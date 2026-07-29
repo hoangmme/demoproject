@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo Giá Phát Triển Phần Mềm - Giai Đoạn 2</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
+            color: #333;
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 50px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+
+        .company-info h1 {
+            color: #0056b3;
+            margin: 0 0 5px 0;
+            font-size: 28px;
+        }
+
+        .company-info p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .quote-info {
+            text-align: right;
+        }
+
+        .quote-info h2 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            color: #333;
+            text-transform: uppercase;
+        }
+
+        .quote-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .quote-title h3 {
+            font-size: 22px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .quote-title p {
+            color: #7f8c8d;
+            font-size: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th {
+            background-color: #0056b3;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .item-desc {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .price-col {
+            width: 150px;
+            font-weight: 500;
+        }
+
+        .total-row {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .total-row td {
+            border-bottom: none;
+            border-top: 2px solid #0056b3;
+        }
+
+        .timeline-box {
+            background: #eef2f5;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 40px;
+        }
+        
+        .timeline-box h4 {
+            margin-top: 0;
+            color: #0056b3;
+        }
+
+        .terms {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 50px;
+        }
+
+        .terms ul {
+            padding-left: 20px;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
+            text-align: center;
+        }
+
+        .signature {
+            width: 300px;
+        }
+
+        .signature p {
+            font-weight: bold;
+            margin-bottom: 80px;
+        }
+
+        .signature .line {
+            border-top: 1px solid #000;
+            margin-top: 20px;
+            padding-top: 5px;
+            color: #666;
+        }
+        
+        @media print {
+            body { background: #fff; padding: 0; }
+            .container { box-shadow: none; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="company-info">
+            <h1>GIẢI PHÁP PHẦN MỀM</h1>
+            <p><i class="fas fa-envelope"></i> Email: contact@yourcompany.com</p>
+            <p><i class="fas fa-phone"></i> Hotline: 09xx.xxx.xxx</p>
+            <p><i class="fas fa-map-marker-alt"></i> Hà Nội, Việt Nam</p>
+        </div>
+        <div class="quote-info">
+            <h2>BÁO GIÁ DỊCH VỤ</h2>
+            <p><strong>Ngày báo giá:</strong> 29/07/2026</p>
+            <p><strong>Hiệu lực đến:</strong> 29/08/2026</p>
+            <p><strong>Mã BG:</strong> QL-2026-07A</p>
+        </div>
+    </div>
+
+    <div class="quote-title">
+        <h3>NÂNG CẤP HỆ THỐNG QUẢN LÝ HỒ SƠ CÁN BỘ (GIAI ĐOẠN 2)</h3>
+        <p>Kính gửi: <strong>Quý Khách Hàng / Đối tác</strong></p>
+        <p>Dựa trên yêu cầu khảo sát thực tế và mở rộng tính năng từ phiên bản thử nghiệm (Demo MVP), chúng tôi xin trân trọng gửi đến Quý khách báo giá chi tiết cho các hạng mục phát triển Giai đoạn 2 như sau:</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50px;" class="text-center">STT</th>
+                <th>Hạng mục tính năng (Scope of Work)</th>
+                <th class="text-right price-col">Thành tiền (VNĐ)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="text-center">1</td>
+                <td>
+                    <div class="item-name">Hệ thống Phân quyền & Đăng nhập (SSO/RBAC)</div>
+                    <div class="item-desc">- Đăng nhập, Quên mật khẩu, Tạo tài khoản.<br>- Phân quyền chi tiết (Admin, Chuyên viên nhập liệu, Trưởng phòng phê duyệt).<br>- Giới hạn quyền xem/sửa dữ liệu theo phòng ban.</div>
+                </td>
+                <td class="text-right">12,000,000</td>
+            </tr>
+            <tr>
+                <td class="text-center">2</td>
+                <td>
+                    <div class="item-name">Nhật ký hệ thống (Audit Logs - Real-time)</div>
+                    <div class="item-desc">- Lưu vết toàn bộ thao tác: Ai đã Thêm/Sửa/Xóa dữ liệu, vào lúc nào, địa chỉ IP nào.<br>- So sánh dữ liệu Cũ - Mới (Diff history).</div>
+                </td>
+                <td class="text-right">7,500,000</td>
+            </tr>
+            <tr>
+                <td class="text-center">3</td>
+                <td>
+                    <div class="item-name">Nhập liệu số lượng lớn (Bulk Import Excel/CSV)</div>
+                    <div class="item-desc">- Tải xuống File mẫu theo chuẩn hệ thống.<br>- Tải lên hàng loạt Hồ sơ, Phụ lục 1, 2, 3 từ file Excel.<br>- Tự động validate, kiểm tra trùng lặp và cảnh báo dữ liệu lỗi.</div>
+                </td>
+                <td class="text-right">10,000,000</td>
+            </tr>
+            <tr>
+                <td class="text-center">4</td>
+                <td>
+                    <div class="item-name">Nâng cấp Hồ sơ Cán bộ & Kho Tài Liệu (E-Cabinet)</div>
+                    <div class="item-desc">- Bổ sung đầy đủ các trường thông tin cơ bản (theo mẫu yêu cầu bổ sung).<br>- Thêm module Upload & Quản lý file đính kèm (PDF, Word, Ảnh) riêng biệt cho từng cán bộ.<br>- Không gian lưu trữ Cloud/Local tùy chỉnh.</div>
+                </td>
+                <td class="text-right">15,000,000</td>
+            </tr>
+            <tr>
+                <td class="text-center">5</td>
+                <td>
+                    <div class="item-name">Trung tâm Tìm kiếm & Lọc dữ liệu Nâng cao</div>
+                    <div class="item-desc">- Lọc chéo dữ liệu đa chiều (Theo cá nhân, khoảng thời gian, quốc gia, phòng ban).<br>- Xem nhanh 3 Phụ lục ngay trên kết quả lọc của Cán bộ.</div>
+                </td>
+                <td class="text-right">6,500,000</td>
+            </tr>
+            <tr>
+                <td class="text-center">6</td>
+                <td>
+                    <div class="item-name">Hệ thống Báo cáo & Kết xuất văn bản (Export Report)</div>
+                    <div class="item-desc">- Tạo báo cáo thống kê định kỳ theo biểu mẫu động.<br>- Kết xuất dữ liệu chính xác vào file Word/Excel/PDF theo phôi biểu mẫu chuẩn của nhà nước/doanh nghiệp.</div>
+                </td>
+                <td class="text-right">16,000,000</td>
+            </tr>
+            <tr>
+                <td class="text-center">7</td>
+                <td>
+                    <div class="item-name">Thiết kế UI/UX Chuyên nghiệp (Re-design)</div>
+                    <div class="item-desc">- Tái thiết kế toàn bộ giao diện theo Brand Guidelines của tổ chức.<br>- Trải nghiệm người dùng mượt mà, thân thiện, tương thích đa thiết bị (Responsive Mobile/Tablet).</div>
+                </td>
+                <td class="text-right">10,000,000</td>
+            </tr>
+            <tr>
+                <td class="text-center">8</td>
+                <td>
+                    <div class="item-name">Module Lịch sử công tác</div>
+                    <div class="item-desc">- Quản lý quá trình công tác, luân chuyển, thăng giáng chức vụ của cán bộ theo trục thời gian (Timeline).</div>
+                </td>
+                <td class="text-right">8,000,000</td>
+            </tr>
+            
+            <tr class="total-row">
+                <td colspan="2" class="text-right">TỔNG CỘNG CHƯA VAT:</td>
+                <td class="text-right">85,000,000 đ</td>
+            </tr>
+            <tr>
+                <td colspan="2" class="text-right">Thuế VAT (10%):</td>
+                <td class="text-right">8,500,000 đ</td>
+            </tr>
+            <tr class="total-row" style="color: #0056b3;">
+                <td colspan="2" class="text-right">TỔNG THANH TOÁN:</td>
+                <td class="text-right">93,500,000 đ</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="timeline-box">
+        <h4><i class="fas fa-clock"></i> Thời gian triển khai dự kiến</h4>
+        <p><strong>Tổng thời gian:</strong> 45 - 60 ngày làm việc (Tính từ ngày chốt UI/UX và ký hợp đồng).</p>
+        <ul style="margin-top: 10px; padding-left: 20px;">
+            <li>Phân tích yêu cầu & Chốt giao diện: 10 ngày</li>
+            <li>Phát triển phần mềm (Coding): 30 ngày</li>
+            <li>Kiểm thử (UAT) & Căn chỉnh: 10 ngày</li>
+            <li>Bàn giao & Đào tạo: 05 ngày</li>
+        </ul>
+    </div>
+
+    <div class="terms">
+        <strong>* Điều khoản & Ghi chú:</strong>
+        <ul>
+            <li>Báo giá đã bao gồm chi phí cài đặt lên máy chủ VPS của khách hàng.</li>
+            <li>Bảo hành và hỗ trợ kỹ thuật miễn phí trong 12 tháng kể từ ngày nghiệm thu.</li>
+            <li>Báo giá không bao gồm chi phí mua Tên miền, VPS/Server hoặc phí lưu trữ Cloud.</li>
+            <li>Phương thức thanh toán: Chia làm 3 đợt (40% - 40% - 20%).</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        <div class="signature">
+            <p>ĐẠI DIỆN KHÁCH HÀNG</p>
+            <div class="line">(Ký, ghi rõ họ tên và đóng dấu)</div>
+        </div>
+        <div class="signature">
+            <p>ĐẠI DIỆN ĐƠN VỊ CUNG CẤP</p>
+            <div class="line">(Ký, ghi rõ họ tên và đóng dấu)</div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
