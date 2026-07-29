@@ -17,7 +17,7 @@
         }
         
         .container {
-            max-width: 900px;
+            max-width: 950px;
             margin: 0 auto;
             background: #fff;
             padding: 50px;
@@ -93,33 +93,37 @@
         }
 
         .item-name {
-            font-weight: 600;
+            font-weight: 700;
             color: #2c3e50;
             margin-bottom: 5px;
+            font-size: 15px;
         }
 
         .item-desc {
             font-size: 13px;
-            color: #666;
+            color: #555;
+        }
+        
+        .item-limits {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #d35400;
+            font-style: italic;
         }
 
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
 
         .price-col {
-            width: 150px;
-            font-weight: 500;
+            width: 160px;
+            font-weight: 600;
+            color: #2c3e50;
         }
 
         .total-row {
             background-color: #f8f9fa;
             font-weight: bold;
-            font-size: 18px;
+            font-size: 17px;
         }
 
         .total-row td {
@@ -127,26 +131,31 @@
             border-top: 2px solid #0056b3;
         }
 
-        .timeline-box {
+        .section-box {
             background: #eef2f5;
             padding: 20px;
             border-radius: 6px;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
         
-        .timeline-box h4 {
+        .section-box h4 {
             margin-top: 0;
             color: #0056b3;
+            font-size: 16px;
+            border-bottom: 1px solid #d1d8dd;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
 
-        .terms {
-            font-size: 13px;
-            color: #555;
-            margin-bottom: 50px;
-        }
-
-        .terms ul {
+        .section-box ul {
+            margin: 0;
             padding-left: 20px;
+            font-size: 14px;
+            color: #444;
+        }
+        
+        .section-box ul li {
+            margin-bottom: 6px;
         }
 
         .footer {
@@ -170,11 +179,12 @@
             margin-top: 20px;
             padding-top: 5px;
             color: #666;
+            font-size: 13px;
         }
         
         @media print {
             body { background: #fff; padding: 0; }
-            .container { box-shadow: none; padding: 0; }
+            .container { box-shadow: none; padding: 0; max-width: 100%; }
         }
     </style>
 </head>
@@ -192,21 +202,21 @@
             <h2>BÁO GIÁ DỊCH VỤ</h2>
             <p><strong>Ngày báo giá:</strong> 29/07/2026</p>
             <p><strong>Hiệu lực đến:</strong> 29/08/2026</p>
-            <p><strong>Mã BG:</strong> QL-2026-07A</p>
+            <p><strong>Mã BG:</strong> QL-2026-07B</p>
         </div>
     </div>
 
     <div class="quote-title">
         <h3>NÂNG CẤP HỆ THỐNG QUẢN LÝ HỒ SƠ CÁN BỘ (GIAI ĐOẠN 2)</h3>
-        <p>Kính gửi: <strong>Quý Khách Hàng / Đối tác</strong></p>
-        <p>Dựa trên yêu cầu khảo sát thực tế và mở rộng tính năng từ phiên bản thử nghiệm (Demo MVP), chúng tôi xin trân trọng gửi đến Quý khách báo giá chi tiết cho các hạng mục phát triển Giai đoạn 2 như sau:</p>
+        <p>Kính gửi: <strong>Quý Cơ quan / Doanh nghiệp</strong></p>
+        <p>Tiếp nối thành công của phiên bản thử nghiệm (Demo MVP), chúng tôi trân trọng gửi báo giá nâng cấp toàn diện hệ thống quản lý, chuẩn hóa quy trình và trải nghiệm người dùng với các Module nghiệp vụ chuyên sâu.</p>
     </div>
 
     <table>
         <thead>
             <tr>
                 <th style="width: 50px;" class="text-center">STT</th>
-                <th>Hạng mục tính năng (Scope of Work)</th>
+                <th>Hạng mục Module (Scope of Work)</th>
                 <th class="text-right price-col">Thành tiền (VNĐ)</th>
             </tr>
         </thead>
@@ -214,102 +224,109 @@
             <tr>
                 <td class="text-center">1</td>
                 <td>
-                    <div class="item-name">Hệ thống Phân quyền & Đăng nhập (SSO/RBAC)</div>
-                    <div class="item-desc">- Đăng nhập, Quên mật khẩu, Tạo tài khoản.<br>- Phân quyền chi tiết (Admin, Chuyên viên nhập liệu, Trưởng phòng phê duyệt).<br>- Giới hạn quyền xem/sửa dữ liệu theo phòng ban.</div>
-                </td>
-                <td class="text-right">12,000,000</td>
-            </tr>
-            <tr>
-                <td class="text-center">2</td>
-                <td>
-                    <div class="item-name">Nhật ký hệ thống (Audit Logs - Real-time)</div>
-                    <div class="item-desc">- Lưu vết toàn bộ thao tác: Ai đã Thêm/Sửa/Xóa dữ liệu, vào lúc nào, địa chỉ IP nào.<br>- So sánh dữ liệu Cũ - Mới (Diff history).</div>
-                </td>
-                <td class="text-right">7,500,000</td>
-            </tr>
-            <tr>
-                <td class="text-center">3</td>
-                <td>
-                    <div class="item-name">Nhập liệu số lượng lớn (Bulk Import Excel/CSV)</div>
-                    <div class="item-desc">- Tải xuống File mẫu theo chuẩn hệ thống.<br>- Tải lên hàng loạt Hồ sơ, Phụ lục 1, 2, 3 từ file Excel.<br>- Tự động validate, kiểm tra trùng lặp và cảnh báo dữ liệu lỗi.</div>
-                </td>
-                <td class="text-right">10,000,000</td>
-            </tr>
-            <tr>
-                <td class="text-center">4</td>
-                <td>
-                    <div class="item-name">Nâng cấp Hồ sơ Cán bộ & Kho Tài Liệu (E-Cabinet)</div>
-                    <div class="item-desc">- Bổ sung đầy đủ các trường thông tin cơ bản (theo mẫu yêu cầu bổ sung).<br>- Thêm module Upload & Quản lý file đính kèm (PDF, Word, Ảnh) riêng biệt cho từng cán bộ.<br>- Không gian lưu trữ Cloud/Local tùy chỉnh.</div>
+                    <div class="item-name">Module Phân quyền & Định danh (SSO/RBAC)</div>
+                    <div class="item-desc">- Đăng nhập, Tạo tài khoản, Quên mật khẩu.<br>- Phân quyền (Role-based) chi tiết: Quản trị viên, Trưởng phòng, Chuyên viên.<br>- Phân luồng dữ liệu (Data Isolation): Chỉ xem/sửa dữ liệu thuộc phòng ban quản lý.</div>
                 </td>
                 <td class="text-right">15,000,000</td>
             </tr>
             <tr>
+                <td class="text-center">2</td>
+                <td>
+                    <div class="item-name">Module E-Cabinet & Kho tài liệu số</div>
+                    <div class="item-desc">- Bổ sung toàn bộ các trường thông tin cán bộ theo quy chuẩn (Dân tộc, tôn giáo, ngạch bậc, v.v.).<br>- Tính năng Upload tài liệu, minh chứng đính kèm hồ sơ.</div>
+                    <div class="item-limits">* Giới hạn kỹ thuật: Tối đa 10MB/file. Hỗ trợ định dạng PDF, JPG, PNG, DOCX. Lưu trữ trên máy chủ hiện tại của khách hàng.</div>
+                </td>
+                <td class="text-right">25,000,000</td>
+            </tr>
+            <tr>
+                <td class="text-center">3</td>
+                <td>
+                    <div class="item-name">Module UI/UX & Design System</div>
+                    <div class="item-desc">- Thiết kế lại trải nghiệm người dùng (UX) chuyên nghiệp, hiện đại.<br>- Xây dựng Design System đồng bộ, tối ưu hóa thao tác nghiệp vụ.<br>- Thiết kế Prototype (Bản mẫu tương tác) trước khi lập trình.</div>
+                    <div class="item-limits">* Phạm vi: Thiết kế tối đa 15 màn hình nghiệp vụ chính. Hỗ trợ 02 vòng chỉnh sửa UI (Revisions). Giao diện tối ưu (Responsive) cho Desktop và Tablet.</div>
+                </td>
+                <td class="text-right">30,000,000</td>
+            </tr>
+            <tr>
+                <td class="text-center">4</td>
+                <td>
+                    <div class="item-name">Module Tìm kiếm & Lọc Dữ liệu Đa chiều</div>
+                    <div class="item-desc">- Truy vấn dữ liệu tốc độ cao nhiều lớp (Theo độ tuổi, phòng ban, quốc gia đi lại, khoảng thời gian).<br>- Tích hợp màn hình xem nhanh (Quick View) 3 phụ lục trực tiếp từ bảng kết quả.</div>
+                </td>
+                <td class="text-right">12,000,000</td>
+            </tr>
+            <tr>
                 <td class="text-center">5</td>
                 <td>
-                    <div class="item-name">Trung tâm Tìm kiếm & Lọc dữ liệu Nâng cao</div>
-                    <div class="item-desc">- Lọc chéo dữ liệu đa chiều (Theo cá nhân, khoảng thời gian, quốc gia, phòng ban).<br>- Xem nhanh 3 Phụ lục ngay trên kết quả lọc của Cán bộ.</div>
+                    <div class="item-name">Module Báo cáo & Kết xuất (Report Engine)</div>
+                    <div class="item-desc">- Hệ thống tổng hợp báo cáo tự động theo mẫu biểu Nhà nước/Doanh nghiệp.<br>- Kết xuất (Export) dữ liệu báo cáo ra các định dạng chuẩn văn bản.</div>
+                    <div class="item-limits">* Phạm vi: Cấu hình sẵn 05 mẫu biểu báo cáo định dạng Word/Excel/PDF theo phôi chuẩn do khách hàng cung cấp.</div>
                 </td>
-                <td class="text-right">6,500,000</td>
+                <td class="text-right">12,000,000</td>
             </tr>
             <tr>
                 <td class="text-center">6</td>
                 <td>
-                    <div class="item-name">Hệ thống Báo cáo & Kết xuất văn bản (Export Report)</div>
-                    <div class="item-desc">- Tạo báo cáo thống kê định kỳ theo biểu mẫu động.<br>- Kết xuất dữ liệu chính xác vào file Word/Excel/PDF theo phôi biểu mẫu chuẩn của nhà nước/doanh nghiệp.</div>
+                    <div class="item-name">Module Nhập liệu Hàng loạt (Bulk Import)</div>
+                    <div class="item-desc">- Tải dữ liệu vào hệ thống từ file Excel (Hồ sơ cán bộ, Lịch sử phụ lục).<br>- Tự động kiểm tra lỗi (Validate), lọc trùng lặp trước khi lưu.</div>
+                    <div class="item-limits">* Giới hạn kỹ thuật: Xử lý file chuẩn 03 template Excel. Tối đa 5.000 dòng/lần import để đảm bảo hiệu năng.</div>
                 </td>
-                <td class="text-right">16,000,000</td>
+                <td class="text-right">8,000,000</td>
             </tr>
             <tr>
                 <td class="text-center">7</td>
                 <td>
-                    <div class="item-name">Thiết kế UI/UX Chuyên nghiệp (Re-design)</div>
-                    <div class="item-desc">- Tái thiết kế toàn bộ giao diện theo Brand Guidelines của tổ chức.<br>- Trải nghiệm người dùng mượt mà, thân thiện, tương thích đa thiết bị (Responsive Mobile/Tablet).</div>
+                    <div class="item-name">Module Lịch sử công tác (Work History)</div>
+                    <div class="item-desc">- Biểu diễn quá trình công tác, luân chuyển, bổ nhiệm, khen thưởng/kỷ luật dưới dạng Timeline trực quan.</div>
                 </td>
                 <td class="text-right">10,000,000</td>
             </tr>
             <tr>
                 <td class="text-center">8</td>
                 <td>
-                    <div class="item-name">Module Lịch sử công tác</div>
-                    <div class="item-desc">- Quản lý quá trình công tác, luân chuyển, thăng giáng chức vụ của cán bộ theo trục thời gian (Timeline).</div>
+                    <div class="item-name">Module Nhật ký Hệ thống (Audit Logs)</div>
+                    <div class="item-desc">- Ghi nhận toàn bộ thao tác hệ thống (Thêm/Sửa/Xóa).<br>- Lưu vết chi tiết người thực hiện, thời gian, IP và dữ liệu thay đổi (Before/After).</div>
                 </td>
                 <td class="text-right">8,000,000</td>
             </tr>
             
             <tr class="total-row">
                 <td colspan="2" class="text-right">TỔNG CỘNG CHƯA VAT:</td>
-                <td class="text-right">85,000,000 đ</td>
+                <td class="text-right">120,000,000 đ</td>
             </tr>
             <tr>
                 <td colspan="2" class="text-right">Thuế VAT (10%):</td>
-                <td class="text-right">8,500,000 đ</td>
+                <td class="text-right">12,000,000 đ</td>
             </tr>
-            <tr class="total-row" style="color: #0056b3;">
+            <tr class="total-row" style="color: #d35400;">
                 <td colspan="2" class="text-right">TỔNG THANH TOÁN:</td>
-                <td class="text-right">93,500,000 đ</td>
+                <td class="text-right">132,000,000 đ</td>
             </tr>
         </tbody>
     </table>
 
-    <div class="timeline-box">
-        <h4><i class="fas fa-clock"></i> Thời gian triển khai dự kiến</h4>
-        <p><strong>Tổng thời gian:</strong> 45 - 60 ngày làm việc (Tính từ ngày chốt UI/UX và ký hợp đồng).</p>
-        <ul style="margin-top: 10px; padding-left: 20px;">
-            <li>Phân tích yêu cầu & Chốt giao diện: 10 ngày</li>
-            <li>Phát triển phần mềm (Coding): 30 ngày</li>
-            <li>Kiểm thử (UAT) & Căn chỉnh: 10 ngày</li>
-            <li>Bàn giao & Đào tạo: 05 ngày</li>
-        </ul>
-    </div>
-
-    <div class="terms">
-        <strong>* Điều khoản & Ghi chú:</strong>
-        <ul>
-            <li>Báo giá đã bao gồm chi phí cài đặt lên máy chủ VPS của khách hàng.</li>
-            <li>Bảo hành và hỗ trợ kỹ thuật miễn phí trong 12 tháng kể từ ngày nghiệm thu.</li>
-            <li>Báo giá không bao gồm chi phí mua Tên miền, VPS/Server hoặc phí lưu trữ Cloud.</li>
-            <li>Phương thức thanh toán: Chia làm 3 đợt (40% - 40% - 20%).</li>
-        </ul>
+    <div style="display: flex; gap: 20px;">
+        <div class="section-box" style="flex: 1;">
+            <h4><i class="fas fa-ban"></i> Phạm vi NGOÀI Báo Giá (Out of Scope)</h4>
+            <ul>
+                <li>Không bao gồm công việc nhập liệu ban đầu (Data Entry) từ giấy tờ vào phần mềm.</li>
+                <li>Không bao gồm việc mua sắm phần cứng, máy chủ (Server/VPS), Domain, SSL.</li>
+                <li>Không tích hợp API với các hệ thống phần mềm thứ 3 bên ngoài scope dự án.</li>
+                <li>Các yêu cầu thay đổi luồng nghiệp vụ cốt lõi hoặc thay đổi UI/UX sau khi đã ký xác nhận (Sign-off) bản Prototype sẽ được tính thành Phụ lục phát sinh.</li>
+            </ul>
+        </div>
+        
+        <div class="section-box" style="flex: 1;">
+            <h4><i class="fas fa-clock"></i> Nguồn lực & Timeline Triển Khai</h4>
+            <ul>
+                <li><strong>Thời gian dự kiến:</strong> 60 - 75 ngày làm việc.</li>
+                <li><strong>Đội ngũ triển khai:</strong> 01 Project Manager, 01 UI/UX Designer, 02 Developers, 01 QA/Tester.</li>
+                <li><strong>Giai đoạn 1 (15 ngày):</strong> Thiết kế UI/UX Prototype & Chốt luồng nghiệp vụ.</li>
+                <li><strong>Giai đoạn 2 (40 ngày):</strong> Lập trình tính năng (Coding).</li>
+                <li><strong>Giai đoạn 3 (15 ngày):</strong> Kiểm thử UAT, Sửa lỗi và Đào tạo bàn giao.</li>
+                <li><strong>Bảo hành:</strong> 12 tháng khắc phục lỗi kỹ thuật hoàn toàn miễn phí.</li>
+            </ul>
+        </div>
     </div>
 
     <div class="footer">
