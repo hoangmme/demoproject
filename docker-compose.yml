@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   frontend:
-    image: nginx:alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
     restart: always
-    volumes:
-      - ./:/usr/share/nginx/html:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`demo.mme.vn`)"
