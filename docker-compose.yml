@@ -33,8 +33,8 @@ services:
       CORS_ENABLED: "true"
       CORS_ORIGIN: "true"
       CORS_METHODS: "GET,POST,PATCH,DELETE,OPTIONS"
-      PUBLIC_URL: "https://api.demo.mme.vn"
+      PUBLIC_URL: "https://demodirectus.mme.vn"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.directus.rule=Host(`api.demo.mme.vn`)"
+      - "traefik.http.routers.directus.rule=Host(`demodirectus.mme.vn`)"
       - "traefik.http.services.directus.loadbalancer.server.port=8055"
