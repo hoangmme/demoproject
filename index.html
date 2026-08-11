@@ -1781,13 +1781,29 @@
                     ];
                 },
                 
-                doLogin() {
-                    const user = this.users.find(u => u.email === this.loginForm.email);
-                    if (user) {
-                        // Normally check password via API, here we simulate basic validation
-                        this.currentUser = user;
-                    } else {
-                        alert('Tài khoản hoặc mật khẩu không chính xác!');
+                async doLogin() {
+                    try {
+                        const res = await fetch(`${API_URL}/auth/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: this.loginForm.email, password: this.loginForm.password })
+                        });
+                        
+                        if (!res.ok) {
+                            alert('Tài khoản hoặc mật khẩu không chính xác!');
+                            return;
+                        }
+                        
+                        const user = this.users.find(u => u.email === this.loginForm.email);
+                        if (user) {
+                            this.currentUser = user;
+                            this.isLoggedIn = true;
+                            localStorage.setItem('mvp_session', JSON.stringify(user));
+                        } else {
+                            alert('Tài khoản không được cấp quyền trong hệ thống nội bộ!');
+                        }
+                    } catch (e) {
+                        alert('Lỗi kết nối tới máy chủ!');
                     }
                 },
                 openImportModal(type = 'personnel') {
