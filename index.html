@@ -2125,15 +2125,35 @@
                 },
                 async fetchData() {
                     try {
-                        const res = await fetch(`${API_URL}/items/personnels?limit=100`, {
-                            headers: { 'Authorization': 'Bearer mvp-static-token-999' }
-                        });
-                        const json = await res.json();
-                        if (json.data) {
-                            this.personnel = json.data.map(p => {
-                                p.trips = Array.isArray(p.trips) ? p.trips : [];
-                                p.flags = p.flags || {};
-                                p.relatives = Array.isArray(p.relatives) ? p.relatives : [];
+                        const [resP, resA1, resA2, resA3] = await Promise.all([
+                            fetch(`${API_URL}/items/personnels?limit=1000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
+                            fetch(`${API_URL}/items/appendix1?limit=2000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
+                            fetch(`${API_URL}/items/appendix2?limit=2000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
+                            fetch(`${API_URL}/items/appendix3?limit=2000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } })
+                        ]);
+                        
+                        const [jsonP, jsonA1, jsonA2, jsonA3] = await Promise.all([
+                            resP.json(), resA1.json(), resA2.json(), resA3.json()
+                        ]);
+                        
+                        if (jsonP.data) {
+                            this.personnel = jsonP.data.map(p => {
+                                p.trips = jsonA1.data ? jsonA1.data.filter(a => a.personnelId === p.id) : [];
+                                p.relatives = jsonA2.data ? jsonA2.data.filter(a => a.personnelId === p.id) : [];
+                                
+                                const a3 = jsonA3.data ? jsonA3.data.filter(a => a.personnelId === p.id) : [];
+                                p.flags = a3.length > 0 ? a3[0] : {};
+                                
+                                // Map old properties for legacy UI compatibility in pl1 and pl2
+                                if (p.trips.length > 0) {
+                                    const t = p.trips[0];
+                                    p.hktt = t.thuongTru || p.hktt;
+                                    p.currentAddress = t.tamTru || p.currentAddress;
+                                    p.passportPersonal = t.hcCaNhan || p.passportPersonal;
+                                    p.passportOfficial = t.hcCongVu || p.passportOfficial;
+                                    p.tcctResult = t.kqThamTra || p.tcctResult;
+                                }
+                                
                                 return p;
                             });
                         }
