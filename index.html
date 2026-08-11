@@ -298,35 +298,35 @@
                                             <td class="border border-gray-300 px-2 py-2" x-text="p.tcctResult"></td>
                                             
                                             <!-- Col 16 to 30 (Trip Info) -->
-                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.qd"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.qdDate"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.agency"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.exit"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.enter"></td>
-                                            <td class="border border-gray-300 px-2 py-2 font-semibold" x-text="tr.country"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.times"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.purpose === 'Công tác' ? 'X' : ''"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.purpose === 'Học tập' ? 'X' : ''"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.purpose === 'Việc riêng' ? 'X' : ''"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.soQuyetDinh"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.soQuyetDinhDate"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.coQuanBanHanh"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.ngayXuatCanh"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.ngayNhapCanh"></td>
+                                            <td class="border border-gray-300 px-2 py-2 font-semibold" x-text="tr.quocGia"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.soLan"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.mucDich === 'Công tác' ? 'X' : ''"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.mucDich === 'Học tập' ? 'X' : ''"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.mucDich === 'Việc riêng' ? 'X' : ''"></td>
                                             
                                             <!-- Funding (26-29) -->
-                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.funding === 'Ngân sách NN' ? 'X' : ''"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.funding === 'Tự túc' ? 'X' : ''"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.nguonKinhPhi === 'Ngân sách NN' ? 'X' : ''"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.nguonKinhPhi === 'Tự túc' ? 'X' : ''"></td>
                                             <td class="border border-gray-300 px-2 py-2"></td>
                                             <td class="border border-gray-300 px-2 py-2"></td>
                                             
                                             <!-- Reports (30-31) -->
-                                            <td class="border border-gray-300 px-2 py-2 text-center font-bold text-green-600" x-text="tr.submittedPassport"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center font-bold text-green-600" x-text="tr.submittedReport"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center font-bold text-green-600" x-text="tr.nopHoChieu"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center font-bold text-green-600" x-text="tr.baoCaoKetQua"></td>
                                             
                                             <!-- Flags (32-37) show only on first trip row -->
-                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.noPermission"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.lawViolation"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.overstay"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.partyDiscipline"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.govDiscipline"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.foreignLaw"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.vnLaw"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="tr.vpChuaPhep"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="tr.vpNuocNgoai"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="tr.vpQuaHan"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="tr.klDang"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="tr.klChinhQuyen"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="tr.xlplNuocSoTai"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="tr.xlplVietNam"></td>
                                         </tr>
                                     </template>
                                 </template>
@@ -413,7 +413,7 @@
 
         <tbody>
                             <template x-for="(p, i) in personnel" :key="'p2'+p.id">
-                                <template x-for="(t, j) in p.relatives.filter(r => r.hasForeignElement)" :key="t.id">
+                                <template x-for="(t, j) in p.relatives" :key="t.id">
                                     <tr class="hover:bg-blue-50/50">
                                         <!-- Col 1 to 7 (Cá nhân) -->
                                         <td class="border border-gray-300 px-2 py-2" x-text="i+1"></td>
@@ -426,24 +426,24 @@
                                         <td class="border border-gray-300 px-2 py-2"></td>
                                         
                                         <!-- Col 8 to 13 (Relative) -->
-                                        <td class="border border-gray-300 px-2 py-2 text-center font-bold" x-text="t.relation"></td>
-                                        <td class="border border-gray-300 px-2 py-2 text-left" x-text="t.name"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-center font-bold" x-text="t.relationshipName"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-left" x-text="t.relativeName"></td>
                                         <td class="border border-gray-300 px-2 py-2" x-text="t.birthYear"></td>
                                         <td class="border border-gray-300 px-2 py-2" x-text="t.currentAddress"></td>
-                                        <td class="border border-gray-300 px-2 py-2" x-text="t.job"></td>
-                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.unit"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.occupation"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.unitAbroad"></td>
                                         
                                         <!-- Col 14 to 23 (Foreign Element & Law) -->
-                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.time"></td>
-                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.unit"></td>
-                                        <td class="border border-gray-300 px-2 py-2 font-semibold text-blue-700" x-text="t.foreignInfo.country"></td>
-                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.funding"></td>
-                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.currentWork"></td>
-                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.foreignInfo.married"></td>
-                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.foreignInfo.fdi"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.timeAbroad"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.unitAbroad"></td>
+                                        <td class="border border-gray-300 px-2 py-2 font-semibold text-blue-700" x-text="t.countryName"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.fundingName"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.currentUnit"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.marriedToForeigner"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.workInForeignCompany"></td>
                                         
-                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.foreignInfo.punishVN"></td>
-                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.foreignInfo.punishForeign"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.xlplVietNam"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.xlplNuocSoTai"></td>
                                     </tr>
                                 </template>
                             </template>
