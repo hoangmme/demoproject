@@ -122,11 +122,13 @@
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="p-4 flex justify-between items-center border-b border-gray-100">
                         <h3 class="font-bold text-gray-800">Danh sách tài khoản hệ thống</h3>
+                        <button x-show="isAdmin() && selectedIds.length > 0" @click="deleteSelected()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>Xóa đã chọn (<span x-text="selectedIds.length"></span>)</button>
                         
                     </div>
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+                                <th class="py-4 px-4 font-semibold w-12 text-center"><input type="checkbox" @click="selectedIds = $event.target.checked ? filteredPersonnel.map(p => p.id) : []" :checked="selectedIds.length === filteredPersonnel.length && filteredPersonnel.length > 0" class="rounded text-blue-600 focus:ring-blue-500"></th>
                                 <th class="py-4 px-6 font-semibold">Mã CB</th>
                                 <th class="py-4 px-6 font-semibold">Họ và tên</th>
                                 <th class="py-4 px-6 font-semibold">Năm sinh</th>
@@ -138,6 +140,7 @@
                         <tbody class="divide-y divide-gray-100">
                             <template x-for="person in filteredPersonnel" :key="person.id">
                                 <tr class="hover:bg-blue-50/50 transition-colors cursor-pointer group" @click="openPanel(person)">
+                                    <td class="py-3 px-4 text-center"><input type="checkbox" x-model="selectedIds" :value="person.id" @click.stop class="rounded text-blue-600 focus:ring-blue-500"></td>
                                     <td class="py-3 px-6 text-sm text-gray-500 font-medium" x-text="person.code || 'N/A'"></td>
                                     <td class="py-3 px-6 text-sm font-semibold text-gray-800" x-text="person.name"></td>
                                     <td class="py-3 px-6 text-sm text-gray-600" x-text="person.birthYear"></td>
@@ -1611,6 +1614,7 @@
                 
                 // Panel state
                 isPanelOpen: false,
+                    selectedIds: [],
                 activeTab: 'canhan',
                 showColumns: true,
                 selectedPerson: null,
@@ -2265,6 +2269,32 @@
                     this.isPanelOpen = false;
                 },
                 
+                
+                async deleteSelected() {
+                    if (!this.isAdmin()) return;
+                    if (!confirm(`Bạn có chắc chắn muốn xóa ${this.selectedIds.length} cán bộ đã chọn? Các bản ghi phụ lục liên quan có thể sẽ không bị xóa hoàn toàn khỏi CSDL nhưng sẽ không hiển thị nữa.`)) return;
+                    
+                    try {
+                        const res = await fetch(`${API_URL}/items/personnels`, {
+                            method: 'DELETE',
+                            headers: { 
+                                'Authorization': 'Bearer mvp-static-token-999',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(this.selectedIds)
+                        });
+                        
+                        if (res.ok) {
+                            alert('Xóa thành công!');
+                            this.selectedIds = [];
+                            await this.fetchData();
+                        } else {
+                            alert('Có lỗi xảy ra khi xóa!');
+                        }
+                    } catch(e) {
+                        alert('Lỗi: ' + e.message);
+                    }
+                },
                 async deleteData() {
                     if (!this.selectedPerson) return;
                     if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ hồ sơ của cán bộ này?')) return;
