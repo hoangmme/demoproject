@@ -1879,6 +1879,13 @@
                         let newMapping = {};
                         this.importHeaders.forEach((h, index) => {
                             const hl = h.toLowerCase();
+                            
+                            // Bỏ qua cột 1 (STT) hoặc các cột chưa dùng
+                            if (index === 0 || hl === 'stt' || hl.includes('chưa dùng')) {
+                                newMapping[index] = "";
+                                return;
+                            }
+                            
                             let match = this.systemFields.find(f => {
                                 const fl = f.label.toLowerCase();
                                 const cleanHl = hl.replace(/cột \d+/g, '').replace(/[()]/g, '').trim();
@@ -2448,9 +2455,18 @@
                         </select>
                         <p x-show="!importTargetPersonnelId && importPasteText.trim() !== ''" class="text-xs text-red-500 mt-1 mt-2">Vui lòng chọn cán bộ trước khi tiếp tục!</p>
                     </div>
-                    <div class="flex justify-between items-center mb-4">
-                        <p class="text-sm text-gray-600">Copy dữ liệu bảng từ Excel hoặc Google Sheets (bao gồm cả dòng tiêu đề) và Dán (Ctrl+V) vào ô dưới đây:</p>
-                        <button type="button" @click="loadSampleData()" class="text-xs text-blue-600 underline hover:text-blue-800 font-medium">Điền dữ liệu mẫu</button>
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-sm text-gray-800 font-semibold">📋 Hướng dẫn copy từ Excel/Google Sheets:</p>
+                            <button type="button" @click="loadSampleData()" class="text-xs text-blue-600 underline hover:text-blue-800 font-medium bg-blue-50 px-2 py-1 rounded">Điền dữ liệu mẫu</button>
+                        </div>
+                        <ul class="text-xs text-gray-600 list-disc pl-5 mb-2 space-y-1">
+                            <li>Bôi đen và Copy toàn bộ bảng dữ liệu <b>bao gồm cả dòng tiêu đề</b>.</li>
+                            <li><b>Hồ sơ Cán bộ:</b> Copy nguyên khối từ <b>Cột 1 (STT)</b> đến hết <b>Cột 52</b>.</li>
+                            <li><b>Hồ sơ Thân nhân:</b> Copy nguyên khối từ <b>Cột 53</b> đến hết <b>Cột 78</b>.</li>
+                            <li class="text-blue-600 font-medium italic">Mẹo: Cột 1 (STT) và các cột không có dữ liệu sẽ tự động được hệ thống bỏ qua.</li>
+                        </ul>
+                        <p class="text-sm text-gray-800 font-medium">Dán (Ctrl+V) khối dữ liệu vừa copy vào ô dưới đây:</p>
                     </div>
                     <textarea x-model="importPasteText" class="w-full h-64 border-2 border-dashed border-gray-300 rounded-lg p-4 font-mono text-sm focus:border-blue-500 focus:ring-0 outline-none" placeholder="Dán dữ liệu vào đây..."></textarea>
                 </div>
