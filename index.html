@@ -2480,17 +2480,19 @@
                         <div class="font-bold text-sm text-gray-700 bg-gray-100 p-2 rounded">Trường Hệ thống</div>
                         
                         <template x-for="(header, index) in importHeaders" :key="index">
-                            <div class="contents">
-                                <div class="flex items-center text-sm font-medium text-gray-800" x-text="header"></div>
-                                <div>
-                                    <select x-model="importMapping[index]" class="w-full border-gray-300 border rounded py-1 px-2 text-sm focus:ring-blue-500">
-                                        <option value="">-- Bỏ qua cột này --</option>
-                                        <template x-for="field in systemFields" :key="field.key">
-                                            <option :value="field.key" x-text="field.label"></option>
-                                        </template>
-                                    </select>
+                            <template x-if="index !== 0">
+                                <div class="contents">
+                                    <div class="flex items-center text-sm font-medium text-gray-800" x-text="header"></div>
+                                    <div>
+                                        <select x-model="importMapping[index]" class="w-full border-gray-300 border rounded py-1 px-2 text-sm focus:ring-blue-500">
+                                            <option value="">-- Bỏ qua cột này --</option>
+                                            <template x-for="field in systemFields" :key="field.key">
+                                                <option :value="field.key" x-text="field.label"></option>
+                                            </template>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
+                            </template>
                         </template>
                     </div>
                     
