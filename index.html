@@ -71,6 +71,12 @@
             <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-10 flex-shrink-0">
                 <h2 class="text-xl font-semibold text-gray-800" x-text="getViewTitle()"></h2>
                 
+                <div class="flex-1"></div>
+                <div class="flex items-center gap-4 border-r pr-4 mr-4" x-show="currentUser">
+                    <span class="text-sm font-medium text-gray-700">Xin chào, <span x-text="currentUser.first_name || currentUser.name || currentUser.email"></span></span>
+                    <button @click="doLogout()" class="text-sm text-red-600 hover:text-red-800 font-medium transition-colors">Đăng xuất</button>
+                </div>
+                
                 <!-- Actions for Cán bộ view -->
                 <div x-show="currentView === 'canbo'" class="flex items-center gap-4">
                     <div class="relative">
