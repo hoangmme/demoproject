@@ -8,6 +8,10 @@ services:
       - "8080:80"
     volumes:
       - ./:/usr/share/nginx/html:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`demo.mme.vn`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
 
   directus:
     image: directus/directus:11.1.1
@@ -30,3 +34,7 @@ services:
       CORS_ORIGIN: "true"
       CORS_METHODS: "GET,POST,PATCH,DELETE,OPTIONS"
       PUBLIC_URL: "https://api.demo.mme.vn"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.directus.rule=Host(`api.demo.mme.vn`)"
+      - "traefik.http.services.directus.loadbalancer.server.port=8055"
