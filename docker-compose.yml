@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/usr/share/nginx/html:ro
+
+  directus:
+    image: directus/directus:11.1.1
+    restart: always
+    ports:
+      - "8055:8055"
+    volumes:
+      - ./backend/database:/directus/database
+      - ./backend/uploads:/directus/uploads
+      - ./backend/extensions:/directus/extensions
+    environment:
+      KEY: "b3f3b924-4f27-4a0b-9d2a-874591a27e02"
+      SECRET: "e1a9b3a0-f8f4-4c57-89df-1d54e0c4b223"
+      DB_CLIENT: "sqlite3"
+      DB_FILENAME: "/directus/database/data.db"
+      ADMIN_EMAIL: "admin@demo.com"
+      ADMIN_PASSWORD: "321456"
+      WEBSOCKETS_ENABLED: "true"
+      CORS_ENABLED: "true"
+      CORS_ORIGIN: "true"
+      CORS_METHODS: "GET,POST,PATCH,DELETE,OPTIONS"
+      PUBLIC_URL: "https://api.demo.mme.vn"
