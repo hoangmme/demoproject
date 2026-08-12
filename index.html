@@ -1011,7 +1011,7 @@
                                                 <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Đi NN không phép <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 45]</span></label><input type="text" x-model="formData.flags.noPermission" class="w-full border rounded px-2 py-1"></div>
                                                 <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Vi phạm PL ở NN <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 46]</span></label><input type="text" x-model="formData.flags.lawViolation" class="w-full border rounded px-2 py-1"></div>
                                                 <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ở lại NN quá hạn <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 47]</span></label><input type="text" x-model="formData.flags.overstay" class="w-full border rounded px-2 py-1"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Thuộc diện quản lý <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 48]</span></label><input type="text" class="w-full border rounded px-2 py-1"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Thuộc diện quản lý <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 48]</span></label><input type="text" x-model="formData.flags.managed" class="w-full border rounded px-2 py-1"></div>
                                                 
                                                 <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Được tặng quà >50tr <span x-show="showColumns" class="text-blue-600">[Cột 49]</span></label><input type="text" x-model="formData.flags.gift" class="w-full border rounded px-2 py-1"></div>
                                                 <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Cho thuê nhà/đất <span x-show="showColumns" class="text-blue-600">[Cột 50]</span></label><input type="text" x-model="formData.flags.rent" class="w-full border rounded px-2 py-1"></div>
@@ -2411,7 +2411,12 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                 p.flags.noPermission = p.flags.vpChuaPhep || p.flags.noPermission;
                                 p.flags.partyDiscipline = p.flags.klDang || p.flags.partyDiscipline;
                                 p.flags.govDiscipline = p.flags.klChinhQuyen || p.flags.govDiscipline;
-                                p.flags.investigating = p.flags.thamNhung || p.flags.trongYeu || p.flags.loiKeo || p.flags.investigating; 
+                                p.flags.investigating = p.flags.thamNhung || p.flags.investigating; 
+                                p.flags.politicalIssue = p.flags.trongYeu || p.flags.politicalIssue;
+                                p.flags.otherIssue = p.flags.otherFlags || p.flags.otherIssue;
+                                p.flags.lawViolation = p.flags.vpNuocNgoai || p.flags.lawViolation;
+                                p.flags.overstay = p.flags.vpQuaHan || p.flags.overstay;
+                                p.flags.managed = p.flags.dienQuanLy || p.flags.managed;
                                 p.flags.gift = p.flags.receivedGiftOver50M || p.flags.gift;
                                 p.flags.rent = p.flags.rentHouseToForeigner || p.flags.rent;
                                 p.flags.fdi = p.flags.workInForeignCompany || p.flags.fdi;
@@ -2456,6 +2461,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                     tr.enter = tr.arrivalDate || tr.enter;
                                     tr.times = tr.tripCount || tr.times;
                                     tr.country = tr.countryName || tr.country;
+                                    tr.purpose = tr.purposeName || tr.purpose;
                                 });
                                 
                                 return p;
@@ -2733,10 +2739,15 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             // Xử lý lưu Flags (Phụ lục 3)
                             const mappedFlags = {
                                 personnelId: payload.id,
-                                vpChuaPhep: flags.noPermission || null,
+                                trongYeu: flags.politicalIssue || null,
+                                thamNhung: flags.investigating || null,
+                                otherFlags: flags.otherIssue || null,
                                 klDang: flags.partyDiscipline || null,
                                 klChinhQuyen: flags.govDiscipline || null,
-                                thamNhung: flags.investigating || null,
+                                vpChuaPhep: flags.noPermission || null,
+                                vpNuocNgoai: flags.lawViolation || null,
+                                vpQuaHan: flags.overstay || null,
+                                dienQuanLy: flags.managed || null,
                                 receivedGiftOver50M: flags.gift || null,
                                 rentHouseToForeigner: flags.rent || null,
                                 workInForeignCompany: flags.fdi || null
