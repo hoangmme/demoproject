@@ -1871,11 +1871,19 @@
                     } else {
                         const headers = ['Cột 1 (TT)', 'Cột 2 (Họ và tên)', 'Cột 3 (Tên khác)', 'Cột 4 (Ngày, tháng, năm sinh)', 'Cột 5 (Dân tộc)', 'Cột 6 (Tôn giáo)', 'Cột 7 (Quê quán)', 'Cột 8 (Đơn vị công tác)', 'Cột 9 (Chức vụ)', 'Cột 10 (Nơi đăng ký hộ khẩu thường trú)', 'Cột 11 (Nơi ở hiện nay)', 'Cột 12 (Số Căn cước công dân)', 'Cột 13 (Số hộ chiếu cá nhân)', 'Cột 14 (Số Hộ chiếu công vụ)', 'Cột 15 (Kết quả thẩm tra, xác minh TCCT trước khi đi nước ngoài)', 'Cột 16 (Số Quyết định)', 'Cột 17 (Ngày ban hành)', 'Cột 18 (Cơ quan, người có thẩm quyền ban hành)', 'Cột 19 (Ngày Xuất cảnh)', 'Cột 20 (Ngày nhập cảnh)', 'Cột 21 (Quốc Gia)', 'Cột 22 (Số lần)', 'Cột 23 (Mục đích chuyến đi (Công tác/Học tập/Việc riêng))', 'Cột 24 (Diện đào tạo)', 'Cột 25 (Nơi đào tạo)', 'Cột 26 (Vai trò khi tham gia đào tạo tại nước ngoài)', 'Cột 27 (Đơn vị chọn cử)', 'Cột 28 (Nguồn Kinh phí (tự túc, học bổng, tài trợ (cơ quan tài trợ),…))', 'Cột 29 (Thời gian đào tạo (ngày, tháng, năm đến ngày, tháng, năm))', 'Cột 30 (Trưởng Đoàn / Chức vụ / Đơn vị công tác)', 'Cột 31 (Thành phần Đoàn (CBCCVBC cơ quan, đơn vị))', 'Cột 32 (Số lượng thành viên Đoàn)', 'Cột 33 (Nguồn Kinh phí Đoàn (NSNN/Tự túc/Tài trợ/Học bổng))', 'Cột 34 (Báo cáo kết quả)', 'Cột 35 (Nộp hộ chiếu công vụ)', 'Cột 36 (Vấn đề về tiêu chuẩn chính trị (Tự diễn biến/Chuyển hóa/TCCT khác))', 'Cột 37 (Bản thân và thân nhân đang trong quá trình điều tra, xem xét hoặc có liên quan đến vụ việc phức tạp)', 'Cột 38 (Có vấn đề khác về lý lịch (khai man, che dấu lý lịch, bằng cấp,…))', 'Cột 39 (Kỷ luật Đảng)', 'Cột 40 (Kỷ luật Chính Quyền)', 'Cột 41 (Đi nước ngoài không xin phép)', 'Cột 42 (Vi phạm pháp luật ở nước ngoài)', 'Cột 43 (Ở lại nước ngoài quá thời gian quy định)', 'Cột 44 (Diện quản lý)', 'Cột 45 (Được tặng tiền, hàng, hiện vật có giá trị từ 50 triệu trở lên)', 'Cột 46 (Cho người nước ngoài thuê nhà, đất)', 'Cột 47 (Làm việc tại công ty có vốn đầu tư nước ngoài)'].join('	');
                         const row1 = Array.from({length: 47}, (_, i) => {
-                            const map = {1: 'Nguyễn Văn Mẫu', 2: 'Tèo', 3: '1985', 4: 'Kinh', 5: 'Không', 6: 'Hà Nội', 7: 'Phòng HC-NS', 8: 'Trưởng phòng', 9: 'Hà Nội', 10: 'Hà Nội', 11: '001085123456', 12: 'B123', 13: 'C123', 14: 'Sạch'};
+                            const map = {
+                                1: 'Nguyễn Văn Mẫu', 2: 'Tèo', 3: '1985', 4: 'Kinh', 5: 'Không', 6: 'Hà Nội', 7: 'Phòng HC-NS', 8: 'Trưởng phòng', 9: 'Hà Nội', 10: 'Hà Nội', 11: '001085123456', 12: 'B123', 13: 'C123', 14: 'Sạch',
+                                15: 'QD123/2023', 16: '2023-01-15', 17: 'UBND TP Hà Nội', 18: '2023-02-01', 19: '2023-02-15', 20: 'Mỹ', 21: '1', 22: 'Công tác', 27: 'Ngân sách nhà nước',
+                                35: 'Tự diễn biến nhẹ', 38: 'Cảnh cáo', 40: 'Có', 44: 'Được tặng quà 60tr'
+                            };
                             return map[i] || ``;
                         }).join('	');
                         const row2 = Array.from({length: 47}, (_, i) => {
-                            const map = {1: 'Trần Thị Test', 2: 'Mít', 3: '1990', 4: 'Kinh', 5: 'Không', 6: 'Đà Nẵng', 7: 'Phòng Kế Toán', 8: 'Nhân viên', 9: 'Đà Nẵng', 10: 'Đà Nẵng', 11: '001090987654'};
+                            const map = {
+                                1: 'Trần Thị Test', 2: 'Mít', 3: '1990', 4: 'Kinh', 5: 'Không', 6: 'Đà Nẵng', 7: 'Phòng Kế Toán', 8: 'Nhân viên', 9: 'Đà Nẵng', 10: 'Đà Nẵng', 11: '001090987654', 12: '', 13: '', 14: '',
+                                15: 'QD456/2023', 16: '2023-05-10', 17: 'Sở Tài Chính', 18: '2023-06-01', 19: '2023-06-10', 20: 'Trung Quốc', 21: '1', 22: 'Du lịch', 27: 'Cá nhân tự túc',
+                                36: 'Đang xem xét', 39: 'Khiển trách', 41: 'Vi phạm giao thông', 45: 'Cho thuê nhà'
+                            };
                             return map[i] || ``;
                         }).join('	');
                         
@@ -2810,7 +2818,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                 <thead>
                                     <tr class="bg-gray-50">
                                         <template x-for="colIndex in Object.keys(importMapping)" :key="colIndex">
-                                            <th class="border p-2 whitespace-nowrap" x-text="'Cột ' + (parseInt(colIndex)+1) + ' - ' + (importMapping[colIndex] ? (systemFields.find(f => f.key === importMapping[colIndex])?.label || importMapping[colIndex]) : 'Chưa chọn (Bỏ qua)')"></th>
+                                            <th class="border p-2 whitespace-nowrap" x-text="importMapping[colIndex] ? (systemFields.find(f => f.key === importMapping[colIndex])?.label || importMapping[colIndex]) : ('Cột ' + (parseInt(colIndex)+1) + ' - Chưa chọn (Bỏ qua)')"></th>
                                         </template>
                                     </tr>
                                 </thead>
