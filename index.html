@@ -1564,7 +1564,9 @@
                     if (this.importType === 'relative') {
                         return [
                             { key: 'parentPersonnelCccd', label: 'CCCD Cán bộ (Dùng để khớp dữ liệu)' },
-                            { key: 'parentPersonnelName', label: 'Họ và tên cán bộ' },
+                            { key: 'parentPersonnelName', label: '[Thông tin Cán bộ] Họ và tên' },
+                            { key: 'parentPosition', label: '[Thông tin Cán bộ] Chức vụ' },
+                            { key: 'parentDepartment', label: '[Thông tin Cán bộ] Đơn vị' },
                             { key: 'relationshipName', label: 'Quan hệ' },
                             { key: 'relativeName', label: 'Họ và tên người thân' },
                             { key: 'birthYear', label: 'Năm sinh' },
@@ -1771,6 +1773,9 @@
                                         match = { key: 'name' };
                                     }
                                 }
+                                else if (this.importType === 'relative' && hl.includes('chức vụ')) match = { key: 'parentPosition' };
+                                else if (this.importType === 'relative' && hl.includes('đơn vị') && !hl.includes('công tác') && !hl.includes('học tập')) match = { key: 'parentDepartment' };
+                                else if (this.importType === 'relative' && hl.includes('nơi ở')) match = { key: 'currentAddress' };
                             }
                             newMapping[index] = match ? match.key : "";
                         });
