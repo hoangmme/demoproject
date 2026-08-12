@@ -394,8 +394,8 @@
         </thead>
         <tbody>
                             <template x-for="(p, i) in personnel" :key="p.id">
-                                <template x-if="p.trips && p.trips.length > 0">
-                                    <template x-for="(tr, j) in p.trips" :key="tr.id">
+                                <template x-if="p.trips && p.trips.filter(t => t.quocGia).length > 0">
+                                    <template x-for="(tr, j) in p.trips.filter(t => t.quocGia)" :key="tr.id">
                                         <tr class="hover:bg-blue-50/50">
                                             <!-- Col 1 to 15 (cá nhân) only show on first trip -->
                                             <td class="border border-gray-300 px-2 py-2" x-text="i+1"></td>
@@ -529,7 +529,7 @@
 
         <tbody>
                             <template x-for="(p, i) in personnel" :key="'p2'+p.id">
-                                <template x-for="(t, j) in p.relatives" :key="t.id">
+                                <template x-for="(t, j) in p.relatives.filter(r => r.relativeName)" :key="t.id">
                                     <tr class="hover:bg-blue-50/50">
                                         <!-- Col 1 to 7 (Cá nhân) -->
                                         <td class="border border-gray-300 px-2 py-2" x-text="i+1"></td>
