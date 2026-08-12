@@ -2444,15 +2444,15 @@
                             <table class="w-full border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50">
-                                        <template x-for="colIndex in Object.keys(importMapping).filter(k => importMapping[k])" :key="colIndex">
-                                            <th class="border p-2" x-text="systemFields.find(f => f.key === importMapping[colIndex])?.label || importMapping[colIndex]"></th>
+                                        <template x-for="colIndex in Object.keys(importMapping)" :key="colIndex">
+                                            <th class="border p-2 whitespace-nowrap" x-text="'Cột ' + (parseInt(colIndex)+1) + ' - ' + (importMapping[colIndex] ? (systemFields.find(f => f.key === importMapping[colIndex])?.label || importMapping[colIndex]) : 'Chưa chọn (Bỏ qua)')"></th>
                                         </template>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template x-for="(row, rIndex) in importRows.slice(0, 5)" :key="rIndex">
                                         <tr>
-                                            <template x-for="(colIndex, mIndex) in Object.keys(importMapping).filter(k => importMapping[k])" :key="colIndex">
+                                            <template x-for="(colIndex, mIndex) in Object.keys(importMapping)" :key="colIndex">
                                                 <td class="border p-2 text-gray-600" x-text="row[colIndex]"></td>
                                             </template>
                                         </tr>
