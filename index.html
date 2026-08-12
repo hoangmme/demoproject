@@ -2114,7 +2114,10 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             }
                             
                             if (hasData) {
-                                if (!payload.id) payload.id = 'CB' + Date.now() + Math.floor(Math.random()*1000); // Generate ID if missing
+                                if (!payload.id) {
+                                    payload.id = this.generateNextId('CB_', allCbIds);
+                                    allCbIds.push(payload.id);
+                                }
                                 payloads.push(payload);
                                 
                                 if (Object.keys(app3Payload).length > 0) {
@@ -2391,9 +2394,9 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                         ]);
                         
                         if (jsonP.data) {
-                            this.personnel = jsonP.data.map(p => {
+                            this.personnel = jsonP.data.filter(p => p.isDeleted !== true).map(p => {
                                 p.trips = jsonA1.data ? jsonA1.data.filter(a => a.personnelId === p.id) : [];
-                                p.relatives = jsonA2.data ? jsonA2.data.filter(a => a.personnelId === p.id) : [];
+                                p.relatives = jsonA2.data ? jsonA2.data.filter(a => a.personnelId === p.id && a.isDeleted !== true) : [];
                                 
                                 const a3 = jsonA3.data ? jsonA3.data.filter(a => a.personnelId === p.id) : [];
                                 p.flags = a3.length > 0 ? a3[0] : {};
@@ -2550,6 +2553,21 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                     return dept ? dept.name : 'Chưa phân bổ';
                 },
                 
+                generateNextId(prefix, existingIds) {
+                    let maxNum = 0;
+                    for (let id of existingIds) {
+                        if (id && id.startsWith(prefix)) {
+                            const numPart = id.substring(prefix.length);
+                            const num = parseInt(numPart, 10);
+                            if (!isNaN(num) && num > maxNum) {
+                                maxNum = num;
+                            }
+                        }
+                    }
+                    const nextNum = maxNum + 1;
+                    return prefix + String(nextNum).padStart(4, '0');
+                },
+                
                 openPanel(person) {
                     this.selectedPerson = person;
                     if (person) {
@@ -2578,28 +2596,26 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                 
                 
                 async deleteCascade(personnelIds) {
-                    const collections = ['appendix1', 'appendix2', 'appendix3'];
-                    for (let coll of collections) {
-                        try {
-                            const res = await fetch(`${API_URL}/items/${coll}?filter[personnelId][_in]=${personnelIds.join(',')}&fields=id`, {
-                                headers: { 'Authorization': 'Bearer mvp-static-token-999' }
-                            });
-                            if(res.ok) {
-                                const data = await res.json();
-                                if(data.data && data.data.length > 0) {
-                                    const childIds = data.data.map(i => i.id);
-                                    await fetch(`${API_URL}/items/${coll}`, {
-                                        method: 'DELETE',
-                                        headers: { 
-                                            'Authorization': 'Bearer mvp-static-token-999',
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify(childIds)
-                                    });
-                                }
+                    try {
+                        const coll = 'appendix2'; // Only soft delete relatives
+                        const res = await fetch(`${API_URL}/items/${coll}?filter[personnelId][_in]=${personnelIds.join(',')}&fields=id`, {
+                            headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                        });
+                        if(res.ok) {
+                            const data = await res.json();
+                            if(data.data && data.data.length > 0) {
+                                const childIds = data.data.map(i => i.id);
+                                await fetch(`${API_URL}/items/${coll}`, {
+                                    method: 'PATCH',
+                                    headers: { 
+                                        'Authorization': 'Bearer mvp-static-token-999',
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ keys: childIds, data: { isDeleted: true } })
+                                });
                             }
-                        } catch(e) { console.error('Cascade error', e); }
-                    }
+                        }
+                    } catch(e) { console.error('Cascade error', e); }
                 },
                 async deleteSelected() {
                     if (!this.isAdmin()) return;
@@ -2608,12 +2624,12 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                     try {
                         await this.deleteCascade(this.selectedIds);
                         const res = await fetch(`${API_URL}/items/personnels`, {
-                            method: 'DELETE',
+                            method: 'PATCH',
                             headers: { 
                                 'Authorization': 'Bearer mvp-static-token-999',
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify(this.selectedIds)
+                            body: JSON.stringify({ keys: this.selectedIds, data: { isDeleted: true } })
                         });
                         
                         if (res.ok) {
@@ -2634,8 +2650,9 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                     try {
                         await this.deleteCascade([this.selectedPerson.id]);
                         const res = await fetch(`${API_URL}/items/personnels/${this.selectedPerson.id}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                            body: JSON.stringify({ isDeleted: true })
                         });
                         
                         if (res.ok) {
@@ -2670,7 +2687,10 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             if (payload[k] === "") payload[k] = null;
                         });
                         if (!this.selectedPerson && !payload.id) {
-                            payload.id = 'CB' + Date.now() + Math.floor(Math.random()*1000);
+                            const resIds = await fetch(`${API_URL}/items/personnels?fields=id&limit=10000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } });
+                            const jsonIds = await resIds.json();
+                            const allCbIds = jsonIds.data ? jsonIds.data.map(i => i.id) : [];
+                            payload.id = this.generateNextId('CB_', allCbIds);
                         }
                         
                         const res = await fetch(url, {
@@ -2775,8 +2795,19 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             // Xử lý lưu Thân nhân (Phụ lục 2)
                             const originalRelativeIds = (this.selectedPerson && this.selectedPerson.relatives) ? this.selectedPerson.relatives.map(t => t.id) : [];
                             
+                            let allTnIds = [];
+                            if (relatives.some(r => !r.id)) {
+                                const resRelIds = await fetch(`${API_URL}/items/appendix2?fields=id&limit=10000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } });
+                                const jsonRelIds = await resRelIds.json();
+                                allTnIds = jsonRelIds.data ? jsonRelIds.data.map(i => i.id) : [];
+                            }
+
                             const mappedRelatives = relatives.map(r => {
-                                const relCopy = { ...r, personnelId: payload.id, id: r.id || ('a2_' + Date.now() + Math.floor(Math.random()*1000)) };
+                                const relCopy = { ...r, personnelId: payload.id };
+                                if (!relCopy.id) {
+                                    relCopy.id = this.generateNextId('TN_', allTnIds);
+                                    allTnIds.push(relCopy.id);
+                                }
                                 delete relCopy.hasForeignElement;
                                 delete relCopy.foreignInfo;
                                 return relCopy;
@@ -2787,8 +2818,9 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             
                             for (const id of deletedRelativeIds) {
                                 await fetch(`${API_URL}/items/appendix2/${id}`, {
-                                    method: 'DELETE',
-                                    headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                    body: JSON.stringify({ isDeleted: true })
                                 });
                             }
                             
