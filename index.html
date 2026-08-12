@@ -2688,6 +2688,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             
                             const mappedTrips = trips.filter(t => t.country).map(t => {
                                 const m = {
+                                    id: t.id || ('trip_' + Date.now() + Math.floor(Math.random()*1000)),
                                     personnelId: payload.id,
                                     decisionNumber: t.qd || null,
                                     decisionDate: t.qdDate || null,
@@ -2724,23 +2725,19 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             
                             // Thêm hoặc Cập nhật trips
                             for (const trip of mappedTrips) {
-                                if (trip.id) {
-                                    await fetch(`${API_URL}/items/appendix1/${trip.id}`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
-                                        body: JSON.stringify(trip)
-                                    });
-                                } else {
-                                    await fetch(`${API_URL}/items/appendix1`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
-                                        body: JSON.stringify(trip)
-                                    });
-                                }
+                                const m = trip.id && this.selectedPerson && this.selectedPerson.trips && this.selectedPerson.trips.some(t => t.id === trip.id) ? 'PATCH' : 'POST';
+                                const u = m === 'PATCH' ? `${API_URL}/items/appendix1/${trip.id}` : `${API_URL}/items/appendix1`;
+                                const r = await fetch(u, {
+                                    method: m,
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                    body: JSON.stringify(trip)
+                                });
+                                if (!r.ok) console.error("Lỗi lưu Phụ lục 1:", await r.text());
                             }
                             
                             // Xử lý lưu Flags (Phụ lục 3)
                             const mappedFlags = {
+                                id: flags.id || ('a3_' + Date.now() + Math.floor(Math.random()*1000)),
                                 personnelId: payload.id,
                                 trongYeu: flags.politicalIssue || null,
                                 thamNhung: flags.investigating || null,
@@ -2756,19 +2753,22 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                 workInForeignCompany: flags.fdi || null
                             };
                             
-                            if (flags.id) {
-                                await fetch(`${API_URL}/items/appendix3/${flags.id}`, {
+                            const isNewFlag = !(flags.id && this.selectedPerson && this.selectedPerson.flags && this.selectedPerson.flags.id);
+                            if (!isNewFlag) {
+                                const r = await fetch(`${API_URL}/items/appendix3/${flags.id}`, {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
                                     body: JSON.stringify(mappedFlags)
                                 });
+                                if (!r.ok) console.error("Lỗi lưu Phụ lục 3:", await r.text());
                             } else {
-                                if (Object.values(mappedFlags).some(v => v !== null && v !== payload.id)) {
-                                    await fetch(`${API_URL}/items/appendix3`, {
+                                if (Object.values(mappedFlags).some(v => v !== null && v !== payload.id && v !== mappedFlags.id)) {
+                                    const r = await fetch(`${API_URL}/items/appendix3`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
                                         body: JSON.stringify(mappedFlags)
                                     });
+                                    if (!r.ok) console.error("Lỗi lưu Phụ lục 3:", await r.text());
                                 }
                             }
 
@@ -2776,7 +2776,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             const originalRelativeIds = (this.selectedPerson && this.selectedPerson.relatives) ? this.selectedPerson.relatives.map(t => t.id) : [];
                             
                             const mappedRelatives = relatives.map(r => {
-                                const relCopy = { ...r, personnelId: payload.id };
+                                const relCopy = { ...r, personnelId: payload.id, id: r.id || ('a2_' + Date.now() + Math.floor(Math.random()*1000)) };
                                 delete relCopy.hasForeignElement;
                                 delete relCopy.foreignInfo;
                                 return relCopy;
@@ -2793,19 +2793,22 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             }
                             
                             for (const rel of mappedRelatives) {
-                                if (rel.id) {
-                                    await fetch(`${API_URL}/items/appendix2/${rel.id}`, {
+                                const isNewRel = !(rel.id && this.selectedPerson && this.selectedPerson.relatives && this.selectedPerson.relatives.some(r => r.id === rel.id));
+                                if (!isNewRel) {
+                                    const r = await fetch(`${API_URL}/items/appendix2/${rel.id}`, {
                                         method: 'PATCH',
                                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
                                         body: JSON.stringify(rel)
                                     });
+                                    if (!r.ok) console.error("Lỗi lưu Phụ lục 2:", await r.text());
                                 } else {
                                     if(rel.relativeName || rel.relationshipName) {
-                                        await fetch(`${API_URL}/items/appendix2`, {
+                                        const r = await fetch(`${API_URL}/items/appendix2`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
                                             body: JSON.stringify(rel)
                                         });
+                                        if (!r.ok) console.error("Lỗi lưu Phụ lục 2:", await r.text());
                                     }
                                 }
                             }
