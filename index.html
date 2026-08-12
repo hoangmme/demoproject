@@ -1820,26 +1820,21 @@
                     this.importRows = [];
                     this.importMapping = {};
                 },
-                loadSampleData() {
+                                loadSampleData() {
                     if (this.importType === 'relative') {
-                        // 26 columns
-                        const headers = Array.from({length: 26}, (_, i) => {
-                            const map = {
-                                1: 'Quan hệ', 2: 'Họ và tên người thân', 3: 'Năm sinh', 4: 'Nơi cư trú', 5: 'Nghề nghiệp/Nơi làm việc',
-                                6: 'Quốc gia (Yếu tố NN)', 7: 'Thời gian ở NN', 8: 'Cơ quan/Tổ chức NN', 9: 'Nguồn kinh phí', 10: 'Công việc hiện tại (NN)',
-                                11: 'Kết hôn với người NN', 12: 'Làm việc cho FDI'
-                            };
-                            return map[i+1] ? `Cột ${i+53} (${map[i+1]})` : `Cột ${i+53} (Chưa dùng)`;
-                        }).join('\t');
+                        const headers = ['TT', 'Họ và tên cán bộ', 'Chức vụ', 'Đơn vị', 'Mối quan hệ', 'Họ tên thân nhân', 'Tên khác', 'Ngày, tháng, năm sinh', 'Quê quán', 'Quốc tịch', 'CCCD', 'Nghề nghiệp', 'Nơi đăng ký HKTT', 'Nơi ở hiện nay', 'Số Căn cước công dân', 'Thông tin thân nhân cần lưu ý', 'Nội Dung', 'Cơ quan/Tổ chức NN', 'Quốc Gia', 'Thời gian ở NN', 'Nguồn Kinh phí', 'Công việc hiện tại (NN)', 'Kết hôn với người nước ngoài', 'Làm việc cho FDI', 'Xử lý vi phạm VN', 'Xử lý vi phạm Nước Ngoài'].join('	');
                         const row1 = Array.from({length: 26}, (_, i) => {
-                            const map = {1: 'Vợ', 2: 'Trần Thị Vợ', 3: '1988', 4: 'Hà Nội', 5: 'Giáo viên', 6: 'Úc', 7: '2020-nay', 8: 'ĐH Sydney', 9: 'Tự túc', 10: 'Nghiên cứu sinh', 11: 'Không', 12: 'Không'};
-                            return map[i+1] || ``;
-                        }).join('\t');
+                            const map = {1: 'Nguyễn Văn Cán Bộ', 4: 'Con ruột', 5: 'Nguyễn Văn Con', 7: '2015', 13: 'Hà Nội', 11: 'Học sinh', 18: 'Úc', 19: '2020-nay', 17: 'ĐH Sydney', 20: 'Tự túc'};
+                            return map[i] || ``;
+                        }).join('	');
                         const row2 = Array.from({length: 26}, (_, i) => {
-                            const map = {1: 'Con trai', 2: 'Nguyễn Văn Con', 3: '2015', 4: 'Hà Nội', 5: 'Học sinh'};
-                            return map[i+1] || ``;
-                        }).join('\t');
-                        const text = headers + '\n' + row1 + '\n' + row2;
+                            const map = {1: 'Nguyễn Văn Cán Bộ', 4: 'Vợ', 5: 'Trần Thị Vợ', 7: '1988', 13: 'Hà Nội', 11: 'Giáo viên', 18: 'Úc'};
+                            return map[i] || ``;
+                        }).join('	');
+                        
+                        const text = headers + '
+' + row1 + '
+' + row2;
                         navigator.clipboard.writeText(text).then(() => {
                             alert('Đã copy dữ liệu mẫu Thân nhân vào Clipboard! Bạn hãy dán (Ctrl+V) vào Google Sheets.');
                         }).catch(err => {
@@ -1847,31 +1842,26 @@
                             this.importPasteText = text;
                         });
                     } else {
-                        // 52 columns
-                        const headers = Array.from({length: 52}, (_, i) => {
-                            const map = {
-                                2: 'Họ và Tên', 3: 'Tên khác', 4: 'Năm sinh', 5: 'Dân tộc', 6: 'Tôn giáo',
-                                7: 'Quê quán', 9: 'Chức vụ', 10: 'Nơi ĐKHK thường trú', 11: 'Nơi ở hiện nay', 12: 'Số CCCD',
-                                13: 'Hộ chiếu cá nhân', 14: 'Hộ chiếu công vụ', 15: 'Kết quả thẩm tra TCCT', 16: 'Phòng ban', 17: 'Email',
-                                40: 'Vấn đề TCCT (Tự diễn biến)', 41: 'Đang bị điều tra', 42: 'Vấn đề khác về lý lịch', 43: 'Kỷ luật Đảng', 44: 'Kỷ luật Chính quyền',
-                                45: 'Đi NN không phép', 46: 'Vi phạm PL ở NN', 47: 'Ở lại NN quá hạn', 49: 'Được tặng quà >50tr', 50: 'Cho thuê nhà/đất',
-                                51: 'Làm tại cty FDI', 52: 'Kết hôn với người NN'
-                            };
-                            return map[i+1] ? `Cột ${i+1} (${map[i+1]})` : `Cột ${i+1} (Chưa dùng)`;
-                        }).join('\t');
+                        const headers = ['TT', 'Họ và tên', 'Tên khác', 'Năm sinh', 'Dân tộc', 'Tôn giáo', 'Quê quán', 'Đơn vị công tác', 'Chức vụ', 'Nơi ĐKHK thường trú', 'Nơi ở hiện nay', 'Số CCCD', 'Số hộ chiếu cá nhân', 'Số Hộ chiếu công vụ', 'Kết quả thẩm tra TCCT trước khi đi NN', 'Số Quyết định', 'Ngày ban hành', 'Cơ quan có thẩm quyền ban hành', 'Ngày Xuất cảnh', 'Ngày nhập cảnh', 'Quốc Gia', 'Số lần', 'Mục đích (Công tác)', 'Mục đích (Học tập, tập huấn)', 'Mục đích (Việc riêng)', 'Diện đào tạo', 'Nơi đào tạo', 'Vai trò khi tham gia đào tạo', 'Đơn vị chọn cử', 'Nguồn Kinh phí', 'Thời gian đào tạo', 'Trưởng Đoàn / Đơn vị công tác', 'Thành phần Đoàn', 'Số lượng thành viên Đoàn', 'Kinh phí Ngân sách nhà nước', 'Kinh phí Tự túc', 'Kinh phí Tài trợ', 'Học bổng từ cơ quan tổ chức khác', 'Báo cáo kết quả', 'Nộp hộ chiếu công vụ', 'Vấn đề về tiêu chuẩn chính trị (tự diễn biến, tự chuyển hóa)', 'Đang trong quá trình điều tra', 'Có vấn đề khác về lý lịch (khai man, che dấu)', 'Kỷ luật Đảng', 'Kỷ luật Chính Quyền', 'Đi nước ngoài không xin phép', 'Vi phạm pháp luật ở nước ngoài', 'Ở lại nước ngoài quá thời gian quy định', 'Diện quản lý', 'Được tặng tiền, hiện vật > 50 triệu', 'Cho người nước ngoài thuê nhà, đất', 'Làm việc tại công ty FDI / Kết hôn với người NN'].join('	');
                         const row1 = Array.from({length: 52}, (_, i) => {
-                            const map = {2: 'Nguyễn Văn Mẫu', 3: 'Tèo', 4: '1985', 5: 'Kinh', 6: 'Không', 7: 'Hà Nội', 9: 'Trưởng phòng', 10: 'Hà Nội', 11: 'Hà Nội', 12: '001085123456', 13: 'B123', 14: 'C123', 15: 'Sạch', 16: 'D1', 17: 'mau@vn.com'};
-                            return map[i+1] || ``;
-                        }).join('\t');
+                            const map = {1: 'Nguyễn Văn Mẫu', 2: 'Tèo', 3: '1985', 4: 'Kinh', 5: 'Không', 6: 'Hà Nội', 8: 'Trưởng phòng', 9: 'Hà Nội', 10: 'Hà Nội', 11: '001085123456', 12: 'B123', 13: 'C123', 14: 'Sạch', 7: 'D1'};
+                            return map[i] || ``;
+                        }).join('	');
                         const row2 = Array.from({length: 52}, (_, i) => {
-                            const map = {2: 'Trần Thị Test', 3: 'Mít', 4: '1990', 5: 'Kinh', 6: 'Không', 7: 'Đà Nẵng', 9: 'Nhân viên', 10: 'Đà Nẵng', 11: 'Đà Nẵng', 12: '001090987654', 16: 'D2'};
-                            return map[i+1] || ``;
-                        }).join('\t');
-                        this.importPasteText = headers + '\n' + row1 + '\n' + row2;
+                            const map = {1: 'Trần Thị Test', 2: 'Mít', 3: '1990', 4: 'Kinh', 5: 'Không', 6: 'Đà Nẵng', 8: 'Nhân viên', 9: 'Đà Nẵng', 10: 'Đà Nẵng', 11: '001090987654', 7: 'D2'};
+                            return map[i] || ``;
+                        }).join('	');
+                        
+                        const text = headers + '
+' + row1 + '
+' + row2;
+                        navigator.clipboard.writeText(text).then(() => {
+                            alert('Đã copy dữ liệu mẫu Cán bộ vào Clipboard! Bạn hãy dán (Ctrl+V) vào Google Sheets.');
+                        }).catch(err => {
+                            alert('Lỗi copy, trình duyệt không hỗ trợ. Dữ liệu đã được điền vào ô bên dưới.');
+                            this.importPasteText = text;
+                        });
                     }
-                    this.processPastedData();
-                    this.importMapping = newMapping;
-                    this.importStep = 2; // Jump to step 2 automatically if loading sample data
                 },
                 
                 processPastedData() {
