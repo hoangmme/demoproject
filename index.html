@@ -2650,13 +2650,20 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             ? `${API_URL}/items/personnels/${this.selectedPerson.id}` 
                             : `${API_URL}/items/personnels`;
                         
-                        // Xóa các trường trống hoặc không hợp lệ khỏi JSON
+                        // Lấy riêng trips và flags trước khi gửi payload
                         const payload = JSON.parse(JSON.stringify(this.formData));
+                        const trips = payload.trips || [];
+                        const flags = payload.flags || {};
+                        delete payload.trips;
+                        delete payload.flags;
+                        delete payload.relatives;
+                        
+                        // Xóa các trường trống hoặc không hợp lệ khỏi JSON
                         Object.keys(payload).forEach(k => {
                             if (payload[k] === "") payload[k] = null;
                         });
                         if (!this.selectedPerson && !payload.id) {
-                            payload.id = 'CB' + Date.now();
+                            payload.id = 'CB' + Date.now() + Math.floor(Math.random()*1000);
                         }
                         
                         const res = await fetch(url, {
@@ -2669,10 +2676,92 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                         });
                         
                         if(res.ok) {
+                            // Xử lý lưu Trips (Phụ lục 1)
+                            const originalTripIds = (this.selectedPerson && this.selectedPerson.trips) ? this.selectedPerson.trips.map(t => t.id) : [];
+                            
+                            const mappedTrips = trips.filter(t => t.country).map(t => ({
+                                id: t.id,
+                                personnelId: payload.id,
+                                decisionNumber: t.qd || null,
+                                decisionDate: t.qdDate || null,
+                                decisionIssuer: t.agency || null,
+                                departureDate: t.exit || null,
+                                arrivalDate: t.enter || null,
+                                countryName: t.country || null,
+                                tripCount: t.times || null,
+                                purposeName: t.purpose || null,
+                                fundingName: t.funding || null,
+                                // training fields
+                                trainingType: t.trainType || null,
+                                trainingPlace: t.trainLoc || null,
+                                trainingRole: t.trainRole || null,
+                                sponsorUnit: t.trainAgency || null,
+                                trainingTime: t.trainTime || null,
+                                workRole: t.leader || null,
+                                workMembers: t.members || null,
+                                workMemberCount: t.count || null
+                            }));
+                            
+                            const currentTripIds = mappedTrips.map(t => t.id).filter(id => id);
+                            const deletedTripIds = originalTripIds.filter(id => !currentTripIds.includes(id));
+                            
+                            // Xóa trips đã xóa
+                            for (const id of deletedTripIds) {
+                                await fetch(`${API_URL}/items/appendix1/${id}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                                });
+                            }
+                            
+                            // Thêm hoặc Cập nhật trips
+                            for (const trip of mappedTrips) {
+                                if (trip.id) {
+                                    await fetch(`${API_URL}/items/appendix1/${trip.id}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                        body: JSON.stringify(trip)
+                                    });
+                                } else {
+                                    await fetch(`${API_URL}/items/appendix1`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                        body: JSON.stringify(trip)
+                                    });
+                                }
+                            }
+                            
+                            // Xử lý lưu Flags (Phụ lục 3)
+                            const mappedFlags = {
+                                personnelId: payload.id,
+                                vpChuaPhep: flags.noPermission || null,
+                                klDang: flags.partyDiscipline || null,
+                                klChinhQuyen: flags.govDiscipline || null,
+                                thamNhung: flags.investigating || null,
+                                receivedGiftOver50M: flags.gift || null,
+                                rentHouseToForeigner: flags.rent || null,
+                                workInForeignCompany: flags.fdi || null
+                            };
+                            
+                            if (flags.id) {
+                                await fetch(`${API_URL}/items/appendix3/${flags.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                    body: JSON.stringify(mappedFlags)
+                                });
+                            } else {
+                                if (Object.values(mappedFlags).some(v => v !== null && v !== payload.id)) {
+                                    await fetch(`${API_URL}/items/appendix3`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                        body: JSON.stringify(mappedFlags)
+                                    });
+                                }
+                            }
+
                             this.closePanel();
                             await this.fetchData();
                             await this.fetchLogs(); 
-                            alert("Đã lưu thành công vào Database thật!");
+                            alert("Đã lưu thành công Cán bộ, Các Chuyến đi và Thông tin lưu ý vào Database!");
                         } else {
                             const err = await res.json();
                             alert("Lỗi khi lưu dữ liệu: " + (err.errors?.[0]?.message || 'Lỗi không xác định'));
