@@ -2769,10 +2769,48 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                 }
                             }
 
+                            // Xử lý lưu Thân nhân (Phụ lục 2)
+                            const originalRelativeIds = (this.selectedPerson && this.selectedPerson.relatives) ? this.selectedPerson.relatives.map(t => t.id) : [];
+                            
+                            const mappedRelatives = relatives.map(r => {
+                                const relCopy = { ...r, personnelId: payload.id };
+                                delete relCopy.hasForeignElement;
+                                delete relCopy.foreignInfo;
+                                return relCopy;
+                            });
+                            
+                            const currentRelativeIds = mappedRelatives.map(r => r.id).filter(id => id);
+                            const deletedRelativeIds = originalRelativeIds.filter(id => !currentRelativeIds.includes(id));
+                            
+                            for (const id of deletedRelativeIds) {
+                                await fetch(`${API_URL}/items/appendix2/${id}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                                });
+                            }
+                            
+                            for (const rel of mappedRelatives) {
+                                if (rel.id) {
+                                    await fetch(`${API_URL}/items/appendix2/${rel.id}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                        body: JSON.stringify(rel)
+                                    });
+                                } else {
+                                    if(rel.relativeName || rel.relationshipName) {
+                                        await fetch(`${API_URL}/items/appendix2`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                            body: JSON.stringify(rel)
+                                        });
+                                    }
+                                }
+                            }
+
                             this.closePanel();
                             await this.fetchData();
                             await this.fetchLogs(); 
-                            alert("Đã lưu thành công Cán bộ, Các Chuyến đi và Thông tin lưu ý vào Database!");
+                            alert("Đã lưu thành công Cán bộ, Thân nhân, Chuyến đi và Thông tin lưu ý vào Database!");
                         } else {
                             const err = await res.json();
                             alert("Lỗi khi lưu dữ liệu: " + (err.errors?.[0]?.message || 'Lỗi không xác định'));
