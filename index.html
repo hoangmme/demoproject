@@ -1827,9 +1827,9 @@
                     this.importRows = [];
                     this.importMapping = {};
                 },
-                                                loadSampleData() {
+                                                                loadSampleData() {
                     if (this.importType === 'relative') {
-                        const headers = ['Cột 1 (TT)', 'Cột 2 (Họ và tên cán bộ)', 'Cột 3 (Chức vụ cán bộ)', 'Cột 4 (Đơn vị công tác cán bộ)', 'Cột 5 (Mối quan hệ)', 'Cột 6 (Họ tên thân nhân)', 'Cột 7 (Tên khác)', 'Cột 8 (Năm sinh)', 'Cột 9 (Quê quán)', 'Cột 10 (Quốc tịch)', 'Cột 11 (CCCD)', 'Cột 12 (Nghề nghiệp)', 'Cột 13 (Nơi ĐKHK thường trú)', 'Cột 14 (Nơi ở hiện nay)', 'Cột 15 (Lưu ý khác)', 'Cột 16 (Cơ quan/Tổ chức NN)', 'Cột 17 (Quốc Gia)', 'Cột 18 (Thời gian ở NN)', 'Cột 19 (Nguồn Kinh phí)', 'Cột 20 (Công việc hiện tại (NN))', 'Cột 21 (Kết hôn với người nước ngoài)', 'Cột 22 (Làm việc cho FDI)', 'Cột 23 (Xử lý vi phạm VN)', 'Cột 24 (Xử lý vi phạm Nước Ngoài)'].join('	');
+                        const headers = ['Cột 1 (TT)', 'Cột 2 (Họ và tên cán bộ)', 'Cột 3 (Chức vụ)', 'Cột 4 (Đơn vị)', 'Cột 5 (Mối quan hệ)', 'Cột 6 (Họ và tên thân nhân)', 'Cột 7 (Tên khác)', 'Cột 8 (Ngày, tháng, năm sinh)', 'Cột 9 (Quê quán)', 'Cột 10 (Quốc tịch)', 'Cột 11 (CCCD)', 'Cột 12 (Nghề nghiệp)', 'Cột 13 (Nơi đăng ký HKTT)', 'Cột 14 (Nơi ở hiện nay)', 'Cột 15 (Thông tin lưu ý (Số hồ sơ/Nội dung))', 'Cột 16 (Đơn vị học tập, làm việc, sinh sống ở nước ngoài)', 'Cột 17 (Quốc Gia)', 'Cột 18 (Thời gian học tập, làm việc, sinh sống ở nước ngoài)', 'Cột 19 (Nguồn Kinh phí (Tự túc; học bổng; mời làm việc; tài trợ ))', 'Cột 20 (Đơn vị công tác hiện nay)', 'Cột 21 (Kết hôn với người nước ngoài)', 'Cột 22 (Làm việc tại công ty có vốn đầu tư nước ngoài)', 'Cột 23 (Xử lý vi phạm VN (Pháp luật Việt Nam))', 'Cột 24 (Xử lý vi phạm Nước Ngoài (Nước sở tại))'].join('	');
                         const row1 = Array.from({length: 24}, (_, i) => {
                             const map = {1: 'Nguyễn Văn Cán Bộ', 4: 'Con ruột', 5: 'Nguyễn Văn Con', 7: '2015', 12: 'Hà Nội', 11: 'Học sinh', 16: 'Úc', 17: '2020-nay', 15: 'ĐH Sydney', 18: 'Tự túc'};
                             return map[i] || ``;
@@ -1839,7 +1839,9 @@
                             return map[i] || ``;
                         }).join('	');
                         
-                        const text = headers + '\n' + row1 + '\n' + row2;
+                        const text = headers + '
+' + row1 + '
+' + row2;
                         navigator.clipboard.writeText(text).then(() => {
                             alert('Đã copy dữ liệu mẫu Thân nhân vào Clipboard! Bạn hãy dán (Ctrl+V) vào Google Sheets.');
                         }).catch(err => {
@@ -1847,17 +1849,19 @@
                             this.importPasteText = text;
                         });
                     } else {
-                        const headers = ['Cột 1 (TT)', 'Cột 2 (Họ và tên)', 'Cột 3 (Tên khác)', 'Cột 4 (Năm sinh)', 'Cột 5 (Dân tộc)', 'Cột 6 (Tôn giáo)', 'Cột 7 (Quê quán)', 'Cột 8 (Đơn vị công tác)', 'Cột 9 (Chức vụ)', 'Cột 10 (Nơi ĐKHK thường trú)', 'Cột 11 (Nơi ở hiện nay)', 'Cột 12 (Số CCCD)', 'Cột 13 (Số hộ chiếu cá nhân)', 'Cột 14 (Số Hộ chiếu công vụ)', 'Cột 15 (Kết quả thẩm tra TCCT trước khi đi NN)', 'Cột 16 (Số Quyết định)', 'Cột 17 (Ngày ban hành)', 'Cột 18 (Cơ quan có thẩm quyền ban hành)', 'Cột 19 (Ngày Xuất cảnh)', 'Cột 20 (Ngày nhập cảnh)', 'Cột 21 (Quốc Gia)', 'Cột 22 (Số lần)', 'Cột 23 (Mục đích (Công tác/Học tập/Việc riêng))', 'Cột 24 (Diện đào tạo)', 'Cột 25 (Nơi đào tạo)', 'Cột 26 (Vai trò khi tham gia đào tạo)', 'Cột 27 (Đơn vị chọn cử)', 'Cột 28 (Nguồn Kinh phí (Ngân sách/Tự túc/Tài trợ/Học bổng))', 'Cột 29 (Thời gian đào tạo)', 'Cột 30 (Trưởng Đoàn / Đơn vị công tác)', 'Cột 31 (Thành phần Đoàn)', 'Cột 32 (Số lượng thành viên Đoàn)', 'Cột 33 (Báo cáo kết quả)', 'Cột 34 (Nộp hộ chiếu công vụ)', 'Cột 35 (Vấn đề về tiêu chuẩn chính trị)', 'Cột 36 (Đang trong quá trình điều tra)', 'Cột 37 (Có vấn đề khác về lý lịch (khai man, che dấu))', 'Cột 38 (Kỷ luật Đảng)', 'Cột 39 (Kỷ luật Chính Quyền)', 'Cột 40 (Đi nước ngoài không xin phép)', 'Cột 41 (Vi phạm pháp luật ở nước ngoài)', 'Cột 42 (Ở lại nước ngoài quá thời gian quy định)', 'Cột 43 (Diện quản lý)', 'Cột 44 (Được tặng tiền, hiện vật > 50 triệu)', 'Cột 45 (Cho người nước ngoài thuê nhà, đất)', 'Cột 46 (Làm việc tại công ty FDI / Kết hôn với người NN)'].join('	');
-                        const row1 = Array.from({length: 46}, (_, i) => {
-                            const map = {1: 'Nguyễn Văn Mẫu', 2: 'Tèo', 3: '1985', 4: 'Kinh', 5: 'Không', 6: 'Hà Nội', 7: 'Trưởng phòng', 8: 'Hà Nội', 9: 'Hà Nội', 10: '001085123456', 11: 'B123', 12: 'C123', 13: 'Sạch', 6: 'D1'};
+                        const headers = ['Cột 1 (TT)', 'Cột 2 (Họ và tên)', 'Cột 3 (Tên khác)', 'Cột 4 (Ngày, tháng, năm sinh)', 'Cột 5 (Dân tộc)', 'Cột 6 (Tôn giáo)', 'Cột 7 (Quê quán)', 'Cột 8 (Đơn vị công tác)', 'Cột 9 (Chức vụ)', 'Cột 10 (Nơi đăng ký hộ khẩu thường trú)', 'Cột 11 (Nơi ở hiện nay)', 'Cột 12 (Số Căn cước công dân)', 'Cột 13 (Số hộ chiếu cá nhân)', 'Cột 14 (Số Hộ chiếu công vụ)', 'Cột 15 (Kết quả thẩm tra, xác minh TCCT trước khi đi nước ngoài)', 'Cột 16 (Số Quyết định)', 'Cột 17 (Ngày ban hành)', 'Cột 18 (Cơ quan, người có thẩm quyền ban hành)', 'Cột 19 (Ngày Xuất cảnh)', 'Cột 20 (Ngày nhập cảnh)', 'Cột 21 (Quốc Gia)', 'Cột 22 (Số lần)', 'Cột 23 (Mục đích chuyến đi (Công tác/Học tập/Việc riêng))', 'Cột 24 (Diện đào tạo)', 'Cột 25 (Nơi đào tạo)', 'Cột 26 (Vai trò khi tham gia đào tạo tại nước ngoài)', 'Cột 27 (Đơn vị chọn cử)', 'Cột 28 (Nguồn Kinh phí (tự túc, học bổng, tài trợ (cơ quan tài trợ),…))', 'Cột 29 (Thời gian đào tạo (ngày, tháng, năm đến ngày, tháng, năm))', 'Cột 30 (Trưởng Đoàn / Chức vụ / Đơn vị công tác)', 'Cột 31 (Thành phần Đoàn (CBCCVBC cơ quan, đơn vị))', 'Cột 32 (Số lượng thành viên Đoàn)', 'Cột 33 (Nguồn Kinh phí Đoàn (NSNN/Tự túc/Tài trợ/Học bổng))', 'Cột 34 (Báo cáo kết quả)', 'Cột 35 (Nộp hộ chiếu công vụ)', 'Cột 36 (Vấn đề về tiêu chuẩn chính trị (Tự diễn biến/Chuyển hóa/TCCT khác))', 'Cột 37 (Bản thân và thân nhân đang trong quá trình điều tra, xem xét hoặc có liên quan đến vụ việc phức tạp)', 'Cột 38 (Có vấn đề khác về lý lịch (khai man, che dấu lý lịch, bằng cấp,…))', 'Cột 39 (Kỷ luật Đảng)', 'Cột 40 (Kỷ luật Chính Quyền)', 'Cột 41 (Đi nước ngoài không xin phép)', 'Cột 42 (Vi phạm pháp luật ở nước ngoài)', 'Cột 43 (Ở lại nước ngoài quá thời gian quy định)', 'Cột 44 (Diện quản lý)', 'Cột 45 (Được tặng tiền, hàng, hiện vật có giá trị từ 50 triệu trở lên)', 'Cột 46 (Cho người nước ngoài thuê nhà, đất)', 'Cột 47 (Làm việc tại công ty có vốn đầu tư nước ngoài)'].join('	');
+                        const row1 = Array.from({length: 47}, (_, i) => {
+                            const map = {1: 'Nguyễn Văn Mẫu', 2: 'Tèo', 3: '1985', 4: 'Kinh', 5: 'Không', 6: 'Hà Nội', 7: 'Trưởng phòng', 8: 'Hà Nội', 9: 'Hà Nội', 10: 'Hà Nội', 11: '001085123456', 12: 'B123', 13: 'C123', 14: 'Sạch', 6: 'D1'};
                             return map[i] || ``;
                         }).join('	');
-                        const row2 = Array.from({length: 46}, (_, i) => {
-                            const map = {1: 'Trần Thị Test', 2: 'Mít', 3: '1990', 4: 'Kinh', 5: 'Không', 6: 'Đà Nẵng', 7: 'Nhân viên', 8: 'Đà Nẵng', 9: 'Đà Nẵng', 10: '001090987654', 6: 'D2'};
+                        const row2 = Array.from({length: 47}, (_, i) => {
+                            const map = {1: 'Trần Thị Test', 2: 'Mít', 3: '1990', 4: 'Kinh', 5: 'Không', 6: 'Đà Nẵng', 7: 'Nhân viên', 8: 'Đà Nẵng', 9: 'Đà Nẵng', 10: 'Đà Nẵng', 11: '001090987654', 6: 'D2'};
                             return map[i] || ``;
                         }).join('	');
                         
-                        const text = headers + '\n' + row1 + '\n' + row2;
+                        const text = headers + '
+' + row1 + '
+' + row2;
                         navigator.clipboard.writeText(text).then(() => {
                             alert('Đã copy dữ liệu mẫu Cán bộ vào Clipboard! Bạn hãy dán (Ctrl+V) vào Google Sheets.');
                         }).catch(err => {
