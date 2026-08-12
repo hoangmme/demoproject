@@ -1793,18 +1793,26 @@
                     this.isImporting = true;
                     try {
                         if (this.importType === 'relative') {
-                            // Import Relatives Logic
-                            const targetPerson = this.personnel.find(p => p.id === this.importTargetPersonnelId);
-                            if (!targetPerson) throw new Error('Không tìm thấy cán bộ hợp lệ');
-                            
+                            // Import Relatives Logic with Bulk Mapping
                             const payloads = [];
+                            const errorLogs = [];
+                            let rowNum = 1; // Header is row 0
+                            
                             for (let r of this.importRows) {
+                                rowNum++;
                                 let hasData = false;
-                                const payload = { personnelId: targetPerson.id };
+                                const payload = {};
+                                let parentCccd = null;
+                                
                                 for (let i = 0; i < this.importHeaders.length; i++) {
                                     const fieldKey = this.importMapping[i];
                                     let val = r[i]?.trim();
                                     if (fieldKey && val) {
+                                        const ignoredFields = ['stt', 'parentPersonnelCccd', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'otherName', 'hometown', 'nationality', 'hktt', 'fileNumber', 'content'];
+                                        if (ignoredFields.includes(fieldKey)) {
+                                            if (fieldKey === 'parentPersonnelCccd') parentCccd = val;
+                                            continue; // Ignore pseudo/unsupported fields for relative DB insertion
+                                        }
                                         if (fieldKey === 'marriedToForeigner' || fieldKey === 'workInForeignCompany') {
                                             val = (val.toLowerCase() === 'có' || val.toLowerCase() === 'yes') ? true : false;
                                         }
@@ -1812,29 +1820,53 @@
                                         hasData = true;
                                     }
                                 }
-                                if (hasData) payloads.push(payload);
+                                
+                                if (hasData) {
+                                    if (!parentCccd) {
+                                        errorLogs.push(`Dòng ${rowNum}: Thiếu CCCD Cán bộ để khớp dữ liệu.`);
+                                        continue;
+                                    }
+                                    
+                                    const targetPerson = this.personnel.find(p => p.cccd === parentCccd);
+                                    if (!targetPerson) {
+                                        errorLogs.push(`Dòng ${rowNum}: Không tìm thấy Cán bộ có CCCD = ${parentCccd}.`);
+                                        continue;
+                                    }
+                                    
+                                    payload.personnelId = targetPerson.id;
+                                    payloads.push(payload);
+                                }
                             }
                             
                             if (payloads.length === 0) {
-                                alert("Không có dữ liệu hợp lệ!");
+                                alert('Không có dữ liệu hợp lệ để lưu!\n\n' + errorLogs.slice(0, 5).join('\n'));
                                 this.isImporting = false;
                                 return;
                             }
                             
+                            // Batch insert
                             const res = await fetch(`${API_URL}/items/appendix2`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer mvp-static-token-999'
+                                },
                                 body: JSON.stringify(payloads)
                             });
                             
-                            if (res.ok) {
-                                alert(`Đã thêm thành công ${payloads.length} thân nhân!`);
+                            if(res.ok) {
                                 this.isImportModalOpen = false;
                                 await this.fetchData();
+                                let msg = `Đã import thành công ${payloads.length} thân nhân!`;
+                                if(errorLogs.length > 0) {
+                                    msg += `\nTuy nhiên có ${errorLogs.length} dòng bị lỗi:\n- ` + errorLogs.slice(0, 5).join('\n- ');
+                                    if(errorLogs.length > 5) msg += `\n... và ${errorLogs.length - 5} lỗi khác.`;
+                                }
+                                alert(msg);
                             } else {
-                                alert("Có lỗi xảy ra khi lưu thân nhân!");
+                                const err = await res.json();
+                                alert("Lỗi khi import: " + (err.errors?.[0]?.message || 'Lỗi không xác định'));
                             }
-                            
                             this.isImporting = false;
                             return;
                         }
