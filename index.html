@@ -1756,35 +1756,33 @@
                                 return;
                             }
                             
-                            let match = this.systemFields.find(f => {
-                                const fl = f.label.toLowerCase();
-                                const cleanHl = hl.replace(/cột \d+/g, '').replace(/[()]/g, '').trim();
-                                const cleanFl = fl.replace(/cột \d+/g, '').replace(/[()]/g, '').trim();
-                                return cleanHl.includes(cleanFl) || cleanFl.includes(cleanHl);
-                            });
-                            if (!match) {
-                                if (hl.includes('cccd') || hl.includes('căn cước')) {
-                                    if (this.importType === 'relative') {
-                                        // Hardcode index mapping based on 26-column template to support old CSVs
-                                        if (index === 10 || hl.includes('cán bộ')) match = { key: 'parentPersonnelCccd' };
-                                        else match = { key: 'cccd' };
-                                    } else {
-                                        match = { key: 'cccd' };
-                                    }
+                            let matchKey = "";
+                            if (this.importType === 'relative') {
+                                // Strictly map by standard 26-column index for relatives
+                                const mappingArr = [
+                                    'stt', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'relationshipName',
+                                    'relativeName', 'otherName', 'birthYear', 'hometown', 'nationality',
+                                    'parentPersonnelCccd', 'occupation', 'hktt', 'currentAddress', 'cccd',
+                                    'fileNumber', 'content', 'unitAbroad', 'countryName', 'timeAbroad',
+                                    'fundingName', 'currentUnit', 'marriedToForeigner', 'workInForeignCompany', 'xlplNuocSoTai', 'xlplVietNam'
+                                ];
+                                if (index < mappingArr.length) {
+                                    matchKey = mappingArr[index];
                                 }
-                                else if (hl.includes('họ tên') || hl.includes('họ và tên')) {
-                                    if (this.importType === 'relative') {
-                                        if (hl.includes('thân nhân')) match = { key: 'relativeName' };
-                                        else if (hl.includes('cán bộ')) match = { key: 'parentPersonnelName' };
-                                    } else {
-                                        match = { key: 'name' };
-                                    }
+                            } else {
+                                let match = this.systemFields.find(f => {
+                                    const fl = f.label.toLowerCase();
+                                    const cleanHl = hl.replace(/cột \d+/g, '').replace(/[()]/g, '').trim();
+                                    const cleanFl = fl.replace(/cột \d+/g, '').replace(/[()]/g, '').trim();
+                                    return cleanHl.includes(cleanFl) || cleanFl.includes(cleanHl);
+                                });
+                                if (!match) {
+                                    if (hl.includes('cccd') || hl.includes('căn cước')) match = { key: 'cccd' };
+                                    else if (hl.includes('họ tên') || hl.includes('họ và tên')) match = { key: 'name' };
                                 }
-                                else if (this.importType === 'relative' && hl.includes('chức vụ')) match = { key: 'parentPosition' };
-                                else if (this.importType === 'relative' && hl.includes('đơn vị') && !hl.includes('công tác') && !hl.includes('học tập')) match = { key: 'parentDepartment' };
-                                else if (this.importType === 'relative' && hl.includes('nơi ở')) match = { key: 'currentAddress' };
+                                matchKey = match ? match.key : "";
                             }
-                            newMapping[index] = match ? match.key : "";
+                            newMapping[index] = matchKey;
                         });
                         this.importMapping = newMapping;
                         this.importStep = 2;
