@@ -121,7 +121,7 @@
             <div x-show="currentView === 'canbo'" class="flex-1 overflow-auto p-8">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="p-4 flex justify-between items-center border-b border-gray-100">
-                        <h3 class="font-bold text-gray-800">Danh sách tài khoản hệ thống</h3>
+                        <h3 class="font-bold text-gray-800">Danh sách Cán bộ</h3>
                         <button x-show="isAdmin() && selectedIds.length > 0" @click="deleteSelected()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>Xóa đã chọn (<span x-text="selectedIds.length"></span>)</button>
                         
                     </div>
@@ -148,10 +148,9 @@
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#447f28]/10 text-[#447f28]" x-text="getDepartmentName(person.departmentId)"></span>
                                     </td>
                                     <td class="py-3 px-6 text-sm text-gray-600" x-text="person.cccd"></td>
-                                    <td class="py-3 px-6 text-right">
-                                        <button class="text-gray-400 hover:text-[#447f28] p-2 transition-colors">
-                                            Sửa
-                                        </button>
+                                    <td class="py-3 px-6 text-right flex justify-end gap-2">
+                                        <button @click.stop="openPanel(person)" class="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors text-xs font-medium">Chi tiết</button>
+                                        <button x-show="isAdmin()" @click.stop="selectedPerson = person; deleteData()" class="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-200 transition-colors text-xs font-medium">Xóa</button>
                                     </td>
                                 </tr>
                             </template>
@@ -2269,11 +2268,36 @@
                 },
                 
                 
+                async deleteCascade(personnelIds) {
+                    const collections = ['appendix1', 'appendix2', 'appendix3'];
+                    for (let coll of collections) {
+                        try {
+                            const res = await fetch(`${API_URL}/items/${coll}?filter[personnelId][_in]=${personnelIds.join(',')}&fields=id`, {
+                                headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                            });
+                            if(res.ok) {
+                                const data = await res.json();
+                                if(data.data && data.data.length > 0) {
+                                    const childIds = data.data.map(i => i.id);
+                                    await fetch(`${API_URL}/items/${coll}`, {
+                                        method: 'DELETE',
+                                        headers: { 
+                                            'Authorization': 'Bearer mvp-static-token-999',
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify(childIds)
+                                    });
+                                }
+                            }
+                        } catch(e) { console.error('Cascade error', e); }
+                    }
+                },
                 async deleteSelected() {
                     if (!this.isAdmin()) return;
                     if (!confirm(`Bạn có chắc chắn muốn xóa ${this.selectedIds.length} cán bộ đã chọn? Các bản ghi phụ lục liên quan có thể sẽ không bị xóa hoàn toàn khỏi CSDL nhưng sẽ không hiển thị nữa.`)) return;
                     
                     try {
+                        await this.deleteCascade(this.selectedIds);
                         const res = await fetch(`${API_URL}/items/personnels`, {
                             method: 'DELETE',
                             headers: { 
@@ -2299,6 +2323,7 @@
                     if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ hồ sơ của cán bộ này?')) return;
                     
                     try {
+                        await this.deleteCascade([this.selectedPerson.id]);
                         const res = await fetch(`${API_URL}/items/personnels/${this.selectedPerson.id}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': 'Bearer mvp-static-token-999' }
