@@ -948,17 +948,45 @@
                                                     
                                                     <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày Xuất cảnh <span x-show="showColumns" class="text-blue-600">[Cột 19]</span></label><input type="date" x-model="trip.exit" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.exit')"></div>
                                                     <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày Nhập cảnh <span x-show="showColumns" class="text-blue-600">[Cột 20]</span></label><input type="date" x-model="trip.enter" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.enter')"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc Gia <span x-show="showColumns" class="text-blue-600">[Cột 21]</span></label><input type="text" x-model="trip.country" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.country')"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc Gia <span x-show="showColumns" class="text-blue-600">[Cột 21]</span></label><select x-model="trip.country" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.country')">
+                                                            <option value="">-- Chọn --</option>
+                                                            <option value="Mỹ">Mỹ</option>
+                                                            <option value="Trung Quốc">Trung Quốc</option>
+                                                            <option value="Đài Loan">Đài Loan</option>
+                                                            <option value="Hàn Quốc">Hàn Quốc</option>
+                                                            <option value="Nhật Bản">Nhật Bản</option>
+                                                            <option value="Nga">Nga</option>
+                                                            <option value="Pháp">Pháp</option>
+                                                            <option value="Anh">Anh</option>
+                                                            <option value="Đức">Đức</option>
+                                                            <option value="Úc">Úc</option>
+                                                            <option value="Canada">Canada</option>
+                                                            <option value="Singapore">Singapore</option>
+                                                            <option value="Thái Lan">Thái Lan</option>
+                                                            <option value="Lào">Lào</option>
+                                                            <option value="Campuchia">Campuchia</option>
+                                                            <option value="Khác">Khác</option>
+                                                        </select></div>
                                                     <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Số lần <span x-show="showColumns" class="text-blue-600">[Cột 22]</span></label><input type="number" x-model="trip.times" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.times')"></div>
                                                     
                                                     <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">Mục đích (Ghi rõ mục đích) <span x-show="showColumns" class="text-blue-600">[Cột 23,24,25]</span></label>
-                                                        <input type="text" x-model="trip.purpose" placeholder="Công tác / Học tập / Việc riêng..." class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.purpose')">
+                                                        <select x-model="trip.purpose" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.purpose')">
+                                                            <option value="">-- Chọn --</option>
+                                                            <option value="Hội nghị/Hội thảo">Hội nghị/Hội thảo</option>
+                                                            <option value="Học tập/Nghiên cứu">Học tập/Nghiên cứu</option>
+                                                            <option value="Công tác">Công tác</option>
+                                                            <option value="Việc riêng/Thăm thân">Việc riêng/Thăm thân</option>
+                                                            <option value="Du lịch">Du lịch</option>
+                                                            <option value="Khác">Khác</option>
+                                                        </select>
                                                     </div>
                                                     <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">Kinh phí <span x-show="showColumns" class="text-blue-600">[Cột 26]</span></label>
                                                         <select x-model="trip.funding" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.funding')">
-                                                            <option>NSNN</option>
-                                                            <option>Cơ quan đài thọ</option>
-                                                            <option>Cá nhân</option>
+                                                            <option value="">-- Chọn --</option>
+                                                            <option value="Ngân sách nhà nước">Ngân sách nhà nước</option>
+                                                            <option value="Cơ quan, tổ chức đài thọ">Cơ quan, tổ chức đài thọ</option>
+                                                            <option value="Cá nhân tự túc">Cá nhân tự túc</option>
+                                                            <option value="Khác">Khác</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -1042,10 +1070,34 @@
                                                     </div>
                                                     
                                                     <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đơn vị học tập/làm việc ở NN <span x-show="showColumns" class="text-blue-600">[Cột 18]</span></label><input type="text" x-model="rel.unitAbroad" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc gia <span x-show="showColumns" class="text-blue-600">[Cột 19]</span></label><input type="text" x-model="rel.countryName" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc gia <span x-show="showColumns" class="text-blue-600">[Cột 19]</span></label><select x-model="rel.countryName" class="w-full border rounded px-2 py-1">
+                                                        <option value="">-- Chọn --</option>
+                                                        <option value="Mỹ">Mỹ</option>
+                                                        <option value="Trung Quốc">Trung Quốc</option>
+                                                        <option value="Đài Loan">Đài Loan</option>
+                                                        <option value="Hàn Quốc">Hàn Quốc</option>
+                                                        <option value="Nhật Bản">Nhật Bản</option>
+                                                        <option value="Nga">Nga</option>
+                                                        <option value="Pháp">Pháp</option>
+                                                        <option value="Anh">Anh</option>
+                                                        <option value="Đức">Đức</option>
+                                                        <option value="Úc">Úc</option>
+                                                        <option value="Canada">Canada</option>
+                                                        <option value="Singapore">Singapore</option>
+                                                        <option value="Thái Lan">Thái Lan</option>
+                                                        <option value="Lào">Lào</option>
+                                                        <option value="Campuchia">Campuchia</option>
+                                                        <option value="Khác">Khác</option>
+                                                    </select></div>
                                                     <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Thời gian <span x-show="showColumns" class="text-blue-600">[Cột 20]</span></label><input type="text" x-model="rel.timeAbroad" class="w-full border rounded px-2 py-1"></div>
                                                     
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Nguồn kinh phí <span x-show="showColumns" class="text-blue-600">[Cột 21]</span></label><input type="text" x-model="rel.fundingName" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Nguồn kinh phí <span x-show="showColumns" class="text-blue-600">[Cột 21]</span></label><select x-model="rel.fundingName" class="w-full border rounded px-2 py-1">
+                                                        <option value="">-- Chọn --</option>
+                                                        <option value="Ngân sách nhà nước">Ngân sách nhà nước</option>
+                                                        <option value="Cơ quan, tổ chức đài thọ">Cơ quan, tổ chức đài thọ</option>
+                                                        <option value="Cá nhân tự túc">Cá nhân tự túc</option>
+                                                        <option value="Khác">Khác</option>
+                                                    </select></div>
                                                     <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đơn vị công tác hiện nay <span x-show="showColumns" class="text-blue-600">[Cột 22]</span></label><input type="text" x-model="rel.currentUnit" class="w-full border rounded px-2 py-1"></div>
                                                     
                                                     <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Kết hôn với người NN <span x-show="showColumns" class="text-blue-600">[Cột 23]</span></label><input type="text" x-model="rel.marriedToForeigner" class="w-full border rounded px-2 py-1"></div>
