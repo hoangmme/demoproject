@@ -1744,9 +1744,16 @@
                                 return cleanHl.includes(cleanFl) || cleanFl.includes(cleanHl);
                             });
                             if (!match) {
-                                if(hl.includes('họ tên') || hl.includes('họ và tên')) match = { key: 'name' };
                                 if(hl.includes('cccd') && hl.includes('cán bộ')) match = { key: 'parentPersonnelCccd' };
                                 else if(hl.includes('cccd') || hl.includes('căn cước')) match = { key: 'cccd' };
+                                else if(hl.includes('họ tên') || hl.includes('họ và tên')) {
+                                    if (this.importType === 'relative') {
+                                        if (hl.includes('thân nhân')) match = { key: 'relativeName' };
+                                        // "Họ và tên cán bộ" sẽ bị bỏ qua (không map)
+                                    } else {
+                                        match = { key: 'name' };
+                                    }
+                                }
                             }
                             newMapping[index] = match ? match.key : "";
                         });
