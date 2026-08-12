@@ -172,48 +172,60 @@
                     <!-- Charts / Lists Row -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <!-- Mục đích xuất ngoại -->
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-96 overflow-auto">
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 h-96 overflow-auto">
                             <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Mục đích xuất ngoại</h3>
-                            <ul class="space-y-3">
-                                <template x-for="(count, name) in dashboardStats.purposeCount" :key="name">
-                                    <li class="flex justify-between items-center text-sm">
-                                        <span class="text-gray-700 truncate pr-2" x-text="name"></span>
-                                        <span class="bg-blue-100 text-blue-800 py-1 px-2.5 rounded-full font-bold text-xs" x-text="count"></span>
-                                    </li>
+                            <div class="space-y-4">
+                                <template x-for="item in dashboardStats.purposeList" :key="item.name">
+                                    <div>
+                                        <div class="flex justify-between items-end mb-1">
+                                            <span class="text-xs font-semibold text-gray-700 truncate pr-2" x-text="item.name"></span>
+                                            <span class="text-xs font-bold text-blue-600" x-text="item.count"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-100 rounded-full h-2">
+                                            <div class="bg-blue-500 h-2 rounded-full transition-all duration-500" :style="`width: ${(item.count / dashboardStats.maxPurpose) * 100}%`"></div>
+                                        </div>
+                                    </div>
                                 </template>
-                                <li x-show="Object.keys(dashboardStats.purposeCount).length === 0" class="text-gray-400 text-sm italic">Không có dữ liệu</li>
-                            </ul>
+                            </div>
                         </div>
                         
                         <!-- Quốc gia -->
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-96 overflow-auto">
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 h-96 overflow-auto">
                             <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Quốc gia</h3>
-                            <ul class="space-y-3">
-                                <template x-for="(item, index) in dashboardStats.countryCount" :key="item.name">
-                                    <li class="flex justify-between items-center text-sm">
-                                        <div class="flex items-center gap-2 truncate pr-2">
-                                            <span class="font-bold text-gray-400 w-4" x-text="(index+1)+'.'"></span>
-                                            <span class="text-gray-700 truncate" :class="index < 3 ? 'font-semibold' : ''" x-text="item.name"></span>
+                            <div class="space-y-4">
+                                <template x-for="(item, index) in dashboardStats.countryList" :key="item.name">
+                                    <div>
+                                        <div class="flex justify-between items-end mb-1">
+                                            <div class="flex items-center gap-1.5 truncate pr-2">
+                                                <span class="font-bold text-gray-400 text-[10px]" x-text="(index+1)+'.'"></span>
+                                                <span class="text-xs text-gray-700 truncate" :class="index < 3 ? 'font-bold' : 'font-medium'" x-text="item.name"></span>
+                                            </div>
+                                            <span class="text-xs font-bold text-green-600" x-text="item.count"></span>
                                         </div>
-                                        <span class="bg-green-100 text-green-800 py-1 px-2.5 rounded-full font-bold text-xs" x-text="item.count"></span>
-                                    </li>
+                                        <div class="w-full bg-gray-100 rounded-full h-2">
+                                            <div class="bg-green-500 h-2 rounded-full transition-all duration-500" :style="`width: ${(item.count / dashboardStats.maxCountry) * 100}%`"></div>
+                                        </div>
+                                    </div>
                                 </template>
-                                <li x-show="dashboardStats.countryCount.length === 0" class="text-gray-400 text-sm italic">Không có dữ liệu</li>
-                            </ul>
+                            </div>
                         </div>
                         
                         <!-- Nguồn kinh phí -->
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-96 overflow-auto">
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 h-96 overflow-auto">
                             <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Nguồn kinh phí</h3>
-                            <ul class="space-y-3">
-                                <template x-for="(count, name) in dashboardStats.fundingCount" :key="name">
-                                    <li class="flex justify-between items-center text-sm">
-                                        <span class="text-gray-700 truncate pr-2" x-text="name"></span>
-                                        <span class="bg-purple-100 text-purple-800 py-1 px-2.5 rounded-full font-bold text-xs" x-text="count"></span>
-                                    </li>
+                            <div class="space-y-4">
+                                <template x-for="item in dashboardStats.fundingList" :key="item.name">
+                                    <div>
+                                        <div class="flex justify-between items-end mb-1">
+                                            <span class="text-xs font-semibold text-gray-700 truncate pr-2" x-text="item.name"></span>
+                                            <span class="text-xs font-bold text-purple-600" x-text="item.count"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-100 rounded-full h-2">
+                                            <div class="bg-purple-500 h-2 rounded-full transition-all duration-500" :style="`width: ${(item.count / dashboardStats.maxFunding) * 100}%`"></div>
+                                        </div>
+                                    </div>
                                 </template>
-                                <li x-show="Object.keys(dashboardStats.fundingCount).length === 0" class="text-gray-400 text-sm italic">Không có dữ liệu</li>
-                            </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2170,9 +2182,23 @@
                     let total = this.personnel.length;
                     let missingDecisions = 0;
                     let warnings = 0;
-                    let purposeCount = {};
-                    let countryCountMap = {};
-                    let fundingCount = {};
+                    let purposeCount = {
+                        'Hội nghị/Hội thảo': 0,
+                        'Học tập/Nghiên cứu': 0,
+                        'Công tác': 0,
+                        'Việc riêng/Thăm thân': 0,
+                        'Du lịch': 0
+                    };
+                    let countryCountMap = {
+                        'Mỹ': 0,
+                        'Trung Quốc': 0,
+                        'Đài Loan': 0
+                    };
+                    let fundingCount = {
+                        'Ngân sách nhà nước': 0,
+                        'Cơ quan, tổ chức đài thọ': 0,
+                        'Cá nhân tự túc': 0
+                    };
                     
                     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -2211,25 +2237,33 @@
                     const top3 = ['Mỹ', 'Trung Quốc', 'Đài Loan'];
                     const sortedCountries = [];
                     
-                    // Add top 3 if they exist or even if they are 0 (user request just said 3 cái đầu tiên là mỹ, trung quốc, đài loan)
+                    // Add top 3 if they exist or even if they are 0
                     top3.forEach(c => {
-                        if (countryCountMap[c] !== undefined) {
-                            sortedCountries.push({ name: c, count: countryCountMap[c] });
-                            delete countryCountMap[c];
-                        }
+                        sortedCountries.push({ name: c, count: countryCountMap[c] || 0 });
+                        delete countryCountMap[c];
                     });
                     
                     // Sort the rest
                     const restCountries = Object.keys(countryCountMap).map(k => ({ name: k, count: countryCountMap[k] }));
                     restCountries.sort((a, b) => b.count - a.count);
+                    const finalCountryList = [...sortedCountries, ...restCountries];
                     
+                    // Convert Purpose and Funding to array and sort by count descending
+                    const purposeList = Object.keys(purposeCount).map(k => ({ name: k, count: purposeCount[k] })).sort((a,b) => b.count - a.count);
+                    const fundingList = Object.keys(fundingCount).map(k => ({ name: k, count: fundingCount[k] })).sort((a,b) => b.count - a.count);
+
+                    // To draw the chart, we need the max count
+                    const maxPurpose = Math.max(1, ...purposeList.map(p => p.count));
+                    const maxCountry = Math.max(1, ...finalCountryList.map(c => c.count));
+                    const maxFunding = Math.max(1, ...fundingList.map(f => f.count));
+
                     this.dashboardStats = {
                         total,
                         missingDecisions,
                         warnings,
-                        purposeCount,
-                        countryCount: [...sortedCountries, ...restCountries],
-                        fundingCount
+                        purposeList, maxPurpose,
+                        countryList: finalCountryList, maxCountry,
+                        fundingList, maxFunding
                     };
                 },
                 
