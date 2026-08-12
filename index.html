@@ -1839,9 +1839,7 @@
                             return map[i] || ``;
                         }).join('	');
                         
-                        const text = headers + '
-' + row1 + '
-' + row2;
+                        const text = headers + '\n' + row1 + '\n' + row2;
                         navigator.clipboard.writeText(text).then(() => {
                             alert('Đã copy dữ liệu mẫu Thân nhân vào Clipboard! Bạn hãy dán (Ctrl+V) vào Google Sheets.');
                         }).catch(err => {
@@ -1859,9 +1857,7 @@
                             return map[i] || ``;
                         }).join('	');
                         
-                        const text = headers + '
-' + row1 + '
-' + row2;
+                        const text = headers + '\n' + row1 + '\n' + row2;
                         navigator.clipboard.writeText(text).then(() => {
                             alert('Đã copy dữ liệu mẫu Cán bộ vào Clipboard! Bạn hãy dán (Ctrl+V) vào Google Sheets.');
                         }).catch(err => {
