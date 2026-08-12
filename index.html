@@ -2566,8 +2566,8 @@
                             <table class="w-full border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50">
-                                        <template x-for="fieldKey in Object.values(importMapping).filter(Boolean)" :key="fieldKey">
-                                            <th class="border p-2" x-text="systemFields.find(f => f.key === fieldKey)?.label || fieldKey"></th>
+                                        <template x-for="colIndex in Object.keys(importMapping).filter(k => importMapping[k])" :key="colIndex">
+                                            <th class="border p-2" x-text="systemFields.find(f => f.key === importMapping[colIndex])?.label || importMapping[colIndex]"></th>
                                         </template>
                                     </tr>
                                 </thead>
