@@ -1647,13 +1647,13 @@
                 },
                                                                 loadSampleData() {
                     if (this.importType === 'relative') {
-                        const headers = ['Cột 1 (TT)', 'Cột 2 (Họ và tên cán bộ)', 'Cột 3 (Chức vụ)', 'Cột 4 (Đơn vị)', 'Cột 5 (Mối quan hệ)', 'Cột 6 (Họ và tên thân nhân)', 'Cột 7 (Tên khác)', 'Cột 8 (Ngày, tháng, năm sinh)', 'Cột 9 (Quê quán)', 'Cột 10 (Quốc tịch)', 'Cột 11 (CCCD)', 'Cột 12 (Nghề nghiệp)', 'Cột 13 (Nơi đăng ký HKTT)', 'Cột 14 (Nơi ở hiện nay)', 'Cột 15 (Thông tin lưu ý (Số hồ sơ/Nội dung))', 'Cột 16 (Đơn vị học tập, làm việc, sinh sống ở nước ngoài)', 'Cột 17 (Quốc Gia)', 'Cột 18 (Thời gian học tập, làm việc, sinh sống ở nước ngoài)', 'Cột 19 (Nguồn Kinh phí (Tự túc; học bổng; mời làm việc; tài trợ ))', 'Cột 20 (Đơn vị công tác hiện nay)', 'Cột 21 (Kết hôn với người nước ngoài)', 'Cột 22 (Làm việc tại công ty có vốn đầu tư nước ngoài)', 'Cột 23 (Xử lý vi phạm VN (Pháp luật Việt Nam))', 'Cột 24 (Xử lý vi phạm Nước Ngoài (Nước sở tại))'].join('	');
-                        const row1 = Array.from({length: 24}, (_, i) => {
-                            const map = {1: 'Nguyễn Văn Cán Bộ', 2: 'Trưởng phòng', 3: 'Phòng HC', 4: 'Con ruột', 5: 'Nguyễn Văn Con', 7: '2015', 8: 'Hà Nội', 9: 'Việt Nam', 11: 'Học sinh', 12: 'Hà Nội', 13: 'Hà Nội', 15: 'ĐH Sydney', 16: 'Úc', 17: '2020-nay', 18: 'Tự túc'};
+                        const headers = ['Cột 1 (TT)', 'Cột 2 (Họ và tên cán bộ)', 'Cột 3 (Chức vụ)', 'Cột 4 (Đơn vị)', 'Cột 5 (Mối quan hệ)', 'Cột 6 (Họ và tên thân nhân)', 'Cột 7 (Tên khác)', 'Cột 8 (Ngày, tháng, năm sinh)', 'Cột 9 (Quê quán)', 'Cột 10 (Quốc tịch)', 'Cột 11 (CCCD)', 'Cột 12 (Nghề nghiệp)', 'Cột 13 (Nơi đăng ký HKTT)', 'Cột 14 (Nơi ở hiện nay)', 'Cột 15 (Số Căn cước công dân)', 'Cột 16 (Số hồ sơ)', 'Cột 17 (Nội Dung)', 'Cột 18 (Đơn vị học tập, làm việc, sinh sống ở nước ngoài)', 'Cột 19 (Quốc Gia)', 'Cột 20 (Thời gian học tập, làm việc, sinh sống ở nước ngoài)', 'Cột 21 (Nguồn Kinh phí (Tự túc; học bổng; mời làm việc; tài trợ ))', 'Cột 22 (Đơn vị công tác hiện nay)', 'Cột 23 (Kết hôn với người nước ngoài)', 'Cột 24 (Làm việc tại công ty có vốn đầu tư nước ngoài)', 'Cột 25 (Xử lý vi phạm NN (Nước sở tại))', 'Cột 26 (Xử lý vi phạm VN (Pháp luật Việt Nam))'].join('	');
+                        const row1 = Array.from({length: 26}, (_, i) => {
+                            const map = {1: 'Nguyễn Văn Cán Bộ', 2: 'Trưởng phòng', 3: 'Phòng HC', 4: 'Con ruột', 5: 'Nguyễn Văn Con', 7: '2015', 8: 'Hà Nội', 9: 'Việt Nam', 11: 'Học sinh', 12: 'Hà Nội', 13: 'Hà Nội', 17: 'ĐH Sydney', 18: 'Úc', 19: '2020-nay', 20: 'Tự túc'};
                             return map[i] || ``;
                         }).join('	');
-                        const row2 = Array.from({length: 24}, (_, i) => {
-                            const map = {1: 'Nguyễn Văn Cán Bộ', 2: 'Trưởng phòng', 3: 'Phòng HC', 4: 'Vợ', 5: 'Trần Thị Vợ', 7: '1988', 8: 'Hà Nội', 9: 'Việt Nam', 10: '001188123456', 11: 'Giáo viên', 12: 'Hà Nội', 13: 'Hà Nội', 16: 'Úc'};
+                        const row2 = Array.from({length: 26}, (_, i) => {
+                            const map = {1: 'Nguyễn Văn Cán Bộ', 2: 'Trưởng phòng', 3: 'Phòng HC', 4: 'Vợ', 5: 'Trần Thị Vợ', 7: '1988', 8: 'Hà Nội', 9: 'Việt Nam', 10: '001188123456', 11: 'Giáo viên', 12: 'Hà Nội', 13: 'Hà Nội', 14: '001188123456', 18: 'Úc'};
                             return map[i] || ``;
                         }).join('	');
                         
