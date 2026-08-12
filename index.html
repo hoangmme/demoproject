@@ -2660,6 +2660,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                         const payload = JSON.parse(JSON.stringify(this.formData));
                         const trips = payload.trips || [];
                         const flags = payload.flags || {};
+                        const relatives = payload.relatives || [];
                         delete payload.trips;
                         delete payload.flags;
                         delete payload.relatives;
@@ -2685,28 +2686,30 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             // Xử lý lưu Trips (Phụ lục 1)
                             const originalTripIds = (this.selectedPerson && this.selectedPerson.trips) ? this.selectedPerson.trips.map(t => t.id) : [];
                             
-                            const mappedTrips = trips.filter(t => t.country).map(t => ({
-                                id: t.id,
-                                personnelId: payload.id,
-                                decisionNumber: t.qd || null,
-                                decisionDate: t.qdDate || null,
-                                decisionIssuer: t.agency || null,
-                                departureDate: t.exit || null,
-                                arrivalDate: t.enter || null,
-                                countryName: t.country || null,
-                                tripCount: t.times || null,
-                                purposeName: t.purpose || null,
-                                fundingName: t.funding || null,
-                                // training fields
-                                trainingType: t.trainType || null,
-                                trainingPlace: t.trainLoc || null,
-                                trainingRole: t.trainRole || null,
-                                sponsorUnit: t.trainAgency || null,
-                                trainingTime: t.trainTime || null,
-                                workRole: t.leader || null,
-                                workMembers: t.members || null,
-                                workMemberCount: t.count || null
-                            }));
+                            const mappedTrips = trips.filter(t => t.country).map(t => {
+                                const m = {
+                                    personnelId: payload.id,
+                                    decisionNumber: t.qd || null,
+                                    decisionDate: t.qdDate || null,
+                                    decisionIssuer: t.agency || null,
+                                    departureDate: t.exit || null,
+                                    arrivalDate: t.enter || null,
+                                    countryName: t.country || null,
+                                    tripCount: t.times ? parseInt(t.times) : null,
+                                    purposeName: t.purpose || null,
+                                    fundingName: t.funding || null,
+                                    trainingType: t.trainType || null,
+                                    trainingPlace: t.trainLoc || null,
+                                    trainingRole: t.trainRole || null,
+                                    sponsorUnit: t.trainAgency || null,
+                                    trainingTime: t.trainTime || null,
+                                    workRole: t.leader || null,
+                                    workMembers: t.members || null,
+                                    workMemberCount: t.count ? parseInt(t.count) : null
+                                };
+                                if (t.id) m.id = t.id;
+                                return m;
+                            });
                             
                             const currentTripIds = mappedTrips.map(t => t.id).filter(id => id);
                             const deletedTripIds = originalTripIds.filter(id => !currentTripIds.includes(id));
