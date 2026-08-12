@@ -1764,35 +1764,53 @@
                         ];
                     }
                     return [
-                        { key: 'name', label: 'Họ và Tên' },
-                        { key: 'otherName', label: 'Tên khác' },
-                        { key: 'birthYear', label: 'Năm sinh' },
-                        { key: 'ethnicity', label: 'Dân tộc' },
-                        { key: 'religion', label: 'Tôn giáo' },
-                        { key: 'hometown', label: 'Quê quán' },
-                        { key: 'positionName', label: 'Chức vụ' },
-                        { key: 'thuongTru', label: 'Nơi ĐKHK thường trú' },
-                        { key: 'tamTru', label: 'Nơi ở hiện nay' },
-                        { key: 'cccd', label: 'Số CCCD' },
-                        { key: 'hcCaNhan', label: 'Hộ chiếu cá nhân' },
-                        { key: 'hcCongVu', label: 'Hộ chiếu công vụ' },
-                        { key: 'kqThamTra', label: 'Kết quả thẩm tra TCCT' },
-                        { key: 'departmentName', label: 'Phòng ban' },
-                        { key: 'email', label: 'Email' },
-                        
-                        { key: 'trongYeu', label: 'Vấn đề TCCT (Tự diễn biến)' },
-                        { key: 'thamNhung', label: 'Đang bị điều tra' },
-                        { key: 'loiKeo', label: 'Vấn đề khác về lý lịch' },
-                        { key: 'klDang', label: 'Kỷ luật Đảng' },
-                        { key: 'klChinhQuyen', label: 'Kỷ luật Chính quyền' },
-                        { key: 'vpChuaPhep', label: 'Đi NN không phép' },
-                        { key: 'vpNuocNgoai', label: 'Vi phạm PL ở NN' },
-                        { key: 'vpQuaHan', label: 'Ở lại NN quá hạn' },
-                        { key: 'receivedGiftOver50M', label: 'Được tặng quà >50tr' },
-                        { key: 'rentHouseToForeigner', label: 'Cho thuê nhà/đất' },
-                        { key: 'workInForeignCompany', label: 'Làm tại cty FDI' },
-                        { key: 'marriedToForeigner', label: 'Kết hôn với người NN' },
-                        { key: 'otherFlags', label: 'Lưu ý khác' }
+                        { key: 'stt', label: 'Cột 1 (TT)' },
+                        { key: 'name', label: 'Cột 2 (Họ và tên)' },
+                        { key: 'otherName', label: 'Cột 3 (Tên khác)' },
+                        { key: 'birthYear', label: 'Cột 4 (Ngày, tháng, năm sinh)' },
+                        { key: 'ethnicity', label: 'Cột 5 (Dân tộc)' },
+                        { key: 'religion', label: 'Cột 6 (Tôn giáo)' },
+                        { key: 'hometown', label: 'Cột 7 (Quê quán)' },
+                        { key: 'departmentName', label: 'Cột 8 (Đơn vị công tác)' },
+                        { key: 'positionName', label: 'Cột 9 (Chức vụ)' },
+                        { key: 'thuongTru', label: 'Cột 10 (Nơi ĐKHK thường trú)' },
+                        { key: 'tamTru', label: 'Cột 11 (Nơi ở hiện nay)' },
+                        { key: 'cccd', label: 'Cột 12 (Số CCCD)' },
+                        { key: 'hcCaNhan', label: 'Cột 13 (Hộ chiếu cá nhân)' },
+                        { key: 'hcCongVu', label: 'Cột 14 (Hộ chiếu công vụ)' },
+                        { key: 'kqThamTra', label: 'Cột 15 (KQ thẩm tra)' },
+                        { key: 'decisionNumber', label: 'Cột 16 (Số Quyết định)' },
+                        { key: 'decisionDate', label: 'Cột 17 (Ngày ban hành)' },
+                        { key: 'decisionIssuer', label: 'Cột 18 (Cơ quan ban hành)' },
+                        { key: 'departureDate', label: 'Cột 19 (Ngày xuất cảnh)' },
+                        { key: 'arrivalDate', label: 'Cột 20 (Ngày nhập cảnh)' },
+                        { key: 'countryName', label: 'Cột 21 (Quốc Gia)' },
+                        { key: 'tripCount', label: 'Cột 22 (Số lần)' },
+                        { key: 'purposeName', label: 'Cột 23 (Mục đích chuyến đi)' },
+                        { key: 'trainingType', label: 'Cột 24 (Diện đào tạo)' },
+                        { key: 'trainingPlace', label: 'Cột 25 (Nơi đào tạo)' },
+                        { key: 'trainingRole', label: 'Cột 26 (Vai trò đào tạo)' },
+                        { key: 'sponsorUnit', label: 'Cột 27 (Đơn vị chọn cử)' },
+                        { key: 'fundingName', label: 'Cột 28 (Nguồn Kinh phí)' },
+                        { key: 'trainingTime', label: 'Cột 29 (Thời gian đào tạo)' },
+                        { key: 'workRole', label: 'Cột 30 (Trưởng Đoàn)' },
+                        { key: 'workMembers', label: 'Cột 31 (Thành phần Đoàn)' },
+                        { key: 'workMemberCount', label: 'Cột 32 (Số lượng thành viên)' },
+                        { key: 'groupFunding', label: 'Cột 33 (Nguồn Kinh phí Đoàn)' },
+                        { key: 'report', label: 'Cột 34 (Báo cáo kết quả)' },
+                        { key: 'nopHC', label: 'Cột 35 (Nộp hộ chiếu)' },
+                        { key: 'trongYeu', label: 'Cột 36 (Vấn đề TCCT)' },
+                        { key: 'thamNhung', label: 'Cột 37 (Đang bị điều tra)' },
+                        { key: 'loiKeo', label: 'Cột 38 (Vấn đề khác)' },
+                        { key: 'klDang', label: 'Cột 39 (Kỷ luật Đảng)' },
+                        { key: 'klChinhQuyen', label: 'Cột 40 (Kỷ luật CQ)' },
+                        { key: 'vpChuaPhep', label: 'Cột 41 (Đi NN không phép)' },
+                        { key: 'vpNuocNgoai', label: 'Cột 42 (VPPL NN)' },
+                        { key: 'vpQuaHan', label: 'Cột 43 (Ở lại NN quá hạn)' },
+                        { key: 'dienQuanLy', label: 'Cột 44 (Diện quản lý)' },
+                        { key: 'receivedGiftOver50M', label: 'Cột 45 (Được tặng quà >50tr)' },
+                        { key: 'rentHouseToForeigner', label: 'Cột 46 (Cho thuê nhà/đất)' },
+                        { key: 'workInForeignCompany', label: 'Cột 47 (Làm tại cty FDI)' }
                     ];
                 },
                 
@@ -1910,6 +1928,14 @@
                     this.importHeaders = rows[0].map(h => h.trim());
                     this.importRows = rows.slice(1);
                     
+                    const expectedCols = this.importType === 'relative' ? 26 : 47;
+                    if (this.importHeaders.length !== expectedCols) {
+                        const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length} cột, nhưng hệ thống yêu cầu ${expectedCols} cột theo Template chuẩn.
+
+Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn có muốn tiếp tục không?`);
+                        if (!proceed) return;
+                    }
+                    
                     // Auto mapping (basic guessing based on exact or partial match)
                     setTimeout(() => {
                         let newMapping = {};
@@ -1942,17 +1968,15 @@
                                     matchKey = mappingArr[index];
                                 }
                             } else {
-                                let match = this.systemFields.find(f => {
-                                    const fl = f.label.toLowerCase();
-                                    const cleanHl = hl.replace(/cột \d+/g, '').replace(/[()]/g, '').trim();
-                                    const cleanFl = fl.replace(/cột \d+/g, '').replace(/[()]/g, '').trim();
-                                    return cleanHl.includes(cleanFl) || cleanFl.includes(cleanHl);
-                                });
-                                if (!match) {
-                                    if (hl.includes('cccd') || hl.includes('căn cước')) match = { key: 'cccd' };
-                                    else if (hl.includes('họ tên') || hl.includes('họ và tên')) match = { key: 'name' };
+                                // Strictly map by standard 47-column index for personnels
+                                const mappingArr = [
+                                    'stt', 'name', 'otherName', 'birthYear', 'ethnicity', 'religion', 'hometown', 'departmentName', 'positionName', 'thuongTru', 'tamTru', 'cccd', 'hcCaNhan', 'hcCongVu', 'kqThamTra',
+                                    'decisionNumber', 'decisionDate', 'decisionIssuer', 'departureDate', 'arrivalDate', 'countryName', 'tripCount', 'purposeName', 'trainingType', 'trainingPlace', 'trainingRole', 'sponsorUnit', 'fundingName', 'trainingTime', 'workRole', 'workMembers', 'workMemberCount', 'groupFunding', 'report', 'nopHC',
+                                    'trongYeu', 'thamNhung', 'loiKeo', 'klDang', 'klChinhQuyen', 'vpChuaPhep', 'vpNuocNgoai', 'vpQuaHan', 'dienQuanLy', 'receivedGiftOver50M', 'rentHouseToForeigner', 'workInForeignCompany'
+                                ];
+                                if (index < mappingArr.length) {
+                                    matchKey = mappingArr[index];
                                 }
-                                matchKey = match ? match.key : "";
                             }
                             newMapping[index] = matchKey;
                         });
@@ -2047,15 +2071,21 @@
                         // Personnel Import Logic
                         const payloads = [];
                         const appendix3Payloads = [];
+                        const appendix1Payloads = [];
                         for (let r of this.importRows) {
                             const payload = {};
                             const app3Payload = {};
+                            const app1Payload = {};
                             let hasData = false;
-                            const flagKeys = ['trongYeu', 'thamNhung', 'loiKeo', 'klDang', 'klChinhQuyen', 'vpChuaPhep', 'vpNuocNgoai', 'vpQuaHan', 'receivedGiftOver50M', 'rentHouseToForeigner', 'workInForeignCompany', 'marriedToForeigner', 'otherFlags'];
+                            let hasApp1Data = false;
+                            
+                            const flagKeys = ['trongYeu', 'thamNhung', 'loiKeo', 'klDang', 'klChinhQuyen', 'vpChuaPhep', 'vpNuocNgoai', 'vpQuaHan', 'dienQuanLy', 'receivedGiftOver50M', 'rentHouseToForeigner', 'workInForeignCompany', 'marriedToForeigner', 'otherFlags'];
+                            const tripKeys = ['decisionNumber', 'decisionDate', 'decisionIssuer', 'departureDate', 'arrivalDate', 'countryName', 'tripCount', 'purposeName', 'trainingType', 'trainingPlace', 'trainingRole', 'sponsorUnit', 'fundingName', 'trainingTime', 'workRole', 'workMembers', 'workMemberCount', 'groupFunding', 'report', 'nopHC'];
+                            const ignoredKeys = ['stt'];
                             
                             for (let i = 0; i < this.importHeaders.length; i++) {
                                 const fieldKey = this.importMapping[i];
-                                if (fieldKey) {
+                                if (fieldKey && !ignoredKeys.includes(fieldKey)) {
                                     let val = r[i]?.trim() || null;
                                     if(val) hasData = true;
                                     if (fieldKey === 'departmentId' && val) {
@@ -2064,8 +2094,11 @@
                                             val = null; // Prevent invalid foreign key
                                         }
                                     }
+                                    
                                     if(flagKeys.includes(fieldKey)) {
                                         if (val !== null) app3Payload[fieldKey] = val;
+                                    } else if (tripKeys.includes(fieldKey)) {
+                                        if (val !== null) { app1Payload[fieldKey] = val; hasApp1Data = true; }
                                     } else {
                                         if (val !== null) payload[fieldKey] = val;
                                     }
@@ -2080,6 +2113,12 @@
                                     app3Payload.id = 'a3_' + Date.now() + Math.floor(Math.random()*1000) + payload.id;
                                     app3Payload.personnelId = payload.id;
                                     appendix3Payloads.push(app3Payload);
+                                }
+                                
+                                if (hasApp1Data) {
+                                    app1Payload.id = 'trip_' + Date.now() + Math.floor(Math.random()*1000) + payload.id;
+                                    app1Payload.personnelId = payload.id;
+                                    appendix1Payloads.push(app1Payload);
                                 }
                             }
                         }
@@ -2110,7 +2149,18 @@
                                     body: JSON.stringify(appendix3Payloads)
                                 });
                             }
-                            alert(`Đã lưu thành công ${payloads.length} dòng dữ liệu Cán bộ!`);
+                            if (appendix1Payloads.length > 0) {
+                                await fetch(`${API_URL}/items/appendix1`, {
+                                    method: 'POST',
+                                    headers: { 
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer mvp-static-token-999'
+                                    },
+                                    body: JSON.stringify(appendix1Payloads)
+                                });
+                            }
+                            alert(`Đã lưu thành công ${payloads.length} Cán bộ mới!
+(Kèm theo ${appendix1Payloads.length} dữ liệu Chuyến đi và ${appendix3Payloads.length} dữ liệu Lưu ý/Vi phạm)`);
                             this.isImportModalOpen = false;
                             await this.fetchData();
                         } else {
