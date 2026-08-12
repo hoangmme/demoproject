@@ -398,20 +398,20 @@
                                     <template x-for="(tr, j) in p.trips.filter(t => t.quocGia)" :key="tr.id">
                                         <tr class="hover:bg-blue-50/50">
                                             <!-- Col 1 to 15 (cá nhân) only show on first trip -->
-                                            <td class="border border-gray-300 px-2 py-2" x-text="i+1"></td>
-                                            <td class="border border-gray-300 px-2 py-2 text-left font-medium" x-text="p.name"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="p.birthYear"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="p.cccd"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="p.hktt"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="p.currentAddress"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="p.passportPersonal"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="p.passportOfficial"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="p.position"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="getDepartmentName(p.departmentId)"></td>
-                                            <td class="border border-gray-300 px-2 py-2"></td>
-                                            <td class="border border-gray-300 px-2 py-2"></td>
-                                            <td class="border border-gray-300 px-2 py-2"></td>
-                                            <td class="border border-gray-300 px-2 py-2" x-text="p.tcctResult"></td>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="i+1"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 text-left font-medium align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="p.name"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="p.birthYear"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="p.cccd"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="p.hktt"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="p.currentAddress"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="p.passportPersonal"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="p.passportOfficial"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="p.position"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="getDepartmentName(p.departmentId)"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2" :rowspan="p.trips.filter(t => t.quocGia).length"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2" :rowspan="p.trips.filter(t => t.quocGia).length"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2" :rowspan="p.trips.filter(t => t.quocGia).length"></td></template>
+                                            <template x-if="j === 0"><td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.trips.filter(t => t.quocGia).length" x-text="p.tcctResult"></td></template>
                                             
                                             <!-- Col 16 to 30 (Trip Info) -->
                                             <td class="border border-gray-300 px-2 py-2" x-text="tr.soQuyetDinh"></td>
@@ -531,15 +531,31 @@
                             <template x-for="(p, i) in personnel" :key="'p2'+p.id">
                                 <template x-for="(t, j) in p.relatives.filter(r => r.relativeName)" :key="t.id">
                                     <tr class="hover:bg-blue-50/50">
-                                        <!-- Col 1 to 7 (Cá nhân) -->
-                                        <td class="border border-gray-300 px-2 py-2" x-text="i+1"></td>
-                                        <td class="border border-gray-300 px-2 py-2 text-left font-medium" x-text="p.name"></td>
-                                        <td class="border border-gray-300 px-2 py-2" x-text="p.birthYear"></td>
-                                        <td class="border border-gray-300 px-2 py-2" x-text="p.position"></td>
-                                        <td class="border border-gray-300 px-2 py-2" x-text="getDepartmentName(p.departmentId)"></td>
-                                        <td class="border border-gray-300 px-2 py-2"></td>
-                                        <td class="border border-gray-300 px-2 py-2"></td>
-                                        <td class="border border-gray-300 px-2 py-2"></td>
+                                        <!-- Col 1 to 8 (Cá nhân) -->
+                                        <template x-if="j === 0">
+                                            <td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.relatives.filter(r => r.relativeName).length" x-text="i+1"></td>
+                                        </template>
+                                        <template x-if="j === 0">
+                                            <td class="border border-gray-300 px-2 py-2 text-left font-medium align-top" :rowspan="p.relatives.filter(r => r.relativeName).length" x-text="p.name"></td>
+                                        </template>
+                                        <template x-if="j === 0">
+                                            <td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.relatives.filter(r => r.relativeName).length" x-text="p.birthYear"></td>
+                                        </template>
+                                        <template x-if="j === 0">
+                                            <td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.relatives.filter(r => r.relativeName).length" x-text="p.position"></td>
+                                        </template>
+                                        <template x-if="j === 0">
+                                            <td class="border border-gray-300 px-2 py-2 align-top" :rowspan="p.relatives.filter(r => r.relativeName).length" x-text="getDepartmentName(p.departmentId)"></td>
+                                        </template>
+                                        <template x-if="j === 0">
+                                            <td class="border border-gray-300 px-2 py-2" :rowspan="p.relatives.filter(r => r.relativeName).length"></td>
+                                        </template>
+                                        <template x-if="j === 0">
+                                            <td class="border border-gray-300 px-2 py-2" :rowspan="p.relatives.filter(r => r.relativeName).length"></td>
+                                        </template>
+                                        <template x-if="j === 0">
+                                            <td class="border border-gray-300 px-2 py-2" :rowspan="p.relatives.filter(r => r.relativeName).length"></td>
+                                        </template>
                                         
                                         <!-- Col 8 to 13 (Relative) -->
                                         <td class="border border-gray-300 px-2 py-2 text-center font-bold" x-text="t.relationshipName"></td>
