@@ -1839,7 +1839,13 @@
                             const map = {1: 'Con trai', 2: 'Nguyễn Văn Con', 3: '2015', 4: 'Hà Nội', 5: 'Học sinh'};
                             return map[i+1] || ``;
                         }).join('\t');
-                        this.importPasteText = headers + '\n' + row1 + '\n' + row2;
+                        const text = headers + '\n' + row1 + '\n' + row2;
+                        navigator.clipboard.writeText(text).then(() => {
+                            alert('Đã copy dữ liệu mẫu Thân nhân vào Clipboard! Bạn hãy dán (Ctrl+V) vào Google Sheets.');
+                        }).catch(err => {
+                            alert('Lỗi copy, trình duyệt không hỗ trợ. Dữ liệu đã được điền vào ô bên dưới.');
+                            this.importPasteText = text;
+                        });
                     } else {
                         // 52 columns
                         const headers = Array.from({length: 52}, (_, i) => {
@@ -2498,7 +2504,7 @@
                     <div class="mb-4">
                         <div class="flex justify-between items-center mb-2">
                             <p class="text-sm text-gray-800 font-semibold">📋 Hướng dẫn copy từ Excel/Google Sheets:</p>
-                            <button type="button" @click="loadSampleData()" class="text-xs text-blue-600 underline hover:text-blue-800 font-medium bg-blue-50 px-2 py-1 rounded">Điền dữ liệu mẫu</button>
+                            <button type="button" @click="loadSampleData()" class="text-xs text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-3 py-1.5 rounded flex items-center gap-1 border border-blue-200 shadow-sm"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg> Copy Template mẫu (Google Sheets)</button>
                         </div>
                         <ul class="text-xs text-gray-600 list-disc pl-5 mb-2 space-y-1">
                             <li>Bôi đen và Copy toàn bộ bảng dữ liệu <b>bao gồm cả dòng tiêu đề</b>.</li>
