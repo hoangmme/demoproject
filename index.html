@@ -1563,6 +1563,7 @@
                 get systemFields() {
                     if (this.importType === 'relative') {
                         return [
+                            { key: 'stt', label: 'Số thứ tự (STT)' },
                             { key: 'parentPersonnelCccd', label: 'CCCD Cán bộ (Dùng để khớp dữ liệu)' },
                             { key: 'parentPersonnelName', label: '[Thông tin Cán bộ] Họ và tên' },
                             { key: 'parentPosition', label: '[Thông tin Cán bộ] Chức vụ' },
@@ -1743,9 +1744,15 @@
                         this.importHeaders.forEach((h, index) => {
                             const hl = h.toLowerCase();
                             
-                            // Bỏ qua cột 1 (STT) hoặc các cột chưa dùng
-                            if (index === 0 || hl === 'stt' || hl.includes('chưa dùng')) {
+                            // Bỏ qua các cột chưa dùng (chỉ áp dụng cho personnel hoặc thực sự không cần)
+                            if (hl.includes('chưa dùng')) {
                                 newMapping[index] = "";
+                                return;
+                            }
+                            
+                            // Map STT
+                            if (index === 0 || hl === 'stt' || hl.includes('tt')) {
+                                newMapping[index] = 'stt';
                                 return;
                             }
                             
@@ -1785,10 +1792,6 @@
                 },
                 
                 async executeImport() {
-                    if (this.importType === 'relative' && !this.importTargetPersonnelId) {
-                        alert('Vui lòng chọn Cán bộ trước khi import thân nhân!');
-                        return;
-                    }
                     this.isImporting = true;
                     try {
                         if (this.importType === 'relative') {
