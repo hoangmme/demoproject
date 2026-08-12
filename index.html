@@ -2398,7 +2398,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                 const a3 = jsonA3.data ? jsonA3.data.filter(a => a.personnelId === p.id) : [];
                                 p.flags = a3.length > 0 ? a3[0] : {};
                                 
-                                // Map old properties for legacy UI compatibility in pl1 and pl2
+                                // Map old properties for legacy UI compatibility in pl1, pl2, pl3
                                 if (p.trips.length > 0) {
                                     const t = p.trips[0];
                                     p.hktt = t.thuongTru || p.hktt;
@@ -2407,6 +2407,56 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                     p.passportOfficial = t.hcCongVu || p.passportOfficial;
                                     p.tcctResult = t.kqThamTra || p.tcctResult;
                                 }
+                                
+                                p.flags.noPermission = p.flags.vpChuaPhep || p.flags.noPermission;
+                                p.flags.partyDiscipline = p.flags.klDang || p.flags.partyDiscipline;
+                                p.flags.govDiscipline = p.flags.klChinhQuyen || p.flags.govDiscipline;
+                                p.flags.investigating = p.flags.thamNhung || p.flags.trongYeu || p.flags.loiKeo || p.flags.investigating; 
+                                p.flags.gift = p.flags.receivedGiftOver50M || p.flags.gift;
+                                p.flags.rent = p.flags.rentHouseToForeigner || p.flags.rent;
+                                p.flags.fdi = p.flags.workInForeignCompany || p.flags.fdi;
+                                
+                                p.trips.forEach(tr => {
+                                    // PL1 Mapping
+                                    tr.soQuyetDinh = tr.decisionNumber || tr.soQuyetDinh;
+                                    tr.soQuyetDinhDate = tr.decisionDate || tr.soQuyetDinhDate;
+                                    tr.coQuanBanHanh = tr.decisionIssuer || tr.coQuanBanHanh;
+                                    tr.ngayXuatCanh = tr.departureDate || tr.ngayXuatCanh;
+                                    tr.ngayNhapCanh = tr.arrivalDate || tr.ngayNhapCanh;
+                                    tr.quocGia = tr.countryName || tr.quocGia;
+                                    tr.soLan = tr.tripCount || tr.soLan;
+                                    tr.mucDich = tr.purposeName || tr.mucDich;
+                                    tr.nguonKinhPhi = tr.fundingName || tr.nguonKinhPhi;
+                                    tr.nopHoChieu = tr.nopHC || tr.nopHoChieu;
+                                    tr.baoCaoKetQua = tr.report || tr.baoCaoKetQua;
+                                    
+                                    // Inject flags into trip for PL1 layout
+                                    tr.vpChuaPhep = p.flags.vpChuaPhep || tr.vpChuaPhep;
+                                    tr.vpNuocNgoai = p.flags.vpNuocNgoai || tr.vpNuocNgoai;
+                                    tr.vpQuaHan = p.flags.vpQuaHan || tr.vpQuaHan;
+                                    tr.klDang = p.flags.klDang || tr.klDang;
+                                    tr.klChinhQuyen = p.flags.klChinhQuyen || tr.klChinhQuyen;
+                                    tr.xlplNuocSoTai = p.flags.xlplNuocSoTai || tr.xlplNuocSoTai;
+                                    tr.xlplVietNam = p.flags.xlplVietNam || tr.xlplVietNam;
+                                    
+                                    // PL3 Mapping
+                                    tr.trainType = tr.trainingType || tr.trainType;
+                                    tr.trainLoc = tr.trainingPlace || tr.trainLoc;
+                                    tr.trainRole = tr.trainingRole || tr.trainRole;
+                                    tr.trainAgency = tr.sponsorUnit || tr.trainAgency;
+                                    tr.funding = tr.fundingName || tr.funding;
+                                    tr.trainTime = tr.trainingTime || tr.trainTime;
+                                    tr.leader = tr.workRole || tr.leader;
+                                    tr.members = tr.workMembers || tr.members;
+                                    tr.count = tr.workMemberCount || tr.count;
+                                    tr.qd = tr.decisionNumber || tr.qd;
+                                    tr.qdDate = tr.decisionDate || tr.qdDate;
+                                    tr.agency = tr.decisionIssuer || tr.agency;
+                                    tr.exit = tr.departureDate || tr.exit;
+                                    tr.enter = tr.arrivalDate || tr.enter;
+                                    tr.times = tr.tripCount || tr.times;
+                                    tr.country = tr.countryName || tr.country;
+                                });
                                 
                                 return p;
                             });
