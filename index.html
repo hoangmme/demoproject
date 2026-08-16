@@ -165,56 +165,24 @@
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <template x-for="(colObj, cIndex) in group.columns" :key="cIndex">
-                                            <div x-show="colObj.id !== 'stt'" class="flex flex-col gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors shadow-sm relative group/col">
-                                                <button @click="removeColumn(gIndex, cIndex)" class="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover/col:opacity-100 transition-opacity" title="Xóa cột này">
+                                            <div x-show="colObj.id !== 'stt'" class="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors shadow-sm">
+                                                <input x-model="colObj.label" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5" placeholder="Tên cột...">
+                                                
+                                                <select x-model="colObj.format" class="w-36 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 bg-green-50 text-green-700 font-medium">
+                                                    <option value="text">Văn bản</option>
+                                                    <option value="number">Số</option>
+                                                    <option value="date">Ngày tháng</option>
+                                                    <option value="text_loop">Đoạn văn</option>
+                                                    <option value="checkbox">Hộp kiểm</option>
+                                                </select>
+                                                
+                                                <template x-if="colObj.id && colObj.id.startsWith('custom_')">
+                                                    <span class="px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded border border-purple-200 whitespace-nowrap hidden md:block">Tùy chỉnh</span>
+                                                </template>
+
+                                                <button @click="removeColumn(gIndex, cIndex)" class="text-gray-400 hover:text-red-500 p-1" title="Xóa cột này">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                                 </button>
-                                                <div class="flex items-center gap-2 pr-6">
-                                                    <span class="text-xs font-bold text-gray-500 uppercase w-16">Tên Cột</span>
-                                                    <input x-model="colObj.label" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5" placeholder="Nhập tên cột hiển thị...">
-                                                </div>
-                                                
-                                                <div class="flex items-center gap-2">
-                                                    <span class="text-xs font-bold text-gray-500 uppercase w-16">Định dạng</span>
-                                                    <select x-model="colObj.format" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 bg-green-50 text-green-700 font-medium">
-                                                        <option value="text">Văn bản (Mặc định)</option>
-                                                        <option value="number">Số</option>
-                                                        <option value="date">Ngày tháng (DD/MM/YYYY)</option>
-                                                        <option value="text_loop">Đoạn văn (Xuống dòng)</option>
-                                                        <option value="checkbox">Hộp kiểm (Có/Không)</option>
-                                                    </select>
-                                                
-                                                    <!-- Dynamic fields cho thân nhân -->
-                                                    <div class="col-span-4 mt-4 bg-purple-50 p-4 rounded-xl border border-purple-100">
-                                                        <h4 class="text-sm font-bold text-purple-700 mb-2">Trường tùy chỉnh</h4>
-                                                        <div class="grid grid-cols-2 gap-4">
-                                                            <template x-for="group in importMappingRelative" :key="group.group">
-                                                                <template x-for="col in group.columns.filter(c => c.id && c.id.startsWith('custom_'))" :key="col.id">
-                                                                    <div class="col-span-1">
-                                                                        <label class="block text-xs font-medium text-gray-700">
-                                                                            <span x-text="col.label"></span>
-                                                                        </label>
-                                                                        <template x-if="col.format === 'checkbox'">
-                                                                            <input type="checkbox" x-model="rel.custom_data[col.id]" class="mt-1">
-                                                                        </template>
-                                                                        <template x-if="col.format === 'date'">
-                                                                            <input type="date" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
-                                                                        </template>
-                                                                        <template x-if="col.format === 'number'">
-                                                                            <input type="number" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
-                                                                        </template>
-                                                                        <template x-if="col.format === 'text_loop'">
-                                                                            <textarea rows="2" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1"></textarea>
-                                                                        </template>
-                                                                        <template x-if="col.format === 'text'">
-                                                                            <input type="text" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
-                                                                        </template>
-                                                                    </div>
-                                                                </template>
-                                                            </template>
-                                                        </div>
-                                                    </div>
-</div>
                                             </div>
                                         </template>
                                     </div>
