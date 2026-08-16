@@ -2710,9 +2710,9 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                         ]);
                         
                         if (jsonP.data) {
-                            this.personnel = jsonP.data.filter(p => p.isDeleted !== true).map(p => {
+                            this.personnel = jsonP.data.filter(p => !p.isDeleted).map(p => {
                                 p.trips = jsonA1.data ? jsonA1.data.filter(a => a.personnelId === p.id) : [];
-                                p.relatives = jsonA2.data ? jsonA2.data.filter(a => a.personnelId === p.id && a.isDeleted !== true) : [];
+                                p.relatives = jsonA2.data ? jsonA2.data.filter(a => a.personnelId === p.id && !a.isDeleted) : [];
                                 
                                 const a3 = jsonA3.data ? jsonA3.data.filter(a => a.personnelId === p.id) : [];
                                 p.flags = a3.length > 0 ? a3[0] : {};
