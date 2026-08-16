@@ -173,23 +173,7 @@
                                                     <span class="text-xs font-bold text-gray-500 uppercase w-16">Tên Cột</span>
                                                     <input x-model="colObj.label" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5" placeholder="Nhập tên cột hiển thị...">
                                                 </div>
-                                                <div class="flex items-center gap-2">
-                                                    <span class="text-xs font-bold text-gray-500 uppercase w-16">Liên kết</span>
-                                                    <select x-model="colObj.id" @change="if($event.target.value === '__NEW_CUSTOM__') { colObj.id = 'custom_' + Date.now(); }" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs py-1.5">
-                                                        <option value="">-- Không lưu (Bỏ qua) --</option>
-                                                        <optgroup label="Tạo Cột Mới">
-                                                            <template x-if="colObj.id && colObj.id.startsWith('custom_')">
-                                                                <option :value="colObj.id" x-text="'Trường Tùy chỉnh (' + colObj.id + ')'"></option>
-                                                            </template>
-                                                            <option value="__NEW_CUSTOM__">✨ Tạo Trường Tùy Chỉnh Mới...</option>
-                                                        </optgroup>
-                                                        <optgroup label="Trường Hệ Thống Có Sẵn">
-                                                            <template x-for="field in systemFields" :key="field.key">
-                                                                <option :value="field.key" x-text="field.label"></option>
-                                                            </template>
-                                                        </optgroup>
-                                                    </select>
-                                                </div>
+                                                
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs font-bold text-gray-500 uppercase w-16">Định dạng</span>
                                                     <select x-model="colObj.format" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 bg-green-50 text-green-700 font-medium">
@@ -1973,7 +1957,7 @@
                 },
                 addColumn(gIndex) {
                     let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
-                    mapArr[gIndex].columns.push({ id: '', label: 'Cột mới', format: 'text' });
+                    mapArr[gIndex].columns.push({ id: 'custom_' + Date.now(), label: 'Cột mới', format: 'text' });
                 },
                 removeColumn(gIndex, cIndex) {
                     let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
