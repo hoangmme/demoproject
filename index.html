@@ -2262,15 +2262,16 @@
                     const rawConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel; 
                     const mappingConfig = rawConfig.flatMap(g => g.columns);
                     
-                    this.importMapping = [];
+                    let newMapping = [];
                     for(let i = 1; i < this.importHeaders.length; i++) {
                         // User wants STRICT INDEX mapping based on defaultMapping54
                         if (this.importType !== 'relative' && i < this.defaultMapping54.length) {
-                            this.importMapping[i] = this.defaultMapping54[i];
+                            newMapping[i] = this.defaultMapping54[i];
                         } else {
-                            this.importMapping[i] = '';
+                            newMapping[i] = '';
                         }
                     }
+                    this.importMapping = newMapping;
                     
                     if (this.importHeaders.length - 1 !== mappingConfig.length) {
                         const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length - 1} cột (bỏ qua STT), nhưng hệ thống kỳ vọng ${mappingConfig.length} cột. 
@@ -3481,11 +3482,13 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                         <template x-for="(h, colIndex) in importHeaders" :key="colIndex">
                                             <th class="border p-2 whitespace-nowrap">
                                                 <span x-text="(() => {
-                                                    const m = importType === 'relative' ? importMappingRelative : importMappingPersonnel;
-                                                    const flatM = m.flatMap(g => g.columns || []);
-                                                    const key = flatM[colIndex]?.id;
-                                                    if (!key) return ('Cột ' + (parseInt(colIndex)+1) + ' - Bỏ qua');
-                                                    if (key.startsWith('custom_')) return flatM[colIndex].label;
+                                                    const key = importMapping[colIndex];
+                                                    if (!key) return h || ('Cột ' + (parseInt(colIndex)+1) + ' - Bỏ qua');
+                                                    if (key.startsWith('custom_')) {
+                                                        const m = importType === 'relative' ? importMappingRelative : importMappingPersonnel;
+                                                        const flatM = m.flatMap(g => g.columns || []);
+                                                        return flatM.find(c => c.id === key)?.label || key;
+                                                    }
                                                     return systemFields.find(f => f.key === key)?.label || key;
                                                 })()"></span>
                                             </th>
