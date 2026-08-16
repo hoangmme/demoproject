@@ -2426,6 +2426,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                 if (virtualPurposes.length > 0) app1Payload['purposeName'] = virtualPurposes.join(', ');
                                 if (virtualFundings.length > 0) app1Payload['groupFunding'] = virtualFundings.join(', ');
                                 if (hasData || hasApp1Data) {
+                                    payload.id = 'p_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
                                     payloads.push(payload);
                                     appendix3Payloads.push(app3Payload);
                                     appendix1Payloads.push(app1Payload);
