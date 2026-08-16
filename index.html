@@ -2332,6 +2332,23 @@
                             return val.replace(/\n/g, ', ').trim();
                         };
 
+                        let currentMaxCb = 0;
+                        if (this.importType !== 'relative') {
+                            try {
+                                const resCodes = await fetch(`${API_URL}/items/personnels?fields=id,code&limit=10000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } });
+                                const jsonCodes = await resCodes.json();
+                                if (jsonCodes.data) {
+                                    for (let item of jsonCodes.data) {
+                                        const c = item.code || item.id || '';
+                                        if (typeof c === 'string' && c.startsWith('CB')) {
+                                            const num = parseInt(c.replace(/[^0-9]/g, ''), 10);
+                                            if (!isNaN(num) && num > currentMaxCb) currentMaxCb = num;
+                                        }
+                                    }
+                                }
+                            } catch(e) { console.error('Error fetching max CB code', e); }
+                        }
+
                         for (let r of this.importRows) {
                             rowNum++;
                             let hasData = false;
@@ -2444,7 +2461,10 @@
                                 if (virtualPurposes.length > 0) app1Payload['purposeName'] = virtualPurposes.join(', ');
                                 if (virtualFundings.length > 0) app1Payload['groupFunding'] = virtualFundings.join(', ');
                                 if (hasData || hasApp1Data) {
-                                    payload.id = 'p_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+                                    currentMaxCb++;
+                                    const nextCode = 'CB' + String(currentMaxCb).padStart(5, '0');
+                                    payload.id = nextCode;
+                                    payload.code = nextCode;
                                     payloads.push(payload);
                                     appendix3Payloads.push(app3Payload);
                                     appendix1Payloads.push(app1Payload);
@@ -2910,11 +2930,11 @@
                     return dept ? dept.name : 'Chưa phân bổ';
                 },
                 
-                generateNextId(prefix, existingIds) {
+                generateNextId(prefix = 'CB', existingIds = [], padding = 5) {
                     let maxNum = 0;
                     for (let id of existingIds) {
-                        if (id && id.startsWith(prefix)) {
-                            const numPart = id.substring(prefix.length);
+                        if (id && typeof id === 'string' && id.startsWith(prefix)) {
+                            const numPart = id.substring(prefix.length).replace(/[^0-9]/g, '');
                             const num = parseInt(numPart, 10);
                             if (!isNaN(num) && num > maxNum) {
                                 maxNum = num;
@@ -2922,7 +2942,7 @@
                         }
                     }
                     const nextNum = maxNum + 1;
-                    return prefix + String(nextNum).padStart(4, '0');
+                    return prefix + String(nextNum).padStart(padding, '0');
                 },
                 
                 openPanel(person) {
@@ -3149,10 +3169,12 @@
                             if (payload[k] === "") payload[k] = null;
                         });
                         if (!this.selectedPerson && !payload.id) {
-                            const resIds = await fetch(`${API_URL}/items/personnels?fields=id&limit=10000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } });
+                            const resIds = await fetch(`${API_URL}/items/personnels?fields=id,code&limit=10000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } });
                             const jsonIds = await resIds.json();
-                            const allCbIds = jsonIds.data ? jsonIds.data.map(i => i.id) : [];
-                            payload.id = this.generateNextId('CB_', allCbIds);
+                            const allCbIds = jsonIds.data ? jsonIds.data.map(i => i.code || i.id) : [];
+                            const nextCode = this.generateNextId('CB', allCbIds, 5);
+                            payload.id = nextCode;
+                            payload.code = nextCode;
                         }
                         
                         const res = await fetch(url, {
