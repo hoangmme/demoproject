@@ -3467,6 +3467,14 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                                 <option :value="field.key" x-text="field.label"></option>
                                             </template>
                                         </select>
+                                        <template x-if="importMapping[index] && systemFields.find(f => f.key === importMapping[index]) && (() => {
+                                            const sysLabel = systemFields.find(f => f.key === importMapping[index]).label.toLowerCase().replace(/\s+/g, '');
+                                            const impHeader = header.toLowerCase().replace(/\s+/g, '');
+                                            // Only warn if they are completely different (not a substring of each other)
+                                            return !sysLabel.includes(impHeader) && !impHeader.includes(sysLabel);
+                                        })()">
+                                            <div class="text-red-500 text-xs mt-1 font-medium">⚠️ Cảnh báo: Tên cột TSV không khớp trường hệ thống</div>
+                                        </template>
                                     </div>
                                 </div>
                             </template>
