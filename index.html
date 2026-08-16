@@ -95,6 +95,10 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                         Thêm Cán bộ
                     </button> 
+                    <button @click="renumberPersonnelCodes()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-3.5 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-1.5 text-sm" title="Đánh lại Mã CB theo thứ tự liên tục CB-00001, CB-00002...">
+                        <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Đánh lại Mã CB
+                    </button> 
                     <div class="relative" x-data="{ openImportDropdown: false }">
                         <button @click="openImportDropdown = !openImportDropdown" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
@@ -1213,86 +1217,110 @@
 </div>
 <template x-for="(rel, index) in formData.relatives" :key="index">
     <div class="relative p-6 border border-gray-200 rounded-2xl bg-white shadow-sm mt-4">
-        <button x-show="formData.relatives.length > 1" type="button" @click="formData.relatives.splice(index, 1)" class="absolute -top-3 -right-3 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm z-10"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+            <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-[#447f28]/10 text-[#447f28] flex items-center justify-center text-xs font-bold" x-text="index + 1"></span>
+                <span class="text-sm font-bold text-gray-800">Thân nhân #<span x-text="index + 1"></span></span>
+            </div>
+            <button x-show="formData.relatives.length > 1" type="button" @click="formData.relatives.splice(index, 1)" class="text-red-600 hover:text-red-800 text-xs font-medium bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition-colors flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Xóa thân nhân này
+            </button>
+        </div>
         <template x-for="group in importMappingRelative" :key="group.group">
             <div class="mb-4">
                 <h4 class="text-sm font-bold text-[#447f28] mb-3 border-b pb-1" x-text="group.group"></h4>
                 <div class="grid grid-cols-4 gap-4">
                     <template x-for="col in group.columns" :key="col.id">
 
-                                                    <template x-if="col.id !== 'stt'">
-                                                        <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
-                                                            <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, true); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
-                                                                <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
-                                                            </label>
-                                                            
-                                                            <template x-if="col.format === 'checkbox_text'">
-                                                                <div class="mt-1 space-y-2" x-data="{ state: (rel[col.id] === 'Không' || !rel[col.id]) ? (rel[col.id] === 'Không' ? 'no' : '') : 'yes' }">
-                                                                    <div class="flex items-center gap-4">
-                                                                        <label class="inline-flex items-center">
-                                                                            <input type="radio" x-model="state" value="yes" @change="if(rel[col.id] === 'Không') rel[col.id] = ''" class="rounded-full border-gray-300 text-blue-600">
-                                                                            <span class="ml-1 text-xs text-gray-700">Có</span>
-                                                                        </label>
-                                                                        <label class="inline-flex items-center">
-                                                                            <input type="radio" x-model="state" value="no" @change="rel[col.id] = 'Không'" class="rounded-full border-gray-300 text-blue-600">
-                                                                            <span class="ml-1 text-xs text-gray-700">Không</span>
-                                                                        </label>
-                                                                    </div>
-                                                                    <div x-show="state === 'yes'">
-                                                                        <input type="text" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập chi tiết...">
-                                                                    </div>
-                                                                </div>
-                                                            </template>
-                                                            
-                                                            <template x-if="col.format === 'checkbox'">
-                                                                <div class="mt-1 space-y-1" x-init="if(col.options && !Array.isArray(rel[col.id])) rel[col.id] = []">
-                                                                    <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
-                                                                        <label class="inline-flex items-center mr-4">
-                                                                            <input type="checkbox" :value="opt" x-model="rel[col.id]" class="rounded border-gray-300 text-blue-600">
-                                                                            <span class="ml-1 text-xs text-gray-700" x-text="opt"></span>
-                                                                        </label>
-                                                                    </template>
-                                                                    <template x-if="!(col.options)">
-                                                                        <input type="checkbox" x-model="rel[col.id]" class="mt-1">
-                                                                    </template>
-                                                                </div>
-                                                            </template>
-                                                            
-                                                            <template x-if="col.format === 'dropdown'">
-                                                                <select x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1 bg-white">
-                                                                    <option value="">-- Chọn --</option>
-                                                                    <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
-                                                                        <option :value="opt" x-text="opt"></option>
-                                                                    </template>
-                                                                </select>
-                                                            </template>
+                        <template x-if="col.id !== 'stt'">
+                            <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
+                                <!-- Trường kế thừa từ Cán bộ (Cột 2, 3, 4, 5...) -->
+                                <template x-if="isParentInfoCol(col)">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-500 mb-1">
+                                            <span x-text="col.label"></span> <span class="text-[10px] text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded font-semibold ml-1">Kế thừa từ Cán bộ</span>
+                                        </label>
+                                        <input type="text" :value="getParentInfoVal(col)" disabled class="w-full border border-gray-200 bg-gray-100 text-gray-600 rounded px-2 py-1 text-xs mt-1 cursor-not-allowed select-none">
+                                    </div>
+                                </template>
+                                
+                                <!-- Trường thông tin Thân nhân thông thường -->
+                                <template x-if="!isParentInfoCol(col)">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">
+                                            <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, true); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
+                                            <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
+                                        </label>
+                                        
+                                        <template x-if="col.format === 'checkbox_text'">
+                                            <div class="mt-1 space-y-2" x-data="{ state: (rel[col.id] === 'Không' || !rel[col.id]) ? (rel[col.id] === 'Không' ? 'no' : '') : 'yes' }">
+                                                <div class="flex items-center gap-4">
+                                                    <label class="inline-flex items-center">
+                                                        <input type="radio" x-model="state" value="yes" @change="if(rel[col.id] === 'Không') rel[col.id] = ''" class="rounded-full border-gray-300 text-blue-600">
+                                                        <span class="ml-1 text-xs text-gray-700">Có</span>
+                                                    </label>
+                                                    <label class="inline-flex items-center">
+                                                        <input type="radio" x-model="state" value="no" @change="rel[col.id] = 'Không'" class="rounded-full border-gray-300 text-blue-600">
+                                                        <span class="ml-1 text-xs text-gray-700">Không</span>
+                                                    </label>
+                                                </div>
+                                                <div x-show="state === 'yes'">
+                                                    <input type="text" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập chi tiết...">
+                                                </div>
+                                            </div>
+                                        </template>
+                                        
+                                        <template x-if="col.format === 'checkbox'">
+                                            <div class="mt-1 space-y-1" x-init="if(col.options && !Array.isArray(rel[col.id])) rel[col.id] = []">
+                                                <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
+                                                    <label class="inline-flex items-center mr-4">
+                                                        <input type="checkbox" :value="opt" x-model="rel[col.id]" class="rounded border-gray-300 text-blue-600">
+                                                        <span class="ml-1 text-xs text-gray-700" x-text="opt"></span>
+                                                    </label>
+                                                </template>
+                                                <template x-if="!(col.options)">
+                                                    <input type="checkbox" x-model="rel[col.id]" class="mt-1">
+                                                </template>
+                                            </div>
+                                        </template>
+                                        
+                                        <template x-if="col.format === 'dropdown'">
+                                            <select x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1 bg-white">
+                                                <option value="">-- Chọn --</option>
+                                                <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
+                                                    <option :value="opt" x-text="opt"></option>
+                                                </template>
+                                            </select>
+                                        </template>
 
-                                                            <template x-if="col.format === 'date'">
-                                                                <input type="date" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
-                                                            </template>
-                                                            
-                                                            <template x-if="col.format === 'number'">
-                                                                <input type="number" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
-                                                            </template>
-                                                            
-                                                            <template x-if="col.format === 'text_loop'">
-                                                                <div class="mt-1 space-y-1" x-data="{ items: Array.isArray(rel[col.id]) ? rel[col.id] : (rel[col.id] ? [rel[col.id]] : ['']) }" x-effect="rel[col.id] = items.filter(Boolean)">
-                                                                    <template x-for="(item, idx) in items" :key="idx">
-                                                                        <div class="flex gap-1 items-center">
-                                                                            <input type="text" x-model="items[idx]" class="flex-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập dữ liệu...">
-                                                                            <button @click="items.splice(idx, 1)" class="text-red-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-                                                                        </div>
-                                                                    </template>
-                                                                    <button @click="items.push('')" class="text-xs text-blue-600 hover:underline mt-1 font-medium">+ Thêm dòng</button>
-                                                                </div>
-                                                            </template>
-                                                            
-                                                            <template x-if="col.format === 'text'">
-                                                                <input type="text" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
-                                                            </template>
-                                                        </div>
-                                                    </template>
+                                        <template x-if="col.format === 'date'">
+                                            <input type="date" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
+                                        </template>
+                                        
+                                        <template x-if="col.format === 'number'">
+                                            <input type="number" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
+                                        </template>
+                                        
+                                        <template x-if="col.format === 'text_loop'">
+                                            <div class="mt-1 space-y-1" x-data="{ items: Array.isArray(rel[col.id]) ? rel[col.id] : (rel[col.id] ? [rel[col.id]] : ['']) }" x-effect="rel[col.id] = items.filter(Boolean)">
+                                                <template x-for="(item, idx) in items" :key="idx">
+                                                    <div class="flex gap-1 items-center">
+                                                        <input type="text" x-model="items[idx]" class="flex-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập dữ liệu...">
+                                                        <button @click="items.splice(idx, 1)" class="text-red-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                                                    </div>
+                                                </template>
+                                                <button @click="items.push('')" class="text-xs text-blue-600 hover:underline mt-1 font-medium">+ Thêm dòng</button>
+                                            </div>
+                                        </template>
+                                        
+                                        <template x-if="col.format === 'text'">
+                                            <input type="text" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
     
                     </template>
                 </div>
@@ -2464,7 +2492,7 @@
                                 if (virtualFundings.length > 0) app1Payload['groupFunding'] = virtualFundings.join(', ');
                                 if (hasData || hasApp1Data) {
                                     currentMaxCb++;
-                                    const nextCode = 'CB' + String(currentMaxCb).padStart(5, '0');
+                                    const nextCode = 'CB-' + String(currentMaxCb).padStart(5, '0');
                                     payload.id = nextCode;
                                     payload.code = nextCode;
                                     payloads.push(payload);
@@ -2932,11 +2960,68 @@
                     return dept ? dept.name : 'Chưa phân bổ';
                 },
                 
-                generateNextId(prefix = 'CB', existingIds = [], padding = 5) {
+                isParentInfoCol(col) {
+                    if (!col) return false;
+                    const id = col.id || '';
+                    const l = (col.label || '').toLowerCase();
+                    return id === 'parentPersonnelCccd' || id === 'parentPersonnelName' || id === 'parentPosition' || id === 'parentDepartment' ||
+                           l.includes('cccd cán bộ') || l.includes('cccd cb') ||
+                           l.includes('tên cán bộ') || l.includes('tên cb') ||
+                           l.includes('chức vụ cb') || l.includes('chức vụ cán bộ') ||
+                           l.includes('đơn vị cb') || l.includes('đơn vị cán bộ');
+                },
+                
+                getParentInfoVal(col) {
+                    if (!col) return '';
+                    const id = col.id || '';
+                    const l = (col.label || '').toLowerCase();
+                    if (id === 'parentPersonnelCccd' || l.includes('cccd')) return this.formData.cccd || '';
+                    if (id === 'parentPersonnelName' || l.includes('tên')) return this.formData.name || '';
+                    if (id === 'parentPosition' || l.includes('chức vụ')) return this.formData.positionName || this.formData.position || '';
+                    if (id === 'parentDepartment' || l.includes('đơn vị')) return this.getDepartmentName(this.formData.departmentId) || this.formData.departmentName || '';
+                    return '';
+                },
+
+                async renumberPersonnelCodes() {
+                    const activeList = this.personnel || [];
+                    if (activeList.length === 0) {
+                        alert("Chưa có cán bộ nào trong danh sách!");
+                        return;
+                    }
+                    if (!confirm(`Bạn có chắc chắn muốn đánh lại Mã CB cho toàn bộ ${activeList.length} cán bộ hiện có theo thứ tự từ CB-00001, CB-00002, CB-00003...?`)) {
+                        return;
+                    }
+                    this.loading = true;
+                    try {
+                        let count = 0;
+                        for (let i = 0; i < activeList.length; i++) {
+                            const p = activeList[i];
+                            const newCode = 'CB-' + String(i + 1).padStart(5, '0');
+                            await fetch(`${API_URL}/items/personnels/${p.id}`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer mvp-static-token-999'
+                                },
+                                body: JSON.stringify({ code: newCode })
+                            });
+                            p.code = newCode;
+                            count++;
+                        }
+                        await this.fetchData();
+                        alert(`Đã đánh lại Mã CB thành công cho ${count} cán bộ (từ CB-00001 đến CB-${String(count).padStart(5, '0')})!`);
+                    } catch(e) {
+                        alert("Lỗi khi cập nhật Mã CB: " + e.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                generateNextId(prefix = 'CB-', existingIds = [], padding = 5) {
                     let maxNum = 0;
                     for (let id of existingIds) {
-                        if (id && typeof id === 'string' && id.startsWith(prefix)) {
-                            const numPart = id.substring(prefix.length).replace(/[^0-9]/g, '');
+                        if (id && typeof id === 'string' && (id.startsWith(prefix) || id.startsWith('CB'))) {
+                            const numPart = id.replace(/[^0-9]/g, '');
                             const num = parseInt(numPart, 10);
                             if (!isNaN(num) && num > maxNum) {
                                 maxNum = num;
