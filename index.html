@@ -360,7 +360,7 @@
                             <template x-for="person in filteredPersonnel" :key="person.id">
                                 <tr class="hover:bg-blue-50/50 transition-colors cursor-pointer group" @click="openPanel(person)">
                                     <td class="py-3 px-4 text-center"><input type="checkbox" x-model="selectedIds" :value="person.id" @click.stop class="rounded text-blue-600 focus:ring-blue-500"></td>
-                                    <td class="py-3 px-6 text-sm text-gray-500 font-medium" x-text="person.code || 'N/A'"></td>
+                                    <td class="py-3 px-6 text-sm text-gray-500 font-medium" x-text="person.code || (person.id ? (person.id.startsWith('p_') ? 'CB' + person.id.replace('p_', '').slice(-5).toUpperCase() : person.id) : 'N/A')"></td>
                                     <td class="py-3 px-6 text-sm font-semibold text-gray-800" x-text="person.name"></td>
                                     <td class="py-3 px-6 text-sm text-gray-600" x-text="person.birthYear"></td>
                                     <td class="py-3 px-6 text-sm text-gray-600">
@@ -2934,11 +2934,16 @@
                             name: '', code: '', cccd: '', birthYear: '', departmentId: ''
                         };
                     }
-                    if (!this.formData.trips) this.formData.trips = [{}];
-                    if (this.formData.trips.length === 0) this.formData.trips.push({});
+                    if (!this.formData.trips) this.formData.trips = [];
                     if (!this.formData.flags) this.formData.flags = {};
                     if (!this.formData.custom_data) this.formData.custom_data = {};
                     if (!this.formData.relatives) this.formData.relatives = [];
+                    
+                    // Copy flags into formData so checkbox/radio fields in form get bound
+                    if (this.formData.flags) {
+                        Object.assign(this.formData, this.formData.flags);
+                    }
+                    
                     // Flatten custom_data array fields
                     for(let k in this.formData.custom_data) {
                         if (Array.isArray(this.formData.custom_data[k])) {
@@ -2950,11 +2955,11 @@
                     const allMaps = [...this.importMappingPersonnel, ...this.importMappingRelative];
                     for(let g of allMaps) {
                         if(g.isMultiple && g.group) {
-                            if(!this.formData[g.group]) {
-                                this.formData[g.group] = [];
-                            }
-                            if(this.formData[g.group].length === 0) {
-                                this.formData[g.group].push({});
+                            if (this.formData.trips && this.formData.trips.length > 0 && 
+                               (g.group.toLowerCase().includes('nước ngoài') || g.group.toLowerCase().includes('chuyến đi') || g.group.startsWith('Khối B'))) {
+                                this.formData[g.group] = JSON.parse(JSON.stringify(this.formData.trips));
+                            } else if (!this.formData[g.group] || this.formData[g.group].length === 0) {
+                                this.formData[g.group] = [{}];
                             }
                         }
                     }
@@ -2968,6 +2973,11 @@
                         }
                     }
 
+                    // Ensure relatives list has at least 1 item if empty so form displays nicely
+                    if (this.formData.relatives.length === 0) {
+                        this.formData.relatives = [{}];
+                    }
+
                     // Ensure relatives have foreignInfo
                     this.formData.relatives.forEach(r => {
                         if (!r.foreignInfo) r.foreignInfo = {};
@@ -2978,6 +2988,7 @@
                     });
                     
                     // Ensure trips have flattened custom fields
+                    if (this.formData.trips.length === 0) this.formData.trips.push({});
                     this.formData.trips.forEach(t => {
                         if (!t.custom_data) t.custom_data = {};
                         if (t.custom_data) {
