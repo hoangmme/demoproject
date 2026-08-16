@@ -2190,13 +2190,19 @@
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const text = e.target.result;
-                        // Basic CSV parser to handle quotes and commas
+                        // Auto-detect separator
+                        let firstLine = text.split('\n')[0] || '';
+                        let sep = ',';
+                        if (firstLine.indexOf('\t') !== -1) sep = '\t';
+                        else if (firstLine.indexOf(';') !== -1 && firstLine.indexOf(',') === -1) sep = ';';
+                        else if (firstLine.split(';').length > firstLine.split(',').length) sep = ';';
+                        
                         let p = '', row = [''], ret = [row], i = 0, r = 0, s = !0, l;
                         for (l of text) {
                             if ('"' === l) {
                                 if (s && l === p) row[i] += l;
                                 s = !s;
-                            } else if (',' === l && s) l = row[++i] = '';
+                            } else if (sep === l && s) l = row[++i] = '';
                             else if ('\n' === l && s) {
                                 if ('\r' === p) row[i] = row[i].slice(0, -1);
                                 row = ret[++r] = [l = '']; i = 0;
@@ -2205,13 +2211,13 @@
                         }
                         if (ret.length > 0 && ret[ret.length-1].length === 1 && ret[ret.length-1][0] === '') ret.pop();
                         
-                        // Set the pasted text as TSV and run process
                         this.importPasteText = ret.map(r => r.join('\t')).join('\n');
                         this.processPastedData();
                     };
                     reader.readAsText(file);
                     event.target.value = '';
                 },
+
                 
                 processPastedData() {
                     if(!this.importPasteText.trim()) return;
@@ -3550,7 +3556,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
     
             
             <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
-                <button @click="importMapping = [...defaultMapping54]" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">Khôi phục 54 cột chuẩn</button>
+                                <button @click="resetToFactory()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">Khôi phục 54 cột chuẩn</button>
                 <button @click="isSettingsModalOpen = false" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">Hủy</button>
                 <button @click="saveMappingConfig()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">
                     Lưu Cấu hình
