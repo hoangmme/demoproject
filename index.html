@@ -2173,8 +2173,7 @@
                     const headersStr = headers.join('	');
                     
                     const row1 = Array.from({length: headers.length}, () => '').join('	');
-                    const text = headersStr + '
-' + row1;
+                    const text = headersStr + '\\n' + row1;
                     
                     const msg = this.importTab === 'relative' ? 'Thân nhân' : 'Cán bộ';
                     navigator.clipboard.writeText(text).then(() => {
