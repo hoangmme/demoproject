@@ -2264,10 +2264,11 @@
                     const mappingConfig = rawConfig.flatMap(g => g.columns);
                     
                     let newMapping = [];
+                    const sf = this.systemFields;
                     for(let i = 1; i < this.importHeaders.length; i++) {
-                        // User wants STRICT INDEX mapping based on defaultMapping54
-                        if (this.importType !== 'relative' && i < this.defaultMapping54.length) {
-                            newMapping[i] = this.defaultMapping54[i];
+                        // STRICT 1-1 index mapping: TSV column i -> system field i
+                        if (sf[i]) {
+                            newMapping[i] = sf[i].key;
                         } else {
                             newMapping[i] = '';
                         }
@@ -3462,19 +3463,22 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                 <div class="contents">
                                     <div class="flex items-center text-sm font-medium text-gray-800" x-text="header"></div>
                                     <div>
-                                        <select x-model="importMapping[index]" class="w-full border-gray-300 border rounded py-1 px-2 text-sm focus:ring-blue-500">
-                                            <option value="">-- Bỏ qua cột này --</option>
-                                            <template x-for="field in systemFields" :key="field.key">
-                                                <option :value="field.key" x-text="field.label"></option>
-                                            </template>
-                                        </select>
-                                        <template x-if="importMapping[index] && systemFields.find(f => f.key === importMapping[index]) && (() => {
-                                            const sysLabel = systemFields.find(f => f.key === importMapping[index]).label.toLowerCase().replace(/\s+/g, '');
-                                            const impHeader = header.toLowerCase().replace(/\s+/g, '');
-                                            // Only warn if they are completely different (not a substring of each other)
+                                        <div class="w-full border border-green-300 bg-green-50 rounded py-1.5 px-3 text-sm text-green-800 font-medium"
+                                             x-text="(() => {
+                                                 const sf = systemFields[index] || null;
+                                                 return sf ? sf.label : '(Không có trường tương ứng)';
+                                             })()"></div>
+                                        <template x-if="(() => {
+                                            const sf = systemFields[index] || null;
+                                            if (!sf) return true;
+                                            const sysNum = sf.label.match(/Cột\s*(\d+)/i);
+                                            const impNum = header.match(/Cột\s*(\d+)/i);
+                                            if (sysNum && impNum) return sysNum[1] !== impNum[1];
+                                            const sysLabel = sf.label.toLowerCase().replace(/[\s,]+/g, '');
+                                            const impHeader = header.toLowerCase().replace(/[\s,]+/g, '');
                                             return !sysLabel.includes(impHeader) && !impHeader.includes(sysLabel);
                                         })()">
-                                            <div class="text-red-500 text-xs mt-1 font-medium">⚠️ Cảnh báo: Tên cột TSV không khớp trường hệ thống</div>
+                                            <div class="text-red-500 text-xs mt-1 font-medium">⚠️ Tên cột TSV không khớp trường hệ thống</div>
                                         </template>
                                     </div>
                                 </div>
@@ -3490,16 +3494,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                     <tr class="bg-gray-50">
                                         <template x-for="(h, colIndex) in importHeaders" :key="colIndex">
                                             <th class="border p-2 whitespace-nowrap">
-                                                <span x-text="(() => {
-                                                    const key = importMapping[colIndex];
-                                                    if (!key) return h || ('Cột ' + (parseInt(colIndex)+1) + ' - Bỏ qua');
-                                                    if (key.startsWith('custom_')) {
-                                                        const m = importType === 'relative' ? importMappingRelative : importMappingPersonnel;
-                                                        const flatM = m.flatMap(g => g.columns || []);
-                                                        return flatM.find(c => c.id === key)?.label || key;
-                                                    }
-                                                    return systemFields.find(f => f.key === key)?.label || key;
-                                                })()"></span>
+                                                <span x-text="h"></span>
                                             </th>
                                         </template>
                                     </tr>
