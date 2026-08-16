@@ -182,7 +182,7 @@
                                                     <option value="dropdown">Dropdown</option>
                                                 </select>
                                                 
-                                                <template x-if="colObj.format === 'checkbox' || colObj.format === 'checkbox_text' || colObj.format === 'dropdown'">
+                                                <template x-if="colObj.format === 'checkbox' || colObj.format === 'dropdown'">
                                                     <input x-model="colObj.options" class="w-48 rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-xs py-1.5 bg-yellow-50" placeholder="Các tùy chọn, cách nhau bằng phẩy...">
                                                 </template>
                                                 
@@ -1027,12 +1027,18 @@
                                                             </label>
                                                             
                                                             <template x-if="col.format === 'checkbox_text'">
-                                                                <div class="mt-1 space-y-2" x-data="{ checked: !!formData[col.id] }">
-                                                                    <label class="inline-flex items-center">
-                                                                        <input type="checkbox" x-model="checked" @change="if(!checked) formData[col.id] = ''" class="rounded border-gray-300 text-blue-600">
-                                                                        <span class="ml-1 text-xs text-gray-700" x-text="col.options || 'Có'"></span>
-                                                                    </label>
-                                                                    <div x-show="checked">
+                                                                <div class="mt-1 space-y-2" x-data="{ state: (formData[col.id] === 'Không' || !formData[col.id]) ? (formData[col.id] === 'Không' ? 'no' : '') : 'yes' }">
+                                                                    <div class="flex items-center gap-4">
+                                                                        <label class="inline-flex items-center">
+                                                                            <input type="radio" x-model="state" value="yes" @change="if(formData[col.id] === 'Không') formData[col.id] = ''" class="rounded-full border-gray-300 text-blue-600">
+                                                                            <span class="ml-1 text-xs text-gray-700">Có</span>
+                                                                        </label>
+                                                                        <label class="inline-flex items-center">
+                                                                            <input type="radio" x-model="state" value="no" @change="formData[col.id] = 'Không'" class="rounded-full border-gray-300 text-blue-600">
+                                                                            <span class="ml-1 text-xs text-gray-700">Không</span>
+                                                                        </label>
+                                                                    </div>
+                                                                    <div x-show="state === 'yes'">
                                                                         <input type="text" x-model="formData[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập chi tiết...">
                                                                     </div>
                                                                 </div>
@@ -1117,12 +1123,18 @@
                                                             </label>
                                                             
                                                             <template x-if="col.format === 'checkbox_text'">
-                                                                <div class="mt-1 space-y-2" x-data="{ checked: !!t[col.id] }">
-                                                                    <label class="inline-flex items-center">
-                                                                        <input type="checkbox" x-model="checked" @change="if(!checked) t[col.id] = ''" class="rounded border-gray-300 text-blue-600">
-                                                                        <span class="ml-1 text-xs text-gray-700" x-text="col.options || 'Có'"></span>
-                                                                    </label>
-                                                                    <div x-show="checked">
+                                                                <div class="mt-1 space-y-2" x-data="{ state: (t[col.id] === 'Không' || !t[col.id]) ? (t[col.id] === 'Không' ? 'no' : '') : 'yes' }">
+                                                                    <div class="flex items-center gap-4">
+                                                                        <label class="inline-flex items-center">
+                                                                            <input type="radio" x-model="state" value="yes" @change="if(t[col.id] === 'Không') t[col.id] = ''" class="rounded-full border-gray-300 text-blue-600">
+                                                                            <span class="ml-1 text-xs text-gray-700">Có</span>
+                                                                        </label>
+                                                                        <label class="inline-flex items-center">
+                                                                            <input type="radio" x-model="state" value="no" @change="t[col.id] = 'Không'" class="rounded-full border-gray-300 text-blue-600">
+                                                                            <span class="ml-1 text-xs text-gray-700">Không</span>
+                                                                        </label>
+                                                                    </div>
+                                                                    <div x-show="state === 'yes'">
                                                                         <input type="text" x-model="t[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập chi tiết...">
                                                                     </div>
                                                                 </div>
@@ -1211,12 +1223,18 @@
                                                             </label>
                                                             
                                                             <template x-if="col.format === 'checkbox_text'">
-                                                                <div class="mt-1 space-y-2" x-data="{ checked: !!rel[col.id] }">
-                                                                    <label class="inline-flex items-center">
-                                                                        <input type="checkbox" x-model="checked" @change="if(!checked) rel[col.id] = ''" class="rounded border-gray-300 text-blue-600">
-                                                                        <span class="ml-1 text-xs text-gray-700" x-text="col.options || 'Có'"></span>
-                                                                    </label>
-                                                                    <div x-show="checked">
+                                                                <div class="mt-1 space-y-2" x-data="{ state: (rel[col.id] === 'Không' || !rel[col.id]) ? (rel[col.id] === 'Không' ? 'no' : '') : 'yes' }">
+                                                                    <div class="flex items-center gap-4">
+                                                                        <label class="inline-flex items-center">
+                                                                            <input type="radio" x-model="state" value="yes" @change="if(rel[col.id] === 'Không') rel[col.id] = ''" class="rounded-full border-gray-300 text-blue-600">
+                                                                            <span class="ml-1 text-xs text-gray-700">Có</span>
+                                                                        </label>
+                                                                        <label class="inline-flex items-center">
+                                                                            <input type="radio" x-model="state" value="no" @change="rel[col.id] = 'Không'" class="rounded-full border-gray-300 text-blue-600">
+                                                                            <span class="ml-1 text-xs text-gray-700">Không</span>
+                                                                        </label>
+                                                                    </div>
+                                                                    <div x-show="state === 'yes'">
                                                                         <input type="text" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập chi tiết...">
                                                                     </div>
                                                                 </div>
