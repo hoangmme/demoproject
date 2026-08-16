@@ -2253,10 +2253,20 @@
                     this.importHeaders = rows[0].map(h => h.trim());
                     this.importRows = rows.slice(1);
                     
-                    const rawConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel; const mappingConfig = rawConfig.flatMap(g => g.columns);
+                    const rawConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel; 
+                    const mappingConfig = rawConfig.flatMap(g => g.columns);
                     
-                    if (this.importHeaders.length !== mappingConfig.length) {
-                        const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length} cột, nhưng hệ thống kỳ vọng ${mappingConfig.length} cột. 
+                    this.importMapping = [];
+                    for(let i = 1; i < this.importHeaders.length; i++) {
+                        if (i - 1 < mappingConfig.length) {
+                            this.importMapping[i] = mappingConfig[i - 1].id;
+                        } else {
+                            this.importMapping[i] = '';
+                        }
+                    }
+                    
+                    if (this.importHeaders.length - 1 !== mappingConfig.length) {
+                        const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length - 1} cột (bỏ qua STT), nhưng hệ thống kỳ vọng ${mappingConfig.length} cột. 
 Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn có muốn tiếp tục không?`);
                         if (!proceed) return;
                     }
@@ -2687,11 +2697,12 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                 
                 async fetchData() {
                     try {
+                        const ts = Date.now();
                         const [resP, resA1, resA2, resA3] = await Promise.all([
-                            fetch(`${API_URL}/items/personnels?limit=1000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
-                            fetch(`${API_URL}/items/appendix1?limit=2000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
-                            fetch(`${API_URL}/items/appendix2?limit=2000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
-                            fetch(`${API_URL}/items/appendix3?limit=2000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } })
+                            fetch(`${API_URL}/items/personnels?limit=1000&_t=${ts}`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
+                            fetch(`${API_URL}/items/appendix1?limit=2000&_t=${ts}`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
+                            fetch(`${API_URL}/items/appendix2?limit=2000&_t=${ts}`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
+                            fetch(`${API_URL}/items/appendix3?limit=2000&_t=${ts}`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } })
                         ]);
                         
                         const [jsonP, jsonA1, jsonA2, jsonA3] = await Promise.all([
