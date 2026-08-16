@@ -2161,8 +2161,8 @@
                     this.importRows = [];
                     
                 },
-                                                                loadSampleData() {
-                    const maps = this.importTab === 'relative' ? this.importMappingRelative : this.importMappingPersonnel;
+                loadSampleData() {
+                    const maps = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel;
                     const headers = ['Cột 1 (STT)'];
                     let colIndex = 2;
                     for (let g of maps) {
@@ -2172,12 +2172,12 @@
                             colIndex++;
                         }
                     }
-                    const headersStr = headers.join('	');
+                    const headersStr = headers.join('\t');
                     
-                    const row1 = Array.from({length: headers.length}, () => '').join('	');
-                    const text = headersStr + '\\n' + row1;
+                    const row1 = Array.from({length: headers.length}, () => '').join('\t');
+                    const text = headersStr + '\n' + row1;
                     
-                    const msg = this.importTab === 'relative' ? 'Thân nhân' : 'Cán bộ';
+                    const msg = this.importType === 'relative' ? 'Thân nhân' : 'Cán bộ';
                     navigator.clipboard.writeText(text).then(() => {
                         alert(`Đã copy Template cấu hình ${msg} hiện tại vào Clipboard! Bạn hãy dán (Ctrl+V) vào Google Sheets.`);
                     }).catch(err => {
