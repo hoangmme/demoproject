@@ -128,14 +128,23 @@
             <!-- SETTINGS IMPORT VIEW -->
             <div x-show="currentView === 'settings_import'" class="flex-1 overflow-y-auto p-8" style="display: none;">
                 <div class="max-w-5xl mx-auto">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    
+                    <div class="flex gap-2 mb-4">
+                        <button @click="activeSettingsTab = 'personnel'" :class="activeSettingsTab === 'personnel' ? 'bg-[#447f28] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'" class="px-6 py-2.5 rounded-t-lg font-bold shadow-sm transition-colors border border-b-0 border-gray-200">
+                            Cấu hình Mẫu Cá nhân
+                        </button>
+                        <button @click="activeSettingsTab = 'relative'" :class="activeSettingsTab === 'relative' ? 'bg-[#447f28] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'" class="px-6 py-2.5 rounded-t-lg font-bold shadow-sm transition-colors border border-b-0 border-gray-200">
+                            Cấu hình Mẫu Thân nhân
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-gray-200 p-6 -mt-[1px]">
                         <div class="mb-6 pb-4 border-b border-gray-100 flex justify-between items-center">
                             <div>
                                 <h3 class="text-lg font-bold text-gray-800">Cấu hình ánh xạ cột Excel</h3>
-                                <p class="text-sm text-gray-500 mt-1">Ghép nối đúng thứ tự cột trong file Excel mẫu với các trường dữ liệu trong hệ thống. Cấu hình này áp dụng chung cho tất cả người dùng.</p>
+                                <p class="text-sm text-gray-500 mt-1">Ghép nối đúng thứ tự cột trong file Excel mẫu với các trường hệ thống và kiểu định dạng (Format). Cấu hình áp dụng chung cho tất cả người dùng.</p>
                             </div>
                             <div class="flex gap-3">
-                                <button @click="importMapping = [...defaultMapping54]" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">Khôi phục 54 cột chuẩn</button>
                                 <button @click="saveMappingConfig()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                     Lưu Cấu hình
@@ -143,16 +152,31 @@
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-4">
-                            <template x-for="(col, index) in importMapping" :key="index">
-                                <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors shadow-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <template x-for="(colObj, index) in (activeSettingsTab === 'personnel' ? importMappingPersonnel : importMappingRelative)" :key="index">
+                                <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors shadow-sm">
                                     <span class="w-16 font-bold text-gray-600 bg-white border border-gray-200 rounded py-1 text-center text-sm">Cột <span x-text="index + 1"></span></span>
-                                    <select x-model="importMapping[index]" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2">
+                                    <select x-model="colObj.key" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs py-1.5 w-1/2">
                                         <option value="">-- Bỏ qua --</option>
                                         <template x-for="field in systemFields.filter(f => !['stt','parentPersonnelCccd','parentPersonnelName','parentPosition','parentDepartment','relationshipName','relativeName','currentAddress','occupation','timeAbroad','unitAbroad','currentUnit','marriedToForeigner','workInForeignCompany','xlplNuocSoTai','xlplVietNam','nationality','fileNumber','content'].includes(f.key))" :key="field.key">
-                                            <option :value="field.key" x-text="field.label" :selected="importMapping[index] === field.key"></option>
+                                            <option :value="field.key" x-text="field.label" :selected="colObj.key === field.key"></option>
                                         </template>
+                                        <optgroup label="Dành riêng Thân nhân">
+                                            <template x-for="field in systemFields.filter(f => ['stt','parentPersonnelCccd','parentPersonnelName','parentPosition','parentDepartment','relationshipName','relativeName','currentAddress','occupation','timeAbroad','unitAbroad','currentUnit','marriedToForeigner','workInForeignCompany','xlplNuocSoTai','xlplVietNam','nationality','fileNumber','content'].includes(f.key))" :key="field.key">
+                                                <option :value="field.key" x-text="field.label" :selected="colObj.key === field.key"></option>
+                                            </template>
+                                        </optgroup>
                                     </select>
+                                    
+                                    <select x-model="colObj.format" class="rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 w-28 bg-green-50">
+                                        <option value="text">Văn bản</option>
+                                        <option value="number">Số</option>
+                                        <option value="date">Ngày</option>
+                                        <option value="text_loop">Text Loop</option>
+                                        <option value="checkbox">Checkbox (Có/X)</option>
+                                        <option value="dropdown">Dropdown</option>
+                                    </select>
+
                                     <button @click="removeColumn(index)" class="text-red-400 hover:text-red-600 bg-white p-1.5 rounded-md border border-gray-200" title="Xóa cột này">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                     </button>
@@ -1796,7 +1820,7 @@
                 importPasteText: '',
                 importHeaders: [],
                 importRows: [],
-                importMapping: {},
+                importMappingPersonnel: [], importMappingRelative: [], activeSettingsTab: 'personnel',
                 isImporting: false,
                 isSettingsModalOpen: false,
                 defaultMapping54: ["stt", "name", "otherName", "birthYear", "ethnicity", "religion", "hometown", "departmentName", "positionName", "thuongTru", "tamTru", "cccd", "hcCaNhan", "hcCongVu", "kqThamTra", "decisionNumber", "decisionDate", "decisionIssuer", "departureDate", "arrivalDate", "countryName", "tripCount", "purpose_cong_tac", "purpose_hoc_tap", "purpose_viec_rieng", "trainingType", "trainingPlace", "trainingRole", "sponsorUnit", "fundingName", "trainingTime", "workRole", "workMembers", "workMemberCount", "funding_ngan_sach", "funding_tu_tuc", "funding_tai_tro", "funding_hoc_bong", "report", "nopHC", "trongYeu", "thamNhung", "loiKeo", "otherFlags", "kl_chung", "klDang", "klChinhQuyen", "vpChuaPhep", "vpNuocNgoai", "vpQuaHan", "receivedGiftOver50M", "rentHouseToForeigner", "workInForeignCompany", "dienQuanLy"],
@@ -2012,35 +2036,15 @@
                     this.importHeaders = rows[0].map(h => h.trim());
                     this.importRows = rows.slice(1);
                     
-                    const expectedCols = this.importType === 'relative' ? 26 : this.defaultMapping54.length;
-                    if (this.importHeaders.length !== expectedCols && this.importHeaders.length !== Object.keys(this.importMapping).length) {
-                        const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length} cột, nhưng hệ thống kỳ vọng ${expectedCols} cột. 
+                    const mappingConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel;
+                    
+                    if (this.importHeaders.length !== mappingConfig.length) {
+                        const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length} cột, nhưng hệ thống kỳ vọng ${mappingConfig.length} cột. 
 Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn có muốn tiếp tục không?`);
                         if (!proceed) return;
                     }
                     
                     setTimeout(() => {
-                        let newMapping = {};
-                        this.importHeaders.forEach((h, index) => {
-                            if (this.importType === 'relative') {
-                                const mappingArr = [
-                                    'stt', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'relationshipName',
-                                    'relativeName', 'otherName', 'birthYear', 'hometown', 'nationality',
-                                    'parentPersonnelCccd', 'occupation', 'hktt', 'currentAddress', 'cccd',
-                                    'fileNumber', 'content', 'unitAbroad', 'countryName', 'timeAbroad',
-                                    'fundingName', 'currentUnit', 'marriedToForeigner', 'workInForeignCompany', 'xlplNuocSoTai', 'xlplVietNam'
-                                ];
-                                newMapping[index] = mappingArr[index] || "";
-                            } else {
-                                // If we have a saved mapping array, use it
-                                if (Array.isArray(this.importMapping) && this.importMapping.length > 0) {
-                                    newMapping[index] = this.importMapping[index] || "";
-                                } else {
-                                    newMapping[index] = this.defaultMapping54[index] || "";
-                                }
-                            }
-                        });
-                        this.importMapping = newMapping;
                         this.importStep = 2;
                     }, 50);
                 },
@@ -2048,66 +2052,138 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                 async executeImport() {
                     this.isImporting = true;
                     try {
-                        if (this.importType === 'relative') {
-                            // Import Relatives Logic with Bulk Mapping
-                            const payloads = [];
-                            const errorLogs = [];
-                            let rowNum = 1; // Header is row 0
+                        const mappingConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel;
+                        const payloads = [];
+                        const appendix3Payloads = [];
+                        const appendix1Payloads = [];
+                        const errorLogs = [];
+                        let rowNum = 1;
+                        
+                        // Parser Utilities
+                        const parseDate = (val) => {
+                            if (!val) return null;
+                            if (/^\d{4}$/.test(val)) return `${val}-01-01`;
+                            const parts = val.split(/[-/]/);
+                            if (parts.length === 3) {
+                                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            }
+                            return val;
+                        };
+                        const parseNumber = (val) => {
+                            if (!val) return null;
+                            const num = parseFloat(val.replace(/[^\d.-]/g, ''));
+                            return isNaN(num) ? null : num;
+                        };
+                        const parseCheckbox = (val) => {
+                            if (!val) return false;
+                            const v = val.toLowerCase().trim();
+                            return ['x', 'v', 'có', 'yes', 'true', '1'].includes(v);
+                        };
+                        const parseTextLoop = (val) => {
+                            if (!val) return '';
+                            return val.replace(/\n/g, ', ').trim();
+                        };
+
+                        for (let r of this.importRows) {
+                            rowNum++;
+                            let hasData = false;
+                            let hasApp1Data = false;
                             
-                            for (let r of this.importRows) {
-                                rowNum++;
-                                let hasData = false;
-                                const payload = {};
-                                let parentCccd = null;
+                            const payload = {};
+                            const app3Payload = {};
+                            const app1Payload = {};
+                            let parentCccd = null;
+                            
+                            const virtualPurposes = [];
+                            const virtualFundings = [];
+                            
+                            for (let i = 0; i < mappingConfig.length; i++) {
+                                const config = mappingConfig[i];
+                                if (!config || !config.key) continue;
                                 
-                                for (let i = 0; i < this.importHeaders.length; i++) {
-                                    const fieldKey = this.importMapping[i];
-                                    let val = r[i]?.trim();
-                                    if (fieldKey && val) {
-                                        const ignoredFields = ['stt', 'parentPersonnelCccd', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'otherName', 'hometown', 'nationality', 'hktt', 'fileNumber', 'content'];
-                                        if (ignoredFields.includes(fieldKey)) {
-                                            if (fieldKey === 'parentPersonnelCccd') parentCccd = val;
-                                            continue; // Ignore pseudo/unsupported fields for relative DB insertion
-                                        }
-                                        if (fieldKey === 'marriedToForeigner' || fieldKey === 'workInForeignCompany') {
-                                            val = (val.toLowerCase() === 'có' || val.toLowerCase() === 'yes') ? true : false;
-                                        }
+                                const fieldKey = config.key;
+                                const format = config.format || 'text';
+                                let rawVal = (r[i] !== undefined && r[i] !== null) ? String(r[i]).trim() : '';
+                                
+                                if (!rawVal && format !== 'checkbox') continue;
+                                
+                                let val = rawVal;
+                                if (format === 'date') val = parseDate(rawVal);
+                                else if (format === 'number') val = parseNumber(rawVal);
+                                else if (format === 'checkbox') val = parseCheckbox(rawVal);
+                                else if (format === 'text_loop') val = parseTextLoop(rawVal);
+                                else val = rawVal; 
+                                
+                                if (val === null || val === '') continue;
+
+                                if (this.importType === 'relative') {
+                                    const ignoredFields = ['stt', 'parentPersonnelCccd', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'otherName', 'hometown', 'nationality', 'hktt', 'fileNumber', 'content'];
+                                    if (ignoredFields.includes(fieldKey)) {
+                                        if (fieldKey === 'parentPersonnelCccd') parentCccd = val;
+                                        continue;
+                                    }
+                                    payload[fieldKey] = val;
+                                    hasData = true;
+                                } else {
+                                    const ignoredKeys = ['stt'];
+                                    const flagKeys = ['trongYeu', 'thamNhung', 'loiKeo', 'klDang', 'klChinhQuyen', 'vpChuaPhep', 'vpNuocNgoai', 'vpQuaHan', 'dienQuanLy', 'receivedGiftOver50M', 'rentHouseToForeigner', 'workInForeignCompany', 'marriedToForeigner', 'otherFlags', 'kl_chung'];
+                                    const tripKeys = ['decisionNumber', 'decisionDate', 'decisionIssuer', 'departureDate', 'arrivalDate', 'countryName', 'tripCount', 'purposeName', 'trainingType', 'trainingPlace', 'trainingRole', 'sponsorUnit', 'fundingName', 'trainingTime', 'workRole', 'workMembers', 'workMemberCount', 'groupFunding', 'report', 'nopHC'];
+                                    
+                                    if (ignoredKeys.includes(fieldKey)) continue;
+
+                                    if (fieldKey.startsWith('purpose_') && val === true) {
+                                        virtualPurposes.push(this.systemFields.find(f => f.key === fieldKey)?.label.replace('[Mục đích] ', '') || fieldKey);
+                                        hasApp1Data = true;
+                                    } else if (fieldKey.startsWith('funding_') && val === true) {
+                                        virtualFundings.push(this.systemFields.find(f => f.key === fieldKey)?.label.replace('[Kinh phí] ', '') || fieldKey);
+                                        hasApp1Data = true;
+                                    } else if (flagKeys.includes(fieldKey)) {
+                                        app3Payload[fieldKey] = val;
+                                        hasData = true;
+                                    } else if (tripKeys.includes(fieldKey)) {
+                                        app1Payload[fieldKey] = val;
+                                        hasApp1Data = true;
+                                    } else {
                                         payload[fieldKey] = val;
                                         hasData = true;
                                     }
                                 }
-                                
-                                if (hasData) {
-                                    if (!parentCccd) {
-                                        errorLogs.push(`Dòng ${rowNum}: Thiếu CCCD Cán bộ để khớp dữ liệu.`);
-                                        continue;
-                                    }
-                                    
-                                    const targetPerson = this.personnel.find(p => p.cccd === parentCccd);
-                                    if (!targetPerson) {
-                                        errorLogs.push(`Dòng ${rowNum}: Không tìm thấy Cán bộ có CCCD = ${parentCccd}.`);
-                                        continue;
-                                    }
-                                    
-                                    payload.personnelId = targetPerson.id;
-                                    payload.id = 'rel_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+                            }
+                            
+                            if (this.importType === 'relative') {
+                                if (!parentCccd) {
+                                    errorLogs.push(`Dòng ${rowNum}: Thiếu CCCD cán bộ để ghép nối!`);
+                                    continue;
+                                }
+                                const targetPerson = this.personnels.find(p => p.cccd === parentCccd);
+                                if (!targetPerson) {
+                                    errorLogs.push(`Dòng ${rowNum}: Không tìm thấy cán bộ có CCCD ${parentCccd}`);
+                                    continue;
+                                }
+                                payload.personnelId = targetPerson.id;
+                                payload.id = 'rel_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+                                if (hasData) payloads.push(payload);
+                            } else {
+                                if (virtualPurposes.length > 0) app1Payload['purposeName'] = virtualPurposes.join(', ');
+                                if (virtualFundings.length > 0) app1Payload['groupFunding'] = virtualFundings.join(', ');
+                                if (hasData || hasApp1Data) {
                                     payloads.push(payload);
+                                    appendix3Payloads.push(app3Payload);
+                                    appendix1Payloads.push(app1Payload);
                                 }
                             }
-                            
-                            if (payloads.length === 0) {
-                                alert('Không có dữ liệu hợp lệ để lưu!\n\n' + errorLogs.slice(0, 5).join('\n'));
-                                this.isImporting = false;
-                                return;
-                            }
-                            
-                            // Batch insert
+                        }
+                        
+                        if (payloads.length === 0 && appendix1Payloads.length === 0 && errorLogs.length > 0) {
+                            alert('Không có dữ liệu hợp lệ để lưu!\n\n' + errorLogs.slice(0, 5).join('\n'));
+                            this.isImporting = false;
+                            return;
+                        }
+
+                        if (this.importType === 'relative') {
                             const res = await fetch(`${API_URL}/items/appendix2`, {
                                 method: 'POST',
-                                headers: { 
-                                    'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer mvp-static-token-999'
-                                },
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
                                 body: JSON.stringify(payloads)
                             });
                             
@@ -2124,115 +2200,65 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                 const err = await res.json();
                                 alert("Lỗi khi import: " + (err.errors?.[0]?.message || 'Lỗi không xác định'));
                             }
-                            this.isImporting = false;
-                            return;
-                        }
-
-                        // Personnel Import Logic
-                        const payloads = [];
-                        const appendix3Payloads = [];
-                        const appendix1Payloads = [];
-                        for (let r of this.importRows) {
-                            const payload = {};
-                            const app3Payload = {};
-                            const app1Payload = {};
-                            let hasData = false;
-                            let hasApp1Data = false;
-                            
-                            const flagKeys = ['trongYeu', 'thamNhung', 'loiKeo', 'klDang', 'klChinhQuyen', 'vpChuaPhep', 'vpNuocNgoai', 'vpQuaHan', 'dienQuanLy', 'receivedGiftOver50M', 'rentHouseToForeigner', 'workInForeignCompany', 'marriedToForeigner', 'otherFlags'];
-                            const tripKeys = ['decisionNumber', 'decisionDate', 'decisionIssuer', 'departureDate', 'arrivalDate', 'countryName', 'tripCount', 'purposeName', 'trainingType', 'trainingPlace', 'trainingRole', 'sponsorUnit', 'fundingName', 'trainingTime', 'workRole', 'workMembers', 'workMemberCount', 'groupFunding', 'report', 'nopHC'];
-                            const ignoredKeys = ['stt'];
-                            
-                            for (let i = 0; i < this.importHeaders.length; i++) {
-                                const fieldKey = this.importMapping[i];
-                                if (fieldKey && !ignoredKeys.includes(fieldKey)) {
-                                    let val = r[i]?.trim() || null;
-                                    if(val) hasData = true;
-                                    if (fieldKey === 'departmentId' && val) {
-                                        const validIds = this.departments ? this.departments.map(d => String(d.id)) : ['D1', 'D2', 'D3', 'D4', 'D5'];
-                                        if (!validIds.includes(String(val))) {
-                                            val = null; // Prevent invalid foreign key
-                                        }
-                                    }
-                                    
-                                    if(flagKeys.includes(fieldKey)) {
-                                        if (val !== null) app3Payload[fieldKey] = val;
-                                    } else if (tripKeys.includes(fieldKey)) {
-                                        if (val !== null) { app1Payload[fieldKey] = val; hasApp1Data = true; }
-                                    } else {
-                                        if (val !== null) payload[fieldKey] = val;
-                                    }
-                                }
-                            }
-                            
-                            if (hasData) {
-                                if (!payload.id) {
-                                    payload.id = this.generateNextId('CB_', allCbIds);
-                                    allCbIds.push(payload.id);
-                                }
-                                payloads.push(payload);
-                                
-                                if (Object.keys(app3Payload).length > 0) {
-                                    app3Payload.id = 'a3_' + Date.now() + Math.floor(Math.random()*1000) + payload.id;
-                                    app3Payload.personnelId = payload.id;
-                                    appendix3Payloads.push(app3Payload);
-                                }
-                                
-                                if (hasApp1Data) {
-                                    app1Payload.id = 'trip_' + Date.now() + Math.floor(Math.random()*1000) + payload.id;
-                                    app1Payload.personnelId = payload.id;
-                                    appendix1Payloads.push(app1Payload);
-                                }
-                            }
-                        }
-                        
-                        if(payloads.length === 0) {
-                            alert("Không có dữ liệu hợp lệ để lưu!");
-                            this.isImporting = false;
-                            return;
-                        }
-                        
-                        const res = await fetch(`${API_URL}/items/personnels`, {
-                            method: 'POST',
-                            headers: { 
-                                'Content-Type': 'application/json',
-                                'Authorization': 'Bearer mvp-static-token-999'
-                            },
-                            body: JSON.stringify(payloads)
-                        });
-                        
-                        if (res.ok) {
-                            if (appendix3Payloads.length > 0) {
-                                await fetch(`${API_URL}/items/appendix3`, {
-                                    method: 'POST',
-                                    headers: { 
-                                        'Content-Type': 'application/json',
-                                        'Authorization': 'Bearer mvp-static-token-999'
-                                    },
-                                    body: JSON.stringify(appendix3Payloads)
-                                });
-                            }
-                            if (appendix1Payloads.length > 0) {
-                                await fetch(`${API_URL}/items/appendix1`, {
-                                    method: 'POST',
-                                    headers: { 
-                                        'Content-Type': 'application/json',
-                                        'Authorization': 'Bearer mvp-static-token-999'
-                                    },
-                                    body: JSON.stringify(appendix1Payloads)
-                                });
-                            }
-                            alert(`Đã lưu thành công ${payloads.length} Cán bộ mới!
-(Kèm theo ${appendix1Payloads.length} dữ liệu Chuyến đi và ${appendix3Payloads.length} dữ liệu Lưu ý/Vi phạm)`);
-                            this.isImportModalOpen = false;
-                            await this.fetchData();
                         } else {
-                            const err = await res.json();
-                            console.error(err);
-                            alert("Có lỗi xảy ra khi lưu Cán bộ: " + (err.errors?.[0]?.message || 'Unknown error'));
+                            const res = await fetch(`${API_URL}/items/personnels`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                body: JSON.stringify(payloads)
+                            });
+                            
+                            if(res.ok) {
+                                const result = await res.json();
+                                const insertedPersonnels = result.data;
+                                
+                                const finalApp1 = [];
+                                const finalApp3 = [];
+                                
+                                for(let i = 0; i < insertedPersonnels.length; i++) {
+                                    const pId = insertedPersonnels[i].id;
+                                    const a1 = appendix1Payloads[i];
+                                    const a3 = appendix3Payloads[i];
+                                    
+                                    if(Object.keys(a1).length > 0) {
+                                        a1.personnelId = pId;
+                                        a1.id = 'app1_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+                                        finalApp1.push(a1);
+                                    }
+                                    if(Object.keys(a3).length > 0) {
+                                        a3.personnelId = pId;
+                                        a3.id = 'app3_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+                                        finalApp3.push(a3);
+                                    }
+                                }
+                                
+                                const reqs = [];
+                                if(finalApp1.length > 0) {
+                                    reqs.push(fetch(`${API_URL}/items/appendix1`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                        body: JSON.stringify(finalApp1)
+                                    }));
+                                }
+                                if(finalApp3.length > 0) {
+                                    reqs.push(fetch(`${API_URL}/items/appendix3`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                        body: JSON.stringify(finalApp3)
+                                    }));
+                                }
+                                
+                                if (reqs.length > 0) await Promise.all(reqs);
+                                
+                                this.isImportModalOpen = false;
+                                await this.fetchData();
+                                alert(`Đã import thành công ${payloads.length} Cán bộ và dữ liệu đính kèm!`);
+                            } else {
+                                const err = await res.json();
+                                alert("Lỗi khi lưu Cán bộ: " + (err.errors?.[0]?.message || 'Lỗi không xác định'));
+                            }
                         }
-                    } catch(e) {
-                        alert("Lỗi kết nối Server: " + e.message);
+                    } catch (e) {
+                        alert('Lỗi khi import: ' + e.message);
                     } finally {
                         this.isImporting = false;
                     }
