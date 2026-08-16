@@ -157,7 +157,13 @@
                             <template x-for="(group, gIndex) in (activeSettingsTab === 'personnel' ? importMappingPersonnel : importMappingRelative)" :key="gIndex">
                                 <div class="p-5 border border-gray-200 rounded-2xl bg-white shadow-sm">
                                     <div class="flex justify-between items-center mb-4 border-b pb-2">
-                                        <input x-model="group.group" class="font-bold text-lg text-gray-800 border-none focus:ring-0 p-0 w-2/3 bg-transparent hover:bg-gray-50 rounded px-2" placeholder="Tên Nhóm (VD: Khối A: Thông tin chung)">
+                                        <div class="w-2/3">
+                                            <input x-model="group.group" class="font-bold text-lg text-gray-800 border-none focus:ring-0 p-0 w-full bg-transparent hover:bg-gray-50 rounded px-2" placeholder="Tên Nhóm (VD: Khối A: Thông tin chung)">
+                                            <label class="inline-flex items-center mt-2 px-2 cursor-pointer">
+                                                <input type="checkbox" x-model="group.isMultiple" class="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4">
+                                                <span class="ml-2 text-xs font-semibold text-purple-700">Cho phép lặp lại (Nhập nhiều lần)</span>
+                                            </label>
+                                        </div>
                                         <button @click="removeGroup(gIndex)" class="text-red-400 hover:text-red-600 text-sm flex items-center gap-1 font-medium px-2 py-1 hover:bg-red-50 rounded">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                             Xóa Nhóm
@@ -1013,7 +1019,7 @@
 <!-- Khối Động Cá Nhân -->
 <template x-for="group in importMappingPersonnel" :key="group.group">
     <div class="mb-6">
-        <template x-if="!group.group.includes('Khối B') && !group.group.includes('Chuyến đi')">
+        <template x-if="!group.isMultiple">
             <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <h3 class="text-lg font-bold text-[#447f28] mb-4 flex items-center gap-2" x-text="group.group"></h3>
                 <div class="grid grid-cols-4 gap-4">
@@ -1098,20 +1104,17 @@
             </div>
         </template>
         
-        <template x-if="group.group.includes('Khối B') || group.group.includes('Chuyến đi')">
+        <template x-if="group.isMultiple">
             <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mt-6 relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                    <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M2.05 13h19.9M5 11l7-7 7 7M22 13h-20v8h20v-8z"/></svg>
-                </div>
                 <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                     <h3 class="text-xl font-bold text-gray-800" x-text="group.group"></h3>
-                    <button type="button" @click="formData.trips.push({})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Thêm Chuyến đi</button>
+                    <button type="button" @click="formData[group.group].push({})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Thêm <span x-text="group.group.split(':')[0]"></span></button>
                 </div>
                 <div class="space-y-6">
-                    <template x-for="(t, index) in formData.trips" :key="index">
+                    <template x-for="(t, index) in formData[group.group]" :key="index">
                         <div class="relative p-5 border border-gray-200 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-colors">
-                            <button x-show="formData.trips.length > 1" type="button" @click="formData.trips.splice(index, 1)" class="absolute -top-3 -right-3 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm z-10"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-                            <h4 class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs" x-text="index + 1"></span> Chuyến đi</h4>
+                            <button x-show="formData[group.group].length > 1" type="button" @click="formData[group.group].splice(index, 1)" class="absolute -top-3 -right-3 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm z-10"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                            <h4 class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs" x-text="index + 1"></span> Mục</h4>
                             <div class="grid grid-cols-4 gap-4">
                                 <template x-for="col in group.columns" :key="col.id">
 
@@ -2874,10 +2877,50 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                     if (!this.formData.flags) this.formData.flags = {};
                     if (!this.formData.custom_data) this.formData.custom_data = {};
                     if (!this.formData.relatives) this.formData.relatives = [];
+                    // Flatten custom_data array fields
+                    for(let k in this.formData.custom_data) {
+                        if (Array.isArray(this.formData.custom_data[k])) {
+                            this.formData[k] = this.formData.custom_data[k];
+                        }
+                    }
+                    
+                    // Initialize dynamic multiple groups
+                    const allMaps = [...this.importMappingPersonnel, ...this.importMappingRelative];
+                    for(let g of allMaps) {
+                        if(g.isMultiple && g.group) {
+                            if(!this.formData[g.group]) {
+                                this.formData[g.group] = [];
+                            }
+                            if(this.formData[g.group].length === 0) {
+                                this.formData[g.group].push({});
+                            }
+                        }
+                    }
+                    
+                    // Flatten single custom fields
+                    if (this.formData.custom_data) {
+                        for (let k in this.formData.custom_data) {
+                            if(!Array.isArray(this.formData.custom_data[k])) {
+                                this.formData[k] = this.formData.custom_data[k];
+                            }
+                        }
+                    }
+
                     // Ensure relatives have foreignInfo
                     this.formData.relatives.forEach(r => {
                         if (!r.foreignInfo) r.foreignInfo = {};
                         if (!r.custom_data) r.custom_data = {};
+                        if (r.custom_data) {
+                            for (let k in r.custom_data) r[k] = r.custom_data[k];
+                        }
+                    });
+                    
+                    // Ensure trips have flattened custom fields
+                    this.formData.trips.forEach(t => {
+                        if (!t.custom_data) t.custom_data = {};
+                        if (t.custom_data) {
+                            for (let k in t.custom_data) t[k] = t.custom_data[k];
+                        }
                     });
                     
                     this.activeTab = 'canhan';
@@ -2987,11 +3030,16 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                         // Regroup custom_data for personnel
                         payload.custom_data = {};
                         for (let g of this.importMappingPersonnel) {
-                            for (let c of g.columns) {
-                                if (c.id && c.id.startsWith('custom_')) {
-                                    if (payload[c.id] !== undefined) {
-                                        payload.custom_data[c.id] = payload[c.id];
-                                        delete payload[c.id];
+                            if (g.isMultiple && payload[g.group]) {
+                                payload.custom_data[g.group] = payload[g.group];
+                                delete payload[g.group];
+                            } else {
+                                for (let c of g.columns) {
+                                    if (c.id && c.id.startsWith('custom_')) {
+                                        if (payload[c.id] !== undefined) {
+                                            payload.custom_data[c.id] = payload[c.id];
+                                            delete payload[c.id];
+                                        }
                                     }
                                 }
                             }
