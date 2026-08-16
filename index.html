@@ -1783,11 +1783,13 @@
                 
                 loadMappingConfig() {
                     const fetchConfig = (key, defaultArr) => {
-                        return fetch(`${API_URL}/items/app_settings/${key}`, {
+                        return fetch(`${API_URL}/items/app_settings?filter[key][_eq]=${key}`, {
                             headers: { 'Authorization': 'Bearer mvp-static-token-999' }
                         }).then(r => r.json()).then(data => {
-                            if (data.data && data.data.value) {
-                                return typeof data.data.value === 'string' ? JSON.parse(data.data.value) : data.data.value;
+                            if (data.data && data.data.length > 0 && data.data[0].value) {
+                                let val = data.data[0].value;
+                                return typeof val === 'string' ? JSON.parse(val) : val;
+                                
                             }
                             return defaultArr;
                         }).catch(() => defaultArr);
@@ -1807,19 +1809,24 @@
                 async saveMappingConfig() {
                     try {
                         const saveConfig = async (key, val) => {
-                            let res = await fetch(`${API_URL}/items/app_settings/${key}`, {
-                                method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
-                                body: JSON.stringify({ value: JSON.stringify(val) })
+                            let getRes = await fetch(`${API_URL}/items/app_settings?filter[key][_eq]=${key}`, {
+                                headers: { 'Authorization': 'Bearer mvp-static-token-999' }
                             });
-                            if (!res.ok) {
-                                res = await fetch(`${API_URL}/items/app_settings`, {
+                            let getData = await getRes.json();
+                            if (getData.data && getData.data.length > 0) {
+                                let id = getData.data[0].id;
+                                return await fetch(`${API_URL}/items/app_settings/${id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                    body: JSON.stringify({ value: JSON.stringify(val) })
+                                });
+                            } else {
+                                return await fetch(`${API_URL}/items/app_settings`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
                                     body: JSON.stringify({ key: key, value: JSON.stringify(val) })
                                 });
                             }
-                            return res;
                         };
                         
                         await Promise.all([
