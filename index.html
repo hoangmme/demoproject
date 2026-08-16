@@ -1040,8 +1040,8 @@
                                                         <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('hometown', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
                                                     </label><input type="text" x-model="formData.hometown" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hometown')"></div>
                                                 <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('departmentId', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('departmentId', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                        <span x-text="getLabel('departmentName', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('departmentName', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
                                                     </label>
                                                     <select x-model="formData.departmentId" class="w-full border rounded px-2 py-1 bg-white" :disabled="!canEdit('departmentId')">
                                                         <option value="">-- Chọn phòng ban --</option>
@@ -1049,17 +1049,17 @@
                                                     </select>
                                                 </div>
                                                 <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('position', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('position', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                        <span x-text="getLabel('positionName', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('positionName', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
                                                     </label><input type="text" x-model="formData.position" class="w-full border rounded px-2 py-1" :disabled="!canEdit('position')"></div>
                                                 
                                                 <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('hktt', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('hktt', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                        <span x-text="getLabel('thuongTru', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('thuongTru', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
                                                     </label><input type="text" x-model="formData.hktt" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hktt')"></div>
                                                 <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('currentAddress', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('currentAddress', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                        <span x-text="getLabel('tamTru', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('tamTru', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
                                                     </label><input type="text" x-model="formData.currentAddress" class="w-full border rounded px-2 py-1" :disabled="!canEdit('currentAddress')"></div>
                                                 
                                                 <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
@@ -1261,12 +1261,12 @@
                                                     </label><input type="text" x-model="rel.occupation" class="w-full border rounded px-2 py-1"></div>
                                                     
                                                     <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('hktt', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('hktt', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                        <span x-text="getLabel('thuongTru', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('thuongTru', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
                                                     </label><input type="text" x-model="rel.hktt" class="w-full border rounded px-2 py-1"></div>
                                                     <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('currentAddress', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('currentAddress', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                        <span x-text="getLabel('tamTru', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('tamTru', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
                                                     </label><input type="text" x-model="rel.currentAddress" class="w-full border rounded px-2 py-1"></div>
                                                     
                                                     <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
@@ -2006,7 +2006,7 @@
                 },
                 loadMappingConfig() {
                     const fetchConfig = (key, defaultArr) => {
-                        return fetch(`${API_URL}/items/app_settings?filter[key][_eq]=${key}`, {
+                        return fetch(`${API_URL}/items/app_settings?filter[key][_eq]=${key}&_t=${Date.now()}`, {
                             headers: { 'Authorization': 'Bearer mvp-static-token-999' }
                         }).then(r => r.json()).then(data => {
                             if (data.data && data.data.length > 0 && data.data[0].value) {
