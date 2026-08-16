@@ -2258,7 +2258,7 @@
                         return;
                     }
                     
-                    this.importHeaders = rows[0].map(h => h.trim());
+                    this.importHeaders = rows[0].map(h => h.trim().replace(/\\n$/, '').replace(/\\r$/, '').trim());
                     this.importRows = rows.slice(1);
                     
                     const rawConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel; 
