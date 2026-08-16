@@ -1923,8 +1923,8 @@
                     const rDef = [{group: "Thông tin chung", columns: [{id: 'relativeName', label: 'Tên thân nhân', format: 'text'}]}];
                     
                     Promise.all([
-                        fetchConfig('mapping_config_personnel', pDef),
-                        fetchConfig('mapping_config_relative', rDef)
+                        fetchConfig('dynamic_form_personnel', pDef),
+                        fetchConfig('dynamic_form_relative', rDef)
                     ]).then(([pConfig, rConfig]) => {
                         this.importMappingPersonnel = pConfig;
                         this.importMappingRelative = rConfig;
