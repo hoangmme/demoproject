@@ -2287,9 +2287,8 @@
                     }
                     this.importMapping = newMapping;
                     
-                    if (this.importHeaders.length - 1 !== mappingConfig.length) {
-                        const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length - 1} cột (bỏ qua STT), nhưng hệ thống kỳ vọng ${mappingConfig.length} cột. 
-Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn có muốn tiếp tục không?`);
+                    if (this.importHeaders.length !== mappingConfig.length) {
+                        const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length} cột, nhưng hệ thống kỳ vọng ${mappingConfig.length} cột. \nDữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn có muốn tiếp tục không?`);
                         if (!proceed) return;
                     }
                     
