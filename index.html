@@ -2030,6 +2030,7 @@
                 importHeaders: [],
                 importRows: [],
                 importMapping: [],
+                _templateCols: [],
                 importMappingPersonnel: [], importMappingRelative: [], activeSettingsTab: 'personnel',
                 isImporting: false,
                 
@@ -2263,12 +2264,23 @@
                     const rawConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel; 
                     const mappingConfig = rawConfig.flatMap(g => g.columns);
                     
+                    // Build template columns (same source as loadSampleData)
+                    const templateCols = [{id: 'stt', label: 'STT'}];
+                    let ci = 2;
+                    for (let g of rawConfig) {
+                        for (let c of (g.columns||[])) {
+                            if (c.id === 'stt') continue;
+                            templateCols.push({id: c.id, label: `Cột ${ci} (${c.label})`, rawLabel: c.label});
+                            ci++;
+                        }
+                    }
+                    this._templateCols = templateCols;
+                    
                     let newMapping = [];
-                    const sf = this.systemFields;
                     for(let i = 1; i < this.importHeaders.length; i++) {
-                        // STRICT 1-1 index mapping: TSV column i -> system field i
-                        if (sf[i]) {
-                            newMapping[i] = sf[i].key;
+                        // STRICT 1-1 index mapping: TSV column i -> template column i
+                        if (templateCols[i]) {
+                            newMapping[i] = templateCols[i].id;
                         } else {
                             newMapping[i] = '';
                         }
@@ -3465,18 +3477,15 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                     <div>
                                         <div class="w-full border border-green-300 bg-green-50 rounded py-1.5 px-3 text-sm text-green-800 font-medium"
                                              x-text="(() => {
-                                                 const sf = systemFields[index] || null;
-                                                 return sf ? sf.label : '(Không có trường tương ứng)';
+                                                 const tc = (_templateCols || [])[index];
+                                                 return tc ? tc.label : '(Không có trường tương ứng)';
                                              })()"></div>
                                         <template x-if="(() => {
-                                            const sf = systemFields[index] || null;
-                                            if (!sf) return true;
-                                            const sysNum = sf.label.match(/Cột\s*(\d+)/i);
-                                            const impNum = header.match(/Cột\s*(\d+)/i);
-                                            if (sysNum && impNum) return sysNum[1] !== impNum[1];
-                                            const sysLabel = sf.label.toLowerCase().replace(/[\s,]+/g, '');
-                                            const impHeader = header.toLowerCase().replace(/[\s,]+/g, '');
-                                            return !sysLabel.includes(impHeader) && !impHeader.includes(sysLabel);
+                                            const tc = (_templateCols || [])[index];
+                                            if (!tc) return true;
+                                            const sysLabel = tc.label.toLowerCase().replace(/[\s,.:;]+/g, '');
+                                            const impHeader = header.toLowerCase().replace(/[\s,.:;]+/g, '');
+                                            return sysLabel !== impHeader;
                                         })()">
                                             <div class="text-red-500 text-xs mt-1 font-medium">⚠️ Tên cột TSV không khớp trường hệ thống</div>
                                         </template>
