@@ -177,11 +177,12 @@
                                                     <option value="number">Số</option>
                                                     <option value="date">Ngày tháng</option>
                                                     <option value="text_loop">List Dữ liệu</option>
-                                                    <option value="checkbox">Hộp kiểm</option>
+                                                    <option value="checkbox">Hộp kiểm (Nhiều lựa chọn)</option>
+                                                    <option value="checkbox_text">Hộp kiểm + Nhập Text</option>
                                                     <option value="dropdown">Dropdown</option>
                                                 </select>
                                                 
-                                                <template x-if="colObj.format === 'checkbox' || colObj.format === 'dropdown'">
+                                                <template x-if="colObj.format === 'checkbox' || colObj.format === 'checkbox_text' || colObj.format === 'dropdown'">
                                                     <input x-model="colObj.options" class="w-48 rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-xs py-1.5 bg-yellow-50" placeholder="Các tùy chọn, cách nhau bằng phẩy...">
                                                 </template>
                                                 
@@ -189,9 +190,11 @@
                                                     <span class="px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded border border-purple-200 whitespace-nowrap hidden lg:block">Tùy chỉnh</span>
                                                 </template>
 
-                                                <button @click="removeColumn(gIndex, cIndex)" class="text-gray-400 hover:text-red-500 p-1" title="Xóa cột này">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                                </button>
+                                                <div class="flex items-center ml-2">
+                                                    <button type="button" @click="if(cIndex > 1) { let temp = group.columns[cIndex]; group.columns[cIndex] = group.columns[cIndex-1]; group.columns[cIndex-1] = temp; }" :disabled="cIndex <= 1" class="p-1 text-gray-400 hover:text-blue-600 disabled:opacity-30" title="Di chuyển lên"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg></button>
+                                                    <button type="button" @click="if(cIndex > 0 && cIndex < group.columns.length - 1) { let temp = group.columns[cIndex]; group.columns[cIndex] = group.columns[cIndex+1]; group.columns[cIndex+1] = temp; }" :disabled="cIndex === 0 || cIndex === group.columns.length - 1" class="p-1 text-gray-400 hover:text-blue-600 disabled:opacity-30" title="Di chuyển xuống"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
+                                                    <button type="button" @click="removeColumn(gIndex, cIndex)" class="p-1 ml-1 text-gray-400 hover:text-red-500 transition-colors" title="Xóa cột này"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                                                </div>
                                             </div>
                                         </template>
                                     </div>
@@ -1023,6 +1026,18 @@
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
                                                             </label>
                                                             
+                                                            <template x-if="col.format === 'checkbox_text'">
+                                                                <div class="mt-1 space-y-2" x-data="{ checked: !!formData[col.id] }">
+                                                                    <label class="inline-flex items-center">
+                                                                        <input type="checkbox" x-model="checked" @change="if(!checked) formData[col.id] = ''" class="rounded border-gray-300 text-blue-600">
+                                                                        <span class="ml-1 text-xs text-gray-700" x-text="col.options || 'Có'"></span>
+                                                                    </label>
+                                                                    <div x-show="checked">
+                                                                        <input type="text" x-model="formData[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập chi tiết...">
+                                                                    </div>
+                                                                </div>
+                                                            </template>
+                                                            
                                                             <template x-if="col.format === 'checkbox'">
                                                                 <div class="mt-1 space-y-1" x-init="if(col.options && !Array.isArray(formData[col.id])) formData[col.id] = []">
                                                                     <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
@@ -1100,6 +1115,18 @@
                                                                 <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
                                                             </label>
+                                                            
+                                                            <template x-if="col.format === 'checkbox_text'">
+                                                                <div class="mt-1 space-y-2" x-data="{ checked: !!t[col.id] }">
+                                                                    <label class="inline-flex items-center">
+                                                                        <input type="checkbox" x-model="checked" @change="if(!checked) t[col.id] = ''" class="rounded border-gray-300 text-blue-600">
+                                                                        <span class="ml-1 text-xs text-gray-700" x-text="col.options || 'Có'"></span>
+                                                                    </label>
+                                                                    <div x-show="checked">
+                                                                        <input type="text" x-model="t[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập chi tiết...">
+                                                                    </div>
+                                                                </div>
+                                                            </template>
                                                             
                                                             <template x-if="col.format === 'checkbox'">
                                                                 <div class="mt-1 space-y-1" x-init="if(col.options && !Array.isArray(t[col.id])) t[col.id] = []">
@@ -1179,9 +1206,21 @@
                                                     <template x-if="col.id !== 'stt'">
                                                         <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
                                                             <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, true); return idx >= 0 ? '[Cột ' + (idx + 53) + ']' : ''; })()"></span>
+                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, true); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
                                                             </label>
+                                                            
+                                                            <template x-if="col.format === 'checkbox_text'">
+                                                                <div class="mt-1 space-y-2" x-data="{ checked: !!rel[col.id] }">
+                                                                    <label class="inline-flex items-center">
+                                                                        <input type="checkbox" x-model="checked" @change="if(!checked) rel[col.id] = ''" class="rounded border-gray-300 text-blue-600">
+                                                                        <span class="ml-1 text-xs text-gray-700" x-text="col.options || 'Có'"></span>
+                                                                    </label>
+                                                                    <div x-show="checked">
+                                                                        <input type="text" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập chi tiết...">
+                                                                    </div>
+                                                                </div>
+                                                            </template>
                                                             
                                                             <template x-if="col.format === 'checkbox'">
                                                                 <div class="mt-1 space-y-1" x-init="if(col.options && !Array.isArray(rel[col.id])) rel[col.id] = []">
