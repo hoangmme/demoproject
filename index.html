@@ -166,7 +166,7 @@
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <template x-for="(colObj, cIndex) in group.columns" :key="cIndex">
                                             <div x-show="colObj.id !== 'stt'" class="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors shadow-sm">
-                                                <div class="flex-shrink-0 text-center hidden md:block">
+                                                <div class="flex-shrink-0 text-center">
                                                     <span class="text-[11px] font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-md">Cột <span x-text="getGlobalColIndex(gIndex, cIndex) + 2"></span></span>
                                                 </div>
                                                 
@@ -1019,7 +1019,7 @@
                                                     <template x-if="col.id !== 'stt'">
                                                         <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
                                                             <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
                                                             </label>
                                                             
@@ -1097,7 +1097,7 @@
                                                     <template x-if="col.id !== 'stt'">
                                                         <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
                                                             <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
                                                             </label>
                                                             
@@ -1179,7 +1179,7 @@
                                                     <template x-if="col.id !== 'stt'">
                                                         <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
                                                             <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, true); return idx >= 0 ? '[Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, true); return idx >= 0 ? '[Cột ' + (idx + 53) + ']' : ''; })()"></span>
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
                                                             </label>
                                                             
