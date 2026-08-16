@@ -2264,25 +2264,12 @@
                     
                     this.importMapping = [];
                     for(let i = 1; i < this.importHeaders.length; i++) {
-                        let header = this.importHeaders[i] ? this.importHeaders[i].toLowerCase().trim() : '';
-                        let matchedKey = '';
-                        if (header && header !== '') {
-                            let bestMatch = this.systemFields.find(f => {
-                                let l = f.label.toLowerCase().trim();
-                                let lClean = l.replace(/\[.*?\]/g, '').replace(/cột \d+/g, '').trim();
-                                let hClean = header.replace(/\[.*?\]/g, '').replace(/cột \d+/g, '').trim();
-                                return l === header || header.includes(l) || l.includes(header) ||
-                                       (lClean.length > 3 && hClean.includes(lClean)) ||
-                                       (hClean.length > 3 && lClean.includes(hClean));
-                            });
-                            if (bestMatch) matchedKey = bestMatch.key;
+                        // User wants STRICT INDEX mapping based on defaultMapping54
+                        if (this.importType !== 'relative' && i < this.defaultMapping54.length) {
+                            this.importMapping[i] = this.defaultMapping54[i];
+                        } else {
+                            this.importMapping[i] = '';
                         }
-                        
-                        if (!matchedKey && this.importType !== 'relative' && i < this.defaultMapping54.length) {
-                            matchedKey = this.defaultMapping54[i];
-                        }
-                        
-                        this.importMapping[i] = matchedKey || '';
                     }
                     
                     if (this.importHeaders.length - 1 !== mappingConfig.length) {
