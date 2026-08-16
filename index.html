@@ -2413,7 +2413,7 @@
                                     errorLogs.push(`Dòng ${rowNum}: Thiếu CCCD cán bộ để ghép nối!`);
                                     continue;
                                 }
-                                const targetPerson = this.personnels.find(p => p.cccd === parentCccd);
+                                const targetPerson = (this.personnel || []).find(p => String(p.cccd || '').trim() === String(parentCccd).trim());
                                 if (!targetPerson) {
                                     errorLogs.push(`Dòng ${rowNum}: Không tìm thấy cán bộ có CCCD ${parentCccd}`);
                                     continue;
