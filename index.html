@@ -65,6 +65,10 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     Nhật ký Hệ thống
                 </a>
+                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'settings_import'" :class="currentView === 'settings_import' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Cấu hình Cột Import
+                </a>
             </nav>
         </aside>
 
@@ -120,6 +124,52 @@
                     </button>
                 </div>
             </header>
+
+            <!-- SETTINGS IMPORT VIEW -->
+            <div x-show="currentView === 'settings_import'" class="flex-1 overflow-y-auto p-8" style="display: none;">
+                <div class="max-w-5xl mx-auto">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="mb-6 pb-4 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800">Cấu hình ánh xạ cột Excel</h3>
+                                <p class="text-sm text-gray-500 mt-1">Ghép nối đúng thứ tự cột trong file Excel mẫu với các trường dữ liệu trong hệ thống. Cấu hình này áp dụng chung cho tất cả người dùng.</p>
+                            </div>
+                            <div class="flex gap-3">
+                                <button @click="importMapping = [...defaultMapping54]" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">Khôi phục 54 cột chuẩn</button>
+                                <button @click="saveMappingConfig()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    Lưu Cấu hình
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <template x-for="(col, index) in importMapping" :key="index">
+                                <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors shadow-sm">
+                                    <span class="w-16 font-bold text-gray-600 bg-white border border-gray-200 rounded py-1 text-center text-sm">Cột <span x-text="index + 1"></span></span>
+                                    <select x-model="importMapping[index]" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2">
+                                        <option value="">-- Bỏ qua --</option>
+                                        <template x-for="field in systemFields.filter(f => !['stt','parentPersonnelCccd','parentPersonnelName','parentPosition','parentDepartment','relationshipName','relativeName','currentAddress','occupation','timeAbroad','unitAbroad','currentUnit','marriedToForeigner','workInForeignCompany','xlplNuocSoTai','xlplVietNam','nationality','fileNumber','content'].includes(f.key))" :key="field.key">
+                                            <option :value="field.key" x-text="field.label" :selected="importMapping[index] === field.key"></option>
+                                        </template>
+                                    </select>
+                                    <button @click="removeColumn(index)" class="text-red-400 hover:text-red-600 bg-white p-1.5 rounded-md border border-gray-200" title="Xóa cột này">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <div class="mt-8 flex justify-center">
+                            <button @click="addColumn()" class="px-6 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all flex items-center gap-2 font-medium">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                Thêm Cột mới
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 
             <!-- ================= VIEW: DASHBOARD ================= -->
             <div x-show="currentView === 'dashboard'" class="flex-1 overflow-auto p-4 sm:p-8" x-cloak>
@@ -3112,45 +3162,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div x-show="isSettingsModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm" x-cloak>
-        <div class="bg-white w-full max-w-4xl h-[80vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h2 class="text-xl font-bold text-gray-800">Cấu hình Cột Import (Cá nhân)</h2>
-                <button @click="isSettingsModalOpen = false" class="text-gray-400 hover:text-red-500 transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-gray-600 mb-4">Ghép nối đúng thứ tự cột trong file Excel của bạn với trường dữ liệu trong hệ thống. Cột nào trong Excel không cần thiết thì chọn "Bỏ qua".</p>
-                    
-                    <div class="grid grid-cols-2 gap-3">
-                        <template x-for="(col, index) in importMapping" :key="index">
-                            <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
-                                <span class="w-16 font-bold text-gray-500 text-sm">Cột <span x-text="index + 1"></span>:</span>
-                                <select x-model="importMapping[index]" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
-                                    <option value="">-- Bỏ qua --</option>
-                                    <template x-for="field in systemFields.filter(f => !['stt','parentPersonnelCccd','parentPersonnelName','parentPosition','parentDepartment','relationshipName','relativeName','currentAddress','occupation','timeAbroad','unitAbroad','currentUnit','marriedToForeigner','workInForeignCompany','xlplNuocSoTai','xlplVietNam','nationality','fileNumber','content'].includes(f.key))" :key="field.key">
-                                        <option :value="field.key" x-text="field.label" :selected="importMapping[index] === field.key"></option>
-                                    </template>
-                                </select>
-                                <button @click="removeColumn(index)" class="text-red-400 hover:text-red-600" title="Xóa cột này">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
-                            </div>
-                        </template>
-                    </div>
-                    
-                    <div class="mt-4 flex justify-center">
-                        <button @click="addColumn()" class="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-blue-600 hover:border-blue-300 transition-colors flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            Thêm Cột mới
-                        </button>
-                    </div>
-                </div>
-            </div>
+    
             
             <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
                 <button @click="importMapping = [...defaultMapping54]" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">Khôi phục 54 cột chuẩn</button>
