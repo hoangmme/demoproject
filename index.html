@@ -1961,6 +1961,8 @@
                         };
                         
                         await Promise.all([
+                            saveConfig('dynamic_form_personnel', this.importMappingPersonnel),
+                            saveConfig('dynamic_form_relative', this.importMappingRelative),
                             saveConfig('mapping_config_personnel', this.importMappingPersonnel),
                             saveConfig('mapping_config_relative', this.importMappingRelative)
                         ]);
