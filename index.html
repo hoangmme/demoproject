@@ -1014,29 +1014,71 @@
                                         <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                                             <h3 class="text-lg font-bold text-[#447f28] mb-4 flex items-center gap-2">Khối A: Thông tin cơ bản</h3>
                                             <div class="grid grid-cols-4 gap-4">
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Họ và Tên <span x-show="showColumns" class="text-blue-600">[Cột 2]</span></label><input type="text" x-model="formData.name" class="w-full border rounded px-2 py-1" :disabled="!canEdit('name')"></div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Tên khác <span x-show="showColumns" class="text-blue-600">[Cột 3]</span></label><input type="text" x-model="formData.otherName" class="w-full border rounded px-2 py-1" :disabled="!canEdit('otherName')"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày sinh <span x-show="showColumns" class="text-blue-600">[Cột 4]</span></label><input type="date" x-model="formData.birthYear" class="w-full border rounded px-2 py-1" :disabled="!canEdit('birthYear')"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Dân tộc <span x-show="showColumns" class="text-blue-600">[Cột 5]</span></label><input type="text" x-model="formData.ethnicity" class="w-full border rounded px-2 py-1" :disabled="!canEdit('ethnicity')"></div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Tôn giáo <span x-show="showColumns" class="text-blue-600">[Cột 6]</span></label><input type="text" x-model="formData.religion" class="w-full border rounded px-2 py-1" :disabled="!canEdit('religion')"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('name', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('name', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.name" class="w-full border rounded px-2 py-1" :disabled="!canEdit('name')"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('otherName', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('otherName', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.otherName" class="w-full border rounded px-2 py-1" :disabled="!canEdit('otherName')"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('birthYear', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('birthYear', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="date" x-model="formData.birthYear" class="w-full border rounded px-2 py-1" :disabled="!canEdit('birthYear')"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('ethnicity', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('ethnicity', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.ethnicity" class="w-full border rounded px-2 py-1" :disabled="!canEdit('ethnicity')"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('religion', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('religion', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.religion" class="w-full border rounded px-2 py-1" :disabled="!canEdit('religion')"></div>
                                                 
-                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Quê quán <span x-show="showColumns" class="text-blue-600">[Cột 7]</span></label><input type="text" x-model="formData.hometown" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hometown')"></div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đơn vị công tác <span x-show="showColumns" class="text-blue-600">[Cột 8]</span></label>
+                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('hometown', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('hometown', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.hometown" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hometown')"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('departmentId', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('departmentId', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label>
                                                     <select x-model="formData.departmentId" class="w-full border rounded px-2 py-1 bg-white" :disabled="!canEdit('departmentId')">
                                                         <option value="">-- Chọn phòng ban --</option>
                                                         <template x-for="dept in departments" :key="dept.id"><option :value="dept.id" x-text="dept.name"></option></template>
                                                     </select>
                                                 </div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Chức vụ <span x-show="showColumns" class="text-blue-600">[Cột 9]</span></label><input type="text" x-model="formData.position" class="w-full border rounded px-2 py-1" :disabled="!canEdit('position')"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('position', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('position', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.position" class="w-full border rounded px-2 py-1" :disabled="!canEdit('position')"></div>
                                                 
-                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Nơi ĐKHK thường trú <span x-show="showColumns" class="text-blue-600">[Cột 10]</span></label><input type="text" x-model="formData.hktt" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hktt')"></div>
-                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Nơi ở hiện nay <span x-show="showColumns" class="text-blue-600">[Cột 15]</span></label><input type="text" x-model="formData.currentAddress" class="w-full border rounded px-2 py-1" :disabled="!canEdit('currentAddress')"></div>
+                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('hktt', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('hktt', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.hktt" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hktt')"></div>
+                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('currentAddress', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('currentAddress', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.currentAddress" class="w-full border rounded px-2 py-1" :disabled="!canEdit('currentAddress')"></div>
                                                 
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Số CCCD <span x-show="showColumns" class="text-blue-600">[Cột 12]</span></label><input type="text" x-model="formData.cccd" class="w-full border rounded px-2 py-1" :disabled="!canEdit('cccd')"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Hộ chiếu cá nhân <span x-show="showColumns" class="text-blue-600">[Cột 13]</span></label><input type="text" x-model="formData.passportPersonal" class="w-full border rounded px-2 py-1" :disabled="!canEdit('passportPersonal')"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Hộ chiếu công vụ <span x-show="showColumns" class="text-blue-600">[Cột 14]</span></label><input type="text" x-model="formData.passportOfficial" class="w-full border rounded px-2 py-1" :disabled="!canEdit('passportOfficial')"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('cccd', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('cccd', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.cccd" class="w-full border rounded px-2 py-1" :disabled="!canEdit('cccd')"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('passportPersonal', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('passportPersonal', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.passportPersonal" class="w-full border rounded px-2 py-1" :disabled="!canEdit('passportPersonal')"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('passportOfficial', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('passportOfficial', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="formData.passportOfficial" class="w-full border rounded px-2 py-1" :disabled="!canEdit('passportOfficial')"></div>
                                                 
-                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Kết quả thẩm tra TCCT <span x-show="showColumns" class="text-blue-600">[Cột 15]</span></label><textarea rows="2" x-model="formData.tcctResult" class="w-full border rounded px-2 py-1" :disabled="!canEdit('tcctResult')"></textarea></div>
+                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('tcctResult', false)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('tcctResult', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><textarea rows="2" x-model="formData.tcctResult" class="w-full border rounded px-2 py-1" :disabled="!canEdit('tcctResult')"></textarea></div>
                                             </div>
                                         </div>
 
@@ -1187,22 +1229,58 @@
                                                     <button x-show="isAdmin()" type="button" @click="formData.relatives.splice(index, 1)" class="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Xóa</button>
                                                 </div>
                                                 <div class="grid grid-cols-4 gap-4">
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Mối quan hệ <span x-show="showColumns" class="text-blue-600">[Cột 5]</span></label><input type="text" x-model="rel.relationshipName" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Họ và tên thân nhân <span x-show="showColumns" class="text-blue-600">[Cột 6]</span></label><input type="text" x-model="rel.relativeName" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Tên khác <span x-show="showColumns" class="text-blue-600">[Cột 7]</span></label><input type="text" x-model="rel.otherName" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('relationshipName', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('relationshipName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.relationshipName" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('relativeName', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('relativeName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.relativeName" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('otherName', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('otherName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.otherName" class="w-full border rounded px-2 py-1"></div>
                                                     
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày sinh <span x-show="showColumns" class="text-blue-600">[Cột 8]</span></label><input type="date" x-model="rel.birthYear" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-3"><label class="block text-xs font-medium text-gray-700">Quê quán <span x-show="showColumns" class="text-blue-600">[Cột 9]</span></label><input type="text" x-model="rel.hometown" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('birthYear', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('birthYear', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="date" x-model="rel.birthYear" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-3"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('hometown', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('hometown', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.hometown" class="w-full border rounded px-2 py-1"></div>
                                                     
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc tịch <span x-show="showColumns" class="text-blue-600">[Cột 10]</span></label><input type="text" x-model="rel.nationality" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-3"><label class="block text-xs font-medium text-gray-700">Nghề nghiệp <span x-show="showColumns" class="text-blue-600">[Cột 12]</span></label><input type="text" x-model="rel.occupation" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('nationality', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('nationality', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.nationality" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-3"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('occupation', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('occupation', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.occupation" class="w-full border rounded px-2 py-1"></div>
                                                     
-                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Nơi ĐKHKTT <span x-show="showColumns" class="text-blue-600">[Cột 13]</span></label><input type="text" x-model="rel.hktt" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Nơi ở hiện nay <span x-show="showColumns" class="text-blue-600">[Cột 14]</span></label><input type="text" x-model="rel.currentAddress" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('hktt', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('hktt', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.hktt" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('currentAddress', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('currentAddress', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.currentAddress" class="w-full border rounded px-2 py-1"></div>
                                                     
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Số CCCD <span x-show="showColumns" class="text-blue-600">[Cột 15]</span></label><input type="text" x-model="rel.cccd" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Số hồ sơ <span x-show="showColumns" class="text-blue-600">[Cột 16]</span></label><input type="text" x-model="rel.fileNumber" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Nội dung <span x-show="showColumns" class="text-blue-600">[Cột 17]</span></label><textarea rows="1" x-model="rel.content" class="w-full border rounded px-2 py-1"></textarea></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('cccd', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('cccd', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.cccd" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('fileNumber', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('fileNumber', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.fileNumber" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('content', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('content', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><textarea rows="1" x-model="rel.content" class="w-full border rounded px-2 py-1"></textarea></div>
                                                     
                                                     <div class="col-span-4 mt-4 mb-2 flex items-center justify-between">
                                                         <h4 class="font-semibold text-gray-700 border-b pb-1 w-full flex items-center justify-between">
@@ -1213,8 +1291,14 @@
                                                         </h4>
                                                     </div>
                                                     
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đơn vị học tập/làm việc ở NN <span x-show="showColumns" class="text-blue-600">[Cột 18]</span></label><input type="text" x-model="rel.unitAbroad" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc gia <span x-show="showColumns" class="text-blue-600">[Cột 19]</span></label><select x-model="rel.countryName" class="w-full border rounded px-2 py-1">
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('unitAbroad', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('unitAbroad', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.unitAbroad" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('countryName', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('countryName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><select x-model="rel.countryName" class="w-full border rounded px-2 py-1">
                                                         <option value="">-- Chọn --</option>
                                                         <option value="Mỹ">Mỹ</option>
                                                         <option value="Trung Quốc">Trung Quốc</option>
@@ -1233,22 +1317,43 @@
                                                         <option value="Campuchia">Campuchia</option>
                                                         <option value="Khác">Khác</option>
                                                     </select></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Thời gian <span x-show="showColumns" class="text-blue-600">[Cột 20]</span></label><input type="text" x-model="rel.timeAbroad" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('timeAbroad', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('timeAbroad', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.timeAbroad" class="w-full border rounded px-2 py-1"></div>
                                                     
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Nguồn kinh phí <span x-show="showColumns" class="text-blue-600">[Cột 21]</span></label><select x-model="rel.fundingName" class="w-full border rounded px-2 py-1">
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('fundingName', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('fundingName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><select x-model="rel.fundingName" class="w-full border rounded px-2 py-1">
                                                         <option value="">-- Chọn --</option>
                                                         <option value="Ngân sách nhà nước">Ngân sách nhà nước</option>
                                                         <option value="Cơ quan, tổ chức đài thọ">Cơ quan, tổ chức đài thọ</option>
                                                         <option value="Cá nhân tự túc">Cá nhân tự túc</option>
                                                         <option value="Khác">Khác</option>
                                                     </select></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đơn vị công tác hiện nay <span x-show="showColumns" class="text-blue-600">[Cột 22]</span></label><input type="text" x-model="rel.currentUnit" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('currentUnit', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('currentUnit', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.currentUnit" class="w-full border rounded px-2 py-1"></div>
                                                     
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Kết hôn với người NN <span x-show="showColumns" class="text-blue-600">[Cột 23]</span></label><input type="text" x-model="rel.marriedToForeigner" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Làm cty FDI <span x-show="showColumns" class="text-blue-600">[Cột 24]</span></label><input type="text" x-model="rel.workInForeignCompany" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('marriedToForeigner', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('marriedToForeigner', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.marriedToForeigner" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('workInForeignCompany', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('workInForeignCompany', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.workInForeignCompany" class="w-full border rounded px-2 py-1"></div>
                                                     
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Xử lý PL: Của nước sở tại <span x-show="showColumns" class="text-blue-600">[Cột 25]</span></label><input type="text" x-model="rel.xlplNuocSoTai" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Xử lý PL: Của PL Việt Nam <span x-show="showColumns" class="text-blue-600">[Cột 26]</span></label><input type="text" x-model="rel.xlplVietNam" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('xlplNuocSoTai', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('xlplNuocSoTai', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.xlplNuocSoTai" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
+                                                        <span x-text="getLabel('xlplVietNam', true)"></span>
+                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('xlplVietNam', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                    </label><input type="text" x-model="rel.xlplVietNam" class="w-full border rounded px-2 py-1"></div>
                                                 
                                                     <!-- Dynamic fields cho thân nhân -->
                                                     <div class="col-span-4 mt-4 bg-purple-50 p-4 rounded-xl border border-purple-100">
@@ -1866,6 +1971,28 @@
                 
                 
                 
+                getLabel(id, isRelative = false) {
+                    let mapArr = isRelative ? this.importMappingRelative : this.importMappingPersonnel;
+                    if(!mapArr) return '';
+                    for(let g of mapArr) {
+                        let c = (g.columns||[]).find(col => col.id === id);
+                        if(c) return c.label;
+                    }
+                    return '';
+                },
+                getColIndex(id, isRelative = false) {
+                    let mapArr = isRelative ? this.importMappingRelative : this.importMappingPersonnel;
+                    if(!mapArr) return -1;
+                    let idx = 0;
+                    for(let g of mapArr) {
+                        for(let c of (g.columns||[])) {
+                            if(c.id === 'stt') continue;
+                            if(c.id === id) return idx;
+                            idx++;
+                        }
+                    }
+                    return -1;
+                },
                 getGlobalColIndex(gIndex, cIndex) {
                     let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
                     let idx = 0;
