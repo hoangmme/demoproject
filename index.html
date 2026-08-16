@@ -1222,9 +1222,8 @@
                 <span class="w-6 h-6 rounded-full bg-[#447f28]/10 text-[#447f28] flex items-center justify-center text-xs font-bold" x-text="index + 1"></span>
                 <span class="text-sm font-bold text-gray-800">Thân nhân #<span x-text="index + 1"></span></span>
             </div>
-            <button x-show="formData.relatives.length > 1" type="button" @click="formData.relatives.splice(index, 1)" class="text-red-600 hover:text-red-800 text-xs font-medium bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition-colors flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                Xóa thân nhân này
+            <button x-show="formData.relatives.length > 1" type="button" @click="formData.relatives.splice(index, 1)" class="w-7 h-7 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm" title="Xóa thân nhân này">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
         <template x-for="group in importMappingRelative" :key="group.group">
@@ -2962,23 +2961,19 @@
                 
                 isParentInfoCol(col) {
                     if (!col) return false;
-                    const id = col.id || '';
                     const l = (col.label || '').toLowerCase();
-                    return id === 'parentPersonnelCccd' || id === 'parentPersonnelName' || id === 'parentPosition' || id === 'parentDepartment' ||
-                           l.includes('cccd cán bộ') || l.includes('cccd cb') ||
-                           l.includes('tên cán bộ') || l.includes('tên cb') ||
-                           l.includes('chức vụ cb') || l.includes('chức vụ cán bộ') ||
-                           l.includes('đơn vị cb') || l.includes('đơn vị cán bộ');
+                    // Chỉ kế thừa nếu nhãn ghi rõ "cán bộ" hoặc "cb" (Cột 2, 3, 4, 5 của Cán bộ)
+                    return l.includes('cán bộ') || l.includes(' cb');
                 },
                 
                 getParentInfoVal(col) {
                     if (!col) return '';
-                    const id = col.id || '';
                     const l = (col.label || '').toLowerCase();
-                    if (id === 'parentPersonnelCccd' || l.includes('cccd')) return this.formData.cccd || '';
-                    if (id === 'parentPersonnelName' || l.includes('tên')) return this.formData.name || '';
-                    if (id === 'parentPosition' || l.includes('chức vụ')) return this.formData.positionName || this.formData.position || '';
-                    if (id === 'parentDepartment' || l.includes('đơn vị')) return this.getDepartmentName(this.formData.departmentId) || this.formData.departmentName || '';
+                    if (!l.includes('cán bộ') && !l.includes(' cb')) return '';
+                    if (l.includes('cccd')) return this.formData.cccd || '';
+                    if (l.includes('tên') || l.includes('họ')) return this.formData.name || '';
+                    if (l.includes('chức vụ')) return this.formData.positionName || this.formData.position || '';
+                    if (l.includes('đơn vị') || l.includes('phòng')) return this.getDepartmentName(this.formData.departmentId) || this.formData.departmentName || '';
                     return '';
                 },
 
