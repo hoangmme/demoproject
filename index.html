@@ -2216,8 +2216,39 @@
                 processPastedData() {
                     if(!this.importPasteText.trim()) return;
                     
-                    const rows = this.importPasteText.trim().split('\n').map(r => r.split('\t'));
-                    if (rows.length < 2) return;
+                    let text = this.importPasteText.trim();
+                    let separator = '\t';
+                    if (text.indexOf('\t') === -1 && text.indexOf(',') !== -1) {
+                        separator = ',';
+                    }
+                    
+                    // Simple parser that handles quotes for CSV
+                    let rows = [];
+                    if (separator === ',') {
+                        let p = '', row = [''], i = 0, s = !0, l;
+                        for (l of text) {
+                            if ('"' === l) {
+                                if (s && l === p) row[i] += l;
+                                s = !s;
+                            } else if (',' === l && s) l = row[++i] = '';
+                            else if ('\n' === l && s) {
+                                if ('\r' === p) row[i] = row[i].slice(0, -1);
+                                rows.push(row); row = ['']; i = 0; l = '';
+                            } else row[i] += l;
+                            p = l;
+                        }
+                        if (row.length > 0 || row[0] !== '') rows.push(row);
+                    } else {
+                        rows = text.split('\n').map(r => r.replace(/\r$/, '').split('\t'));
+                    }
+                    
+                    // Filter empty rows
+                    rows = rows.filter(r => r.some(c => c && c.trim() !== ''));
+                    
+                    if (rows.length < 2) {
+                        alert("Dữ liệu không hợp lệ. Vui lòng đảm bảo có ít nhất 1 dòng tiêu đề và 1 dòng dữ liệu.");
+                        return;
+                    }
                     
                     this.importHeaders = rows[0].map(h => h.trim());
                     this.importRows = rows.slice(1);
