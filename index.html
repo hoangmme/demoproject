@@ -1006,392 +1006,240 @@
                                     
                                     <!-- TAB 1: CÁ NHÂN (52 Fields) -->
                                     <div x-show="activeTab === 'canhan'" class="space-y-10">
-                                        <!-- Khối A: Thông tin cá nhân cơ bản -->
-                                        <fieldset class="relative">
-                                            
-                                            
-                                        <!-- Khối A: Thông tin cá nhân cơ bản -->
-                                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                                            <h3 class="text-lg font-bold text-[#447f28] mb-4 flex items-center gap-2">Khối A: Thông tin cơ bản</h3>
-                                            <div class="grid grid-cols-4 gap-4">
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('name', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('name', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.name" class="w-full border rounded px-2 py-1" :disabled="!canEdit('name')"></div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('otherName', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('otherName', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.otherName" class="w-full border rounded px-2 py-1" :disabled="!canEdit('otherName')"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('birthYear', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('birthYear', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="date" x-model="formData.birthYear" class="w-full border rounded px-2 py-1" :disabled="!canEdit('birthYear')"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('ethnicity', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('ethnicity', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.ethnicity" class="w-full border rounded px-2 py-1" :disabled="!canEdit('ethnicity')"></div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('religion', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('religion', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.religion" class="w-full border rounded px-2 py-1" :disabled="!canEdit('religion')"></div>
-                                                
-                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('hometown', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('hometown', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.hometown" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hometown')"></div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('departmentName', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('departmentName', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label>
-                                                    <select x-model="formData.departmentId" class="w-full border rounded px-2 py-1 bg-white" :disabled="!canEdit('departmentId')">
-                                                        <option value="">-- Chọn phòng ban --</option>
-                                                        <template x-for="dept in departments" :key="dept.id"><option :value="dept.id" x-text="dept.name"></option></template>
-                                                    </select>
-                                                </div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('positionName', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('positionName', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.position" class="w-full border rounded px-2 py-1" :disabled="!canEdit('position')"></div>
-                                                
-                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('thuongTru', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('thuongTru', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.hktt" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hktt')"></div>
-                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('tamTru', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('tamTru', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.currentAddress" class="w-full border rounded px-2 py-1" :disabled="!canEdit('currentAddress')"></div>
-                                                
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('cccd', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('cccd', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.cccd" class="w-full border rounded px-2 py-1" :disabled="!canEdit('cccd')"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('passportPersonal', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('passportPersonal', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.passportPersonal" class="w-full border rounded px-2 py-1" :disabled="!canEdit('passportPersonal')"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('passportOfficial', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('passportOfficial', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="formData.passportOfficial" class="w-full border rounded px-2 py-1" :disabled="!canEdit('passportOfficial')"></div>
-                                                
-                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('tcctResult', false)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('tcctResult', false); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><textarea rows="2" x-model="formData.tcctResult" class="w-full border rounded px-2 py-1" :disabled="!canEdit('tcctResult')"></textarea></div>
-                                            </div>
-                                        </div>
-
                                         
-                                        </fieldset>
-                                        <!-- Khối B: Lịch sử Đi nước ngoài -->
-                                        <fieldset class="relative">
-                                            
+<!-- Khối Động Cá Nhân -->
+<template x-for="group in importMappingPersonnel" :key="group.group">
+    <div class="mb-6">
+        <template x-if="!group.group.includes('Khối B') && !group.group.includes('Chuyến đi')">
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <h3 class="text-lg font-bold text-[#447f28] mb-4 flex items-center gap-2" x-text="group.group"></h3>
+                <div class="grid grid-cols-4 gap-4">
+                    <template x-for="col in group.columns" :key="col.id">
 
-                                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm" >
-                                            <div class="flex justify-between items-center mb-4">
-                                                <h3 class="text-lg font-bold text-[#447f28]">Khối B: Lịch sử Đi nước ngoài</h3>
-                                                <button type="button" @click="formData.trips.push({})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Thêm Chuyến đi</button>
-                                            </div>
-                                            <template x-for="(trip, index) in formData.trips" :key="index">
-                                                <div class="grid grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-100 relative">
-                                                    <button x-show="isAdmin()" type="button" @click="formData.trips.splice(index, 1)" class="absolute -right-2 -top-2 text-red-500 hover:bg-red-50 rounded-full p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Số Quyết định <span x-show="showColumns" class="text-blue-600">[Cột 16]</span></label><input type="text" x-model="trip.qd" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.qd')"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày ban hành <span x-show="showColumns" class="text-blue-600">[Cột 17]</span></label><input type="date" x-model="trip.qdDate" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.qdDate')"></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Cơ quan ban hành <span x-show="showColumns" class="text-blue-600">[Cột 18]</span></label><input type="text" x-model="trip.agency" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.agency')"></div>
-                                                    
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày Xuất cảnh <span x-show="showColumns" class="text-blue-600">[Cột 19]</span></label><input type="date" x-model="trip.exit" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.exit')"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày Nhập cảnh <span x-show="showColumns" class="text-blue-600">[Cột 20]</span></label><input type="date" x-model="trip.enter" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.enter')"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc Gia <span x-show="showColumns" class="text-blue-600">[Cột 21]</span></label><select x-model="trip.country" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.country')">
-                                                            <option value="">-- Chọn --</option>
-                                                            <option value="Mỹ">Mỹ</option>
-                                                            <option value="Trung Quốc">Trung Quốc</option>
-                                                            <option value="Đài Loan">Đài Loan</option>
-                                                            <option value="Hàn Quốc">Hàn Quốc</option>
-                                                            <option value="Nhật Bản">Nhật Bản</option>
-                                                            <option value="Nga">Nga</option>
-                                                            <option value="Pháp">Pháp</option>
-                                                            <option value="Anh">Anh</option>
-                                                            <option value="Đức">Đức</option>
-                                                            <option value="Úc">Úc</option>
-                                                            <option value="Canada">Canada</option>
-                                                            <option value="Singapore">Singapore</option>
-                                                            <option value="Thái Lan">Thái Lan</option>
-                                                            <option value="Lào">Lào</option>
-                                                            <option value="Campuchia">Campuchia</option>
-                                                            <option value="Khác">Khác</option>
-                                                        </select></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Số lần <span x-show="showColumns" class="text-blue-600">[Cột 22]</span></label><input type="number" x-model="trip.times" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.times')"></div>
-                                                    
-                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">Mục đích (Ghi rõ mục đích) <span x-show="showColumns" class="text-blue-600">[Cột 23,24,25]</span></label>
-                                                        <select x-model="trip.purpose" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.purpose')">
-                                                            <option value="">-- Chọn --</option>
-                                                            <option value="Hội nghị/Hội thảo">Hội nghị/Hội thảo</option>
-                                                            <option value="Học tập/Nghiên cứu">Học tập/Nghiên cứu</option>
-                                                            <option value="Công tác">Công tác</option>
-                                                            <option value="Việc riêng/Thăm thân">Việc riêng/Thăm thân</option>
-                                                            <option value="Du lịch">Du lịch</option>
-                                                            <option value="Khác">Khác</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">Kinh phí <span x-show="showColumns" class="text-blue-600">[Cột 26]</span></label>
-                                                        <select x-model="trip.funding" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.funding')">
-                                                            <option value="">-- Chọn --</option>
-                                                            <option value="Ngân sách nhà nước">Ngân sách nhà nước</option>
-                                                            <option value="Cơ quan, tổ chức đài thọ">Cơ quan, tổ chức đài thọ</option>
-                                                            <option value="Cá nhân tự túc">Cá nhân tự túc</option>
-                                                            <option value="Khác">Khác</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                            <div x-show="formData.trips.length === 0" class="text-center py-4 text-gray-500 italic text-sm">Chưa có chuyến đi nào.</div>
-                                        </div>
-                                        </fieldset>
-                                        <!-- Khối C: Lưu ý & Vi phạm -->
-                                        <fieldset class="relative">
-                                            
-
-                                        <div class="bg-red-50 p-6 rounded-xl border border-red-100 shadow-sm" >
-                                            <h3 class="text-lg font-bold text-red-600 mb-4">Khối C: Vấn đề cần lưu ý</h3>
-                                            <div class="grid grid-cols-2 gap-4">
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Vấn đề TCCT (Tự diễn biến) <span x-show="showColumns" class="text-blue-600">[Cột 40]</span></label><textarea rows="1" x-model="formData.flags.politicalIssue" class="w-full border rounded px-2 py-1"></textarea></div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đang bị điều tra <span x-show="showColumns" class="text-blue-600">[Cột 41]</span></label><textarea rows="1" x-model="formData.flags.investigating" class="w-full border rounded px-2 py-1"></textarea></div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Vấn đề khác về lý lịch <span x-show="showColumns" class="text-blue-600">[Cột 42]</span></label><textarea rows="1" x-model="formData.flags.otherIssue" class="w-full border rounded px-2 py-1"></textarea></div>
-                                                
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Kỷ luật Đảng <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 43, 44]</span></label><input type="text" x-model="formData.flags.partyDiscipline" class="w-full border rounded px-2 py-1"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Kỷ luật Chính quyền <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 44]</span></label><input type="text" x-model="formData.flags.govDiscipline" class="w-full border rounded px-2 py-1"></div>
-                                                
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Đi NN không phép <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 45]</span></label><input type="text" x-model="formData.flags.noPermission" class="w-full border rounded px-2 py-1"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Vi phạm PL ở NN <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 46]</span></label><input type="text" x-model="formData.flags.lawViolation" class="w-full border rounded px-2 py-1"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ở lại NN quá hạn <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 47]</span></label><input type="text" x-model="formData.flags.overstay" class="w-full border rounded px-2 py-1"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Thuộc diện quản lý <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 48]</span></label><input type="text" x-model="formData.flags.managed" class="w-full border rounded px-2 py-1"></div>
-                                                
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Được tặng quà >50tr <span x-show="showColumns" class="text-blue-600">[Cột 49]</span></label><input type="text" x-model="formData.flags.gift" class="w-full border rounded px-2 py-1"></div>
-                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Cho thuê nhà/đất <span x-show="showColumns" class="text-blue-600">[Cột 50]</span></label><input type="text" x-model="formData.flags.rent" class="w-full border rounded px-2 py-1"></div>
-                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Làm tại cty FDI <span x-show="showColumns" class="text-blue-600">[Cột 51]</span></label><input type="text" x-model="formData.flags.fdi" class="w-full border rounded px-2 py-1"></div>
-                                            </div>
-                                        </div>
-                                    
-                                        <!-- Bắt đầu Khối Tùy Chỉnh (Dynamic Form) cho Cá nhân -->
-                                        <div class="bg-purple-50 p-6 rounded-xl border border-purple-100 shadow-sm mt-6">
-                                            <h3 class="text-lg font-bold text-purple-700 mb-4">Các trường tùy chỉnh bổ sung (Dynamic)</h3>
-                                            <div class="grid grid-cols-2 gap-4">
-                                                <template x-for="group in importMappingPersonnel" :key="group.group">
-                                                    <template x-for="col in group.columns.filter(c => c.id && c.id.startsWith('custom_'))" :key="col.id">
-                                                        <div class="col-span-1">
-                                                            <label class="block text-xs font-medium text-gray-700">
-                                                                <span x-text="col.label"></span> <span class="text-xs text-gray-400 font-normal ml-1" x-text="'(' + group.group + ')'"></span>
+                                                    <template x-if="col.id !== 'stt'">
+                                                        <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
+                                                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                                <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
                                                             </label>
+                                                            
                                                             <template x-if="col.format === 'checkbox'">
-                                                                <input type="checkbox" x-model="formData.custom_data[col.id]" class="mt-1">
+                                                                <div class="mt-1 space-y-1" x-init="if(col.options && !Array.isArray(formData[col.id])) formData[col.id] = []">
+                                                                    <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
+                                                                        <label class="inline-flex items-center mr-4">
+                                                                            <input type="checkbox" :value="opt" x-model="formData[col.id]" class="rounded border-gray-300 text-blue-600">
+                                                                            <span class="ml-1 text-xs text-gray-700" x-text="opt"></span>
+                                                                        </label>
+                                                                    </template>
+                                                                    <template x-if="!(col.options)">
+                                                                        <input type="checkbox" x-model="formData[col.id]" class="mt-1">
+                                                                    </template>
+                                                                </div>
                                                             </template>
+                                                            
+                                                            <template x-if="col.format === 'dropdown'">
+                                                                <select x-model="formData[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1 bg-white">
+                                                                    <option value="">-- Chọn --</option>
+                                                                    <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
+                                                                        <option :value="opt" x-text="opt"></option>
+                                                                    </template>
+                                                                </select>
+                                                            </template>
+
                                                             <template x-if="col.format === 'date'">
-                                                                <input type="date" x-model="formData.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                                <input type="date" x-model="formData[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
                                                             </template>
+                                                            
                                                             <template x-if="col.format === 'number'">
-                                                                <input type="number" x-model="formData.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                                <input type="number" x-model="formData[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
                                                             </template>
+                                                            
                                                             <template x-if="col.format === 'text_loop'">
-                                                                <textarea rows="2" x-model="formData.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1"></textarea>
+                                                                <div class="mt-1 space-y-1" x-data="{ items: Array.isArray(formData[col.id]) ? formData[col.id] : (formData[col.id] ? [formData[col.id]] : ['']) }" x-effect="formData[col.id] = items.filter(Boolean)">
+                                                                    <template x-for="(item, idx) in items" :key="idx">
+                                                                        <div class="flex gap-1 items-center">
+                                                                            <input type="text" x-model="items[idx]" class="flex-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập dữ liệu...">
+                                                                            <button @click="items.splice(idx, 1)" class="text-red-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                                                                        </div>
+                                                                    </template>
+                                                                    <button @click="items.push('')" class="text-xs text-blue-600 hover:underline mt-1 font-medium">+ Thêm dòng</button>
+                                                                </div>
                                                             </template>
+                                                            
                                                             <template x-if="col.format === 'text'">
-                                                                <input type="text" x-model="formData.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                                <input type="text" x-model="formData[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
                                                             </template>
                                                         </div>
                                                     </template>
-                                                </template>
-                                            </div>
-                                        </div>
-                                        <!-- Kết thúc Khối Tùy Chỉnh -->
-</fieldset>
-                                    </div>
-                                    <!-- TAB 2: THÂN NHÂN (26 Fields) -->
-                                    <div x-show="activeTab === 'thannhan'" class="space-y-6">
-                                        <fieldset class="relative min-h-[300px]">
-                                            
+    
+                    </template>
+                </div>
+            </div>
+        </template>
+        
+        <template x-if="group.group.includes('Khối B') || group.group.includes('Chuyến đi')">
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mt-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                    <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M2.05 13h19.9M5 11l7-7 7 7M22 13h-20v8h20v-8z"/></svg>
+                </div>
+                <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                    <h3 class="text-xl font-bold text-gray-800" x-text="group.group"></h3>
+                    <button type="button" @click="formData.trips.push({})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Thêm Chuyến đi</button>
+                </div>
+                <div class="space-y-6">
+                    <template x-for="(t, index) in formData.trips" :key="index">
+                        <div class="relative p-5 border border-gray-200 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                            <button x-show="formData.trips.length > 1" type="button" @click="formData.trips.splice(index, 1)" class="absolute -top-3 -right-3 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm z-10"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                            <h4 class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs" x-text="index + 1"></span> Chuyến đi</h4>
+                            <div class="grid grid-cols-4 gap-4">
+                                <template x-for="col in group.columns" :key="col.id">
 
-                                    <div x-show="activeTab === 'thannhan'" class="space-y-6">
-                                        <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                                            <div>
-                                                <h3 class="text-lg font-bold text-gray-800">Danh sách Thân nhân</h3>
-                                                <p class="text-sm text-gray-500">Chứa 26 trường thông tin liên quan đến thân nhân.</p>
-                                            </div>
-                                            <button type="button" @click="formData.relatives.push({})" class="bg-[#447f28] hover:bg-[#015301] text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Thêm Thân nhân</button>
-                                        </div>
-                                        <div x-show="formData.relatives.length === 0" class="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300 text-gray-500 italic">Chưa có danh sách thân nhân.</div>
-                                        
-                                        <!-- Form Thân Nhân -->
-                                        <template x-for="(rel, index) in formData.relatives" :key="index">
-                                            <div class="p-6 border border-gray-200 rounded-xl bg-white shadow-sm mb-4">
-                                                <div class="flex justify-between items-center mb-4">
-                                                    <h4 class="font-bold text-[#447f28]">Thân nhân #<span x-text="index+1"></span> (Cột 5 -> 26)</h4>
-                                                    <button x-show="isAdmin()" type="button" @click="formData.relatives.splice(index, 1)" class="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Xóa</button>
-                                                </div>
-                                                <div class="grid grid-cols-4 gap-4">
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('relationshipName', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('relationshipName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.relationshipName" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('relativeName', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('relativeName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.relativeName" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('otherName', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('otherName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.otherName" class="w-full border rounded px-2 py-1"></div>
-                                                    
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('birthYear', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('birthYear', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="date" x-model="rel.birthYear" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-3"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('hometown', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('hometown', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.hometown" class="w-full border rounded px-2 py-1"></div>
-                                                    
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('nationality', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('nationality', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.nationality" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-3"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('occupation', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('occupation', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.occupation" class="w-full border rounded px-2 py-1"></div>
-                                                    
-                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('thuongTru', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('thuongTru', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.hktt" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('tamTru', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('tamTru', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.currentAddress" class="w-full border rounded px-2 py-1"></div>
-                                                    
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('cccd', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('cccd', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.cccd" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('fileNumber', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('fileNumber', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.fileNumber" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('content', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('content', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><textarea rows="1" x-model="rel.content" class="w-full border rounded px-2 py-1"></textarea></div>
-                                                    
-                                                    <div class="col-span-4 mt-4 mb-2 flex items-center justify-between">
-                                                        <h4 class="font-semibold text-gray-700 border-b pb-1 w-full flex items-center justify-between">
-                                                            Yếu tố nước ngoài
-                                                            <label class="flex items-center gap-2 font-normal text-sm bg-yellow-50 px-3 py-1 rounded text-yellow-800 border border-yellow-200">
-                                                                <input type="checkbox" x-model="rel.hasForeignElement" class="rounded text-[#447f28]"> Có yếu tố nước ngoài (Sẽ lên Phụ lục 2)
+                                                    <template x-if="col.id !== 'stt'">
+                                                        <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
+                                                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                                <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
                                                             </label>
-                                                        </h4>
-                                                    </div>
-                                                    
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('unitAbroad', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('unitAbroad', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.unitAbroad" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('countryName', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('countryName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><select x-model="rel.countryName" class="w-full border rounded px-2 py-1">
-                                                        <option value="">-- Chọn --</option>
-                                                        <option value="Mỹ">Mỹ</option>
-                                                        <option value="Trung Quốc">Trung Quốc</option>
-                                                        <option value="Đài Loan">Đài Loan</option>
-                                                        <option value="Hàn Quốc">Hàn Quốc</option>
-                                                        <option value="Nhật Bản">Nhật Bản</option>
-                                                        <option value="Nga">Nga</option>
-                                                        <option value="Pháp">Pháp</option>
-                                                        <option value="Anh">Anh</option>
-                                                        <option value="Đức">Đức</option>
-                                                        <option value="Úc">Úc</option>
-                                                        <option value="Canada">Canada</option>
-                                                        <option value="Singapore">Singapore</option>
-                                                        <option value="Thái Lan">Thái Lan</option>
-                                                        <option value="Lào">Lào</option>
-                                                        <option value="Campuchia">Campuchia</option>
-                                                        <option value="Khác">Khác</option>
-                                                    </select></div>
-                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('timeAbroad', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('timeAbroad', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.timeAbroad" class="w-full border rounded px-2 py-1"></div>
-                                                    
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('fundingName', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('fundingName', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><select x-model="rel.fundingName" class="w-full border rounded px-2 py-1">
-                                                        <option value="">-- Chọn --</option>
-                                                        <option value="Ngân sách nhà nước">Ngân sách nhà nước</option>
-                                                        <option value="Cơ quan, tổ chức đài thọ">Cơ quan, tổ chức đài thọ</option>
-                                                        <option value="Cá nhân tự túc">Cá nhân tự túc</option>
-                                                        <option value="Khác">Khác</option>
-                                                    </select></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('currentUnit', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('currentUnit', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.currentUnit" class="w-full border rounded px-2 py-1"></div>
-                                                    
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('marriedToForeigner', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('marriedToForeigner', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.marriedToForeigner" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('workInForeignCompany', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('workInForeignCompany', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.workInForeignCompany" class="w-full border rounded px-2 py-1"></div>
-                                                    
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('xlplNuocSoTai', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('xlplNuocSoTai', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.xlplNuocSoTai" class="w-full border rounded px-2 py-1"></div>
-                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">
-                                                        <span x-text="getLabel('xlplVietNam', true)"></span>
-                                                        <span x-show="showColumns" class="text-blue-600" x-text="(() => { let idx = getColIndex('xlplVietNam', true); return idx >= 0 ? ' [Cột ' + (idx + 1) + ']' : ''; })()"></span>
-                                                    </label><input type="text" x-model="rel.xlplVietNam" class="w-full border rounded px-2 py-1"></div>
-                                                
-                                                    <!-- Dynamic fields cho thân nhân -->
-                                                    <div class="col-span-4 mt-4 bg-purple-50 p-4 rounded-xl border border-purple-100">
-                                                        <h4 class="text-sm font-bold text-purple-700 mb-2">Trường tùy chỉnh</h4>
-                                                        <div class="grid grid-cols-2 gap-4">
-                                                            <template x-for="group in importMappingRelative" :key="group.group">
-                                                                <template x-for="col in group.columns.filter(c => c.id && c.id.startsWith('custom_'))" :key="col.id">
-                                                                    <div class="col-span-1">
-                                                                        <label class="block text-xs font-medium text-gray-700">
-                                                                            <span x-text="col.label"></span>
+                                                            
+                                                            <template x-if="col.format === 'checkbox'">
+                                                                <div class="mt-1 space-y-1" x-init="if(col.options && !Array.isArray(t[col.id])) t[col.id] = []">
+                                                                    <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
+                                                                        <label class="inline-flex items-center mr-4">
+                                                                            <input type="checkbox" :value="opt" x-model="t[col.id]" class="rounded border-gray-300 text-blue-600">
+                                                                            <span class="ml-1 text-xs text-gray-700" x-text="opt"></span>
                                                                         </label>
-                                                                        <template x-if="col.format === 'checkbox'">
-                                                                            <input type="checkbox" x-model="rel.custom_data[col.id]" class="mt-1">
-                                                                        </template>
-                                                                        <template x-if="col.format === 'date'">
-                                                                            <input type="date" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
-                                                                        </template>
-                                                                        <template x-if="col.format === 'number'">
-                                                                            <input type="number" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
-                                                                        </template>
-                                                                        <template x-if="col.format === 'text_loop'">
-                                                                            <textarea rows="2" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1"></textarea>
-                                                                        </template>
-                                                                        <template x-if="col.format === 'text'">
-                                                                            <input type="text" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
-                                                                        </template>
-                                                                    </div>
-                                                                </template>
+                                                                    </template>
+                                                                    <template x-if="!(col.options)">
+                                                                        <input type="checkbox" x-model="t[col.id]" class="mt-1">
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+                                                            
+                                                            <template x-if="col.format === 'dropdown'">
+                                                                <select x-model="t[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1 bg-white">
+                                                                    <option value="">-- Chọn --</option>
+                                                                    <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
+                                                                        <option :value="opt" x-text="opt"></option>
+                                                                    </template>
+                                                                </select>
+                                                            </template>
+
+                                                            <template x-if="col.format === 'date'">
+                                                                <input type="date" x-model="t[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
+                                                            </template>
+                                                            
+                                                            <template x-if="col.format === 'number'">
+                                                                <input type="number" x-model="t[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
+                                                            </template>
+                                                            
+                                                            <template x-if="col.format === 'text_loop'">
+                                                                <div class="mt-1 space-y-1" x-data="{ items: Array.isArray(t[col.id]) ? t[col.id] : (t[col.id] ? [t[col.id]] : ['']) }" x-effect="t[col.id] = items.filter(Boolean)">
+                                                                    <template x-for="(item, idx) in items" :key="idx">
+                                                                        <div class="flex gap-1 items-center">
+                                                                            <input type="text" x-model="items[idx]" class="flex-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập dữ liệu...">
+                                                                            <button @click="items.splice(idx, 1)" class="text-red-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                                                                        </div>
+                                                                    </template>
+                                                                    <button @click="items.push('')" class="text-xs text-blue-600 hover:underline mt-1 font-medium">+ Thêm dòng</button>
+                                                                </div>
+                                                            </template>
+                                                            
+                                                            <template x-if="col.format === 'text'">
+                                                                <input type="text" x-model="t[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
                                                             </template>
                                                         </div>
-                                                    </div>
+                                                    </template>
+    
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+</template>
+<!-- TAB 2: THÂN NHÂN (26 Fields) -->
+                                    <div x-show="activeTab === 'thannhan'" class="space-y-6">
+<div class="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+    <div>
+        <h3 class="text-lg font-bold text-gray-800">Danh sách Thân nhân</h3>
+    </div>
+    <button type="button" @click="formData.relatives.push({})" class="bg-[#447f28] hover:bg-[#015301] text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Thêm Thân nhân</button>
 </div>
-                                            </div>
-                                        </template>
-                                    </fieldset>
-                                    </div>
-                                    
-                                    <!-- Panel Footer -->
+<template x-for="(rel, index) in formData.relatives" :key="index">
+    <div class="relative p-6 border border-gray-200 rounded-2xl bg-white shadow-sm mt-4">
+        <button x-show="formData.relatives.length > 1" type="button" @click="formData.relatives.splice(index, 1)" class="absolute -top-3 -right-3 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm z-10"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <template x-for="group in importMappingRelative" :key="group.group">
+            <div class="mb-4">
+                <h4 class="text-sm font-bold text-[#447f28] mb-3 border-b pb-1" x-text="group.group"></h4>
+                <div class="grid grid-cols-4 gap-4">
+                    <template x-for="col in group.columns" :key="col.id">
+
+                                                    <template x-if="col.id !== 'stt'">
+                                                        <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
+                                                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                                <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, true); return idx >= 0 ? '[Cột ' + (idx + 1) + ']' : ''; })()"></span>
+                                                                <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
+                                                            </label>
+                                                            
+                                                            <template x-if="col.format === 'checkbox'">
+                                                                <div class="mt-1 space-y-1" x-init="if(col.options && !Array.isArray(rel[col.id])) rel[col.id] = []">
+                                                                    <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
+                                                                        <label class="inline-flex items-center mr-4">
+                                                                            <input type="checkbox" :value="opt" x-model="rel[col.id]" class="rounded border-gray-300 text-blue-600">
+                                                                            <span class="ml-1 text-xs text-gray-700" x-text="opt"></span>
+                                                                        </label>
+                                                                    </template>
+                                                                    <template x-if="!(col.options)">
+                                                                        <input type="checkbox" x-model="rel[col.id]" class="mt-1">
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+                                                            
+                                                            <template x-if="col.format === 'dropdown'">
+                                                                <select x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1 bg-white">
+                                                                    <option value="">-- Chọn --</option>
+                                                                    <template x-for="opt in (col.options || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="opt">
+                                                                        <option :value="opt" x-text="opt"></option>
+                                                                    </template>
+                                                                </select>
+                                                            </template>
+
+                                                            <template x-if="col.format === 'date'">
+                                                                <input type="date" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
+                                                            </template>
+                                                            
+                                                            <template x-if="col.format === 'number'">
+                                                                <input type="number" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
+                                                            </template>
+                                                            
+                                                            <template x-if="col.format === 'text_loop'">
+                                                                <div class="mt-1 space-y-1" x-data="{ items: Array.isArray(rel[col.id]) ? rel[col.id] : (rel[col.id] ? [rel[col.id]] : ['']) }" x-effect="rel[col.id] = items.filter(Boolean)">
+                                                                    <template x-for="(item, idx) in items" :key="idx">
+                                                                        <div class="flex gap-1 items-center">
+                                                                            <input type="text" x-model="items[idx]" class="flex-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Nhập dữ liệu...">
+                                                                            <button @click="items.splice(idx, 1)" class="text-red-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                                                                        </div>
+                                                                    </template>
+                                                                    <button @click="items.push('')" class="text-xs text-blue-600 hover:underline mt-1 font-medium">+ Thêm dòng</button>
+                                                                </div>
+                                                            </template>
+                                                            
+                                                            <template x-if="col.format === 'text'">
+                                                                <input type="text" x-model="rel[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
+                                                            </template>
+                                                        </div>
+                                                    </template>
+    
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+</template>
+</div>
+<!-- Panel Footer -->
                                 <div class="flex flex-shrink-0 justify-end gap-3 px-6 sm:px-8 py-4 border-t border-gray-200 bg-white">
                                     <button x-show="isAdmin() && selectedPerson" type="button" @click="deleteData()" class="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-red-700 mr-auto">Xóa Cán bộ</button>
                                     <button type="button" @click="closePanel()" class="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50">Hủy</button>
@@ -3065,13 +2913,60 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                         // Lấy riêng trips và flags trước khi gửi payload
                         const payload = JSON.parse(JSON.stringify(this.formData));
                         const trips = payload.trips || [];
-                        const flags = payload.flags || {};
                         const relatives = payload.relatives || [];
                         delete payload.trips;
-                        delete payload.flags;
                         delete payload.relatives;
                         
-                        // Xóa các trường trống hoặc không hợp lệ khỏi JSON
+                        const appendix3Keys = ['trongYeu', 'thamNhung', 'otherFlags', 'klDang', 'klChinhQuyen', 'vpChuaPhep', 'vpNuocNgoai', 'vpQuaHan', 'dienQuanLy', 'receivedGiftOver50M', 'rentHouseToForeigner', 'workInForeignCompany', 'loiKeo', 'kl_chung', 'marriedToForeigner'];
+                        const flags = payload.flags || {};
+                        for(let k of appendix3Keys) {
+                            if(payload[k] !== undefined) {
+                                flags[k] = payload[k];
+                                delete payload[k];
+                            }
+                        }
+                        delete payload.flags;
+
+                        // Regroup custom_data for personnel
+                        payload.custom_data = {};
+                        for (let g of this.importMappingPersonnel) {
+                            for (let c of g.columns) {
+                                if (c.id && c.id.startsWith('custom_')) {
+                                    if (payload[c.id] !== undefined) {
+                                        payload.custom_data[c.id] = payload[c.id];
+                                        delete payload[c.id];
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Regroup custom_data for trips
+                        trips.forEach(t => {
+                            t.custom_data = {};
+                            for (let g of this.importMappingPersonnel) {
+                                for (let c of g.columns) {
+                                    if (c.id && c.id.startsWith('custom_') && t[c.id] !== undefined) {
+                                        t.custom_data[c.id] = t[c.id];
+                                        delete t[c.id];
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Regroup custom_data for relatives
+                        relatives.forEach(r => {
+                            r.custom_data = {};
+                            for (let g of this.importMappingRelative) {
+                                for (let c of g.columns) {
+                                    if (c.id && c.id.startsWith('custom_') && r[c.id] !== undefined) {
+                                        r.custom_data[c.id] = r[c.id];
+                                        delete r[c.id];
+                                    }
+                                }
+                            }
+                        });
+                        
+// Xóa các trường trống hoặc không hợp lệ khỏi JSON
                         Object.keys(payload).forEach(k => {
                             if (payload[k] === "") payload[k] = null;
                         });
@@ -3095,29 +2990,31 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             // Xử lý lưu Trips (Phụ lục 1)
                             const originalTripIds = (this.selectedPerson && this.selectedPerson.trips) ? this.selectedPerson.trips.map(t => t.id) : [];
                             
-                            const mappedTrips = trips.filter(t => t.country).map(t => {
+                            const mappedTrips = trips.filter(t => t.countryName || t.country).map(t => {
                                 const m = {
                                     id: t.id || ('trip_' + Date.now() + Math.floor(Math.random()*1000)),
                                     personnelId: payload.id,
-                                    decisionNumber: t.qd || null,
-                                    decisionDate: t.qdDate || null,
-                                    decisionIssuer: t.agency || null,
-                                    departureDate: t.exit || null,
-                                    arrivalDate: t.enter || null,
-                                    countryName: t.country || null,
-                                    tripCount: t.times ? parseInt(t.times) : null,
-                                    purposeName: t.purpose || null,
-                                    fundingName: t.funding || null,
-                                    trainingType: t.trainType || null,
-                                    trainingPlace: t.trainLoc || null,
-                                    trainingRole: t.trainRole || null,
-                                    sponsorUnit: t.trainAgency || null,
-                                    trainingTime: t.trainTime || null,
-                                    workRole: t.leader || null,
-                                    workMembers: t.members || null,
-                                    workMemberCount: t.count ? parseInt(t.count) : null
+                                    decisionNumber: t.decisionNumber || null,
+                                    decisionDate: t.decisionDate || null,
+                                    decisionIssuer: t.decisionIssuer || null,
+                                    departureDate: t.departureDate || null,
+                                    arrivalDate: t.arrivalDate || null,
+                                    countryName: t.countryName || null,
+                                    tripCount: t.tripCount ? parseInt(t.tripCount) : null,
+                                    purposeName: t.purposeName || null,
+                                    fundingName: t.fundingName || null,
+                                    trainingType: t.trainingType || null,
+                                    trainingPlace: t.trainingPlace || null,
+                                    trainingRole: t.trainingRole || null,
+                                    sponsorUnit: t.sponsorUnit || null,
+                                    trainingTime: t.trainingTime || null,
+                                    workRole: t.workRole || null,
+                                    workMembers: t.workMembers || null,
+                                    workMemberCount: t.workMemberCount ? parseInt(t.workMemberCount) : null,
+                                    report: t.report || null,
+                                    nopHC: t.nopHC || null,
+                                    custom_data: t.custom_data || null
                                 };
-                                if (t.id) m.id = t.id;
                                 return m;
                             });
                             
@@ -3148,18 +3045,21 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             const mappedFlags = {
                                 id: flags.id || ('a3_' + Date.now() + Math.floor(Math.random()*1000)),
                                 personnelId: payload.id,
-                                trongYeu: flags.politicalIssue || null,
-                                thamNhung: flags.investigating || null,
-                                otherFlags: flags.otherIssue || null,
-                                klDang: flags.partyDiscipline || null,
-                                klChinhQuyen: flags.govDiscipline || null,
-                                vpChuaPhep: flags.noPermission || null,
-                                vpNuocNgoai: flags.lawViolation || null,
-                                vpQuaHan: flags.overstay || null,
-                                dienQuanLy: flags.managed || null,
-                                receivedGiftOver50M: flags.gift || null,
-                                rentHouseToForeigner: flags.rent || null,
-                                workInForeignCompany: flags.fdi || null
+                                trongYeu: flags.trongYeu || null,
+                                thamNhung: flags.thamNhung || null,
+                                loiKeo: flags.loiKeo || null,
+                                kl_chung: flags.kl_chung || null,
+                                otherFlags: flags.otherFlags || null,
+                                klDang: flags.klDang || null,
+                                klChinhQuyen: flags.klChinhQuyen || null,
+                                vpChuaPhep: flags.vpChuaPhep || null,
+                                vpNuocNgoai: flags.vpNuocNgoai || null,
+                                vpQuaHan: flags.vpQuaHan || null,
+                                dienQuanLy: flags.dienQuanLy || null,
+                                receivedGiftOver50M: flags.receivedGiftOver50M || null,
+                                rentHouseToForeigner: flags.rentHouseToForeigner || null,
+                                workInForeignCompany: flags.workInForeignCompany || null,
+                                marriedToForeigner: flags.marriedToForeigner || null
                             };
                             
                             const isNewFlag = !(flags.id && this.selectedPerson && this.selectedPerson.flags && this.selectedPerson.flags.id);
@@ -3191,15 +3091,28 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                 allTnIds = jsonRelIds.data ? jsonRelIds.data.map(i => i.id) : [];
                             }
 
-                            const mappedRelatives = relatives.map(r => {
-                                const relCopy = { ...r, personnelId: payload.id };
-                                if (!relCopy.id) {
-                                    relCopy.id = this.generateNextId('TN_', allTnIds);
-                                    allTnIds.push(relCopy.id);
-                                }
-                                delete relCopy.hasForeignElement;
-                                delete relCopy.foreignInfo;
-                                return relCopy;
+                            const mappedRelatives = relatives.filter(r => r.relativeName).map(r => {
+                                const m = {
+                                    id: r.id || ('rel_' + Date.now() + Math.floor(Math.random()*1000)),
+                                    personnelId: payload.id,
+                                    relationshipName: r.relationshipName || null,
+                                    relativeName: r.relativeName || null,
+                                    birthYear: r.birthYear || null,
+                                    currentAddress: r.currentAddress || null,
+                                    occupation: r.occupation || null,
+                                    studyWorkAddress: r.studyWorkAddress || null,
+                                    countryName: r.countryName || null,
+                                    timeAbroad: r.timeAbroad || null,
+                                    unitAbroad: r.unitAbroad || null,
+                                    fundingName: r.fundingName || null,
+                                    currentUnit: r.currentUnit || null,
+                                    marriedToForeigner: r.marriedToForeigner || null,
+                                    workInForeignCompany: r.workInForeignCompany || null,
+                                    xlplNuocSoTai: r.xlplNuocSoTai || null,
+                                    xlplVietNam: r.xlplVietNam || null,
+                                    custom_data: r.custom_data || null
+                                };
+                                return m;
                             });
                             
                             const currentRelativeIds = mappedRelatives.map(r => r.id).filter(id => id);
