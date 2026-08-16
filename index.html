@@ -152,44 +152,105 @@
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <template x-for="(colObj, index) in (activeSettingsTab === 'personnel' ? importMappingPersonnel : importMappingRelative)" :key="index">
-                                <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors shadow-sm">
-                                    <span class="w-16 font-bold text-gray-600 bg-white border border-gray-200 rounded py-1 text-center text-sm">Cột <span x-text="index + 1"></span></span>
-                                    <select x-model="colObj.key" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs py-1.5 w-1/2">
-                                        <option value="">-- Bỏ qua --</option>
-                                        <template x-for="field in systemFields.filter(f => !['stt','parentPersonnelCccd','parentPersonnelName','parentPosition','parentDepartment','relationshipName','relativeName','currentAddress','occupation','timeAbroad','unitAbroad','currentUnit','marriedToForeigner','workInForeignCompany','xlplNuocSoTai','xlplVietNam','nationality','fileNumber','content'].includes(f.key))" :key="field.key">
-                                            <option :value="field.key" x-text="field.label" :selected="colObj.key === field.key"></option>
+                        
+                        <div class="space-y-6">
+                            <template x-for="(group, gIndex) in (activeSettingsTab === 'personnel' ? importMappingPersonnel : importMappingRelative)" :key="gIndex">
+                                <div class="p-5 border border-gray-200 rounded-2xl bg-white shadow-sm">
+                                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                                        <input x-model="group.group" class="font-bold text-lg text-gray-800 border-none focus:ring-0 p-0 w-2/3 bg-transparent hover:bg-gray-50 rounded px-2" placeholder="Tên Nhóm (VD: Khối A: Thông tin chung)">
+                                        <button @click="removeGroup(gIndex)" class="text-red-400 hover:text-red-600 text-sm flex items-center gap-1 font-medium px-2 py-1 hover:bg-red-50 rounded">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            Xóa Nhóm
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <template x-for="(colObj, cIndex) in group.columns" :key="cIndex">
+                                            <div class="flex flex-col gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors shadow-sm relative group/col">
+                                                <button @click="removeColumn(gIndex, cIndex)" class="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover/col:opacity-100 transition-opacity" title="Xóa cột này">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                                </button>
+                                                <div class="flex items-center gap-2 pr-6">
+                                                    <span class="text-xs font-bold text-gray-500 uppercase w-16">Tên Cột</span>
+                                                    <input x-model="colObj.label" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5" placeholder="Nhập tên cột hiển thị...">
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs font-bold text-gray-500 uppercase w-16">Liên kết</span>
+                                                    <select x-model="colObj.id" @change="if($event.target.value === '__NEW_CUSTOM__') { colObj.id = 'custom_' + Date.now(); }" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs py-1.5">
+                                                        <option value="">-- Không lưu (Bỏ qua) --</option>
+                                                        <optgroup label="Tạo Cột Mới">
+                                                            <template x-if="colObj.id && colObj.id.startsWith('custom_')">
+                                                                <option :value="colObj.id" x-text="'Trường Tùy chỉnh (' + colObj.id + ')'"></option>
+                                                            </template>
+                                                            <option value="__NEW_CUSTOM__">✨ Tạo Trường Tùy Chỉnh Mới...</option>
+                                                        </optgroup>
+                                                        <optgroup label="Trường Hệ Thống Có Sẵn">
+                                                            <template x-for="field in systemFields" :key="field.key">
+                                                                <option :value="field.key" x-text="field.label"></option>
+                                                            </template>
+                                                        </optgroup>
+                                                    </select>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs font-bold text-gray-500 uppercase w-16">Định dạng</span>
+                                                    <select x-model="colObj.format" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 bg-green-50 text-green-700 font-medium">
+                                                        <option value="text">Văn bản (Mặc định)</option>
+                                                        <option value="number">Số</option>
+                                                        <option value="date">Ngày tháng (DD/MM/YYYY)</option>
+                                                        <option value="text_loop">Đoạn văn (Xuống dòng)</option>
+                                                        <option value="checkbox">Hộp kiểm (Có/Không)</option>
+                                                    </select>
+                                                
+                                                    <!-- Dynamic fields cho thân nhân -->
+                                                    <div class="col-span-4 mt-4 bg-purple-50 p-4 rounded-xl border border-purple-100">
+                                                        <h4 class="text-sm font-bold text-purple-700 mb-2">Trường tùy chỉnh</h4>
+                                                        <div class="grid grid-cols-2 gap-4">
+                                                            <template x-for="group in importMappingRelative" :key="group.group">
+                                                                <template x-for="col in group.columns.filter(c => c.id && c.id.startsWith('custom_'))" :key="col.id">
+                                                                    <div class="col-span-1">
+                                                                        <label class="block text-xs font-medium text-gray-700">
+                                                                            <span x-text="col.label"></span>
+                                                                        </label>
+                                                                        <template x-if="col.format === 'checkbox'">
+                                                                            <input type="checkbox" x-model="rel.custom_data[col.id]" class="mt-1">
+                                                                        </template>
+                                                                        <template x-if="col.format === 'date'">
+                                                                            <input type="date" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                                        </template>
+                                                                        <template x-if="col.format === 'number'">
+                                                                            <input type="number" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                                        </template>
+                                                                        <template x-if="col.format === 'text_loop'">
+                                                                            <textarea rows="2" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1"></textarea>
+                                                                        </template>
+                                                                        <template x-if="col.format === 'text'">
+                                                                            <input type="text" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                                        </template>
+                                                                    </div>
+                                                                </template>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+</div>
+                                            </div>
                                         </template>
-                                        <optgroup label="Dành riêng Thân nhân">
-                                            <template x-for="field in systemFields.filter(f => ['stt','parentPersonnelCccd','parentPersonnelName','parentPosition','parentDepartment','relationshipName','relativeName','currentAddress','occupation','timeAbroad','unitAbroad','currentUnit','marriedToForeigner','workInForeignCompany','xlplNuocSoTai','xlplVietNam','nationality','fileNumber','content'].includes(f.key))" :key="field.key">
-                                                <option :value="field.key" x-text="field.label" :selected="colObj.key === field.key"></option>
-                                            </template>
-                                        </optgroup>
-                                    </select>
-                                    
-                                    <select x-model="colObj.format" class="rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 w-28 bg-green-50">
-                                        <option value="text">Văn bản</option>
-                                        <option value="number">Số</option>
-                                        <option value="date">Ngày</option>
-                                        <option value="text_loop">Text Loop</option>
-                                        <option value="checkbox">Checkbox (Có/X)</option>
-                                        
-                                    </select>
-
-                                    <button @click="removeColumn(index)" class="text-red-400 hover:text-red-600 bg-white p-1.5 rounded-md border border-gray-200" title="Xóa cột này">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                    </button>
+                                    </div>
+                                    <div class="mt-4">
+                                        <button @click="addColumn(gIndex)" class="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                            Thêm Cột vào Nhóm này
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
                         
                         <div class="mt-8 flex justify-center">
-                            <button @click="addColumn()" class="px-6 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all flex items-center gap-2 font-medium">
+                            <button @click="addGroup()" class="px-6 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all flex items-center gap-2 font-medium">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                Thêm Cột mới
+                                Thêm Nhóm Mới
                             </button>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -1108,7 +1169,39 @@
                                                 <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Làm tại cty FDI <span x-show="showColumns" class="text-blue-600">[Cột 51]</span></label><input type="text" x-model="formData.flags.fdi" class="w-full border rounded px-2 py-1"></div>
                                             </div>
                                         </div>
-                                    </fieldset>
+                                    
+                                        <!-- Bắt đầu Khối Tùy Chỉnh (Dynamic Form) cho Cá nhân -->
+                                        <div class="bg-purple-50 p-6 rounded-xl border border-purple-100 shadow-sm mt-6">
+                                            <h3 class="text-lg font-bold text-purple-700 mb-4">Các trường tùy chỉnh bổ sung (Dynamic)</h3>
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <template x-for="group in importMappingPersonnel" :key="group.group">
+                                                    <template x-for="col in group.columns.filter(c => c.id && c.id.startsWith('custom_'))" :key="col.id">
+                                                        <div class="col-span-1">
+                                                            <label class="block text-xs font-medium text-gray-700">
+                                                                <span x-text="col.label"></span> <span class="text-xs text-gray-400 font-normal ml-1" x-text="'(' + group.group + ')'"></span>
+                                                            </label>
+                                                            <template x-if="col.format === 'checkbox'">
+                                                                <input type="checkbox" x-model="formData.custom_data[col.id]" class="mt-1">
+                                                            </template>
+                                                            <template x-if="col.format === 'date'">
+                                                                <input type="date" x-model="formData.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                            </template>
+                                                            <template x-if="col.format === 'number'">
+                                                                <input type="number" x-model="formData.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                            </template>
+                                                            <template x-if="col.format === 'text_loop'">
+                                                                <textarea rows="2" x-model="formData.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1"></textarea>
+                                                            </template>
+                                                            <template x-if="col.format === 'text'">
+                                                                <input type="text" x-model="formData.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <!-- Kết thúc Khối Tùy Chỉnh -->
+</fieldset>
                                     </div>
                                     <!-- TAB 2: THÂN NHÂN (26 Fields) -->
                                     <div x-show="activeTab === 'thannhan'" class="space-y-6">
@@ -1195,7 +1288,38 @@
                                                     
                                                     <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Xử lý PL: Của nước sở tại <span x-show="showColumns" class="text-blue-600">[Cột 25]</span></label><input type="text" x-model="rel.xlplNuocSoTai" class="w-full border rounded px-2 py-1"></div>
                                                     <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Xử lý PL: Của PL Việt Nam <span x-show="showColumns" class="text-blue-600">[Cột 26]</span></label><input type="text" x-model="rel.xlplVietNam" class="w-full border rounded px-2 py-1"></div>
-                                                </div>
+                                                
+                                                    <!-- Dynamic fields cho thân nhân -->
+                                                    <div class="col-span-4 mt-4 bg-purple-50 p-4 rounded-xl border border-purple-100">
+                                                        <h4 class="text-sm font-bold text-purple-700 mb-2">Trường tùy chỉnh</h4>
+                                                        <div class="grid grid-cols-2 gap-4">
+                                                            <template x-for="group in importMappingRelative" :key="group.group">
+                                                                <template x-for="col in group.columns.filter(c => c.id && c.id.startsWith('custom_'))" :key="col.id">
+                                                                    <div class="col-span-1">
+                                                                        <label class="block text-xs font-medium text-gray-700">
+                                                                            <span x-text="col.label"></span>
+                                                                        </label>
+                                                                        <template x-if="col.format === 'checkbox'">
+                                                                            <input type="checkbox" x-model="rel.custom_data[col.id]" class="mt-1">
+                                                                        </template>
+                                                                        <template x-if="col.format === 'date'">
+                                                                            <input type="date" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                                        </template>
+                                                                        <template x-if="col.format === 'number'">
+                                                                            <input type="number" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                                        </template>
+                                                                        <template x-if="col.format === 'text_loop'">
+                                                                            <textarea rows="2" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1"></textarea>
+                                                                        </template>
+                                                                        <template x-if="col.format === 'text'">
+                                                                            <input type="text" x-model="rel.custom_data[col.id]" class="w-full border border-gray-300 rounded px-2 py-1">
+                                                                        </template>
+                                                                    </div>
+                                                                </template>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+</div>
                                             </div>
                                         </template>
                                     </fieldset>
@@ -1795,8 +1919,8 @@
                         }).catch(() => defaultArr);
                     };
                     
-                    const pDef = this.defaultMapping54.map(k => ({key: k, format: 'text'}));
-                    const rDef = Array.from({length: 26}, () => ({key: '', format: 'text'}));
+                    const pDef = [{group: "Khối A: Thông tin chung", columns: [{id: 'name', label: 'Họ và tên', format: 'text'}]}];
+                    const rDef = [{group: "Thông tin chung", columns: [{id: 'relativeName', label: 'Tên thân nhân', format: 'text'}]}];
                     
                     Promise.all([
                         fetchConfig('mapping_config_personnel', pDef),
@@ -1838,13 +1962,22 @@
                         alert("Lỗi mạng: " + e.message);
                     }
                 },
-                addColumn() {
+                addGroup() {
                     let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
-                    mapArr.push({key: '', format: 'text'});
+                    mapArr.push({ group: "Nhóm mới", columns: [] });
                 },
-                removeColumn(index) {
+                removeGroup(gIndex) {
+                    if(!confirm("Bạn có chắc chắn muốn xóa nhóm này và tất cả các cột bên trong?")) return;
                     let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
-                    mapArr.splice(index, 1);
+                    mapArr.splice(gIndex, 1);
+                },
+                addColumn(gIndex) {
+                    let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
+                    mapArr[gIndex].columns.push({ id: '', label: 'Cột mới', format: 'text' });
+                },
+                removeColumn(gIndex, cIndex) {
+                    let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
+                    mapArr[gIndex].columns.splice(cIndex, 1);
                 },
 
                 async fetchUsers() {
@@ -2103,7 +2236,7 @@
                     this.importHeaders = rows[0].map(h => h.trim());
                     this.importRows = rows.slice(1);
                     
-                    const mappingConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel;
+                    const rawConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel; const mappingConfig = rawConfig.flatMap(g => g.columns);
                     
                     if (this.importHeaders.length !== mappingConfig.length) {
                         const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length} cột, nhưng hệ thống kỳ vọng ${mappingConfig.length} cột. 
@@ -2119,7 +2252,7 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                 async executeImport() {
                     this.isImporting = true;
                     try {
-                        const mappingConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel;
+                        const rawConfig = this.importType === 'relative' ? this.importMappingRelative : this.importMappingPersonnel; const mappingConfig = rawConfig.flatMap(g => g.columns);
                         const payloads = [];
                         const appendix3Payloads = [];
                         const appendix1Payloads = [];
@@ -2166,9 +2299,9 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             
                             for (let i = 0; i < mappingConfig.length; i++) {
                                 const config = mappingConfig[i];
-                                if (!config || !config.key) continue;
+                                if (!config || !config.id) continue;
                                 
-                                const fieldKey = config.key;
+                                const fieldKey = config.id;
                                 const format = config.format || 'text';
                                 let rawVal = (r[i] !== undefined && r[i] !== null) ? String(r[i]).trim() : '';
                                 
@@ -2189,7 +2322,12 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                         if (fieldKey === 'parentPersonnelCccd') parentCccd = val;
                                         continue;
                                     }
-                                    payload[fieldKey] = val;
+                                    if (fieldKey.startsWith('custom_')) {
+                                        if (!payload.custom_data) payload.custom_data = {};
+                                        payload.custom_data[fieldKey] = val;
+                                    } else {
+                                        payload[fieldKey] = val;
+                                    }
                                     hasData = true;
                                 } else {
                                     const ignoredKeys = ['stt'];
@@ -2211,8 +2349,13 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                         app1Payload[fieldKey] = val;
                                         hasApp1Data = true;
                                     } else {
+                                        if (fieldKey.startsWith('custom_')) {
+                                        if (!payload.custom_data) payload.custom_data = {};
+                                        payload.custom_data[fieldKey] = val;
+                                    } else {
                                         payload[fieldKey] = val;
-                                        hasData = true;
+                                    }
+                                    hasData = true;
                                     }
                                 }
                             }
@@ -2725,10 +2868,12 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                     if (!this.formData.trips) this.formData.trips = [{}];
                     if (this.formData.trips.length === 0) this.formData.trips.push({});
                     if (!this.formData.flags) this.formData.flags = {};
+                    if (!this.formData.custom_data) this.formData.custom_data = {};
                     if (!this.formData.relatives) this.formData.relatives = [];
                     // Ensure relatives have foreignInfo
                     this.formData.relatives.forEach(r => {
                         if (!r.foreignInfo) r.foreignInfo = {};
+                        if (!r.custom_data) r.custom_data = {};
                     });
                     
                     this.activeTab = 'canhan';
@@ -3192,8 +3337,11 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                             <th class="border p-2 whitespace-nowrap">
                                                 <span x-text="(() => {
                                                     const m = importType === 'relative' ? importMappingRelative : importMappingPersonnel;
-                                                    const key = m[colIndex]?.key;
-                                                    return key ? (systemFields.find(f => f.key === key)?.label || key) : ('Cột ' + (parseInt(colIndex)+1) + ' - Bỏ qua');
+                                                    const flatM = m.flatMap(g => g.columns || []);
+                                                    const key = flatM[colIndex]?.id;
+                                                    if (!key) return ('Cột ' + (parseInt(colIndex)+1) + ' - Bỏ qua');
+                                                    if (key.startsWith('custom_')) return flatM[colIndex].label;
+                                                    return systemFields.find(f => f.key === key)?.label || key;
                                                 })()"></span>
                                             </th>
                                         </template>
