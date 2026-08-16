@@ -1748,6 +1748,8 @@
                 importRows: [],
                 importMapping: {},
                 isImporting: false,
+                isSettingsModalOpen: false,
+                defaultMapping54: ["stt", "name", "otherName", "birthYear", "ethnicity", "religion", "hometown", "departmentName", "positionName", "thuongTru", "tamTru", "cccd", "hcCaNhan", "hcCongVu", "kqThamTra", "decisionNumber", "decisionDate", "decisionIssuer", "departureDate", "arrivalDate", "countryName", "tripCount", "purpose_cong_tac", "purpose_hoc_tap", "purpose_viec_rieng", "trainingType", "trainingPlace", "trainingRole", "sponsorUnit", "fundingName", "trainingTime", "workRole", "workMembers", "workMemberCount", "funding_ngan_sach", "funding_tu_tuc", "funding_tai_tro", "funding_hoc_bong", "report", "nopHC", "trongYeu", "thamNhung", "loiKeo", "otherFlags", "kl_chung", "klDang", "klChinhQuyen", "vpChuaPhep", "vpNuocNgoai", "vpQuaHan", "receivedGiftOver50M", "rentHouseToForeigner", "workInForeignCompany", "dienQuanLy"],
                 get systemFields() {
                     if (this.importType === 'relative') {
                         return [
@@ -1814,19 +1816,28 @@
                         { key: 'workMemberCount', label: 'Cột 32 (Số lượng thành viên)' },
                         { key: 'groupFunding', label: 'Cột 33 (Nguồn Kinh phí Đoàn)' },
                         { key: 'report', label: 'Cột 34 (Báo cáo kết quả)' },
-                        { key: 'nopHC', label: 'Cột 35 (Nộp hộ chiếu)' },
-                        { key: 'trongYeu', label: 'Cột 36 (Vấn đề TCCT)' },
-                        { key: 'thamNhung', label: 'Cột 37 (Đang bị điều tra)' },
-                        { key: 'loiKeo', label: 'Cột 38 (Vấn đề khác)' },
-                        { key: 'klDang', label: 'Cột 39 (Kỷ luật Đảng)' },
-                        { key: 'klChinhQuyen', label: 'Cột 40 (Kỷ luật CQ)' },
-                        { key: 'vpChuaPhep', label: 'Cột 41 (Đi NN không phép)' },
-                        { key: 'vpNuocNgoai', label: 'Cột 42 (VPPL NN)' },
-                        { key: 'vpQuaHan', label: 'Cột 43 (Ở lại NN quá hạn)' },
-                        { key: 'dienQuanLy', label: 'Cột 44 (Diện quản lý)' },
-                        { key: 'receivedGiftOver50M', label: 'Cột 45 (Được tặng quà >50tr)' },
-                        { key: 'rentHouseToForeigner', label: 'Cột 46 (Cho thuê nhà/đất)' },
-                        { key: 'workInForeignCompany', label: 'Cột 47 (Làm tại cty FDI)' }
+                        { key: 'nopHC', label: 'Nộp hộ chiếu' },
+                        { key: 'purpose_cong_tac', label: '[Mục đích] Công tác' },
+                        { key: 'purpose_hoc_tap', label: '[Mục đích] Học tập' },
+                        { key: 'purpose_viec_rieng', label: '[Mục đích] Việc riêng' },
+                        { key: 'funding_ngan_sach', label: '[Kinh phí] Ngân sách NN' },
+                        { key: 'funding_tu_tuc', label: '[Kinh phí] Tự túc' },
+                        { key: 'funding_tai_tro', label: '[Kinh phí] Tài trợ' },
+                        { key: 'funding_hoc_bong', label: '[Kinh phí] Học bổng' },
+                        { key: 'trongYeu', label: 'Vấn đề TCCT / Tự diễn biến' },
+                        { key: 'thamNhung', label: 'Đang bị điều tra' },
+                        { key: 'loiKeo', label: 'Khai man / Vấn đề lý lịch khác' },
+                        { key: 'otherFlags', label: 'Có vấn đề TCCT (Khác)' },
+                        { key: 'kl_chung', label: 'Kỷ luật (Chung)' },
+                        { key: 'klDang', label: 'Kỷ luật Đảng' },
+                        { key: 'klChinhQuyen', label: 'Kỷ luật Chính quyền' },
+                        { key: 'vpChuaPhep', label: 'Đi NN không phép' },
+                        { key: 'vpNuocNgoai', label: 'Vi phạm PL ở nước ngoài' },
+                        { key: 'vpQuaHan', label: 'Ở lại NN quá hạn' },
+                        { key: 'dienQuanLy', label: 'Diện quản lý' },
+                        { key: 'receivedGiftOver50M', label: 'Được tặng quà >50tr' },
+                        { key: 'rentHouseToForeigner', label: 'Cho thuê nhà/đất' },
+                        { key: 'workInForeignCompany', label: 'Làm tại cty FDI' }
                     ];
                 },
                 
@@ -1945,42 +1956,23 @@
                 processPastedData() {
                     if(!this.importPasteText.trim()) return;
                     
-                    
                     const rows = this.importPasteText.trim().split('\n').map(r => r.split('\t'));
-                    if (rows.length < 2) return; // need headers and at least 1 row of data
+                    if (rows.length < 2) return;
                     
                     this.importHeaders = rows[0].map(h => h.trim());
                     this.importRows = rows.slice(1);
                     
-                    const expectedCols = this.importType === 'relative' ? 26 : 47;
-                    if (this.importHeaders.length !== expectedCols) {
-                        const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length} cột, nhưng hệ thống yêu cầu ${expectedCols} cột theo Template chuẩn.
-
+                    const expectedCols = this.importType === 'relative' ? 26 : this.defaultMapping54.length;
+                    if (this.importHeaders.length !== expectedCols && this.importHeaders.length !== Object.keys(this.importMapping).length) {
+                        const proceed = confirm(`CẢNH BÁO: Dữ liệu bạn nhập có ${this.importHeaders.length} cột, nhưng hệ thống kỳ vọng ${expectedCols} cột. 
 Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn có muốn tiếp tục không?`);
                         if (!proceed) return;
                     }
                     
-                    // Auto mapping (basic guessing based on exact or partial match)
                     setTimeout(() => {
                         let newMapping = {};
                         this.importHeaders.forEach((h, index) => {
-                            const hl = h.toLowerCase();
-                            
-                            // Bỏ qua các cột chưa dùng (chỉ áp dụng cho personnel hoặc thực sự không cần)
-                            if (hl.includes('chưa dùng')) {
-                                newMapping[index] = "";
-                                return;
-                            }
-                            
-                            // Map STT
-                            if (index === 0 || hl === 'stt' || hl.includes('tt')) {
-                                newMapping[index] = 'stt';
-                                return;
-                            }
-                            
-                            let matchKey = "";
                             if (this.importType === 'relative') {
-                                // Strictly map by standard 26-column index for relatives
                                 const mappingArr = [
                                     'stt', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'relationshipName',
                                     'relativeName', 'otherName', 'birthYear', 'hometown', 'nationality',
@@ -1988,21 +1980,15 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                                     'fileNumber', 'content', 'unitAbroad', 'countryName', 'timeAbroad',
                                     'fundingName', 'currentUnit', 'marriedToForeigner', 'workInForeignCompany', 'xlplNuocSoTai', 'xlplVietNam'
                                 ];
-                                if (index < mappingArr.length) {
-                                    matchKey = mappingArr[index];
-                                }
+                                newMapping[index] = mappingArr[index] || "";
                             } else {
-                                // Strictly map by standard 47-column index for personnels
-                                const mappingArr = [
-                                    'stt', 'name', 'otherName', 'birthYear', 'ethnicity', 'religion', 'hometown', 'departmentName', 'positionName', 'thuongTru', 'tamTru', 'cccd', 'hcCaNhan', 'hcCongVu', 'kqThamTra',
-                                    'decisionNumber', 'decisionDate', 'decisionIssuer', 'departureDate', 'arrivalDate', 'countryName', 'tripCount', 'purposeName', 'trainingType', 'trainingPlace', 'trainingRole', 'sponsorUnit', 'fundingName', 'trainingTime', 'workRole', 'workMembers', 'workMemberCount', 'groupFunding', 'report', 'nopHC',
-                                    'trongYeu', 'thamNhung', 'loiKeo', 'klDang', 'klChinhQuyen', 'vpChuaPhep', 'vpNuocNgoai', 'vpQuaHan', 'dienQuanLy', 'receivedGiftOver50M', 'rentHouseToForeigner', 'workInForeignCompany'
-                                ];
-                                if (index < mappingArr.length) {
-                                    matchKey = mappingArr[index];
+                                // If we have a saved mapping array, use it
+                                if (Array.isArray(this.importMapping) && this.importMapping.length > 0) {
+                                    newMapping[index] = this.importMapping[index] || "";
+                                } else {
+                                    newMapping[index] = this.defaultMapping54[index] || "";
                                 }
                             }
-                            newMapping[index] = matchKey;
                         });
                         this.importMapping = newMapping;
                         this.importStep = 2;
@@ -3125,5 +3111,56 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
             </div>
         </div>
     </div>
+
+    <!-- Settings Modal -->
+    <div x-show="isSettingsModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm" x-cloak>
+        <div class="bg-white w-full max-w-4xl h-[80vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h2 class="text-xl font-bold text-gray-800">Cấu hình Cột Import (Cá nhân)</h2>
+                <button @click="isSettingsModalOpen = false" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                    <p class="text-sm text-gray-600 mb-4">Ghép nối đúng thứ tự cột trong file Excel của bạn với trường dữ liệu trong hệ thống. Cột nào trong Excel không cần thiết thì chọn "Bỏ qua".</p>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <template x-for="(col, index) in importMapping" :key="index">
+                            <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                                <span class="w-16 font-bold text-gray-500 text-sm">Cột <span x-text="index + 1"></span>:</span>
+                                <select x-model="importMapping[index]" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                                    <option value="">-- Bỏ qua --</option>
+                                    <template x-for="field in systemFields.filter(f => !['stt','parentPersonnelCccd','parentPersonnelName','parentPosition','parentDepartment','relationshipName','relativeName','currentAddress','occupation','timeAbroad','unitAbroad','currentUnit','marriedToForeigner','workInForeignCompany','xlplNuocSoTai','xlplVietNam','nationality','fileNumber','content'].includes(f.key))" :key="field.key">
+                                        <option :value="field.key" x-text="field.label" :selected="importMapping[index] === field.key"></option>
+                                    </template>
+                                </select>
+                                <button @click="removeColumn(index)" class="text-red-400 hover:text-red-600" title="Xóa cột này">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <div class="mt-4 flex justify-center">
+                        <button @click="addColumn()" class="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-blue-600 hover:border-blue-300 transition-colors flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Thêm Cột mới
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
+                <button @click="importMapping = [...defaultMapping54]" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">Khôi phục 54 cột chuẩn</button>
+                <button @click="isSettingsModalOpen = false" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">Hủy</button>
+                <button @click="saveMappingConfig()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">
+                    Lưu Cấu hình
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
