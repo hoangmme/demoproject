@@ -1776,10 +1776,70 @@
                             this.isLoggedIn = true;
                         } catch(e) {}
                     }
-                    this.fetchData(); this.fetchLogs(); this.fetchUsers();
+                    this.loadMappingConfig(); this.fetchData(); this.fetchLogs(); this.fetchUsers();
                 },
                 
                 
+                
+                loadMappingConfig() {
+                    const fetchConfig = (key, defaultArr) => {
+                        return fetch(`${API_URL}/items/app_settings/${key}`, {
+                            headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                        }).then(r => r.json()).then(data => {
+                            if (data.data && data.data.value) {
+                                return typeof data.data.value === 'string' ? JSON.parse(data.data.value) : data.data.value;
+                            }
+                            return defaultArr;
+                        }).catch(() => defaultArr);
+                    };
+                    
+                    const pDef = this.defaultMapping54.map(k => ({key: k, format: 'text'}));
+                    const rDef = Array.from({length: 26}, () => ({key: '', format: 'text'}));
+                    
+                    Promise.all([
+                        fetchConfig('mapping_config_personnel', pDef),
+                        fetchConfig('mapping_config_relative', rDef)
+                    ]).then(([pConfig, rConfig]) => {
+                        this.importMappingPersonnel = pConfig;
+                        this.importMappingRelative = rConfig;
+                    });
+                },
+                async saveMappingConfig() {
+                    try {
+                        const saveConfig = async (key, val) => {
+                            let res = await fetch(`${API_URL}/items/app_settings/${key}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                body: JSON.stringify({ value: JSON.stringify(val) })
+                            });
+                            if (!res.ok) {
+                                res = await fetch(`${API_URL}/items/app_settings`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                    body: JSON.stringify({ key: key, value: JSON.stringify(val) })
+                                });
+                            }
+                            return res;
+                        };
+                        
+                        await Promise.all([
+                            saveConfig('mapping_config_personnel', this.importMappingPersonnel),
+                            saveConfig('mapping_config_relative', this.importMappingRelative)
+                        ]);
+                        alert("Đã lưu cấu hình cột Import thành công!");
+                    } catch(e) {
+                        alert("Lỗi mạng: " + e.message);
+                    }
+                },
+                addColumn() {
+                    let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
+                    mapArr.push({key: '', format: 'text'});
+                },
+                removeColumn(index) {
+                    let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
+                    mapArr.splice(index, 1);
+                },
+
                 async fetchUsers() {
                     try {
                         const [usersRes, rolesRes] = await Promise.all([
@@ -1822,7 +1882,7 @@
                 importRows: [],
                 importMappingPersonnel: [], importMappingRelative: [], activeSettingsTab: 'personnel',
                 isImporting: false,
-                isSettingsModalOpen: false,
+                
                 defaultMapping54: ["stt", "name", "otherName", "birthYear", "ethnicity", "religion", "hometown", "departmentName", "positionName", "thuongTru", "tamTru", "cccd", "hcCaNhan", "hcCongVu", "kqThamTra", "decisionNumber", "decisionDate", "decisionIssuer", "departureDate", "arrivalDate", "countryName", "tripCount", "purpose_cong_tac", "purpose_hoc_tap", "purpose_viec_rieng", "trainingType", "trainingPlace", "trainingRole", "sponsorUnit", "fundingName", "trainingTime", "workRole", "workMembers", "workMemberCount", "funding_ngan_sach", "funding_tu_tuc", "funding_tai_tro", "funding_hoc_bong", "report", "nopHC", "trongYeu", "thamNhung", "loiKeo", "otherFlags", "kl_chung", "klDang", "klChinhQuyen", "vpChuaPhep", "vpNuocNgoai", "vpQuaHan", "receivedGiftOver50M", "rentHouseToForeigner", "workInForeignCompany", "dienQuanLy"],
                 get systemFields() {
                     if (this.importType === 'relative') {
@@ -1948,7 +2008,7 @@
                     this.importPasteText = '';
                     this.importHeaders = [];
                     this.importRows = [];
-                    this.importMapping = {};
+                    
                 },
                                                                 loadSampleData() {
                     if (this.importType === 'relative') {
@@ -3121,15 +3181,21 @@ Dữ liệu hiển thị có thể bị xô lệch hoặc thiếu sót. Bạn c�
                             <table class="w-full border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50">
-                                        <template x-for="colIndex in Object.keys(importMapping)" :key="colIndex">
-                                            <th class="border p-2 whitespace-nowrap" x-text="importMapping[colIndex] ? (systemFields.find(f => f.key === importMapping[colIndex])?.label || importMapping[colIndex]) : ('Cột ' + (parseInt(colIndex)+1) + ' - Chưa chọn (Bỏ qua)')"></th>
+                                        <template x-for="(h, colIndex) in importHeaders" :key="colIndex">
+                                            <th class="border p-2 whitespace-nowrap">
+                                                <span x-text="(() => {
+                                                    const m = importType === 'relative' ? importMappingRelative : importMappingPersonnel;
+                                                    const key = m[colIndex]?.key;
+                                                    return key ? (systemFields.find(f => f.key === key)?.label || key) : ('Cột ' + (parseInt(colIndex)+1) + ' - Bỏ qua');
+                                                })()"></span>
+                                            </th>
                                         </template>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template x-for="(row, rIndex) in importRows.slice(0, 5)" :key="rIndex">
                                         <tr>
-                                            <template x-for="(colIndex, mIndex) in Object.keys(importMapping)" :key="colIndex">
+                                            <template x-for="(h, colIndex) in importHeaders" :key="colIndex">
                                                 <td class="border p-2 text-gray-600" x-text="row[colIndex]"></td>
                                             </template>
                                         </tr>
