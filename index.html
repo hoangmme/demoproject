@@ -2345,11 +2345,13 @@
                             const virtualPurposes = [];
                             const virtualFundings = [];
                             
-                            for (let i = 0; i < mappingConfig.length; i++) {
-                                const config = mappingConfig[i];
+                            const cols = this._templateCols || [];
+                            for (let i = 1; i < cols.length; i++) {
+                                const config = cols[i];
                                 if (!config || !config.id) continue;
                                 
                                 const fieldKey = config.id;
+                                const rawLabel = (config.rawLabel || config.label || '').toLowerCase().trim();
                                 const format = config.format || 'text';
                                 let rawVal = (r[i] !== undefined && r[i] !== null) ? String(r[i]).trim() : '';
                                 
@@ -2362,14 +2364,30 @@
                                 else if (format === 'text_loop') val = parseTextLoop(rawVal);
                                 else val = rawVal; 
                                 
-                                if (val === null || val === '') continue;
-
                                 if (this.importType === 'relative') {
-                                    const ignoredFields = ['stt', 'parentPersonnelCccd', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'otherName', 'hometown', 'nationality', 'hktt', 'fileNumber', 'content'];
-                                    if (ignoredFields.includes(fieldKey)) {
-                                        if (fieldKey === 'parentPersonnelCccd') parentCccd = val;
+                                    const isParentCccd = fieldKey === 'parentPersonnelCccd' || 
+                                                         rawLabel.includes('cccd cán bộ') || 
+                                                         rawLabel.includes('cccd cb') ||
+                                                         rawLabel === 'cccd';
+                                    if (isParentCccd) {
+                                        parentCccd = rawVal;
                                         continue;
                                     }
+                                    
+                                    const isParentInfo = ['stt', 'parentPersonnelName', 'parentPosition', 'parentDepartment'].includes(fieldKey) ||
+                                                         rawLabel.includes('tên cán bộ') || 
+                                                         rawLabel.includes('tên cb') || 
+                                                         rawLabel.includes('chức vụ cb') || 
+                                                         rawLabel.includes('chức vụ cán bộ') || 
+                                                         rawLabel.includes('đơn vị cb') || 
+                                                         rawLabel.includes('đơn vị cán bộ') ||
+                                                         rawLabel.includes('thông tin cán bộ');
+                                    if (isParentInfo) {
+                                        continue;
+                                    }
+                                    
+                                    if (val === null || val === '') continue;
+                                    
                                     if (fieldKey.startsWith('custom_')) {
                                         if (!payload.custom_data) payload.custom_data = {};
                                         payload.custom_data[fieldKey] = val;
@@ -2378,6 +2396,7 @@
                                     }
                                     hasData = true;
                                 } else {
+                                    if (val === null || val === '') continue;
                                     const ignoredKeys = ['stt'];
                                     const flagKeys = ['trongYeu', 'thamNhung', 'loiKeo', 'klDang', 'klChinhQuyen', 'vpChuaPhep', 'vpNuocNgoai', 'vpQuaHan', 'dienQuanLy', 'receivedGiftOver50M', 'rentHouseToForeigner', 'workInForeignCompany', 'marriedToForeigner', 'otherFlags', 'kl_chung'];
                                     const tripKeys = ['decisionNumber', 'decisionDate', 'decisionIssuer', 'departureDate', 'arrivalDate', 'countryName', 'tripCount', 'purposeName', 'trainingType', 'trainingPlace', 'trainingRole', 'sponsorUnit', 'fundingName', 'trainingTime', 'workRole', 'workMembers', 'workMemberCount', 'groupFunding', 'report', 'nopHC'];
@@ -2398,12 +2417,12 @@
                                         hasApp1Data = true;
                                     } else {
                                         if (fieldKey.startsWith('custom_')) {
-                                        if (!payload.custom_data) payload.custom_data = {};
-                                        payload.custom_data[fieldKey] = val;
-                                    } else {
-                                        payload[fieldKey] = val;
-                                    }
-                                    hasData = true;
+                                            if (!payload.custom_data) payload.custom_data = {};
+                                            payload.custom_data[fieldKey] = val;
+                                        } else {
+                                            payload[fieldKey] = val;
+                                        }
+                                        hasData = true;
                                     }
                                 }
                             }
