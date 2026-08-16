@@ -166,18 +166,27 @@
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <template x-for="(colObj, cIndex) in group.columns" :key="cIndex">
                                             <div x-show="colObj.id !== 'stt'" class="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors shadow-sm">
+                                                <div class="flex-shrink-0 text-center hidden md:block">
+                                                    <span class="text-[11px] font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-md">Cột <span x-text="getGlobalColIndex(gIndex, cIndex) + 2"></span></span>
+                                                </div>
+                                                
                                                 <input x-model="colObj.label" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5" placeholder="Tên cột...">
                                                 
-                                                <select x-model="colObj.format" class="w-36 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 bg-green-50 text-green-700 font-medium">
+                                                <select x-model="colObj.format" class="w-32 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 bg-green-50 text-green-700 font-medium">
                                                     <option value="text">Văn bản</option>
                                                     <option value="number">Số</option>
                                                     <option value="date">Ngày tháng</option>
-                                                    <option value="text_loop">Đoạn văn</option>
+                                                    <option value="text_loop">List Dữ liệu</option>
                                                     <option value="checkbox">Hộp kiểm</option>
+                                                    <option value="dropdown">Dropdown</option>
                                                 </select>
                                                 
+                                                <template x-if="colObj.format === 'checkbox' || colObj.format === 'dropdown'">
+                                                    <input x-model="colObj.options" class="w-48 rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-xs py-1.5 bg-yellow-50" placeholder="Các tùy chọn, cách nhau bằng phẩy...">
+                                                </template>
+                                                
                                                 <template x-if="colObj.id && colObj.id.startsWith('custom_')">
-                                                    <span class="px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded border border-purple-200 whitespace-nowrap hidden md:block">Tùy chỉnh</span>
+                                                    <span class="px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded border border-purple-200 whitespace-nowrap hidden lg:block">Tùy chỉnh</span>
                                                 </template>
 
                                                 <button @click="removeColumn(gIndex, cIndex)" class="text-gray-400 hover:text-red-500 p-1" title="Xóa cột này">
@@ -1857,6 +1866,17 @@
                 
                 
                 
+                getGlobalColIndex(gIndex, cIndex) {
+                    let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
+                    let idx = 0;
+                    for(let i=0; i<gIndex; i++) {
+                        idx += (mapArr[i].columns || []).filter(c => c.id !== 'stt').length;
+                    }
+                    for(let i=0; i<cIndex; i++) {
+                        if(mapArr[gIndex].columns[i].id !== 'stt') idx++;
+                    }
+                    return idx;
+                },
                 loadMappingConfig() {
                     const fetchConfig = (key, defaultArr) => {
                         return fetch(`${API_URL}/items/app_settings?filter[key][_eq]=${key}`, {
