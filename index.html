@@ -2264,11 +2264,25 @@
                     
                     this.importMapping = [];
                     for(let i = 1; i < this.importHeaders.length; i++) {
-                        if (i - 1 < mappingConfig.length) {
-                            this.importMapping[i] = mappingConfig[i - 1].id;
-                        } else {
-                            this.importMapping[i] = '';
+                        let header = this.importHeaders[i] ? this.importHeaders[i].toLowerCase().trim() : '';
+                        let matchedKey = '';
+                        if (header && header !== '') {
+                            let bestMatch = this.systemFields.find(f => {
+                                let l = f.label.toLowerCase().trim();
+                                let lClean = l.replace(/\[.*?\]/g, '').replace(/cột \d+/g, '').trim();
+                                let hClean = header.replace(/\[.*?\]/g, '').replace(/cột \d+/g, '').trim();
+                                return l === header || header.includes(l) || l.includes(header) ||
+                                       (lClean.length > 3 && hClean.includes(lClean)) ||
+                                       (hClean.length > 3 && lClean.includes(hClean));
+                            });
+                            if (bestMatch) matchedKey = bestMatch.key;
                         }
+                        
+                        if (!matchedKey && this.importType !== 'relative' && i < this.defaultMapping54.length) {
+                            matchedKey = this.defaultMapping54[i];
+                        }
+                        
+                        this.importMapping[i] = matchedKey || '';
                     }
                     
                     if (this.importHeaders.length - 1 !== mappingConfig.length) {
