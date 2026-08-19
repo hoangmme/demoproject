@@ -725,3 +725,17 @@ td.col-right {
   color: #ffffff !important;
   font-weight: 700 !important;
 }
+
+.col-num-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-right: 5px;
+  vertical-align: middle;
+  border: 1px solid #bae6fd;
+}

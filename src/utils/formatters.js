@@ -20,3 +20,37 @@ export const formatPersonnelCode = (id, code) => {
   }
   return String(id);
 };
+
+export const computeColumnIndexMap = (groups) => {
+  const map = {};
+  let currentIdx = 0;
+
+  (groups || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      currentIdx++;
+      if (c.id === 'stt') {
+        map['stt'] = `Cột ${currentIdx}`;
+        return;
+      }
+
+      let subCount = 1;
+      if (c.format === 'checkbox_text' && c.options) {
+        const parts = String(c.options).split(',').map((s) => s.trim()).filter(Boolean);
+        if (parts.length > 1) {
+          subCount = parts.length;
+        }
+      }
+
+      if (subCount > 1) {
+        const start = currentIdx;
+        const end = currentIdx + subCount - 1;
+        map[c.id] = `Cột ${start} - ${end}`;
+        currentIdx = end;
+      } else {
+        map[c.id] = `Cột ${currentIdx}`;
+      }
+    });
+  });
+
+  return map;
+};

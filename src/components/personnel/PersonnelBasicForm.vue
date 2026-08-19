@@ -1,22 +1,34 @@
 <template>
   <div class="form-grid">
     <div class="field-item col-4">
-      <label class="field-label">Mã Cán bộ</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['code']" class="col-num-badge">{{ colIndexMap['code'] }}</span>
+        Mã Cán bộ
+      </label>
       <InputText v-model="form.code" placeholder="Tự động sinh (CB-00001...)" size="small" />
     </div>
 
     <div class="field-item col-4">
-      <label class="field-label">Họ và tên <span style="color: red;">*</span></label>
+      <label class="field-label">
+        <span v-if="colIndexMap['name']" class="col-num-badge">{{ colIndexMap['name'] }}</span>
+        Họ và tên <span style="color: red;">*</span>
+      </label>
       <InputText v-model="form.name" placeholder="Nhập đầy đủ họ và tên" size="small" />
     </div>
 
     <div class="field-item col-4">
-      <label class="field-label">Tên gọi khác</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['otherName']" class="col-num-badge">{{ colIndexMap['otherName'] }}</span>
+        Tên gọi khác
+      </label>
       <InputText v-model="form.otherName" placeholder="Tên gọi khác (nếu có)" size="small" />
     </div>
 
     <div class="field-item col-3">
-      <label class="field-label">Năm sinh / Ngày sinh</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['birthYear']" class="col-num-badge">{{ colIndexMap['birthYear'] }}</span>
+        Năm sinh / Ngày sinh
+      </label>
       <AppDatePicker
         v-model="form.birthYear"
         placeholder="DD/MM/YYYY hoặc YYYY"
@@ -24,22 +36,34 @@
     </div>
 
     <div class="field-item col-3">
-      <label class="field-label">Dân tộc</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['ethnicity']" class="col-num-badge">{{ colIndexMap['ethnicity'] }}</span>
+        Dân tộc
+      </label>
       <InputText v-model="form.ethnicity" placeholder="Kinh, Tày, Nùng..." size="small" />
     </div>
 
     <div class="field-item col-3">
-      <label class="field-label">Tôn giáo</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['religion']" class="col-num-badge">{{ colIndexMap['religion'] }}</span>
+        Tôn giáo
+      </label>
       <InputText v-model="form.religion" placeholder="Không, Phật giáo..." size="small" />
     </div>
 
     <div class="field-item col-3">
-      <label class="field-label">Số CCCD / Định danh</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['cccd']" class="col-num-badge">{{ colIndexMap['cccd'] }}</span>
+        Số CCCD / Định danh
+      </label>
       <InputText v-model="form.cccd" placeholder="Số CCCD 12 số" size="small" />
     </div>
 
     <div class="field-item col-6">
-      <label class="field-label">Phòng ban / Đơn vị công tác</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['departmentId']" class="col-num-badge">{{ colIndexMap['departmentId'] }}</span>
+        Phòng ban / Đơn vị công tác
+      </label>
       <Select
         v-model="form.departmentId"
         :options="departments"
@@ -53,37 +77,58 @@
     </div>
 
     <div class="field-item col-6">
-      <label class="field-label">Chức vụ</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['position']" class="col-num-badge">{{ colIndexMap['position'] }}</span>
+        Chức vụ
+      </label>
       <InputText v-model="form.position" placeholder="Chức vụ hiện tại" size="small" />
     </div>
 
     <div class="field-item col-6">
-      <label class="field-label">Quê quán</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['hometown']" class="col-num-badge">{{ colIndexMap['hometown'] }}</span>
+        Quê quán
+      </label>
       <InputText v-model="form.hometown" placeholder="Xã/Phường, Huyện/Quận, Tỉnh/Thành phố" size="small" />
     </div>
 
     <div class="field-item col-6">
-      <label class="field-label">Nơi ĐKHK thường trú</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['thuongTru']" class="col-num-badge">{{ colIndexMap['thuongTru'] }}</span>
+        Nơi ĐKHK thường trú
+      </label>
       <InputText v-model="form.thuongTru" placeholder="Địa chỉ thường trú" size="small" />
     </div>
 
     <div class="field-item col-6">
-      <label class="field-label">Nơi ở hiện nay</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['tamTru']" class="col-num-badge">{{ colIndexMap['tamTru'] }}</span>
+        Nơi ở hiện nay
+      </label>
       <InputText v-model="form.tamTru" placeholder="Địa chỉ nơi ở hiện nay" size="small" />
     </div>
 
     <div class="field-item col-3">
-      <label class="field-label">Hộ chiếu cá nhân</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['passportPersonal']" class="col-num-badge">{{ colIndexMap['passportPersonal'] }}</span>
+        Hộ chiếu cá nhân
+      </label>
       <InputText v-model="form.passportPersonal" placeholder="Số HC cá nhân" size="small" />
     </div>
 
     <div class="field-item col-3">
-      <label class="field-label">Hộ chiếu công vụ</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['passportOfficial']" class="col-num-badge">{{ colIndexMap['passportOfficial'] }}</span>
+        Hộ chiếu công vụ
+      </label>
       <InputText v-model="form.passportOfficial" placeholder="Số HC công vụ" size="small" />
     </div>
 
     <div class="field-item col-12">
-      <label class="field-label">Kết quả thẩm tra, xác minh TCCT</label>
+      <label class="field-label">
+        <span v-if="colIndexMap['tcctResult']" class="col-num-badge">{{ colIndexMap['tcctResult'] }}</span>
+        Kết quả thẩm tra, xác minh TCCT
+      </label>
       <Textarea v-model="form.tcctResult" rows="2" placeholder="Nội dung kết quả thẩm tra trước khi đi nước ngoài..." size="small" />
     </div>
 
@@ -98,7 +143,10 @@
         class="field-item"
         :class="getWidthClass(col.width)"
       >
-        <label class="field-label">{{ col.label }}</label>
+        <label class="field-label">
+          <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
+          {{ col.label }}
+        </label>
         <DynamicField v-model="form.custom_data[col.id]" :col="col" />
       </div>
     </template>
@@ -112,6 +160,7 @@ import Textarea from 'primevue/textarea';
 import Select from 'primevue/select';
 import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import DynamicField from '@/components/common/DynamicField.vue';
+import { computeColumnIndexMap } from '@/utils/formatters';
 
 const props = defineProps({
   form: {
@@ -128,6 +177,10 @@ const props = defineProps({
   },
 });
 
+const colIndexMap = computed(() => {
+  return computeColumnIndexMap(props.mapping);
+});
+
 const getWidthClass = (width) => {
   const w = String(width || '50').replace('%', '');
   if (w === '25') return 'col-3';
@@ -142,7 +195,7 @@ const customColumns = computed(() => {
   const list = [];
   (props.mapping || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
-      if (c.id && c.id.startsWith('custom_')) {
+      if (c.id && (c.id.startsWith('custom_') || !['code', 'name', 'otherName', 'birthYear', 'ethnicity', 'religion', 'cccd', 'departmentId', 'position', 'hometown', 'thuongTru', 'tamTru', 'passportPersonal', 'passportOfficial', 'tcctResult', 'stt'].includes(c.id))) {
         list.push(c);
       }
     });

@@ -22,7 +22,7 @@
       <!-- Header of relative card -->
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 0.75rem; background: #0284c7; color: #ffffff; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+          <span class="badge-code" style="background: #0284c7; color: #ffffff;">
             {{ rel.code || ('TN-' + String(idx + 1).padStart(5, '0')) }}
           </span>
           <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">
@@ -53,6 +53,10 @@
                 :key="col.id"
                 :class="'field-item ' + getColClass(col.width)"
               >
+                <label class="field-label">
+                  <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
+                  {{ col.label }}
+                </label>
                 <DynamicField
                   v-model="rel[col.id]"
                   :col="col"
@@ -114,6 +118,7 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import DynamicField from '@/components/common/DynamicField.vue';
+import { computeColumnIndexMap } from '@/utils/formatters';
 
 const props = defineProps({
   form: {
@@ -138,21 +143,27 @@ const relativeGroups = computed(() => {
   return personnelStore.importMappingRelative || [];
 });
 
+const colIndexMap = computed(() => {
+  return computeColumnIndexMap(personnelStore.importMappingRelative);
+});
+
 const filterRelativeColumns = (cols) => {
   const ignore = new Set(['stt', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'parentPersonnelCccd']);
   return (cols || []).filter((c) => !ignore.has(c.id));
 };
 
 const getColClass = (w) => {
-  if (w === '100' || w === '100%') return 'col-12';
-  if (w === '75' || w === '75%') return 'col-9';
-  if (w === '50' || w === '50%') return 'col-6';
-  if (w === '33' || w === '33%') return 'col-4';
+  const cleanW = String(w || '25').replace('%', '');
+  if (cleanW === '100') return 'col-12';
+  if (cleanW === '75') return 'col-9';
+  if (cleanW === '50') return 'col-6';
+  if (cleanW === '33') return 'col-4';
   return 'col-3';
 };
 
 const addRelative = () => {
-  const newCode = 'TN-' + String(Date.now()).slice(-5);
+  const nextIdx = relatives.value.length + 1;
+  const newCode = 'TN-' + String(nextIdx).padStart(5, '0');
   relatives.value.push({
     code: newCode,
     relationshipName: '',
