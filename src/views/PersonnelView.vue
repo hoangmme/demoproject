@@ -1166,7 +1166,8 @@ const executeImport = async () => {
       const pByCode = {};
       const pByName = {};
       personnelStore.personnelList.forEach((p) => {
-        if (p.cccd) pByCccd[String(p.cccd).trim()] = p;
+        const cccd = p.cccd || p.cccdparent || p.custom_data?.cccd || p.custom_data?.cccdparent;
+        if (cccd) pByCccd[String(cccd).trim()] = p;
         if (p.code) pByCode[String(p.code).trim().toLowerCase()] = p;
         if (p.name) pByName[String(p.name).trim().toLowerCase()] = p;
       });
@@ -1203,8 +1204,8 @@ const executeImport = async () => {
           if (matched) {
             const fId = matched.id;
             relData[fId] = val;
-            if (fId === 'parentPersonnelCccd' || fId === 'cccd_can_bo') parentCccd = val;
-            if (fId === 'parentPersonnelName') parentName = val;
+            if (fId === 'parentPersonnelCccd' || fId === 'cccd_can_bo' || fId === 'parentCccd' || fId === 'cccdparent') parentCccd = val;
+            if (fId === 'parentPersonnelName' || fId === 'parentName') parentName = val;
             if (fId === 'relationshipName') relationshipName = val;
             if (fId === 'relativeName') relativeName = val;
           }
@@ -1217,15 +1218,25 @@ const executeImport = async () => {
         if (!parentCccd && row[1] && String(row[1]).length >= 9) parentCccd = String(row[1]).trim();
         if (!parentName && row[2]) parentName = String(row[2]).trim();
 
-        // Match parent by CCCD -> Code -> Name
-        const parentPerson = (parentCccd && pByCccd[parentCccd]) || (parentCode && pByCode[parentCode.toLowerCase()]) || (parentName && pByName[parentName.toLowerCase()]) || null;
+        const targetParentCccd = parentCccd || relData['cccd_can_bo'] || relData['parentPersonnelCccd'] || relData['parentCccd'] || '';
+        const cleanParentCccd = targetParentCccd ? String(targetParentCccd).trim() : '';
+
+        // Match parent by CCCD (cccd / cccdparent) -> Code -> Name
+        const parentPerson = (cleanParentCccd && pByCccd[cleanParentCccd]) || (parentCode && pByCode[parentCode.toLowerCase()]) || (parentName && pByName[parentName.toLowerCase()]) || null;
 
         const nextTnIndex = (personnelStore.relativesList || []).length + count + 1;
         const newRel = {
           id: 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
           code: 'TN-' + String(nextTnIndex).padStart(5, '0'),
           personnelId: parentPerson ? parentPerson.id : (parentCode || 'CB-UNKNOWN'),
+          personnelCode: parentPerson ? parentPerson.code : '',
           personnelName: parentPerson?.name || parentName || 'Chưa liên kết',
+          parentName: parentPerson?.name || parentName || 'Chưa liên kết',
+          parentPersonnelName: parentPerson?.name || parentName || 'Chưa liên kết',
+          parentCccd: parentPerson ? (parentPerson.cccd || parentPerson.cccdparent || '') : cleanParentCccd,
+          cccd_can_bo: cleanParentCccd || (parentPerson ? (parentPerson.cccd || parentPerson.cccdparent || '') : ''),
+          parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : '',
+          parentDepartment: parentPerson ? (parentPerson.departmentName || '') : '',
           relationshipName: relationshipName || String(row[5] || 'Thân nhân'),
           relativeName,
           birthYear: formatExcelDate(relData['birthYear'] || row[8] || ''),
@@ -1238,7 +1249,11 @@ const executeImport = async () => {
           fundingName: String(relData['fundingName'] || ''),
           marriedToForeigner: String(relData['marriedToForeigner'] || '').toLowerCase().includes('có') ? 1 : 0,
           workInForeignCompany: String(relData['workInForeignCompany'] || '').toLowerCase().includes('có') ? 1 : 0,
-          custom_data: relData,
+          custom_data: {
+            ...relData,
+            cccd_can_bo: cleanParentCccd || (parentPerson ? (parentPerson.cccd || parentPerson.cccdparent || '') : ''),
+            parentName: parentPerson?.name || parentName || '',
+          },
         };
 
         await apiClient.post('/items/appendix2', newRel);
