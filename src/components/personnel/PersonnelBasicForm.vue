@@ -47,7 +47,7 @@
         optionValue="id"
         placeholder="Chọn phòng ban"
         size="small"
-        appendTo="body"
+        appendTo="self"
         class="w-full"
       />
     </div>

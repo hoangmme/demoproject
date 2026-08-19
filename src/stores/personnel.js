@@ -33,45 +33,35 @@ export const usePersonnelStore = defineStore('personnel', {
       return map;
     },
     allAvailableColumns: (state) => {
-      const list = [
-        { id: 'code', label: 'Mã CB', width: '110px' },
-        { id: 'name', label: 'Họ và tên', width: '200px' },
-        { id: 'otherName', label: 'Tên gọi khác', width: '140px' },
-        { id: 'birthYear', label: 'Năm sinh', width: '120px' },
-        { id: 'ethnicity', label: 'Dân tộc', width: '110px' },
-        { id: 'religion', label: 'Tôn giáo', width: '110px' },
-        { id: 'hometown', label: 'Quê quán', width: '180px' },
-        { id: 'departmentId', label: 'Phòng ban', width: '160px' },
-        { id: 'position', label: 'Chức vụ', width: '140px' },
-        { id: 'thuongTru', label: 'Nơi ĐKHK thường trú', width: '200px' },
-        { id: 'tamTru', label: 'Nơi ở hiện nay', width: '200px' },
-        { id: 'cccd', label: 'Số CCCD', width: '140px' },
-        { id: 'passportPersonal', label: 'Hộ chiếu cá nhân', width: '150px' },
-        { id: 'passportOfficial', label: 'Hộ chiếu công vụ', width: '150px' },
-        { id: 'tcctResult', label: 'Kết quả thẩm tra TCCT', width: '220px' },
-      ];
+      const list = [];
+      const seen = new Set();
 
       (state.importMappingPersonnel || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
-          if (c.id && c.id !== 'stt') {
-            const exist = list.find((x) => x.id === c.id);
-            if (!exist) {
-              list.push({
-                id: c.id,
-                label: (c.label || c.id).replace(/^\[Cột \d+\]\s*/, ''),
-                width: '160px',
-                format: c.format || 'text',
-              });
-            } else if (c.label) {
-              if (c.id === 'birthYear') {
-                exist.label = 'Năm sinh';
-              } else {
-                exist.label = c.label.replace(/^\[Cột \d+\]\s*/, '');
-              }
-            }
+          if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+            seen.add(c.id);
+            list.push({
+              id: c.id,
+              label: c.label || c.id,
+              width: '160px',
+              format: c.format || 'text',
+              group: g.group,
+            });
           }
         });
       });
+
+      // Fallback base list if settings not loaded yet
+      if (list.length === 0) {
+        return [
+          { id: 'code', label: 'Mã CB', width: '110px' },
+          { id: 'name', label: 'Họ và tên', width: '200px' },
+          { id: 'birthYear', label: 'Năm sinh', width: '120px' },
+          { id: 'departmentId', label: 'Phòng ban', width: '160px' },
+          { id: 'position', label: 'Chức vụ', width: '140px' },
+          { id: 'cccd', label: 'Số CCCD', width: '140px' },
+        ];
+      }
       return list;
     },
   },

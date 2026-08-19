@@ -316,28 +316,25 @@
           </div>
         </div>
 
-        <!-- Sections Selection -->
+        <!-- Dynamic Groups Selection -->
         <div>
           <label style="font-size: 0.85rem; font-weight: 700; color: #1f2937; margin-bottom: 6px; display: block;">
             2. Chọn các Khối dữ liệu cần xuất (Tự động chia thành các Sheet):
           </label>
-          <div style="display: flex; flex-direction: column; gap: 8px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
-              <input type="checkbox" v-model="exportSections.basic" />
-              <strong>Khối A: Thông tin chung & Cư trú (Hồ sơ Cán bộ đầy đủ)</strong>
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
-              <input type="checkbox" v-model="exportSections.trips" />
-              <span>Khối B: Lịch sử đi nước ngoài (Phụ lục 1)</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
-              <input type="checkbox" v-model="exportSections.relatives" />
-              <span>Khối C: Danh sách thân nhân nước ngoài (Phụ lục 2)</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
-              <input type="checkbox" v-model="exportSections.notes" />
-              <span>Khối D: Lịch sử kỷ luật & Lưu ý chính trị (Phụ lục 3)</span>
-            </label>
+          <div style="display: flex; flex-direction: column; gap: 8px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; max-height: 240px; overflow-y: auto;">
+            <div
+              v-for="(group, gIdx) in exportGroupsList"
+              :key="gIdx"
+              style="display: flex; align-items: center; justify-content: space-between; padding: 4px 0;"
+            >
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer; flex: 1;">
+                <input type="checkbox" v-model="group.enabled" style="accent-color: #2e7d32;" />
+                <strong>{{ group.title }}</strong>
+              </label>
+              <span style="font-size: 0.72rem; color: #6b7280; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-weight: 600;">
+                {{ group.type === 'relatives' ? `${flattenedRelatives.length} thân nhân` : `${group.columnsCount} cột` }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -622,8 +619,35 @@ const handleBulkDelete = async () => {
   selectedPersonnel.value = [];
 };
 
+const exportGroupsList = ref([]);
+
+const initExportGroups = () => {
+  const list = [];
+  (personnelStore.importMappingPersonnel || []).forEach((g, idx) => {
+    list.push({
+      id: 'group_' + idx,
+      type: 'personnel_group',
+      title: g.group || `Khối ${idx + 1}`,
+      enabled: true,
+      columns: g.columns || [],
+      columnsCount: g.columns?.length || 0,
+    });
+  });
+
+  list.push({
+    id: 'group_relatives',
+    type: 'relatives',
+    title: 'Danh sách Thân nhân (Phụ lục 2)',
+    enabled: true,
+    columnsCount: personnelStore.importMappingRelative?.reduce((acc, g) => acc + (g.columns?.length || 0), 0) || 26,
+  });
+
+  exportGroupsList.value = list;
+};
+
 const openExportModal = () => {
   exportScope.value = selectedPersonnel.value.length > 0 ? 'selected' : 'all';
+  initExportGroups();
   isExportOpen.value = true;
 };
 
@@ -634,65 +658,62 @@ const executeAdvancedExport = () => {
 
   const sheets = [];
 
-  // 1. Sheet Khối A: Hồ sơ Cán bộ
-  if (exportSections.value.basic) {
-    const basicRows = targetPersonnel.map((p, idx) => ({
-      'STT': idx + 1,
-      'Mã CB': p.code || formatPersonnelCode(p.id),
-      'Họ và tên': p.name || '',
-      'Tên gọi khác': p.otherName || '',
-      'Năm sinh': p.birthYear || '',
-      'Dân tộc': p.ethnicity || '',
-      'Tôn giáo': p.religion || '',
-      'Phòng ban': personnelStore.getDepartmentName(p.departmentId) || '',
-      'Chức vụ': p.position || '',
-      'Số CCCD': p.cccd || '',
-      'Quê quán': p.hometown || '',
-      'Thường trú': p.thuongTru || '',
-      'Tạm trú': p.tamTru || '',
-      'Hộ chiếu cá nhân': p.passportPersonal || '',
-      'Hộ chiếu công vụ': p.passportOfficial || '',
-      'Kết quả TCCT': p.tcctResult || '',
-    }));
-    sheets.push({ name: 'A. Cán bộ (Cá nhân)', data: basicRows });
-  }
+  exportGroupsList.value.filter((g) => g.enabled).forEach((grp) => {
+    if (grp.type === 'personnel_group') {
+      const rows = targetPersonnel.map((p, pIdx) => {
+        const row = {};
+        (grp.columns || []).forEach((c) => {
+          if (c.id === 'stt') {
+            row['STT'] = pIdx + 1;
+            return;
+          }
 
-  // 2. Sheet Khối B: Lịch sử đi nước ngoài (PL1)
-  if (exportSections.value.trips) {
-    const tripRows = [];
-    let tIdx = 1;
-    targetPersonnel.forEach((p) => {
-      (p.trips || []).forEach((t) => {
-        tripRows.push({
-          'STT': tIdx++,
-          'Mã CB': p.code || formatPersonnelCode(p.id),
-          'Họ và tên Cán bộ': p.name,
-          'Phòng ban': personnelStore.getDepartmentName(p.departmentId),
-          'Số Quyết định': t.decisionNumber || '-',
-          'Ngày Quyết định': t.decisionDate || '-',
-          'Cơ quan ban hành': t.decisionIssuer || '-',
-          'Quốc gia đến': t.countryName || '-',
-          'Ngày đi': t.departureDate || '-',
-          'Ngày về': t.arrivalDate || '-',
-          'Mục đích': t.purpose || '-',
-          'Nguồn kinh phí': t.fundingName || '-',
+          const subOpts = (c.format === 'checkbox_text' && c.options)
+            ? String(c.options).split(',').map((s) => s.trim()).filter(Boolean)
+            : [];
+
+          if (subOpts.length > 1) {
+            subOpts.forEach((opt) => {
+              const header = `${c.label || c.id}: ${opt}`;
+              const val = p[c.id] || p.custom_data?.[c.id] || '';
+              if (String(val).includes(opt)) {
+                row[header] = 'X';
+              } else {
+                row[header] = '';
+              }
+            });
+          } else {
+            const header = c.label || c.id;
+            let val = p[c.id] !== undefined ? p[c.id] : (p.custom_data?.[c.id] !== undefined ? p.custom_data[c.id] : '');
+            if (c.id === 'departmentId' || c.id === 'departmentName') {
+              val = personnelStore.getDepartmentName(p.departmentId) || val || '';
+            }
+            if (c.id === 'code') {
+              val = p.code || formatPersonnelCode(p.id);
+            }
+            row[header] = val || '';
+          }
         });
+        return row;
       });
-    });
-    sheets.push({ name: 'B. Đi nước ngoài (PL1)', data: tripRows });
-  }
 
-  // 3. Sheet Khối C: Danh sách thân nhân (PL2)
-  if (exportSections.value.relatives) {
-    const relRows = [];
-    let rIdx = 1;
-    targetPersonnel.forEach((p) => {
-      (p.relatives || []).forEach((r) => {
+      sheets.push({
+        name: (grp.title || 'Hồ sơ Cán bộ').substring(0, 31),
+        data: rows,
+      });
+    } else if (grp.type === 'relatives') {
+      const relRows = [];
+      let rIdx = 1;
+      const targetIds = new Set(targetPersonnel.map((p) => p.id));
+      const targetRelatives = (personnelStore.relativesList || []).filter((r) => targetIds.has(r.personnelId));
+
+      targetRelatives.forEach((r) => {
+        const parent = targetPersonnel.find((p) => p.id === r.personnelId) || {};
         relRows.push({
           'STT': rIdx++,
-          'Mã CB': p.code || formatPersonnelCode(p.id),
-          'Họ và tên Cán bộ': p.name,
-          'Phòng ban': personnelStore.getDepartmentName(p.departmentId),
+          'Mã CB': parent.code || formatPersonnelCode(parent.id || r.personnelId),
+          'Họ và tên Cán bộ': parent.name || '',
+          'Phòng ban': personnelStore.getDepartmentName(parent.departmentId) || '',
           'Mối quan hệ': r.relationshipName || '-',
           'Họ và tên Thân nhân': r.relativeName || '-',
           'Năm sinh': r.birthYear || '-',
@@ -705,34 +726,9 @@ const executeAdvancedExport = () => {
           'Nguồn kinh phí': r.fundingName || '-',
         });
       });
-    });
-    sheets.push({ name: 'C. Thân nhân (PL2)', data: relRows });
-  }
-
-  // 4. Sheet Khối D: Lịch sử kỷ luật & Lưu ý (PL3)
-  if (exportSections.value.notes) {
-    const noteRows = [];
-    let nIdx = 1;
-    targetPersonnel.forEach((p) => {
-      const f = p.flags || {};
-      noteRows.push({
-        'STT': nIdx++,
-        'Mã CB': p.code || formatPersonnelCode(p.id),
-        'Họ và tên Cán bộ': p.name,
-        'Phòng ban': personnelStore.getDepartmentName(p.departmentId),
-        'Kỷ luật Đảng': f.partyDiscipline || 'Không',
-        'Kỷ luật Chính quyền': f.govDiscipline || 'Không',
-        'Vấn đề chính trị': f.politicalIssue || 'Không',
-        'Vi phạm pháp luật': f.lawViolation || 'Không',
-        'Đi NN chưa phép': f.noPermission || 'Không',
-        'Quá hạn ở NN': f.overstay || 'Không',
-        'Thuộc diện quản lý': f.managed || 'Không',
-        'Nhận quà > 50M': f.gift || 'Không',
-        'Lưu ý khác': f.otherIssue || '-',
-      });
-    });
-    sheets.push({ name: 'D. Kỷ luật & Lưu ý (PL3)', data: noteRows });
-  }
+      sheets.push({ name: 'Danh sách Thân nhân (PL2)', data: relRows });
+    }
+  });
 
   if (sheets.length === 0) {
     alert('Vui lòng chọn ít nhất 1 Khối dữ liệu cần xuất!');

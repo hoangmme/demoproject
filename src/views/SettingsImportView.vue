@@ -117,7 +117,7 @@
                     optionLabel="label"
                     optionValue="value"
                     size="small"
-                    appendTo="body"
+                    appendTo="self"
                     placeholder="Định dạng"
                     style="width: 175px; font-size: 0.75rem;"
                   />
@@ -127,7 +127,7 @@
                     optionLabel="label"
                     optionValue="value"
                     size="small"
-                    appendTo="body"
+                    appendTo="self"
                     placeholder="Rộng: 25%"
                     style="width: 120px; font-size: 0.75rem;"
                   />
