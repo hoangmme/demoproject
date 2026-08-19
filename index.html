@@ -2236,12 +2236,15 @@
                 },
                 getGlobalColIndex(gIndex, cIndex) {
                     let mapArr = this.activeSettingsTab === 'personnel' ? this.importMappingPersonnel : this.importMappingRelative;
+                    if (!mapArr || !mapArr[gIndex] || !mapArr[gIndex].columns) return 0;
                     let idx = 0;
                     for(let i=0; i<gIndex; i++) {
-                        idx += (mapArr[i].columns || []).filter(c => c.id !== 'stt').length;
+                        if (mapArr[i] && mapArr[i].columns) {
+                            idx += mapArr[i].columns.filter(c => c && c.id !== 'stt').length;
+                        }
                     }
                     for(let i=0; i<cIndex; i++) {
-                        if(mapArr[gIndex].columns[i].id !== 'stt') idx++;
+                        if(mapArr[gIndex].columns[i] && mapArr[gIndex].columns[i].id !== 'stt') idx++;
                     }
                     return idx;
                 },
@@ -3545,15 +3548,16 @@
                         }
                         delete payload.flags;
 
-                        // Regroup custom_data for personnel
-                        payload.custom_data = {};
+                        // Regroup custom_data for personnel (bảo toàn tất cả các trường tùy chỉnh, file đính kèm, trường mở rộng)
+                        const corePersonnelFields = ['id', 'code', 'name', 'cccd', 'birthYear', 'departmentId', 'isDeleted', 'custom_data'];
+                        if (!payload.custom_data) payload.custom_data = {};
                         for (let g of this.importMappingPersonnel) {
                             if (g.isMultiple && payload[g.group]) {
                                 payload.custom_data[g.group] = payload[g.group];
                                 delete payload[g.group];
                             } else {
-                                for (let c of g.columns) {
-                                    if (c.id && c.id.startsWith('custom_')) {
+                                for (let c of (g.columns || [])) {
+                                    if (c.id && !corePersonnelFields.includes(c.id)) {
                                         if (payload[c.id] !== undefined) {
                                             payload.custom_data[c.id] = payload[c.id];
                                             delete payload[c.id];
@@ -3564,11 +3568,12 @@
                         }
                         
                         // Regroup custom_data for trips
+                        const coreTripFields = ['id', 'personnelId', 'decisionNumber', 'decisionDate', 'decisionIssuer', 'departureDate', 'arrivalDate', 'countryName', 'tripCount', 'purposeName', 'fundingName', 'trainingType', 'trainingPlace', 'trainingRole', 'sponsorUnit', 'trainingTime', 'workRole', 'workMembers', 'workMemberCount', 'report', 'nopHC', 'custom_data'];
                         trips.forEach(t => {
-                            t.custom_data = {};
+                            if (!t.custom_data) t.custom_data = {};
                             for (let g of this.importMappingPersonnel) {
-                                for (let c of g.columns) {
-                                    if (c.id && c.id.startsWith('custom_') && t[c.id] !== undefined) {
+                                for (let c of (g.columns || [])) {
+                                    if (c.id && !coreTripFields.includes(c.id) && t[c.id] !== undefined) {
                                         t.custom_data[c.id] = t[c.id];
                                         delete t[c.id];
                                     }
@@ -3577,11 +3582,12 @@
                         });
                         
                         // Regroup custom_data for relatives
+                        const coreRelFields = ['id', 'personnelId', 'relationshipName', 'relativeName', 'birthYear', 'currentAddress', 'occupation', 'studyWorkAddress', 'countryName', 'timeAbroad', 'unitAbroad', 'fundingName', 'currentUnit', 'marriedToForeigner', 'workInForeignCompany', 'xlplNuocSoTai', 'xlplVietNam', 'custom_data'];
                         relatives.forEach(r => {
-                            r.custom_data = {};
+                            if (!r.custom_data) r.custom_data = {};
                             for (let g of this.importMappingRelative) {
-                                for (let c of g.columns) {
-                                    if (c.id && c.id.startsWith('custom_') && r[c.id] !== undefined) {
+                                for (let c of (g.columns || [])) {
+                                    if (c.id && !coreRelFields.includes(c.id) && r[c.id] !== undefined) {
                                         r.custom_data[c.id] = r[c.id];
                                         delete r[c.id];
                                     }
@@ -3589,18 +3595,14 @@
                             }
                         });
                         
-// Xóa các trường trống hoặc không hợp lệ khỏi JSON
+                        // Xóa các trường trống khỏi JSON
                         Object.keys(payload).forEach(k => {
                             if (payload[k] === "") payload[k] = null;
                         });
-                        if (!this.selectedPerson && !payload.id) {
-                            const resIds = await fetch(`${API_URL}/items/personnels?fields=id,code&limit=10000`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } });
-                            const jsonIds = await resIds.json();
-                            const allCbIds = jsonIds.data ? jsonIds.data.map(i => i.code || i.id) : [];
-                            const nextCode = this.generateNextId('CB', allCbIds, 5);
-                            payload.id = nextCode;
-                            payload.code = nextCode;
-                        }
+                        
+                        const targetPersonId = this.selectedPerson ? this.selectedPerson.id : (payload.id || this.generateNextId('CB', (this.personnel || []).map(i => i.code || i.id), 5));
+                        payload.id = targetPersonId;
+                        if (!payload.code) payload.code = targetPersonId;
                         
                         const res = await fetch(url, {
                             method: method,
@@ -3618,7 +3620,7 @@
                             const mappedTrips = trips.filter(t => t.countryName || t.country).map(t => {
                                 const m = {
                                     id: t.id || ('trip_' + Date.now() + Math.floor(Math.random()*1000)),
-                                    personnelId: payload.id,
+                                    personnelId: targetPersonId,
                                     decisionNumber: t.decisionNumber || null,
                                     decisionDate: t.decisionDate || null,
                                     decisionIssuer: t.decisionIssuer || null,
@@ -3669,7 +3671,7 @@
                             // Xử lý lưu Flags (Phụ lục 3)
                             const mappedFlags = {
                                 id: flags.id || ('a3_' + Date.now() + Math.floor(Math.random()*1000)),
-                                personnelId: payload.id,
+                                personnelId: targetPersonId,
                                 trongYeu: flags.trongYeu || null,
                                 thamNhung: flags.thamNhung || null,
                                 loiKeo: flags.loiKeo || null,
@@ -3687,24 +3689,33 @@
                                 marriedToForeigner: flags.marriedToForeigner || null
                             };
                             
-                            const isNewFlag = !(flags.id && this.selectedPerson && this.selectedPerson.flags && this.selectedPerson.flags.id);
-                            if (!isNewFlag) {
-                                const r = await fetch(`${API_URL}/items/appendix3/${flags.id}`, {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
-                                    body: JSON.stringify(mappedFlags)
-                                });
-                                if (!r.ok) console.error("Lỗi lưu Phụ lục 3:", await r.text());
-                            } else {
-                                if (Object.values(mappedFlags).some(v => v !== null && v !== payload.id && v !== mappedFlags.id)) {
-                                    const r = await fetch(`${API_URL}/items/appendix3`, {
-                                        method: 'POST',
+                            const isExistingFlag = !!(flags.id && this.selectedPerson && this.selectedPerson.flags && this.selectedPerson.flags.id);
+                            try {
+                                if (isExistingFlag) {
+                                    const r = await fetch(`${API_URL}/items/appendix3/${flags.id}`, {
+                                        method: 'PATCH',
                                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
                                         body: JSON.stringify(mappedFlags)
                                     });
-                                    if (!r.ok) console.error("Lỗi lưu Phụ lục 3:", await r.text());
+                                    if (!r.ok) {
+                                        delete mappedFlags.id;
+                                        await fetch(`${API_URL}/items/appendix3`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                            body: JSON.stringify(mappedFlags)
+                                        });
+                                    }
+                                } else {
+                                    if (Object.values(mappedFlags).some(v => v !== null && v !== targetPersonId && v !== mappedFlags.id)) {
+                                        delete mappedFlags.id;
+                                        await fetch(`${API_URL}/items/appendix3`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                                            body: JSON.stringify(mappedFlags)
+                                        });
+                                    }
                                 }
-                            }
+                            } catch(e) { console.error("Lỗi lưu Phụ lục 3:", e); }
 
                             // Xử lý lưu Thân nhân (Phụ lục 2)
                             const originalRelativeIds = (this.selectedPerson && this.selectedPerson.relatives) ? this.selectedPerson.relatives.map(t => t.id) : [];
