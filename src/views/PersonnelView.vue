@@ -11,7 +11,7 @@
         @click="mainTab = 'canhan'"
       />
       <Button
-        :label="'2. Quản lý Thân nhân (' + totalRelativesCount + ')'"
+        :label="'2. Quản lý Thân nhân (' + personnelStore.relativesList.length + ')'"
         icon="pi pi-users"
         :severity="mainTab === 'thannhan' ? 'primary' : 'secondary'"
         :text="mainTab !== 'thannhan'"
@@ -47,7 +47,7 @@
             v-model="searchQuery"
             placeholder="Tìm tên, CCCD, chức vụ..."
             size="small"
-            style="width: 180px; font-size: 0.8rem;"
+            style="width: 170px; font-size: 0.8rem;"
           />
 
           <!-- Column Selector MultiSelect -->
@@ -63,8 +63,19 @@
             appendTo="body"
             :showToggleAll="false"
             :filter="false"
-            style="width: 175px; font-size: 0.8rem;"
+            style="width: 165px; font-size: 0.8rem;"
             @change="onColumnsChange"
+          />
+
+          <!-- Template Button -->
+          <Button
+            label="Tải File Mẫu"
+            icon="pi pi-download"
+            severity="secondary"
+            outlined
+            size="small"
+            @click="downloadPersonnelTemplate"
+            style="font-size: 0.8rem;"
           />
 
           <!-- Import Excel Button -->
@@ -74,18 +85,18 @@
             severity="info"
             outlined
             size="small"
-            @click="openImportModal"
+            @click="openImportModal('personnel')"
             style="font-size: 0.8rem;"
           />
 
-          <!-- Export Button -->
+          <!-- Advanced Export Button -->
           <Button
             label="Xuất Excel"
             icon="pi pi-file-excel"
             severity="secondary"
             outlined
             size="small"
-            @click="handleExportExcel"
+            @click="openExportModal"
             style="font-size: 0.8rem;"
           />
 
@@ -181,23 +192,56 @@
 
     <!-- TAB 2: DANH SÁCH THÂN NHÂN -->
     <div v-show="mainTab === 'thannhan'" class="app-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem;">
         <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">
           Danh sách Thân nhân có yếu tố nước ngoài ({{ flattenedRelatives.length }} người)
         </span>
-        <Button
-          label="Xuất Excel Thân nhân"
-          icon="pi pi-file-excel"
-          severity="secondary"
-          outlined
-          size="small"
-          @click="handleExportRelatives"
-          style="font-size: 0.8rem;"
-        />
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <InputText
+            v-model="relativeSearchQuery"
+            placeholder="Tìm tên thân nhân, cán bộ..."
+            size="small"
+            style="width: 200px; font-size: 0.8rem;"
+          />
+
+          <!-- Template Button for Relatives -->
+          <Button
+            label="Tải File Mẫu"
+            icon="pi pi-download"
+            severity="secondary"
+            outlined
+            size="small"
+            @click="downloadRelativeTemplate"
+            style="font-size: 0.8rem;"
+          />
+
+          <!-- Import Relatives Button -->
+          <Button
+            label="Import Thân nhân"
+            icon="pi pi-upload"
+            severity="info"
+            outlined
+            size="small"
+            @click="openImportModal('relative')"
+            style="font-size: 0.8rem;"
+          />
+
+          <!-- Export Relatives Button -->
+          <Button
+            label="Xuất Excel"
+            icon="pi pi-file-excel"
+            severity="secondary"
+            outlined
+            size="small"
+            @click="handleExportRelatives"
+            style="font-size: 0.8rem;"
+          />
+        </div>
       </div>
 
       <DataTable
-        :value="flattenedRelatives"
+        :value="filteredRelatives"
         paginator
         :rows="15"
         :rowsPerPageOptions="[10, 15, 25, 50]"
@@ -219,8 +263,13 @@
           </template>
         </Column>
         <Column field="relativeName" header="Họ và tên thân nhân" sortable :headerStyle="{ width: '180px', minWidth: '180px' }" />
-        <Column field="birthYear" header="Năm sinh" sortable :headerStyle="{ width: '110px', minWidth: '110px' }" />
-        <Column field="countryName" header="Quốc gia" sortable :headerStyle="{ width: '140px', minWidth: '140px' }" />
+        <Column field="birthYear" header="Năm sinh" sortable :headerStyle="{ width: '100px', minWidth: '100px' }" />
+        <Column field="countryName" header="Quốc gia" sortable :headerStyle="{ width: '130px', minWidth: '130px' }">
+          <template #body="{ data }">
+            <span class="badge-pill badge-blue">{{ data.countryName || '-' }}</span>
+          </template>
+        </Column>
+        <Column field="currentAddress" header="Nơi cư trú" sortable :headerStyle="{ width: '180px', minWidth: '180px' }" />
         <Column field="occupation" header="Nghề nghiệp / Nơi làm việc" sortable :headerStyle="{ width: '200px', minWidth: '200px' }" />
         <Column header="Thao tác" :headerStyle="{ width: '110px', minWidth: '110px', textAlign: 'right' }" :bodyStyle="{ textAlign: 'right' }">
           <template #body="{ data }">
@@ -245,14 +294,77 @@
       @deleted="onPersonDeleted"
     />
 
-    <!-- Import Excel Modal -->
-    <Dialog v-model:visible="isImportOpen" modal header="Import Cán bộ từ file Excel (.xlsx, .csv)" :style="{ width: '600px' }">
+    <!-- Advanced Export Modal -->
+    <Dialog v-model:visible="isExportOpen" modal header="Tùy chọn Xuất Dữ liệu Excel" :style="{ width: '550px' }">
+      <div style="display: flex; flex-direction: column; gap: 1.25rem; padding-top: 8px;">
+        <!-- Scope -->
+        <div>
+          <label style="font-size: 0.85rem; font-weight: 700; color: #1f2937; margin-bottom: 6px; display: block;">
+            1. Phạm vi cán bộ xuất dữ liệu:
+          </label>
+          <div style="display: flex; gap: 16px; font-size: 0.85rem;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" value="all" v-model="exportScope" />
+              <span>Tất cả hồ sơ ({{ personnelStore.personnelList.length }} cán bộ)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" :style="{ opacity: selectedPersonnel.length === 0 ? 0.5 : 1 }">
+              <input type="radio" value="selected" v-model="exportScope" :disabled="selectedPersonnel.length === 0" />
+              <span>Chỉ các cán bộ đã chọn ({{ selectedPersonnel.length }} cán bộ)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Sections Selection -->
+        <div>
+          <label style="font-size: 0.85rem; font-weight: 700; color: #1f2937; margin-bottom: 6px; display: block;">
+            2. Chọn các Khối dữ liệu cần xuất (Tự động chia Sheet):
+          </label>
+          <div style="display: flex; flex-direction: column; gap: 8px; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
+              <input type="checkbox" v-model="exportSections.basic" />
+              <strong>Khối A: Thông tin chung & Cư trú (Hồ sơ Cán bộ)</strong>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
+              <input type="checkbox" v-model="exportSections.trips" />
+              <span>Khối B: Lịch sử đi nước ngoài (Phụ lục 1)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
+              <input type="checkbox" v-model="exportSections.relatives" />
+              <span>Khối C: Danh sách thân nhân nước ngoài (Phụ lục 2)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
+              <input type="checkbox" v-model="exportSections.notes" />
+              <span>Khối D: Lịch sử kỷ luật & Lưu ý chính trị (Phụ lục 3)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Hủy" severity="secondary" text size="small" @click="isExportOpen = false" />
+        <Button
+          label="Tiến hành Xuất Excel"
+          icon="pi pi-file-excel"
+          severity="success"
+          size="small"
+          @click="executeAdvancedExport"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Import Excel Modal (Supports both Personnel & Relatives with Append / Merge) -->
+    <Dialog v-model:visible="isImportOpen" modal :header="currentImportType === 'personnel' ? 'Import Hồ sơ Cán bộ từ Excel' : 'Import Thân nhân từ Excel (Gộp dữ liệu)'" :style="{ width: '620px' }">
       <div style="display: flex; flex-direction: column; gap: 1rem; padding-top: 8px;">
         <p style="font-size: 0.85rem; color: #4b5563;">
-          Chọn tệp Excel hoặc CSV chứa danh sách cán bộ để hệ thống tự động import vào cơ sở dữ liệu.
+          <template v-if="currentImportType === 'personnel'">
+            Chọn tệp Excel hoặc CSV chứa danh sách cán bộ để import vào hệ thống.
+          </template>
+          <template v-else>
+            Hệ thống sẽ <b>tự động ghép thân nhân vào hồ sơ cán bộ tương ứng</b> theo Mã CB hoặc Họ tên cán bộ. Nếu cán bộ đã có thân nhân, dữ liệu sẽ được <b>gộp thêm (append)</b> thay vì ghi đè.
+          </template>
         </p>
 
-        <div>
+        <div style="display: flex; gap: 10px; align-items: center;">
           <input type="file" ref="importFileInput" accept=".xlsx, .xls, .csv" @change="onImportFileSelected" style="display: none;" />
           <Button
             label="Chọn tệp Excel từ máy tính"
@@ -260,7 +372,15 @@
             severity="primary"
             outlined
             @click="$refs.importFileInput.click()"
-            style="width: 100%;"
+            style="flex: 1;"
+          />
+          <Button
+            label="Tải File Mẫu"
+            icon="pi pi-download"
+            severity="secondary"
+            text
+            size="small"
+            @click="currentImportType === 'personnel' ? downloadPersonnelTemplate() : downloadRelativeTemplate()"
           />
         </div>
 
@@ -270,7 +390,7 @@
           </div>
           <div style="max-height: 150px; overflow-y: auto; font-size: 0.75rem; color: #6b7280;">
             <div v-for="(r, i) in importPreviewRows.slice(0, 5)" :key="i" style="padding: 2px 0;">
-              • Dòng {{ i + 1 }}: {{ r[1] || r[0] || 'Dòng trống' }}
+              • Dòng {{ i + 1 }}: {{ r[1] || r[0] || 'Dòng trống' }} {{ r[2] ? `(${r[2]})` : '' }} {{ r[3] ? `- ${r[3]}` : '' }}
             </div>
             <div v-if="importPreviewRows.length > 5" style="color: #2e7d32; font-weight: 600; margin-top: 4px;">
               ...và {{ importPreviewRows.length - 5 }} dòng tiếp theo.
@@ -282,7 +402,7 @@
       <template #footer>
         <Button label="Hủy" severity="secondary" text size="small" @click="isImportOpen = false" />
         <Button
-          label="Tiến hành Import"
+          :label="currentImportType === 'personnel' ? 'Tiến hành Import' : 'Gộp Thân nhân vào Cán bộ'"
           icon="pi pi-check"
           severity="success"
           size="small"
@@ -303,10 +423,17 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Dialog from 'primevue/dialog';
+import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
 import { formatPersonnelCode } from '@/utils/formatters';
-import { exportToExcel, parseExcelFile } from '@/utils/excel';
+import {
+  exportToExcel,
+  exportMultiSheetExcel,
+  downloadPersonnelTemplate,
+  downloadRelativeTemplate,
+  parseExcelFile,
+} from '@/utils/excel';
 import { createPersonnel } from '@/api/personnel';
 import { logActivity } from '@/api/audit';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
@@ -316,12 +443,24 @@ const authStore = useAuthStore();
 
 const mainTab = ref('canhan'); // 'canhan' or 'thannhan'
 const searchQuery = ref('');
+const relativeSearchQuery = ref('');
 const selectedPersonnel = ref([]);
 const isDialogOpen = ref(false);
 const selectedPerson = ref(null);
 
+// Advanced Export Modal
+const isExportOpen = ref(false);
+const exportScope = ref('all'); // 'all' or 'selected'
+const exportSections = ref({
+  basic: true,
+  trips: true,
+  relatives: true,
+  notes: true,
+});
+
 // Import Modal State
 const isImportOpen = ref(false);
+const currentImportType = ref('personnel'); // 'personnel' or 'relative'
 const importing = ref(false);
 const importPreviewRows = ref([]);
 const importFileInput = ref(null);
@@ -353,31 +492,37 @@ const filteredPersonnel = computed(() => {
   });
 });
 
-const totalRelativesCount = computed(() => {
-  return personnelStore.personnelList.reduce((acc, p) => acc + (p.relatives?.length || 0), 0);
+const flattenedRelatives = computed(() => {
+  const pMap = {};
+  personnelStore.personnelList.forEach((p) => {
+    pMap[p.id] = p;
+    if (p.code) pMap[p.code] = p;
+  });
+
+  let stt = 1;
+  return personnelStore.relativesList.map((r) => {
+    const parent = pMap[r.personnelId] || pMap[r.personnelCode] || null;
+    return {
+      stt: stt++,
+      ...r,
+      parentPerson: parent,
+      parentName: parent?.name || r.personnelName || 'Chưa liên kết',
+      parentDepartment: parent ? personnelStore.getDepartmentName(parent.departmentId) : (r.departmentName || '-'),
+    };
+  });
 });
 
-const flattenedRelatives = computed(() => {
-  const list = [];
-  let stt = 1;
-  personnelStore.personnelList.forEach((p) => {
-    if (Array.isArray(p.relatives)) {
-      p.relatives.forEach((r) => {
-        list.push({
-          stt: stt++,
-          parentPerson: p,
-          parentName: p.name,
-          parentDepartment: personnelStore.getDepartmentName(p.departmentId),
-          relationshipName: r.relationshipName || '-',
-          relativeName: r.relativeName || '-',
-          birthYear: r.birthYear || '-',
-          countryName: r.countryName || '-',
-          occupation: r.occupation || '-',
-        });
-      });
-    }
+const filteredRelatives = computed(() => {
+  const q = relativeSearchQuery.value.trim().toLowerCase();
+  if (!q) return flattenedRelatives.value;
+  return flattenedRelatives.value.filter((r) => {
+    return (
+      (r.relativeName && r.relativeName.toLowerCase().includes(q)) ||
+      (r.parentName && r.parentName.toLowerCase().includes(q)) ||
+      (r.relationshipName && r.relationshipName.toLowerCase().includes(q)) ||
+      (r.countryName && r.countryName.toLowerCase().includes(q))
+    );
   });
-  return list;
 });
 
 const getDisplayValue = (person, colId) => {
@@ -408,6 +553,7 @@ const openCreateDialog = () => {
 };
 
 const openEditDialog = (person) => {
+  if (!person) return;
   selectedPerson.value = person;
   isDialogOpen.value = true;
 };
@@ -428,40 +574,148 @@ const handleBulkDelete = async () => {
   selectedPersonnel.value = [];
 };
 
-const handleExportExcel = () => {
-  const exportData = filteredPersonnel.value.map((p, idx) => {
-    const row = {
+const openExportModal = () => {
+  exportScope.value = selectedPersonnel.value.length > 0 ? 'selected' : 'all';
+  isExportOpen.value = true;
+};
+
+const executeAdvancedExport = () => {
+  const targetPersonnel = exportScope.value === 'selected' && selectedPersonnel.value.length > 0
+    ? selectedPersonnel.value
+    : personnelStore.personnelList;
+
+  const sheets = [];
+
+  // 1. Sheet Khối A: Hồ sơ Cán bộ
+  if (exportSections.value.basic) {
+    const basicRows = targetPersonnel.map((p, idx) => ({
       'STT': idx + 1,
       'Mã CB': p.code || formatPersonnelCode(p.id),
       'Họ và tên': p.name || '',
+      'Tên gọi khác': p.otherName || '',
       'Năm sinh': p.birthYear || '',
+      'Dân tộc': p.ethnicity || '',
+      'Tôn giáo': p.religion || '',
       'Phòng ban': personnelStore.getDepartmentName(p.departmentId) || '',
       'Chức vụ': p.position || '',
       'Số CCCD': p.cccd || '',
       'Quê quán': p.hometown || '',
       'Thường trú': p.thuongTru || '',
       'Tạm trú': p.tamTru || '',
-    };
-    return row;
-  });
-  exportToExcel(exportData, 'Danh_sach_Can_bo');
+      'Hộ chiếu cá nhân': p.passportPersonal || '',
+      'Hộ chiếu công vụ': p.passportOfficial || '',
+      'Kết quả TCCT': p.tcctResult || '',
+    }));
+    sheets.push({ name: 'A. Cán bộ (Cá nhân)', data: basicRows });
+  }
+
+  // 2. Sheet Khối B: Lịch sử đi nước ngoài (PL1)
+  if (exportSections.value.trips) {
+    const tripRows = [];
+    let tIdx = 1;
+    targetPersonnel.forEach((p) => {
+      (p.trips || []).forEach((t) => {
+        tripRows.push({
+          'STT': tIdx++,
+          'Mã CB': p.code || formatPersonnelCode(p.id),
+          'Họ và tên Cán bộ': p.name,
+          'Phòng ban': personnelStore.getDepartmentName(p.departmentId),
+          'Số Quyết định': t.decisionNumber || '-',
+          'Ngày Quyết định': t.decisionDate || '-',
+          'Cơ quan ban hành': t.decisionIssuer || '-',
+          'Quốc gia đến': t.countryName || '-',
+          'Ngày đi': t.departureDate || '-',
+          'Ngày về': t.arrivalDate || '-',
+          'Mục đích': t.purpose || '-',
+          'Nguồn kinh phí': t.fundingName || '-',
+        });
+      });
+    });
+    sheets.push({ name: 'B. Đi nước ngoài (PL1)', data: tripRows });
+  }
+
+  // 3. Sheet Khối C: Danh sách thân nhân (PL2)
+  if (exportSections.value.relatives) {
+    const relRows = [];
+    let rIdx = 1;
+    targetPersonnel.forEach((p) => {
+      (p.relatives || []).forEach((r) => {
+        relRows.push({
+          'STT': rIdx++,
+          'Mã CB': p.code || formatPersonnelCode(p.id),
+          'Họ và tên Cán bộ': p.name,
+          'Phòng ban': personnelStore.getDepartmentName(p.departmentId),
+          'Mối quan hệ': r.relationshipName || '-',
+          'Họ và tên Thân nhân': r.relativeName || '-',
+          'Năm sinh': r.birthYear || '-',
+          'Số CCCD': r.cccd || '-',
+          'Nơi cư trú': r.currentAddress || '-',
+          'Nghề nghiệp': r.occupation || '-',
+          'Quốc gia': r.countryName || '-',
+          'Thời gian ở NN': r.timeAbroad || '-',
+          'Cơ quan ở NN': r.unitAbroad || '-',
+          'Nguồn kinh phí': r.fundingName || '-',
+        });
+      });
+    });
+    sheets.push({ name: 'C. Thân nhân (PL2)', data: relRows });
+  }
+
+  // 4. Sheet Khối D: Lịch sử kỷ luật & Lưu ý (PL3)
+  if (exportSections.value.notes) {
+    const noteRows = [];
+    let nIdx = 1;
+    targetPersonnel.forEach((p) => {
+      const f = p.flags || {};
+      noteRows.push({
+        'STT': nIdx++,
+        'Mã CB': p.code || formatPersonnelCode(p.id),
+        'Họ và tên Cán bộ': p.name,
+        'Phòng ban': personnelStore.getDepartmentName(p.departmentId),
+        'Kỷ luật Đảng': f.partyDiscipline || 'Không',
+        'Kỷ luật Chính quyền': f.govDiscipline || 'Không',
+        'Vấn đề chính trị': f.politicalIssue || 'Không',
+        'Vi phạm pháp luật': f.lawViolation || 'Không',
+        'Đi NN chưa phép': f.noPermission || 'Không',
+        'Quá hạn ở NN': f.overstay || 'Không',
+        'Thuộc diện quản lý': f.managed || 'Không',
+        'Nhận quà > 50M': f.gift || 'Không',
+        'Lưu ý khác': f.otherIssue || '-',
+      });
+    });
+    sheets.push({ name: 'D. Kỷ luật & Lưu ý (PL3)', data: noteRows });
+  }
+
+  if (sheets.length === 0) {
+    alert('Vui lòng chọn ít nhất 1 Khối dữ liệu cần xuất!');
+    return;
+  }
+
+  exportMultiSheetExcel(sheets, `Bao_cao_Can_bo_${exportScope.value === 'selected' ? 'Da_Chon' : 'Tat_Ca'}`);
+  isExportOpen.value = false;
 };
 
 const handleExportRelatives = () => {
   const exportData = flattenedRelatives.value.map((r) => ({
     'STT': r.stt,
+    'Mã CB': r.personnelId || '',
     'Cán bộ liên quan': r.parentName,
     'Phòng ban': r.parentDepartment,
     'Mối quan hệ': r.relationshipName,
     'Họ và tên thân nhân': r.relativeName,
     'Năm sinh': r.birthYear,
+    'Số CCCD': r.cccd || '',
     'Quốc gia': r.countryName,
-    'Nghề nghiệp': r.occupation,
+    'Nơi cư trú': r.currentAddress || '',
+    'Nghề nghiệp': r.occupation || '',
+    'Thời gian ở NN': r.timeAbroad || '',
+    'Cơ quan ở NN': r.unitAbroad || '',
   }));
-  exportToExcel(exportData, 'Danh_sach_Than_nhan');
+  exportToExcel(exportData, 'Danh_sach_Than_nhan', 'Thân nhân');
 };
 
-const openImportModal = () => {
+const openImportModal = (type = 'personnel') => {
+  currentImportType.value = type;
   importPreviewRows.value = [];
   isImportOpen.value = true;
 };
@@ -484,34 +738,92 @@ const executeImport = async () => {
   try {
     let startIdx = 0;
     const firstRowStr = importPreviewRows.value[0]?.join(' ').toLowerCase() || '';
-    if (firstRowStr.includes('họ và tên') || firstRowStr.includes('họ tên') || firstRowStr.includes('stt')) {
+    if (firstRowStr.includes('họ và tên') || firstRowStr.includes('họ tên') || firstRowStr.includes('stt') || firstRowStr.includes('mã cb')) {
       startIdx = 1;
     }
 
-    for (let i = startIdx; i < importPreviewRows.value.length; i++) {
-      const row = importPreviewRows.value[i];
-      if (!row || row.length === 0) continue;
-      const name = String(row[1] || row[0] || '').trim();
-      if (!name || name.toLowerCase() === 'họ và tên') continue;
+    if (currentImportType.value === 'personnel') {
+      // Import Personnel
+      for (let i = startIdx; i < importPreviewRows.value.length; i++) {
+        const row = importPreviewRows.value[i];
+        if (!row || row.length === 0) continue;
+        const name = String(row[1] || row[2] || '').trim();
+        if (!name || name.toLowerCase() === 'họ và tên') continue;
 
-      const newPerson = {
-        name,
-        birthYear: String(row[2] || row[3] || ''),
-        cccd: String(row[4] || row[11] || ''),
-        position: String(row[5] || row[8] || ''),
-        hometown: String(row[6] || ''),
-        trips: [],
-        relatives: [],
-        flags: {},
-        custom_data: {},
-      };
-      await createPersonnel(newPerson);
-      count++;
+        const newPerson = {
+          id: 'CB-' + Date.now() + '-' + i,
+          code: String(row[1] || '').startsWith('CB') ? String(row[1]) : 'CB-' + Date.now() + '-' + i,
+          name: String(row[2] || row[1] || ''),
+          otherName: String(row[3] || ''),
+          birthYear: String(row[4] || row[3] || ''),
+          ethnicity: String(row[5] || 'Kinh'),
+          religion: String(row[6] || 'Không'),
+          cccd: String(row[7] || row[11] || ''),
+          position: String(row[9] || row[8] || ''),
+          hometown: String(row[10] || ''),
+          thuongTru: String(row[11] || ''),
+          tamTru: String(row[12] || ''),
+          passportPersonal: String(row[13] || ''),
+          passportOfficial: String(row[14] || ''),
+          tcctResult: String(row[15] || ''),
+          trips: [],
+          relatives: [],
+          flags: {},
+          custom_data: {},
+        };
+        await createPersonnel(newPerson);
+        count++;
+      }
+      await logActivity('Import Excel Cán bộ', `Đã import thành công ${count} hồ sơ cán bộ`);
+    } else {
+      // Import Relatives (Gộp dữ liệu vào appendix2 linked với Cán bộ tương ứng)
+      const pMap = {};
+      personnelStore.personnelList.forEach((p) => {
+        if (p.id) pMap[p.id.toLowerCase()] = p;
+        if (p.code) pMap[p.code.toLowerCase()] = p;
+        if (p.name) pMap[p.name.toLowerCase().trim()] = p;
+        if (p.cccd) pMap[p.cccd.toLowerCase().trim()] = p;
+      });
+
+      for (let i = startIdx; i < importPreviewRows.value.length; i++) {
+        const row = importPreviewRows.value[i];
+        if (!row || row.length === 0) continue;
+
+        const codeOrName = String(row[1] || row[2] || '').toLowerCase().trim();
+        const parentPerson = pMap[codeOrName] || pMap[String(row[2] || '').toLowerCase().trim()] || null;
+
+        const relativeName = String(row[4] || row[3] || row[1] || '').trim();
+        if (!relativeName || relativeName.toLowerCase() === 'họ và tên thân nhân') continue;
+
+        const pId = parentPerson ? parentPerson.id : (String(row[1] || '').startsWith('CB') ? String(row[1]) : 'CB-UNKNOWN');
+
+        const newRel = {
+          id: 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+          personnelId: pId,
+          personnelName: parentPerson?.name || String(row[2] || ''),
+          relationshipName: String(row[3] || 'Thân nhân'),
+          relativeName,
+          birthYear: String(row[5] || ''),
+          cccd: String(row[6] || ''),
+          currentAddress: String(row[7] || ''),
+          occupation: String(row[8] || ''),
+          countryName: String(row[9] || ''),
+          timeAbroad: String(row[10] || ''),
+          unitAbroad: String(row[11] || ''),
+          fundingName: String(row[12] || ''),
+          marriedToForeigner: String(row[13] || 'Không').toLowerCase().includes('có') ? 1 : 0,
+          workInForeignCompany: String(row[14] || 'Không').toLowerCase().includes('có') ? 1 : 0,
+        };
+
+        // Post to appendix2
+        await apiClient.post('/items/appendix2', newRel);
+        count++;
+      }
+      await logActivity('Import Excel Thân nhân', `Đã import và gộp ${count} thân nhân vào hồ sơ cán bộ`);
     }
 
-    await logActivity('Import Excel Cán bộ', `Đã import thành công ${count} cán bộ từ tệp Excel`);
     await personnelStore.fetchPersonnel();
-    alert(`Import hoàn tất thành công ${count} cán bộ!`);
+    alert(`Import hoàn tất thành công ${count} bản ghi!`);
     isImportOpen.value = false;
   } catch (err) {
     alert('Lỗi trong quá trình import: ' + err.message);
