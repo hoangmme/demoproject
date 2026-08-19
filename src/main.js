@@ -35,15 +35,6 @@ app.use(pinia);
 // Synchronously initialize auth
 const authStore = useAuthStore(pinia);
 authStore.initAuth();
-if (!authStore.isLoggedIn) {
-  authStore.user = {
-    email: 'admin@demo.com',
-    first_name: 'Quản trị viên',
-    role: 'Admin',
-  };
-  authStore.isLoggedIn = true;
-  localStorage.setItem('mvp_session', JSON.stringify(authStore.user));
-}
 
 app.use(router);
 

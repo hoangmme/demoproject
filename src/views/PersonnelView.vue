@@ -1385,7 +1385,7 @@ const executeImport = async () => {
             const fId = matched.id;
             relData[fId] = val;
             if (fId === 'cccd_can_bo' || fId === 'parentCccd' || fId === 'parentPersonnelCccd') parentCccd = val;
-            if (fId === 'cccdthannhan' || fId === 'cccd_than_nhan' || fId === 'cccd') relCccd = val;
+            if (fId === 'cccdthannhan' || fId === 'cccd_than_nhan') relCccd = val;
             if (fId === 'relationshipName' || fId === 'relationship' || fId === 'moi_quan_he') relationshipName = val;
             if (fId === 'relativeName' || fId === 'name' || fId === 'ten_than_nhan') relativeName = val;
             if (fId === 'parentName' || fId === 'parentPersonnelName') parentName = val;
