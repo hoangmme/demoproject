@@ -125,9 +125,15 @@ const relatives = computed({
 
 const displayedRelatives = computed(() => {
   if (props.targetRelativeCode && !showAllRelatives.value) {
-    const target = relatives.value.filter(
-      (r) => r.code === props.targetRelativeCode || ('TN-' + String(r.id || '').slice(-5).padStart(5, '0')) === props.targetRelativeCode
-    );
+    const codeClean = String(props.targetRelativeCode).trim().toLowerCase();
+    const target = relatives.value.filter((r, idx) => {
+      const rCode = String(r.code || '').trim().toLowerCase();
+      const rIdxCode = ('tn-' + String(idx + 1).padStart(5, '0')).toLowerCase();
+      const rIdCode = ('tn-' + String(r.id || '').slice(-5).padStart(5, '0')).toLowerCase();
+      const rId = String(r.id || '').trim().toLowerCase();
+      const rCccd = String(r.cccd || r.custom_data?.cccdthannhan || r.cccdthannhan || '').trim().toLowerCase();
+      return rCode === codeClean || rIdxCode === codeClean || rIdCode === codeClean || rId === codeClean || rCccd === codeClean;
+    });
     if (target.length > 0) return target;
   }
   return relatives.value;

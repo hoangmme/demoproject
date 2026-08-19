@@ -2,7 +2,7 @@
   <Dialog
     v-model:visible="visible"
     modal
-    :header="isEdit ? `Chỉnh sửa Hồ sơ: ${form.name || ''}` : 'Thêm mới Hồ sơ Cán bộ'"
+    :header="dialogHeader"
     :style="{ width: '85vw', maxWidth: '1100px' }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
@@ -131,12 +131,31 @@ const authStore = useAuthStore();
 const activeTab = ref(props.initialTab || 0);
 const saving = ref(false);
 
+watch(
+  () => [props.modelValue, props.initialTab],
+  ([isOpen, tab]) => {
+    if (isOpen) {
+      activeTab.value = tab !== undefined ? tab : 0;
+    }
+  },
+  { immediate: true }
+);
+
 const visible = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 });
 
 const isEdit = computed(() => Boolean(form.value.id));
+
+const isRelativeDetail = computed(() => Boolean(props.targetRelativeCode));
+
+const dialogHeader = computed(() => {
+  if (props.targetRelativeCode) {
+    return `Chi tiết Thân nhân (${props.targetRelativeCode}) - Cán bộ: ${form.value.name || 'Hồ sơ liên quan'}`;
+  }
+  return isEdit.value ? `Chỉnh sửa Hồ sơ: ${form.value.name || ''}` : 'Thêm mới Hồ sơ Cán bộ';
+});
 
 const form = ref({
   id: null,
