@@ -86,13 +86,14 @@
     <template v-else-if="col.format === 'checkbox_text'">
       <!-- Trường hợp 1: Có cấu hình danh sách options -->
       <template v-if="parsedOptions.length > 0">
-        <div style="display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 4px 0; align-items: flex-start;">
-          <div
-            v-for="opt in parsedOptions"
-            :key="opt"
-            style="display: inline-flex; flex-direction: column; gap: 4px; max-width: 100%;"
-          >
-            <label style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; user-select: none;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Horizontal Checkbox Row -->
+          <div style="display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 2px 0; align-items: center;">
+            <label
+              v-for="opt in parsedOptions"
+              :key="opt"
+              style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; user-select: none;"
+            >
               <input
                 type="checkbox"
                 :checked="isConditionalOptActive(opt)"
@@ -101,12 +102,26 @@
               />
               <span style="white-space: nowrap;">{{ opt }}</span>
             </label>
-            <div v-if="isConditionalOptActive(opt)" style="margin-top: 2px;">
+          </div>
+
+          <!-- Detail input container underneath -->
+          <div
+            v-if="activeConditionalOptions.length > 0"
+            style="display: flex; flex-direction: column; gap: 6px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;"
+          >
+            <div
+              v-for="opt in activeConditionalOptions"
+              :key="opt"
+              style="display: flex; align-items: center; gap: 8px;"
+            >
+              <span style="font-size: 0.78rem; font-weight: 600; color: #475569; min-width: 75px; white-space: nowrap;">
+                {{ opt }}:
+              </span>
               <InputText
                 v-model="conditionalDetails[opt]"
-                :placeholder="'Chi tiết: ' + opt + '...'"
+                :placeholder="'Nhập chi tiết cho ' + opt + '...'"
                 size="small"
-                style="font-size: 0.78rem; height: 28px; width: 160px; min-width: 140px;"
+                style="font-size: 0.8rem; height: 30px; flex: 1;"
                 @input="syncConditionalModel"
               />
             </div>
@@ -117,7 +132,8 @@
       <!-- Trường hợp 2: Không có options -> Hộp kiểm đơn + ô nhập nội dung inline -->
       <template v-else>
         <div style="display: flex; flex-wrap: wrap; gap: 8px 12px; padding: 4px 0; align-items: center;">
-          <label style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; user-select: none;">
+          <label style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; user-select: none;"
+          >
             <input
               type="checkbox"
               v-model="singleConditionalChecked"
@@ -131,7 +147,7 @@
               v-model="singleConditionalText"
               placeholder="Nhập diễn giải chi tiết..."
               size="small"
-              style="font-size: 0.78rem; height: 28px; width: 100%;"
+              style="font-size: 0.78rem; height: 30px; width: 100%;"
               @input="syncSingleConditional"
             />
           </div>
@@ -256,6 +272,10 @@ const conditionalDetails = ref({});
 const isConditionalOptActive = (opt) => {
   return conditionalActiveOpts.value.includes(opt);
 };
+
+const activeConditionalOptions = computed(() => {
+  return parsedOptions.value.filter((opt) => isConditionalOptActive(opt));
+});
 
 const toggleConditionalOpt = (opt) => {
   if (conditionalActiveOpts.value.includes(opt)) {
