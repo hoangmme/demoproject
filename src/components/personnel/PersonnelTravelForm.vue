@@ -14,7 +14,7 @@
     </div>
 
     <div v-if="trips.length === 0" style="text-align: center; padding: 2rem; background: #f9fafb; border-radius: 8px; border: 1px dashed #d1d5db; color: #6b7280; font-size: 0.85rem;">
-      Chưa có chuyến đi nước ngoài nào được ghi nhận. Nhấp <b>"+ Thêm Chuyến đi"</b> để bổ sung.
+      Chưa có chuyến đi nước ngoài nào được ghi nhận. Nhấp <b>"Thêm Chuyến đi"</b> để bổ sung.
     </div>
 
     <div v-for="(trip, idx) in trips" :key="idx" style="margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff;">
@@ -42,7 +42,17 @@
         </div>
         <div class="field-item col-3">
           <label class="field-label">Ngày Quyết định</label>
-          <InputText v-model="trip.decisionDate" placeholder="DD/MM/YYYY" size="small" />
+          <DatePicker
+            :modelValue="parseDate(trip.decisionDate)"
+            @update:modelValue="(v) => trip.decisionDate = formatDateStr(v)"
+            dateFormat="dd/mm/yy"
+            placeholder="DD/MM/YYYY"
+            showIcon
+            iconDisplay="input"
+            size="small"
+            appendTo="body"
+            class="w-full"
+          />
         </div>
         <div class="field-item col-6">
           <label class="field-label">Cơ quan ban hành Quyết định</label>
@@ -51,11 +61,31 @@
 
         <div class="field-item col-3">
           <label class="field-label">Ngày xuất cảnh (Ngày đi)</label>
-          <InputText v-model="trip.departureDate" placeholder="DD/MM/YYYY" size="small" />
+          <DatePicker
+            :modelValue="parseDate(trip.departureDate)"
+            @update:modelValue="(v) => trip.departureDate = formatDateStr(v)"
+            dateFormat="dd/mm/yy"
+            placeholder="DD/MM/YYYY"
+            showIcon
+            iconDisplay="input"
+            size="small"
+            appendTo="body"
+            class="w-full"
+          />
         </div>
         <div class="field-item col-3">
           <label class="field-label">Ngày nhập cảnh (Ngày về)</label>
-          <InputText v-model="trip.arrivalDate" placeholder="DD/MM/YYYY" size="small" />
+          <DatePicker
+            :modelValue="parseDate(trip.arrivalDate)"
+            @update:modelValue="(v) => trip.arrivalDate = formatDateStr(v)"
+            dateFormat="dd/mm/yy"
+            placeholder="DD/MM/YYYY"
+            showIcon
+            iconDisplay="input"
+            size="small"
+            appendTo="body"
+            class="w-full"
+          />
         </div>
         <div class="field-item col-3">
           <label class="field-label">Quốc gia / Nước đến</label>
@@ -80,16 +110,21 @@
         </div>
 
         <div class="field-item col-6">
-          <label class="field-label">Báo cáo kết quả sau khi về</label>
-          <InputText v-model="trip.report" placeholder="Đã nộp báo cáo / Chưa" size="small" />
+          <label class="field-label">Thời gian đào tạo (nếu đi học tập)</label>
+          <InputText v-model="trip.trainingTime" placeholder="VD: 6 tháng, 1 năm..." size="small" />
         </div>
         <div class="field-item col-6">
-          <label class="field-label">Nộp lại Hộ chiếu công vụ</label>
-          <InputText v-model="trip.nopHC" placeholder="Đã nộp / Chưa" size="small" />
+          <label class="field-label">Nơi đào tạo / Cơ sở đào tạo</label>
+          <InputText v-model="trip.trainingPlace" placeholder="Tên trường, viện nghiên cứu..." size="small" />
         </div>
 
-        <div class="field-item col-12">
-          <PersonnelAttachments v-model="trip.files" label="Tệp đính kèm chuyến đi (Quyết định, Báo cáo...)" />
+        <div class="field-item col-6" style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
+          <input type="checkbox" id="report" v-model="trip.report" />
+          <label for="report" class="field-label" style="margin: 0; cursor: pointer;">Đã nộp Báo cáo kết quả sau chuyến đi</label>
+        </div>
+        <div class="field-item col-6" style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
+          <input type="checkbox" id="nopHC" v-model="trip.nopHC" />
+          <label for="nopHC" class="field-label" style="margin: 0; cursor: pointer;">Đã nộp lại Hộ chiếu công vụ</label>
         </div>
       </div>
     </div>
@@ -98,9 +133,9 @@
 
 <script setup>
 import { computed } from 'vue';
-import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
-import PersonnelAttachments from './PersonnelAttachments.vue';
+import InputText from 'primevue/inputtext';
+import DatePicker from 'primevue/datepicker';
 
 const props = defineProps({
   form: {
@@ -109,31 +144,46 @@ const props = defineProps({
   },
 });
 
-const trips = computed({
-  get: () => {
-    if (!props.form.trips) props.form.trips = [];
-    return props.form.trips;
-  },
-  set: (val) => {
-    props.form.trips = val;
-  },
+const trips = computed(() => {
+  if (!props.form.trips) props.form.trips = [];
+  return props.form.trips;
 });
+
+const parseDate = (val) => {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const formatDateStr = (val) => {
+  if (!val) return '';
+  if (val instanceof Date) {
+    const yyyy = val.getFullYear();
+    const mm = String(val.getMonth() + 1).padStart(2, '0');
+    const dd = String(val.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return String(val);
+};
 
 const addTrip = () => {
   trips.value.push({
+    id: 'temp_' + Date.now(),
     decisionNumber: '',
     decisionDate: '',
     decisionIssuer: '',
     departureDate: '',
     arrivalDate: '',
     countryName: '',
-    tripCount: 1,
+    tripCount: '1',
     purpose: '',
     fundingName: '',
     sponsorUnit: '',
-    report: '',
-    nopHC: '',
-    files: [],
+    trainingTime: '',
+    trainingPlace: '',
+    report: false,
+    nopHC: false,
   });
 };
 

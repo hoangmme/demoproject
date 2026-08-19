@@ -16,8 +16,17 @@
     </div>
 
     <div class="field-item col-3">
-      <label class="field-label">Năm sinh</label>
-      <InputText v-model="form.birthYear" placeholder="VD: 1985 hoặc 15/08/1985" size="small" />
+      <label class="field-label">Năm sinh / Ngày sinh</label>
+      <DatePicker
+        v-model="birthDateValue"
+        dateFormat="dd/mm/yy"
+        placeholder="DD/MM/YYYY hoặc YYYY"
+        showIcon
+        iconDisplay="input"
+        size="small"
+        appendTo="body"
+        class="w-full"
+      />
     </div>
 
     <div class="field-item col-3">
@@ -84,18 +93,41 @@
       <Textarea v-model="form.tcctResult" rows="2" placeholder="Nội dung kết quả thẩm tra trước khi đi nước ngoài..." size="small" />
     </div>
 
-    <!-- Custom columns if defined -->
+    <!-- Custom columns with type-specific components -->
     <template v-if="customColumns.length > 0">
       <div class="col-12" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5e7eb;">
         <span style="font-size: 0.8rem; font-weight: 700; color: #4b5563;">Trường bổ sung tùy chỉnh:</span>
       </div>
       <div v-for="col in customColumns" :key="col.id" class="field-item col-6">
         <label class="field-label">{{ col.label }}</label>
+        
+        <!-- File Format -->
         <template v-if="col.format === 'file'">
           <PersonnelAttachments v-model="form.custom_data[col.id]" :label="col.label" />
         </template>
+        
+        <!-- Date Format -->
+        <template v-else-if="col.format === 'date'">
+          <DatePicker
+            v-model="form.custom_data[col.id]"
+            dateFormat="dd/mm/yy"
+            placeholder="DD/MM/YYYY"
+            showIcon
+            iconDisplay="input"
+            size="small"
+            appendTo="body"
+            class="w-full"
+          />
+        </template>
+
+        <!-- Number Format -->
+        <template v-else-if="col.format === 'number'">
+          <InputNumber v-model="form.custom_data[col.id]" size="small" class="w-full" />
+        </template>
+
+        <!-- Default Text Format -->
         <template v-else>
-          <InputText v-model="form.custom_data[col.id]" size="small" />
+          <InputText v-model="form.custom_data[col.id]" size="small" class="w-full" />
         </template>
       </div>
     </template>
@@ -107,6 +139,8 @@ import { computed } from 'vue';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import Select from 'primevue/select';
+import DatePicker from 'primevue/datepicker';
+import InputNumber from 'primevue/inputnumber';
 import PersonnelAttachments from './PersonnelAttachments.vue';
 
 const props = defineProps({
@@ -121,6 +155,26 @@ const props = defineProps({
   mapping: {
     type: Array,
     default: () => [],
+  },
+});
+
+const birthDateValue = computed({
+  get: () => {
+    const raw = props.form.birthYear;
+    if (!raw) return null;
+    if (raw instanceof Date) return raw;
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? raw : d;
+  },
+  set: (val) => {
+    if (val instanceof Date) {
+      const yyyy = val.getFullYear();
+      const mm = String(val.getMonth() + 1).padStart(2, '0');
+      const dd = String(val.getDate()).padStart(2, '0');
+      props.form.birthYear = `${yyyy}-${mm}-${dd}`;
+    } else {
+      props.form.birthYear = val || '';
+    }
   },
 });
 
