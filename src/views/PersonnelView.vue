@@ -399,36 +399,36 @@
       v-model:visible="isImportOpen"
       modal
       :header="currentImportType === 'personnel' ? 'Import Hồ sơ Cán bộ từ Excel' : 'Import Thân nhân từ Excel (Gộp dữ liệu)'"
-      :style="{ width: '680px' }"
+      :style="{ width: '1200px', maxWidth: '96vw' }"
     >
       <div style="display: flex; flex-direction: column; gap: 1.25rem; padding-top: 8px;">
         <!-- Notice box -->
         <div style="padding: 10px 14px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #2e7d32; font-size: 0.82rem; color: #1b5e20;">
           <template v-if="currentImportType === 'personnel'">
-            Hệ thống hỗ trợ import file <b>.xlsx, .xls, .csv</b> gồm đầy đủ các khối trường thông tin cán bộ. Nếu Mã CB đã có, hệ thống sẽ cập nhật thông tin tương ứng.
+            Hệ thống hỗ trợ import file <b>.xlsx, .xls, .csv</b> gồm đầy đủ các khối trường thông tin cán bộ. Nếu Số CCCD cán bộ đã có trong hệ thống, dữ liệu mới sẽ được cập nhật/ghi đè tương ứng.
           </template>
           <template v-else>
-            Hệ thống sẽ <b>tự động ghép thân nhân vào cán bộ tương ứng</b> theo Mã CB hoặc Họ tên. Dữ liệu thân nhân sẽ được <b>gộp thêm (append)</b>, bảo toàn danh sách cũ.
+            Hệ thống sẽ <b>tự động liên kết thân nhân vào cán bộ tương ứng</b> theo số <b>`cccd_can_bo`</b> (khớp với <b>`cccdparent`</b> của Cán bộ).
           </template>
         </div>
 
         <!-- Big Dropzone Box -->
         <div
-          style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; background: #fcfdfc; cursor: pointer; transition: all 0.2s ease;"
+          style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 1.5rem 1.5rem; text-align: center; background: #fcfdfc; cursor: pointer; transition: all 0.2s ease;"
           @click="$refs.importFileInput.click()"
           @dragover.prevent
           @drop.prevent="onFileDrop"
         >
           <input type="file" ref="importFileInput" accept=".xlsx, .xls, .csv" @change="onImportFileSelected" style="display: none;" />
           
-          <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 16px; background: #e8f5e9; color: #2e7d32; margin-bottom: 12px;">
-            <i class="pi pi-file-excel" style="font-size: 1.75rem;"></i>
+          <div style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background: #e8f5e9; color: #2e7d32; margin-bottom: 8px;">
+            <i class="pi pi-file-excel" style="font-size: 1.5rem;"></i>
           </div>
 
-          <div style="font-size: 0.95rem; font-weight: 700; color: #1f2937; margin-bottom: 4px;">
+          <div style="font-size: 0.92rem; font-weight: 700; color: #1f2937; margin-bottom: 4px;">
             {{ selectedFileName || 'Kéo thả tệp Excel vào đây hoặc nhấp để tải lên' }}
           </div>
-          <div style="font-size: 0.78rem; color: #6b7280; margin-bottom: 12px;">
+          <div style="font-size: 0.78rem; color: #6b7280; margin-bottom: 10px;">
             Định dạng hỗ trợ: Microsoft Excel (.xlsx, .xls), CSV (.csv)
           </div>
 
@@ -485,30 +485,64 @@
           </div>
         </div>
 
-        <!-- Preview Table if rows loaded -->
+        <!-- Full Column Preview Table -->
         <div v-if="importPreviewRows.length > 0" style="border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; background: #ffffff;">
-          <div style="padding: 0.6rem 1rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.82rem; font-weight: 700; color: #1f2937;">
-              Xem trước dữ liệu (Tìm thấy {{ importPreviewRows.length }} dòng dữ liệu)
-            </span>
+          <div style="padding: 0.6rem 1rem; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="pi pi-eye" style="color: #0284c7; font-size: 1rem;"></i>
+              <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">
+                Xem trước toàn bộ dữ liệu: Tìm thấy {{ importPreviewRows[0]?.length || 0 }} cột | {{ importPreviewRows.length - 1 }} dòng dữ liệu
+              </span>
+            </div>
             <span class="badge-pill badge-green" style="font-size: 0.75rem;">Sẵn sàng Import</span>
           </div>
 
-          <div style="max-height: 180px; overflow: auto; padding: 0.5rem;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">
+          <!-- Full Horizontal & Vertical Scrollable Table -->
+          <div style="max-height: 300px; overflow: auto; border-bottom: 1px solid #f1f5f9;">
+            <table style="width: max-content; min-width: 100%; border-collapse: collapse; font-size: 0.76rem;">
+              <thead style="position: sticky; top: 0; z-index: 2; background: #f1f5f9; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">
+                <tr>
+                  <th style="padding: 8px 10px; border: 1px solid #cbd5e1; background: #e2e8f0; color: #334155; font-weight: 700; text-align: center; white-space: nowrap; position: sticky; left: 0; z-index: 3; min-width: 50px;">
+                    Dòng
+                  </th>
+                  <th
+                    v-for="(headerText, colIdx) in (importPreviewRows[0] || [])"
+                    :key="colIdx"
+                    style="padding: 8px 12px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; font-weight: 700; text-align: left; white-space: nowrap; min-width: 130px;"
+                  >
+                    {{ headerText || `[Cột ${colIdx + 1}]` }}
+                  </th>
+                </tr>
+              </thead>
               <tbody>
-                <tr v-for="(r, idx) in importPreviewRows.slice(0, 5)" :key="idx" style="border-bottom: 1px solid #f3f4f6;">
-                  <td style="padding: 6px 8px; font-weight: 600; color: #6b7280; width: 40px;">#{{ idx + 1 }}</td>
-                  <td style="padding: 6px 8px; font-weight: 600; color: #1f2937;">{{ r[1] || r[0] || '-' }}</td>
-                  <td style="padding: 6px 8px; color: #4b5563;">{{ r[2] || '-' }}</td>
-                  <td style="padding: 6px 8px; color: #6b7280;">{{ r[3] || '-' }}</td>
-                  <td style="padding: 6px 8px; color: #6b7280;">{{ r[4] || '-' }}</td>
+                <tr
+                  v-for="(row, rIdx) in importPreviewRows.slice(1, 15)"
+                  :key="rIdx"
+                  :style="{ backgroundColor: rIdx % 2 === 0 ? '#ffffff' : '#f8fafc' }"
+                >
+                  <td style="padding: 6px 10px; border: 1px solid #e2e8f0; font-weight: 700; color: #64748b; text-align: center; white-space: nowrap; position: sticky; left: 0; background: inherit; z-index: 1;">
+                    #{{ rIdx + 1 }}
+                  </td>
+                  <td
+                    v-for="(colName, colIdx) in (importPreviewRows[0] || [])"
+                    :key="colIdx"
+                    style="padding: 6px 12px; border: 1px solid #e2e8f0; color: #334155; white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis;"
+                    :title="String(row[colIdx] !== undefined && row[colIdx] !== null ? row[colIdx] : '')"
+                  >
+                    <span v-if="row[colIdx] !== undefined && row[colIdx] !== null && String(row[colIdx]).trim() !== ''">
+                      {{ row[colIdx] }}
+                    </span>
+                    <span v-else style="color: #cbd5e1; font-style: italic;">
+                      -
+                    </span>
+                  </td>
                 </tr>
               </tbody>
             </table>
-            <div v-if="importPreviewRows.length > 5" style="text-align: center; padding: 6px; font-size: 0.72rem; color: #6b7280;">
-              ...và {{ importPreviewRows.length - 5 }} dòng tiếp theo sẽ được xử lý.
-            </div>
+          </div>
+
+          <div v-if="importPreviewRows.length > 15" style="text-align: center; padding: 6px 12px; font-size: 0.75rem; color: #64748b; background: #f8fafc;">
+            ...và <b>{{ importPreviewRows.length - 15 }}</b> dòng dữ liệu tiếp theo sẽ được xử lý đầy đủ khi bấm bắt đầu Import.
           </div>
         </div>
       </div>
@@ -516,17 +550,17 @@
       <template #footer>
         <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
           <span style="font-size: 0.78rem; color: #6b7280;">
-            {{ importPreviewRows.length > 0 ? `Đã chọn ${importPreviewRows.length} dòng` : 'Chưa chọn tệp' }}
+            {{ importPreviewRows.length > 0 ? `Đã nạp ${importPreviewRows[0]?.length || 0} cột | ${importPreviewRows.length - 1} dòng dữ liệu` : 'Chưa chọn tệp' }}
           </span>
           <div style="display: flex; gap: 8px;">
             <Button label="Hủy" severity="secondary" text size="small" @click="isImportOpen = false" />
             <Button
-              :label="currentImportType === 'personnel' ? `Bắt đầu Import (${importPreviewRows.length} hồ sơ)` : `Bắt đầu Gộp (${importPreviewRows.length} thân nhân)`"
+              :label="currentImportType === 'personnel' ? `Bắt đầu Import (${importPreviewRows.length - 1} hồ sơ)` : `Bắt đầu Gộp (${importPreviewRows.length - 1} thân nhân)`"
               icon="pi pi-check"
               severity="success"
               size="small"
               :loading="importing"
-              :disabled="importPreviewRows.length === 0"
+              :disabled="importPreviewRows.length < 2"
               @click="executeImport"
             />
           </div>
