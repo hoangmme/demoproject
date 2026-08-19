@@ -1405,7 +1405,11 @@ const executeImport = async () => {
         if (!relativeName && row[6] && String(row[6]).trim()) relativeName = String(row[6]).trim();
         if (!relationshipName && row[5] && String(row[5]).trim()) relationshipName = String(row[5]).trim();
 
-        if (!relativeName || relativeName.toLowerCase() === 'họ và tên thân nhân') continue;
+        // Nếu ô Tên thân nhân bị để trống trong Excel thì tự động lấy theo Mối quan hệ
+        if (!relativeName) {
+          relativeName = relationshipName || 'Thân nhân';
+        }
+        if (relativeName.toLowerCase() === 'họ và tên thân nhân' || relativeName.toLowerCase() === 'tên thân nhân') continue;
 
         const cleanParentCccd = String(parentCccd || relData['cccd_can_bo'] || '').trim();
         let cleanRelCccd = String(relCccd || relData['cccdthannhan'] || '').trim();
