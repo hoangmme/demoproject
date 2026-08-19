@@ -1,6 +1,6 @@
 <template>
-  <div class="field-item">
-    <label class="field-label">{{ label }}</label>
+  <div>
+    <label v-if="showLabel" class="field-label">{{ label }}</label>
     
     <!-- File List Display -->
     <div v-if="filesList.length > 0" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
@@ -65,6 +65,10 @@ const props = defineProps({
   label: {
     type: String,
     default: 'Tệp đính kèm',
+  },
+  showLabel: {
+    type: Boolean,
+    default: false,
   },
 });
 

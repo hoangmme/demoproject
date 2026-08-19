@@ -198,7 +198,7 @@ html, body {
   min-width: 0;
 }
 
-.field-item input,
+.field-item input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .field-item .p-inputtext,
 .field-item .p-inputnumber,
 .field-item .p-select,
@@ -209,7 +209,7 @@ html, body {
   min-width: 0 !important;
 }
 
-.dynamic-field-wrapper input,
+.dynamic-field-wrapper input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .dynamic-field-wrapper .p-inputtext,
 .dynamic-field-wrapper .p-inputnumber,
 .dynamic-field-wrapper .p-select,
@@ -217,6 +217,18 @@ html, body {
   width: 100% !important;
   box-sizing: border-box !important;
   min-width: 0 !important;
+}
+
+.field-item input[type="checkbox"],
+.dynamic-field-wrapper input[type="checkbox"],
+.field-item input[type="radio"],
+.dynamic-field-wrapper input[type="radio"] {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
+  margin: 0 !important;
 }
 
 .field-label {
