@@ -130,7 +130,11 @@
         @row-click="onRowClick"
       >
         <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
-
+        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
+          <template #body="{ index }">
+            <span style="font-weight: 600; color: #4b5563;">{{ index + 1 }}</span>
+          </template>
+        </Column>
         <Column
           v-for="col in activeColumns"
           :key="col.id"
@@ -571,8 +575,45 @@ onMounted(async () => {
 });
 
 const activeColumns = computed(() => {
+  const map = {};
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id) map[c.id] = c;
+    });
+  });
+
   return personnelStore.visibleColumns.map((id) => {
+    const cfg = map[id];
+    if (cfg && cfg.label) {
+      return {
+        id: cfg.id,
+        label: cfg.label,
+        width: '160px',
+      };
+    }
     const found = personnelStore.allAvailableColumns.find((c) => c.id === id);
+    return found || { id, label: id, width: '160px' };
+  });
+});
+
+const activeRelativeColumns = computed(() => {
+  const map = {};
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id) map[c.id] = c;
+    });
+  });
+
+  return (personnelStore.visibleRelativeColumns || []).map((id) => {
+    const cfg = map[id];
+    if (cfg && cfg.label) {
+      return {
+        id: cfg.id,
+        label: cfg.label,
+        width: '160px',
+      };
+    }
+    const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
     return found || { id, label: id, width: '160px' };
   });
 });
@@ -599,11 +640,16 @@ const flattenedRelatives = computed(() => {
   });
 
   let stt = 1;
-  return personnelStore.relativesList.map((r) => {
+  return personnelStore.relativesList.map((r, idx) => {
     const parent = pMap[r.personnelId] || pMap[r.personnelCode] || null;
+    const formattedCode = r.code && r.code.startsWith('TN-') && !isNaN(Number(r.code.replace('TN-', '')))
+      ? r.code
+      : `TN-${String(idx + 1).padStart(5, '0')}`;
+
     return {
       stt: stt++,
       ...r,
+      code: formattedCode,
       parentPerson: parent,
       parentName: parent?.name || r.personnelName || 'Chưa liên kết',
       parentDepartment: parent ? personnelStore.getDepartmentName(parent.departmentId) : (r.departmentName || '-'),

@@ -26,72 +26,106 @@ export const getSubOptionsList = (col) => {
   return [];
 };
 
-// Export Full Columns for Personnel
+// Export Full Columns for Personnel with [Cột N] prefix
 export const exportFullPersonnelExcel = (personnelList, mappingConfig, getDepartmentName) => {
+  let currentColIdx = 0;
+  const columnHeaders = [];
+
+  (mappingConfig || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      currentColIdx++;
+      if (c.id === 'stt') {
+        columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
+        return;
+      }
+
+      const subOpts = getSubOptionsList(c);
+      if (subOpts.length > 1) {
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = currentColIdx + sIdx;
+          columnHeaders.push({
+            id: c.id,
+            subOpt: opt,
+            header: `[Cột ${colNum}] ${c.label || c.id}: ${opt}`,
+            col: c,
+          });
+        });
+        currentColIdx += (subOpts.length - 1);
+      } else {
+        columnHeaders.push({
+          id: c.id,
+          header: `[Cột ${currentColIdx}] ${c.label || c.id}`,
+          col: c,
+        });
+      }
+    });
+  });
+
   const rows = (personnelList || []).map((p, idx) => {
     const row = {};
-
-    (mappingConfig || []).forEach((g) => {
-      (g.columns || []).forEach((c) => {
-        if (c.id === 'stt') {
-          row['STT'] = idx + 1;
-          return;
-        }
-
-        const subOpts = getSubOptionsList(c);
-        if (subOpts.length > 1) {
-          subOpts.forEach((opt) => {
-            const header = `${c.label || c.id}: ${opt}`;
-            const val = getFieldValue(p, c.id, getDepartmentName);
-            if (String(val).toLowerCase().includes(opt.toLowerCase())) {
-              row[header] = 'X';
-            } else {
-              row[header] = '';
-            }
-          });
-        } else {
-          const header = c.label || c.id;
-          row[header] = getFieldValue(p, c.id, getDepartmentName);
-        }
-      });
+    columnHeaders.forEach((item) => {
+      if (item.id === 'stt') {
+        row[item.header] = idx + 1;
+      } else if (item.subOpt) {
+        const val = getFieldValue(p, item.id, getDepartmentName);
+        row[item.header] = String(val).toLowerCase().includes(item.subOpt.toLowerCase()) ? 'X' : '';
+      } else {
+        row[item.header] = getFieldValue(p, item.id, getDepartmentName);
+      }
     });
-
     return row;
   });
 
   exportToExcel(rows, 'Danh_sach_Can_bo_Full_Cot', 'Hồ sơ Cán bộ');
 };
 
-// Export Full Columns for Relatives
+// Export Full Columns for Relatives with [Cột N] prefix
 export const exportFullRelativesExcel = (relativesList, mappingConfig) => {
+  let currentColIdx = 0;
+  const columnHeaders = [];
+
+  (mappingConfig || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      currentColIdx++;
+      if (c.id === 'stt') {
+        columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
+        return;
+      }
+
+      const subOpts = getSubOptionsList(c);
+      if (subOpts.length > 1) {
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = currentColIdx + sIdx;
+          columnHeaders.push({
+            id: c.id,
+            subOpt: opt,
+            header: `[Cột ${colNum}] ${c.label || c.id}: ${opt}`,
+            col: c,
+          });
+        });
+        currentColIdx += (subOpts.length - 1);
+      } else {
+        columnHeaders.push({
+          id: c.id,
+          header: `[Cột ${currentColIdx}] ${c.label || c.id}`,
+          col: c,
+        });
+      }
+    });
+  });
+
   const rows = (relativesList || []).map((r, idx) => {
     const row = {};
-
-    (mappingConfig || []).forEach((g) => {
-      (g.columns || []).forEach((c) => {
-        if (c.id === 'stt') {
-          row['STT'] = idx + 1;
-          return;
-        }
-
-        const subOpts = getSubOptionsList(c);
-        if (subOpts.length > 1) {
-          subOpts.forEach((opt) => {
-            const header = `${c.label || c.id}: ${opt}`;
-            const val = getRelativeFieldValue(r, c.id, c.label);
-            if (String(val).toLowerCase().includes(opt.toLowerCase())) {
-              row[header] = 'X';
-            } else {
-              row[header] = '';
-            }
-          });
-        } else {
-          const header = c.label || c.id;
-          row[header] = getRelativeFieldValue(r, c.id, c.label);
-        }
-      });
+    columnHeaders.forEach((item) => {
+      if (item.id === 'stt') {
+        row[item.header] = idx + 1;
+      } else if (item.subOpt) {
+        const val = getRelativeFieldValue(r, item.id, item.col.label);
+        row[item.header] = String(val).toLowerCase().includes(item.subOpt.toLowerCase()) ? 'X' : '';
+      } else {
+        row[item.header] = getRelativeFieldValue(r, item.id, item.col.label);
+      }
     });
-
     return row;
   });
 
@@ -134,21 +168,17 @@ function getFieldValue(p, fieldId, getDepartmentName) {
     return p.position || p.positionName || '';
   }
 
-  // Check top level
   if (p[fieldId] !== undefined && p[fieldId] !== null) return p[fieldId];
 
-  // Check trips (first trip)
   if (p.trips && p.trips.length > 0) {
     const t = p.trips[0];
     if (t[fieldId] !== undefined && t[fieldId] !== null) return t[fieldId];
   }
 
-  // Check flags
   if (p.flags && p.flags[fieldId] !== undefined && p.flags[fieldId] !== null) {
     return p.flags[fieldId];
   }
 
-  // Check custom_data
   if (p.custom_data && p.custom_data[fieldId] !== undefined && p.custom_data[fieldId] !== null) {
     return p.custom_data[fieldId];
   }
@@ -158,38 +188,45 @@ function getFieldValue(p, fieldId, getDepartmentName) {
 
 export const downloadPersonnelTemplate = (mappingConfig = null) => {
   const emptyRow = {};
+  let currentColIdx = 0;
 
   if (Array.isArray(mappingConfig) && mappingConfig.length > 0) {
-    emptyRow['STT'] = '';
     mappingConfig.forEach((g) => {
       (g.columns || []).forEach((c) => {
-        if (c.id === 'stt') return;
+        currentColIdx++;
+        if (c.id === 'stt') {
+          emptyRow[`[Cột ${currentColIdx}] STT`] = '';
+          return;
+        }
+
         const subOpts = getSubOptionsList(c);
         if (subOpts.length > 1) {
-          subOpts.forEach((opt) => {
-            const header = `${c.label || c.id}: ${opt}`;
+          subOpts.forEach((opt, sIdx) => {
+            const colNum = currentColIdx + sIdx;
+            const header = `[Cột ${colNum}] ${c.label || c.id}: ${opt}`;
             emptyRow[header] = '';
           });
+          currentColIdx += (subOpts.length - 1);
         } else {
-          const header = c.label || c.id;
+          const header = `[Cột ${currentColIdx}] ${c.label || c.id}`;
           emptyRow[header] = '';
         }
       });
     });
   } else {
-    emptyRow['STT'] = '';
-    emptyRow['Mã CB'] = '';
-    emptyRow['Họ và tên'] = '';
-    emptyRow['Tên gọi khác'] = '';
-    emptyRow['Ngày tháng năm sinh'] = '';
-    emptyRow['Dân tộc'] = '';
-    emptyRow['Tôn giáo'] = '';
-    emptyRow['Quê quán'] = '';
-    emptyRow['Đơn vị công tác'] = '';
-    emptyRow['Chức vụ'] = '';
-    emptyRow['Thường trú'] = '';
-    emptyRow['Tạm trú'] = '';
-    emptyRow['Số CCCD'] = '';
+    emptyRow['[Cột 1] STT'] = '';
+    emptyRow['[Cột 2] Mã CB'] = '';
+    emptyRow['[Cột 3] Họ và tên'] = '';
+    emptyRow['[Cột 4] Tên gọi khác'] = '';
+    emptyRow['[Cột 5] Ngày tháng năm sinh'] = '';
+    emptyRow['[Cột 6] Dân tộc'] = '';
+    emptyRow['[Cột 7] Tôn giáo'] = '';
+    emptyRow['[Cột 8] Quê quán'] = '';
+    emptyRow['[Cột 9] Đơn vị công tác'] = '';
+    emptyRow['[Cột 10] Chức vụ'] = '';
+    emptyRow['[Cột 11] Thường trú'] = '';
+    emptyRow['[Cột 12] Tạm trú'] = '';
+    emptyRow['[Cột 13] Số CCCD'] = '';
   }
 
   exportToExcel([emptyRow], 'Mau_Import_Ho_So_Can_Bo', 'Mẫu Cán bộ');
@@ -197,35 +234,42 @@ export const downloadPersonnelTemplate = (mappingConfig = null) => {
 
 export const downloadRelativeTemplate = (mappingConfig = null) => {
   const emptyRow = {};
+  let currentColIdx = 0;
 
   if (Array.isArray(mappingConfig) && mappingConfig.length > 0) {
-    emptyRow['STT'] = '';
     mappingConfig.forEach((g) => {
       (g.columns || []).forEach((c) => {
-        if (c.id === 'stt') return;
+        currentColIdx++;
+        if (c.id === 'stt') {
+          emptyRow[`[Cột ${currentColIdx}] STT`] = '';
+          return;
+        }
+
         const subOpts = getSubOptionsList(c);
         if (subOpts.length > 1) {
-          subOpts.forEach((opt) => {
-            const header = `${c.label || c.id}: ${opt}`;
+          subOpts.forEach((opt, sIdx) => {
+            const colNum = currentColIdx + sIdx;
+            const header = `[Cột ${colNum}] ${c.label || c.id}: ${opt}`;
             emptyRow[header] = '';
           });
+          currentColIdx += (subOpts.length - 1);
         } else {
-          const header = c.label || c.id;
+          const header = `[Cột ${currentColIdx}] ${c.label || c.id}`;
           emptyRow[header] = '';
         }
       });
     });
   } else {
-    emptyRow['STT'] = '';
-    emptyRow['Mã CB'] = '';
-    emptyRow['Tên Cán bộ'] = '';
-    emptyRow['Số CCCD Cán bộ'] = '';
-    emptyRow['Mối quan hệ'] = '';
-    emptyRow['Tên thân nhân'] = '';
-    emptyRow['Năm sinh'] = '';
-    emptyRow['Số CCCD'] = '';
-    emptyRow['Nơi ở hiện nay'] = '';
-    emptyRow['Nghề nghiệp'] = '';
+    emptyRow['[Cột 1] STT'] = '';
+    emptyRow['[Cột 2] Mã CB'] = '';
+    emptyRow['[Cột 3] Tên Cán bộ'] = '';
+    emptyRow['[Cột 4] Số CCCD Cán bộ'] = '';
+    emptyRow['[Cột 5] Mối quan hệ'] = '';
+    emptyRow['[Cột 6] Tên thân nhân'] = '';
+    emptyRow['[Cột 7] Năm sinh'] = '';
+    emptyRow['[Cột 8] Số CCCD'] = '';
+    emptyRow['[Cột 9] Nơi ở hiện nay'] = '';
+    emptyRow['[Cột 10] Nghề nghiệp'] = '';
   }
 
   exportToExcel([emptyRow], 'Mau_Import_Than_Nhan', 'Mẫu Thân nhân');
