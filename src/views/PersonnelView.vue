@@ -287,7 +287,7 @@
           <template #body="{ data, index }">
             <div v-if="isFirstRelativeOfParent(data, index)">
               <strong style="cursor: pointer; color: #1f2937; font-size: 0.82rem;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
-              <div v-if="data.parentDepartment || data.parentPosition" style="font-size: 0.72rem; color: #6b7280;">{{ data.parentDepartment || data.parentPosition }}</div>
+              <div v-if="data.parentPosition" style="font-size: 0.72rem; color: #6b7280;">{{ data.parentPosition }}</div>
               <div v-if="data.cccd_can_bo" style="font-size: 0.7rem; color: #64748b; font-family: monospace;">CCCD: {{ data.cccd_can_bo }}</div>
             </div>
             <div v-else style="padding-left: 10px; color: #94a3b8; font-size: 0.74rem; display: flex; align-items: center; gap: 4px;">
@@ -1317,20 +1317,14 @@ const executeImport = async () => {
         if (cccd) pByCccd[String(cccd).trim()] = p;
       });
 
-      // Lookup existing relatives by cccdthannhan and by (parentCccd + relativeName)
+      // Lookup existing relatives strictly by cccdthannhan
       const existingRelatives = [...(personnelStore.relativesList || [])];
       const relByCccd = {};
-      const relByParentAndName = {};
 
       existingRelatives.forEach((r) => {
         const rCccd = String(r.cccdthannhan || r.custom_data?.cccdthannhan || r.cccd || '').trim();
         if (rCccd) {
           relByCccd[rCccd] = r;
-        }
-        const pCccd = String(r.cccd_can_bo || r.custom_data?.cccd_can_bo || '').trim();
-        const rName = normalizeKey(r.relativeName || r.name || r.custom_data?.relativeName || '');
-        if (pCccd && rName) {
-          relByParentAndName[`${pCccd}_${rName}`] = r;
         }
       });
 
@@ -1385,27 +1379,19 @@ const executeImport = async () => {
         const cleanParentCccd = String(parentCccd || relData['cccd_can_bo'] || '').trim();
         const cleanRelCccd = String(relCccd || relData['cccdthannhan'] || '').trim();
 
-        // BẮT BUỘC PHẢI CÓ CCCD CÁN BỘ VÀ TÊN THÂN NHÂN
-        if (!cleanParentCccd) {
+        // NẾU THÂN NHÂN KHÔNG CÓ cccdthannhan HOẶC KHÔNG CÓ cccd_can_bo -> BỎ QUA NGAY LẬP TỨC
+        if (!cleanParentCccd || !cleanRelCccd) {
           continue;
         }
 
         // Match parent strictly by cccd_can_bo -> cccdparent
         const parentPerson = pByCccd[cleanParentCccd] || null;
 
-        // So khớp / Gộp: Ưu tiên CCCD thân nhân nếu có, nếu không thì theo Tên + CCCD Cán bộ
-        let existingRel = null;
-        if (cleanRelCccd && relByCccd[cleanRelCccd]) {
-          existingRel = relByCccd[cleanRelCccd];
-        } else if (cleanParentCccd && relativeName) {
-          const key = `${cleanParentCccd}_${normalizeKey(relativeName)}`;
-          if (relByParentAndName[key]) {
-            existingRel = relByParentAndName[key];
-          }
-        }
+        // So khớp / Gộp DUY NHẤT theo 1 KEY là cccdthannhan
+        const existingRel = relByCccd[cleanRelCccd] || null;
 
         if (existingRel) {
-          // GỘP / CẬP NHẬT THÂN NHÂN ĐÃ TỒN TẠI
+          // GỘP / CẬP NHẬT THÂN NHÂN ĐÃ TỒN TẠI (Theo đúng key cccdthannhan)
           const updatedPayload = {
             ...existingRel,
             ...existingRel.custom_data,
@@ -1421,7 +1407,7 @@ const executeImport = async () => {
             relationshipName: relationshipName || existingRel.relationshipName,
             relativeName: relativeName || existingRel.relativeName,
             birthYear: formatExcelDate(relData['birthYear'] || row[8] || existingRel.birthYear || ''),
-            cccd: cleanRelCccd || existingRel.cccd || '',
+            cccd: cleanRelCccd,
             currentAddress: String(relData['currentAddress'] || row[13] || existingRel.currentAddress || ''),
             occupation: String(relData['occupation'] || row[11] || existingRel.occupation || ''),
             countryName: String(relData['countryName'] || relData['quoc_gia'] || relData['quocGia'] || existingRel.countryName || ''),
@@ -1434,7 +1420,7 @@ const executeImport = async () => {
               ...(existingRel.custom_data || {}),
               ...relData,
               cccd_can_bo: cleanParentCccd,
-              cccdthannhan: cleanRelCccd || existingRel.custom_data?.cccdthannhan || '',
+              cccdthannhan: cleanRelCccd,
               parentName: parentPerson?.name || existingRel.parentName || '',
             },
           };
@@ -1474,10 +1460,7 @@ const executeImport = async () => {
             },
           };
           await apiClient.post('/items/appendix2', newRel);
-          if (cleanRelCccd) relByCccd[cleanRelCccd] = newRel;
-          if (cleanParentCccd && relativeName) {
-            relByParentAndName[`${cleanParentCccd}_${normalizeKey(relativeName)}`] = newRel;
-          }
+          relByCccd[cleanRelCccd] = newRel;
           relCreatedCount++;
         }
         count++;
