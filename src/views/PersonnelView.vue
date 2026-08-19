@@ -1218,9 +1218,11 @@ const executeImport = async () => {
         }
 
         // Bắt buộc phải có tên cán bộ
-        if (!rowData.name && row[1]) rowData.name = String(row[1]).trim();
-        if (!rowData.name && row[2]) rowData.name = String(row[2]).trim();
-        if (!rowData.name || rowData.name.toLowerCase() === 'họ và tên') continue;
+        if (!rowData.name && row[1] !== undefined && row[1] !== null) rowData.name = String(row[1]).trim();
+        if (!rowData.name && row[2] !== undefined && row[2] !== null) rowData.name = String(row[2]).trim();
+        const cleanName = String(rowData.name || '').trim();
+        if (!cleanName || cleanName.toLowerCase() === 'họ và tên') continue;
+        rowData.name = cleanName;
 
         const cleanCccd = String(rowData.cccdparent || customData.cccdparent || '').trim();
 
@@ -1403,7 +1405,9 @@ const executeImport = async () => {
         if (!relativeName) {
           relativeName = relationshipName || 'Thân nhân';
         }
-        if (relativeName.toLowerCase() === 'họ và tên thân nhân' || relativeName.toLowerCase() === 'tên thân nhân') continue;
+        const cleanRelName = String(relativeName || '').trim();
+        if (cleanRelName.toLowerCase() === 'họ và tên thân nhân' || cleanRelName.toLowerCase() === 'tên thân nhân') continue;
+        relativeName = cleanRelName;
 
         const cleanParentCccd = String(parentCccd || relData['cccd_can_bo'] || '').trim();
         let cleanRelCccd = String(relCccd || relData['cccdthannhan'] || '').trim();
