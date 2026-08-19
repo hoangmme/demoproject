@@ -1,58 +1,90 @@
 <template>
-  <div class="app-content">
-    <div class="app-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
-        <div>
-          <h3 style="font-size: 1.1rem; font-weight: 700; color: #1f2937;">Cấu hình Cột & Mẫu Import/Export</h3>
-          <p style="font-size: 0.82rem; color: #6b7280; margin-top: 2px;">
-            Ghép nối đúng thứ tự cột trong file Excel mẫu với các trường hệ thống và kiểu định dạng. Hộp kiểm nhiều lựa chọn sẽ tự động phân rã thành các cột Excel độc lập.
-          </p>
-        </div>
-
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <Button
-            label="Thêm Nhóm mới"
-            icon="pi pi-plus"
-            severity="secondary"
-            size="small"
-            @click="addGroup"
-          />
-          <Button
-            label="Lưu Cấu hình"
-            icon="pi pi-check"
-            severity="success"
-            size="small"
-            :loading="saving"
-            @click="saveConfig"
-          />
-        </div>
+  <div class="page-container">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <div>
+        <h1 style="font-size: 1.35rem; font-weight: 700; color: #1f2937; margin: 0;">
+          Cấu hình Cột & Mẫu Dữ liệu Excel
+        </h1>
+        <p style="font-size: 0.85rem; color: #6b7280; margin: 4px 0 0 0;">
+          Tùy chỉnh thứ tự cột, dời vị trí, nhãn hiển thị và định dạng trường thông tin.
+        </p>
       </div>
 
-      <!-- Tabs between Personnel and Relatives -->
-      <div style="display: flex; gap: 8px; margin-bottom: 1.25rem;">
+      <div style="display: flex; gap: 8px;">
         <Button
-          label="Cấu hình Mẫu Cán bộ (Cá nhân)"
-          icon="pi pi-user"
-          :severity="activeTab === 'personnel' ? 'primary' : 'secondary'"
-          :text="activeTab !== 'personnel'"
-          size="small"
-          @click="activeTab = 'personnel'"
+          label="Lưu Cấu hình"
+          icon="pi pi-save"
+          severity="success"
+          :loading="saving"
+          @click="saveConfig"
+          style="font-size: 0.85rem;"
         />
+      </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div style="display: flex; gap: 8px; margin-bottom: 1.25rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px;">
+      <button
+        type="button"
+        @click="activeTab = 'personnel'"
+        :style="{
+          padding: '8px 16px',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          border: 'none',
+          background: 'none',
+          cursor: 'pointer',
+          color: activeTab === 'personnel' ? '#2e7d32' : '#6b7280',
+          borderBottom: activeTab === 'personnel' ? '3px solid #2e7d32' : '3px solid transparent',
+          marginBottom: '-6px'
+        }"
+      >
+        <i class="pi pi-user" style="margin-right: 6px;"></i>
+        Cấu hình Cột Cán bộ (Cá nhân)
+      </button>
+
+      <button
+        type="button"
+        @click="activeTab = 'relative'"
+        :style="{
+          padding: '8px 16px',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          border: 'none',
+          background: 'none',
+          cursor: 'pointer',
+          color: activeTab === 'relative' ? '#2e7d32' : '#6b7280',
+          borderBottom: activeTab === 'relative' ? '3px solid #2e7d32' : '3px solid transparent',
+          marginBottom: '-6px'
+        }"
+      >
+        <i class="pi pi-users" style="margin-right: 6px;"></i>
+        Cấu hình Cột Thân nhân
+      </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="app-card" style="padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <span style="font-size: 0.95rem; font-weight: 700; color: #1f2937;">
+          Danh sách Nhóm & Cột dữ liệu ({{ activeTab === 'personnel' ? 'Hồ sơ Cán bộ' : 'Hồ sơ Thân nhân' }})
+        </span>
         <Button
-          label="Cấu hình Mẫu Thân nhân"
-          icon="pi pi-users"
-          :severity="activeTab === 'relative' ? 'primary' : 'secondary'"
-          :text="activeTab !== 'relative'"
+          label="Thêm Nhóm mới"
+          icon="pi pi-plus-circle"
           size="small"
-          @click="activeTab = 'relative'"
+          severity="primary"
+          @click="addGroup"
+          style="font-size: 0.8rem;"
         />
       </div>
 
       <!-- Columns List -->
-      <div style="max-height: 60vh; overflow-y: auto; padding-right: 6px;">
-        <div v-for="(group, gIdx) in currentGroups" :key="gIdx" style="margin-bottom: 1.5rem; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+      <div style="max-height: 65vh; overflow-y: auto; padding-right: 6px;">
+        <div v-for="(group, gIdx) in currentGroups" :key="gIdx" style="margin-bottom: 1.5rem; border: 1px solid #e5e7eb; border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
           <!-- Group Header -->
-          <div style="padding: 0.75rem 1rem; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="padding: 0.75rem 1rem; background: #f8fafc; border-bottom: 1px solid #e5e7eb; border-top-left-radius: 12px; border-top-right-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
               <InputText
                 v-model="group.group"
@@ -85,8 +117,30 @@
               style="display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 8px; font-size: 0.8rem;"
             >
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-                <!-- Column Order + Field ID + Field Label -->
+                <!-- Move Buttons + Column Badge + Field ID + Field Label -->
                 <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 280px;">
+                  <!-- Move Up / Down Buttons -->
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <button
+                      type="button"
+                      class="btn-reorder"
+                      :disabled="gIdx === 0 && cIdx === 0"
+                      @click="moveColumn(gIdx, cIdx, -1)"
+                      title="Dời cột lên trên (Ví dụ từ cột 17 lên 16)"
+                    >
+                      <i class="pi pi-chevron-up" style="font-size: 0.62rem;"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-reorder"
+                      :disabled="gIdx === currentGroups.length - 1 && cIdx === group.columns.length - 1"
+                      @click="moveColumn(gIdx, cIdx, 1)"
+                      title="Dời cột xuống dưới"
+                    >
+                      <i class="pi pi-chevron-down" style="font-size: 0.62rem;"></i>
+                    </button>
+                  </div>
+
                   <span class="badge-pill badge-green" style="font-weight: 700; font-size: 0.72rem; min-width: 68px; justify-content: center;">
                     {{ getColLabelBadge(gIdx, cIdx) }}
                   </span>
@@ -109,28 +163,30 @@
                   />
                 </div>
 
-                <!-- Format & Width Settings -->
+                <!-- Format & Width Settings using clean native selects -->
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <Select
+                  <select
                     v-model="col.format"
-                    :options="formatOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    size="small"
-                    appendTo="self"
-                    placeholder="Định dạng"
-                    style="width: 175px; font-size: 0.75rem;"
-                  />
-                  <Select
+                    class="custom-col-select"
+                    style="width: 175px;"
+                    title="Định dạng dữ liệu"
+                  >
+                    <option v-for="opt in formatOptions" :key="opt.value" :value="opt.value">
+                      {{ opt.label }}
+                    </option>
+                  </select>
+
+                  <select
                     v-model="col.width"
-                    :options="widthOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    size="small"
-                    appendTo="self"
-                    placeholder="Rộng: 25%"
-                    style="width: 120px; font-size: 0.75rem;"
-                  />
+                    class="custom-col-select"
+                    style="width: 110px;"
+                    title="Độ rộng hiển thị Form"
+                  >
+                    <option v-for="w in widthOptions" :key="w.value" :value="w.value">
+                      {{ w.label }}
+                    </option>
+                  </select>
+
                   <Button
                     icon="pi pi-trash"
                     severity="danger"
@@ -146,7 +202,7 @@
               <!-- Options Config (for Checkbox, Checkbox_Text, Dropdown) -->
               <div
                 v-if="col.format === 'checkbox' || col.format === 'checkbox_text' || col.format === 'dropdown'"
-                style="padding-left: 76px; display: flex; flex-direction: column; gap: 4px;"
+                style="padding-left: 104px; display: flex; flex-direction: column; gap: 4px;"
               >
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <i class="pi pi-list" style="font-size: 0.75rem; color: #6b7280;"></i>
@@ -158,8 +214,8 @@
                   />
                 </div>
                 
-                <!-- Sub-columns Excel breakdown preview -->
-                <div v-if="getSubOptions(col).length > 1" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px;">
+                <!-- Sub-columns Excel breakdown preview (Only for checkbox_text) -->
+                <div v-if="col.format === 'checkbox_text' && getSubOptions(col).length > 1" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px;">
                   <span style="font-size: 0.7rem; color: #6b7280; font-weight: 600;">Sẽ xuất ra {{ getSubOptions(col).length }} cột Excel riêng biệt:</span>
                   <span
                     v-for="(subOpt, sIdx) in getSubOptions(col)"
@@ -194,7 +250,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import { saveAppSettings } from '@/api/settings';
@@ -252,7 +307,6 @@ const normalizeGroupColumns = (groups) => {
   (groups || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (!c.width) c.width = '25';
-      // Clean up legacy custom_ timestamps into readable slugs if available
       if (c.id && c.id.startsWith('custom_') && c.label) {
         const cleanSlug = generateSlug(c.label);
         if (cleanSlug) c.id = cleanSlug;
@@ -296,6 +350,38 @@ const getColLabelBadge = (groupIndex, columnIndex) => {
     return `Cột ${startCol} - ${endCol} (${currentSub.length} cột)`;
   }
   return `Cột ${startCol}`;
+};
+
+const moveColumn = (gIdx, cIdx, direction) => {
+  const groups = currentGroups.value;
+  const currentGroup = groups[gIdx];
+  if (!currentGroup || !currentGroup.columns) return;
+
+  const targetIdx = cIdx + direction;
+
+  // Move within the same group
+  if (targetIdx >= 0 && targetIdx < currentGroup.columns.length) {
+    const temp = currentGroup.columns[cIdx];
+    currentGroup.columns[cIdx] = currentGroup.columns[targetIdx];
+    currentGroup.columns[targetIdx] = temp;
+    return;
+  }
+
+  // Move to previous group
+  if (direction === -1 && gIdx > 0) {
+    const col = currentGroup.columns.splice(cIdx, 1)[0];
+    const prevGroup = groups[gIdx - 1];
+    prevGroup.columns.push(col);
+    return;
+  }
+
+  // Move to next group
+  if (direction === 1 && gIdx < groups.length - 1) {
+    const col = currentGroup.columns.splice(cIdx, 1)[0];
+    const nextGroup = groups[gIdx + 1];
+    nextGroup.columns.unshift(col);
+    return;
+  }
 };
 
 const onLabelBlur = (col) => {
@@ -353,3 +439,48 @@ const saveConfig = async () => {
   }
 };
 </script>
+
+<style scoped>
+.btn-reorder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 14px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  color: #475569;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-reorder:hover:not(:disabled) {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+.btn-reorder:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.custom-col-select {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  background-color: #ffffff;
+  color: #1f2937;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.custom-col-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+</style>
