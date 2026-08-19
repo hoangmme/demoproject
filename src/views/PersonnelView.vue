@@ -1352,56 +1352,65 @@ const executeImport = async () => {
 
           const hKey = normalizeKey(rawHeader);
           const rawHeaderLower = String(rawHeader || '').toLowerCase();
+          const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
+          const colNumber = colNumMatch ? Number(colNumMatch[1]) : (colIdx + 1);
 
-          // 1. Ưu tiên 1: Khớp chính xác 100% theo Tên nhãn hoặc ID
-          let matched = relColByLabel[hKey] || relColById[hKey];
-
-          // 2. Ưu tiên 2: Khớp theo [Cột N] nếu chưa khớp nhãn
-          if (!matched) {
-            const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
-            if (colNumMatch && relColByNum[Number(colNumMatch[1])]) {
-              matched = relColByNum[Number(colNumMatch[1])];
-            }
+          // Cột CCCD cán bộ (Cột 2 hoặc ID cccd_can_bo)
+          if (colNumber === 2 || hKey === 'cccdcanbo' || hKey === 'cccd_can_bo' || rawHeaderLower.includes('cccd cán bộ') || rawHeaderLower.includes('cccd can bo')) {
+            parentCccd = val;
+            relData.cccd_can_bo = val;
+            return;
           }
+
+          // Cột CCCD thân nhân (Cột 15 hoặc ID cccdthannhan hoặc Số Căn cước công dân)
+          if (colNumber === 15 || hKey === 'cccdthannhan' || hKey === 'cccd_than_nhan' || rawHeaderLower.includes('căn cước') || rawHeaderLower.includes('can cuoc') || rawHeaderLower.includes('cccd thân nhân') || rawHeaderLower.includes('cccd than nhan')) {
+            relCccd = val;
+            relData.cccdthannhan = val;
+            relData.cccd = val;
+            return;
+          }
+
+          // Cột Họ và tên thân nhân (Cột 7 hoặc ID relativeName)
+          if (colNumber === 7 || hKey === 'relativename' || rawHeaderLower.includes('tên thân nhân') || (rawHeaderLower.includes('họ và tên') && !rawHeaderLower.includes('cán bộ'))) {
+            relativeName = val;
+            relData.relativeName = val;
+            return;
+          }
+
+          // Cột Mối quan hệ (Cột 6 hoặc ID relationshipName)
+          if (colNumber === 6 || hKey === 'relationshipname' || rawHeaderLower.includes('quan hệ') || rawHeaderLower.includes('mối quan hệ')) {
+            relationshipName = val;
+            relData.relationshipName = val;
+            return;
+          }
+
+          // 1. Ưu tiên 1: Khớp theo Tên nhãn hoặc ID
+          let matched = relColByLabel[hKey] || relColById[hKey] || relColByNum[colNumber];
 
           if (matched) {
             const fId = matched.id;
             relData[fId] = val;
             if (fId === 'cccd_can_bo' || fId === 'parentCccd' || fId === 'parentPersonnelCccd') parentCccd = val;
-            if (fId === 'cccdthannhan' || fId === 'cccd_than_nhan') relCccd = val;
+            if (fId === 'cccdthannhan' || fId === 'cccd_than_nhan' || fId === 'cccd') relCccd = val;
             if (fId === 'relationshipName' || fId === 'relationship' || fId === 'moi_quan_he') relationshipName = val;
             if (fId === 'relativeName' || fId === 'name' || fId === 'ten_than_nhan') relativeName = val;
             if (fId === 'parentName' || fId === 'parentPersonnelName') parentName = val;
             if (fId === 'parentPosition' || fId === 'chuc_vu_can_bo') parentPosition = val;
           }
-
-          // Phân biệt chính xác giữa CCCD Cán bộ và CCCD Thân nhân
-          if (rawHeaderLower.includes('cán bộ') || rawHeaderLower.includes('can bo') || hKey.includes('cccd_can_bo') || hKey === 'cccdcanbo') {
-            if (rawHeaderLower.includes('cccd') || rawHeaderLower.includes('định danh') || rawHeaderLower.includes('dinh danh')) {
-              parentCccd = val;
-            }
-          } else if (rawHeaderLower.includes('thân nhân') || rawHeaderLower.includes('than nhan') || hKey.includes('cccdthannhan') || hKey === 'cccdthannhan') {
-            if (rawHeaderLower.includes('cccd') || rawHeaderLower.includes('định danh') || rawHeaderLower.includes('dinh danh')) {
-              relCccd = val;
-            }
-          } else if (hKey === 'cccd' || hKey === 'socccd' || rawHeaderLower === 'số cccd' || rawHeaderLower === 'cccd') {
-            // Nếu là cột CCCD đơn thuần: kiểm tra nếu chưa có relCccd thì gán
-            if (!relCccd) relCccd = val;
-          }
         });
 
-        // Tự động nhận diện Tên thân nhân nếu chưa có
-        if (!relativeName && relData['relativeName']) relativeName = relData['relativeName'];
-        if (!relativeName && row[6]) relativeName = String(row[6]).trim();
-        if (!relativeName || relativeName.toLowerCase() === 'họ và tên thân nhân') continue;
+        // Fallback nhận diện theo vị trí cột thực tế nếu chưa được gán:
+        if (!parentCccd && row[1] && String(row[1]).trim()) parentCccd = String(row[1]).trim();
+        if (!relCccd && row[14] && String(row[14]).trim()) relCccd = String(row[14]).trim();
+        if (!relativeName && row[6] && String(row[6]).trim()) relativeName = String(row[6]).trim();
+        if (!relationshipName && row[5] && String(row[5]).trim()) relationshipName = String(row[5]).trim();
 
-        if (!parentCccd && relData['cccd_can_bo']) parentCccd = relData['cccd_can_bo'];
-        if (!parentCccd && row[1] && String(row[1]).length >= 9) parentCccd = String(row[1]).trim();
+        if (!relativeName || relativeName.toLowerCase() === 'họ và tên thân nhân') continue;
 
         const cleanParentCccd = String(parentCccd || relData['cccd_can_bo'] || '').trim();
         let cleanRelCccd = String(relCccd || relData['cccdthannhan'] || '').trim();
 
-        // Nếu CCCD thân nhân bị gán nhầm thành CCCD cán bộ thì tách ra
+        // Đảm bảo không nhầm CCCD cán bộ thành CCCD thân nhân nếu trùng lặp
         if (cleanRelCccd && cleanRelCccd === cleanParentCccd) {
           cleanRelCccd = '';
         }
