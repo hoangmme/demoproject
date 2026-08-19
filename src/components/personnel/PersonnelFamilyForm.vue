@@ -14,12 +14,27 @@
       />
     </div>
 
-    <div v-if="relatives.length === 0" style="text-align: center; padding: 2rem; background: #f9fafb; border-radius: 8px; border: 1px dashed #d1d5db; color: #6b7280; font-size: 0.85rem;">
+    <!-- Notice if filtering to single relative -->
+    <div
+      v-if="targetRelativeCode && relatives.length > 1"
+      style="display: flex; justify-content: space-between; align-items: center; background: #e0f2fe; padding: 6px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 0.8rem; color: #0369a1; border-left: 4px solid #0284c7;"
+    >
+      <span><i class="pi pi-user"></i> Đang xem chi tiết thân nhân <b>{{ targetRelativeCode }}</b></span>
+      <button
+        type="button"
+        @click="showAllRelatives = !showAllRelatives"
+        style="background: none; border: none; color: #0284c7; font-weight: 700; cursor: pointer; text-decoration: underline; font-size: 0.78rem;"
+      >
+        {{ showAllRelatives ? 'Chỉ xem thân nhân này' : `Xem toàn bộ (${relatives.length} thân nhân)` }}
+      </button>
+    </div>
+
+    <div v-if="displayedRelatives.length === 0" style="text-align: center; padding: 2rem; background: #f9fafb; border-radius: 8px; border: 1px dashed #d1d5db; color: #6b7280; font-size: 0.85rem;">
       Chưa có thân nhân liên quan nào được ghi nhận. Nhấp <b>"+ Thêm Thân nhân"</b> để bổ sung.
     </div>
 
     <div
-      v-for="(rel, idx) in relatives"
+      v-for="(rel, idx) in displayedRelatives"
       :key="rel.id || idx"
       :id="`relative-card-${rel.code || ('TN-' + String(idx + 1).padStart(5, '0'))}`"
       class="relative-card-box"
@@ -78,7 +93,7 @@
 </template>
 
 <script setup>
-import { computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import DynamicField from '@/components/common/DynamicField.vue';
@@ -96,6 +111,7 @@ const props = defineProps({
 });
 
 const personnelStore = usePersonnelStore();
+const showAllRelatives = ref(false);
 
 const relatives = computed({
   get: () => {
@@ -105,6 +121,16 @@ const relatives = computed({
   set: (val) => {
     props.form.relatives = val;
   },
+});
+
+const displayedRelatives = computed(() => {
+  if (props.targetRelativeCode && !showAllRelatives.value) {
+    const target = relatives.value.filter(
+      (r) => r.code === props.targetRelativeCode || ('TN-' + String(r.id || '').slice(-5).padStart(5, '0')) === props.targetRelativeCode
+    );
+    if (target.length > 0) return target;
+  }
+  return relatives.value;
 });
 
 const relativeGroups = computed(() => {

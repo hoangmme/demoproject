@@ -283,10 +283,16 @@
             <span class="badge-code">{{ data.code || ('TN-' + String(data.id || (index + 1)).slice(-5).padStart(5, '0')) }}</span>
           </template>
         </Column>
-        <Column field="parentName" header="Cán bộ liên quan" sortable :headerStyle="{ width: '200px', minWidth: '200px' }">
-          <template #body="{ data }">
-            <strong style="cursor: pointer; color: #1f2937;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
-            <div style="font-size: 0.75rem; color: #6b7280;">{{ data.parentDepartment }}</div>
+        <Column field="parentName" header="Cán bộ liên quan" sortable :headerStyle="{ width: '210px', minWidth: '210px' }">
+          <template #body="{ data, index }">
+            <div v-if="isFirstRelativeOfParent(data, index)">
+              <strong style="cursor: pointer; color: #1f2937; font-size: 0.82rem;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
+              <div style="font-size: 0.72rem; color: #6b7280;">{{ data.parentDepartment || 'Chưa phân bổ' }}</div>
+              <div v-if="data.cccd_can_bo" style="font-size: 0.7rem; color: #64748b; font-family: monospace;">CCCD: {{ data.cccd_can_bo }}</div>
+            </div>
+            <div v-else style="padding-left: 10px; color: #94a3b8; font-size: 0.74rem; display: flex; align-items: center; gap: 4px;">
+              <span style="color: #cbd5e1;">↳</span> <span style="font-style: italic; color: #94a3b8;">(cùng cán bộ)</span>
+            </div>
           </template>
         </Column>
         <Column field="relationshipName" header="Mối quan hệ" sortable :headerStyle="{ width: '130px', minWidth: '130px' }">
@@ -877,6 +883,16 @@ const handleRelativeDetail = (relData) => {
   }
 };
 
+const isFirstRelativeOfParent = (data, index) => {
+  if (index === 0) return true;
+  const list = filteredRelatives.value || [];
+  const prev = list[index - 1];
+  if (!prev) return true;
+  const curKey = String(data.cccd_can_bo || data.parentName || data.personnelId || '').trim();
+  const prevKey = String(prev.cccd_can_bo || prev.parentName || prev.personnelId || '').trim();
+  return !curKey || curKey !== prevKey;
+};
+
 const onRowClick = (event) => {
   openEditDialog(event.data);
 };
@@ -1318,6 +1334,7 @@ const executeImport = async () => {
         if (!row || row.length === 0 || !row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== '')) continue;
 
         let parentCccd = '';
+        let relCccd = '';
         let relativeName = '';
         let relationshipName = '';
         const relData = {};
@@ -1342,24 +1359,26 @@ const executeImport = async () => {
           if (matched) {
             const fId = matched.id;
             relData[fId] = val;
-            if (fId === 'cccd_can_bo') parentCccd = val;
-            if (fId === 'relationshipName') relationshipName = val;
-            if (fId === 'relativeName') relativeName = val;
+            if (fId === 'cccd_can_bo' || fId === 'parentCccd' || fId === 'cccdparent') parentCccd = val;
+            if (fId === 'cccdthannhan' || fId === 'cccd_than_nhan' || fId === 'cccd') relCccd = val;
+            if (fId === 'relationshipName' || fId === 'relationship' || fId === 'moi_quan_he') relationshipName = val;
+            if (fId === 'relativeName' || fId === 'name' || fId === 'ten_than_nhan') relativeName = val;
           }
+
+          // Khớp trực tiếp theo ID trong tiêu đề cột
+          if (hKey === 'cccdcanbo' || hKey === 'cccd_can_bo' || hKey.includes('cccd_can_bo')) parentCccd = val;
+          if (hKey === 'cccdthannhan' || hKey === 'cccd_than_nhan' || hKey.includes('cccdthannhan')) relCccd = val;
         });
 
-        // Fallback column positions
+        // Fallback column positions for Relative Name
         if (!relativeName) relativeName = String(row[6] || row[4] || row[3] || row[1] || '').trim();
         if (!relativeName || relativeName.toLowerCase() === 'họ và tên thân nhân') continue;
 
-        if (!parentCccd && relData['cccd_can_bo']) parentCccd = relData['cccd_can_bo'];
-        if (!parentCccd && row[1] && String(row[1]).length >= 9) parentCccd = String(row[1]).trim();
-
-        const cleanParentCccd = parentCccd ? String(parentCccd).trim() : '';
-        const relCccd = String(relData['cccdthannhan'] || relData['cccd_than_nhan'] || relData['cccd'] || '').trim();
+        const cleanParentCccd = String(parentCccd || relData['cccd_can_bo'] || '').trim();
+        const cleanRelCccd = String(relCccd || relData['cccdthannhan'] || '').trim();
 
         // NẾU THÂN NHÂN KHÔNG CÓ cccdthannhan HOẶC KHÔNG CÓ cccd_can_bo -> BỎ QUA NGAY LẬP TỨC
-        if (!cleanParentCccd || !relCccd) {
+        if (!cleanParentCccd || !cleanRelCccd) {
           continue;
         }
 
