@@ -92,7 +92,12 @@
       <div class="col-12" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5e7eb;">
         <span style="font-size: 0.8rem; font-weight: 700; color: #4b5563;">Trường bổ sung tùy chỉnh:</span>
       </div>
-      <div v-for="col in customColumns" :key="col.id" class="field-item col-6">
+      <div
+        v-for="col in customColumns"
+        :key="col.id"
+        class="field-item"
+        :class="getWidthClass(col.width)"
+      >
         <label class="field-label">{{ col.label }}</label>
         
         <!-- File Format -->
@@ -145,6 +150,16 @@ const props = defineProps({
     default: () => [],
   },
 });
+
+const getWidthClass = (width) => {
+  const w = String(width || '50').replace('%', '');
+  if (w === '25') return 'col-3';
+  if (w === '33') return 'col-4';
+  if (w === '50') return 'col-6';
+  if (w === '75') return 'col-9';
+  if (w === '100') return 'col-12';
+  return 'col-6';
+};
 
 const customColumns = computed(() => {
   const list = [];

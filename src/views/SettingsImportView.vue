@@ -142,10 +142,11 @@ const formatOptions = [
 ];
 
 const widthOptions = [
-  { label: 'Nhỏ (110px)', value: '110px' },
-  { label: 'Vừa (160px)', value: '160px' },
-  { label: 'Lớn (200px)', value: '200px' },
-  { label: 'Rộng (260px)', value: '260px' },
+  { label: 'Rộng: 25%', value: '25' },
+  { label: 'Rộng: 33%', value: '33' },
+  { label: 'Rộng: 50%', value: '50' },
+  { label: 'Rộng: 75%', value: '75' },
+  { label: 'Rộng: 100%', value: '100' },
 ];
 
 onMounted(async () => {
