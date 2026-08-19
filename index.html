@@ -1041,52 +1041,84 @@
                                                             </label>
                                                             
                                                             <template x-if="col.format === 'checkbox_text'">
-                                                                <div class="mt-1 space-y-2" x-data="{ 
-                                                                    get options() {
-                                                                        const opts = (col.options || '').split(',').map(s=>s.trim()).filter(Boolean);
-                                                                        return opts.length > 0 ? opts : ['Có', 'Không'];
-                                                                    },
-                                                                    state: '',
-                                                                    detail: '',
-                                                                    init() {
-                                                                        const val = formData[col.id] || '';
-                                                                        const opts = this.options;
-                                                                        const matched = opts.find(o => val === o || String(val).startsWith(o + ':') || String(val).startsWith(o + ' - '));
-                                                                        if (matched) {
-                                                                            this.state = matched;
-                                                                            this.detail = String(val).replace(new RegExp('^' + matched + '[:\\-\\s]+'), '');
-                                                                        } else if (val) {
-                                                                            this.state = opts[0];
-                                                                            this.detail = val;
-                                                                        }
-                                                                    },
-                                                                    updateValue() {
-                                                                        if (!this.state) {
-                                                                            formData[col.id] = '';
-                                                                            return;
-                                                                        }
-                                                                        if (this.detail) {
-                                                                            formData[col.id] = this.state + ': ' + this.detail;
-                                                                        } else {
-                                                                            formData[col.id] = this.state;
-                                                                        }
-                                                                    }
-                                                                }">
-                                                                    <div class="flex flex-wrap items-center gap-3">
-                                                                        <template x-for="opt in options" :key="opt">
-                                                                            <label class="inline-flex items-center cursor-pointer">
-                                                                                <input type="radio" x-model="state" :value="opt" @change="updateValue()" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                                                <span class="ml-1.5 text-xs text-gray-700 font-medium" x-text="opt"></span>
-                                                                            </label>
-                                                                        </template>
-                                                                    </div>
-                                                                    <div x-show="state !== ''">
-                                                                        <input type="text" 
-                                                                               x-model="detail" 
-                                                                               @input="updateValue()"
-                                                                               class="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
-                                                                               :placeholder="'Nhập chi tiết nội dung / ghi chú cho [' + state + ']...'">
-                                                                    </div>
+                                                                <div>
+                                                                    <!-- Trạng thái 1: Có cấu hình danh sách tùy chọn (VD: Tự túc, Học bổng...) -> Hiển thị Dropdown + Ô nhập nội dung -->
+                                                                    <template x-if="(col.options || '').trim().length > 0">
+                                                                        <div class="mt-1 space-y-2" x-data="{ 
+                                                                            get options() {
+                                                                                return (col.options || '').split(',').map(s=>s.trim()).filter(Boolean);
+                                                                            },
+                                                                            selectedOpt: '',
+                                                                            detail: '',
+                                                                            init() {
+                                                                                const val = (formData[col.id] !== undefined && formData[col.id] !== null) ? String(formData[col.id]) : '';
+                                                                                const opts = this.options;
+                                                                                const matched = opts.find(o => val === o || val.startsWith(o + ':') || val.startsWith(o + ' - '));
+                                                                                if (matched) {
+                                                                                    this.selectedOpt = matched;
+                                                                                    this.detail = val.replace(new RegExp('^' + matched + '[:\\-\\s]+'), '');
+                                                                                } else if (val) {
+                                                                                    if (opts.includes(val)) {
+                                                                                        this.selectedOpt = val;
+                                                                                    } else {
+                                                                                        this.selectedOpt = opts[0] || '';
+                                                                                        this.detail = val;
+                                                                                    }
+                                                                                }
+                                                                            },
+                                                                            updateValue() {
+                                                                                if (!this.selectedOpt) {
+                                                                                    formData[col.id] = this.detail || '';
+                                                                                    return;
+                                                                                }
+                                                                                if (this.detail) {
+                                                                                    formData[col.id] = this.selectedOpt + ': ' + this.detail;
+                                                                                } else {
+                                                                                    formData[col.id] = this.selectedOpt;
+                                                                                }
+                                                                            }
+                                                                        }">
+                                                                            <select x-model="selectedOpt" @change="updateValue()" class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:ring-1 focus:ring-blue-500">
+                                                                                <option value="">-- Chọn tùy chọn --</option>
+                                                                                <template x-for="opt in options" :key="opt">
+                                                                                    <option :value="opt" x-text="opt"></option>
+                                                                                </template>
+                                                                            </select>
+                                                                            <div x-show="selectedOpt !== ''">
+                                                                                <input type="text" 
+                                                                                       x-model="detail" 
+                                                                                       @input="updateValue()" 
+                                                                                       class="w-full border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-blue-500" 
+                                                                                       :placeholder="'Nhập chi tiết / ghi chú cho [' + selectedOpt + ']...'">
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
+
+                                                                    <!-- Trạng thái 2: Mặc định Có / Không -> Có thì hiện nhập, Không thì thôi ko hiện ô nhập -->
+                                                                    <template x-if="!(col.options || '').trim().length">
+                                                                        <div class="mt-1 space-y-2" x-data="{ 
+                                                                            state: (formData[col.id] === 'Không') ? 'no' : (formData[col.id] ? 'yes' : ''),
+                                                                            detail: (formData[col.id] === 'Không' || formData[col.id] === 'Có') ? '' : (formData[col.id] || '')
+                                                                        }">
+                                                                            <div class="flex items-center gap-4">
+                                                                                <label class="inline-flex items-center cursor-pointer">
+                                                                                    <input type="radio" x-model="state" value="yes" @change="formData[col.id] = detail || 'Có'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                                    <span class="ml-1 text-xs text-gray-700 font-medium">Có</span>
+                                                                                </label>
+                                                                                <label class="inline-flex items-center cursor-pointer">
+                                                                                    <input type="radio" x-model="state" value="no" @change="formData[col.id] = 'Không'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                                    <span class="ml-1 text-xs text-gray-700 font-medium">Không</span>
+                                                                                </label>
+                                                                            </div>
+                                                                            <div x-show="state === 'yes'">
+                                                                                <input type="text" 
+                                                                                       x-model="detail" 
+                                                                                       @input="formData[col.id] = detail || 'Có'" 
+                                                                                       class="w-full border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-blue-500" 
+                                                                                       placeholder="Nhập chi tiết nội dung...">
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
                                                                 </div>
                                                             </template>
                                                             
@@ -1202,52 +1234,84 @@
                                                             </label>
                                                             
                                                             <template x-if="col.format === 'checkbox_text'">
-                                                                <div class="mt-1 space-y-2" x-data="{ 
-                                                                    get options() {
-                                                                        const opts = (col.options || '').split(',').map(s=>s.trim()).filter(Boolean);
-                                                                        return opts.length > 0 ? opts : ['Có', 'Không'];
-                                                                    },
-                                                                    state: '',
-                                                                    detail: '',
-                                                                    init() {
-                                                                        const val = t[col.id] || '';
-                                                                        const opts = this.options;
-                                                                        const matched = opts.find(o => val === o || String(val).startsWith(o + ':') || String(val).startsWith(o + ' - '));
-                                                                        if (matched) {
-                                                                            this.state = matched;
-                                                                            this.detail = String(val).replace(new RegExp('^' + matched + '[:\\-\\s]+'), '');
-                                                                        } else if (val) {
-                                                                            this.state = opts[0];
-                                                                            this.detail = val;
-                                                                        }
-                                                                    },
-                                                                    updateValue() {
-                                                                        if (!this.state) {
-                                                                            t[col.id] = '';
-                                                                            return;
-                                                                        }
-                                                                        if (this.detail) {
-                                                                            t[col.id] = this.state + ': ' + this.detail;
-                                                                        } else {
-                                                                            t[col.id] = this.state;
-                                                                        }
-                                                                    }
-                                                                }">
-                                                                    <div class="flex flex-wrap items-center gap-3">
-                                                                        <template x-for="opt in options" :key="opt">
-                                                                            <label class="inline-flex items-center cursor-pointer">
-                                                                                <input type="radio" x-model="state" :value="opt" @change="updateValue()" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                                                <span class="ml-1.5 text-xs text-gray-700 font-medium" x-text="opt"></span>
-                                                                            </label>
-                                                                        </template>
-                                                                    </div>
-                                                                    <div x-show="state !== ''">
-                                                                        <input type="text" 
-                                                                               x-model="detail" 
-                                                                               @input="updateValue()"
-                                                                               class="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
-                                                                               :placeholder="'Nhập chi tiết nội dung / ghi chú cho [' + state + ']...'">
-                                                                    </div>
+                                                                <div>
+                                                                    <!-- Trạng thái 1: Có cấu hình danh sách tùy chọn (VD: Tự túc, Học bổng...) -> Hiển thị Dropdown + Ô nhập nội dung -->
+                                                                    <template x-if="(col.options || '').trim().length > 0">
+                                                                        <div class="mt-1 space-y-2" x-data="{ 
+                                                                            get options() {
+                                                                                return (col.options || '').split(',').map(s=>s.trim()).filter(Boolean);
+                                                                            },
+                                                                            selectedOpt: '',
+                                                                            detail: '',
+                                                                            init() {
+                                                                                const val = (t[col.id] !== undefined && t[col.id] !== null) ? String(t[col.id]) : '';
+                                                                                const opts = this.options;
+                                                                                const matched = opts.find(o => val === o || val.startsWith(o + ':') || val.startsWith(o + ' - '));
+                                                                                if (matched) {
+                                                                                    this.selectedOpt = matched;
+                                                                                    this.detail = val.replace(new RegExp('^' + matched + '[:\\-\\s]+'), '');
+                                                                                } else if (val) {
+                                                                                    if (opts.includes(val)) {
+                                                                                        this.selectedOpt = val;
+                                                                                    } else {
+                                                                                        this.selectedOpt = opts[0] || '';
+                                                                                        this.detail = val;
+                                                                                    }
+                                                                                }
+                                                                            },
+                                                                            updateValue() {
+                                                                                if (!this.selectedOpt) {
+                                                                                    t[col.id] = this.detail || '';
+                                                                                    return;
+                                                                                }
+                                                                                if (this.detail) {
+                                                                                    t[col.id] = this.selectedOpt + ': ' + this.detail;
+                                                                                } else {
+                                                                                    t[col.id] = this.selectedOpt;
+                                                                                }
+                                                                            }
+                                                                        }">
+                                                                            <select x-model="selectedOpt" @change="updateValue()" class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:ring-1 focus:ring-blue-500">
+                                                                                <option value="">-- Chọn tùy chọn --</option>
+                                                                                <template x-for="opt in options" :key="opt">
+                                                                                    <option :value="opt" x-text="opt"></option>
+                                                                                </template>
+                                                                            </select>
+                                                                            <div x-show="selectedOpt !== ''">
+                                                                                <input type="text" 
+                                                                                       x-model="detail" 
+                                                                                       @input="updateValue()" 
+                                                                                       class="w-full border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-blue-500" 
+                                                                                       :placeholder="'Nhập chi tiết / ghi chú cho [' + selectedOpt + ']...'">
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
+
+                                                                    <!-- Trạng thái 2: Mặc định Có / Không -> Có thì hiện nhập, Không thì thôi ko hiện ô nhập -->
+                                                                    <template x-if="!(col.options || '').trim().length">
+                                                                        <div class="mt-1 space-y-2" x-data="{ 
+                                                                            state: (t[col.id] === 'Không') ? 'no' : (t[col.id] ? 'yes' : ''),
+                                                                            detail: (t[col.id] === 'Không' || t[col.id] === 'Có') ? '' : (t[col.id] || '')
+                                                                        }">
+                                                                            <div class="flex items-center gap-4">
+                                                                                <label class="inline-flex items-center cursor-pointer">
+                                                                                    <input type="radio" x-model="state" value="yes" @change="t[col.id] = detail || 'Có'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                                    <span class="ml-1 text-xs text-gray-700 font-medium">Có</span>
+                                                                                </label>
+                                                                                <label class="inline-flex items-center cursor-pointer">
+                                                                                    <input type="radio" x-model="state" value="no" @change="t[col.id] = 'Không'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                                    <span class="ml-1 text-xs text-gray-700 font-medium">Không</span>
+                                                                                </label>
+                                                                            </div>
+                                                                            <div x-show="state === 'yes'">
+                                                                                <input type="text" 
+                                                                                       x-model="detail" 
+                                                                                       @input="t[col.id] = detail || 'Có'" 
+                                                                                       class="w-full border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-blue-500" 
+                                                                                       placeholder="Nhập chi tiết nội dung...">
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
                                                                 </div>
                                                             </template>
                                                             
@@ -1393,52 +1457,84 @@
                                         </label>
                                         
                                         <template x-if="col.format === 'checkbox_text'">
-                                            <div class="mt-1 space-y-2" x-data="{ 
-                                                get options() {
-                                                    const opts = (col.options || '').split(',').map(s=>s.trim()).filter(Boolean);
-                                                    return opts.length > 0 ? opts : ['Có', 'Không'];
-                                                },
-                                                state: '',
-                                                detail: '',
-                                                init() {
-                                                    const val = rel[col.id] || '';
-                                                    const opts = this.options;
-                                                    const matched = opts.find(o => val === o || String(val).startsWith(o + ':') || String(val).startsWith(o + ' - '));
-                                                    if (matched) {
-                                                        this.state = matched;
-                                                        this.detail = String(val).replace(new RegExp('^' + matched + '[:\\-\\s]+'), '');
-                                                    } else if (val) {
-                                                        this.state = opts[0];
-                                                        this.detail = val;
-                                                    }
-                                                },
-                                                updateValue() {
-                                                    if (!this.state) {
-                                                        rel[col.id] = '';
-                                                        return;
-                                                    }
-                                                    if (this.detail) {
-                                                        rel[col.id] = this.state + ': ' + this.detail;
-                                                    } else {
-                                                        rel[col.id] = this.state;
-                                                    }
-                                                }
-                                            }">
-                                                <div class="flex flex-wrap items-center gap-3">
-                                                    <template x-for="opt in options" :key="opt">
-                                                        <label class="inline-flex items-center cursor-pointer">
-                                                            <input type="radio" x-model="state" :value="opt" @change="updateValue()" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                            <span class="ml-1.5 text-xs text-gray-700 font-medium" x-text="opt"></span>
-                                                        </label>
-                                                    </template>
-                                                </div>
-                                                <div x-show="state !== ''">
-                                                    <input type="text" 
-                                                           x-model="detail" 
-                                                           @input="updateValue()"
-                                                           class="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
-                                                           :placeholder="'Nhập chi tiết nội dung / ghi chú cho [' + state + ']...'">
-                                                </div>
+                                            <div>
+                                                <!-- Trạng thái 1: Có cấu hình danh sách tùy chọn (VD: Tự túc, Học bổng...) -> Hiển thị Dropdown + Ô nhập nội dung -->
+                                                <template x-if="(col.options || '').trim().length > 0">
+                                                    <div class="mt-1 space-y-2" x-data="{ 
+                                                        get options() {
+                                                            return (col.options || '').split(',').map(s=>s.trim()).filter(Boolean);
+                                                        },
+                                                        selectedOpt: '',
+                                                        detail: '',
+                                                        init() {
+                                                            const val = (rel[col.id] !== undefined && rel[col.id] !== null) ? String(rel[col.id]) : '';
+                                                            const opts = this.options;
+                                                            const matched = opts.find(o => val === o || val.startsWith(o + ':') || val.startsWith(o + ' - '));
+                                                            if (matched) {
+                                                                this.selectedOpt = matched;
+                                                                this.detail = val.replace(new RegExp('^' + matched + '[:\\-\\s]+'), '');
+                                                            } else if (val) {
+                                                                if (opts.includes(val)) {
+                                                                    this.selectedOpt = val;
+                                                                } else {
+                                                                    this.selectedOpt = opts[0] || '';
+                                                                    this.detail = val;
+                                                                }
+                                                            }
+                                                        },
+                                                        updateValue() {
+                                                            if (!this.selectedOpt) {
+                                                                rel[col.id] = this.detail || '';
+                                                                return;
+                                                            }
+                                                            if (this.detail) {
+                                                                rel[col.id] = this.selectedOpt + ': ' + this.detail;
+                                                            } else {
+                                                                rel[col.id] = this.selectedOpt;
+                                                            }
+                                                        }
+                                                    }">
+                                                        <select x-model="selectedOpt" @change="updateValue()" class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:ring-1 focus:ring-blue-500">
+                                                            <option value="">-- Chọn tùy chọn --</option>
+                                                            <template x-for="opt in options" :key="opt">
+                                                                <option :value="opt" x-text="opt"></option>
+                                                            </template>
+                                                        </select>
+                                                        <div x-show="selectedOpt !== ''">
+                                                            <input type="text" 
+                                                                   x-model="detail" 
+                                                                   @input="updateValue()" 
+                                                                   class="w-full border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-blue-500" 
+                                                                   :placeholder="'Nhập chi tiết / ghi chú cho [' + selectedOpt + ']...'">
+                                                        </div>
+                                                    </div>
+                                                </template>
+
+                                                <!-- Trạng thái 2: Mặc định Có / Không -> Có thì hiện nhập, Không thì thôi ko hiện ô nhập -->
+                                                <template x-if="!(col.options || '').trim().length">
+                                                    <div class="mt-1 space-y-2" x-data="{ 
+                                                        state: (rel[col.id] === 'Không') ? 'no' : (rel[col.id] ? 'yes' : ''),
+                                                        detail: (rel[col.id] === 'Không' || rel[col.id] === 'Có') ? '' : (rel[col.id] || '')
+                                                    }">
+                                                        <div class="flex items-center gap-4">
+                                                            <label class="inline-flex items-center cursor-pointer">
+                                                                <input type="radio" x-model="state" value="yes" @change="rel[col.id] = detail || 'Có'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                <span class="ml-1 text-xs text-gray-700 font-medium">Có</span>
+                                                            </label>
+                                                            <label class="inline-flex items-center cursor-pointer">
+                                                                <input type="radio" x-model="state" value="no" @change="rel[col.id] = 'Không'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                <span class="ml-1 text-xs text-gray-700 font-medium">Không</span>
+                                                            </label>
+                                                        </div>
+                                                        <div x-show="state === 'yes'">
+                                                            <input type="text" 
+                                                                   x-model="detail" 
+                                                                   @input="rel[col.id] = detail || 'Có'" 
+                                                                   class="w-full border border-gray-300 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-blue-500" 
+                                                                   placeholder="Nhập chi tiết nội dung...">
+                                                        </div>
+                                                    </div>
+                                                </template>
                                             </div>
                                         </template>
                                         
@@ -2203,6 +2299,7 @@
                             saveConfig('mapping_config_personnel', this.importMappingPersonnel),
                             saveConfig('mapping_config_relative', this.importMappingRelative)
                         ]);
+                        this.loadMappingConfig();
                         alert("Đã lưu cấu hình cột Import thành công!");
                     } catch(e) {
                         alert("Lỗi mạng: " + e.message);
