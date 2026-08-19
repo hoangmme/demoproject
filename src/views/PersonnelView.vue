@@ -965,17 +965,6 @@ const normalizeKey = (str) => {
     .trim();
 };
 
-const normalizeCccd = (val) => {
-  if (!val && val !== 0) return '';
-  let str = String(val).trim().replace(/\D/g, '');
-  if (!str) return '';
-  // Tự động bù lại các số 0 ở đầu nếu bị Excel cắt mất thành 10 hoặc 11 chữ số
-  if (str.length >= 10 && str.length < 12) {
-    str = str.padStart(12, '0');
-  }
-  return str;
-};
-
 const executeImport = async () => {
   if (importPreviewRows.value.length === 0) return;
   importing.value = true;
@@ -1035,16 +1024,12 @@ const executeImport = async () => {
         });
       });
 
-      // Existing Personnel map by CCCD (chuẩn hóa 12 số có số 0 ở đầu) & Code
+      // Existing Personnel map by CCCD & Code
       const existingByCccd = {};
       const existingByCode = {};
       personnelStore.personnelList.forEach((p) => {
         const pCccd = p.cccd || p.cccdparent || p.custom_data?.cccd || p.custom_data?.cccdparent;
-        const norm = normalizeCccd(pCccd);
-        if (norm) {
-          existingByCccd[norm] = p;
-          existingByCccd[String(pCccd).trim()] = p;
-        }
+        if (pCccd) existingByCccd[String(pCccd).trim()] = p;
         if (p.code) existingByCode[String(p.code).trim().toLowerCase()] = p;
       });
 
@@ -1095,9 +1080,9 @@ const executeImport = async () => {
             finalVal = formatExcelDate(val);
           }
 
-          // Xử lý CCCD (bảo toàn số 0 ở đầu)
-          if (fId === 'cccd' || fId === 'cccdparent' || fId.toLowerCase().includes('cccd')) {
-            finalVal = normalizeCccd(val);
+          // Xử lý CCCD
+          if (fId === 'cccd' || fId === 'cccdparent') {
+            finalVal = String(val).trim();
           }
 
           // Xử lý Hộp kiểm nhiều lựa chọn
@@ -1175,7 +1160,7 @@ const executeImport = async () => {
         if (!rowData.name && row[2]) rowData.name = String(row[2]).trim();
         if (!rowData.name || rowData.name.toLowerCase() === 'họ và tên') continue;
 
-        const cleanCccd = normalizeCccd(rowData.cccd || rowData.cccdparent || customData.cccd || customData.cccdparent);
+        const cleanCccd = String(rowData.cccd || rowData.cccdparent || customData.cccd || customData.cccdparent || '').trim();
         const cleanCode = rowData.code ? String(rowData.code).trim().toLowerCase() : '';
 
         // Kiểm tra cán bộ đã tồn tại theo CCCD hoặc Mã CB
