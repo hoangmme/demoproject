@@ -189,8 +189,17 @@
                                                     <option value="file">Tệp đính kèm (File/Ảnh/PDF)</option>
                                                 </select>
                                                 
+                                                <select x-model="colObj.width" class="w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs py-1.5 bg-indigo-50 text-indigo-700 font-medium" title="Độ rộng cột khi hiển thị trong form">
+                                                    <option value="">Rộng: 25%</option>
+                                                    <option value="25">Rộng: 25%</option>
+                                                    <option value="33">Rộng: 33%</option>
+                                                    <option value="50">Rộng: 50%</option>
+                                                    <option value="75">Rộng: 75%</option>
+                                                    <option value="100">Rộng: 100%</option>
+                                                </select>
+                                                
                                                 <template x-if="colObj.format === 'checkbox' || colObj.format === 'dropdown' || colObj.format === 'checkbox_text'">
-                                                    <input x-model="colObj.options" class="w-52 rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-xs py-1.5 bg-yellow-50" :placeholder="colObj.format === 'checkbox_text' ? 'Tùy chọn (VD: Tự túc, Học bổng...)' : 'Các tùy chọn, cách nhau bằng phẩy...'">
+                                                    <input x-model="colObj.options" class="w-48 rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-xs py-1.5 bg-yellow-50" :placeholder="colObj.format === 'checkbox_text' ? 'Tùy chọn (VD: Tự túc, Học bổng...)' : 'Các tùy chọn, cách nhau bằng phẩy...'">
                                                 </template>
                                                 
                                                 <template x-if="colObj.id && colObj.id.startsWith('custom_')">
@@ -1030,11 +1039,11 @@
         <template x-if="!group.isMultiple">
             <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <h3 class="text-lg font-bold text-[#447f28] mb-4 flex items-center gap-2" x-text="group.group"></h3>
-                <div class="grid grid-cols-4 gap-4">
+                <div class="grid grid-cols-12 gap-4">
                     <template x-for="col in group.columns" :key="col.id">
 
                                                     <template x-if="col.id !== 'stt'">
-                                                        <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
+                                                        <div :class="getColSpanClass(col)">
                                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                                 <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
@@ -1042,7 +1051,7 @@
                                                             
                                                             <template x-if="col.format === 'checkbox_text'">
                                                                 <div>
-                                                                    <!-- Trạng thái 1: Có cấu hình danh sách tùy chọn (VD: Tự túc, Học bổng...) -> Hiển thị Dropdown + Ô nhập nội dung -->
+                                                                    <!-- Trạng thái 1: Có cấu hình danh sách tùy chọn (VD: Tự túc, Học bổng...) -> Hiển thị Hộp kiểm + Ô nhập nội dung -->
                                                                     <template x-if="(col.options || '').trim().length > 0">
                                                                         <div class="mt-1 space-y-2" x-data="{ 
                                                                             get options() {
@@ -1078,12 +1087,14 @@
                                                                                 }
                                                                             }
                                                                         }">
-                                                                            <select x-model="selectedOpt" @change="updateValue()" class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:ring-1 focus:ring-blue-500">
-                                                                                <option value="">-- Chọn tùy chọn --</option>
+                                                                            <div class="flex flex-wrap items-center gap-3">
                                                                                 <template x-for="opt in options" :key="opt">
-                                                                                    <option :value="opt" x-text="opt"></option>
+                                                                                    <label class="inline-flex items-center cursor-pointer">
+                                                                                        <input type="radio" x-model="selectedOpt" :value="opt" @change="updateValue()" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                                        <span class="ml-1 text-xs text-gray-700 font-medium" x-text="opt"></span>
+                                                                                    </label>
                                                                                 </template>
-                                                                            </select>
+                                                                            </div>
                                                                             <div x-show="selectedOpt !== ''">
                                                                                 <input type="text" 
                                                                                        x-model="detail" 
@@ -1223,11 +1234,11 @@
                         <div class="relative p-5 border border-gray-200 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-colors">
                             <button x-show="formData[group.group].length > 1" type="button" @click="formData[group.group].splice(index, 1)" class="absolute -top-3 -right-3 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm z-10"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
                             <h4 class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs" x-text="index + 1"></span> Mục</h4>
-                            <div class="grid grid-cols-4 gap-4">
+                            <div class="grid grid-cols-12 gap-4">
                                 <template x-for="col in group.columns" :key="col.id">
 
                                                     <template x-if="col.id !== 'stt'">
-                                                        <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
+                                                        <div :class="getColSpanClass(col)">
                                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                                 <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
@@ -1235,7 +1246,7 @@
                                                             
                                                             <template x-if="col.format === 'checkbox_text'">
                                                                 <div>
-                                                                    <!-- Trạng thái 1: Có cấu hình danh sách tùy chọn (VD: Tự túc, Học bổng...) -> Hiển thị Dropdown + Ô nhập nội dung -->
+                                                                    <!-- Trạng thái 1: Có cấu hình danh sách tùy chọn (VD: Tự túc, Học bổng...) -> Hiển thị Hộp kiểm + Ô nhập nội dung -->
                                                                     <template x-if="(col.options || '').trim().length > 0">
                                                                         <div class="mt-1 space-y-2" x-data="{ 
                                                                             get options() {
@@ -1271,12 +1282,14 @@
                                                                                 }
                                                                             }
                                                                         }">
-                                                                            <select x-model="selectedOpt" @change="updateValue()" class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:ring-1 focus:ring-blue-500">
-                                                                                <option value="">-- Chọn tùy chọn --</option>
+                                                                            <div class="flex flex-wrap items-center gap-3">
                                                                                 <template x-for="opt in options" :key="opt">
-                                                                                    <option :value="opt" x-text="opt"></option>
+                                                                                    <label class="inline-flex items-center cursor-pointer">
+                                                                                        <input type="radio" x-model="selectedOpt" :value="opt" @change="updateValue()" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                                        <span class="ml-1 text-xs text-gray-700 font-medium" x-text="opt"></span>
+                                                                                    </label>
                                                                                 </template>
-                                                                            </select>
+                                                                            </div>
                                                                             <div x-show="selectedOpt !== ''">
                                                                                 <input type="text" 
                                                                                        x-model="detail" 
@@ -1433,11 +1446,11 @@
         <template x-for="group in importMappingRelative" :key="group.group">
             <div class="mb-4">
                 <h4 class="text-sm font-bold text-[#447f28] mb-3 border-b pb-1" x-text="group.group"></h4>
-                <div class="grid grid-cols-4 gap-4">
+                <div class="grid grid-cols-12 gap-4">
                     <template x-for="col in group.columns" :key="col.id">
 
                         <template x-if="col.id !== 'stt'">
-                            <div :class="{ 'md:col-span-2': col.format === 'text' || col.format === 'text_loop', 'col-span-4 md:col-span-4': col.format === 'text_loop', 'col-span-1 md:col-span-2': !(col.format === 'text' || col.format === 'text_loop') }">
+                            <div :class="getColSpanClass(col)">
                                 <!-- Trường kế thừa từ Cán bộ (Cột 2, 3, 4, 5...) -->
                                 <template x-if="isParentInfoCol(col)">
                                     <div>
@@ -1458,7 +1471,7 @@
                                         
                                         <template x-if="col.format === 'checkbox_text'">
                                             <div>
-                                                <!-- Trạng thái 1: Có cấu hình danh sách tùy chọn (VD: Tự túc, Học bổng...) -> Hiển thị Dropdown + Ô nhập nội dung -->
+                                                <!-- Trạng thái 1: Có cấu hình danh sách tùy chọn (VD: Tự túc, Học bổng...) -> Hiển thị Hộp kiểm + Ô nhập nội dung -->
                                                 <template x-if="(col.options || '').trim().length > 0">
                                                     <div class="mt-1 space-y-2" x-data="{ 
                                                         get options() {
@@ -1494,12 +1507,14 @@
                                                             }
                                                         }
                                                     }">
-                                                        <select x-model="selectedOpt" @change="updateValue()" class="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:ring-1 focus:ring-blue-500">
-                                                            <option value="">-- Chọn tùy chọn --</option>
+                                                        <div class="flex flex-wrap items-center gap-3">
                                                             <template x-for="opt in options" :key="opt">
-                                                                <option :value="opt" x-text="opt"></option>
+                                                                <label class="inline-flex items-center cursor-pointer">
+                                                                    <input type="radio" x-model="selectedOpt" :value="opt" @change="updateValue()" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                    <span class="ml-1 text-xs text-gray-700 font-medium" x-text="opt"></span>
+                                                                </label>
                                                             </template>
-                                                        </select>
+                                                        </div>
                                                         <div x-show="selectedOpt !== ''">
                                                             <input type="text" 
                                                                    x-model="detail" 
@@ -2142,11 +2157,19 @@
                         'pl1': 'Phụ lục 1: Cán bộ đi nước ngoài',
                         'pl2': 'Phụ lục 2: Thân nhân ở nước ngoài',
                         'pl3': 'Phụ lục 3: Lịch sử tiếp xúc & Lưu ý'
-                    };
                     return titles[this.currentView] || titles['canbo'];
                 },
-                
-                
+                getColSpanClass(col) {
+                    if (!col) return 'col-span-12 sm:col-span-6 md:col-span-3';
+                    const w = parseInt(col.width, 10);
+                    if (w === 100) return 'col-span-12';
+                    if (w === 75) return 'col-span-12 md:col-span-9';
+                    if (w === 50) return 'col-span-12 sm:col-span-6 md:col-span-6';
+                    if (w === 33) return 'col-span-12 sm:col-span-6 md:col-span-4';
+                    if (w === 25) return 'col-span-12 sm:col-span-6 md:col-span-3';
+                    if (col.format === 'text_loop') return 'col-span-12';
+                    return 'col-span-12 sm:col-span-6 md:col-span-3';
+                },
                 
                 canReadColumn(colId) {
                     if (this.isAdmin()) return true;
