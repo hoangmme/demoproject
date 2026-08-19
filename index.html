@@ -1200,11 +1200,24 @@
                                                                     get fileData() {
                                                                         const val = formData[col.id];
                                                                         if (!val) return null;
-                                                                        if (typeof val === 'object') return val;
-                                                                        if (typeof val === 'string' && val.startsWith('{')) {
-                                                                            try { return JSON.parse(val); } catch(e) { return { name: 'Tệp đính kèm', url: val }; }
+                                                                        let name = 'Tệp đính kèm';
+                                                                        let url = '';
+                                                                        if (typeof val === 'object') {
+                                                                            name = val.name || 'Tệp đính kèm';
+                                                                            url = val.url || (val.id ? `${API_URL}/assets/${val.id}` : '');
+                                                                        } else if (typeof val === 'string' && val.startsWith('{')) {
+                                                                            try {
+                                                                                const obj = JSON.parse(val);
+                                                                                name = obj.name || 'Tệp đính kèm';
+                                                                                url = obj.url || (obj.id ? `${API_URL}/assets/${obj.id}` : '');
+                                                                            } catch(e) { url = val; }
+                                                                        } else if (typeof val === 'string') {
+                                                                            url = val.startsWith('http') || val.startsWith('data:') ? val : `${API_URL}/assets/${val}`;
                                                                         }
-                                                                        return { name: 'Tệp đính kèm', url: val.startsWith('http') ? val : `${API_URL}/assets/${val}` };
+                                                                        if (url && !url.includes('access_token=') && !url.startsWith('data:')) {
+                                                                            url += (url.includes('?') ? '&' : '?') + 'access_token=mvp-static-token-999';
+                                                                        }
+                                                                        return url ? { name, url } : null;
                                                                     }
                                                                 }">
                                                                     <template x-if="fileData">
@@ -1395,11 +1408,24 @@
                                                                     get fileData() {
                                                                         const val = t[col.id];
                                                                         if (!val) return null;
-                                                                        if (typeof val === 'object') return val;
-                                                                        if (typeof val === 'string' && val.startsWith('{')) {
-                                                                            try { return JSON.parse(val); } catch(e) { return { name: 'Tệp đính kèm', url: val }; }
+                                                                        let name = 'Tệp đính kèm';
+                                                                        let url = '';
+                                                                        if (typeof val === 'object') {
+                                                                            name = val.name || 'Tệp đính kèm';
+                                                                            url = val.url || (val.id ? `${API_URL}/assets/${val.id}` : '');
+                                                                        } else if (typeof val === 'string' && val.startsWith('{')) {
+                                                                            try {
+                                                                                const obj = JSON.parse(val);
+                                                                                name = obj.name || 'Tệp đính kèm';
+                                                                                url = obj.url || (obj.id ? `${API_URL}/assets/${obj.id}` : '');
+                                                                            } catch(e) { url = val; }
+                                                                        } else if (typeof val === 'string') {
+                                                                            url = val.startsWith('http') || val.startsWith('data:') ? val : `${API_URL}/assets/${val}`;
                                                                         }
-                                                                        return { name: 'Tệp đính kèm', url: val.startsWith('http') ? val : `${API_URL}/assets/${val}` };
+                                                                        if (url && !url.includes('access_token=') && !url.startsWith('data:')) {
+                                                                            url += (url.includes('?') ? '&' : '?') + 'access_token=mvp-static-token-999';
+                                                                        }
+                                                                        return url ? { name, url } : null;
                                                                     }
                                                                 }">
                                                                     <template x-if="fileData">
@@ -1620,11 +1646,24 @@
                                                 get fileData() {
                                                     const val = rel[col.id];
                                                     if (!val) return null;
-                                                    if (typeof val === 'object') return val;
-                                                    if (typeof val === 'string' && val.startsWith('{')) {
-                                                        try { return JSON.parse(val); } catch(e) { return { name: 'Tệp đính kèm', url: val }; }
+                                                    let name = 'Tệp đính kèm';
+                                                    let url = '';
+                                                    if (typeof val === 'object') {
+                                                        name = val.name || 'Tệp đính kèm';
+                                                        url = val.url || (val.id ? `${API_URL}/assets/${val.id}` : '');
+                                                    } else if (typeof val === 'string' && val.startsWith('{')) {
+                                                        try {
+                                                            const obj = JSON.parse(val);
+                                                            name = obj.name || 'Tệp đính kèm';
+                                                            url = obj.url || (obj.id ? `${API_URL}/assets/${obj.id}` : '');
+                                                        } catch(e) { url = val; }
+                                                    } else if (typeof val === 'string') {
+                                                        url = val.startsWith('http') || val.startsWith('data:') ? val : `${API_URL}/assets/${val}`;
                                                     }
-                                                    return { name: 'Tệp đính kèm', url: val.startsWith('http') ? val : `${API_URL}/assets/${val}` };
+                                                    if (url && !url.includes('access_token=') && !url.startsWith('data:')) {
+                                                        url += (url.includes('?') ? '&' : '?') + 'access_token=mvp-static-token-999';
+                                                    }
+                                                    return url ? { name, url } : null;
                                                 }
                                             }">
                                                 <template x-if="fileData">
@@ -2251,6 +2290,13 @@
                         } catch(e) {}
                     }
                     this.loadMappingConfig(); this.fetchData(); this.fetchLogs(); this.fetchUsers();
+                    
+                    // Cấp quyền đọc file cho public trong Directus
+                    fetch(`${API_URL}/permissions`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                        body: JSON.stringify({ role: null, collection: 'directus_files', action: 'read', fields: ['*'] })
+                    }).catch(()=>{});
                 },
                 
                 
