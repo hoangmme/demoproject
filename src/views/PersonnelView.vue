@@ -111,7 +111,8 @@
         dataKey="id"
         paginator
         :rows="15"
-        :rowsPerPageOptions="[10, 15, 25, 50]"
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} cán bộ"
         :loading="personnelStore.loading"
         responsiveLayout="scroll"
         stripedRows
@@ -263,7 +264,8 @@
         :value="filteredRelatives"
         paginator
         :rows="15"
-        :rowsPerPageOptions="[10, 15, 25, 50]"
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} thân nhân"
         responsiveLayout="scroll"
         stripedRows
         class="p-datatable-sm"

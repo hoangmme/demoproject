@@ -165,7 +165,6 @@
 import { ref, computed, watch } from 'vue';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
-import Select from 'primevue/select';
 import Button from 'primevue/button';
 import AppDatePicker from './AppDatePicker.vue';
 import PersonnelAttachments from '@/components/personnel/PersonnelAttachments.vue';

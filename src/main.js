@@ -10,12 +10,22 @@ import router from './router';
 import { useAuthStore } from './stores/auth';
 import './assets/styles/main.css';
 
-// Silence non-actionable theme license notices
+// Silence non-actionable theme license notices & overlay orientation errors
 const originalWarn = console.warn;
 console.warn = (...args) => {
   if (typeof args[0] === 'string' && args[0].includes('PrimeUI license')) return;
   originalWarn.apply(console, args);
 };
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    if (event?.message?.includes("Cannot read properties of undefined (reading 'style')") || event?.message?.includes('alignOverlay') || event?.message?.includes('matchMediaOrientationListener')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return true;
+    }
+  });
+}
 
 const app = createApp(App);
 const pinia = createPinia();

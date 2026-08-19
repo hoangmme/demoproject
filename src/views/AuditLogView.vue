@@ -21,7 +21,8 @@
         :loading="loading"
         paginator
         :rows="15"
-        :rowsPerPageOptions="[10, 15, 25, 50]"
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} bản ghi"
         responsiveLayout="scroll"
         stripedRows
         class="p-datatable-sm"
