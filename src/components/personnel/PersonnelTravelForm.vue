@@ -42,15 +42,9 @@
         </div>
         <div class="field-item col-3">
           <label class="field-label">Ngày Quyết định</label>
-          <DatePicker
-            :modelValue="parseDate(trip.decisionDate)"
-            @update:modelValue="(v) => trip.decisionDate = formatDateStr(v)"
-            dateFormat="dd/mm/yy"
+          <AppDatePicker
+            v-model="trip.decisionDate"
             placeholder="DD/MM/YYYY"
-            showIcon
-            size="small"
-            appendTo="body"
-            class="w-full"
           />
         </div>
         <div class="field-item col-6">
@@ -60,28 +54,16 @@
 
         <div class="field-item col-3">
           <label class="field-label">Ngày xuất cảnh (Ngày đi)</label>
-          <DatePicker
-            :modelValue="parseDate(trip.departureDate)"
-            @update:modelValue="(v) => trip.departureDate = formatDateStr(v)"
-            dateFormat="dd/mm/yy"
+          <AppDatePicker
+            v-model="trip.departureDate"
             placeholder="DD/MM/YYYY"
-            showIcon
-            size="small"
-            appendTo="body"
-            class="w-full"
           />
         </div>
         <div class="field-item col-3">
           <label class="field-label">Ngày nhập cảnh (Ngày về)</label>
-          <DatePicker
-            :modelValue="parseDate(trip.arrivalDate)"
-            @update:modelValue="(v) => trip.arrivalDate = formatDateStr(v)"
-            dateFormat="dd/mm/yy"
+          <AppDatePicker
+            v-model="trip.arrivalDate"
             placeholder="DD/MM/YYYY"
-            showIcon
-            size="small"
-            appendTo="body"
-            class="w-full"
           />
         </div>
         <div class="field-item col-3">
@@ -132,7 +114,7 @@
 import { computed } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import DatePicker from 'primevue/datepicker';
+import AppDatePicker from '@/components/common/AppDatePicker.vue';
 
 const props = defineProps({
   form: {
@@ -145,24 +127,6 @@ const trips = computed(() => {
   if (!props.form.trips) props.form.trips = [];
   return props.form.trips;
 });
-
-const parseDate = (val) => {
-  if (!val) return null;
-  if (val instanceof Date) return val;
-  const d = new Date(val);
-  return isNaN(d.getTime()) ? null : d;
-};
-
-const formatDateStr = (val) => {
-  if (!val) return '';
-  if (val instanceof Date) {
-    const yyyy = val.getFullYear();
-    const mm = String(val.getMonth() + 1).padStart(2, '0');
-    const dd = String(val.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-  return String(val);
-};
 
 const addTrip = () => {
   trips.value.push({

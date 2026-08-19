@@ -17,14 +17,9 @@
 
     <div class="field-item col-3">
       <label class="field-label">Năm sinh / Ngày sinh</label>
-      <DatePicker
-        v-model="birthDateValue"
-        dateFormat="dd/mm/yy"
-        placeholder="DD/MM/YYYY"
-        showIcon
-        size="small"
-        appendTo="body"
-        class="w-full"
+      <AppDatePicker
+        v-model="form.birthYear"
+        placeholder="DD/MM/YYYY hoặc YYYY"
       />
     </div>
 
@@ -107,14 +102,9 @@
         
         <!-- Date Format -->
         <template v-else-if="col.format === 'date'">
-          <DatePicker
+          <AppDatePicker
             v-model="form.custom_data[col.id]"
-            dateFormat="dd/mm/yy"
             placeholder="DD/MM/YYYY"
-            showIcon
-            size="small"
-            appendTo="body"
-            class="w-full"
           />
         </template>
 
@@ -137,9 +127,9 @@ import { computed } from 'vue';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import Select from 'primevue/select';
-import DatePicker from 'primevue/datepicker';
 import InputNumber from 'primevue/inputnumber';
 import PersonnelAttachments from './PersonnelAttachments.vue';
+import AppDatePicker from '@/components/common/AppDatePicker.vue';
 
 const props = defineProps({
   form: {
@@ -153,26 +143,6 @@ const props = defineProps({
   mapping: {
     type: Array,
     default: () => [],
-  },
-});
-
-const birthDateValue = computed({
-  get: () => {
-    const raw = props.form.birthYear;
-    if (!raw) return null;
-    if (raw instanceof Date) return raw;
-    const d = new Date(raw);
-    return isNaN(d.getTime()) ? raw : d;
-  },
-  set: (val) => {
-    if (val instanceof Date) {
-      const yyyy = val.getFullYear();
-      const mm = String(val.getMonth() + 1).padStart(2, '0');
-      const dd = String(val.getDate()).padStart(2, '0');
-      props.form.birthYear = `${yyyy}-${mm}-${dd}`;
-    } else {
-      props.form.birthYear = val || '';
-    }
   },
 });
 
