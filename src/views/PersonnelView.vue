@@ -40,7 +40,9 @@
             placeholder="Cột hiển thị"
             size="small"
             appendTo="body"
-            style="width: 170px; font-size: 0.8rem;"
+            :showToggleAll="false"
+            :filter="false"
+            style="width: 175px; font-size: 0.8rem;"
             @change="onColumnsChange"
           />
 
