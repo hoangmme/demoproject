@@ -8,11 +8,11 @@
         </div>
         <div>
           <h2 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0;">Bảng Thống kê & Giám sát</h2>
-          <span style="font-size: 0.76rem; color: #64748b;">Tổng quan tình hình cán bộ, xuất nhập cảnh & thân nhân</span>
+          <span style="font-size: 0.76rem; color: #64748b;">Tổng quan tình hình cán bộ, xuất nhập cảnh, thân nhân & các chỉ số tùy chỉnh</span>
         </div>
       </div>
 
-      <!-- Time Filter Selector -->
+      <!-- Time Filter Selector & Action Buttons -->
       <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
         <div class="time-filter-group" style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
           <button
@@ -68,17 +68,28 @@
           </div>
         </div>
 
+        <!-- Add Custom Group Button -->
+        <Button
+          icon="pi pi-plus"
+          label="Thêm Nhóm Thống kê"
+          severity="success"
+          size="small"
+          @click="openAddGroupDialog"
+          style="font-size: 0.8rem;"
+        />
+
         <!-- Dashboard Settings Button -->
         <Button
           icon="pi pi-cog"
-          label="Cài đặt cột"
+          label="Cài đặt cột hệ thống"
           severity="secondary"
           size="small"
           outlined
-          @click="isSettingsOpen = true"
-          v-tooltip.top="'Tùy chỉnh ID các cột thống kê'"
+          @click="openSettingsDialog"
+          v-tooltip.top="'Tùy chỉnh ID các cột thống kê mặc định'"
           style="font-size: 0.8rem;"
         />
+
         <Button
           icon="pi pi-refresh"
           severity="secondary"
@@ -92,7 +103,9 @@
       </div>
     </div>
 
-    <!-- 1. Top Stat Cards (Clickable for Drill-down) -->
+    <!-- ========================================================= -->
+    <!-- 1. DEFAULT TOP STAT CARDS                                -->
+    <!-- ========================================================= -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
       <!-- Total Personnel -->
       <div class="stat-card" style="border-left: 4px solid #2e7d32;" @click="openDrilldown('all_personnel', 'Danh sách Toàn bộ Cán bộ')">
@@ -133,7 +146,7 @@
         </div>
       </div>
 
-      <!-- Missing Decision Warning Card (Configurable) -->
+      <!-- Missing Decision Warning Card -->
       <div class="stat-card stat-card-warning" style="border-left: 4px solid #dc2626;" @click="openDrilldown('missing_decision', 'Danh sách Chuyến đi Chưa có Quyết định')">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div style="display: flex; align-items: center; gap: 4px;">
@@ -151,7 +164,7 @@
         </div>
       </div>
 
-      <!-- Departure/Arrival Schedule Warnings Card (Configurable) -->
+      <!-- Departure/Arrival Schedule Warnings Card -->
       <div class="stat-card" style="border-left: 4px solid #ea580c;" @click="openDrilldown('schedule_warnings', 'Cảnh báo Tiến độ Duyệt Đi / Duyệt Về / Gia Hạn')">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div style="display: flex; align-items: center; gap: 4px;">
@@ -175,7 +188,9 @@
       </div>
     </div>
 
-    <!-- 2. Detailed Breakdown Grid (Full Countries & Full Fundings) -->
+    <!-- ========================================================= -->
+    <!-- 2. DEFAULT BREAKDOWN GRIDS (QUỐC GIA & KINH PHÍ)          -->
+    <!-- ========================================================= -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
       <!-- FULL COUNTRIES CARD -->
       <div class="app-card">
@@ -198,43 +213,45 @@
           </div>
         </div>
 
-        <div style="max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+        <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
+          <div v-if="filteredCountryList.length === 0" style="text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.8rem;">
+            Không tìm thấy quốc gia phù hợp.
+          </div>
           <div
             v-for="(item, idx) in filteredCountryList"
-            :key="idx"
+            :key="item.name"
             class="breakdown-row"
             @click="openDrilldown('country', `Danh sách Cán bộ đi: ${item.name}`, { countryName: item.name })"
           >
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; margin-bottom: 3px;">
-              <span style="font-weight: 600; color: #334155; display: flex; align-items: center; gap: 6px;">
-                <span class="badge-num">#{{ idx + 1 }}</span> {{ item.name }}
-              </span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge-num">#{{ idx + 1 }}</span>
+                <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
+              </div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <strong style="color: #16a34a;">{{ item.count }} lượt</strong>
-                <i class="pi pi-chevron-right" style="font-size: 0.7rem; color: #94a3b8;"></i>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #16a34a;">{{ item.count }} lượt</span>
+                <span style="font-size: 0.7rem; color: #94a3b8;">
+                  ({{ stats.filteredTrips.length > 0 ? Math.round((item.count / stats.filteredTrips.length) * 100) : 0 }}%)
+                </span>
               </div>
             </div>
             <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
               <div
-                :style="{ width: `${(item.count / (stats.maxCountry || 1)) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #22c55e, #16a34a)', borderRadius: '4px' }"
+                style="height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); border-radius: 4px; transition: width 0.4s ease;"
+                :style="{ width: `${(item.count / stats.maxCountry) * 100}%` }"
               ></div>
             </div>
-          </div>
-
-          <div v-if="filteredCountryList.length === 0" style="text-align: center; color: #94a3b8; font-size: 0.8rem; padding: 2rem;">
-            <i class="pi pi-inbox" style="font-size: 1.5rem; margin-bottom: 6px; display: block;"></i>
-            Không có dữ liệu quốc gia phù hợp
           </div>
         </div>
       </div>
 
-      <!-- FULL FUNDINGS CARD -->
+      <!-- FULL FUNDING SOURCES CARD -->
       <div class="app-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
           <div style="display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-wallet" style="color: #7c3aed; font-size: 1.05rem;"></i>
+            <i class="pi pi-wallet" style="color: #0284c7; font-size: 1.05rem;"></i>
             <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
-              Thống kê Toàn bộ Nguồn kinh phí ({{ stats.fundingList.length }} nguồn)
+              Thống kê Toàn bộ Nguồn Kinh phí ({{ stats.fundingList.length }} nguồn)
             </h3>
             <button type="button" class="btn-card-setting" @click="openSingleSetting('funding')" title="Cài đặt cột Nguồn kinh phí">
               <i class="pi pi-cog"></i>
@@ -244,57 +261,229 @@
             <InputText
               v-model="fundingSearch"
               placeholder="Tìm nguồn kinh phí..."
-              style="font-size: 0.75rem; padding: 4px 8px; width: 150px; height: 28px;"
+              style="font-size: 0.75rem; padding: 4px 8px; width: 140px; height: 28px;"
             />
           </div>
         </div>
 
-        <div style="max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+        <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
+          <div v-if="filteredFundingList.length === 0" style="text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.8rem;">
+            Không tìm thấy nguồn kinh phí phù hợp.
+          </div>
           <div
             v-for="(item, idx) in filteredFundingList"
-            :key="idx"
+            :key="item.name"
             class="breakdown-row"
-            @click="openDrilldown('funding', `Danh sách Cán bộ theo Nguồn kinh phí: ${item.name}`, { fundingName: item.name })"
+            @click="openDrilldown('funding', `Danh sách Cán bộ theo Kinh phí: ${item.name}`, { fundingName: item.name })"
           >
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; margin-bottom: 3px;">
-              <span style="font-weight: 600; color: #334155; display: flex; align-items: center; gap: 6px;">
-                <span class="badge-num" style="background: #ede9fe; color: #6d28d9;">#{{ idx + 1 }}</span> {{ item.name }}
-              </span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge-num" style="background: #e0f2fe; color: #0369a1;">#{{ idx + 1 }}</span>
+                <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
+              </div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <strong style="color: #7c3aed;">{{ item.count }} lượt</strong>
-                <i class="pi pi-chevron-right" style="font-size: 0.7rem; color: #94a3b8;"></i>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #0284c7;">{{ item.count }} lượt</span>
+                <span style="font-size: 0.7rem; color: #94a3b8;">
+                  ({{ stats.filteredTrips.length > 0 ? Math.round((item.count / stats.filteredTrips.length) * 100) : 0 }}%)
+                </span>
               </div>
             </div>
             <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
               <div
-                :style="{ width: `${(item.count / (stats.maxFunding || 1)) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #a855f7, #7c3aed)', borderRadius: '4px' }"
+                style="height: 100%; background: linear-gradient(90deg, #38bdf8, #0284c7); border-radius: 4px; transition: width 0.4s ease;"
+                :style="{ width: `${(item.count / stats.maxFunding) * 100}%` }"
               ></div>
             </div>
-          </div>
-
-          <div v-if="filteredFundingList.length === 0" style="text-align: center; color: #94a3b8; font-size: 0.8rem; padding: 2rem;">
-            <i class="pi pi-inbox" style="font-size: 1.5rem; margin-bottom: 6px; display: block;"></i>
-            Không có dữ liệu nguồn kinh phí phù hợp
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 3. TRAVEL TIMELINE WARNINGS SECTION -->
-    <div class="app-card" style="margin-bottom: 1.5rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <i class="pi pi-bell" style="color: #ea580c; font-size: 1.05rem;"></i>
-          <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
-            Giám sát Tiến độ Chuyến đi: Duyệt Đi - Duyệt Về - Gia Hạn
-          </h3>
-          <button type="button" class="btn-card-setting" @click="openSingleSetting('schedule')" title="Cài đặt cột Thời gian duyệt">
-            <i class="pi pi-cog"></i>
-          </button>
+    <!-- ========================================================= -->
+    <!-- 3. CUSTOM DASHBOARD GROUPS (USER CONFIGURED)              -->
+    <!-- ========================================================= -->
+    <div v-for="(group, gIdx) in customGroups" :key="group.id || gIdx" style="margin-bottom: 1.75rem;">
+      <!-- Group Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; background: #ffffff; padding: 10px 16px; border-radius: 10px; border: 1px solid #e2e8f0; border-left: 4px solid #2e7d32;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <i :class="['pi', group.icon || 'pi-folder']" style="color: #2e7d32; font-size: 1.1rem;"></i>
+          <div>
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0;">{{ group.title }}</h3>
+            <span v-if="group.description" style="font-size: 0.74rem; color: #64748b;">{{ group.description }}</span>
+          </div>
         </div>
-        <span style="font-size: 0.76rem; color: #64748b;">
-          Cột: Duyệt đi (<b>{{ colConfig.approvedDeparture }}</b>) | Duyệt về (<b>{{ colConfig.approvedArrival }}</b>) | Gia hạn (<b>{{ colConfig.approvedExtension }}</b>)
-        </span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <Button
+            icon="pi pi-plus"
+            label="Thêm Khối Thống kê"
+            size="small"
+            severity="success"
+            outlined
+            @click="openAddWidgetDialog(group)"
+            style="font-size: 0.75rem; padding: 4px 8px;"
+          />
+          <Button
+            icon="pi pi-pencil"
+            size="small"
+            severity="secondary"
+            text
+            rounded
+            @click="openEditGroupDialog(group)"
+            v-tooltip.top="'Chỉnh sửa nhóm này'"
+          />
+          <Button
+            icon="pi pi-trash"
+            size="small"
+            severity="danger"
+            text
+            rounded
+            @click="deleteGroup(group)"
+            v-tooltip.top="'Xóa nhóm này'"
+          />
+        </div>
+      </div>
+
+      <!-- Group Widgets Container -->
+      <div v-if="!group.widgets || group.widgets.length === 0" style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.82rem;">
+        Chưa có khối thống kê nào trong nhóm này. Bấm <b>"+ Thêm Khối Thống kê"</b> để thêm thẻ đếm số lượng hoặc biểu đồ phân bổ.
+      </div>
+
+      <!-- Mixed Widgets Grid: Count Cards & Chart Cards -->
+      <div v-else style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- 1. Sub-Grid for Count Cards -->
+        <div
+          v-if="getCountWidgets(group).length > 0"
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;"
+        >
+          <div
+            v-for="widget in getCountWidgets(group)"
+            :key="widget.id"
+            class="stat-card"
+            :style="{ borderLeft: `4px solid ${widget.color || '#2e7d32'}` }"
+            @click="openCustomWidgetDrilldown(widget)"
+          >
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <span class="stat-label" :style="{ color: widget.color || '#334155' }">{{ widget.title }}</span>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa khối này">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa khối này" style="color: #ef4444;">
+                  <i class="pi pi-trash"></i>
+                </button>
+                <i :class="['pi', widget.icon || 'pi-chart-line']" :style="{ color: widget.color || '#2e7d32', fontSize: '1.1rem', marginLeft: '4px' }"></i>
+              </div>
+            </div>
+            <div class="stat-value" :style="{ color: widget.color || '#1e293b' }">
+              {{ computeWidgetCount(widget) }}
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+              <span class="stat-sub" style="color: #64748b;">
+                {{ getSourceLabel(widget.source) }} | Cột: <b>{{ widget.columnLabel || widget.columnId }}</b>
+              </span>
+              <span class="view-more-tag" :style="{ color: widget.color || '#1e293b' }">Xem <i class="pi pi-arrow-right"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Sub-Grid for Chart/Breakdown Cards -->
+        <div
+          v-if="getChartWidgets(group).length > 0"
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem;"
+        >
+          <div
+            v-for="widget in getChartWidgets(group)"
+            :key="widget.id"
+            class="app-card"
+          >
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <i :class="['pi', widget.icon || 'pi-chart-pie']" :style="{ color: widget.color || '#2e7d32', fontSize: '1.05rem' }"></i>
+                <div>
+                  <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
+                    {{ widget.title }} ({{ computeWidgetChartData(widget).list.length }} phân loại)
+                  </h3>
+                  <span style="font-size: 0.72rem; color: #64748b;">
+                    {{ getSourceLabel(widget.source) }} - Cột: <b>{{ widget.columnLabel || widget.columnId }}</b>
+                  </span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <InputText
+                  v-model="customChartSearches[widget.id]"
+                  placeholder="Tìm phân loại..."
+                  style="font-size: 0.75rem; padding: 4px 8px; width: 140px; height: 28px;"
+                />
+                <button type="button" class="btn-card-setting" @click="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button type="button" class="btn-card-setting" @click="deleteWidget(group, widget)" title="Xóa biểu đồ này" style="color: #ef4444;">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
+              <div v-if="getFilteredChartList(widget).length === 0" style="text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.8rem;">
+                Không có dữ liệu phân loại phù hợp.
+              </div>
+              <div
+                v-for="(item, cIdx) in getFilteredChartList(widget)"
+                :key="item.name"
+                class="breakdown-row"
+                @click="openCustomChartItemDrilldown(widget, item.name)"
+              >
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="badge-num" :style="{ background: getLightColor(widget.color), color: widget.color || '#2e7d32' }">
+                      #{{ cIdx + 1 }}
+                    </span>
+                    <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 0.8rem; font-weight: 700;" :style="{ color: widget.color || '#2e7d32' }">
+                      {{ item.count }} hồ sơ
+                    </span>
+                    <span style="font-size: 0.7rem; color: #94a3b8;">
+                      ({{ computeWidgetChartData(widget).total > 0 ? Math.round((item.count / computeWidgetChartData(widget).total) * 100) : 0 }}%)
+                    </span>
+                  </div>
+                </div>
+                <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+                  <div
+                    style="height: 100%; border-radius: 4px; transition: width 0.4s ease;"
+                    :style="{
+                      width: `${(item.count / (computeWidgetChartData(widget).max || 1)) * 100}%`,
+                      background: widget.color || '#2e7d32'
+                    }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 4. SCHEDULE STATUS SUMMARY SECTION                        -->
+    <!-- ========================================================= -->
+    <div class="app-card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <i class="pi pi-calendar-times" style="color: #ea580c; font-size: 1.1rem;"></i>
+          <div>
+            <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
+              Theo dõi Tiến độ Đi - Về & Gia Hạn
+            </h3>
+            <span style="font-size: 0.74rem; color: #64748b;">
+              Kiểm tra tình trạng duyệt thời gian xuất nhập cảnh của cán bộ
+            </span>
+          </div>
+        </div>
+        <button type="button" class="btn-card-setting" @click="openSingleSetting('schedule')" title="Cài đặt cột Duyệt Đi/Về/Gia Hạn">
+          <i class="pi pi-cog"></i> Cài đặt cột tiến độ
+        </button>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
@@ -352,7 +541,7 @@
     </div>
 
     <!-- ========================================================= -->
-    <!-- 4. INTERACTIVE DRILL-DOWN POPUP MODAL                     -->
+    <!-- 5. INTERACTIVE DRILL-DOWN POPUP MODAL                     -->
     <!-- ========================================================= -->
     <Dialog
       v-model:visible="isDrilldownOpen"
@@ -392,7 +581,7 @@
         <!-- DataTable inside Popup -->
         <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; max-height: 480px; overflow-y: auto;">
           <!-- 1. Table for Personnel -->
-          <table v-if="drilldownType === 'all_personnel'" class="drilldown-table">
+          <table v-if="drilldownCategory === 'personnel'" class="drilldown-table">
             <thead>
               <tr>
                 <th style="width: 40px; text-align: center;">STT</th>
@@ -418,7 +607,7 @@
           </table>
 
           <!-- 2. Table for Relatives -->
-          <table v-else-if="drilldownType === 'all_relatives'" class="drilldown-table">
+          <table v-else-if="drilldownCategory === 'relatives'" class="drilldown-table">
             <thead>
               <tr>
                 <th style="width: 40px; text-align: center;">STT</th>
@@ -436,82 +625,65 @@
                 <td style="font-weight: 600; color: #6d28d9;">{{ r.relativeName || r.name || '-' }}</td>
                 <td><span class="badge-pill badge-neutral">{{ r.relationship || r.relationshipName || '-' }}</span></td>
                 <td>{{ r.countryName || r.country || '-' }}</td>
-                <td>{{ r.job || r.status || '-' }}</td>
+                <td>{{ r.occupation || r.job || r.status || '-' }}</td>
               </tr>
             </tbody>
           </table>
 
-          <!-- 3. Table for Trips (All trips, missing decision, country, funding, schedule warnings) -->
+          <!-- 3. Table for Trips -->
           <table v-else class="drilldown-table">
             <thead>
               <tr>
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Tên Cán bộ</th>
                 <th>Số Quyết định</th>
-                <th>Quốc gia</th>
-                <th>Ngày Xuất cảnh</th>
-                <th>Ngày Nhập cảnh</th>
-                <th>Duyệt Đi - Về</th>
+                <th>Quốc gia đến</th>
+                <th>Nguồn Kinh phí</th>
+                <th>Ngày đi</th>
+                <th>Ngày về</th>
                 <th>Duyệt Gia hạn</th>
-                <th>Nguồn kinh phí</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(t, idx) in filteredDrilldownData" :key="t.id || idx">
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
-                <td style="font-weight: 600; color: #1e293b;">
-                  {{ t.personnelName || '-' }}
-                  <div style="font-size: 0.7rem; color: #64748b;">{{ t.personnelCode || '' }}</div>
-                </td>
+                <td style="font-weight: 600; color: #1e293b;">{{ t.personnelName || '-' }}</td>
                 <td>
-                  <span v-if="t.decisionNumber" class="badge-pill badge-neutral">{{ t.decisionNumber }}</span>
-                  <span v-else class="badge-pill badge-red"><i class="pi pi-times-circle"></i> Chưa có QĐ</span>
+                  <span v-if="t.decisionNumber" class="code-badge">{{ t.decisionNumber }}</span>
+                  <span v-else class="badge-pill badge-red">Chưa có</span>
                 </td>
-                <td style="font-weight: 600; color: #16a34a;">{{ t.countryName || '-' }}</td>
-                <td>{{ t.departureDate || '-' }}</td>
-                <td>{{ t.arrivalDate || '-' }}</td>
-                <td>
-                  <div style="font-size: 0.72rem; color: #334155;">
-                    <div>Đi: <b>{{ t.approvedDepartureDate || t.departureDate || '-' }}</b></div>
-                    <div>Về: <b>{{ t.approvedArrivalDate || t.arrivalDate || '-' }}</b></div>
-                  </div>
-                </td>
+                <td><span class="badge-pill badge-green">{{ t.countryName || '-' }}</span></td>
+                <td>{{ t.fundingName || '-' }}</td>
+                <td>{{ t.departureDate || t.approvedDepartureDate || '-' }}</td>
+                <td>{{ t.arrivalDate || t.approvedArrivalDate || '-' }}</td>
                 <td>
                   <span v-if="t.approvedExtensionDate" class="badge-pill badge-yellow">
                     {{ t.approvedExtensionDate }}
                   </span>
-                  <span v-else style="color: #cbd5e1;">-</span>
+                  <span v-else style="color: #94a3b8;">-</span>
                 </td>
-                <td><span class="badge-pill badge-purple">{{ t.fundingName || '-' }}</span></td>
               </tr>
             </tbody>
           </table>
-
-          <div v-if="filteredDrilldownData.length === 0" style="text-align: center; color: #94a3b8; font-size: 0.82rem; padding: 2rem;">
-            Không tìm thấy bản ghi nào
-          </div>
         </div>
       </div>
-
       <template #footer>
-        <div style="display: flex; justify-content: flex-end;">
-          <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownOpen = false" />
-        </div>
+        <Button label="Đóng" severity="secondary" text size="small" @click="isDrilldownOpen = false" />
       </template>
     </Dialog>
 
     <!-- ========================================================= -->
-    <!-- 5. DASHBOARD COLUMN SETTINGS MODAL                        -->
+    <!-- 6. DASHBOARD DEFAULT COLUMN SETTINGS MODAL                -->
     <!-- ========================================================= -->
     <Dialog
       v-model:visible="isSettingsOpen"
       modal
-      header="Cài đặt Mã Cột cho Dashboard"
+      header="Cài đặt Mã Cột Hệ thống cho Dashboard"
       :style="{ width: '720px', maxWidth: '96vw' }"
     >
       <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 8px;">
         <div style="padding: 8px 12px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #16a34a; font-size: 0.78rem; color: #166534;">
-          Bạn có thể tự gõ ID cột hoặc chọn từ danh sách cột có sẵn trong hệ thống để Dashboard thống kê chính xác 100%.
+          Cấu hình này được lưu vĩnh viễn trong CSDL hệ thống. Bạn có thể tự gõ ID cột hoặc chọn từ danh sách cột có sẵn.
         </div>
 
         <!-- Setting 1: Decision ID -->
@@ -523,7 +695,7 @@
             <InputText v-model="tempConfig.decision" placeholder="Ví dụ: decisionNumber" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.decision = $event.target.value">
               <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailableColumns" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
@@ -537,7 +709,7 @@
             <InputText v-model="tempConfig.country" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.country = $event.target.value">
               <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailableColumns" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
@@ -551,7 +723,7 @@
             <InputText v-model="tempConfig.funding" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.funding = $event.target.value">
               <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailableColumns" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
@@ -559,13 +731,13 @@
         <!-- Setting 4: Approved Departure Date ID -->
         <div>
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            4. [Cột 43] Thời gian duyệt đi:
+            4. Thời gian duyệt đi:
           </label>
           <div style="display: flex; gap: 8px;">
             <InputText v-model="tempConfig.approvedDeparture" placeholder="Ví dụ: approvedDepartureDate" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.approvedDeparture = $event.target.value">
               <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailableColumns" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
@@ -573,13 +745,13 @@
         <!-- Setting 5: Approved Arrival Date ID -->
         <div>
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            5. [Cột 44] Thời gian duyệt về:
+            5. Thời gian duyệt về:
           </label>
           <div style="display: flex; gap: 8px;">
             <InputText v-model="tempConfig.approvedArrival" placeholder="Ví dụ: approvedArrivalDate" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.approvedArrival = $event.target.value">
               <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailableColumns" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
@@ -587,13 +759,13 @@
         <!-- Setting 6: Approved Extension Date ID -->
         <div>
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            6. [Cột 45] Thời gian duyệt gia hạn:
+            6. Thời gian duyệt gia hạn:
           </label>
           <div style="display: flex; gap: 8px;">
             <InputText v-model="tempConfig.approvedExtension" placeholder="Ví dụ: approvedExtensionDate" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.approvedExtension = $event.target.value">
               <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailableColumns" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
@@ -604,8 +776,151 @@
           <Button label="Khôi phục mặc định" severity="secondary" text size="small" @click="resetToDefaultSettings" />
           <div style="display: flex; gap: 8px;">
             <Button label="Hủy" severity="secondary" text size="small" @click="isSettingsOpen = false" />
-            <Button label="Lưu Cấu Hình" icon="pi pi-check" severity="success" size="small" @click="saveDashboardSettings" />
+            <Button label="Lưu Cấu Hình vào CSDL" icon="pi pi-check" severity="success" size="small" :loading="savingConfig" @click="saveDashboardSettings" />
           </div>
+        </div>
+      </template>
+    </Dialog>
+
+    <!-- ========================================================= -->
+    <!-- 7. CUSTOM GROUP MODAL (ADD / EDIT GROUP)                 -->
+    <!-- ========================================================= -->
+    <Dialog
+      v-model:visible="isGroupDialogOpen"
+      modal
+      :header="editingGroup ? 'Chỉnh sửa Nhóm Thống kê' : 'Tạo Nhóm Thống kê Mới'"
+      :style="{ width: '480px', maxWidth: '96vw' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 8px;">
+        <div class="field-item">
+          <label class="field-label">Tên Nhóm thống kê <span style="color: #ef4444;">*</span></label>
+          <InputText v-model="groupForm.title" placeholder="Ví dụ: Thống kê Đảng viên & Chính trị" style="width: 100%;" />
+        </div>
+        <div class="field-item">
+          <label class="field-label">Mô tả tóm tắt</label>
+          <InputText v-model="groupForm.description" placeholder="Ví dụ: Theo dõi tỉ lệ kết nạp Đảng & Phân loại" style="width: 100%;" />
+        </div>
+        <div class="field-item">
+          <label class="field-label">Biểu tượng (Icon)</label>
+          <select v-model="groupForm.icon" class="settings-select" style="width: 100%; max-width: 100%;">
+            <option value="pi-folder">📁 Thư mục (pi-folder)</option>
+            <option value="pi-flag">🚩 Cờ Đảng / Chính trị (pi-flag)</option>
+            <option value="pi-building">🏢 Tòa nhà / Phòng ban (pi-building)</option>
+            <option value="pi-user">👤 Nhân sự / Cán bộ (pi-user)</option>
+            <option value="pi-users">👥 Thân nhân (pi-users)</option>
+            <option value="pi-globe">🌐 Nước ngoài (pi-globe)</option>
+            <option value="pi-shield">🛡️ An ninh / Thẩm tra (pi-shield)</option>
+            <option value="pi-chart-pie">📊 Biểu đồ (pi-chart-pie)</option>
+          </select>
+        </div>
+      </div>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
+          <Button label="Hủy" severity="secondary" text size="small" @click="isGroupDialogOpen = false" />
+          <Button label="Lưu Nhóm" icon="pi pi-check" severity="success" size="small" @click="saveGroup" />
+        </div>
+      </template>
+    </Dialog>
+
+    <!-- ========================================================= -->
+    <!-- 8. CUSTOM WIDGET MODAL (ADD / EDIT WIDGET)               -->
+    <!-- ========================================================= -->
+    <Dialog
+      v-model:visible="isWidgetDialogOpen"
+      modal
+      :header="editingWidget ? 'Chỉnh sửa Khối Thống kê' : 'Thêm Khối Thống kê Mới'"
+      :style="{ width: '560px', maxWidth: '96vw' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 8px;">
+        <div class="field-item">
+          <label class="field-label">Tiêu đề Khối Thống kê <span style="color: #ef4444;">*</span></label>
+          <InputText v-model="widgetForm.title" placeholder="Ví dụ: Phân bổ theo Dân tộc, hoặc Tổng số Đảng viên" style="width: 100%;" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="field-item">
+            <label class="field-label">Nguồn dữ liệu</label>
+            <select v-model="widgetForm.source" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option value="personnel">Hồ sơ Cán bộ (Cá nhân)</option>
+              <option value="relatives">Danh sách Thân nhân</option>
+              <option value="trips">Lượt đi Nước ngoài (Phụ lục 1)</option>
+            </select>
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">Kiểu hiển thị <span style="color: #ef4444;">*</span></label>
+            <select v-model="widgetForm.displayType" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option value="count">🔢 Đếm số lượng (Thẻ chỉ số)</option>
+              <option value="chart">📊 Biểu đồ phân bổ & Bảng xếp hạng</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-item">
+          <label class="field-label">Cột dữ liệu cần Thống kê / Đếm <span style="color: #ef4444;">*</span></label>
+          <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; max-width: 100%;" @change="onWidgetColumnSelect">
+            <option value="">-- Nhấp để chọn Cột trong hệ thống --</option>
+            <option v-for="c in availableColumnsForWidgetSource" :key="c.id" :value="c.id">
+              {{ c.label }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Extra settings for COUNT type -->
+        <div v-if="widgetForm.displayType === 'count'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+          <label class="field-label" style="font-size: 0.78rem; font-weight: 700; color: #1e293b;">Điều kiện đếm:</label>
+          <div style="display: flex; gap: 12px; font-size: 0.8rem;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" v-model="widgetForm.countCondition" value="not_empty" />
+              Có dữ liệu (Không để trống)
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" v-model="widgetForm.countCondition" value="equals" />
+              Khớp giá trị cụ thể
+            </label>
+          </div>
+          <div v-if="widgetForm.countCondition === 'equals'">
+            <InputText v-model="widgetForm.countValue" placeholder="Ví dụ: Có, Đảng viên, Hoàn thành, v.v." style="width: 100%; font-size: 0.8rem;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="field-item">
+            <label class="field-label">Màu sắc chủ đạo</label>
+            <select v-model="widgetForm.color" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
+              <option value="#0284c7">Xanh dương (Blue - #0284c7)</option>
+              <option value="#7c3aed">Tím (Purple - #7c3aed)</option>
+              <option value="#ea580c">Cam (Orange - #ea580c)</option>
+              <option value="#dc2626">Đỏ (Red - #dc2626)</option>
+              <option value="#0d9488">Xanh mòng két (Teal - #0d9488)</option>
+              <option value="#475569">Xám đậm (Slate - #475569)</option>
+            </select>
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">Biểu tượng (Icon)</label>
+            <select v-model="widgetForm.icon" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option value="pi-chart-line">📈 Biểu đồ đường (pi-chart-line)</option>
+              <option value="pi-chart-pie">🥧 Biểu đồ tròn (pi-chart-pie)</option>
+              <option value="pi-chart-bar">📊 Biểu đồ cột (pi-chart-bar)</option>
+              <option value="pi-user">👤 Cán bộ (pi-user)</option>
+              <option value="pi-users">👥 Nhóm người (pi-users)</option>
+              <option value="pi-building">🏢 Đơn vị / Phòng ban (pi-building)</option>
+              <option value="pi-flag">🚩 Cờ / Danh hiệu (pi-flag)</option>
+              <option value="pi-id-card">🪪 Thẻ CCCD / Hồ sơ (pi-id-card)</option>
+              <option value="pi-globe">🌐 Quốc gia / Nước ngoài (pi-globe)</option>
+              <option value="pi-shield">🛡️ Thẩm tra / Bảo vệ (pi-shield)</option>
+              <option value="pi-check-circle">✅ Hoàn thành / Tích chọn (pi-check-circle)</option>
+              <option value="pi-wallet">💰 Kinh phí (pi-wallet)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
+          <Button label="Hủy" severity="secondary" text size="small" @click="isWidgetDialogOpen = false" />
+          <Button label="Lưu Khối Thống Kê" icon="pi pi-check" severity="success" size="small" @click="saveWidget" />
         </div>
       </template>
     </Dialog>
@@ -621,11 +936,12 @@ import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel } from '@/utils/excel';
 import { computeColumnIndexMap } from '@/utils/formatters';
+import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const personnelStore = usePersonnelStore();
 
 // =========================================================================
-// 1. DASHBOARD COLUMN CONFIGURATION STATE (Persisted in localStorage)
+// 1. DEFAULT DASHBOARD COLUMN CONFIGURATION STATE (Persisted in Directus DB)
 // =========================================================================
 const DEFAULT_CONFIG = {
   decision: 'decisionNumber',
@@ -639,25 +955,49 @@ const DEFAULT_CONFIG = {
 const colConfig = ref({ ...DEFAULT_CONFIG });
 const tempConfig = ref({ ...DEFAULT_CONFIG });
 const isSettingsOpen = ref(false);
+const savingConfig = ref(false);
 
-const loadDashboardSettings = () => {
-  const saved = localStorage.getItem('dashboard_col_config');
-  if (saved) {
-    try {
-      colConfig.value = { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
-    } catch (e) {}
+const loadDashboardSettings = async () => {
+  try {
+    const dbConfig = await getAppSettings('dashboard_col_config');
+    if (dbConfig && typeof dbConfig === 'object') {
+      colConfig.value = { ...DEFAULT_CONFIG, ...dbConfig };
+      localStorage.setItem('dashboard_col_config', JSON.stringify(colConfig.value));
+    } else {
+      const saved = localStorage.getItem('dashboard_col_config');
+      if (saved) {
+        try {
+          colConfig.value = { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+        } catch (e) {}
+      }
+    }
+  } catch (e) {
+    console.error('Error loading dashboard column settings:', e);
   }
   tempConfig.value = { ...colConfig.value };
 };
 
-const saveDashboardSettings = () => {
-  colConfig.value = { ...tempConfig.value };
-  localStorage.setItem('dashboard_col_config', JSON.stringify(colConfig.value));
-  isSettingsOpen.value = false;
+const saveDashboardSettings = async () => {
+  savingConfig.value = true;
+  try {
+    colConfig.value = { ...tempConfig.value };
+    localStorage.setItem('dashboard_col_config', JSON.stringify(colConfig.value));
+    await saveAppSettings('dashboard_col_config', colConfig.value);
+    isSettingsOpen.value = false;
+  } catch (e) {
+    alert('Lưu cấu hình thất bại: ' + e.message);
+  } finally {
+    savingConfig.value = false;
+  }
 };
 
 const resetToDefaultSettings = () => {
   tempConfig.value = { ...DEFAULT_CONFIG };
+};
+
+const openSettingsDialog = () => {
+  tempConfig.value = { ...colConfig.value };
+  isSettingsOpen.value = true;
 };
 
 const openSingleSetting = (type) => {
@@ -666,9 +1006,305 @@ const openSingleSetting = (type) => {
 };
 
 // =========================================================================
-// 2. TIME FILTER STATE
+// 2. CUSTOM DASHBOARD GROUPS & DYNAMIC WIDGETS
 // =========================================================================
-const timeFilterMode = ref('all'); // 'all', 'week', 'month', 'year', 'custom'
+const customGroups = ref([]);
+const customChartSearches = ref({});
+
+const isGroupDialogOpen = ref(false);
+const editingGroup = ref(null);
+const groupForm = ref({
+  id: '',
+  title: '',
+  description: '',
+  icon: 'pi-folder',
+  widgets: [],
+});
+
+const isWidgetDialogOpen = ref(false);
+const activeGroupForWidget = ref(null);
+const editingWidget = ref(null);
+const widgetForm = ref({
+  id: '',
+  title: '',
+  source: 'personnel',
+  columnId: '',
+  columnLabel: '',
+  displayType: 'count',
+  countCondition: 'not_empty',
+  countValue: '',
+  color: '#2e7d32',
+  icon: 'pi-chart-line',
+});
+
+const loadCustomGroups = async () => {
+  try {
+    const dbGroups = await getAppSettings('dashboard_custom_groups');
+    if (dbGroups && Array.isArray(dbGroups)) {
+      customGroups.value = dbGroups;
+      localStorage.setItem('dashboard_custom_groups', JSON.stringify(dbGroups));
+    } else {
+      const local = localStorage.getItem('dashboard_custom_groups');
+      if (local) {
+        customGroups.value = JSON.parse(local);
+      }
+    }
+  } catch (e) {
+    console.error('Error loading custom groups:', e);
+  }
+};
+
+const saveCustomGroupsToDb = async () => {
+  localStorage.setItem('dashboard_custom_groups', JSON.stringify(customGroups.value));
+  try {
+    await saveAppSettings('dashboard_custom_groups', customGroups.value);
+  } catch (e) {
+    console.error('Error saving custom groups to DB:', e);
+  }
+};
+
+// Group CRUD
+const openAddGroupDialog = () => {
+  editingGroup.value = null;
+  groupForm.value = {
+    id: 'grp_' + Date.now(),
+    title: '',
+    description: '',
+    icon: 'pi-folder',
+    widgets: [],
+  };
+  isGroupDialogOpen.value = true;
+};
+
+const openEditGroupDialog = (group) => {
+  editingGroup.value = group;
+  groupForm.value = JSON.parse(JSON.stringify(group));
+  isGroupDialogOpen.value = true;
+};
+
+const saveGroup = async () => {
+  if (!groupForm.value.title.trim()) {
+    alert('Vui lòng nhập Tên Nhóm thống kê!');
+    return;
+  }
+  if (editingGroup.value) {
+    const idx = customGroups.value.findIndex((g) => g.id === editingGroup.value.id);
+    if (idx !== -1) {
+      customGroups.value[idx] = { ...customGroups.value[idx], ...groupForm.value };
+    }
+  } else {
+    customGroups.value.push({ ...groupForm.value });
+  }
+  await saveCustomGroupsToDb();
+  isGroupDialogOpen.value = false;
+};
+
+const deleteGroup = async (group) => {
+  if (!confirm(`Bạn có chắc muốn xóa nhóm "${group.title}" và toàn bộ khối thống kê bên trong?`)) return;
+  customGroups.value = customGroups.value.filter((g) => g.id !== group.id);
+  await saveCustomGroupsToDb();
+};
+
+// Widget CRUD
+const openAddWidgetDialog = (group) => {
+  activeGroupForWidget.value = group;
+  editingWidget.value = null;
+  widgetForm.value = {
+    id: 'w_' + Date.now(),
+    title: '',
+    source: 'personnel',
+    columnId: '',
+    columnLabel: '',
+    displayType: 'count',
+    countCondition: 'not_empty',
+    countValue: '',
+    color: '#2e7d32',
+    icon: 'pi-chart-line',
+  };
+  isWidgetDialogOpen.value = true;
+};
+
+const openEditWidgetDialog = (group, widget) => {
+  activeGroupForWidget.value = group;
+  editingWidget.value = widget;
+  widgetForm.value = JSON.parse(JSON.stringify(widget));
+  isWidgetDialogOpen.value = true;
+};
+
+const onWidgetColumnSelect = () => {
+  const selected = availableColumnsForWidgetSource.value.find((c) => c.id === widgetForm.value.columnId);
+  if (selected) {
+    widgetForm.value.columnLabel = selected.rawLabel || selected.label;
+    if (!widgetForm.value.title) {
+      widgetForm.value.title = widgetForm.value.displayType === 'count'
+        ? `Tổng số ${widgetForm.value.columnLabel}`
+        : `Phân bổ theo ${widgetForm.value.columnLabel}`;
+    }
+  }
+};
+
+const saveWidget = async () => {
+  if (!widgetForm.value.title.trim() || !widgetForm.value.columnId) {
+    alert('Vui lòng nhập Tiêu đề và chọn Cột dữ liệu cần thống kê!');
+    return;
+  }
+  const group = activeGroupForWidget.value;
+  if (!group) return;
+  if (!group.widgets) group.widgets = [];
+
+  if (editingWidget.value) {
+    const idx = group.widgets.findIndex((w) => w.id === editingWidget.value.id);
+    if (idx !== -1) {
+      group.widgets[idx] = { ...widgetForm.value };
+    }
+  } else {
+    group.widgets.push({ ...widgetForm.value });
+  }
+
+  await saveCustomGroupsToDb();
+  isWidgetDialogOpen.value = false;
+};
+
+const deleteWidget = async (group, widget) => {
+  if (!confirm(`Bạn có chắc muốn xóa khối thống kê "${widget.title}"?`)) return;
+  group.widgets = group.widgets.filter((w) => w.id !== widget.id);
+  await saveCustomGroupsToDb();
+};
+
+const getCountWidgets = (group) => {
+  return (group.widgets || []).filter((w) => w.displayType === 'count');
+};
+
+const getChartWidgets = (group) => {
+  return (group.widgets || []).filter((w) => w.displayType === 'chart');
+};
+
+const getSourceLabel = (source) => {
+  if (source === 'personnel') return 'Cán bộ';
+  if (source === 'relatives') return 'Thân nhân';
+  if (source === 'trips') return 'Chuyến đi';
+  return 'Dữ liệu';
+};
+
+const getLightColor = (hex = '#2e7d32') => {
+  if (hex === '#2e7d32') return '#dcfce7';
+  if (hex === '#0284c7') return '#e0f2fe';
+  if (hex === '#7c3aed') return '#f3e8ff';
+  if (hex === '#ea580c') return '#ffedd5';
+  if (hex === '#dc2626') return '#fee2e2';
+  if (hex === '#0d9488') return '#ccfbf1';
+  return '#f1f5f9';
+};
+
+// Dynamic Computation of Custom Widgets
+const getRowFieldValue = (row, colId) => {
+  if (!row) return '';
+  if (row[colId] !== undefined && row[colId] !== null) return row[colId];
+  if (row.custom_data && row.custom_data[colId] !== undefined && row.custom_data[colId] !== null) {
+    return row.custom_data[colId];
+  }
+  return '';
+};
+
+const getSourceList = (source) => {
+  if (source === 'relatives') return personnelStore.relativesList || [];
+  if (source === 'trips') return stats.value.filteredTrips || [];
+  return personnelStore.personnelList || [];
+};
+
+const computeWidgetCount = (widget) => {
+  const list = getSourceList(widget.source);
+  if (!widget.columnId) return 0;
+
+  return list.filter((row) => {
+    const val = getRowFieldValue(row, widget.columnId);
+    if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') return false;
+
+    if (widget.countCondition === 'equals' && widget.countValue) {
+      const target = String(widget.countValue).toLowerCase().trim();
+      const actual = String(val).toLowerCase().trim();
+      return actual === target || actual.includes(target);
+    }
+    return true;
+  }).length;
+};
+
+const computeWidgetChartData = (widget) => {
+  const list = getSourceList(widget.source);
+  if (!widget.columnId) return { list: [], max: 1, total: 0 };
+
+  const counts = {};
+  let total = 0;
+
+  list.forEach((row) => {
+    const val = getRowFieldValue(row, widget.columnId);
+    if (val === undefined || val === null) return;
+    const strVal = String(val).trim();
+    if (!strVal || strVal === '-') return;
+
+    counts[strVal] = (counts[strVal] || 0) + 1;
+    total++;
+  });
+
+  const chartList = Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const max = chartList.length > 0 ? chartList[0].count : 1;
+  return { list: chartList, max, total };
+};
+
+const getFilteredChartList = (widget) => {
+  const data = computeWidgetChartData(widget).list;
+  const q = (customChartSearches.value[widget.id] || '').toLowerCase().trim();
+  if (!q) return data;
+  return data.filter((item) => item.name.toLowerCase().includes(q));
+};
+
+const availableColumnsForWidgetSource = computed(() => {
+  const source = widgetForm.value.source;
+  const mapping = source === 'relatives' ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel;
+  const colMap = computeColumnIndexMap(mapping);
+  const list = [];
+
+  (mapping || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.label) {
+        const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
+        const grp = g.group ? `[${g.group}] ` : '';
+        list.push({
+          id: c.id,
+          rawLabel: c.label,
+          label: `${colNum}${grp}${c.label} (${c.id})`,
+        });
+      }
+    });
+  });
+  return list;
+});
+
+const allAvailablePersonnelColumns = computed(() => {
+  const colMap = computeColumnIndexMap(personnelStore.importMappingPersonnel);
+  const list = [];
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.label) {
+        const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
+        const grp = g.group ? `[${g.group}] ` : '';
+        list.push({
+          id: c.id,
+          label: `${colNum}${grp}${c.label} (${c.id})`,
+        });
+      }
+    });
+  });
+  return list;
+});
+
+// =========================================================================
+// 3. TIME FILTER STATE & STAT COMPUTATION
+// =========================================================================
+const timeFilterMode = ref('all');
 const customStartDate = ref('');
 const customEndDate = ref('');
 
@@ -690,7 +1326,6 @@ const getTimeFilterLabel = () => {
   return 'Tất cả';
 };
 
-// Helper to parse date DD/MM/YYYY or YYYY-MM-DD
 const parseDateObj = (str) => {
   if (!str) return null;
   if (str instanceof Date) return str;
@@ -717,10 +1352,14 @@ const isWithinTimeFilter = (dateStr) => {
   const now = new Date();
 
   if (timeFilterMode.value === 'week') {
-    const day = now.getDay() || 7; // get current day of week (1-7)
-    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1, 0, 0, 0);
-    const sunday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 7, 23, 59, 59);
-    return d >= monday && d <= sunday;
+    const day = now.getDay() || 7;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - day + 1);
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    return d >= startOfWeek && d <= endOfWeek;
   }
 
   if (timeFilterMode.value === 'month') {
@@ -732,51 +1371,31 @@ const isWithinTimeFilter = (dateStr) => {
   }
 
   if (timeFilterMode.value === 'custom') {
-    const start = parseDateObj(customStartDate.value);
-    const end = parseDateObj(customEndDate.value);
-    if (start && d < start) return false;
-    if (end) {
-      const endInclusive = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59);
-      if (d > endInclusive) return false;
-    }
+    const start = customStartDate.value ? parseDateObj(customStartDate.value) : null;
+    const end = customEndDate.value ? parseDateObj(customEndDate.value) : null;
+    if (start && end) return d >= start && d <= end;
+    if (start) return d >= start;
+    if (end) return d <= end;
     return true;
   }
 
   return true;
 };
 
-// =========================================================================
-// 3. STATS COMPUTATION & EXTRACTOR
-// =========================================================================
 const getTripValue = (trip, colId) => {
-  if (!trip || !colId) return '';
-  if (trip[colId] !== undefined && trip[colId] !== null && String(trip[colId]).trim() !== '') {
-    return String(trip[colId]).trim();
-  }
-  if (colId === 'countryName' && (trip.country || trip.quocGia || trip.quoc_gia)) {
-    return String(trip.country || trip.quocGia || trip.quoc_gia).trim();
-  }
-  if (colId === 'fundingName' && (trip.funding || trip.nguonKinhPhi || trip.nguon_kinh_phi)) {
-    return String(trip.funding || trip.nguonKinhPhi || trip.nguon_kinh_phi).trim();
-  }
-  if (colId === 'decisionNumber' && (trip.decision || trip.soQuyetDinh || trip.so_quyet_dinh)) {
-    return String(trip.decision || trip.soQuyetDinh || trip.so_quyet_dinh).trim();
-  }
-  if (colId === 'approvedDepartureDate' && (trip.departureDate || trip.ngayXuatCanh || trip.ngay_xuat_canh)) {
-    return String(trip.departureDate || trip.ngayXuatCanh || trip.ngay_xuat_canh).trim();
-  }
-  if (colId === 'approvedArrivalDate' && (trip.arrivalDate || trip.ngayNhapCanh || trip.ngay_nhap_canh)) {
-    return String(trip.arrivalDate || trip.ngayNhapCanh || trip.ngay_nhap_canh).trim();
-  }
-  if (colId === 'approvedExtensionDate' && (trip.extensionDate || trip.ngayGiaHan || trip.ngay_gia_han)) {
-    return String(trip.extensionDate || trip.ngayGiaHan || trip.ngay_gia_han).trim();
+  if (!trip) return '';
+  if (trip[colId] !== undefined && trip[colId] !== null) return trip[colId];
+  if (trip.custom_data && trip.custom_data[colId] !== undefined && trip.custom_data[colId] !== null) {
+    return trip.custom_data[colId];
   }
   return '';
 };
 
 const stats = computed(() => {
   const pList = personnelStore.personnelList || [];
-  let totalRelatives = 0;
+  const rList = personnelStore.relativesList || [];
+  const totalRelatives = rList.length;
+
   const filteredTrips = [];
   const missingDecisionTrips = [];
   const extendedTrips = [];
@@ -787,15 +1406,10 @@ const stats = computed(() => {
   const fundings = {};
 
   pList.forEach((p) => {
-    if (Array.isArray(p.relatives)) {
-      totalRelatives += p.relatives.length;
-    }
-
-    const pTrips = Array.isArray(p.trips) ? p.trips : [];
-    pTrips.forEach((t) => {
-      // Check date filter by departureDate or arrivalDate
-      const depDate = t.departureDate || t.decisionDate || '';
-      if (!isWithinTimeFilter(depDate) && !isWithinTimeFilter(t.arrivalDate)) {
+    const trips = p.trips || [];
+    trips.forEach((t) => {
+      const depDate = t.departureDate || t.approvedDepartureDate;
+      if (!isWithinTimeFilter(depDate)) {
         return;
       }
 
@@ -814,12 +1428,10 @@ const stats = computed(() => {
 
       filteredTrips.push(enrichedTrip);
 
-      // 1. Missing Decision Warning
       if (!enrichedTrip.decisionNumber) {
         missingDecisionTrips.push(enrichedTrip);
       }
 
-      // 2. Schedule Warnings
       if (enrichedTrip.approvedExtensionDate) {
         extendedTrips.push(enrichedTrip);
       } else {
@@ -832,13 +1444,11 @@ const stats = computed(() => {
         }
       }
 
-      // 3. Country aggregation
       const c = enrichedTrip.countryName;
       if (c && c !== 'Chưa rõ') {
         countries[c] = (countries[c] || 0) + 1;
       }
 
-      // 4. Funding aggregation
       const f = enrichedTrip.fundingName;
       if (f && f !== 'Chưa rõ') {
         fundings[f] = (fundings[f] || 0) + 1;
@@ -884,31 +1494,13 @@ const filteredFundingList = computed(() => {
   return stats.value.fundingList.filter((item) => item.name.toLowerCase().includes(q));
 });
 
-// All Available Columns from Settings for Dropdown selection
-const allAvailableColumns = computed(() => {
-  const colMap = computeColumnIndexMap(personnelStore.importMappingPersonnel);
-  const list = [];
-  (personnelStore.importMappingPersonnel || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.label) {
-        const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
-        const grp = g.group ? `[${g.group}] ` : '';
-        list.push({
-          id: c.id,
-          label: `${colNum}${grp}${c.label} (${c.id})`,
-        });
-      }
-    });
-  });
-  return list;
-});
-
 // =========================================================================
 // 4. DRILL-DOWN POPUP MODAL LOGIC
 // =========================================================================
 const isDrilldownOpen = ref(false);
 const drilldownTitle = ref('');
 const drilldownType = ref('');
+const drilldownCategory = ref('trips'); // 'personnel' | 'relatives' | 'trips'
 const drilldownData = ref([]);
 const drilldownSearch = ref('');
 
@@ -918,32 +1510,80 @@ const openDrilldown = (type, title, filterContext = {}) => {
   drilldownSearch.value = '';
 
   if (type === 'all_personnel') {
+    drilldownCategory.value = 'personnel';
     drilldownData.value = [...(personnelStore.personnelList || [])];
   } else if (type === 'all_trips') {
+    drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.filteredTrips];
   } else if (type === 'all_relatives') {
+    drilldownCategory.value = 'relatives';
     drilldownData.value = [...(personnelStore.relativesList || [])];
   } else if (type === 'missing_decision') {
+    drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.missingDecisionTrips];
   } else if (type === 'schedule_warnings') {
+    drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.extendedTrips, ...stats.value.overdueTrips];
   } else if (type === 'schedule_extended') {
+    drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.extendedTrips];
   } else if (type === 'schedule_overdue') {
+    drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.overdueTrips];
   } else if (type === 'schedule_ontime') {
+    drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.onTimeTrips];
   } else if (type === 'country' && filterContext.countryName) {
+    drilldownCategory.value = 'trips';
     drilldownData.value = stats.value.filteredTrips.filter(
       (t) => t.countryName.toLowerCase() === filterContext.countryName.toLowerCase()
     );
   } else if (type === 'funding' && filterContext.fundingName) {
+    drilldownCategory.value = 'trips';
     drilldownData.value = stats.value.filteredTrips.filter(
       (t) => t.fundingName.toLowerCase() === filterContext.fundingName.toLowerCase()
     );
   } else {
+    drilldownCategory.value = 'trips';
     drilldownData.value = [];
   }
+
+  isDrilldownOpen.value = true;
+};
+
+// Custom Widget Drilldown
+const openCustomWidgetDrilldown = (widget) => {
+  drilldownType.value = widget.id;
+  drilldownTitle.value = `${widget.title} (Cột: ${widget.columnLabel || widget.columnId})`;
+  drilldownCategory.value = widget.source;
+  drilldownSearch.value = '';
+
+  const list = getSourceList(widget.source);
+  drilldownData.value = list.filter((row) => {
+    const val = getRowFieldValue(row, widget.columnId);
+    if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') return false;
+    if (widget.countCondition === 'equals' && widget.countValue) {
+      const target = String(widget.countValue).toLowerCase().trim();
+      const actual = String(val).toLowerCase().trim();
+      return actual === target || actual.includes(target);
+    }
+    return true;
+  });
+
+  isDrilldownOpen.value = true;
+};
+
+const openCustomChartItemDrilldown = (widget, itemName) => {
+  drilldownType.value = `${widget.id}_${itemName}`;
+  drilldownTitle.value = `${widget.title}: ${itemName}`;
+  drilldownCategory.value = widget.source;
+  drilldownSearch.value = '';
+
+  const list = getSourceList(widget.source);
+  drilldownData.value = list.filter((row) => {
+    const val = getRowFieldValue(row, widget.columnId);
+    return String(val || '').trim().toLowerCase() === String(itemName).trim().toLowerCase();
+  });
 
   isDrilldownOpen.value = true;
 };
@@ -972,7 +1612,8 @@ const refreshData = async () => {
 };
 
 onMounted(async () => {
-  loadDashboardSettings();
+  await loadDashboardSettings();
+  await loadCustomGroups();
   if (personnelStore.personnelList.length === 0) {
     await personnelStore.init();
   }
