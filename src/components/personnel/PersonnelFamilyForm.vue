@@ -18,7 +18,13 @@
       Chưa có thân nhân liên quan nào được ghi nhận. Nhấp <b>"+ Thêm Thân nhân"</b> để bổ sung.
     </div>
 
-    <div v-for="(rel, idx) in relatives" :key="idx" style="margin-bottom: 1.25rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div
+      v-for="(rel, idx) in relatives"
+      :key="rel.id || idx"
+      :id="`relative-card-${rel.code || ('TN-' + String(idx + 1).padStart(5, '0'))}`"
+      class="relative-card-box"
+      style="margin-bottom: 1.25rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+    >
       <!-- Header of relative card -->
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -72,7 +78,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch, nextTick } from 'vue';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import DynamicField from '@/components/common/DynamicField.vue';
@@ -82,6 +88,10 @@ const props = defineProps({
   form: {
     type: Object,
     required: true,
+  },
+  targetRelativeCode: {
+    type: String,
+    default: '',
   },
 });
 
@@ -161,4 +171,38 @@ const addRelative = () => {
 const removeRelative = (index) => {
   relatives.value.splice(index, 1);
 };
+
+// Auto scroll to target relative card and highlight it
+watch(
+  () => props.targetRelativeCode,
+  (code) => {
+    if (code) {
+      nextTick(() => {
+        setTimeout(() => {
+          const el = document.getElementById(`relative-card-${code}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('highlight-relative-card');
+            setTimeout(() => {
+              el.classList.remove('highlight-relative-card');
+            }, 3000);
+          }
+        }, 150);
+      });
+    }
+  },
+  { immediate: true }
+);
 </script>
+
+<style scoped>
+.relative-card-box {
+  transition: all 0.3s ease;
+}
+
+.highlight-relative-card {
+  border: 2px solid #0284c7 !important;
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.25) !important;
+  background: #f0f9ff !important;
+}
+</style>

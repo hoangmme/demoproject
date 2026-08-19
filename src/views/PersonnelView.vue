@@ -332,7 +332,7 @@
                 size="small"
                 outlined
                 severity="info"
-                @click="openEditDialog(data.parentPerson)"
+                @click="handleRelativeDetail(data)"
               />
               <Button
                 label="Xóa"
@@ -351,6 +351,8 @@
     <PersonnelDialog
       v-model="isDialogOpen"
       :personData="selectedPerson"
+      :initialTab="dialogInitialTab"
+      :targetRelativeCode="dialogTargetRelativeCode"
       @saved="onPersonSaved"
       @deleted="onPersonDeleted"
     />
@@ -638,6 +640,8 @@ const selectedPersonnel = ref([]);
 const selectedRelatives = ref([]);
 const isDialogOpen = ref(false);
 const selectedPerson = ref(null);
+const dialogInitialTab = ref(0);
+const dialogTargetRelativeCode = ref('');
 
 // Advanced Export Modal
 const isExportOpen = ref(false);
@@ -829,13 +833,48 @@ const onColumnsChange = () => {
 
 const openCreateDialog = () => {
   selectedPerson.value = null;
+  dialogInitialTab.value = 0;
+  dialogTargetRelativeCode.value = '';
   isDialogOpen.value = true;
 };
 
-const openEditDialog = (person) => {
+const openEditDialog = (person, options = {}) => {
   if (!person) return;
   selectedPerson.value = person;
+  dialogInitialTab.value = options.tab !== undefined ? options.tab : 0;
+  dialogTargetRelativeCode.value = options.targetRelativeCode || '';
   isDialogOpen.value = true;
+};
+
+const handleRelativeDetail = (relData) => {
+  if (!relData) return;
+  let parent = relData.parentPerson;
+  if (!parent && relData.cccd_can_bo) {
+    parent = personnelStore.personnelList.find(
+      (p) => String(p.cccdparent || p.cccd || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim() === String(relData.cccd_can_bo).trim()
+    );
+  }
+  if (!parent && relData.personnelId) {
+    parent = personnelStore.personnelList.find((p) => p.id === relData.personnelId);
+  }
+
+  const relCode = relData.code || ('TN-' + String(relData.id || '').slice(-5).padStart(5, '0'));
+
+  if (parent) {
+    openEditDialog(parent, {
+      tab: 1, // Open Tab 2: Thân nhân
+      targetRelativeCode: relCode,
+    });
+  } else {
+    // If not linked to a parent yet, display relative in modal
+    openEditDialog({
+      name: relData.parentName || 'Cán bộ liên quan',
+      relatives: [relData],
+    }, {
+      tab: 1,
+      targetRelativeCode: relCode,
+    });
+  }
 };
 
 const onRowClick = (event) => {
@@ -1259,6 +1298,26 @@ const executeImport = async () => {
         if (cccd) pByCccd[String(cccd).trim()] = p;
       });
 
+      // Lookup existing relatives to merge / deduplicate
+      const existingRelatives = [...(personnelStore.relativesList || [])];
+      const relByCccd = {};
+      const relByParentAndName = {};
+
+      existingRelatives.forEach((r) => {
+        const rCccd = String(r.cccd || r.cccdthannhan || r.custom_data?.cccd || r.custom_data?.cccdthannhan || r.custom_data?.cccd_than_nhan || '').trim();
+        if (rCccd) {
+          relByCccd[rCccd] = r;
+        }
+        const pCccd = String(r.cccd_can_bo || r.custom_data?.cccd_can_bo || '').trim();
+        const rName = normalizeKey(r.relativeName || r.name || r.custom_data?.relativeName || '');
+        if (pCccd && rName) {
+          relByParentAndName[`${pCccd}_${rName}`] = r;
+        }
+      });
+
+      let relCreatedCount = 0;
+      let relUpdatedCount = 0;
+
       for (let i = 1; i < rawRows.length; i++) {
         const row = rawRows[i];
         if (!row || row.length === 0 || !row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== '')) continue;
@@ -1306,47 +1365,103 @@ const executeImport = async () => {
         // Match parent strictly by cccd_can_bo -> cccdparent
         const parentPerson = cleanParentCccd ? pByCccd[cleanParentCccd] : null;
 
-        const nextTnIndex = (personnelStore.relativesList || []).length + count + 1;
-        const newRel = {
-          id: 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
-          code: 'TN-' + String(nextTnIndex).padStart(5, '0'),
-          personnelId: parentPerson ? parentPerson.id : '',
-          personnelCode: parentPerson ? parentPerson.code : '',
-          personnelName: parentPerson ? parentPerson.name : 'Chưa liên kết',
-          parentName: parentPerson ? parentPerson.name : 'Chưa liên kết',
-          parentPersonnelName: parentPerson ? parentPerson.name : 'Chưa liên kết',
-          cccd_can_bo: cleanParentCccd,
-          parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : '',
-          parentDepartment: parentPerson ? (parentPerson.departmentName || '') : '',
-          relationshipName: relationshipName || String(row[5] || 'Thân nhân'),
-          relativeName,
-          birthYear: formatExcelDate(relData['birthYear'] || row[8] || ''),
-          cccd: String(relData['cccd'] || row[15] || ''),
-          currentAddress: String(relData['currentAddress'] || row[13] || ''),
-          occupation: String(relData['occupation'] || row[11] || ''),
-          countryName: String(relData['countryName'] || relData['content'] || ''),
-          timeAbroad: String(relData['timeAbroad'] || relData['unitAbroad'] || ''),
-          unitAbroad: String(relData['fileNumber'] || ''),
-          fundingName: String(relData['fundingName'] || ''),
-          marriedToForeigner: String(relData['marriedToForeigner'] || '').toLowerCase().includes('có') ? 1 : 0,
-          workInForeignCompany: String(relData['workInForeignCompany'] || '').toLowerCase().includes('có') ? 1 : 0,
-          custom_data: {
-            ...relData,
-            cccd_can_bo: cleanParentCccd,
-            parentName: parentPerson?.name || '',
-          },
-        };
+        const relCccd = String(relData['cccd'] || relData['cccdthannhan'] || relData['cccd_than_nhan'] || row[15] || '').trim();
 
-        await apiClient.post('/items/appendix2', newRel);
+        let existingRel = null;
+        if (relCccd && relByCccd[relCccd]) {
+          existingRel = relByCccd[relCccd];
+        } else if (cleanParentCccd && relativeName) {
+          const key = `${cleanParentCccd}_${normalizeKey(relativeName)}`;
+          if (relByParentAndName[key]) {
+            existingRel = relByParentAndName[key];
+          }
+        }
+
+        if (existingRel) {
+          // GỘP / CẬP NHẬT THÂN NHÂN ĐÃ TỒN TẠI (Tránh sinh trùng lặp)
+          const updatedPayload = {
+            ...existingRel,
+            ...existingRel.custom_data,
+            ...relData,
+            personnelId: parentPerson ? parentPerson.id : existingRel.personnelId,
+            personnelCode: parentPerson ? parentPerson.code : existingRel.personnelCode,
+            personnelName: parentPerson ? parentPerson.name : existingRel.personnelName,
+            parentName: parentPerson ? parentPerson.name : existingRel.parentName,
+            parentPersonnelName: parentPerson ? parentPerson.name : existingRel.parentPersonnelName,
+            cccd_can_bo: cleanParentCccd || existingRel.cccd_can_bo,
+            parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : existingRel.parentPosition,
+            parentDepartment: parentPerson ? (parentPerson.departmentName || '') : existingRel.parentDepartment,
+            relationshipName: relationshipName || existingRel.relationshipName,
+            relativeName: relativeName || existingRel.relativeName,
+            birthYear: formatExcelDate(relData['birthYear'] || row[8] || existingRel.birthYear || ''),
+            cccd: relCccd || existingRel.cccd,
+            currentAddress: String(relData['currentAddress'] || row[13] || existingRel.currentAddress || ''),
+            occupation: String(relData['occupation'] || row[11] || existingRel.occupation || ''),
+            countryName: String(relData['countryName'] || relData['quoc_gia'] || relData['quocGia'] || existingRel.countryName || ''),
+            timeAbroad: String(relData['timeAbroad'] || relData['unitAbroad'] || existingRel.timeAbroad || ''),
+            unitAbroad: String(relData['fileNumber'] || existingRel.unitAbroad || ''),
+            fundingName: String(relData['fundingName'] || existingRel.fundingName || ''),
+            marriedToForeigner: relData['marriedToForeigner'] !== undefined ? (String(relData['marriedToForeigner']).toLowerCase().includes('có') ? 1 : 0) : existingRel.marriedToForeigner,
+            workInForeignCompany: relData['workInForeignCompany'] !== undefined ? (String(relData['workInForeignCompany']).toLowerCase().includes('có') ? 1 : 0) : existingRel.workInForeignCompany,
+            custom_data: {
+              ...(existingRel.custom_data || {}),
+              ...relData,
+              cccd_can_bo: cleanParentCccd || existingRel.cccd_can_bo,
+              cccdthannhan: relCccd || existingRel.cccd,
+              parentName: parentPerson?.name || existingRel.parentName || '',
+            },
+          };
+          await apiClient.patch(`/items/appendix2/${existingRel.id}`, updatedPayload);
+          relUpdatedCount++;
+        } else {
+          // THÊM MỚI THÂN NHÂN
+          const nextTnIndex = (personnelStore.relativesList || []).length + relCreatedCount + 1;
+          const newRel = {
+            id: 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
+            code: 'TN-' + String(nextTnIndex).padStart(5, '0'),
+            personnelId: parentPerson ? parentPerson.id : '',
+            personnelCode: parentPerson ? parentPerson.code : '',
+            personnelName: parentPerson ? parentPerson.name : 'Chưa liên kết',
+            parentName: parentPerson ? parentPerson.name : 'Chưa liên kết',
+            parentPersonnelName: parentPerson ? parentPerson.name : 'Chưa liên kết',
+            cccd_can_bo: cleanParentCccd,
+            parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : '',
+            parentDepartment: parentPerson ? (parentPerson.departmentName || '') : '',
+            relationshipName: relationshipName || String(row[5] || 'Thân nhân'),
+            relativeName,
+            birthYear: formatExcelDate(relData['birthYear'] || row[8] || ''),
+            cccd: relCccd,
+            currentAddress: String(relData['currentAddress'] || row[13] || ''),
+            occupation: String(relData['occupation'] || row[11] || ''),
+            countryName: String(relData['countryName'] || relData['quoc_gia'] || relData['quocGia'] || ''),
+            timeAbroad: String(relData['timeAbroad'] || relData['unitAbroad'] || ''),
+            unitAbroad: String(relData['fileNumber'] || ''),
+            fundingName: String(relData['fundingName'] || ''),
+            marriedToForeigner: String(relData['marriedToForeigner'] || '').toLowerCase().includes('có') ? 1 : 0,
+            workInForeignCompany: String(relData['workInForeignCompany'] || '').toLowerCase().includes('có') ? 1 : 0,
+            custom_data: {
+              ...relData,
+              cccd_can_bo: cleanParentCccd,
+              cccdthannhan: relCccd,
+              parentName: parentPerson?.name || '',
+            },
+          };
+          await apiClient.post('/items/appendix2', newRel);
+          if (relCccd) relByCccd[relCccd] = newRel;
+          if (cleanParentCccd && relativeName) {
+            relByParentAndName[`${cleanParentCccd}_${normalizeKey(relativeName)}`] = newRel;
+          }
+          relCreatedCount++;
+        }
         count++;
       }
-      await logActivity('Import Excel Thân nhân', `Đã import và liên kết ${count} thân nhân theo CCCD cán bộ`);
+      await logActivity('Import Excel Thân nhân', `Đã import ${count} thân nhân (Tạo mới: ${relCreatedCount}, Gộp cập nhật: ${relUpdatedCount})`);
     }
 
     await personnelStore.fetchPersonnel();
     const resultMsg = currentImportType.value === 'personnel'
       ? `Import hoàn tất ${count} hồ sơ cán bộ (Tạo mới: ${createdCount}, Cập nhật ghi đè theo CCCD: ${updatedCount})!`
-      : `Import hoàn tất và liên kết thành công ${count} thân nhân vào hồ sơ cán bộ!`;
+      : `Import hoàn tất ${count} thân nhân (Tạo mới: ${relCreatedCount}, Gộp cập nhật: ${relUpdatedCount})!`;
     alert(resultMsg);
     isImportOpen.value = false;
   } catch (err) {

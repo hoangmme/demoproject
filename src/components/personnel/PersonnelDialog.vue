@@ -59,9 +59,9 @@
       <!-- TAB 2: THÂN NHÂN -->
       <div v-show="activeTab === 1">
         <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
-          DANH SÁCH THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI
+          DANH SÁCH THÂN NHÂN LIÊN QUAN
         </h4>
-        <PersonnelFamilyForm :form="form" />
+        <PersonnelFamilyForm :form="form" :targetRelativeCode="targetRelativeCode" />
       </div>
     </div>
 
@@ -114,13 +114,21 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  initialTab: {
+    type: Number,
+    default: 0,
+  },
+  targetRelativeCode: {
+    type: String,
+    default: '',
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'saved', 'deleted']);
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 
-const activeTab = ref(0);
+const activeTab = ref(props.initialTab || 0);
 const saving = ref(false);
 
 const visible = computed({
@@ -205,7 +213,7 @@ watch(
         files: [],
       };
     }
-    activeTab.value = 0;
+    activeTab.value = props.initialTab !== undefined ? props.initialTab : 0;
   },
   { immediate: true }
 );
