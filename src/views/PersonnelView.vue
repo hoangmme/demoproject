@@ -1078,13 +1078,11 @@ const executeImport = async () => {
         });
       });
 
-      // Existing Personnel map by CCCD & Code
+      // Existing Personnel map strictly by cccdparent
       const existingByCccd = {};
-      const existingByCode = {};
       personnelStore.personnelList.forEach((p) => {
-        const pCccd = p.cccd || p.cccdparent || p.custom_data?.cccd || p.custom_data?.cccdparent;
+        const pCccd = p.cccdparent || p.custom_data?.cccdparent;
         if (pCccd) existingByCccd[String(pCccd).trim()] = p;
-        if (p.code) existingByCode[String(p.code).trim().toLowerCase()] = p;
       });
 
       for (let i = 1; i < rawRows.length; i++) {
@@ -1129,7 +1127,7 @@ const executeImport = async () => {
           }
 
           // Xử lý CCCD
-          if (fId === 'cccd' || fId === 'cccdparent') {
+          if (fId === 'cccdparent') {
             finalVal = String(val).trim();
           }
 
@@ -1159,10 +1157,8 @@ const executeImport = async () => {
           }
 
           // Đồng bộ tên trường chuẩn
-          if (fId === 'cccd' || fId === 'cccdparent') {
-            rowData.cccd = finalVal;
+          if (fId === 'cccdparent') {
             rowData.cccdparent = finalVal;
-            customData.cccd = finalVal;
             customData.cccdparent = finalVal;
           } else if (fId === 'positionName' || fId === 'position') {
             rowData.position = finalVal;
@@ -1208,14 +1204,14 @@ const executeImport = async () => {
         if (!rowData.name && row[2]) rowData.name = String(row[2]).trim();
         if (!rowData.name || rowData.name.toLowerCase() === 'họ và tên') continue;
 
-        const cleanCccd = String(rowData.cccd || rowData.cccdparent || customData.cccd || customData.cccdparent || '').trim();
+        const cleanCccd = String(rowData.cccdparent || customData.cccdparent || '').trim();
 
         // NẾU CÁ NHÂN KHÔNG CÓ cccdparent (Số CCCD cán bộ) -> BỎ QUA NGAY LẬP TỨC
         if (!cleanCccd) {
           continue;
         }
 
-        // Kiểm tra cán bộ đã tồn tại theo DUY NHẤT CCCD
+        // Kiểm tra cán bộ đã tồn tại theo DUY NHẤT cccdparent
         const existingPerson = existingByCccd[cleanCccd] || null;
         let targetPersonId = '';
 
@@ -1299,24 +1295,18 @@ const executeImport = async () => {
 
       const pByCccd = {};
       personnelStore.personnelList.forEach((p) => {
-        const cccd = p.cccdparent || p.cccd || p.custom_data?.cccdparent || p.custom_data?.cccd;
+        const cccd = p.cccdparent || p.custom_data?.cccdparent;
         if (cccd) pByCccd[String(cccd).trim()] = p;
       });
 
-      // Lookup existing relatives to merge / deduplicate
+      // Lookup existing relatives strictly by cccdthannhan
       const existingRelatives = [...(personnelStore.relativesList || [])];
       const relByCccd = {};
-      const relByParentAndName = {};
 
       existingRelatives.forEach((r) => {
-        const rCccd = String(r.cccd || r.cccdthannhan || r.custom_data?.cccd || r.custom_data?.cccdthannhan || r.custom_data?.cccd_than_nhan || '').trim();
+        const rCccd = String(r.cccdthannhan || r.custom_data?.cccdthannhan || r.cccd || '').trim();
         if (rCccd) {
           relByCccd[rCccd] = r;
-        }
-        const pCccd = String(r.cccd_can_bo || r.custom_data?.cccd_can_bo || '').trim();
-        const rName = normalizeKey(r.relativeName || r.name || r.custom_data?.relativeName || '');
-        if (pCccd && rName) {
-          relByParentAndName[`${pCccd}_${rName}`] = r;
         }
       });
 
