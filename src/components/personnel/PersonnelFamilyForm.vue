@@ -58,7 +58,8 @@
                   <span class="label-text">{{ col.label }}</span>
                 </label>
                 <DynamicField
-                  v-model="rel[col.id]"
+                  :modelValue="getRelativeFieldValue(rel, col.id)"
+                  @update:modelValue="(val) => setRelativeFieldValue(rel, col.id, val)"
                   :col="col"
                 />
               </div>
@@ -105,8 +106,20 @@ const colIndexMap = computed(() => {
 });
 
 const filterRelativeColumns = (cols) => {
-  const ignore = new Set(['stt', 'code', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'parentPersonnelCccd']);
+  const ignore = new Set(['stt', 'code', 'cccd_can_bo', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'parentPersonnelCccd', 'parentCccd', 'cccdparent']);
   return (cols || []).filter((c) => !ignore.has(c.id));
+};
+
+const getRelativeFieldValue = (rel, colId) => {
+  if (rel[colId] !== undefined && rel[colId] !== null && rel[colId] !== '') return rel[colId];
+  if (rel.custom_data && rel.custom_data[colId] !== undefined && rel.custom_data[colId] !== null) return rel.custom_data[colId];
+  return '';
+};
+
+const setRelativeFieldValue = (rel, colId, val) => {
+  rel[colId] = val;
+  if (!rel.custom_data) rel.custom_data = {};
+  rel.custom_data[colId] = val;
 };
 
 const getColClass = (w) => {
@@ -121,8 +134,12 @@ const getColClass = (w) => {
 const addRelative = () => {
   const nextIdx = relatives.value.length + 1;
   const newCode = 'TN-' + String(nextIdx).padStart(5, '0');
+  const parentCccd = props.form.cccdparent || props.form.cccd || '';
   relatives.value.push({
     code: newCode,
+    personnelId: props.form.id || '',
+    personnelName: props.form.name || '',
+    cccd_can_bo: parentCccd,
     relationshipName: '',
     relativeName: '',
     birthYear: '',
@@ -135,6 +152,9 @@ const addRelative = () => {
     fundingName: '',
     marriedToForeigner: '',
     workInForeignCompany: '',
+    custom_data: {
+      cccd_can_bo: parentCccd,
+    },
   });
 };
 
