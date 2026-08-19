@@ -21,6 +21,7 @@ export const usePersonnelStore = defineStore('personnel', {
     selectedPerson: null,
     isDialogOpen: false,
     visibleColumns: ['code', 'name', 'birthYear', 'departmentId', 'position', 'cccd'],
+    visibleRelativeColumns: ['parentName', 'relationshipName', 'relativeName', 'birthYear', 'currentAddress', 'occupation', 'countryName'],
     importMappingPersonnel: [],
     importMappingRelative: [],
   }),
@@ -51,7 +52,6 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
-      // Fallback base list if settings not loaded yet
       if (list.length === 0) {
         return [
           { id: 'code', label: 'Mã CB', width: '110px' },
@@ -62,6 +62,36 @@ export const usePersonnelStore = defineStore('personnel', {
           { id: 'cccd', label: 'Số CCCD', width: '140px' },
         ];
       }
+      return list;
+    },
+    allAvailableRelativeColumns: (state) => {
+      const list = [
+        { id: 'parentName', label: 'Cán bộ liên quan', width: '180px' },
+        { id: 'relationshipName', label: 'Mối quan hệ', width: '130px' },
+        { id: 'relativeName', label: 'Họ và tên Thân nhân', width: '180px' },
+        { id: 'birthYear', label: 'Năm sinh', width: '110px' },
+        { id: 'currentAddress', label: 'Nơi cư trú', width: '180px' },
+        { id: 'occupation', label: 'Nghề nghiệp', width: '160px' },
+        { id: 'countryName', label: 'Quốc gia', width: '140px' },
+        { id: 'timeAbroad', label: 'Thời gian ở NN', width: '140px' },
+        { id: 'unitAbroad', label: 'Cơ quan ở NN', width: '160px' },
+        { id: 'fundingName', label: 'Nguồn kinh phí', width: '140px' },
+      ];
+
+      (state.importMappingRelative || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          if (c.id && c.id !== 'stt' && !list.find((x) => x.id === c.id)) {
+            list.push({
+              id: c.id,
+              label: c.label || c.id,
+              width: '150px',
+              format: c.format || 'text',
+              group: g.group,
+            });
+          }
+        });
+      });
+
       return list;
     },
   },
@@ -267,6 +297,20 @@ export const usePersonnelStore = defineStore('personnel', {
         await this.fetchPersonnel();
       } catch (e) {
         console.error('Error deleting multiple personnel:', e);
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+    async deleteRelative(rel) {
+      if (!rel?.id) return;
+      this.loading = true;
+      try {
+        await apiClient.delete(`/items/appendix2/${rel.id}`);
+        await logActivity('Xóa Thân nhân', `Xóa thân nhân: ${rel.relativeName || rel.name}`);
+        await this.fetchPersonnel();
+      } catch (e) {
+        console.error('Error deleting relative:', e);
         throw e;
       } finally {
         this.loading = false;

@@ -212,6 +212,22 @@
             style="width: 200px; font-size: 0.8rem;"
           />
 
+          <!-- Column Selector for Relatives -->
+          <MultiSelect
+            v-model="personnelStore.visibleRelativeColumns"
+            :options="personnelStore.allAvailableRelativeColumns"
+            optionLabel="label"
+            optionValue="id"
+            :maxSelectedLabels="1"
+            :selectedItemsLabel="'{0} cột được chọn'"
+            placeholder="Cột hiển thị"
+            size="small"
+            appendTo="self"
+            :showToggleAll="false"
+            :filter="false"
+            style="width: 165px; font-size: 0.8rem;"
+          />
+
           <!-- Import Relatives Button -->
           <Button
             label="Import Thân nhân"
@@ -231,6 +247,16 @@
             outlined
             size="small"
             @click="handleExportRelativesFull"
+            style="font-size: 0.8rem;"
+          />
+
+          <!-- Add Relative Button -->
+          <Button
+            label="Thêm Thân nhân"
+            icon="pi pi-plus"
+            severity="success"
+            size="small"
+            @click="openAddRelativeDialog"
             style="font-size: 0.8rem;"
           />
         </div>
@@ -268,8 +294,8 @@
         <Column field="currentAddress" header="Nơi cư trú" sortable :headerStyle="{ width: '180px', minWidth: '180px' }" />
         <Column field="occupation" header="Nghề nghiệp / Nơi làm việc" sortable :headerStyle="{ width: '200px', minWidth: '200px' }" />
         
-        <!-- Actions column (Centered & standardized to Chi tiết) -->
-        <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '130px', minWidth: '130px' }" :bodyStyle="{ width: '130px', minWidth: '130px' }">
+        <!-- Actions column (Centered with Chi tiết + Xóa) -->
+        <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
           <template #header>
             <div style="text-align: center; width: 100%; font-weight: 700;">THAO TÁC</div>
           </template>
@@ -281,6 +307,13 @@
                 outlined
                 severity="info"
                 @click="openEditDialog(data.parentPerson)"
+              />
+              <Button
+                label="Xóa"
+                size="small"
+                outlined
+                severity="danger"
+                @click.stop="handleDeleteRelative(data)"
               />
             </div>
           </template>
@@ -642,6 +675,20 @@ const handleExportRelativesFull = () => {
   }
 
   exportFullRelativesExcel(list, personnelStore.importMappingRelative);
+};
+
+const handleDeleteRelative = async (rel) => {
+  if (!confirm(`Bạn có chắc chắn muốn xóa thân nhân: "${rel.relativeName || rel.name}" không?`)) return;
+  await personnelStore.deleteRelative(rel);
+};
+
+const openAddRelativeDialog = () => {
+  if (personnelStore.personnelList.length === 0) {
+    alert('Vui lòng tạo hồ sơ Cán bộ trước khi thêm thân nhân!');
+    return;
+  }
+  selectedPerson.value = personnelStore.personnelList[0];
+  isDialogOpen.value = true;
 };
 
 const handleExportRelatives = () => {

@@ -78,7 +78,7 @@ export const exportFullRelativesExcel = (relativesList, mappingConfig) => {
         if (subOpts.length > 1) {
           subOpts.forEach((opt) => {
             const header = `${c.label || c.id}: ${opt}`;
-            const val = r[c.id] || r.custom_data?.[c.id] || '';
+            const val = getRelativeFieldValue(r, c.id, c.label);
             if (String(val).toLowerCase().includes(opt.toLowerCase())) {
               row[header] = 'X';
             } else {
@@ -87,11 +87,7 @@ export const exportFullRelativesExcel = (relativesList, mappingConfig) => {
           });
         } else {
           const header = c.label || c.id;
-          let val = r[c.id];
-          if (val === undefined && r.custom_data) {
-            val = r.custom_data[c.id];
-          }
-          row[header] = val !== undefined && val !== null ? val : '';
+          row[header] = getRelativeFieldValue(r, c.id, c.label);
         }
       });
     });
@@ -101,6 +97,31 @@ export const exportFullRelativesExcel = (relativesList, mappingConfig) => {
 
   exportToExcel(rows, 'Danh_sach_Than_nhan_Full_Cot', 'Hồ sơ Thân nhân');
 };
+
+function getRelativeFieldValue(r, fieldId, colLabel = '') {
+  if (!r) return '';
+  const labelLower = (colLabel || '').toLowerCase();
+
+  if (fieldId === 'parentPersonnelName' || fieldId === 'parentName' || labelLower.includes('tên cán bộ')) {
+    return r.parentName || r.parentPersonnelName || '';
+  }
+  if (fieldId === 'parentPersonnelCccd' || fieldId === 'parentCccd' || (labelLower.includes('cccd') && labelLower.includes('cán bộ'))) {
+    return r.parentCccd || r.parentPersonnelCccd || '';
+  }
+  if (fieldId === 'parentPosition' || labelLower.includes('chức vụ cb')) {
+    return r.parentPosition || '';
+  }
+  if (fieldId === 'parentDepartment' || labelLower.includes('đơn vị cb')) {
+    return r.parentDepartment || '';
+  }
+
+  if (r[fieldId] !== undefined && r[fieldId] !== null) return r[fieldId];
+  if (r.custom_data && r.custom_data[fieldId] !== undefined && r.custom_data[fieldId] !== null) {
+    return r.custom_data[fieldId];
+  }
+
+  return '';
+}
 
 function getFieldValue(p, fieldId, getDepartmentName) {
   if (!p) return '';
