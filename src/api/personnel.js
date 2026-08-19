@@ -63,6 +63,31 @@ export const updatePersonnel = async (id, data) => {
 };
 
 export const deletePersonnel = async (id) => {
+  if (!id) return;
+  
+  // 1. Clean up child records in appendix1, appendix2, appendix3 to satisfy Foreign Key constraints
+  try {
+    const a1Res = await apiClient.get('/items/appendix1', { params: { filter: { personnelId: { _eq: id } }, fields: ['id'] } });
+    for (const item of (a1Res.data?.data || [])) {
+      await apiClient.delete(`/items/appendix1/${item.id}`).catch(() => {});
+    }
+  } catch (e) {}
+
+  try {
+    const a2Res = await apiClient.get('/items/appendix2', { params: { filter: { personnelId: { _eq: id } }, fields: ['id'] } });
+    for (const item of (a2Res.data?.data || [])) {
+      await apiClient.delete(`/items/appendix2/${item.id}`).catch(() => {});
+    }
+  } catch (e) {}
+
+  try {
+    const a3Res = await apiClient.get('/items/appendix3', { params: { filter: { personnelId: { _eq: id } }, fields: ['id'] } });
+    for (const item of (a3Res.data?.data || [])) {
+      await apiClient.delete(`/items/appendix3/${item.id}`).catch(() => {});
+    }
+  } catch (e) {}
+
+  // 2. Now delete from personnels
   try {
     const res = await apiClient.delete(`/items/personnels/${id}`);
     return res.data;
@@ -73,25 +98,13 @@ export const deletePersonnel = async (id) => {
 };
 
 export const deleteMultiplePersonnel = async (ids) => {
-  try {
-    const res = await apiClient.delete('/items/personnels', {
-      data: ids,
-    });
-    return res.data;
-  } catch (e) {
+  if (!Array.isArray(ids) || ids.length === 0) return;
+  for (const id of ids) {
     try {
-      const res = await apiClient.delete('/items/personnel', {
-        data: ids,
-      });
-      return res.data;
+      await deletePersonnel(id);
     } catch (err) {
-      // Fallback: Delete one by one if batch endpoint is restricted (403/500)
-      for (const id of ids) {
-        try {
-          await deletePersonnel(id);
-        } catch (singleErr) {}
-      }
-      return { success: true };
+      console.warn('Error deleting person:', id, err);
     }
   }
+  return { success: true };
 };

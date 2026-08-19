@@ -21,16 +21,16 @@
           <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
           <span class="label-text">{{ col.label }}</span>
         </label>
-        <Select
+        <select
           v-model="form.departmentId"
-          :options="departments"
-          optionLabel="name"
-          optionValue="id"
-          placeholder="Chọn phòng ban"
-          size="small"
-          appendTo="self"
-          class="w-full"
-        />
+          class="custom-col-select w-full"
+          style="height: 33px; font-size: 0.82rem;"
+        >
+          <option value="">-- Chọn phòng ban --</option>
+          <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+            {{ dept.name }}
+          </option>
+        </select>
       </div>
 
       <!-- General Dynamic Fields -->

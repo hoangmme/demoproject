@@ -139,14 +139,16 @@
 
     <!-- 7. Dropdown -->
     <template v-else-if="col.format === 'dropdown'">
-      <Select
+      <select
         v-model="model"
-        :options="parsedOptions"
-        placeholder="-- Chọn --"
-        size="small"
-        appendTo="self"
-        class="w-full"
-      />
+        class="custom-col-select w-full"
+        style="height: 33px; font-size: 0.82rem;"
+      >
+        <option value="">-- Chọn --</option>
+        <option v-for="opt in parsedOptions" :key="opt" :value="opt">
+          {{ opt }}
+        </option>
+      </select>
     </template>
 
     <!-- 8. File Attachments -->
