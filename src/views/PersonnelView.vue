@@ -1163,13 +1163,9 @@ const executeImport = async () => {
       });
 
       const pByCccd = {};
-      const pByCode = {};
-      const pByName = {};
       personnelStore.personnelList.forEach((p) => {
-        const cccd = p.cccd || p.cccdparent || p.custom_data?.cccd || p.custom_data?.cccdparent;
+        const cccd = p.cccdparent || p.cccd || p.custom_data?.cccdparent || p.custom_data?.cccd;
         if (cccd) pByCccd[String(cccd).trim()] = p;
-        if (p.code) pByCode[String(p.code).trim().toLowerCase()] = p;
-        if (p.name) pByName[String(p.name).trim().toLowerCase()] = p;
       });
 
       for (let i = 1; i < rawRows.length; i++) {
@@ -1177,8 +1173,6 @@ const executeImport = async () => {
         if (!row || row.length === 0 || !row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== '')) continue;
 
         let parentCccd = '';
-        let parentCode = '';
-        let parentName = '';
         let relativeName = '';
         let relationshipName = '';
         const relData = {};
@@ -1204,8 +1198,7 @@ const executeImport = async () => {
           if (matched) {
             const fId = matched.id;
             relData[fId] = val;
-            if (fId === 'parentPersonnelCccd' || fId === 'cccd_can_bo' || fId === 'parentCccd' || fId === 'cccdparent') parentCccd = val;
-            if (fId === 'parentPersonnelName' || fId === 'parentName') parentName = val;
+            if (fId === 'cccd_can_bo') parentCccd = val;
             if (fId === 'relationshipName') relationshipName = val;
             if (fId === 'relativeName') relativeName = val;
           }
@@ -1215,26 +1208,24 @@ const executeImport = async () => {
         if (!relativeName) relativeName = String(row[6] || row[4] || row[3] || row[1] || '').trim();
         if (!relativeName || relativeName.toLowerCase() === 'họ và tên thân nhân') continue;
 
+        if (!parentCccd && relData['cccd_can_bo']) parentCccd = relData['cccd_can_bo'];
         if (!parentCccd && row[1] && String(row[1]).length >= 9) parentCccd = String(row[1]).trim();
-        if (!parentName && row[2]) parentName = String(row[2]).trim();
 
-        const targetParentCccd = parentCccd || relData['cccd_can_bo'] || relData['parentPersonnelCccd'] || relData['parentCccd'] || '';
-        const cleanParentCccd = targetParentCccd ? String(targetParentCccd).trim() : '';
+        const cleanParentCccd = parentCccd ? String(parentCccd).trim() : '';
 
-        // Match parent by CCCD (cccd / cccdparent) -> Code -> Name
-        const parentPerson = (cleanParentCccd && pByCccd[cleanParentCccd]) || (parentCode && pByCode[parentCode.toLowerCase()]) || (parentName && pByName[parentName.toLowerCase()]) || null;
+        // Match parent strictly by cccd_can_bo -> cccdparent
+        const parentPerson = cleanParentCccd ? pByCccd[cleanParentCccd] : null;
 
         const nextTnIndex = (personnelStore.relativesList || []).length + count + 1;
         const newRel = {
           id: 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
           code: 'TN-' + String(nextTnIndex).padStart(5, '0'),
-          personnelId: parentPerson ? parentPerson.id : (parentCode || 'CB-UNKNOWN'),
+          personnelId: parentPerson ? parentPerson.id : '',
           personnelCode: parentPerson ? parentPerson.code : '',
-          personnelName: parentPerson?.name || parentName || 'Chưa liên kết',
-          parentName: parentPerson?.name || parentName || 'Chưa liên kết',
-          parentPersonnelName: parentPerson?.name || parentName || 'Chưa liên kết',
-          parentCccd: parentPerson ? (parentPerson.cccd || parentPerson.cccdparent || '') : cleanParentCccd,
-          cccd_can_bo: cleanParentCccd || (parentPerson ? (parentPerson.cccd || parentPerson.cccdparent || '') : ''),
+          personnelName: parentPerson ? parentPerson.name : 'Chưa liên kết',
+          parentName: parentPerson ? parentPerson.name : 'Chưa liên kết',
+          parentPersonnelName: parentPerson ? parentPerson.name : 'Chưa liên kết',
+          cccd_can_bo: cleanParentCccd,
           parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : '',
           parentDepartment: parentPerson ? (parentPerson.departmentName || '') : '',
           relationshipName: relationshipName || String(row[5] || 'Thân nhân'),
@@ -1251,8 +1242,8 @@ const executeImport = async () => {
           workInForeignCompany: String(relData['workInForeignCompany'] || '').toLowerCase().includes('có') ? 1 : 0,
           custom_data: {
             ...relData,
-            cccd_can_bo: cleanParentCccd || (parentPerson ? (parentPerson.cccd || parentPerson.cccdparent || '') : ''),
-            parentName: parentPerson?.name || parentName || '',
+            cccd_can_bo: cleanParentCccd,
+            parentName: parentPerson?.name || '',
           },
         };
 
