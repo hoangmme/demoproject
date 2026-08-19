@@ -202,7 +202,7 @@ html, body {
   color: #374151;
 }
 
-/* PrimeVue Component Styling */
+/* PrimeVue Dialog & Modal */
 .p-dialog-mask {
   background-color: rgba(0, 0, 0, 0.5) !important;
   backdrop-filter: blur(4px) !important;
@@ -246,6 +246,7 @@ html, body {
   align-items: center !important;
 }
 
+/* Inputs & Forms */
 .p-inputtext, .p-textarea, .p-select, .p-multiselect {
   border: 1px solid #d1d5db !important;
   border-radius: 0.5rem !important;
@@ -263,6 +264,97 @@ html, body {
   box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15) !important;
 }
 
+/* MultiSelect & Select Overlay Panels */
+.p-multiselect-panel, .p-select-panel, .p-dropdown-panel, .p-overlaypanel, .p-popover {
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+  padding: 0.4rem !important;
+  z-index: 1200 !important;
+  max-height: 350px !important;
+  overflow-y: auto !important;
+}
+
+.p-multiselect-header, .p-select-header {
+  padding: 0.5rem !important;
+  background: #f9fafb !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+  margin-bottom: 0.35rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.p-multiselect-items, .p-select-items {
+  padding: 0 !important;
+  margin: 0 !important;
+  list-style: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.p-multiselect-item, .p-select-item {
+  padding: 0.45rem 0.65rem !important;
+  border-radius: 0.4rem !important;
+  font-size: 0.82rem !important;
+  color: #374151 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  cursor: pointer !important;
+  transition: all 0.1s ease !important;
+  background: transparent !important;
+}
+
+.p-multiselect-item:hover, .p-select-item:hover {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.p-multiselect-item.p-highlight, .p-select-item.p-highlight {
+  background-color: #e8f5e9 !important;
+  color: #2e7d32 !important;
+  font-weight: 600 !important;
+}
+
+/* Checkboxes */
+.p-checkbox {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 18px !important;
+  height: 18px !important;
+  position: relative !important;
+}
+
+.p-checkbox-box {
+  width: 18px !important;
+  height: 18px !important;
+  border: 1.5px solid #9ca3af !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.p-checkbox-checked .p-checkbox-box,
+.p-checkbox.p-highlight .p-checkbox-box {
+  background-color: #2e7d32 !important;
+  border-color: #2e7d32 !important;
+  color: #ffffff !important;
+}
+
+.p-checkbox-icon {
+  font-size: 11px !important;
+  color: #ffffff !important;
+}
+
+/* Buttons */
 .p-button {
   display: inline-flex !important;
   align-items: center !important;
@@ -276,6 +368,8 @@ html, body {
   border: 1px solid transparent !important;
   transition: all 0.15s ease !important;
   text-decoration: none !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
 }
 
 .p-button-success {
@@ -359,6 +453,25 @@ html, body {
   border-top: 1px solid #f3f4f6 !important;
   padding: 0.5rem 1rem !important;
   font-size: 0.8rem !important;
+}
+
+/* Table Actions container */
+.table-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+}
+
+.table-actions .p-button {
+  padding: 4px 10px !important;
+  font-size: 0.75rem !important;
+  white-space: nowrap !important;
+  min-width: 54px !important;
+  text-align: center !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
 }
 
 /* Custom Badges */

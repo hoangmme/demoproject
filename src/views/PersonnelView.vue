@@ -35,11 +35,12 @@
             :options="personnelStore.allAvailableColumns"
             optionLabel="label"
             optionValue="id"
-            display="chip"
+            :maxSelectedLabels="1"
+            :selectedItemsLabel="'{0} cột được chọn'"
             placeholder="Cột hiển thị"
             size="small"
             appendTo="body"
-            style="max-width: 220px; font-size: 0.8rem;"
+            style="width: 170px; font-size: 0.8rem;"
             @change="onColumnsChange"
           />
 
@@ -129,16 +130,15 @@
         </Column>
 
         <!-- Actions column -->
-        <Column header="Thao tác" headerStyle="width: 8rem; text-align: right;" bodyStyle="text-align: right;">
+        <Column header="Thao tác" headerStyle="width: 145px; min-width: 145px; text-align: right;" bodyStyle="width: 145px; min-width: 145px; text-align: right;">
           <template #body="{ data }">
-            <div style="display: flex; justify-content: flex-end; gap: 4px;">
+            <div class="table-actions">
               <Button
                 label="Chi tiết"
                 size="small"
                 outlined
                 severity="info"
                 @click.stop="openEditDialog(data)"
-                style="padding: 2px 8px; font-size: 0.75rem;"
               />
               <Button
                 v-if="authStore.isAdmin"
@@ -147,7 +147,6 @@
                 outlined
                 severity="danger"
                 @click.stop="handleDeleteOne(data)"
-                style="padding: 2px 8px; font-size: 0.75rem;"
               />
             </div>
           </template>
