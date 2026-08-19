@@ -75,6 +75,7 @@ export const usePersonnelStore = defineStore('personnel', {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            if (!parsed.includes('name')) parsed.splice(1, 0, 'name');
             this.visibleColumns = parsed;
           }
         } catch (e) {}

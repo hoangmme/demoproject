@@ -202,7 +202,7 @@ html, body {
   color: #374151;
 }
 
-/* PrimeVue Dialog & Modal */
+/* Dialog */
 .p-dialog-mask {
   background-color: rgba(0, 0, 0, 0.5) !important;
   backdrop-filter: blur(4px) !important;
@@ -213,7 +213,7 @@ html, body {
   background: #ffffff !important;
   border-radius: 1rem !important;
   border: 1px solid #e5e7eb !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15) !important;
   overflow: hidden !important;
   max-width: 95vw !important;
 }
@@ -246,13 +246,12 @@ html, body {
   align-items: center !important;
 }
 
-/* Inputs & Forms */
+/* Inputs & Form Controls */
 .p-inputtext, .p-textarea, .p-select, .p-multiselect {
   border: 1px solid #d1d5db !important;
   border-radius: 0.5rem !important;
   padding: 0.45rem 0.75rem !important;
   font-size: 0.85rem !important;
-  font-family: inherit !important;
   background: #ffffff !important;
   color: #1f2937 !important;
   outline: none !important;
@@ -264,20 +263,26 @@ html, body {
   box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15) !important;
 }
 
-/* MultiSelect & Select Overlay Panels */
-.p-multiselect-panel, .p-select-panel, .p-dropdown-panel, .p-overlaypanel, .p-popover {
+/* MultiSelect / Select Overlay Dropdown Popup */
+.p-multiselect-overlay,
+.p-multiselect-panel,
+.p-select-overlay,
+.p-select-panel,
+.p-dropdown-panel,
+.p-popover,
+.p-overlay {
   background: #ffffff !important;
+  background-color: #ffffff !important;
   border: 1px solid #d1d5db !important;
   border-radius: 0.75rem !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
-  padding: 0.4rem !important;
-  z-index: 1200 !important;
-  max-height: 350px !important;
-  overflow-y: auto !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+  padding: 0.5rem !important;
+  z-index: 9999 !important;
+  min-width: 200px !important;
 }
 
 .p-multiselect-header, .p-select-header {
-  padding: 0.5rem !important;
+  padding: 0.5rem 0.65rem !important;
   background: #f9fafb !important;
   border-bottom: 1px solid #e5e7eb !important;
   border-radius: 0.5rem 0.5rem 0 0 !important;
@@ -287,47 +292,67 @@ html, body {
   gap: 0.5rem !important;
 }
 
-.p-multiselect-items, .p-select-items {
+.p-multiselect-list-container,
+.p-select-list-container {
+  max-height: 280px !important;
+  overflow-y: auto !important;
+  background: #ffffff !important;
+}
+
+.p-multiselect-list,
+.p-select-list,
+.p-multiselect-items,
+.p-select-items {
   padding: 0 !important;
   margin: 0 !important;
   list-style: none !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 2px !important;
+  gap: 3px !important;
+  background: #ffffff !important;
 }
 
-.p-multiselect-item, .p-select-item {
-  padding: 0.45rem 0.65rem !important;
-  border-radius: 0.4rem !important;
-  font-size: 0.82rem !important;
+.p-multiselect-option,
+.p-multiselect-item,
+.p-select-option,
+.p-select-item {
+  padding: 0.55rem 0.75rem !important;
+  border-radius: 0.45rem !important;
+  font-size: 0.85rem !important;
   color: #374151 !important;
   display: flex !important;
   align-items: center !important;
-  gap: 0.6rem !important;
+  gap: 0.65rem !important;
   cursor: pointer !important;
   transition: all 0.1s ease !important;
-  background: transparent !important;
+  background: #ffffff !important;
+  line-height: 1.4 !important;
 }
 
-.p-multiselect-item:hover, .p-select-item:hover {
+.p-multiselect-option:hover,
+.p-multiselect-item:hover,
+.p-select-option:hover,
+.p-select-item:hover {
   background-color: #f3f4f6 !important;
   color: #111827 !important;
 }
 
-.p-multiselect-item.p-highlight, .p-select-item.p-highlight {
+.p-multiselect-option.p-multiselect-option-selected,
+.p-multiselect-option.p-highlight,
+.p-select-option.p-highlight {
   background-color: #e8f5e9 !important;
   color: #2e7d32 !important;
   font-weight: 600 !important;
 }
 
-/* Checkboxes */
+/* Checkboxes inside MultiSelect */
 .p-checkbox {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 18px !important;
   height: 18px !important;
-  position: relative !important;
+  flex-shrink: 0 !important;
 }
 
 .p-checkbox-box {
@@ -346,7 +371,6 @@ html, body {
 .p-checkbox.p-highlight .p-checkbox-box {
   background-color: #2e7d32 !important;
   border-color: #2e7d32 !important;
-  color: #ffffff !important;
 }
 
 .p-checkbox-icon {
@@ -448,10 +472,65 @@ html, body {
   background-color: #f9fafb !important;
 }
 
+/* Paginator */
 .p-paginator {
   background: #ffffff !important;
-  border-top: 1px solid #f3f4f6 !important;
-  padding: 0.5rem 1rem !important;
+  border-top: 1px solid #e5e7eb !important;
+  padding: 0.75rem 1rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+}
+
+.p-paginator-first,
+.p-paginator-prev,
+.p-paginator-next,
+.p-paginator-last,
+.p-paginator-page {
+  min-width: 32px !important;
+  height: 32px !important;
+  padding: 0 6px !important;
+  border-radius: 6px !important;
+  border: 1px solid #e5e7eb !important;
+  background: #ffffff !important;
+  color: #374151 !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.p-paginator-first:hover,
+.p-paginator-prev:hover,
+.p-paginator-next:hover,
+.p-paginator-last:hover,
+.p-paginator-page:hover {
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+}
+
+.p-paginator-page.p-paginator-page-selected,
+.p-paginator-page.p-highlight {
+  background: #2e7d32 !important;
+  color: #ffffff !important;
+  border-color: #2e7d32 !important;
+  font-weight: 700 !important;
+}
+
+.p-paginator-pages {
+  display: inline-flex !important;
+  gap: 0.25rem !important;
+}
+
+.p-paginator-rpp-select {
+  margin-left: 0.5rem !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  height: 32px !important;
   font-size: 0.8rem !important;
 }
 
