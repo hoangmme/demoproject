@@ -38,6 +38,7 @@
             display="chip"
             placeholder="Cột hiển thị"
             size="small"
+            appendTo="body"
             style="max-width: 220px; font-size: 0.8rem;"
             @change="onColumnsChange"
           />

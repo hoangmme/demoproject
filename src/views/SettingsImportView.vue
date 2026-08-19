@@ -64,6 +64,7 @@
                   optionLabel="label"
                   optionValue="value"
                   size="small"
+                  appendTo="body"
                   placeholder="Định dạng"
                   style="width: 140px; font-size: 0.75rem;"
                 />
@@ -73,6 +74,7 @@
                   optionLabel="label"
                   optionValue="value"
                   size="small"
+                  appendTo="body"
                   placeholder="Độ rộng"
                   style="width: 110px; font-size: 0.75rem;"
                 />
