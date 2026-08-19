@@ -553,9 +553,10 @@ html, body {
 .table-actions {
   display: inline-flex !important;
   align-items: center !important;
-  justify-content: flex-end !important;
+  justify-content: center !important;
   gap: 6px !important;
   white-space: nowrap !important;
+  width: 100% !important;
 }
 
 .table-actions .p-button {
@@ -566,6 +567,28 @@ html, body {
   text-align: center !important;
   display: inline-flex !important;
   flex-direction: row !important;
+}
+
+/* DataTable Column Alignment Utilities */
+.col-center,
+th.col-center .p-column-header-content,
+td.col-center {
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+.col-left,
+th.col-left .p-column-header-content,
+td.col-left {
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
+.col-right,
+th.col-right .p-column-header-content,
+td.col-right {
+  justify-content: flex-end !important;
+  text-align: right !important;
 }
 
 /* Custom Badges */

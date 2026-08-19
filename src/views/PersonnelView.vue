@@ -67,17 +67,6 @@
             @change="onColumnsChange"
           />
 
-          <!-- Download Template Button -->
-          <Button
-            label="Tải File Mẫu"
-            icon="pi pi-download"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="downloadPersonnelTemplate(personnelStore.importMappingPersonnel)"
-            style="font-size: 0.8rem;"
-          />
-
           <!-- Import Excel Button -->
           <Button
             label="Import Excel"
@@ -127,7 +116,7 @@
         tableStyle="min-width: 60rem; table-layout: fixed;"
         @row-click="onRowClick"
       >
-        <Column selectionMode="multiple" :headerStyle="{ width: '48px', minWidth: '48px', textAlign: 'center' }" :bodyStyle="{ width: '48px', minWidth: '48px', textAlign: 'center' }" />
+        <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
 
         <Column
           v-for="col in activeColumns"
@@ -135,13 +124,15 @@
           :field="col.id"
           :header="col.label"
           sortable
+          :headerClass="col.id === 'code' || col.id === 'birthYear' || col.id === 'cccd' ? 'col-left' : 'col-left'"
+          :bodyClass="col.id === 'code' || col.id === 'birthYear' || col.id === 'cccd' ? 'col-left' : 'col-left'"
           :headerStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
           :bodyStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
         >
           <template #body="{ data }">
             <!-- Code column -->
             <template v-if="col.id === 'code'">
-              <span style="font-family: monospace; font-weight: 600; color: #4b5563;">
+              <span style="font-family: monospace; font-weight: 700; color: #374151; padding-left: 2px;">
                 {{ data.code || formatPersonnelCode(data.id) }}
               </span>
             </template>
@@ -166,9 +157,9 @@
         </Column>
 
         <!-- Actions column (Centered) -->
-        <Column header="THAO TÁC" :headerStyle="{ width: '150px', minWidth: '150px', textAlign: 'center' }" :bodyStyle="{ width: '150px', minWidth: '150px', textAlign: 'center' }">
+        <Column header="THAO TÁC" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
           <template #body="{ data }">
-            <div class="table-actions" style="justify-content: center;">
+            <div class="table-actions">
               <Button
                 label="Chi tiết"
                 size="small"
@@ -205,17 +196,6 @@
             style="width: 200px; font-size: 0.8rem;"
           />
 
-          <!-- Download Template Button for Relatives -->
-          <Button
-            label="Tải File Mẫu"
-            icon="pi pi-download"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="downloadRelativeTemplate(personnelStore.importMappingRelative)"
-            style="font-size: 0.8rem;"
-          />
-
           <!-- Import Relatives Button -->
           <Button
             label="Import Thân nhân"
@@ -250,7 +230,7 @@
         class="p-datatable-sm"
         tableStyle="min-width: 60rem; table-layout: fixed;"
       >
-        <Column field="stt" header="STT" :headerStyle="{ width: '60px', minWidth: '60px', textAlign: 'center' }" :bodyStyle="{ width: '60px', minWidth: '60px', textAlign: 'center' }" />
+        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '60px', minWidth: '60px' }" :bodyStyle="{ width: '60px', minWidth: '60px' }" />
         <Column field="parentName" header="Cán bộ liên quan" sortable :headerStyle="{ width: '200px', minWidth: '200px' }">
           <template #body="{ data }">
             <strong style="cursor: pointer; color: #1f2937;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
@@ -273,9 +253,9 @@
         <Column field="occupation" header="Nghề nghiệp / Nơi làm việc" sortable :headerStyle="{ width: '200px', minWidth: '200px' }" />
         
         <!-- Actions column (Centered & standardized to Chi tiết) -->
-        <Column header="THAO TÁC" :headerStyle="{ width: '130px', minWidth: '130px', textAlign: 'center' }" :bodyStyle="{ width: '130px', minWidth: '130px', textAlign: 'center' }">
+        <Column header="THAO TÁC" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '130px', minWidth: '130px' }" :bodyStyle="{ width: '130px', minWidth: '130px' }">
           <template #body="{ data }">
-            <div class="table-actions" style="justify-content: center;">
+            <div class="table-actions">
               <Button
                 label="Chi tiết"
                 size="small"
