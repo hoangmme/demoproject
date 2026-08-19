@@ -554,7 +554,7 @@ import {
   parseExcelFile,
   readExcelWorkbook,
 } from '@/utils/excel';
-import { createPersonnel } from '@/api/personnel';
+import { createPersonnel, updatePersonnel } from '@/api/personnel';
 import { logActivity } from '@/api/audit';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 
