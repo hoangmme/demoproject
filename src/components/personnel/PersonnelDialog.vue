@@ -58,9 +58,6 @@
 
       <!-- TAB 2: THÂN NHÂN -->
       <div v-show="activeTab === 1">
-        <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
-          DANH SÁCH THÂN NHÂN LIÊN QUAN
-        </h4>
         <PersonnelFamilyForm :form="form" :targetRelativeCode="targetRelativeCode" />
       </div>
     </div>
