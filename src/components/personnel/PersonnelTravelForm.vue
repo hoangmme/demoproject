@@ -8,6 +8,7 @@
         label="Thêm Chuyến đi"
         icon="pi pi-plus"
         size="small"
+        severity="success"
         @click="addTrip"
         style="font-size: 0.8rem;"
       />
@@ -17,10 +18,10 @@
       Chưa có chuyến đi nước ngoài nào được ghi nhận. Nhấp <b>"Thêm Chuyến đi"</b> để bổ sung.
     </div>
 
-    <div v-for="(trip, idx) in trips" :key="idx" style="margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff;">
+    <div v-for="(trip, idx) in trips" :key="idx" style="margin-bottom: 1.25rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
       <!-- Header of trip card -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f3f4f6; border-bottom: 1px solid #e5e7eb;">
-        <span style="font-size: 0.85rem; font-weight: 700; color: #1f2937;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">
           Chuyến {{ idx + 1 }}: {{ trip.countryName || 'Chưa đặt quốc gia' }} {{ trip.departureDate ? `(${trip.departureDate})` : '' }}
         </span>
         <Button
@@ -34,76 +35,21 @@
         />
       </div>
 
-      <!-- Content of trip card -->
+      <!-- Dynamic Content based on Khối B (Group 1) -->
       <div style="padding: 1rem;" class="form-grid">
-        <div class="field-item col-3">
-          <label class="field-label">Số Quyết định</label>
-          <InputText v-model="trip.decisionNumber" placeholder="Số QĐ" size="small" />
-        </div>
-        <div class="field-item col-3">
-          <label class="field-label">Ngày Quyết định</label>
-          <AppDatePicker
-            v-model="trip.decisionDate"
-            placeholder="DD/MM/YYYY"
+        <div
+          v-for="col in tripColumns"
+          :key="col.id"
+          :class="'field-item ' + getColClass(col.width)"
+        >
+          <label class="field-label">
+            <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
+            {{ col.label }}
+          </label>
+          <DynamicField
+            v-model="trip[col.id]"
+            :col="col"
           />
-        </div>
-        <div class="field-item col-6">
-          <label class="field-label">Cơ quan ban hành Quyết định</label>
-          <InputText v-model="trip.decisionIssuer" placeholder="Bộ/Ban/Ngành..." size="small" />
-        </div>
-
-        <div class="field-item col-3">
-          <label class="field-label">Ngày xuất cảnh (Ngày đi)</label>
-          <AppDatePicker
-            v-model="trip.departureDate"
-            placeholder="DD/MM/YYYY"
-          />
-        </div>
-        <div class="field-item col-3">
-          <label class="field-label">Ngày nhập cảnh (Ngày về)</label>
-          <AppDatePicker
-            v-model="trip.arrivalDate"
-            placeholder="DD/MM/YYYY"
-          />
-        </div>
-        <div class="field-item col-3">
-          <label class="field-label">Quốc gia / Nước đến</label>
-          <InputText v-model="trip.countryName" placeholder="Mỹ, Nhật, Pháp..." size="small" />
-        </div>
-        <div class="field-item col-3">
-          <label class="field-label">Số lần đi</label>
-          <InputText v-model="trip.tripCount" placeholder="1" size="small" />
-        </div>
-
-        <div class="field-item col-4">
-          <label class="field-label">Mục đích chuyến đi</label>
-          <InputText v-model="trip.purpose" placeholder="Công tác, Học tập, Việc riêng..." size="small" />
-        </div>
-        <div class="field-item col-4">
-          <label class="field-label">Nguồn kinh phí</label>
-          <InputText v-model="trip.fundingName" placeholder="Ngân sách, Tự túc, Tài trợ..." size="small" />
-        </div>
-        <div class="field-item col-4">
-          <label class="field-label">Tổ chức tài trợ (nếu có)</label>
-          <InputText v-model="trip.sponsorUnit" placeholder="Tên cơ quan/tổ chức" size="small" />
-        </div>
-
-        <div class="field-item col-6">
-          <label class="field-label">Thời gian đào tạo (nếu đi học tập)</label>
-          <InputText v-model="trip.trainingTime" placeholder="VD: 6 tháng, 1 năm..." size="small" />
-        </div>
-        <div class="field-item col-6">
-          <label class="field-label">Nơi đào tạo / Cơ sở đào tạo</label>
-          <InputText v-model="trip.trainingPlace" placeholder="Tên trường, viện nghiên cứu..." size="small" />
-        </div>
-
-        <div class="field-item col-6" style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
-          <input type="checkbox" id="report" v-model="trip.report" />
-          <label for="report" class="field-label" style="margin: 0; cursor: pointer;">Đã nộp Báo cáo kết quả sau chuyến đi</label>
-        </div>
-        <div class="field-item col-6" style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
-          <input type="checkbox" id="nopHC" v-model="trip.nopHC" />
-          <label for="nopHC" class="field-label" style="margin: 0; cursor: pointer;">Đã nộp lại Hộ chiếu công vụ</label>
         </div>
       </div>
     </div>
@@ -113,8 +59,9 @@
 <script setup>
 import { computed } from 'vue';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import AppDatePicker from '@/components/common/AppDatePicker.vue';
+import { usePersonnelStore } from '@/stores/personnel';
+import DynamicField from '@/components/common/DynamicField.vue';
+import { computeColumnIndexMap } from '@/utils/formatters';
 
 const props = defineProps({
   form: {
@@ -123,14 +70,42 @@ const props = defineProps({
   },
 });
 
-const trips = computed(() => {
-  if (!props.form.trips) props.form.trips = [];
-  return props.form.trips;
+const personnelStore = usePersonnelStore();
+
+const trips = computed({
+  get: () => {
+    if (!props.form.trips) props.form.trips = [];
+    return props.form.trips;
+  },
+  set: (val) => {
+    props.form.trips = val;
+  },
 });
+
+const colIndexMap = computed(() => {
+  return computeColumnIndexMap(personnelStore.importMappingPersonnel);
+});
+
+const tripColumns = computed(() => {
+  const ignore = new Set(['stt']);
+  const secondGroup = (personnelStore.importMappingPersonnel || [])[1];
+  if (secondGroup && Array.isArray(secondGroup.columns)) {
+    return secondGroup.columns.filter((c) => !ignore.has(c.id));
+  }
+  return [];
+});
+
+const getColClass = (w) => {
+  const cleanW = String(w || '25').replace('%', '');
+  if (cleanW === '100') return 'col-12';
+  if (cleanW === '75') return 'col-9';
+  if (cleanW === '50') return 'col-6';
+  if (cleanW === '33') return 'col-4';
+  return 'col-3';
+};
 
 const addTrip = () => {
   trips.value.push({
-    id: 'temp_' + Date.now(),
     decisionNumber: '',
     decisionDate: '',
     decisionIssuer: '',
@@ -143,8 +118,6 @@ const addTrip = () => {
     sponsorUnit: '',
     trainingTime: '',
     trainingPlace: '',
-    report: false,
-    nopHC: false,
   });
 };
 
