@@ -1,15 +1,32 @@
 import apiClient from './client';
 
 export const getPersonnelList = async (limit = -1) => {
-  const res = await apiClient.get('/items/personnel', {
-    params: {
-      limit,
-      fields: ['*'],
-      sort: ['-id'],
-      _t: Date.now(),
-    },
-  });
-  return res.data?.data || [];
+  try {
+    const res = await apiClient.get('/items/personnels', {
+      params: {
+        limit,
+        fields: ['*'],
+        sort: ['-id'],
+        _t: Date.now(),
+      },
+    });
+    return res.data?.data || [];
+  } catch (e) {
+    // Fallback if collection is named 'personnel'
+    try {
+      const res = await apiClient.get('/items/personnel', {
+        params: {
+          limit,
+          fields: ['*'],
+          sort: ['-id'],
+          _t: Date.now(),
+        },
+      });
+      return res.data?.data || [];
+    } catch (err) {
+      throw e;
+    }
+  }
 };
 
 export const getDepartments = async () => {
@@ -27,23 +44,45 @@ export const getDepartments = async () => {
 };
 
 export const createPersonnel = async (data) => {
-  const res = await apiClient.post('/items/personnel', data);
-  return res.data?.data;
+  try {
+    const res = await apiClient.post('/items/personnels', data);
+    return res.data?.data;
+  } catch (e) {
+    const res = await apiClient.post('/items/personnel', data);
+    return res.data?.data;
+  }
 };
 
 export const updatePersonnel = async (id, data) => {
-  const res = await apiClient.patch(`/items/personnel/${id}`, data);
-  return res.data?.data;
+  try {
+    const res = await apiClient.patch(`/items/personnels/${id}`, data);
+    return res.data?.data;
+  } catch (e) {
+    const res = await apiClient.patch(`/items/personnel/${id}`, data);
+    return res.data?.data;
+  }
 };
 
 export const deletePersonnel = async (id) => {
-  const res = await apiClient.delete(`/items/personnel/${id}`);
-  return res.data;
+  try {
+    const res = await apiClient.delete(`/items/personnels/${id}`);
+    return res.data;
+  } catch (e) {
+    const res = await apiClient.delete(`/items/personnel/${id}`);
+    return res.data;
+  }
 };
 
 export const deleteMultiplePersonnel = async (ids) => {
-  const res = await apiClient.delete('/items/personnel', {
-    data: ids,
-  });
-  return res.data;
+  try {
+    const res = await apiClient.delete('/items/personnels', {
+      data: ids,
+    });
+    return res.data;
+  } catch (e) {
+    const res = await apiClient.delete('/items/personnel', {
+      data: ids,
+    });
+    return res.data;
+  }
 };
