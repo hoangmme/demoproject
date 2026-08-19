@@ -5,7 +5,7 @@
         Danh sách thân nhân có yếu tố nước ngoài ({{ relatives.length }} người)
       </span>
       <Button
-        label="+ Thêm Thân nhân"
+        label="Thêm Thân nhân"
         icon="pi pi-plus"
         size="small"
         @click="addRelative"

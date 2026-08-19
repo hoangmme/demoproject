@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import apiClient from '@/api/client';
 import {
   getPersonnelList,
   getDepartments,
@@ -13,6 +14,8 @@ import { logActivity } from '@/api/audit';
 export const usePersonnelStore = defineStore('personnel', {
   state: () => ({
     personnelList: [],
+    relativesList: [],
+    tripsList: [],
     departments: [],
     loading: false,
     selectedPerson: null,
@@ -89,8 +92,38 @@ export const usePersonnelStore = defineStore('personnel', {
     async fetchPersonnel() {
       this.loading = true;
       try {
-        const data = await getPersonnelList();
-        this.personnelList = data.map((p) => {
+        const [pData, a1Res, a2Res] = await Promise.all([
+          getPersonnelList(),
+          apiClient.get('/items/appendix1', { params: { limit: -1, _t: Date.now() } }).catch(() => ({ data: { data: [] } })),
+          apiClient.get('/items/appendix2', { params: { limit: -1, _t: Date.now() } }).catch(() => ({ data: { data: [] } })),
+        ]);
+
+        const rawTrips = a1Res.data?.data || [];
+        const rawRelatives = a2Res.data?.data || [];
+
+        this.tripsList = rawTrips.filter((x) => x.isDeleted !== 1);
+        this.relativesList = rawRelatives.filter((x) => x.isDeleted !== 1);
+
+        // Build quick lookup maps
+        const tripsMap = {};
+        this.tripsList.forEach((t) => {
+          const k = t.personnelId || t.personnelCode;
+          if (k) {
+            if (!tripsMap[k]) tripsMap[k] = [];
+            tripsMap[k].push(t);
+          }
+        });
+
+        const relativesMap = {};
+        this.relativesList.forEach((r) => {
+          const k = r.personnelId || r.personnelCode;
+          if (k) {
+            if (!relativesMap[k]) relativesMap[k] = [];
+            relativesMap[k].push(r);
+          }
+        });
+
+        this.personnelList = pData.map((p) => {
           let custom = {};
           if (p.custom_data) {
             try {
@@ -100,23 +133,23 @@ export const usePersonnelStore = defineStore('personnel', {
             }
           }
 
-          const trips = custom.trips || p.trips || custom['Khối B: Chuyến đi nước ngoài'] || [];
-          const relatives = custom.relatives || p.relatives || [];
+          const matchedTrips = tripsMap[p.id] || tripsMap[p.code] || custom.trips || custom['Khối B: Chuyến đi nước ngoài'] || [];
+          const matchedRelatives = relativesMap[p.id] || relativesMap[p.code] || custom.relatives || [];
           const flags = custom.flags || p.flags || {};
           const files = custom.files || p.files || [];
 
           return {
             ...custom,
             ...p,
-            trips: Array.isArray(trips) ? trips : [],
-            relatives: Array.isArray(relatives) ? relatives : [],
+            trips: Array.isArray(matchedTrips) ? matchedTrips : [],
+            relatives: Array.isArray(matchedRelatives) ? matchedRelatives : [],
             flags: typeof flags === 'object' ? flags : {},
             files: Array.isArray(files) ? files : [],
             custom_data: custom,
           };
         });
       } catch (e) {
-        console.error('Error fetching personnel:', e);
+        console.error('Error fetching personnel and appendices:', e);
       } finally {
         this.loading = false;
       }
@@ -160,6 +193,48 @@ export const usePersonnelStore = defineStore('personnel', {
           saved = await createPersonnel(payload);
           await logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name}`);
         }
+
+        // Sync relatives to appendix2
+        const pId = payload.id;
+        if (Array.isArray(formData.relatives)) {
+          for (const rel of formData.relatives) {
+            try {
+              if (rel.id && !String(rel.id).startsWith('temp_')) {
+                await apiClient.patch(`/items/appendix2/${rel.id}`, {
+                  ...rel,
+                  personnelId: pId,
+                });
+              } else {
+                await apiClient.post('/items/appendix2', {
+                  ...rel,
+                  id: 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                  personnelId: pId,
+                });
+              }
+            } catch (err) {}
+          }
+        }
+
+        // Sync trips to appendix1
+        if (Array.isArray(formData.trips)) {
+          for (const trip of formData.trips) {
+            try {
+              if (trip.id && !String(trip.id).startsWith('temp_')) {
+                await apiClient.patch(`/items/appendix1/${trip.id}`, {
+                  ...trip,
+                  personnelId: pId,
+                });
+              } else {
+                await apiClient.post('/items/appendix1', {
+                  ...trip,
+                  id: 'app1_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                  personnelId: pId,
+                });
+              }
+            } catch (err) {}
+          }
+        }
+
         await this.fetchPersonnel();
         this.isDialogOpen = false;
         return saved;

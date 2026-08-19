@@ -5,7 +5,7 @@
         Danh sách chuyến đi nước ngoài ({{ trips.length }} chuyến)
       </span>
       <Button
-        label="+ Thêm Chuyến đi"
+        label="Thêm Chuyến đi"
         icon="pi pi-plus"
         size="small"
         @click="addTrip"
