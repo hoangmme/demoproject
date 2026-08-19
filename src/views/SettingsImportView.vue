@@ -239,7 +239,7 @@ const generateSlug = (str) => {
 };
 
 const getSubOptions = (col) => {
-  if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
+  if (col.format === 'checkbox_text' && col.options) {
     return String(col.options)
       .split(',')
       .map((s) => s.trim())
