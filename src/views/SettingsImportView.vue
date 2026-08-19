@@ -11,14 +11,6 @@
 
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <Button
-            label="Khôi phục Mặc định Chuẩn"
-            icon="pi pi-refresh"
-            severity="warn"
-            text
-            size="small"
-            @click="resetToDefault"
-          />
-          <Button
             label="Thêm Nhóm mới"
             icon="pi pi-plus"
             severity="secondary"
