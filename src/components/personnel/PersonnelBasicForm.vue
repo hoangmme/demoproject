@@ -13,28 +13,9 @@
       />
     </div>
 
-    <!-- Dynamic Fields for Khối A -->
+    <!-- 100% Dynamic Fields for Khối A based on Cấu hình Cột -->
     <template v-for="col in basicColumns" :key="col.id">
-      <!-- Department Select -->
-      <div v-if="col.id === 'departmentId' || col.id === 'departmentName'" class="field-item" :class="getColClass(col.width)">
-        <label class="field-label" :title="col.label">
-          <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
-          <span class="label-text">{{ col.label }}</span>
-        </label>
-        <select
-          v-model="form.departmentId"
-          class="custom-col-select w-full"
-          style="height: 33px; font-size: 0.82rem;"
-        >
-          <option value="">-- Chọn phòng ban --</option>
-          <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-            {{ dept.name }}
-          </option>
-        </select>
-      </div>
-
-      <!-- General Dynamic Fields -->
-      <div v-else class="field-item" :class="getColClass(col.width)">
+      <div class="field-item" :class="getColClass(col.width)">
         <label class="field-label" :title="col.label">
           <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
           <span class="label-text">{{ col.label }}</span>
