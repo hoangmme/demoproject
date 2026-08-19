@@ -97,21 +97,32 @@ export const usePersonnelStore = defineStore('personnel', {
   },
   actions: {
     async init() {
+      await Promise.all([
+        this.loadSettings(),
+        this.fetchDepartments(),
+      ]);
+
+      const validIds = new Set(this.allAvailableColumns.map((c) => c.id));
       const saved = localStorage.getItem('vue_visible_columns');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            if (!parsed.includes('name')) parsed.splice(1, 0, 'name');
-            this.visibleColumns = parsed;
+            const filtered = parsed.filter((id) => validIds.has(id));
+            if (filtered.length >= 3) {
+              this.visibleColumns = filtered;
+            } else {
+              this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
+            }
           }
-        } catch (e) {}
+        } catch (e) {
+          this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
+        }
+      } else {
+        this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
       }
-      await Promise.all([
-        this.fetchPersonnel(),
-        this.fetchDepartments(),
-        this.loadSettings(),
-      ]);
+
+      await this.fetchPersonnel();
     },
     async fetchPersonnel() {
       this.loading = true;
@@ -165,6 +176,12 @@ export const usePersonnelStore = defineStore('personnel', {
           return {
             ...custom,
             ...p,
+            position: p.position || p.positionName || custom.positionName || custom.position || '',
+            positionName: p.positionName || p.position || custom.position || custom.positionName || '',
+            departmentName: p.departmentName || (p.departmentId ? this.getDepartmentName(p.departmentId) : '') || custom.departmentName || '',
+            hcCaNhan: p.hcCaNhan || p.passportPersonal || custom.hcCaNhan || custom.passportPersonal || '',
+            hcCongVu: p.hcCongVu || p.passportOfficial || custom.hcCongVu || custom.passportOfficial || '',
+            kqThamTra: p.kqThamTra || p.tcctResult || custom.kqThamTra || custom.tcctResult || '',
             trips: Array.isArray(matchedTrips) ? matchedTrips : [],
             relatives: Array.isArray(matchedRelatives) ? matchedRelatives : [],
             flags: typeof flags === 'object' ? flags : {},

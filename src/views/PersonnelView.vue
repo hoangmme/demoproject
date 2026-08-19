@@ -599,22 +599,21 @@ const activeColumns = computed(() => {
   const map = {};
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
-      if (c.id) map[c.id] = c;
+      if (c.id && c.id !== 'stt') map[c.id] = c;
     });
   });
 
-  return personnelStore.visibleColumns.map((id) => {
-    const cfg = map[id];
-    if (cfg && cfg.label) {
+  return personnelStore.visibleColumns
+    .filter((id) => map[id])
+    .map((id) => {
+      const cfg = map[id];
       return {
         id: cfg.id,
-        label: cfg.label,
-        width: '160px',
+        label: cfg.label || cfg.id,
+        width: cfg.width ? (cfg.width + 'px') : '160px',
+        format: cfg.format || 'text',
       };
-    }
-    const found = personnelStore.allAvailableColumns.find((c) => c.id === id);
-    return found || { id, label: id, width: '160px' };
-  });
+    });
 });
 
 const activeRelativeColumns = computed(() => {
@@ -892,6 +891,7 @@ const executeImport = async () => {
           allCols.push({
             id: c.id,
             labelKey: normalizeKey(c.label || c.id),
+            group: g.group || '',
             raw: c,
           });
         });
@@ -913,6 +913,7 @@ const executeImport = async () => {
         const customData = {};
         const trips = [];
         const flags = {};
+        const currentTrip = {};
 
         headerCols.forEach((hKey, colIdx) => {
           const val = row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : '';
@@ -922,19 +923,57 @@ const executeImport = async () => {
           const matched = allCols.find((c) => c.labelKey === hKey || c.id.toLowerCase() === hKey || hKey.includes(c.labelKey) || c.labelKey.includes(hKey));
           if (matched) {
             const fId = matched.id;
-            if (['name', 'code', 'otherName', 'birthYear', 'ethnicity', 'religion', 'cccd', 'position', 'hometown', 'thuongTru', 'tamTru', 'passportPersonal', 'passportOfficial', 'tcctResult', 'departmentId', 'departmentName'].includes(fId)) {
-              rowData[fId] = val;
-            } else {
-              customData[fId] = val;
+            const grp = String(matched.group || '');
+
+            rowData[fId] = val;
+            customData[fId] = val;
+
+            if (grp.includes('Khối B') || grp.includes('Chuyến đi')) {
+              currentTrip[fId] = val;
+            } else if (grp.includes('Khối C') || grp.includes('Lưu ý') || grp.includes('Kỷ luật')) {
+              flags[fId] = val;
+            }
+
+            // Standard field aliases
+            if (fId === 'positionName' || fId === 'position') {
+              rowData.position = val;
+              rowData.positionName = val;
+              customData.position = val;
+              customData.positionName = val;
+            } else if (fId === 'departmentName' || fId === 'departmentId') {
+              rowData.departmentName = val;
+              customData.departmentName = val;
+            } else if (fId === 'hcCaNhan' || fId === 'passportPersonal') {
+              rowData.passportPersonal = val;
+              rowData.hcCaNhan = val;
+              customData.hcCaNhan = val;
+              customData.passportPersonal = val;
+            } else if (fId === 'hcCongVu' || fId === 'passportOfficial') {
+              rowData.passportOfficial = val;
+              rowData.hcCongVu = val;
+              customData.hcCongVu = val;
+              customData.passportOfficial = val;
+            } else if (fId === 'kqThamTra' || fId === 'tcctResult') {
+              rowData.tcctResult = val;
+              rowData.kqThamTra = val;
+              customData.kqThamTra = val;
+              customData.tcctResult = val;
             }
           } else if (hKey.includes('cccd') || hKey.includes('dinhdanh')) {
             rowData.cccd = val;
+            customData.cccd = val;
           } else if (hKey.includes('hoten') || hKey.includes('hovaten') || hKey.includes('ten')) {
             rowData.name = val;
+            customData.name = val;
           } else if (hKey.includes('macb') || hKey.includes('code')) {
             rowData.code = val;
+            customData.code = val;
           }
         });
+
+        if (Object.keys(currentTrip).length > 0) {
+          trips.push(currentTrip);
+        }
 
         // Ensure mandatory Name exists
         if (!rowData.name && row[1]) rowData.name = String(row[1]).trim();
@@ -951,7 +990,14 @@ const executeImport = async () => {
           // Ghi đè / Cập nhật (Update)
           const updatedPayload = {
             ...rowData,
-            custom_data: { ...(existingPerson.custom_data || {}), ...customData },
+            trips: trips.length > 0 ? trips : (existingPerson.trips || []),
+            flags: { ...(existingPerson.flags || {}), ...flags },
+            custom_data: {
+              ...(existingPerson.custom_data || {}),
+              ...customData,
+              ...rowData,
+              flags: { ...(existingPerson.flags || {}), ...(existingPerson.custom_data?.flags || {}), ...flags },
+            },
           };
           await updatePersonnel(existingPerson.id, updatedPayload);
           updatedCount++;
@@ -960,12 +1006,17 @@ const executeImport = async () => {
           const nextIndex = personnelStore.personnelList.length + createdCount + 1;
           const assignedCode = rowData.code || ('CB-' + String(nextIndex).padStart(5, '0'));
           const newPayload = {
+            id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
             ...rowData,
             code: assignedCode,
-            trips: [],
+            trips: trips.length > 0 ? trips : [],
             relatives: [],
-            flags: {},
-            custom_data: customData,
+            flags: flags,
+            custom_data: {
+              ...customData,
+              ...rowData,
+              flags: flags,
+            },
           };
           await createPersonnel(newPayload);
           createdCount++;

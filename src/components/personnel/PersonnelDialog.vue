@@ -158,12 +158,23 @@ watch(
   () => props.personData,
   (val) => {
     if (val) {
-      form.value = JSON.parse(JSON.stringify(val));
-      if (!form.value.trips) form.value.trips = [];
-      if (!form.value.relatives) form.value.relatives = [];
-      if (!form.value.flags) form.value.flags = {};
-      if (!form.value.custom_data) form.value.custom_data = {};
-      if (!form.value.files) form.value.files = [];
+      const cd = val.custom_data || {};
+      const parsedVal = JSON.parse(JSON.stringify(val));
+      form.value = {
+        ...cd,
+        ...parsedVal,
+        position: parsedVal.position || parsedVal.positionName || cd.positionName || cd.position || '',
+        positionName: parsedVal.positionName || parsedVal.position || cd.position || cd.positionName || '',
+        departmentName: parsedVal.departmentName || (parsedVal.departmentId ? personnelStore.getDepartmentName(parsedVal.departmentId) : '') || cd.departmentName || '',
+        hcCaNhan: parsedVal.hcCaNhan || parsedVal.passportPersonal || cd.hcCaNhan || cd.passportPersonal || '',
+        hcCongVu: parsedVal.hcCongVu || parsedVal.passportOfficial || cd.hcCongVu || cd.passportOfficial || '',
+        kqThamTra: parsedVal.kqThamTra || parsedVal.tcctResult || cd.kqThamTra || cd.tcctResult || '',
+        trips: Array.isArray(parsedVal.trips) ? parsedVal.trips : (cd.trips || []),
+        relatives: Array.isArray(parsedVal.relatives) ? parsedVal.relatives : (cd.relatives || []),
+        flags: (typeof parsedVal.flags === 'object' && parsedVal.flags) ? parsedVal.flags : (cd.flags || {}),
+        files: Array.isArray(parsedVal.files) ? parsedVal.files : (cd.files || []),
+        custom_data: { ...cd, ...parsedVal },
+      };
     } else {
       form.value = {
         id: null,
@@ -175,10 +186,15 @@ watch(
         religion: 'Không',
         hometown: '',
         departmentId: null,
+        departmentName: '',
         position: '',
+        positionName: '',
         thuongTru: '',
         tamTru: '',
         cccd: '',
+        hcCaNhan: '',
+        hcCongVu: '',
+        kqThamTra: '',
         passportPersonal: '',
         passportOfficial: '',
         tcctResult: '',
