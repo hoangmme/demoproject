@@ -275,6 +275,32 @@ export const downloadRelativeTemplate = (mappingConfig = null) => {
   exportToExcel([emptyRow], 'Mau_Import_Than_Nhan', 'Mẫu Thân nhân');
 };
 
+export const readExcelWorkbook = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheets = workbook.SheetNames || [];
+        const sheetsData = {};
+        sheets.forEach((sName) => {
+          const ws = workbook.Sheets[sName];
+          sheetsData[sName] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        });
+        resolve({
+          sheetNames: sheets,
+          sheetsData,
+        });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsArrayBuffer(file);
+  });
+};
+
 export const parseExcelFile = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

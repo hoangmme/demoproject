@@ -463,6 +463,29 @@
           </div>
         </div>
 
+        <!-- Sheet Selector if file has multiple sheets -->
+        <div
+          v-if="availableSheets.length > 1"
+          style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; flex-wrap: wrap; gap: 8px;"
+        >
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="pi pi-file-excel" style="color: #2563eb; font-size: 1.1rem;"></i>
+            <span style="font-size: 0.85rem; font-weight: 700; color: #1e3a8a;">
+              File có {{ availableSheets.length }} Sheet. Chọn Sheet muốn Import:
+            </span>
+          </div>
+          <select
+            v-model="selectedSheet"
+            @change="onSheetChange"
+            class="custom-col-select"
+            style="width: 220px; font-weight: 600; color: #1e40af; border-color: #3b82f6;"
+          >
+            <option v-for="s in availableSheets" :key="s" :value="s">
+              📄 {{ s }} ({{ (parsedWorkbookData[s] || []).length }} dòng)
+            </option>
+          </select>
+        </div>
+
         <!-- Preview Table if rows loaded -->
         <div v-if="importPreviewRows.length > 0" style="border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; background: #ffffff;">
           <div style="padding: 0.6rem 1rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
@@ -534,6 +557,7 @@ import {
   downloadPersonnelTemplate,
   downloadRelativeTemplate,
   parseExcelFile,
+  readExcelWorkbook,
 } from '@/utils/excel';
 import { createPersonnel } from '@/api/personnel';
 import { logActivity } from '@/api/audit';
@@ -567,6 +591,9 @@ const importing = ref(false);
 const importPreviewRows = ref([]);
 const importFileInput = ref(null);
 const selectedFileName = ref('');
+const availableSheets = ref([]);
+const selectedSheet = ref('');
+const parsedWorkbookData = ref({});
 
 onMounted(async () => {
   if (personnelStore.personnelList.length === 0) {
@@ -807,10 +834,23 @@ const onImportFileSelected = async (e) => {
 const handleFile = async (file) => {
   selectedFileName.value = file.name;
   try {
-    const rows = await parseExcelFile(file);
-    importPreviewRows.value = rows.filter((r) => r && r.length > 0);
+    const res = await readExcelWorkbook(file);
+    availableSheets.value = res.sheetNames || [];
+    parsedWorkbookData.value = res.sheetsData || {};
+    if (availableSheets.value.length > 0) {
+      selectedSheet.value = availableSheets.value[0];
+      importPreviewRows.value = (res.sheetsData[selectedSheet.value] || []).filter((r) => r && r.length > 0);
+    } else {
+      importPreviewRows.value = [];
+    }
   } catch (err) {
     alert('Lỗi đọc tệp Excel: ' + err.message);
+  }
+};
+
+const onSheetChange = () => {
+  if (parsedWorkbookData.value && selectedSheet.value) {
+    importPreviewRows.value = (parsedWorkbookData.value[selectedSheet.value] || []).filter((r) => r && r.length > 0);
   }
 };
 
