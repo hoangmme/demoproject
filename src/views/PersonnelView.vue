@@ -1041,6 +1041,8 @@ const executeImport = async () => {
   let count = 0;
   let updatedCount = 0;
   let createdCount = 0;
+  let relCreatedCount = 0;
+  let relUpdatedCount = 0;
 
   try {
     const rawRows = importPreviewRows.value;
@@ -1325,9 +1327,6 @@ const executeImport = async () => {
           relByCccd[rCccd] = r;
         }
       });
-
-      let relCreatedCount = 0;
-      let relUpdatedCount = 0;
 
       for (let i = 1; i < rawRows.length; i++) {
         const row = rawRows[i];
