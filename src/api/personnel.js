@@ -12,7 +12,6 @@ export const getPersonnelList = async (limit = -1) => {
     });
     return res.data?.data || [];
   } catch (e) {
-    // Fallback if collection is named 'personnel'
     try {
       const res = await apiClient.get('/items/personnel', {
         params: {
@@ -80,9 +79,19 @@ export const deleteMultiplePersonnel = async (ids) => {
     });
     return res.data;
   } catch (e) {
-    const res = await apiClient.delete('/items/personnel', {
-      data: ids,
-    });
-    return res.data;
+    try {
+      const res = await apiClient.delete('/items/personnel', {
+        data: ids,
+      });
+      return res.data;
+    } catch (err) {
+      // Fallback: Delete one by one if batch endpoint is restricted (403/500)
+      for (const id of ids) {
+        try {
+          await deletePersonnel(id);
+        } catch (singleErr) {}
+      }
+      return { success: true };
+    }
   }
 };

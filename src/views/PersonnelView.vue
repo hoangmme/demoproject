@@ -872,96 +872,207 @@ const onSheetChange = () => {
   }
 };
 
+const normalizeKey = (str) => {
+  if (!str) return '';
+  return String(str)
+    .toLowerCase()
+    .replace(/\[cột\s*\d+(\s*-\s*\d+)?\]/gi, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[^a-z0-9]+/g, '')
+    .trim();
+};
+
 const executeImport = async () => {
   if (importPreviewRows.value.length === 0) return;
   importing.value = true;
   let count = 0;
+  let updatedCount = 0;
+  let createdCount = 0;
+
   try {
-    let startIdx = 0;
-    const firstRowStr = importPreviewRows.value[0]?.join(' ').toLowerCase() || '';
-    if (firstRowStr.includes('họ và tên') || firstRowStr.includes('họ tên') || firstRowStr.includes('stt') || firstRowStr.includes('mã cb')) {
-      startIdx = 1;
+    const rawRows = importPreviewRows.value;
+    if (rawRows.length < 2) {
+      alert('File Excel không có đủ dữ liệu để import!');
+      return;
     }
 
-    if (currentImportType.value === 'personnel') {
-      for (let i = startIdx; i < importPreviewRows.value.length; i++) {
-        const row = importPreviewRows.value[i];
-        if (!row || row.length === 0) continue;
-        const name = String(row[1] || row[2] || '').trim();
-        if (!name || name.toLowerCase() === 'họ và tên') continue;
+    const headerRow = rawRows[0] || [];
+    const headerCols = headerRow.map((h) => normalizeKey(h));
 
-        const newPerson = {
-          id: 'CB-' + Date.now() + '-' + i,
-          code: String(row[1] || '').startsWith('CB') ? String(row[1]) : 'CB-' + Date.now() + '-' + i,
-          name: String(row[2] || row[1] || ''),
-          otherName: String(row[3] || ''),
-          birthYear: String(row[4] || row[3] || ''),
-          ethnicity: String(row[5] || 'Kinh'),
-          religion: String(row[6] || 'Không'),
-          cccd: String(row[7] || row[11] || ''),
-          position: String(row[9] || row[8] || ''),
-          hometown: String(row[10] || ''),
-          thuongTru: String(row[11] || ''),
-          tamTru: String(row[12] || ''),
-          passportPersonal: String(row[13] || ''),
-          passportOfficial: String(row[14] || ''),
-          tcctResult: String(row[15] || ''),
-          trips: [],
-          relatives: [],
-          flags: {},
-          custom_data: {},
-        };
-        await createPersonnel(newPerson);
-        count++;
-      }
-      await logActivity('Import Excel Cán bộ', `Đã import thành công ${count} hồ sơ cán bộ`);
-    } else {
-      const pMap = {};
-      personnelStore.personnelList.forEach((p) => {
-        if (p.id) pMap[p.id.toLowerCase()] = p;
-        if (p.code) pMap[p.code.toLowerCase()] = p;
-        if (p.name) pMap[p.name.toLowerCase().trim()] = p;
-        if (p.cccd) pMap[p.cccd.toLowerCase().trim()] = p;
+    if (currentImportType.value === 'personnel') {
+      // Build mapping for Personnel fields
+      const allCols = [];
+      (personnelStore.importMappingPersonnel || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          allCols.push({
+            id: c.id,
+            labelKey: normalizeKey(c.label || c.id),
+            raw: c,
+          });
+        });
       });
 
-      for (let i = startIdx; i < importPreviewRows.value.length; i++) {
-        const row = importPreviewRows.value[i];
-        if (!row || row.length === 0) continue;
+      // Existing Personnel map by CCCD (clean 12-digits) & Code & ID
+      const existingByCccd = {};
+      const existingByCode = {};
+      personnelStore.personnelList.forEach((p) => {
+        if (p.cccd) existingByCccd[String(p.cccd).trim()] = p;
+        if (p.code) existingByCode[String(p.code).trim().toLowerCase()] = p;
+      });
 
-        const codeOrName = String(row[1] || row[2] || '').toLowerCase().trim();
-        const parentPerson = pMap[codeOrName] || pMap[String(row[2] || '').toLowerCase().trim()] || null;
+      for (let i = 1; i < rawRows.length; i++) {
+        const row = rawRows[i];
+        if (!row || row.length === 0 || !row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== '')) continue;
 
-        const relativeName = String(row[4] || row[3] || row[1] || '').trim();
+        const rowData = {};
+        const customData = {};
+        const trips = [];
+        const flags = {};
+
+        headerCols.forEach((hKey, colIdx) => {
+          const val = row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : '';
+          if (!val) return;
+
+          // Find matching field in mapping
+          const matched = allCols.find((c) => c.labelKey === hKey || c.id.toLowerCase() === hKey || hKey.includes(c.labelKey) || c.labelKey.includes(hKey));
+          if (matched) {
+            const fId = matched.id;
+            if (['name', 'code', 'otherName', 'birthYear', 'ethnicity', 'religion', 'cccd', 'position', 'hometown', 'thuongTru', 'tamTru', 'passportPersonal', 'passportOfficial', 'tcctResult', 'departmentId', 'departmentName'].includes(fId)) {
+              rowData[fId] = val;
+            } else {
+              customData[fId] = val;
+            }
+          } else if (hKey.includes('cccd') || hKey.includes('dinhdanh')) {
+            rowData.cccd = val;
+          } else if (hKey.includes('hoten') || hKey.includes('hovaten') || hKey.includes('ten')) {
+            rowData.name = val;
+          } else if (hKey.includes('macb') || hKey.includes('code')) {
+            rowData.code = val;
+          }
+        });
+
+        // Ensure mandatory Name exists
+        if (!rowData.name && row[1]) rowData.name = String(row[1]).trim();
+        if (!rowData.name && row[2]) rowData.name = String(row[2]).trim();
+        if (!rowData.name || rowData.name.toLowerCase() === 'họ và tên') continue;
+
+        const cleanCccd = rowData.cccd ? String(rowData.cccd).trim() : '';
+        const cleanCode = rowData.code ? String(rowData.code).trim().toLowerCase() : '';
+
+        // Check if Person already exists by CCCD (Unique Key) or Code
+        const existingPerson = (cleanCccd && existingByCccd[cleanCccd]) || (cleanCode && existingByCode[cleanCode]) || null;
+
+        if (existingPerson) {
+          // Ghi đè / Cập nhật (Update)
+          const updatedPayload = {
+            ...rowData,
+            custom_data: { ...(existingPerson.custom_data || {}), ...customData },
+          };
+          await updatePersonnel(existingPerson.id, updatedPayload);
+          updatedCount++;
+        } else {
+          // Tạo mới (Create)
+          const nextIndex = personnelStore.personnelList.length + createdCount + 1;
+          const assignedCode = rowData.code || ('CB-' + String(nextIndex).padStart(5, '0'));
+          const newPayload = {
+            ...rowData,
+            code: assignedCode,
+            trips: [],
+            relatives: [],
+            flags: {},
+            custom_data: customData,
+          };
+          await createPersonnel(newPayload);
+          createdCount++;
+        }
+        count++;
+      }
+
+      await logActivity('Import Excel Cán bộ', `Đã import ${count} cán bộ (Tạo mới: ${createdCount}, Cập nhật ghi đè theo CCCD: ${updatedCount})`);
+    } else {
+      // Relative Import: Match Parent Personnel by CCCD / Code / Name
+      const pByCccd = {};
+      const pByCode = {};
+      const pByName = {};
+      personnelStore.personnelList.forEach((p) => {
+        if (p.cccd) pByCccd[String(p.cccd).trim()] = p;
+        if (p.code) pByCode[String(p.code).trim().toLowerCase()] = p;
+        if (p.name) pByName[String(p.name).trim().toLowerCase()] = p;
+      });
+
+      for (let i = 1; i < rawRows.length; i++) {
+        const row = rawRows[i];
+        if (!row || row.length === 0 || !row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== '')) continue;
+
+        let parentCccd = '';
+        let parentCode = '';
+        let parentName = '';
+        let relativeName = '';
+        let relationshipName = '';
+        const relData = {};
+
+        headerCols.forEach((hKey, colIdx) => {
+          const val = row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : '';
+          if (!val) return;
+
+          if (hKey.includes('cccdcanbo') || (hKey.includes('cccd') && hKey.includes('cb'))) {
+            parentCccd = val;
+          } else if (hKey.includes('macanbo') || hKey.includes('macb')) {
+            parentCode = val;
+          } else if (hKey.includes('tencanbo') || (hKey.includes('canbo') && !hKey.includes('than'))) {
+            parentName = val;
+          } else if (hKey.includes('moiquanhe') || hKey.includes('quanhe')) {
+            relationshipName = val;
+          } else if (hKey.includes('tenthan') || hKey.includes('hotenthan') || hKey.includes('thannhan')) {
+            relativeName = val;
+          } else {
+            relData[hKey] = val;
+          }
+        });
+
+        // Fallback column positions
+        if (!relativeName) relativeName = String(row[4] || row[3] || row[1] || '').trim();
         if (!relativeName || relativeName.toLowerCase() === 'họ và tên thân nhân') continue;
 
-        const pId = parentPerson ? parentPerson.id : (String(row[1] || '').startsWith('CB') ? String(row[1]) : 'CB-UNKNOWN');
+        if (!parentCccd && row[3] && String(row[3]).length >= 9) parentCccd = String(row[3]).trim();
+        if (!parentName && row[2]) parentName = String(row[2]).trim();
+        if (!parentCode && row[1] && String(row[1]).startsWith('CB')) parentCode = String(row[1]).trim();
 
+        // Match parent by CCCD -> Code -> Name
+        const parentPerson = (parentCccd && pByCccd[parentCccd]) || (parentCode && pByCode[parentCode.toLowerCase()]) || (parentName && pByName[parentName.toLowerCase()]) || null;
+
+        const nextTnIndex = (personnelStore.relativesList || []).length + count + 1;
         const newRel = {
-          id: 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-          personnelId: pId,
-          personnelName: parentPerson?.name || String(row[2] || ''),
-          relationshipName: String(row[3] || 'Thân nhân'),
+          code: 'TN-' + String(nextTnIndex).padStart(5, '0'),
+          personnelId: parentPerson ? parentPerson.id : (parentCode || 'CB-UNKNOWN'),
+          personnelName: parentPerson?.name || parentName || 'Chưa liên kết',
+          relationshipName: relationshipName || String(row[3] || 'Thân nhân'),
           relativeName,
-          birthYear: String(row[5] || ''),
-          cccd: String(row[6] || ''),
-          currentAddress: String(row[7] || ''),
-          occupation: String(row[8] || ''),
-          countryName: String(row[9] || ''),
-          timeAbroad: String(row[10] || ''),
-          unitAbroad: String(row[11] || ''),
-          fundingName: String(row[12] || ''),
-          marriedToForeigner: String(row[13] || 'Không').toLowerCase().includes('có') ? 1 : 0,
-          workInForeignCompany: String(row[14] || 'Không').toLowerCase().includes('có') ? 1 : 0,
+          birthYear: String(row[5] || relData['namsinh'] || ''),
+          cccd: String(row[6] || relData['cccd'] || ''),
+          currentAddress: String(row[7] || relData['noio'] || ''),
+          occupation: String(row[8] || relData['nghenghiep'] || ''),
+          countryName: String(row[9] || relData['quocgia'] || ''),
+          timeAbroad: String(row[10] || relData['thoigian'] || ''),
+          unitAbroad: String(row[11] || relData['coquan'] || ''),
+          fundingName: String(row[12] || relData['kinhphi'] || ''),
+          marriedToForeigner: String(row[13] || '').toLowerCase().includes('có') ? 1 : 0,
+          workInForeignCompany: String(row[14] || '').toLowerCase().includes('có') ? 1 : 0,
         };
 
         await apiClient.post('/items/appendix2', newRel);
         count++;
       }
-      await logActivity('Import Excel Thân nhân', `Đã import và gộp ${count} thân nhân vào hồ sơ cán bộ`);
+      await logActivity('Import Excel Thân nhân', `Đã import và liên kết ${count} thân nhân theo CCCD cán bộ`);
     }
 
     await personnelStore.fetchPersonnel();
-    alert(`Import hoàn tất thành công ${count} bản ghi!`);
+    const resultMsg = currentImportType.value === 'personnel'
+      ? `Import hoàn tất ${count} hồ sơ cán bộ (Tạo mới: ${createdCount}, Cập nhật ghi đè theo CCCD: ${updatedCount})!`
+      : `Import hoàn tất và liên kết thành công ${count} thân nhân vào hồ sơ cán bộ!`;
+    alert(resultMsg);
     isImportOpen.value = false;
   } catch (err) {
     alert('Lỗi trong quá trình import: ' + err.message);
