@@ -34,95 +34,105 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 font-sans text-gray-800 antialiased" x-data="appData()">
+<body class="bg-[#f5f5f7] font-sans text-slate-800 antialiased" x-data="appData()">
 
     <div class="flex h-screen overflow-hidden">
         
-        <!-- Sidebar -->
-        <aside class="w-64 bg-[linear-gradient(118deg,#447f28_32.46%,#015301_91.42%)] text-white flex flex-col shadow-xl z-20">
-            <div class="p-6 text-center border-b border-white/20">
-                <h1 class="text-2xl font-bold tracking-wider">HỒ SƠ CÁN BỘ</h1>
-                <p class="text-sm opacity-80 mt-1">Version 2.1</p>
+        <!-- Sidebar (Apple macOS Style) -->
+        <aside class="w-64 bg-[#1a381a] text-white/90 flex flex-col border-r border-white/5 shadow-2xl z-20">
+            <div class="p-5 text-center border-b border-white/10">
+                <div class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white/15 mb-2 backdrop-blur-md shadow-inner">
+                    <svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                </div>
+                <h1 class="text-base font-bold tracking-tight text-white">HỒ SƠ CÁN BỘ</h1>
+                <p class="text-[11px] text-white/60 font-medium mt-0.5">Hệ thống Quản lý Chuẩn hóa</p>
             </div>
-            <nav class="flex-1 px-4 py-6 space-y-2">
-                <a href="#" @click.prevent="currentView = 'canbo'" :class="currentView === 'canbo' ? 'bg-white/20 font-semibold' : 'bg-white/5 hover:bg-white/10'" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                <a href="#" @click.prevent="currentView = 'canbo'" :class="currentView === 'canbo' ? 'bg-white/20 text-white font-semibold shadow-2xs backdrop-blur-md' : 'text-white/75 hover:bg-white/10 hover:text-white'" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all text-xs active:scale-[0.98]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     Quản lý Cán bộ
                 </a>
                 
-                <div class="pt-4 pb-2 px-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Báo cáo Phụ lục</div>
+                <div class="pt-3 pb-1 px-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Báo cáo Phụ lục</div>
                 
-                <a href="#" @click.prevent="currentView = 'dashboard'" :class="currentView === 'dashboard' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                <a href="#" @click.prevent="currentView = 'dashboard'" :class="currentView === 'dashboard' ? 'bg-white/20 text-white font-semibold shadow-2xs backdrop-blur-md' : 'text-white/75 hover:bg-white/10 hover:text-white'" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs active:scale-[0.98]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
                     Dashboard
                 </a>
-                <a href="#" @click.prevent="currentView = 'pl1'" :class="currentView === 'pl1' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <a href="#" @click.prevent="currentView = 'pl1'" :class="currentView === 'pl1' ? 'bg-white/20 text-white font-semibold shadow-2xs backdrop-blur-md' : 'text-white/75 hover:bg-white/10 hover:text-white'" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs active:scale-[0.98]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     PL1: Đi nước ngoài
                 </a>
-                <a href="#" @click.prevent="currentView = 'pl2'" :class="currentView === 'pl2' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <a href="#" @click.prevent="currentView = 'pl2'" :class="currentView === 'pl2' ? 'bg-white/20 text-white font-semibold shadow-2xs backdrop-blur-md' : 'text-white/75 hover:bg-white/10 hover:text-white'" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs active:scale-[0.98]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     PL2: Thân nhân NN
                 </a>
-                <a href="#" @click.prevent="currentView = 'pl3'" :class="currentView === 'pl3' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <a href="#" @click.prevent="currentView = 'pl3'" :class="currentView === 'pl3' ? 'bg-white/20 text-white font-semibold shadow-2xs backdrop-blur-md' : 'text-white/75 hover:bg-white/10 hover:text-white'" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs active:scale-[0.98]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     PL3: Lịch sử & Lưu ý
                 </a>
 
-                
-                
-                <div class="pt-4 pb-2 px-2 text-xs font-semibold text-white/50 uppercase tracking-wider" x-show="currentUser && isAdmin()">Hệ thống</div>
-                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'users'" :class="currentView === 'users' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <div class="pt-3 pb-1 px-3 text-[10px] font-bold text-white/40 uppercase tracking-wider" x-show="currentUser && isAdmin()">Hệ thống</div>
+                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'users'" :class="currentView === 'users' ? 'bg-white/20 text-white font-semibold shadow-2xs backdrop-blur-md' : 'text-white/75 hover:bg-white/10 hover:text-white'" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs active:scale-[0.98]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     Quản lý Người dùng
                 </a>
-                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'roles'" :class="currentView === 'roles' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                    Quản lý Vai trò (Roles)
+                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'roles'" :class="currentView === 'roles' ? 'bg-white/20 text-white font-semibold shadow-2xs backdrop-blur-md' : 'text-white/75 hover:bg-white/10 hover:text-white'" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs active:scale-[0.98]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    Quản lý Vai trò
                 </a>
-                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'audit_global'" :class="currentView === 'audit_global' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'audit_global'" :class="currentView === 'audit_global' ? 'bg-white/20 text-white font-semibold shadow-2xs backdrop-blur-md' : 'text-white/75 hover:bg-white/10 hover:text-white'" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs active:scale-[0.98]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     Nhật ký Hệ thống
                 </a>
-                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'settings_import'" :class="currentView === 'settings_import' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'settings_import'" :class="currentView === 'settings_import' ? 'bg-white/20 text-white font-semibold shadow-2xs backdrop-blur-md' : 'text-white/75 hover:bg-white/10 hover:text-white'" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs active:scale-[0.98]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     Cấu hình Cột Import
                 </a>
             </nav>
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col relative overflow-hidden bg-gray-100">
+        <main class="flex-1 flex flex-col relative overflow-hidden bg-[#f5f5f7]">
             
             <!-- HEADER (Dynamic based on View) -->
-            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-10 flex-shrink-0">
-                <h2 class="text-xl font-semibold text-gray-800" x-text="getViewTitle()"></h2>
+            <header class="bg-white/80 backdrop-blur-md border-b border-black/[0.06] h-16 flex items-center justify-between px-6 sm:px-8 z-10 flex-shrink-0 sticky top-0">
+                <h2 class="text-lg font-bold text-slate-800 tracking-tight" x-text="getViewTitle()"></h2>
                 
                 <div class="flex-1"></div>
-                <div class="flex items-center gap-4 border-r pr-4 mr-4" x-show="currentUser">
-                    <span class="text-sm font-medium text-gray-700">Xin chào, <span x-text="currentUser?.first_name || currentUser?.name || currentUser?.email"></span></span>
-                    <button @click="doLogout()" class="text-sm text-red-600 hover:text-red-800 font-medium transition-colors">Đăng xuất</button>
+                <div class="flex items-center gap-3 border-r border-slate-200 pr-4 mr-2" x-show="currentUser">
+                    <span class="text-xs font-medium text-slate-600">Xin chào, <b class="text-slate-800" x-text="currentUser?.first_name || currentUser?.name || currentUser?.email"></b></span>
+                    <button @click="doLogout()" class="text-xs text-red-500 hover:text-red-700 font-medium transition-colors">Đăng xuất</button>
                 </div>
                 
                 <!-- Actions for Cán bộ view -->
-                <div x-show="currentView === 'canbo'" class="flex items-center gap-4">
+                <div x-show="currentView === 'canbo'" class="flex items-center gap-2.5">
                     <div class="relative">
-                        <input type="text" x-model="searchQuery" placeholder="Tìm kiếm tên, CCCD..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#447f28] w-64">
-                        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <input type="text" x-model="searchQuery" placeholder="Tìm kiếm tên, CCCD..." class="pl-8 pr-3 py-1.5 bg-slate-100/90 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d7a22] focus:bg-white text-xs w-52 transition-all">
+                        <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
-                    <button @click="openPanel(null)" class="bg-[#447f28] hover:bg-[#015301] text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+
+                    <!-- Nút Tùy chỉnh Cột hiển thị -->
+                    <button @click="openColSelector = true" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs font-medium shadow-2xs transition-all flex items-center gap-1.5 active:scale-95">
+                        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+                        <span>Cột</span>
+                        <span class="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold" x-text="visibleColumns_canbo.length"></span>
+                    </button>
+
+                    <button @click="openPanel(null)" class="bg-[#2d7a22] hover:bg-[#1e5816] text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 active:scale-95">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
                         Thêm Cán bộ
                     </button> 
+
                     <div class="relative" x-data="{ openImportDropdown: false }">
-                        <button @click="openImportDropdown = !openImportDropdown" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                            Import Dữ liệu
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <button @click="openImportDropdown = !openImportDropdown" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 active:scale-95">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Import
+                            <svg class="w-3 h-3 ml-0.5 opacity-80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
-                        <div x-show="openImportDropdown" @click.away="openImportDropdown = false" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-50 overflow-hidden" x-cloak>
-                            <button @click="openImportModal('personnel'); openImportDropdown = false" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium border-b border-gray-50">Import Cán bộ</button>
-                            <button @click="openImportModal('relative'); openImportDropdown = false" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium">Import Thân nhân</button>
+                        <div x-show="openImportDropdown" @click.away="openImportDropdown = false" class="absolute right-0 mt-1.5 w-44 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200/80 z-50 overflow-hidden py-1" x-cloak>
+                            <button @click="openImportModal('personnel'); openImportDropdown = false" class="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 font-medium">Import Cán bộ</button>
+                            <button @click="openImportModal('relative'); openImportDropdown = false" class="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 font-medium">Import Thân nhân</button>
                         </div>
                     </div>
                 </div>
@@ -365,52 +375,116 @@
                 </div>
             </div>
 
-                        <!-- ================= VIEW: CÁN BỘ ================= -->
-            <div x-show="currentView === 'canbo'" class="flex-1 overflow-auto p-8">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="p-4 flex justify-between items-center border-b border-gray-100">
-                        <h3 class="font-bold text-gray-800">Danh sách Cán bộ</h3>
-                        <button x-show="isAdmin() && selectedIds.length > 0" @click="deleteSelected()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>Xóa đã chọn (<span x-text="selectedIds.length"></span>)</button>
-                        
+            <!-- ================= VIEW: CÁN BỘ ================= -->
+            <div x-show="currentView === 'canbo'" class="flex-1 overflow-auto p-6 sm:p-8">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="px-5 py-3.5 flex justify-between items-center border-b border-slate-100 bg-[#fbfbfd]">
+                        <div class="flex items-center gap-3">
+                            <h3 class="font-bold text-slate-800 text-sm">Danh sách Cán bộ</h3>
+                            <span class="text-xs text-slate-400 font-medium" x-text="'(' + filteredPersonnel.length + ' hồ sơ)'"></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button @click="openColSelector = true" class="text-xs text-slate-600 hover:text-[#2d7a22] flex items-center gap-1.5 font-medium bg-slate-100 hover:bg-slate-200/70 px-3 py-1.5 rounded-xl transition-colors border border-slate-200/60 active:scale-95">
+                                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                                <span>Tùy chỉnh cột</span>
+                            </button>
+                            <button x-show="isAdmin() && selectedIds.length > 0" @click="deleteSelected()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-medium shadow-xs flex items-center gap-1 transition-all active:scale-95"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>Xóa đã chọn (<span x-text="selectedIds.length"></span>)</button>
+                        </div>
                     </div>
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
-                                <th class="py-4 px-4 font-semibold w-12 text-center"><input type="checkbox" @click="selectedIds = $event.target.checked ? filteredPersonnel.map(p => p.id) : []" :checked="selectedIds.length === filteredPersonnel.length && filteredPersonnel.length > 0" class="rounded text-blue-600 focus:ring-blue-500"></th>
-                                <th class="py-4 px-6 font-semibold">
-                                    <div class="inline-flex items-center gap-1.5">
-                                        <button @click.stop="renumberPersonnelCodes()" class="text-gray-400 hover:text-amber-600 transition-colors p-0.5 rounded hover:bg-amber-50" title="Đánh lại Mã CB liên tục (CB-00001, CB-00002...)">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                        </button>
-                                        <span>Mã CB</span>
-                                    </div>
-                                </th>
-                                <th class="py-4 px-6 font-semibold">Họ và tên</th>
-                                <th class="py-4 px-6 font-semibold">Năm sinh</th>
-                                <th class="py-4 px-6 font-semibold">Phòng ban</th>
-                                <th class="py-4 px-6 font-semibold">CCCD</th>
-                                <th class="py-4 px-6 font-semibold text-right">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            <template x-for="person in filteredPersonnel" :key="person.id">
-                                <tr class="hover:bg-blue-50/50 transition-colors cursor-pointer group" @click="openPanel(person)">
-                                    <td class="py-3 px-4 text-center"><input type="checkbox" x-model="selectedIds" :value="person.id" @click.stop class="rounded text-blue-600 focus:ring-blue-500"></td>
-                                    <td class="py-3 px-6 text-sm text-gray-500 font-medium" x-text="person.code || (person.id ? (person.id.startsWith('p_') ? 'CB' + person.id.replace('p_', '').slice(-5).toUpperCase() : person.id) : 'N/A')"></td>
-                                    <td class="py-3 px-6 text-sm font-semibold text-gray-800" x-text="person.name"></td>
-                                    <td class="py-3 px-6 text-sm text-gray-600" x-text="person.birthYear"></td>
-                                    <td class="py-3 px-6 text-sm text-gray-600">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#447f28]/10 text-[#447f28]" x-text="getDepartmentName(person.departmentId)"></span>
-                                    </td>
-                                    <td class="py-3 px-6 text-sm text-gray-600" x-text="person.cccd"></td>
-                                    <td class="py-3 px-6 text-right flex justify-end gap-2">
-                                        <button @click.stop="openPanel(person)" class="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors text-xs font-medium">Chi tiết</button>
-                                        <button x-show="isAdmin()" @click.stop="selectedPerson = person; deleteData()" class="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-200 transition-colors text-xs font-medium">Xóa</button>
-                                    </td>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-[#fbfbfd] border-b border-slate-100 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                                    <th class="py-3 px-3 w-10 text-center">
+                                        <input type="checkbox" @click="selectedIds = $event.target.checked ? filteredPersonnel.map(p => p.id) : []" :checked="selectedIds.length === filteredPersonnel.length && filteredPersonnel.length > 0" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                    </th>
+                                    <template x-for="col in getActiveTableCols()" :key="col.id">
+                                        <th class="py-3 px-4 whitespace-nowrap">
+                                            <div class="inline-flex items-center gap-1">
+                                                <template x-if="col.id === 'code'">
+                                                    <button @click.stop="renumberPersonnelCodes()" class="text-slate-400 hover:text-amber-600 transition-colors p-0.5 rounded hover:bg-amber-50" title="Đánh lại Mã CB liên tục (CB-00001, CB-00002...)">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                                    </button>
+                                                </template>
+                                                <span x-text="col.label"></span>
+                                            </div>
+                                        </th>
+                                    </template>
+                                    <th class="py-3 px-4 text-right whitespace-nowrap">Thao tác</th>
                                 </tr>
-                            </template>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-xs">
+                                <template x-for="person in filteredPersonnel" :key="person.id">
+                                    <tr class="hover:bg-slate-50/80 transition-colors cursor-pointer group" @click="openPanel(person)">
+                                        <td class="py-3 px-3 text-center" @click.stop>
+                                            <input type="checkbox" x-model="selectedIds" :value="person.id" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                        </td>
+                                        <template x-for="col in getActiveTableCols()" :key="col.id">
+                                            <td class="py-3 px-4 whitespace-nowrap max-w-xs truncate" :class="{ 'font-semibold text-slate-800': col.id === 'name', 'text-slate-500 font-mono': col.id === 'code', 'text-slate-600': col.id !== 'name' && col.id !== 'code' }">
+                                                <template x-if="col.id === 'departmentId'">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#34c759]/10 text-[#246b1a]" x-text="getPersonDisplayVal(person, col.id) || 'Chưa phân bổ'"></span>
+                                                </template>
+                                                <template x-if="col.id !== 'departmentId'">
+                                                    <span x-text="getPersonDisplayVal(person, col.id) || '-'"></span>
+                                                </template>
+                                            </td>
+                                        </template>
+                                        <td class="py-3 px-4 text-right whitespace-nowrap" @click.stop>
+                                            <div class="flex justify-end gap-1.5">
+                                                <button @click.stop="openPanel(person)" class="text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/80 transition-colors text-[11px] font-medium">Chi tiết</button>
+                                                <button x-show="isAdmin()" @click.stop="selectedPerson = person; deleteData()" class="text-red-600 hover:bg-red-50 px-2.5 py-1 rounded-lg border border-red-200/80 transition-colors text-[11px] font-medium">Xóa</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Tùy chỉnh Cột hiển thị (Apple Style) -->
+            <div x-show="openColSelector" class="fixed inset-0 z-50 overflow-y-auto" x-cloak>
+                <div class="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity" @click="openColSelector = false"></div>
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200/80 p-6 overflow-hidden animate-in fade-in zoom-in duration-150">
+                        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-800">Tùy chỉnh Cột hiển thị Danh sách</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Chọn các cột bạn muốn hiển thị trên bảng ngoài màn hình chính</p>
+                            </div>
+                            <button @click="openColSelector = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        
+                        <div class="py-3 flex items-center justify-between gap-3 border-b border-slate-100">
+                            <input type="text" x-model="colSelectorSearch" placeholder="Tìm tên cột..." class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl w-60 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2d7a22]">
+                            <div class="flex items-center gap-2">
+                                <button type="button" @click="resetDefaultCols()" class="text-xs text-slate-600 hover:text-slate-800 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors font-medium">Mặc định (6 cột)</button>
+                                <button type="button" @click="selectAllCols()" class="text-xs text-blue-600 hover:text-blue-800 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors font-medium">Chọn tất cả</button>
+                            </div>
+                        </div>
+
+                        <div class="py-4 max-h-96 overflow-y-auto">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <template x-for="col in getAllPersonnelColumnsList().filter(c => !colSelectorSearch || c.label.toLowerCase().includes(colSelectorSearch.toLowerCase()))" :key="col.id">
+                                    <label class="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-200/60 transition-all select-none" :class="isColVisible(col.id) ? 'bg-[#34c759]/5 border-[#34c759]/30' : ''">
+                                        <input type="checkbox" :checked="isColVisible(col.id)" @change="toggleColVisibility(col.id)" class="rounded border-slate-300 text-[#2d7a22] focus:ring-[#2d7a22]">
+                                        <div class="truncate">
+                                            <span class="text-xs font-medium text-slate-700 truncate" x-text="col.label"></span>
+                                            <span class="text-[10px] text-slate-400 block truncate" x-text="col.group"></span>
+                                        </div>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+                            <span class="text-xs text-slate-500 font-medium">Đang chọn: <b class="text-[#2d7a22]" x-text="visibleColumns_canbo.length"></b> cột</span>
+                            <button @click="openColSelector = false" class="bg-[#2d7a22] hover:bg-[#1e5816] text-white px-5 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95">Xong</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2248,12 +2322,102 @@
                 dashboardDateFilter: new Date().toISOString().split('T')[0],
                 dashboardStats: { total: 0, missingDecisions: 0, warnings: 0, purposeCount: {}, countryCount: {}, fundingCount: {} },
                 
+                // Cấu hình Cột hiển thị Danh sách Cán bộ
+                visibleColumns_canbo: ['code', 'name', 'birthYear', 'departmentId', 'position', 'cccd'],
+                openColSelector: false,
+                colSelectorSearch: '',
+                
+                getActiveTableCols() {
+                    const all = this.getAllPersonnelColumnsList();
+                    return this.visibleColumns_canbo.map(id => {
+                        if (id === 'code') return { id: 'code', label: 'Mã CB' };
+                        const found = all.find(c => c.id === id);
+                        return found || { id: id, label: id };
+                    });
+                },
+                
+                getAllPersonnelColumnsList() {
+                    const list = [{ id: 'code', label: 'Mã CB', group: 'Mã định danh' }];
+                    (this.importMappingPersonnel || []).forEach(g => {
+                        (g.columns || []).forEach(c => {
+                            if (c.id && c.id !== 'stt' && !list.some(x => x.id === c.id)) {
+                                list.push({
+                                    id: c.id,
+                                    label: c.label || c.id,
+                                    group: g.group || 'Thông tin chung'
+                                });
+                            }
+                        });
+                    });
+                    return list;
+                },
+                
+                isColVisible(colId) {
+                    return this.visibleColumns_canbo.includes(colId);
+                },
+                
+                toggleColVisibility(colId) {
+                    if (this.visibleColumns_canbo.includes(colId)) {
+                        if (this.visibleColumns_canbo.length <= 1) {
+                            alert('Vui lòng giữ lại ít nhất 1 cột hiển thị!');
+                            return;
+                        }
+                        this.visibleColumns_canbo = this.visibleColumns_canbo.filter(id => id !== colId);
+                    } else {
+                        this.visibleColumns_canbo.push(colId);
+                    }
+                    localStorage.setItem('visibleColumns_canbo', JSON.stringify(this.visibleColumns_canbo));
+                },
+                
+                selectAllCols() {
+                    this.visibleColumns_canbo = this.getAllPersonnelColumnsList().map(c => c.id);
+                    localStorage.setItem('visibleColumns_canbo', JSON.stringify(this.visibleColumns_canbo));
+                },
+                
+                resetDefaultCols() {
+                    this.visibleColumns_canbo = ['code', 'name', 'birthYear', 'departmentId', 'position', 'cccd'];
+                    localStorage.setItem('visibleColumns_canbo', JSON.stringify(this.visibleColumns_canbo));
+                },
+                
+                getPersonDisplayVal(person, colId) {
+                    if (!person) return '';
+                    if (colId === 'code') {
+                        return person.code || (person.id ? (person.id.startsWith('p_') ? 'CB' + person.id.replace('p_', '').slice(-5).toUpperCase() : person.id) : '');
+                    }
+                    if (colId === 'departmentId') {
+                        return this.getDepartmentName(person.departmentId);
+                    }
+                    let val = person[colId];
+                    if (val === undefined || val === null || val === '') {
+                        if (person.custom_data && typeof person.custom_data === 'object') {
+                            val = person.custom_data[colId];
+                        }
+                    }
+                    if (val === undefined || val === null) return '';
+                    if (typeof val === 'object') {
+                        if (Array.isArray(val)) {
+                            return val.map(x => (typeof x === 'object' ? (x.name || JSON.stringify(x)) : x)).join(', ');
+                        }
+                        return val.name || JSON.stringify(val);
+                    }
+                    return String(val);
+                },
+                
                 init() {
                     const session = localStorage.getItem('mvp_session');
                     if (session) {
                         try {
                             this.currentUser = JSON.parse(session);
                             this.isLoggedIn = true;
+                        } catch(e) {}
+                    }
+                    const savedCols = localStorage.getItem('visibleColumns_canbo');
+                    if (savedCols) {
+                        try {
+                            const parsed = JSON.parse(savedCols);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                this.visibleColumns_canbo = parsed;
+                            }
                         } catch(e) {}
                     }
                     this.loadMappingConfig(); this.fetchData(); this.fetchLogs(); this.fetchUsers();
