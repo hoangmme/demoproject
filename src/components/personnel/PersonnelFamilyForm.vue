@@ -8,6 +8,7 @@
         label="Thêm Thân nhân"
         icon="pi pi-plus"
         size="small"
+        severity="success"
         @click="addRelative"
         style="font-size: 0.8rem;"
       />
@@ -17,14 +18,19 @@
       Chưa có thân nhân có yếu tố nước ngoài nào được ghi nhận. Nhấp <b>"+ Thêm Thân nhân"</b> để bổ sung.
     </div>
 
-    <div v-for="(rel, idx) in relatives" :key="idx" style="margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff;">
+    <div v-for="(rel, idx) in relatives" :key="idx" style="margin-bottom: 1.25rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
       <!-- Header of relative card -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f3f4f6; border-bottom: 1px solid #e5e7eb;">
-        <span style="font-size: 0.85rem; font-weight: 700; color: #1f2937;">
-          Thân nhân {{ idx + 1 }}: {{ rel.relationshipName ? `[${rel.relationshipName}] ` : '' }}{{ rel.relativeName || 'Chưa đặt tên' }} {{ rel.countryName ? `(${rel.countryName})` : '' }}
-        </span>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 0.75rem; background: #0284c7; color: #ffffff; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+            {{ rel.code || ('TN-' + String(idx + 1).padStart(5, '0')) }}
+          </span>
+          <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">
+            {{ rel.relationshipName ? `[${rel.relationshipName}] ` : '' }}{{ rel.relativeName || 'Chưa đặt tên' }} {{ rel.countryName ? `(${rel.countryName})` : '' }}
+          </span>
+        </div>
         <Button
-          label="Xóa người này"
+          label="Xóa thân nhân này"
           icon="pi pi-trash"
           size="small"
           text
@@ -34,63 +40,69 @@
         />
       </div>
 
-      <!-- Content of relative card -->
-      <div style="padding: 1rem;" class="form-grid">
-        <div class="field-item col-3">
-          <label class="field-label">Mối quan hệ</label>
-          <InputText v-model="rel.relationshipName" placeholder="Bố, Mẹ, Vợ, Chồng, Con..." size="small" />
-        </div>
-        <div class="field-item col-5">
-          <label class="field-label">Họ và tên thân nhân</label>
-          <InputText v-model="rel.relativeName" placeholder="Họ và tên" size="small" />
-        </div>
-        <div class="field-item col-2">
-          <label class="field-label">Năm sinh</label>
-          <InputText v-model="rel.birthYear" placeholder="Năm sinh" size="small" />
-        </div>
-        <div class="field-item col-2">
-          <label class="field-label">Số CCCD / ĐD</label>
-          <InputText v-model="rel.cccd" placeholder="CCCD" size="small" />
-        </div>
+      <!-- Dynamic Content of relative card based on importMappingRelative -->
+      <div style="padding: 1rem;">
+        <template v-if="relativeGroups.length > 0">
+          <div v-for="(group, gIdx) in relativeGroups" :key="gIdx" style="margin-bottom: 1rem;">
+            <div v-if="relativeGroups.length > 1" style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px;">
+              {{ group.group }}
+            </div>
+            <div class="form-grid">
+              <div
+                v-for="col in filterRelativeColumns(group.columns)"
+                :key="col.id"
+                :class="'field-item ' + getColClass(col.width)"
+              >
+                <DynamicField
+                  v-model="rel[col.id]"
+                  :col="col"
+                />
+              </div>
+            </div>
+          </div>
+        </template>
 
-        <div class="field-item col-6">
-          <label class="field-label">Nơi cư trú hiện nay</label>
-          <InputText v-model="rel.currentAddress" placeholder="Địa chỉ cư trú" size="small" />
-        </div>
-        <div class="field-item col-6">
-          <label class="field-label">Nghề nghiệp / Nơi làm việc</label>
-          <InputText v-model="rel.occupation" placeholder="Nghề nghiệp" size="small" />
-        </div>
-
-        <div class="field-item col-4">
-          <label class="field-label">Quốc gia (yếu tố NN)</label>
-          <InputText v-model="rel.countryName" placeholder="Mỹ, Úc, Đức..." size="small" />
-        </div>
-        <div class="field-item col-4">
-          <label class="field-label">Thời gian ở nước ngoài</label>
-          <InputText v-model="rel.timeAbroad" placeholder="VD: 2018 - 2022" size="small" />
-        </div>
-        <div class="field-item col-4">
-          <label class="field-label">Cơ quan / Tổ chức ở NN</label>
-          <InputText v-model="rel.unitAbroad" placeholder="Tên cơ quan/trường học" size="small" />
-        </div>
-
-        <div class="field-item col-4">
-          <label class="field-label">Nguồn kinh phí</label>
-          <InputText v-model="rel.fundingName" placeholder="Tự túc, Học bổng..." size="small" />
-        </div>
-        <div class="field-item col-4">
-          <label class="field-label">Kết hôn với người NN</label>
-          <InputText v-model="rel.marriedToForeigner" placeholder="Có / Không / Chi tiết" size="small" />
-        </div>
-        <div class="field-item col-4">
-          <label class="field-label">Làm việc cho tổ chức FDI / NN</label>
-          <InputText v-model="rel.workInForeignCompany" placeholder="Có / Không / Chi tiết" size="small" />
-        </div>
-
-        <div class="field-item col-12">
-          <PersonnelAttachments v-model="rel.files" label="Tệp đính kèm hồ sơ thân nhân" />
-        </div>
+        <!-- Fallback standard fields if mapping is empty -->
+        <template v-else>
+          <div class="form-grid">
+            <div class="field-item col-3">
+              <label class="field-label">Mối quan hệ</label>
+              <InputText v-model="rel.relationshipName" placeholder="Bố, Mẹ, Vợ, Chồng, Con..." size="small" />
+            </div>
+            <div class="field-item col-5">
+              <label class="field-label">Họ và tên thân nhân</label>
+              <InputText v-model="rel.relativeName" placeholder="Họ và tên" size="small" />
+            </div>
+            <div class="field-item col-2">
+              <label class="field-label">Năm sinh</label>
+              <InputText v-model="rel.birthYear" placeholder="Năm sinh" size="small" />
+            </div>
+            <div class="field-item col-2">
+              <label class="field-label">Số CCCD</label>
+              <InputText v-model="rel.cccd" placeholder="CCCD" size="small" />
+            </div>
+            <div class="field-item col-6">
+              <label class="field-label">Nơi cư trú hiện nay</label>
+              <InputText v-model="rel.currentAddress" placeholder="Địa chỉ cư trú" size="small" />
+            </div>
+            <div class="field-item col-6">
+              <label class="field-label">Nghề nghiệp / Nơi làm việc</label>
+              <InputText v-model="rel.occupation" placeholder="Nghề nghiệp" size="small" />
+            </div>
+            <div class="field-item col-4">
+              <label class="field-label">Quốc gia</label>
+              <InputText v-model="rel.countryName" placeholder="Mỹ, Úc, Đức..." size="small" />
+            </div>
+            <div class="field-item col-4">
+              <label class="field-label">Thời gian ở nước ngoài</label>
+              <InputText v-model="rel.timeAbroad" placeholder="VD: 2018 - 2022" size="small" />
+            </div>
+            <div class="field-item col-4">
+              <label class="field-label">Cơ quan / Tổ chức ở NN</label>
+              <InputText v-model="rel.unitAbroad" placeholder="Tên cơ quan/trường học" size="small" />
+            </div>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -100,7 +112,8 @@
 import { computed } from 'vue';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
-import PersonnelAttachments from './PersonnelAttachments.vue';
+import { usePersonnelStore } from '@/stores/personnel';
+import DynamicField from '@/components/common/DynamicField.vue';
 
 const props = defineProps({
   form: {
@@ -108,6 +121,8 @@ const props = defineProps({
     required: true,
   },
 });
+
+const personnelStore = usePersonnelStore();
 
 const relatives = computed({
   get: () => {
@@ -119,8 +134,27 @@ const relatives = computed({
   },
 });
 
+const relativeGroups = computed(() => {
+  return personnelStore.importMappingRelative || [];
+});
+
+const filterRelativeColumns = (cols) => {
+  const ignore = new Set(['stt', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'parentPersonnelCccd']);
+  return (cols || []).filter((c) => !ignore.has(c.id));
+};
+
+const getColClass = (w) => {
+  if (w === '100' || w === '100%') return 'col-12';
+  if (w === '75' || w === '75%') return 'col-9';
+  if (w === '50' || w === '50%') return 'col-6';
+  if (w === '33' || w === '33%') return 'col-4';
+  return 'col-3';
+};
+
 const addRelative = () => {
+  const newCode = 'TN-' + String(Date.now()).slice(-5);
   relatives.value.push({
+    code: newCode,
     relationshipName: '',
     relativeName: '',
     birthYear: '',
@@ -133,7 +167,6 @@ const addRelative = () => {
     fundingName: '',
     marriedToForeigner: '',
     workInForeignCompany: '',
-    files: [],
   });
 };
 

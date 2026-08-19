@@ -200,9 +200,20 @@
     <!-- TAB 2: DANH SÁCH THÂN NHÂN -->
     <div v-show="mainTab === 'thannhan'" class="app-card">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem;">
-        <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">
-          Danh sách Thân nhân có yếu tố nước ngoài ({{ flattenedRelatives.length }} người)
-        </span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">
+            Danh sách Thân nhân có yếu tố nước ngoài ({{ flattenedRelatives.length }} người)
+          </span>
+          <Button
+            v-if="selectedRelatives.length > 0"
+            :label="`Xóa (${selectedRelatives.length} đã chọn)`"
+            icon="pi pi-trash"
+            severity="danger"
+            size="small"
+            @click="handleBulkDeleteRelatives"
+            style="font-size: 0.8rem;"
+          />
+        </div>
 
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <InputText
@@ -241,7 +252,7 @@
 
           <!-- Export Relatives Button -->
           <Button
-            label="Xuất Excel Thân nhân"
+            :label="selectedRelatives.length > 0 ? `Xuất Excel (${selectedRelatives.length} đã chọn)` : 'Xuất Excel Thân nhân'"
             icon="pi pi-file-excel"
             severity="secondary"
             outlined
@@ -263,6 +274,7 @@
       </div>
 
       <DataTable
+        v-model:selection="selectedRelatives"
         :value="filteredRelatives"
         paginator
         :rows="15"
@@ -272,7 +284,13 @@
         class="p-datatable-sm"
         tableStyle="min-width: 60rem; table-layout: fixed;"
       >
-        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '60px', minWidth: '60px' }" :bodyStyle="{ width: '60px', minWidth: '60px' }" />
+        <Column selectionMode="multiple" :headerStyle="{ width: '45px', minWidth: '45px' }" :bodyStyle="{ width: '45px', minWidth: '45px' }" />
+        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }" />
+        <Column field="code" header="Mã TN" sortable :headerStyle="{ width: '110px', minWidth: '110px' }">
+          <template #body="{ data, index }">
+            <span class="badge-code">{{ data.code || ('TN-' + String(data.id || (index + 1)).slice(-5).padStart(5, '0')) }}</span>
+          </template>
+        </Column>
         <Column field="parentName" header="Cán bộ liên quan" sortable :headerStyle="{ width: '200px', minWidth: '200px' }">
           <template #body="{ data }">
             <strong style="cursor: pointer; color: #1f2937;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
@@ -524,6 +542,7 @@ const mainTab = ref('canhan'); // 'canhan' or 'thannhan'
 const searchQuery = ref('');
 const relativeSearchQuery = ref('');
 const selectedPersonnel = ref([]);
+const selectedRelatives = ref([]);
 const isDialogOpen = ref(false);
 const selectedPerson = ref(null);
 
@@ -668,13 +687,22 @@ const handleExportPersonnelFull = () => {
 };
 
 const handleExportRelativesFull = () => {
-  const list = flattenedRelatives.value;
+  const list = selectedRelatives.value.length > 0 ? selectedRelatives.value : flattenedRelatives.value;
   if (list.length === 0) {
     alert('Không có dữ liệu thân nhân để xuất!');
     return;
   }
 
   exportFullRelativesExcel(list, personnelStore.importMappingRelative);
+};
+
+const handleBulkDeleteRelatives = async () => {
+  const count = selectedRelatives.value.length;
+  if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${count} thân nhân đã chọn không?`)) return;
+  for (const r of selectedRelatives.value) {
+    await personnelStore.deleteRelative(r);
+  }
+  selectedRelatives.value = [];
 };
 
 const handleDeleteRelative = async (rel) => {
