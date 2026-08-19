@@ -63,11 +63,11 @@ const notesColumns = computed(() => {
 });
 
 const getColClass = (w) => {
-  const cleanW = String(w || '100').replace('%', '');
+  const cleanW = String(w || '25').replace('%', '');
   if (cleanW === '100') return 'col-12';
   if (cleanW === '75') return 'col-9';
   if (cleanW === '50') return 'col-6';
   if (cleanW === '33') return 'col-4';
-  return 'col-12';
+  return 'col-3';
 };
 </script>

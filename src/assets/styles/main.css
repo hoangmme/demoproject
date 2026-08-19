@@ -194,12 +194,36 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  width: 100%;
+}
+
+.field-item input,
+.field-item .p-inputtext,
+.field-item .p-inputnumber,
+.field-item .p-select,
+.field-item .app-date-picker-wrapper,
+.field-item .dynamic-field-wrapper {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.dynamic-field-wrapper input,
+.dynamic-field-wrapper .p-inputtext,
+.dynamic-field-wrapper .p-inputnumber,
+.dynamic-field-wrapper .p-select,
+.dynamic-field-wrapper .app-date-picker-wrapper {
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .field-label {
   font-size: 0.8rem;
   font-weight: 600;
   color: #374151;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 /* Dialog */
