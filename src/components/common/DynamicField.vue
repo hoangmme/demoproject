@@ -1,15 +1,7 @@
 <template>
   <div class="dynamic-field-wrapper">
-    <!-- 1. Date -->
-    <template v-if="col.format === 'date' || isDateField(col)">
-      <AppDatePicker
-        v-model="model"
-        :placeholder="col.placeholder || 'DD/MM/YYYY'"
-      />
-    </template>
-
-    <!-- 2. Text -->
-    <template v-else-if="col.format === 'text' || !col.format">
+    <!-- 1. Text -->
+    <template v-if="col.format === 'text' || !col.format">
       <InputText
         v-model="model"
         :placeholder="col.placeholder || ('Nhập ' + (col.label || ''))"
@@ -18,13 +10,21 @@
       />
     </template>
 
-    <!-- 3. Number -->
+    <!-- 2. Number -->
     <template v-else-if="col.format === 'number'">
       <InputNumber
         v-model="model"
         :placeholder="col.placeholder || 'Nhập số'"
         size="small"
         class="w-full"
+      />
+    </template>
+
+    <!-- 3. Date -->
+    <template v-else-if="col.format === 'date'">
+      <AppDatePicker
+        v-model="model"
+        :placeholder="col.placeholder || 'DD/MM/YYYY'"
       />
     </template>
 
@@ -212,14 +212,6 @@ const parsedOptions = computed(() => {
     .map((s) => s.trim())
     .filter(Boolean);
 });
-
-const isDateField = (c) => {
-  if (!c) return false;
-  if (c.format === 'date') return true;
-  const idStr = String(c.id || '').toLowerCase();
-  const labelStr = String(c.label || '').toLowerCase();
-  return idStr.includes('birth') || idStr.includes('date') || labelStr.includes('năm sinh') || labelStr.includes('ngày');
-};
 
 // Text Loop
 const loopItems = ref(['']);
