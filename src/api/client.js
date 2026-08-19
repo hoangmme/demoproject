@@ -8,7 +8,7 @@ const getBaseUrl = () => {
       return 'http://localhost:8055';
     }
   }
-  return 'https://demodirectus.mme.vn';
+  return 'https://api.hscb.online';
 };
 
 export const API_URL = getBaseUrl();

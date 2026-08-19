@@ -8,7 +8,7 @@ services:
     restart: always
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`demo.mme.vn`)"
+      - "traefik.http.routers.frontend.rule=Host(`hscb.online`)"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
 
   directus:
@@ -29,10 +29,10 @@ services:
       CORS_ENABLED: "true"
       CORS_ORIGIN: "true"
       CORS_METHODS: "GET,POST,PATCH,DELETE,OPTIONS"
-      PUBLIC_URL: "https://demodirectus.mme.vn"
+      PUBLIC_URL: "https://api.hscb.online"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.directus.rule=Host(`demodirectus.mme.vn`)"
+      - "traefik.http.routers.directus.rule=Host(`api.hscb.online`)"
       - "traefik.http.services.directus.loadbalancer.server.port=8055"
 
 volumes:
