@@ -126,34 +126,35 @@
             <span style="font-weight: 600; color: #4b5563;">{{ index + 1 }}</span>
           </template>
         </Column>
+        <Column field="code" header="Mã CB" sortable :headerStyle="{ width: '115px', minWidth: '115px' }" :bodyStyle="{ width: '115px', minWidth: '115px' }">
+          <template #body="{ data }">
+            <span class="badge-code">{{ data.code || formatPersonnelCode(data.id) }}</span>
+          </template>
+        </Column>
         <Column
           v-for="col in activeColumns"
           :key="col.id"
           :field="col.id"
           :header="col.label"
           sortable
-          :headerClass="col.id === 'code' || col.id === 'birthYear' || col.id === 'cccd' ? 'col-left' : 'col-left'"
-          :bodyClass="col.id === 'code' || col.id === 'birthYear' || col.id === 'cccd' ? 'col-left' : 'col-left'"
+          :headerClass="'col-left'"
+          :bodyClass="'col-left'"
           :headerStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
           :bodyStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
         >
           <template #body="{ data }">
-            <!-- Code column -->
-            <template v-if="col.id === 'code'">
-              <span style="font-family: monospace; font-weight: 700; color: #374151; padding-left: 2px;">
-                {{ data.code || formatPersonnelCode(data.id) }}
-              </span>
-            </template>
-
             <!-- Name column -->
-            <template v-else-if="col.id === 'name'">
+            <template v-if="col.id === 'name'">
               <strong style="color: #1f2937; cursor: pointer;">{{ data.name }}</strong>
             </template>
 
             <!-- Department column -->
             <template v-else-if="col.id === 'departmentId' || col.id === 'departmentName'">
-              <span class="badge-pill badge-green">
-                {{ personnelStore.getDepartmentName(data.departmentId) || data.departmentName || 'Chưa phân bổ' }}
+              <span v-if="data.departmentName || (data.departmentId && personnelStore.departmentMap[data.departmentId])" style="font-weight: 500; color: #374151;">
+                {{ data.departmentName || personnelStore.getDepartmentName(data.departmentId) }}
+              </span>
+              <span v-else class="badge-pill badge-green">
+                Chưa phân bổ
               </span>
             </template>
 
@@ -599,9 +600,20 @@ const activeColumns = computed(() => {
   const map = {};
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt') map[c.id] = c;
+      if (c.id && c.id !== 'stt' && c.id !== 'code') map[c.id] = c;
     });
   });
+
+  const getColWidth = (id) => {
+    if (id === 'name') return '190px';
+    if (id === 'cccd') return '135px';
+    if (id === 'birthYear') return '115px';
+    if (id === 'position' || id === 'positionName') return '170px';
+    if (id === 'departmentId' || id === 'departmentName') return '190px';
+    if (id === 'otherName') return '125px';
+    if (id === 'thuongTru' || id === 'tamTru' || id === 'hometown') return '180px';
+    return '160px';
+  };
 
   return personnelStore.visibleColumns
     .filter((id) => map[id])
@@ -610,7 +622,7 @@ const activeColumns = computed(() => {
       return {
         id: cfg.id,
         label: cfg.label || cfg.id,
-        width: cfg.width ? (cfg.width + 'px') : '160px',
+        width: getColWidth(cfg.id),
         format: cfg.format || 'text',
       };
     });
