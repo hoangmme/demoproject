@@ -99,29 +99,7 @@
         :class="getWidthClass(col.width)"
       >
         <label class="field-label">{{ col.label }}</label>
-        
-        <!-- File Format -->
-        <template v-if="col.format === 'file'">
-          <PersonnelAttachments v-model="form.custom_data[col.id]" :label="col.label" />
-        </template>
-        
-        <!-- Date Format -->
-        <template v-else-if="col.format === 'date'">
-          <AppDatePicker
-            v-model="form.custom_data[col.id]"
-            placeholder="DD/MM/YYYY"
-          />
-        </template>
-
-        <!-- Number Format -->
-        <template v-else-if="col.format === 'number'">
-          <InputNumber v-model="form.custom_data[col.id]" size="small" class="w-full" />
-        </template>
-
-        <!-- Default Text Format -->
-        <template v-else>
-          <InputText v-model="form.custom_data[col.id]" size="small" class="w-full" />
-        </template>
+        <DynamicField v-model="form.custom_data[col.id]" :col="col" />
       </div>
     </template>
   </div>
@@ -132,9 +110,8 @@ import { computed } from 'vue';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import Select from 'primevue/select';
-import InputNumber from 'primevue/inputnumber';
-import PersonnelAttachments from './PersonnelAttachments.vue';
 import AppDatePicker from '@/components/common/AppDatePicker.vue';
+import DynamicField from '@/components/common/DynamicField.vue';
 
 const props = defineProps({
   form: {
