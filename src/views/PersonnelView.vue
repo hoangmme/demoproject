@@ -463,27 +463,38 @@
           </div>
         </div>
 
-        <!-- Sheet Selector if file has multiple sheets -->
+        <!-- Sheet Selector Tabs -->
         <div
-          v-if="availableSheets.length > 1"
-          style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; flex-wrap: wrap; gap: 8px;"
+          v-if="availableSheets.length > 0"
+          style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;"
         >
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <i class="pi pi-file-excel" style="color: #2563eb; font-size: 1.1rem;"></i>
-            <span style="font-size: 0.85rem; font-weight: 700; color: #1e3a8a;">
-              File có {{ availableSheets.length }} Sheet. Chọn Sheet muốn Import:
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+            <span style="font-size: 0.85rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 6px;">
+              <i class="pi pi-file-excel" style="color: #16a34a; font-size: 1rem;"></i>
+              File Excel có {{ availableSheets.length }} Sheet. Nhấp chọn Sheet cần Import:
+            </span>
+            <span style="font-size: 0.75rem; color: #15803d; font-weight: 600;">
+              Đang chọn: <b>{{ selectedSheet }}</b>
             </span>
           </div>
-          <select
-            v-model="selectedSheet"
-            @change="onSheetChange"
-            class="custom-col-select"
-            style="width: 220px; font-weight: 600; color: #1e40af; border-color: #3b82f6;"
-          >
-            <option v-for="s in availableSheets" :key="s" :value="s">
-              📄 {{ s }} ({{ (parsedWorkbookData[s] || []).length }} dòng)
-            </option>
-          </select>
+
+          <!-- Clickable Sheet Tab Buttons -->
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <button
+              v-for="s in availableSheets"
+              :key="s"
+              type="button"
+              class="sheet-tab-btn"
+              :class="{ 'sheet-tab-active': selectedSheet === s }"
+              @click="selectSheetTab(s)"
+            >
+              <i class="pi pi-table"></i>
+              <span>{{ s }}</span>
+              <span class="sheet-tab-badge">
+                {{ (parsedWorkbookData[s] || []).length }} dòng
+              </span>
+            </button>
+          </div>
         </div>
 
         <!-- Preview Table if rows loaded -->
@@ -845,6 +856,13 @@ const handleFile = async (file) => {
     }
   } catch (err) {
     alert('Lỗi đọc tệp Excel: ' + err.message);
+  }
+};
+
+const selectSheetTab = (s) => {
+  selectedSheet.value = s;
+  if (parsedWorkbookData.value && parsedWorkbookData.value[s]) {
+    importPreviewRows.value = (parsedWorkbookData.value[s] || []).filter((r) => r && r.length > 0);
   }
 };
 

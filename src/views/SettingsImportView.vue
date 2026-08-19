@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div class="app-content">
     <!-- Header -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
       <div>
