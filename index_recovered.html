@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Quản lý Hồ sơ - MVP</title>
+    <link rel="stylesheet" href="css/tailwind.css">
+    <script defer src="js/alpine.min.js"></script>
+    <script>
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8055' 
+            : '/api';
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 antialiased" x-data="appData()">
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-[linear-gradient(118deg,#447f28_32.46%,#015301_91.42%)] text-white flex flex-col shadow-xl z-20">
+            <div class="p-6 text-center border-b border-white/20">
+                <h1 class="text-2xl font-bold tracking-wider">HỒ SƠ CÁN BỘ</h1>
+                <p class="text-sm opacity-80 mt-1">Version 2.1</p>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="#" @click.prevent="currentView = 'canbo'" :class="currentView === 'canbo' ? 'bg-white/20 font-semibold' : 'bg-white/5 hover:bg-white/10'" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    Quản lý Cán bộ
+                </a>
+                
+                <div class="pt-4 pb-2 px-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Báo cáo Phụ lục</div>
+                
+                <a href="#" @click.prevent="currentView = 'pl1'" :class="currentView === 'pl1' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    PL1: Đi nước ngoài
+                </a>
+                <a href="#" @click.prevent="currentView = 'pl2'" :class="currentView === 'pl2' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    PL2: Thân nhân NN
+                </a>
+                <a href="#" @click.prevent="currentView = 'pl3'" :class="currentView === 'pl3' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    PL3: Lịch sử & Lưu ý
+                </a>
+
+                <div class="pt-4 pb-2 px-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Cấu hình</div>
+                <a href="#" class="flex items-center gap-3 px-4 py-2 hover:bg-white/10 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    Danh mục Phòng ban
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col relative overflow-hidden bg-gray-100">
+            
+            <!-- HEADER (Dynamic based on View) -->
+            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-10 flex-shrink-0">
+                <h2 class="text-xl font-semibold text-gray-800" x-text="getViewTitle()"></h2>
+                
+                <!-- Actions for Cán bộ view -->
+                <div x-show="currentView === 'canbo'" class="flex items-center gap-4">
+                    <div class="relative">
+                        <input type="text" x-model="searchQuery" placeholder="Tìm kiếm tên, CCCD..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#447f28] w-64">
+                        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <button @click="openPanel(null)" class="bg-[#447f28] hover:bg-[#015301] text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Thêm Cán bộ
+                    </button>
+                </div>
+                
+                <!-- Actions for Phụ lục views -->
+                <div x-show="currentView !== 'canbo'" class="flex items-center gap-4" x-cloak>
+                    <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Xuất Excel
+                    </button>
+                </div>
+            </header>
+
+            <!-- ================= VIEW: CÁN BỘ ================= -->
+            <div x-show="currentView === 'canbo'" class="flex-1 overflow-auto p-8">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+                                <th class="py-4 px-6 font-semibold">Mã CB</th>
+                                <th class="py-4 px-6 font-semibold">Họ và tên</th>
+                                <th class="py-4 px-6 font-semibold">Năm sinh</th>
+                                <th class="py-4 px-6 font-semibold">Phòng ban</th>
+                                <th class="py-4 px-6 font-semibold">CCCD</th>
+                                <th class="py-4 px-6 font-semibold text-right">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="person in filteredPersonnel" :key="person.id">
+                                <tr class="hover:bg-blue-50/50 transition-colors cursor-pointer group" @click="openPanel(person)">
+                                    <td class="py-3 px-6 text-sm text-gray-500 font-medium" x-text="person.code || 'N/A'"></td>
+                                    <td class="py-3 px-6 text-sm font-semibold text-gray-800" x-text="person.name"></td>
+                                    <td class="py-3 px-6 text-sm text-gray-600" x-text="person.birthYear"></td>
+                                    <td class="py-3 px-6 text-sm text-gray-600">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#447f28]/10 text-[#447f28]" x-text="getDepartmentName(person.departmentId)"></span>
+                                    </td>
+                                    <td class="py-3 px-6 text-sm text-gray-600" x-text="person.cccd"></td>
+                                    <td class="py-3 px-6 text-right">
+                                        <button class="text-gray-400 hover:text-[#447f28] p-2 transition-colors">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ================= VIEW: PHỤ LỤC (Placeholders) ================= -->
+            <div x-show="currentView !== 'canbo'" class="flex-1 overflow-auto p-8" x-cloak>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col items-center justify-center text-gray-400">
+                    <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <h3 class="text-lg font-medium text-gray-600">Báo cáo đang được xây dựng</h3>
+                    <p class="text-sm mt-2 max-w-md text-center">Bảng dữ liệu Phụ lục này sẽ tự động được trích xuất từ thông tin Hồ sơ Cán bộ ở mục Quản lý Cán bộ.</p>
+                </div>
+            </div>
+
+
+            <!-- ================= SLIDE-OVER PANEL (HỒ SƠ CÁN BỘ) ================= -->
+            <div x-cloak x-show="isPanelOpen" class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+                <div class="absolute inset-0 overflow-hidden">
+                    <!-- Backdrop -->
+                    <div x-show="isPanelOpen" x-transition.opacity class="absolute inset-0 bg-gray-900 bg-opacity-40 transition-opacity" @click="closePanel()"></div>
+                    
+                    <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                        <div x-show="isPanelOpen" 
+                             x-transition:enter="transform transition ease-in-out duration-300" 
+                             x-transition:enter-start="translate-x-full" 
+                             x-transition:enter-end="translate-x-0" 
+                             x-transition:leave="transform transition ease-in-out duration-300" 
+                             x-transition:leave-start="translate-x-0" 
+                             x-transition:leave-end="translate-x-full" 
+                             class="pointer-events-auto w-screen max-w-5xl">
+                            
+                            <div class="flex h-full flex-col bg-white shadow-2xl">
+                                <!-- Panel Header -->
+                                <div class="bg-[linear-gradient(118deg,#447f28_32.46%,#015301_91.42%)] px-6 py-5 sm:px-8 flex-shrink-0">
+                                    <div class="flex items-center justify-between">
+                                        <h2 class="text-xl font-semibold text-white" id="slide-over-title" x-text="selectedPerson ? 'Chi tiết Hồ sơ Cán bộ' : 'Thêm mới Cán bộ'"></h2>
+                                        <div class="flex items-center gap-6">
+                                            <label class="flex items-center gap-2 text-white/90 text-sm cursor-pointer hover:text-white">
+                                                <input type="checkbox" x-model="showColumns" class="rounded text-[#447f28] focus:ring-[#447f28] border-none bg-white/20">
+                                                Hiện số [Cột X] Excel
+                                            </label>
+                                            <button type="button" class="text-white/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-2 rounded-full" @click="closePanel()">
+                                                <span class="sr-only">Đóng panel</span>
+                                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Tabs Navigation -->
+                                <div class="border-b border-gray-200 bg-gray-50 px-6 sm:px-8 flex-shrink-0">
+                                    <nav class="-mb-px flex space-x-8">
+                                        <template x-for="tab in tabs" :key="tab.id">
+                                            <button @click="activeTab = tab.id" 
+                                                    :class="activeTab === tab.id ? 'border-[#447f28] text-[#447f28] font-bold' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 font-medium'"
+                                                    class="whitespace-nowrap border-b-2 py-4 px-1 text-sm transition-colors uppercase tracking-wide"
+                                                    x-text="tab.name"></button>
+                                        </template>
+                                    </nav>
+                                </div>
+
+                                <!-- Tab Contents (Scrollable Area) -->
+                                <div class="flex-1 overflow-y-auto px-6 sm:px-8 py-8 bg-gray-50/30">
+                                    
+                                    <!-- TAB 1: CÁ NHÂN (52 Fields) -->
+                                    <div x-show="activeTab === 'canhan'" class="space-y-10">
+                                        
+                                        <!-- Khối 1: Thông tin cá nhân cơ bản -->
+                                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                            <h3 class="text-lg font-bold text-[#447f28] mb-4 flex items-center gap-2">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                                Khối 1: Thông tin cơ bản
+                                            </h3>
+                                            <div class="grid grid-cols-3 gap-6">
+                                                <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Họ và Tên (*) <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 2]</span></label>
+                                                    <input type="text" x-model="formData.name" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#447f28]/20 focus:border-[#447f28] outline-none"></div>
+                                                <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Tên khác <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 3]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Ngày sinh <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 4]</span></label>
+                                                    <input type="date" x-model="formData.birthYear" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                
+                                                <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Dân tộc <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 5]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Tôn giáo <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 6]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Số CCCD <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 12]</span></label>
+                                                    <input type="text" x-model="formData.cccd" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                    
+                                                <div class="col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Quê quán <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 7]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                
+                                                <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Đơn vị công tác <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 8]</span></label>
+                                                    <select x-model="formData.departmentId" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none bg-white">
+                                                        <option value="">-- Chọn phòng ban --</option>
+                                                        <template x-for="dept in departments" :key="dept.id"><option :value="dept.id" x-text="dept.name"></option></template>
+                                                    </select></div>
+                                                <div class="col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Chức vụ <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 9]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                    
+                                                <div class="col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Nơi ĐKHK thường trú <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 10]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                <div class="col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Nơi ở hiện nay <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 11]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                    
+                                                <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Hộ chiếu cá nhân <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 13]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Hộ chiếu công vụ <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 14]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                                                <div class="col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Kết quả thẩm tra, xác minh TCCT <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 15]</span></label>
+                                                    <textarea rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none"></textarea></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Khối 2: Thông tin đi nước ngoài -->
+                                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                            <div class="flex justify-between items-center mb-4">
+                                                <h3 class="text-lg font-bold text-[#447f28] flex items-center gap-2">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                    Khối 2: Lịch sử Đi nước ngoài
+                                                </h3>
+                                                <button type="button" class="text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-medium">+ Thêm chuyến đi</button>
+                                            </div>
+                                            
+                                            <div class="p-5 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                                                <div class="grid grid-cols-3 gap-4">
+                                                    <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Số QĐ <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 16]</span></label>
+                                                        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-sm"></div>
+                                                    <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Ngày ban hành <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 17]</span></label>
+                                                        <input type="date" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-sm"></div>
+                                                    <div class="col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Quốc Gia <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 21]</span></label>
+                                                        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-sm"></div>
+                                                        
+                                                    <div class="col-span-3">
+                                                        <label class="block text-sm font-medium text-gray-700 mb-2">Mục đích <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 23,24,25]</span></label>
+                                                        <div class="flex gap-6">
+                                                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="rounded text-[#447f28]"> Công tác</label>
+                                                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="rounded text-[#447f28]"> Học tập, tập huấn</label>
+                                                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="rounded text-[#447f28]"> Việc riêng</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Khối 3: Lưu ý & Vi phạm -->
+                                        <div class="bg-red-50/50 p-6 rounded-xl border border-red-100 shadow-sm">
+                                            <h3 class="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                                Khối 3: Vấn đề cần lưu ý (Cột 40 -> 52)
+                                            </h3>
+                                            
+                                            <div class="grid grid-cols-2 gap-6">
+                                                <div class="col-span-2">
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Bản thân có vấn đề tiêu chuẩn chính trị <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 40]</span></label>
+                                                    <textarea rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white"></textarea>
+                                                </div>
+                                                <div class="col-span-2">
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Bản thân/thân nhân đang bị điều tra <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 41]</span></label>
+                                                    <textarea rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white"></textarea>
+                                                </div>
+                                                
+                                                <!-- Checkboxes List -->
+                                                <div class="col-span-2 grid grid-cols-2 gap-4 mt-2">
+                                                    <label class="flex items-start gap-2 bg-white p-3 rounded border border-gray-200"><input type="checkbox" class="mt-1 rounded text-red-500"><span class="text-sm font-medium">Vi phạm kỷ luật Đảng/Chính quyền <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 43,44]</span></span></label>
+                                                    <label class="flex items-start gap-2 bg-white p-3 rounded border border-gray-200"><input type="checkbox" class="mt-1 rounded text-red-500"><span class="text-sm font-medium">Đi nước ngoài không xin phép <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 45]</span></span></label>
+                                                    <label class="flex items-start gap-2 bg-white p-3 rounded border border-gray-200"><input type="checkbox" class="mt-1 rounded text-red-500"><span class="text-sm font-medium">Vi phạm pháp luật ở nước ngoài <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 46]</span></span></label>
+                                                    <label class="flex items-start gap-2 bg-white p-3 rounded border border-gray-200"><input type="checkbox" class="mt-1 rounded text-red-500"><span class="text-sm font-medium">Ở lại nước ngoài quá hạn <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 47]</span></span></label>
+                                                    <label class="flex items-start gap-2 bg-white p-3 rounded border border-gray-200"><input type="checkbox" class="mt-1 rounded text-red-500"><span class="text-sm font-medium">Cho người nước ngoài thuê nhà/đất <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 50]</span></span></label>
+                                                    <label class="flex items-start gap-2 bg-white p-3 rounded border border-gray-200"><input type="checkbox" class="mt-1 rounded text-red-500"><span class="text-sm font-medium">Làm việc tại công ty FDI <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 51]</span></span></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- TAB 2: THÂN NHÂN (26 Fields) -->
+                                    <div x-show="activeTab === 'thannhan'" class="space-y-6">
+                                        <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <div>
+                                                <h3 class="text-lg font-bold text-gray-800">Danh sách Thân nhân</h3>
+                                                <p class="text-sm text-gray-500">Chứa 26 trường thông tin liên quan đến thân nhân.</p>
+                                            </div>
+                                            <button type="button" class="bg-[#447f28] hover:bg-[#015301] text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm">+ Thêm thân nhân</button>
+                                        </div>
+                                        
+                                        <!-- Form Placeholder -->
+                                        <div class="p-6 border border-dashed border-gray-300 rounded-xl bg-gray-50">
+                                            <div class="grid grid-cols-2 gap-6">
+                                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Mối quan hệ <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 5]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white"></div>
+                                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Họ và tên thân nhân <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 6]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white"></div>
+                                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Quốc tịch <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 10]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white"></div>
+                                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Quốc gia đang cư trú <span x-show="showColumns" class="text-xs text-blue-600 font-bold ml-1">[Cột 16]</span></label>
+                                                    <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white"></div>
+                                                <div class="col-span-2">
+                                                    <label class="flex items-center gap-2"><input type="checkbox" class="rounded text-[#447f28]"> Có yếu tố nước ngoài <span x-show="showColumns" class="text-xs text-gray-500 italic ml-1">(Tích vào đây thân nhân này sẽ tự động lên Phụ lục 2)</span></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- Panel Footer -->
+                                <div class="flex flex-shrink-0 justify-end gap-3 px-6 sm:px-8 py-4 border-t border-gray-200 bg-white">
+                                    <button type="button" @click="closePanel()" class="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50">Hủy</button>
+                                    <button type="button" @click="saveData()" class="rounded-lg bg-[#447f28] px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-[#015301]">Lưu toàn bộ Hồ sơ</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('appData', () => ({
+                personnel: [],
+                departments: [],
+                searchQuery: '',
+                loading: true,
+                
+                // View state
+                currentView: 'canbo',
+                
+                // Panel state
+                isPanelOpen: false,
+                activeTab: 'canhan',
+                showColumns: true,
+                selectedPerson: null,
+                formData: {},
+                
+                tabs: [
+                    { id: 'canhan', name: 'Cá nhân (52 Trường)' },
+                    { id: 'thannhan', name: 'Thân nhân (26 Trường)' }
+                ],
+                
+                getViewTitle() {
+                    const titles = {
+                        'canbo': 'Danh sách Cán bộ (Lõi)',
+                        'pl1': 'Phụ lục 1: Cán bộ đi nước ngoài',
+                        'pl2': 'Phụ lục 2: Thân nhân ở nước ngoài',
+                        'pl3': 'Phụ lục 3: Lịch sử tiếp xúc & Lưu ý'
+                    };
+                    return titles[this.currentView] || titles['canbo'];
+                },
+                
+                init() {
+                    this.fetchData();
+                },
+                
+                async fetchData() {
+                    this.loading = true;
+                    try {
+                        const headers = { 'Authorization': 'Bearer mvp-static-token-999' };
+                        // Fetch Departments
+                        const deptRes = await fetch(`${API_URL}/items/departments`, { headers });
+                        if(deptRes.ok) {
+                            const deptData = await deptRes.json();
+                            this.departments = deptData.data || [];
+                        }
+                        
+                        // Fetch Personnel
+                        const perRes = await fetch(`${API_URL}/items/personnels`, { headers });
+                        if(perRes.ok) {
+                            const perData = await perRes.json();
+                            this.personnel = perData.data || [];
+                        }
+                    } catch (e) {
+                        console.error("Lỗi kết nối Directus:", e);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                get filteredPersonnel() {
+                    if (!this.searchQuery) return this.personnel;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.personnel.filter(p => 
+                        (p.name && p.name.toLowerCase().includes(q)) || 
+                        (p.cccd && p.cccd.includes(q)) ||
+                        (p.code && p.code.toLowerCase().includes(q))
+                    );
+                },
+                
+                getDepartmentName(id) {
+                    if(!id) return 'Chưa phân bổ';
+                    const dept = this.departments.find(d => d.id === id);
+                    return dept ? dept.name : 'Chưa phân bổ';
+                },
+                
+                openPanel(person) {
+                    this.selectedPerson = person;
+                    if (person) {
+                        this.formData = JSON.parse(JSON.stringify(person));
+                    } else {
+                        this.formData = { name: '', code: '', cccd: '', birthYear: '', departmentId: '' };
+                    }
+                    this.activeTab = 'canhan';
+                    this.isPanelOpen = true;
+                },
+                
+                closePanel() {
+                    this.isPanelOpen = false;
+                },
+                
+                async saveData() {
+                    try {
+                        const method = this.selectedPerson ? 'PATCH' : 'POST';
+                        const url = this.selectedPerson 
+                            ? `${API_URL}/items/personnels/${this.selectedPerson.id}` 
+                            : `${API_URL}/items/personnels`;
+                            
+                        const res = await fetch(url, {
+                            method: method,
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer mvp-static-token-999'
+                            },
+                            body: JSON.stringify(this.formData)
+                        });
+                        
+                        if(res.ok) {
+                            this.closePanel();
+                            this.fetchData(); 
+                        } else {
+                            alert("Lỗi khi lưu dữ liệu");
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert("Lỗi hệ thống");
+                    }
+                }
+            }))
+        })
+    </script>
+</body>
+</html>

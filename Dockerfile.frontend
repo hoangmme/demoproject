@@ -1,2 +1,12 @@
+# Multi-stage Docker build for Vue 3 + PrimeVue Frontend
+FROM node:20-alpine AS build-stage
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
 FROM nginx:alpine
-COPY . /usr/share/nginx/html
+COPY --from=build-stage /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,2532 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Quản lý Hồ sơ - MVP</title>
+    <link rel="stylesheet" href="css/tailwind.css">
+    <script defer src="js/alpine.min.js"></script>
+    <script>
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8055' 
+            : '/api';
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 antialiased" x-data="appData()">
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-[linear-gradient(118deg,#447f28_32.46%,#015301_91.42%)] text-white flex flex-col shadow-xl z-20">
+            <div class="p-6 text-center border-b border-white/20">
+                <h1 class="text-2xl font-bold tracking-wider">HỒ SƠ CÁN BỘ</h1>
+                <p class="text-sm opacity-80 mt-1">Version 2.1</p>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="#" @click.prevent="currentView = 'canbo'" :class="currentView === 'canbo' ? 'bg-white/20 font-semibold' : 'bg-white/5 hover:bg-white/10'" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    Quản lý Cán bộ
+                </a>
+                
+                <div class="pt-4 pb-2 px-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Báo cáo Phụ lục</div>
+                
+                <a href="#" @click.prevent="currentView = 'pl1'" :class="currentView === 'pl1' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    PL1: Đi nước ngoài
+                </a>
+                <a href="#" @click.prevent="currentView = 'pl2'" :class="currentView === 'pl2' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    PL2: Thân nhân NN
+                </a>
+                <a href="#" @click.prevent="currentView = 'pl3'" :class="currentView === 'pl3' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    PL3: Lịch sử & Lưu ý
+                </a>
+
+                
+                
+                <div class="pt-4 pb-2 px-2 text-xs font-semibold text-white/50 uppercase tracking-wider" x-show="currentUser && isAdmin()">Hệ thống</div>
+                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'users'" :class="currentView === 'users' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    Quản lý Người dùng
+                </a>
+                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'roles'" :class="currentView === 'roles' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    Quản lý Vai trò (Roles)
+                </a>
+                <a href="#" x-show="currentUser && isAdmin()" @click.prevent="currentView = 'audit_global'" :class="currentView === 'audit_global' ? 'bg-white/20 font-semibold' : 'hover:bg-white/10'" class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Nhật ký Hệ thống
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col relative overflow-hidden bg-gray-100">
+            
+            <!-- HEADER (Dynamic based on View) -->
+            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-10 flex-shrink-0">
+                <h2 class="text-xl font-semibold text-gray-800" x-text="getViewTitle()"></h2>
+                
+                <!-- Actions for Cán bộ view -->
+                <div x-show="currentView === 'canbo'" class="flex items-center gap-4">
+                    <div class="relative">
+                        <input type="text" x-model="searchQuery" placeholder="Tìm kiếm tên, CCCD..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#447f28] w-64">
+                        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <button @click="openPanel(null)" class="bg-[#447f28] hover:bg-[#015301] text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Thêm Cán bộ
+                    </button> 
+                    <div class="relative" x-data="{ openImportDropdown: false }">
+                        <button @click="openImportDropdown = !openImportDropdown" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Import Dữ liệu
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div x-show="openImportDropdown" @click.away="openImportDropdown = false" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-50 overflow-hidden" x-cloak>
+                            <button @click="openImportModal('personnel'); openImportDropdown = false" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium border-b border-gray-50">Import Cán bộ</button>
+                            <button @click="openImportModal('relative'); openImportDropdown = false" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 font-medium">Import Thân nhân</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions for Phụ lục views -->
+                <div x-show="currentView === 'pl1' || currentView === 'pl2' || currentView === 'pl3'" class="flex items-center gap-4" x-cloak>
+                    <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Xuất Excel
+                    </button>
+                </div>
+
+                <!-- Actions for Users view -->
+                <div x-show="currentView === 'users'" class="flex items-center gap-4" x-cloak>
+                    <button @click="openCreateUser()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Tạo User mới
+                    </button>
+                </div>
+            </header>
+
+            <!-- ================= VIEW: CÁN BỘ ================= -->
+            <div x-show="currentView === 'canbo'" class="flex-1 overflow-auto p-8">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 flex justify-between items-center border-b border-gray-100">
+                        <h3 class="font-bold text-gray-800">Danh sách tài khoản hệ thống</h3>
+                        
+                    </div>
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+                                <th class="py-4 px-6 font-semibold">Mã CB</th>
+                                <th class="py-4 px-6 font-semibold">Họ và tên</th>
+                                <th class="py-4 px-6 font-semibold">Năm sinh</th>
+                                <th class="py-4 px-6 font-semibold">Phòng ban</th>
+                                <th class="py-4 px-6 font-semibold">CCCD</th>
+                                <th class="py-4 px-6 font-semibold text-right">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="person in filteredPersonnel" :key="person.id">
+                                <tr class="hover:bg-blue-50/50 transition-colors cursor-pointer group" @click="openPanel(person)">
+                                    <td class="py-3 px-6 text-sm text-gray-500 font-medium" x-text="person.code || 'N/A'"></td>
+                                    <td class="py-3 px-6 text-sm font-semibold text-gray-800" x-text="person.name"></td>
+                                    <td class="py-3 px-6 text-sm text-gray-600" x-text="person.birthYear"></td>
+                                    <td class="py-3 px-6 text-sm text-gray-600">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#447f28]/10 text-[#447f28]" x-text="getDepartmentName(person.departmentId)"></span>
+                                    </td>
+                                    <td class="py-3 px-6 text-sm text-gray-600" x-text="person.cccd"></td>
+                                    <td class="py-3 px-6 text-right">
+                                        <button class="text-gray-400 hover:text-[#447f28] p-2 transition-colors">
+                                            Sửa
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            
+            <!-- ================= VIEW: PHỤ LỤC 1 ================= -->
+            <div x-show="currentView === 'pl1'" class="flex-1 overflow-auto p-4 sm:p-8" x-cloak>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-auto max-h-full">
+                    <table class="w-max min-w-full border-collapse text-xs text-center border border-gray-300">
+        <thead class="bg-gray-100 text-gray-700" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">
+            <!-- Tầng 1 -->
+            <tr>
+                <th rowspan="4" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">STT</th>
+                <th colspan="12" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thông tin cá nhân, cư trú</th>
+                <th colspan="15" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thông tin đi nước ngoài</th>
+                <th colspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thủ tục sau khi đi nước ngoài về</th>
+                <th colspan="7" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Những vấn đề đáng lưu ý</th>
+            </tr>
+            <!-- Tầng 2 -->
+            <tr>
+                <th rowspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Họ và tên</th>
+                <th rowspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Năm Sinh</th>
+                <th rowspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Số CCCD</th>
+                <th colspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thông tin cư trú</th>
+                <th colspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Số hộ chiếu</th>
+                <th colspan="5" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Vị trí công tác</th>
+
+                <th rowspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Kết quả thẩm tra, xác minh TCCT trước khi đi nước ngoài</th>
+                <th colspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Quyết định</th>
+                <th colspan="4" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thông tin xuất nhập cảnh</th>
+                <th colspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Mục đích</th>
+                <th colspan="4" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Nguồn kinh phí</th>
+
+                <th rowspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Nộp hộ chiếu công vụ</th>
+                <th rowspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Báo cáo kết quả</th>
+
+                <th colspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Vi phạm, hình thức xử lý của cán bộ</th>
+                <th colspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Hình thức kỷ luật</th>
+                <th colspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Hình thức xử lý về pháp luật</th>
+            </tr>
+            <!-- Tầng 3 -->
+            <tr>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thường trú</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Tạm Trú</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Cá nhân</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Công vụ</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Chức vụ</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Đơn vị</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Trọng yếu cơ mật</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Dễ phát sinh tham nhũng, tiêu cực</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Dễ tác động, mua chuộc, lôi kéo</th>
+
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Số Quyết định</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Ngày ban hành</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Cơ quan, người có thẩm quyền ban hành</th>
+                <th colspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Xuất cảnh</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Quốc Gia</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Số lần</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Công tác</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Học tập, tập huấn</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Việc riêng (du lịch, thăm thân, chữa bệnh...)</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Ngân sách nhà nước</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Tự túc</th>
+                <th colspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Từ nguồn khác</th>
+
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Đi nước ngoài khi chưa được phép</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Vi phạm pháp luật ở nước ngoài</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Ở lại nước ngoài quá thời gian quy định</th>
+
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Đảng</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Chính Quyền</th>
+
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Của nước sở tại</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Của pháp luật Việt Nam (Hiệp định tương trợ tư pháp về hình sự và dẫn độ)</th>
+            </tr>
+            <!-- Tầng 4 -->
+            <tr>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Ngày Xuất cảnh</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Ngày nhập cảnh</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Tài trợ</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Học bổng từ cơ quan tổ chức khác</th>
+            </tr>
+            <!-- Tầng 5 (Hàng số) -->
+            <tr>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(1)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(2)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(3)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(4)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(5)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(6)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(7)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(8)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(9)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(10)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(11)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(12)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(13)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(14)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(15)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(16)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(17)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(18)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(19)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(20)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(21)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(22)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(23)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(24)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(25)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(26)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(27)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(28)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(29)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(30)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(31)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(32)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(33)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(34)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(35)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(36)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(37)</th>
+            </tr>
+        </thead>
+        <tbody>
+                            <template x-for="(p, i) in personnel" :key="p.id">
+                                <template x-if="p.trips && p.trips.length > 0">
+                                    <template x-for="(tr, j) in p.trips" :key="tr.id">
+                                        <tr class="hover:bg-blue-50/50">
+                                            <!-- Col 1 to 15 (cá nhân) only show on first trip -->
+                                            <td class="border border-gray-300 px-2 py-2" x-text="i+1"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-left font-medium" x-text="p.name"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="p.birthYear"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="p.cccd"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="p.hktt"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="p.currentAddress"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="p.passportPersonal"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="p.passportOfficial"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="p.position"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="getDepartmentName(p.departmentId)"></td>
+                                            <td class="border border-gray-300 px-2 py-2"></td>
+                                            <td class="border border-gray-300 px-2 py-2"></td>
+                                            <td class="border border-gray-300 px-2 py-2"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="p.tcctResult"></td>
+                                            
+                                            <!-- Col 16 to 30 (Trip Info) -->
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.qd"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.qdDate"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.agency"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.exit"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.enter"></td>
+                                            <td class="border border-gray-300 px-2 py-2 font-semibold" x-text="tr.country"></td>
+                                            <td class="border border-gray-300 px-2 py-2" x-text="tr.times"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.purpose === 'Công tác' ? 'X' : ''"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.purpose === 'Học tập' ? 'X' : ''"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.purpose === 'Việc riêng' ? 'X' : ''"></td>
+                                            
+                                            <!-- Funding (26-29) -->
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.funding === 'Ngân sách NN' ? 'X' : ''"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center" x-text="tr.funding === 'Tự túc' ? 'X' : ''"></td>
+                                            <td class="border border-gray-300 px-2 py-2"></td>
+                                            <td class="border border-gray-300 px-2 py-2"></td>
+                                            
+                                            <!-- Reports (30-31) -->
+                                            <td class="border border-gray-300 px-2 py-2 text-center font-bold text-green-600" x-text="tr.submittedPassport"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center font-bold text-green-600" x-text="tr.submittedReport"></td>
+                                            
+                                            <!-- Flags (32-37) show only on first trip row -->
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.noPermission"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.lawViolation"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.overstay"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.partyDiscipline"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.govDiscipline"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.foreignLaw"></td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="p.flags.vnLaw"></td>
+                                        </tr>
+                                    </template>
+                                </template>
+                            </template>
+                        </tbody>
+    </table>
+                </div>
+            </div>
+
+            <!-- ================= VIEW: PHỤ LỤC 2 ================= -->
+            <div x-show="currentView === 'pl2'" class="flex-1 overflow-auto p-4 sm:p-8" x-cloak>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-auto max-h-full">
+                    <table class="w-max min-w-full border-collapse text-xs text-center border border-gray-300">
+        <thead class="bg-gray-100 text-gray-700" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">
+            <!-- Tầng 1 -->
+            <tr>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">STT</th>
+                <th colspan="7" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thông tin cá nhân</th>
+                <th colspan="6" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thông tin thân nhân</th>
+                <th colspan="7" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Yếu tố nước ngoài</th>
+                <th colspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Hình thức xử lý về pháp luật</th>
+            </tr>
+
+            <!-- Tầng 2 -->
+            <tr>
+                <!-- Của Thông tin cá nhân -->
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Họ và tên</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Năm Sinh</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Chức vụ</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Đơn vị</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Trọng yếu cơ mật</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Dễ phát sinh tham nhũng, tiêu cực</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Dễ tác động, mua chuộc, lôi kéo</th>
+
+                <!-- Của Thông tin thân nhân -->
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Mối quan hệ</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Họ và tên</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Năm sinh</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Chỗ ở hiện nay</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Nghề nghiệp hiện tại</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Địa chỉ nơi làm việc, học tập</th>
+
+                <!-- Của Yếu tố nước ngoài -->
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thời gian học tập, làm việc, sinh sống ở nước ngoài</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Đơn vị học tập, làm việc, sinh sống ở nước ngoài</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Quốc gia</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Nguồn kinh phí (Tự túc; học bổng; tài trợ)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Đơn vị công tác hiện nay</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Kết hôn với người nước ngoài</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Làm việc tại công ty có vốn đầu tư nước ngoài</th>
+
+                <!-- Của Hình thức xử lý về pháp luật -->
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Của pháp luật Việt Nam (Hiệp định tương trợ tư pháp về hình sự và dẫn độ)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Của nước sở tại</th>
+            </tr>
+
+            <!-- Tầng 3 (Hàng số) -->
+            <tr>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(1)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(2)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(3)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(4)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(5)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(6)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(7)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(8)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(9)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(10)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(11)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(12)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(13)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(14)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(15)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(16)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(17)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(18)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(19)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(20)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(21)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(22)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(23)</th>
+            </tr>
+        </thead>
+
+        <tbody>
+                            <template x-for="(p, i) in personnel" :key="'p2'+p.id">
+                                <template x-for="(t, j) in p.relatives.filter(r => r.hasForeignElement)" :key="t.id">
+                                    <tr class="hover:bg-blue-50/50">
+                                        <!-- Col 1 to 7 (Cá nhân) -->
+                                        <td class="border border-gray-300 px-2 py-2" x-text="i+1"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-left font-medium" x-text="p.name"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.birthYear"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.position"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="getDepartmentName(p.departmentId)"></td>
+                                        <td class="border border-gray-300 px-2 py-2"></td>
+                                        <td class="border border-gray-300 px-2 py-2"></td>
+                                        <td class="border border-gray-300 px-2 py-2"></td>
+                                        
+                                        <!-- Col 8 to 13 (Relative) -->
+                                        <td class="border border-gray-300 px-2 py-2 text-center font-bold" x-text="t.relation"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-left" x-text="t.name"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.birthYear"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.currentAddress"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.job"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.unit"></td>
+                                        
+                                        <!-- Col 14 to 23 (Foreign Element & Law) -->
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.time"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.unit"></td>
+                                        <td class="border border-gray-300 px-2 py-2 font-semibold text-blue-700" x-text="t.foreignInfo.country"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.funding"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="t.foreignInfo.currentWork"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.foreignInfo.married"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.foreignInfo.fdi"></td>
+                                        
+                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.foreignInfo.punishVN"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-center text-red-500 font-bold" x-text="t.foreignInfo.punishForeign"></td>
+                                    </tr>
+                                </template>
+                            </template>
+                        </tbody>
+    </table>
+                </div>
+            </div>
+
+            <!-- ================= VIEW: PHỤ LỤC 3 ================= -->
+            <div x-show="currentView === 'pl3'" class="flex-1 overflow-auto p-4 sm:p-8" x-cloak>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-auto max-h-full">
+                    <table class="w-max min-w-full border-collapse text-xs text-center border border-gray-300">
+        <thead class="bg-gray-100 text-gray-700" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">
+            <!-- Tầng 1 -->
+            <tr>
+                <th rowspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">STT</th>
+                <th colspan="7" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thông tin cá nhân</th>
+                <th colspan="20" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Lịch sử bản thân đi nước ngoài và quan hệ tiếp xúc, làm việc các cá nhân, tổ chức nước
+                    ngoài</th>
+            </tr>
+            <!-- Tầng 2 -->
+            <tr>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Họ và tên</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Năm Sinh</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Chức vụ</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Đơn vị</th>
+                <th colspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Vị trí công tác</th>
+
+                <th colspan="6" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Quá trình học tập tại nước ngoài của cán bộ</th>
+                <th colspan="3" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Công tác</th>
+                <th colspan="6" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Việc riêng (du lịch, thăm thân, chữa bệnh...)</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Quốc gia</th>
+                <th colspan="4" class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Liên quan yếu tố nước ngoài của bản thân</th>
+            </tr>
+            <!-- Tầng 3 -->
+            <tr>
+                <!-- Của Vị trí công tác -->
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Trọng yếu cơ mật</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Dễ phát sinh tham nhũng, tiêu cực</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Dễ tác động, mua chuộc, lôi kéo</th>
+
+                <!-- Của Quá trình học tập -->
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Diện đào tạo</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Nơi đào tạo</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Vai trò khi tham gia đào tạo tại nước ngoài</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Đơn vị chọn cử</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Nguồn Kinh phí (tự túc, học bổng, tài trợ (cơ quan tài trợ)...)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thời gian đào tạo (ngày, tháng, năm đến ngày, tháng, năm)</th>
+
+                <!-- Của Công tác -->
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">- Trưởng Đoàn<br>- Chức vụ công tác<br>- Đơn vị công tác</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Thành phần Đoàn (CBCCVBC cơ quan, đơn vị)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Số lượng thành viên Đoàn</th>
+
+                <!-- Của Việc riêng -->
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Quyết định</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Ngày ban hành</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Cơ quan, người có thẩm quyền ban hành</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Ngày Xuất cảnh</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Ngày nhập cảnh</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Số lần</th>
+
+                <!-- Của Liên quan yếu tố nước ngoài -->
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Kết hôn với người nước ngoài</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Được tặng tiền, hàng, hiện vật có giá trị từ 50 triệu trở lên</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Cho người nước ngoài thuê nhà, đất</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">Làm việc tại công ty có vốn đầu tư nước ngoài</th>
+            </tr>
+            <!-- Tầng 4 (Hàng số) -->
+            <tr>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(1)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(2)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(3)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(4)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(5)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(6)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(7)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(8)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(9)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(10)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(11)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(12)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(13)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(14)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(15)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(16)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(17)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(18)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(19)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(20)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(21)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(22)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(23)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(24)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(25)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(26)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(27)</th>
+                <th class="border border-gray-300 px-2 py-2 align-middle font-semibold whitespace-nowrap">(28)</th>
+            </tr>
+        </thead>
+        <tbody>
+                            <template x-for="(p, i) in personnel.filter(p => p.flags.noPermission || p.flags.partyDiscipline || p.flags.govDiscipline || p.flags.investigating || p.trips.length > 0)" :key="'p3'+p.id">
+                                    <tr class="hover:bg-blue-50/50">
+                                        <!-- Col 1 to 8 -->
+                                        <td class="border border-gray-300 px-2 py-2" x-text="i+1"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-left font-medium" x-text="p.name"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.birthYear"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.position"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="getDepartmentName(p.departmentId)"></td>
+                                        <td class="border border-gray-300 px-2 py-2"></td>
+                                        <td class="border border-gray-300 px-2 py-2"></td>
+                                        <td class="border border-gray-300 px-2 py-2"></td>
+                                        
+                                        <!-- Col 9 to 14 (Training) -->
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].trainType : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].trainLoc : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].trainRole : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].trainAgency : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].funding : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].trainTime : ''"></td>
+                                        
+                                        <!-- Col 15 to 17 (Group) -->
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].leader : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].members : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].count : ''"></td>
+                                        
+                                        <!-- Col 18 to 24 (Trips) -->
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].qd : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].qdDate : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].agency : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].exit : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].enter : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2" x-text="p.trips.length > 0 ? p.trips[0].times : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2 font-semibold" x-text="p.trips.length > 0 ? p.trips[0].country : ''"></td>
+                                        
+                                        <!-- Col 25 to 28 (Flags) -->
+                                        <td class="border border-gray-300 px-2 py-2 text-left" x-text="p.flags.noPermission ? 'Không phép: '+p.flags.noPermission : ''"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-left" x-text="p.flags.gift"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-left" x-text="p.flags.rent"></td>
+                                        <td class="border border-gray-300 px-2 py-2 text-left" x-text="p.flags.fdi"></td>
+                                    </tr>
+                            </template>
+                        </tbody>
+    </table>
+                </div>
+            </div>
+
+            <!-- ================= VIEW: USERS ================= -->
+
+            <!-- ROLES VIEW -->
+            <div x-show="currentView === 'roles'" class="flex-1 overflow-auto p-4 sm:p-8" x-cloak>
+                <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Danh sách Vai trò (Roles)</h3>
+                        <button @click="openRoleModal()" class="bg-[#447f28] hover:bg-[#366620] text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Thêm Vai trò
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200">
+                                    <th class="py-3 px-4 font-semibold text-gray-600">Tên Role</th>
+                                    <th class="py-3 px-4 font-semibold text-gray-600">ID Directus</th>
+                                    <th class="py-3 px-4 font-semibold text-gray-600">Mô tả</th>
+                                    <th class="py-3 px-4 font-semibold text-gray-600 w-32">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="r in roles.filter(role => role.name !== 'Administrator')" :key="r.id">
+                                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                        <td class="py-3 px-4 font-medium text-gray-800" x-text="r.name"></td>
+                                        <td class="py-3 px-4 font-mono text-xs text-gray-500" x-text="r.id"></td>
+                                        <td class="py-3 px-4 text-gray-600" x-text="r.description || 'Không có mô tả'"></td>
+                                        <td class="py-3 px-4">
+                                        <div class="flex items-center gap-4">
+                                            <div class="text-blue-600 hover:underline cursor-pointer flex items-center gap-1" @click="editRole(r)">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                                Phân quyền Cột
+                                            </div>
+                                            <div class="text-red-500 hover:underline cursor-pointer flex items-center gap-1" @click="deleteRole(r)">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                Xóa
+                                            </div>
+                                        </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div x-show="currentView === 'users'" class="flex-1 overflow-auto p-4 sm:p-8" x-cloak>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Tên người dùng</th>
+                                <th class="py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Email</th>
+                                <th class="py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Vai trò (Role)</th>
+                                <th class="py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="u in users" :key="u.id">
+                                <tr>
+                                    <td class="py-3 px-6 font-medium text-gray-800" x-text="u.name"></td>
+                                    <td class="py-3 px-6 text-gray-600" x-text="u.email"></td>
+                                    <td class="py-3 px-6">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
+                                              :class="u.role === 'admin' ? 'bg-red-100 text-red-800' : (u.role === 'editor_a' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800')"
+                                              x-text="u.role === 'admin' ? 'Admin' : (u.role === 'editor_a' ? 'Editor Khối A' : 'Viewer')">
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-6 flex gap-3">
+                                        <span class="text-blue-600 hover:underline cursor-pointer font-medium" @click="editUser(u)">Sửa Info/Role</span>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ================= VIEW: GLOBAL AUDIT LOG ================= -->
+            <div x-show="currentView === 'audit_global'" class="flex-1 overflow-auto p-4 sm:p-8" x-cloak>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="p-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between rounded-t-xl">
+                        <h3 class="font-bold text-gray-800">Hoạt động hệ thống (System Activity Log)</h3>
+                        <div class="flex gap-2">
+                            <input type="text" placeholder="Tìm kiếm nhật ký..." class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-64">
+                            <button class="bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                                Lọc
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Thời gian</th>
+                                    <th class="py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Tài khoản thao tác</th>
+                                    <th class="py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Hành động</th>
+                                    <th class="py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Đối tượng (Hồ sơ)</th>
+                                    <th class="py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Chi tiết</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <template x-for="log in globalAuditLogs" :key="log.id">
+                                    <tr class="hover:bg-blue-50/50 transition-colors">
+                                        <td class="py-3 px-6 text-sm text-gray-500 font-medium whitespace-nowrap" x-text="log.time"></td>
+                                        <td class="py-3 px-6 text-sm">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs" x-text="log.user.charAt(0)"></div>
+                                                <span class="font-semibold text-gray-800" x-text="log.user"></span>
+                                            </div>
+                                            <p class="text-xs text-gray-500 ml-8" x-text="log.role"></p>
+                                        </td>
+                                        <td class="py-3 px-6">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold"
+                                                :class="log.action === 'THÊM MỚI' ? 'bg-green-100 text-green-700' : (log.action === 'CẬP NHẬT' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700')"
+                                                x-text="log.action"></span>
+                                        </td>
+                                        <td class="py-3 px-6 text-sm font-medium text-gray-700" x-text="log.entity"></td>
+                                        <td class="py-3 px-6 text-sm text-gray-600">
+                                            <p x-show="log.action === 'CẬP NHẬT'">
+                                                Đổi <span class="font-bold text-[#447f28]" x-text="log.field"></span>: 
+                                                <span class="line-through text-red-400 mx-1" x-text="log.oldValue"></span>
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                                                <span class="text-green-600 font-bold mx-1" x-text="log.newValue"></span>
+                                            </p>
+                                            <p x-show="log.action !== 'CẬP NHẬT'" x-text="log.details"></p>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+<!-- ================= SLIDE-OVER PANEL (HỒ SƠ CÁN BỘ) ================= -->
+            <div x-cloak x-show="isPanelOpen" class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+                <div class="absolute inset-0 overflow-hidden">
+                    <!-- Backdrop -->
+                    <div x-show="isPanelOpen" x-transition.opacity class="absolute inset-0 bg-gray-900 bg-opacity-40 transition-opacity" @click="closePanel()"></div>
+                    
+                    <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                        <div x-show="isPanelOpen" 
+                             x-transition:enter="transform transition ease-in-out duration-300" 
+                             x-transition:enter-start="translate-x-full" 
+                             x-transition:enter-end="translate-x-0" 
+                             x-transition:leave="transform transition ease-in-out duration-300" 
+                             x-transition:leave-start="translate-x-0" 
+                             x-transition:leave-end="translate-x-full" 
+                             class="pointer-events-auto w-screen max-w-5xl">
+                            
+                            <div class="flex h-full flex-col bg-white shadow-2xl">
+                                <!-- Panel Header -->
+                                <div class="bg-[linear-gradient(118deg,#447f28_32.46%,#015301_91.42%)] px-6 py-5 sm:px-8 flex-shrink-0">
+                                    <div class="flex items-center justify-between">
+                                        <h2 class="text-xl font-semibold text-white" id="slide-over-title" x-text="selectedPerson ? 'Chi tiết Hồ sơ Cán bộ' : 'Thêm mới Cán bộ'"></h2>
+                                        <div class="flex items-center gap-6">
+                                            <label class="flex items-center gap-2 text-white/90 text-sm cursor-pointer hover:text-white">
+                                                <input type="checkbox" x-model="showColumns" class="rounded text-[#447f28] focus:ring-[#447f28] border-none bg-white/20">
+                                                Hiện số [Cột X] Excel
+                                            </label>
+                                            <button type="button" class="text-white/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-2 rounded-full" @click="closePanel()">
+                                                <span class="sr-only">Đóng panel</span>
+                                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Tabs Navigation -->
+                                <div class="border-b border-gray-200 bg-gray-50 px-6 sm:px-8 flex-shrink-0">
+                                    <nav class="-mb-px flex space-x-8">
+                                        <template x-for="tab in tabs" :key="tab.id">
+                                            <button @click="activeTab = tab.id" 
+                                                    :class="activeTab === tab.id ? 'border-[#447f28] text-[#447f28] font-bold' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 font-medium'"
+                                                    class="whitespace-nowrap border-b-2 py-4 px-1 text-sm transition-colors uppercase tracking-wide"
+                                                    x-text="tab.name"></button>
+                                        </template>
+                                    </nav>
+                                </div>
+
+                                <!-- Tab Contents (Scrollable Area) -->
+                                <div class="flex-1 overflow-y-auto px-6 sm:px-8 py-8 bg-gray-50/30">
+                                    
+                                    <!-- TAB 1: CÁ NHÂN (52 Fields) -->
+                                    <div x-show="activeTab === 'canhan'" class="space-y-10">
+                                        <!-- Khối A: Thông tin cá nhân cơ bản -->
+                                        <fieldset class="relative">
+                                            
+                                            
+                                        <!-- Khối A: Thông tin cá nhân cơ bản -->
+                                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                            <h3 class="text-lg font-bold text-[#447f28] mb-4 flex items-center gap-2">Khối A: Thông tin cơ bản</h3>
+                                            <div class="grid grid-cols-4 gap-4">
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Họ và Tên <span x-show="showColumns" class="text-blue-600">[Cột 2]</span></label><input type="text" x-model="formData.name" class="w-full border rounded px-2 py-1" :disabled="!canEdit('name')"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Tên khác <span x-show="showColumns" class="text-blue-600">[Cột 3]</span></label><input type="text" x-model="formData.otherName" class="w-full border rounded px-2 py-1" :disabled="!canEdit('otherName')"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày sinh <span x-show="showColumns" class="text-blue-600">[Cột 4]</span></label><input type="date" x-model="formData.birthYear" class="w-full border rounded px-2 py-1" :disabled="!canEdit('birthYear')"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Dân tộc <span x-show="showColumns" class="text-blue-600">[Cột 5]</span></label><input type="text" x-model="formData.ethnicity" class="w-full border rounded px-2 py-1" :disabled="!canEdit('ethnicity')"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Tôn giáo <span x-show="showColumns" class="text-blue-600">[Cột 6]</span></label><input type="text" x-model="formData.religion" class="w-full border rounded px-2 py-1" :disabled="!canEdit('religion')"></div>
+                                                
+                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Quê quán <span x-show="showColumns" class="text-blue-600">[Cột 7]</span></label><input type="text" x-model="formData.hometown" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hometown')"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đơn vị công tác <span x-show="showColumns" class="text-blue-600">[Cột 8]</span></label>
+                                                    <select x-model="formData.departmentId" class="w-full border rounded px-2 py-1 bg-white" :disabled="!canEdit('departmentId')">
+                                                        <option value="">-- Chọn phòng ban --</option>
+                                                        <template x-for="dept in departments" :key="dept.id"><option :value="dept.id" x-text="dept.name"></option></template>
+                                                    </select>
+                                                </div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Chức vụ <span x-show="showColumns" class="text-blue-600">[Cột 9]</span></label><input type="text" x-model="formData.position" class="w-full border rounded px-2 py-1" :disabled="!canEdit('position')"></div>
+                                                
+                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Nơi ĐKHK thường trú <span x-show="showColumns" class="text-blue-600">[Cột 10]</span></label><input type="text" x-model="formData.hktt" class="w-full border rounded px-2 py-1" :disabled="!canEdit('hktt')"></div>
+                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Nơi ở hiện nay <span x-show="showColumns" class="text-blue-600">[Cột 11]</span></label><input type="text" x-model="formData.currentAddress" class="w-full border rounded px-2 py-1" :disabled="!canEdit('currentAddress')"></div>
+                                                
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Số CCCD <span x-show="showColumns" class="text-blue-600">[Cột 12]</span></label><input type="text" x-model="formData.cccd" class="w-full border rounded px-2 py-1" :disabled="!canEdit('cccd')"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Hộ chiếu cá nhân <span x-show="showColumns" class="text-blue-600">[Cột 13]</span></label><input type="text" x-model="formData.passportPersonal" class="w-full border rounded px-2 py-1" :disabled="!canEdit('passportPersonal')"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Hộ chiếu công vụ <span x-show="showColumns" class="text-blue-600">[Cột 14]</span></label><input type="text" x-model="formData.passportOfficial" class="w-full border rounded px-2 py-1" :disabled="!canEdit('passportOfficial')"></div>
+                                                
+                                                <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Kết quả thẩm tra TCCT <span x-show="showColumns" class="text-blue-600">[Cột 15]</span></label><textarea rows="2" x-model="formData.tcctResult" class="w-full border rounded px-2 py-1" :disabled="!canEdit('tcctResult')"></textarea></div>
+                                            </div>
+                                        </div>
+
+                                        
+                                        </fieldset>
+                                        <!-- Khối B: Lịch sử Đi nước ngoài -->
+                                        <fieldset class="relative">
+                                            
+
+                                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm" >
+                                            <div class="flex justify-between items-center mb-4">
+                                                <h3 class="text-lg font-bold text-[#447f28]">Khối B: Lịch sử Đi nước ngoài</h3>
+                                                <button type="button" @click="formData.trips.push({})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Thêm Chuyến đi</button>
+                                            </div>
+                                            <template x-for="(trip, index) in formData.trips" :key="index">
+                                                <div class="grid grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-100 relative">
+                                                    <button x-show="isAdmin()" type="button" @click="formData.trips.splice(index, 1)" class="absolute -right-2 -top-2 text-red-500 hover:bg-red-50 rounded-full p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Số Quyết định <span x-show="showColumns" class="text-blue-600">[Cột 16]</span></label><input type="text" x-model="trip.qd" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.qd')"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày ban hành <span x-show="showColumns" class="text-blue-600">[Cột 17]</span></label><input type="date" x-model="trip.qdDate" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.qdDate')"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Cơ quan ban hành <span x-show="showColumns" class="text-blue-600">[Cột 18]</span></label><input type="text" x-model="trip.agency" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.agency')"></div>
+                                                    
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày Xuất cảnh <span x-show="showColumns" class="text-blue-600">[Cột 19]</span></label><input type="date" x-model="trip.exit" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.exit')"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày Nhập cảnh <span x-show="showColumns" class="text-blue-600">[Cột 20]</span></label><input type="date" x-model="trip.enter" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.enter')"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc Gia <span x-show="showColumns" class="text-blue-600">[Cột 21]</span></label><input type="text" x-model="trip.country" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.country')"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Số lần <span x-show="showColumns" class="text-blue-600">[Cột 22]</span></label><input type="number" x-model="trip.times" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.times')"></div>
+                                                    
+                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700 mb-1">Mục đích (Ghi rõ mục đích) <span x-show="showColumns" class="text-blue-600">[Cột 23,24,25]</span></label>
+                                                        <input type="text" x-model="trip.purpose" placeholder="Công tác / Học tập / Việc riêng..." class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.purpose')">
+                                                    </div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">Kinh phí <span x-show="showColumns" class="text-blue-600">[Cột 26]</span></label>
+                                                        <select x-model="trip.funding" class="w-full border rounded px-2 py-1" :disabled="!canEdit('trips.funding')">
+                                                            <option>NSNN</option>
+                                                            <option>Cơ quan đài thọ</option>
+                                                            <option>Cá nhân</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            <div x-show="formData.trips.length === 0" class="text-center py-4 text-gray-500 italic text-sm">Chưa có chuyến đi nào.</div>
+                                        </div>
+                                        </fieldset>
+                                        <!-- Khối C: Lưu ý & Vi phạm -->
+                                        <fieldset class="relative">
+                                            
+
+                                        <div class="bg-red-50 p-6 rounded-xl border border-red-100 shadow-sm" >
+                                            <h3 class="text-lg font-bold text-red-600 mb-4">Khối C: Vấn đề cần lưu ý</h3>
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Vấn đề TCCT (Tự diễn biến) <span x-show="showColumns" class="text-blue-600">[Cột 40]</span></label><textarea rows="1" x-model="formData.flags.politicalIssue" class="w-full border rounded px-2 py-1"></textarea></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đang bị điều tra <span x-show="showColumns" class="text-blue-600">[Cột 41]</span></label><textarea rows="1" x-model="formData.flags.investigating" class="w-full border rounded px-2 py-1"></textarea></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Vấn đề khác về lý lịch <span x-show="showColumns" class="text-blue-600">[Cột 42]</span></label><textarea rows="1" x-model="formData.flags.otherIssue" class="w-full border rounded px-2 py-1"></textarea></div>
+                                                
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Kỷ luật Đảng <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 43, 44]</span></label><input type="text" x-model="formData.flags.partyDiscipline" class="w-full border rounded px-2 py-1"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Kỷ luật Chính quyền <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 44]</span></label><input type="text" x-model="formData.flags.govDiscipline" class="w-full border rounded px-2 py-1"></div>
+                                                
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Đi NN không phép <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 45]</span></label><input type="text" x-model="formData.flags.noPermission" class="w-full border rounded px-2 py-1"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Vi phạm PL ở NN <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 46]</span></label><input type="text" x-model="formData.flags.lawViolation" class="w-full border rounded px-2 py-1"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ở lại NN quá hạn <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 47]</span></label><input type="text" x-model="formData.flags.overstay" class="w-full border rounded px-2 py-1"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Thuộc diện quản lý <span x-show="showColumns" class="text-blue-600 text-xs">[Cột 48]</span></label><input type="text" class="w-full border rounded px-2 py-1"></div>
+                                                
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Được tặng quà >50tr <span x-show="showColumns" class="text-blue-600">[Cột 49]</span></label><input type="text" x-model="formData.flags.gift" class="w-full border rounded px-2 py-1"></div>
+                                                <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Cho thuê nhà/đất <span x-show="showColumns" class="text-blue-600">[Cột 50]</span></label><input type="text" x-model="formData.flags.rent" class="w-full border rounded px-2 py-1"></div>
+                                                <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Làm tại cty FDI <span x-show="showColumns" class="text-blue-600">[Cột 51]</span></label><input type="text" x-model="formData.flags.fdi" class="w-full border rounded px-2 py-1"></div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    </div>
+                                    <!-- TAB 2: THÂN NHÂN (26 Fields) -->
+                                    <div x-show="activeTab === 'thannhan'" class="space-y-6">
+                                        <fieldset class="relative min-h-[300px]">
+                                            
+
+                                    <div x-show="activeTab === 'thannhan'" class="space-y-6">
+                                        <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                            <div>
+                                                <h3 class="text-lg font-bold text-gray-800">Danh sách Thân nhân</h3>
+                                                <p class="text-sm text-gray-500">Chứa 26 trường thông tin liên quan đến thân nhân.</p>
+                                            </div>
+                                            <button type="button" @click="formData.relatives.push({})" class="bg-[#447f28] hover:bg-[#015301] text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Thêm Thân nhân</button>
+                                        </div>
+                                        <div x-show="formData.relatives.length === 0" class="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300 text-gray-500 italic">Chưa có danh sách thân nhân.</div>
+                                        
+                                        <!-- Form Thân Nhân -->
+                                        <template x-for="(rel, index) in formData.relatives" :key="index">
+                                            <div class="p-6 border border-gray-200 rounded-xl bg-white shadow-sm mb-4">
+                                                <div class="flex justify-between items-center mb-4">
+                                                    <h4 class="font-bold text-[#447f28]">Thân nhân #<span x-text="index+1"></span> (Cột 5 -> 26)</h4>
+                                                    <button x-show="isAdmin()" type="button" @click="formData.relatives.splice(index, 1)" class="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Xóa</button>
+                                                </div>
+                                                <div class="grid grid-cols-4 gap-4">
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Mối quan hệ <span x-show="showColumns" class="text-blue-600">[Cột 5]</span></label><input type="text" x-model="rel.relation" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Họ và tên thân nhân <span x-show="showColumns" class="text-blue-600">[Cột 6]</span></label><input type="text" x-model="rel.name" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Tên khác <span x-show="showColumns" class="text-blue-600">[Cột 7]</span></label><input type="text" x-model="rel.otherName" class="w-full border rounded px-2 py-1"></div>
+                                                    
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Ngày sinh <span x-show="showColumns" class="text-blue-600">[Cột 8]</span></label><input type="date" x-model="rel.birthYear" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-3"><label class="block text-xs font-medium text-gray-700">Quê quán <span x-show="showColumns" class="text-blue-600">[Cột 9]</span></label><input type="text" x-model="rel.hometown" class="w-full border rounded px-2 py-1"></div>
+                                                    
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc tịch <span x-show="showColumns" class="text-blue-600">[Cột 10]</span></label><input type="text" x-model="rel.nationality" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">CCCD <span x-show="showColumns" class="text-blue-600">[Cột 11]</span></label><input type="text" x-model="rel.cccd" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Nghề nghiệp <span x-show="showColumns" class="text-blue-600">[Cột 12]</span></label><input type="text" x-model="rel.job" class="w-full border rounded px-2 py-1"></div>
+                                                    
+                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Nơi ĐKHKTT <span x-show="showColumns" class="text-blue-600">[Cột 13]</span></label><input type="text" x-model="rel.hktt" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Nơi ở hiện nay <span x-show="showColumns" class="text-blue-600">[Cột 14]</span></label><input type="text" x-model="rel.currentAddress" class="w-full border rounded px-2 py-1"></div>
+                                                    
+                                                    <div class="col-span-4"><label class="block text-xs font-medium text-gray-700">Nội dung <span x-show="showColumns" class="text-blue-600">[Cột 17]</span></label><textarea rows="1" x-model="rel.content" class="w-full border rounded px-2 py-1"></textarea></div>
+                                                    
+                                                    <div class="col-span-4 mt-4 mb-2 flex items-center justify-between">
+                                                        <h4 class="font-semibold text-gray-700 border-b pb-1 w-full flex items-center justify-between">
+                                                            Yếu tố nước ngoài
+                                                            <label class="flex items-center gap-2 font-normal text-sm bg-yellow-50 px-3 py-1 rounded text-yellow-800 border border-yellow-200">
+                                                                <input type="checkbox" x-model="rel.hasForeignElement" class="rounded text-[#447f28]"> Có yếu tố nước ngoài (Sẽ lên Phụ lục 2)
+                                                            </label>
+                                                        </h4>
+                                                    </div>
+                                                    
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đơn vị học tập/làm việc ở NN <span x-show="showColumns" class="text-blue-600">[Cột 18]</span></label><input type="text" x-model="rel.foreignInfo.unit" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Quốc gia <span x-show="showColumns" class="text-blue-600">[Cột 19]</span></label><input type="text" x-model="rel.foreignInfo.country" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-1"><label class="block text-xs font-medium text-gray-700">Thời gian <span x-show="showColumns" class="text-blue-600">[Cột 20]</span></label><input type="text" x-model="rel.foreignInfo.time" class="w-full border rounded px-2 py-1"></div>
+                                                    
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Nguồn kinh phí <span x-show="showColumns" class="text-blue-600">[Cột 21]</span></label><input type="text" x-model="rel.foreignInfo.funding" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Đơn vị công tác hiện nay <span x-show="showColumns" class="text-blue-600">[Cột 22]</span></label><input type="text" x-model="rel.foreignInfo.currentWork" class="w-full border rounded px-2 py-1"></div>
+                                                    
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Kết hôn với người NN <span x-show="showColumns" class="text-blue-600">[Cột 23]</span></label><input type="text" x-model="rel.foreignInfo.married" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Làm cty FDI <span x-show="showColumns" class="text-blue-600">[Cột 24]</span></label><input type="text" x-model="rel.foreignInfo.fdi" class="w-full border rounded px-2 py-1"></div>
+                                                    
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Xử lý PL: Của nước sở tại <span x-show="showColumns" class="text-blue-600">[Cột 25]</span></label><input type="text" x-model="rel.foreignInfo.punishForeign" class="w-full border rounded px-2 py-1"></div>
+                                                    <div class="col-span-2"><label class="block text-xs font-medium text-gray-700">Xử lý PL: Của PL Việt Nam <span x-show="showColumns" class="text-blue-600">[Cột 26]</span></label><input type="text" x-model="rel.foreignInfo.punishVN" class="w-full border rounded px-2 py-1"></div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </fieldset>
+                                    </div>
+                                    
+                                    <!-- Panel Footer -->
+                                <div class="flex flex-shrink-0 justify-end gap-3 px-6 sm:px-8 py-4 border-t border-gray-200 bg-white">
+                                    <button x-show="isAdmin() && selectedPerson" type="button" @click="deleteData()" class="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-red-700 mr-auto">Xóa Cán bộ</button>
+                                    <button type="button" @click="closePanel()" class="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50">Hủy</button>
+                                    <button type="button" @click="saveData()" class="rounded-lg bg-[#447f28] px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-[#015301]">Lưu toàn bộ Hồ sơ</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('appData', () => ({
+                
+                personnel: [
+                    {
+                        id: 'CB01',
+                        code: 'NV001',
+                        name: 'Nguyễn Văn A',
+                        otherName: 'Bảy A',
+                        birthYear: '1980-05-12',
+                        ethnicity: 'Kinh',
+                        religion: 'Không',
+                        hometown: 'Thanh Hóa',
+                        departmentId: 'D1',
+                        cccd: '001080123456',
+                        hktt: 'Ba Đình, Hà Nội',
+                        currentAddress: 'Đống Đa, Hà Nội',
+                        passportPersonal: 'B1234567',
+                        passportOfficial: 'C7654321',
+                        position: 'Trưởng phòng',
+                        tcctResult: 'Đủ điều kiện tiêu chuẩn chính trị (Theo KL số 123 ngày 01/01/2023)',
+                        
+                        // Lịch sử chuyến đi
+                        trips: [
+                            {
+                                id: 'TR01',
+                                qd: '123/QĐ-UBND',
+                                qdDate: '2023-01-10',
+                                agency: 'UBND TP Hà Nội',
+                                exit: '2023-02-01',
+                                enter: '2023-02-15',
+                                country: 'Nhật Bản',
+                                times: 1,
+                                purpose: 'Công tác',
+                                funding: 'Ngân sách NN',
+                                submittedPassport: 'X',
+                                submittedReport: 'X',
+                                trainType: 'Bồi dưỡng ngắn hạn',
+                                trainLoc: 'Đại học Tokyo',
+                                trainRole: 'Học viên',
+                                trainAgency: 'Sở Nội vụ',
+                                trainTime: '01/02/2023 - 15/02/2023',
+                                leader: 'Nguyễn Văn A',
+                                members: 'Trần Thị B, Lê Văn C',
+                                count: 3
+                            }
+                        ],
+                        
+                        // Cờ vi phạm & lưu ý
+                        auditLogs: [
+                            { id: 1, user: 'Sếp Tổng (Admin)', role: 'Admin', time: '10/08/2026 15:30', field: 'Quê quán [Cột 7]', oldValue: 'Hà Nội', newValue: 'Thanh Hóa' },
+                            { id: 2, user: 'Nhân viên Nhập liệu', role: 'Editor Khối A', time: '09/08/2026 09:15', field: 'Số CCCD [Cột 12]', oldValue: '001080111111', newValue: '001080123456' },
+                            { id: 3, user: 'Sếp Tổng (Admin)', role: 'Admin', time: '01/08/2026 14:00', field: 'Tôn giáo [Cột 6]', oldValue: 'Phật giáo', newValue: 'Không' }
+                        ],
+                        flags: {
+                            politicalIssue: 'Không có biểu hiện tự diễn biến',
+                            investigating: 'Không',
+                            otherIssue: 'Lý lịch rõ ràng',
+                            noPermission: 'Không',
+                            lawViolation: 'Không',
+                            overstay: 'Không',
+                            partyDiscipline: 'Cảnh cáo (2022)',
+                            govDiscipline: 'Khiển trách (2022)',
+                            foreignLaw: 'Không',
+                            vnLaw: 'Không',
+                            gift: 'Nhận quà 100tr từ đối tác, đã nộp lại',
+                            rent: 'Đang cho thuê 1 căn hộ tại Cầu Giấy',
+                            fdi: 'Không'
+                        },
+
+                        // Thân nhân
+                        relatives: [
+                            {
+                                id: 'TN01',
+                                relation: 'Con ruột',
+                                name: 'Nguyễn Văn B',
+                                otherName: 'Tí',
+                                birthYear: '2005-08-20',
+                                hometown: 'Thanh Hóa',
+                                hktt: 'Ba Đình, Hà Nội',
+                                currentAddress: 'Sydney, Úc',
+                                job: 'Sinh viên',
+                                cccd: '001205123456',
+                                nationality: 'Việt Nam',
+                                content: 'Học đại học tại Úc',
+                                hasForeignElement: true,
+                                foreignInfo: {
+                                    time: 'Từ T8/2023 đến nay',
+                                    unit: 'Đại học Sydney',
+                                    country: 'Úc',
+                                    funding: 'Học bổng chính phủ Úc',
+                                    currentWork: 'Làm thêm tại nhà hàng Úc',
+                                    married: 'Chưa',
+                                    fdi: 'Không',
+                                    punishVN: 'Không',
+                                    punishForeign: 'Bị phạt giao thông ở Úc (2024)'
+                                }
+                            },
+                            {
+                                id: 'TN02',
+                                relation: 'Vợ',
+                                name: 'Phạm Thị D',
+                                otherName: 'Nữ',
+                                birthYear: '1982-10-10',
+                                hometown: 'Nghệ An',
+                                hktt: 'Ba Đình, Hà Nội',
+                                currentAddress: 'Đống Đa, Hà Nội',
+                                job: 'Giám đốc nhân sự',
+                                cccd: '001182123456',
+                                nationality: 'Việt Nam',
+                                content: 'Làm việc tại tập đoàn nước ngoài',
+                                hasForeignElement: true,
+                                foreignInfo: {
+                                    time: 'Từ 2020 đến nay',
+                                    unit: 'Công ty TNHH Samsung',
+                                    country: 'Hàn Quốc (FDI)',
+                                    funding: 'Tự túc',
+                                    currentWork: 'Giám đốc nhân sự',
+                                    married: 'Đã kết hôn',
+                                    fdi: 'Làm việc tại cty FDI (Samsung)',
+                                    punishVN: 'Không',
+                                    punishForeign: 'Không'
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        id: 'CB02',
+                        code: 'NV002',
+                        name: 'Trần Thị C',
+                        otherName: '',
+                        birthYear: '1985-11-30',
+                        ethnicity: 'Tày',
+                        religion: 'Phật giáo',
+                        hometown: 'Đà Nẵng',
+                        departmentId: 'D2',
+                        cccd: '030185123456',
+                        hktt: 'Hải Châu, Đà Nẵng',
+                        currentAddress: 'Hải Châu, Đà Nẵng',
+                        passportPersonal: 'C999888',
+                        passportOfficial: 'Không có',
+                        position: 'Chuyên viên',
+                        tcctResult: 'Chưa thẩm tra TCCT',
+                        trips: [
+                            {
+                                id: 'TR03',
+                                qd: 'Không có',
+                                qdDate: '',
+                                agency: '',
+                                exit: '2023-08-01',
+                                enter: '2023-08-10',
+                                country: 'Thái Lan',
+                                times: 1,
+                                purpose: 'Việc riêng',
+                                funding: 'Tự túc',
+                                submittedPassport: '',
+                                submittedReport: '',
+                                trainType: '',
+                                trainLoc: '',
+                                trainRole: '',
+                                trainAgency: '',
+                                trainTime: '',
+                                leader: '',
+                                members: '',
+                                count: 1
+                            }
+                        ],
+                        flags: {
+                            politicalIssue: 'Không',
+                            investigating: 'Đang bị thanh tra nội bộ',
+                            otherIssue: 'Không',
+                            noPermission: 'Đi Thái Lan tự túc không báo cáo (2023)',
+                            lawViolation: 'Không',
+                            overstay: 'Quá hạn 2 ngày ở Thái Lan',
+                            partyDiscipline: 'Không',
+                            govDiscipline: 'Không',
+                            foreignLaw: 'Không',
+                            vnLaw: 'Không',
+                            gift: 'Không',
+                            rent: 'Không',
+                            fdi: 'Không'
+                        },
+                        relatives: []
+                    }
+                ],
+                departments: [{id: 'D1', name: 'Phòng Kế hoạch'}, {id: 'D2', name: 'Phòng Tổ chức'}],
+
+                departments: [],
+                searchQuery: '',
+                loading: true,
+                
+                // View state
+                currentView: 'canbo',
+                currentUser: null,
+                loginForm: { email: '', password: '' },
+                
+                isFlsModalOpen: false,
+                flsUser: null,
+                flsMatrix: {
+                    'name': {}, 'otherName': {}, 'birthYear': {}, 'ethnicity': {}, 'religion': {}, 'hometown': {}, 'unused_8': {}, 'position': {}, 'hktt': {}, 'currentAddress': {}, 'cccd': {}, 'passportPersonal': {}, 'passportOfficial': {}, 'tcctResult': {}, 'departmentId': {}, 'email': {}, 'trips.country': {}, 'trips.purpose': {}, 'trips.duration': {}, 'trips.funding': {}, 'unused_22': {}, 'unused_23': {}, 'unused_24': {}, 'unused_25': {}, 'unused_26': {}, 'unused_27': {}, 'unused_28': {}, 'unused_29': {}, 'unused_30': {}, 'unused_31': {}, 'unused_32': {}, 'unused_33': {}, 'unused_34': {}, 'unused_35': {}, 'unused_36': {}, 'unused_37': {}, 'unused_38': {}, 'unused_39': {}, 'flags.politicalIssue': {}, 'flags.investigating': {}, 'flags.otherIssue': {}, 'flags.partyDiscipline': {}, 'flags.govDiscipline': {}, 'flags.noPermission': {}, 'flags.lawViolation': {}, 'flags.overstay': {}, 'flags.managed': {}, 'flags.gift': {}, 'flags.rent': {}, 'flags.fdi': {}, 'flags.marriedToForeigner': {}, 'relatives.relation': {}, 'relatives.name': {}, 'relatives.birthYear': {}, 'relatives.currentAddress': {}, 'relatives.job': {}, 'relatives.country': {}, 'relatives.time': {}, 'relatives.unit': {}, 'relatives.funding': {}, 'relatives.currentWork': {}, 'relatives.married': {}, 'relatives.fdi': {}, 'unused_65': {}, 'unused_66': {}, 'unused_67': {}, 'unused_68': {}, 'unused_69': {}, 'unused_70': {}, 'unused_71': {}, 'unused_72': {}, 'unused_73': {}, 'unused_74': {}, 'unused_75': {}, 'unused_76': {}, 'unused_77': {}, 'unused_78': {}
+                },
+                allColumns: [
+          {
+                    id: "name",
+                    label: "[Cột 2] Họ và Tên",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "otherName",
+                    label: "[Cột 3] Tên khác",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "birthYear",
+                    label: "[Cột 4] Năm sinh",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "ethnicity",
+                    label: "[Cột 5] Dân tộc",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "religion",
+                    label: "[Cột 6] Tôn giáo",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "hometown",
+                    label: "[Cột 7] Quê quán",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_8",
+                    label: "[Cột 8] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "position",
+                    label: "[Cột 9] Chức vụ",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "hktt",
+                    label: "[Cột 10] Nơi ĐKHK thường trú",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "currentAddress",
+                    label: "[Cột 11] Nơi ở hiện nay",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "cccd",
+                    label: "[Cột 12] Số CCCD",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "passportPersonal",
+                    label: "[Cột 13] Hộ chiếu cá nhân",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "passportOfficial",
+                    label: "[Cột 14] Hộ chiếu công vụ",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "tcctResult",
+                    label: "[Cột 15] Kết quả thẩm tra TCCT",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "departmentId",
+                    label: "[Cột 16] Phòng ban",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "email",
+                    label: "[Cột 17] Email",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "trips.country",
+                    label: "[Cột 18] Chuyến đi: Nước đến",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "trips.purpose",
+                    label: "[Cột 19] Chuyến đi: Mục đích",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "trips.duration",
+                    label: "[Cột 20] Chuyến đi: Thời gian",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "trips.funding",
+                    label: "[Cột 21] Chuyến đi: Nguồn kinh phí",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_22",
+                    label: "[Cột 22] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_23",
+                    label: "[Cột 23] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_24",
+                    label: "[Cột 24] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_25",
+                    label: "[Cột 25] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_26",
+                    label: "[Cột 26] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_27",
+                    label: "[Cột 27] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_28",
+                    label: "[Cột 28] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_29",
+                    label: "[Cột 29] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_30",
+                    label: "[Cột 30] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_31",
+                    label: "[Cột 31] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_32",
+                    label: "[Cột 32] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_33",
+                    label: "[Cột 33] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_34",
+                    label: "[Cột 34] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_35",
+                    label: "[Cột 35] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_36",
+                    label: "[Cột 36] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_37",
+                    label: "[Cột 37] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_38",
+                    label: "[Cột 38] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "unused_39",
+                    label: "[Cột 39] (Chưa dùng)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.politicalIssue",
+                    label: "[Cột 40] Lưu ý: Vấn đề TCCT (Tự diễn biến)",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.investigating",
+                    label: "[Cột 41] Lưu ý: Đang bị điều tra",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.otherIssue",
+                    label: "[Cột 42] Lưu ý: Vấn đề khác về lý lịch",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.partyDiscipline",
+                    label: "[Cột 43] Lưu ý: Kỷ luật Đảng",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.govDiscipline",
+                    label: "[Cột 44] Lưu ý: Kỷ luật Chính quyền",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.noPermission",
+                    label: "[Cột 45] Lưu ý: Đi NN không phép",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.lawViolation",
+                    label: "[Cột 46] Lưu ý: Vi phạm PL ở NN",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.overstay",
+                    label: "[Cột 47] Lưu ý: Ở lại NN quá hạn",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.managed",
+                    label: "[Cột 48] Lưu ý: Thuộc diện quản lý",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.gift",
+                    label: "[Cột 49] Lưu ý: Được tặng quà >50tr",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.rent",
+                    label: "[Cột 50] Lưu ý: Cho thuê nhà/đất",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.fdi",
+                    label: "[Cột 51] Lưu ý: Làm tại cty FDI",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "flags.marriedToForeigner",
+                    label: "[Cột 52] Lưu ý: Kết hôn với người NN",
+                    group: "Cán bộ (Cột 2-52)"
+          },
+          {
+                    id: "relatives.relation",
+                    label: "[Cột 53] Quan hệ",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.name",
+                    label: "[Cột 54] Họ và tên",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.birthYear",
+                    label: "[Cột 55] Năm sinh",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.currentAddress",
+                    label: "[Cột 56] Nơi cư trú",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.job",
+                    label: "[Cột 57] Nghề nghiệp",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.country",
+                    label: "[Cột 58] Quốc gia (Yếu tố NN)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.time",
+                    label: "[Cột 59] Thời gian ở NN",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.unit",
+                    label: "[Cột 60] Cơ quan/Tổ chức NN",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.funding",
+                    label: "[Cột 61] Nguồn kinh phí",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.currentWork",
+                    label: "[Cột 62] Công việc hiện tại (NN)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.married",
+                    label: "[Cột 63] Kết hôn với người NN",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "relatives.fdi",
+                    label: "[Cột 64] Làm việc cho FDI",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_65",
+                    label: "[Cột 65] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_66",
+                    label: "[Cột 66] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_67",
+                    label: "[Cột 67] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_68",
+                    label: "[Cột 68] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_69",
+                    label: "[Cột 69] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_70",
+                    label: "[Cột 70] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_71",
+                    label: "[Cột 71] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_72",
+                    label: "[Cột 72] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_73",
+                    label: "[Cột 73] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_74",
+                    label: "[Cột 74] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_75",
+                    label: "[Cột 75] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_76",
+                    label: "[Cột 76] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_77",
+                    label: "[Cột 77] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          },
+          {
+                    id: "unused_78",
+                    label: "[Cột 78] (Chưa dùng)",
+                    group: "Thân nhân (Cột 53-78)"
+          }
+],
+                editRole(role) {
+                    this.flsRole = role;
+                    // Initialize matrix with default true or existing user permissions
+                    let perms = {};
+                    try {
+                        if (role.column_permissions) {
+                            perms = typeof role.column_permissions === 'string' ? JSON.parse(role.column_permissions) : role.column_permissions;
+                        }
+                    } catch(e) {}
+                    
+                    this.allColumns.forEach(col => {
+                        this.flsMatrix[col.id] = perms[col.id] || { read: true, write: true };
+                    });
+                    this.isFlsModalOpen = true;
+                },
+                async saveFls() {
+                    if (!this.flsRole) return;
+                    try {
+                        const res = await fetch(`${API_URL}/roles/${this.flsRole.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                            body: JSON.stringify({ column_permissions: this.flsMatrix })
+                        });
+                        if(res.ok) {
+                            this.isFlsModalOpen = false;
+                            await this.fetchUsers(); // Refresh
+                            alert('Đã lưu cấu hình Phân quyền Cột thành công!');
+                        } else {
+                            alert('Lỗi khi lưu cấu hình');
+                        }
+                    } catch(e) { alert('Lỗi kết nối'); }
+                },
+                isCreateUserModalOpen: false,
+                newUserForm: { name: '', email: '', role: 'editor_a' },
+                users: [],
+                roles: [],
+                isRoleModalOpen: false,
+                roleForm: { name: "", description: "" },
+                flsRole: null,
+                availableRoles: [],
+                globalAuditLogs: [
+                    { id: 1, time: '10/08/2026 15:30', user: 'Sếp Tổng (Admin)', role: 'admin@system.com', action: 'CẬP NHẬT', entity: 'Nguyễn Văn A (NV001)', field: 'Quê quán [Cột 7]', oldValue: 'Hà Nội', newValue: 'Thanh Hóa', details: '' },
+                    { id: 2, time: '10/08/2026 14:15', user: 'Nhân viên Nhập liệu', role: 'editor@system.com', action: 'THÊM MỚI', entity: 'Nguyễn Văn A (NV001)', field: '', oldValue: '', newValue: '', details: 'Tạo hồ sơ cán bộ mới' },
+                    { id: 3, time: '09/08/2026 09:10', user: 'Sếp Tổng (Admin)', role: 'admin@system.com', action: 'CẬP NHẬT', entity: 'Trần Thị C (NV002)', field: 'Ngày sinh [Cột 4]', oldValue: '1985-01-01', newValue: '1985-11-30', details: '' },
+                    { id: 4, time: '08/08/2026 16:20', user: 'Admin Hệ Thống', role: 'sys@admin.com', action: 'XÓA', entity: 'Lê Văn B (NV003)', field: '', oldValue: '', newValue: '', details: 'Đã xóa hồ sơ cán bộ' }
+                ],
+                permissions: {
+                    'admin': { editKhoiA: true, editKhoiB: true, editKhoiC: true, editThanNhan: true },
+                    'editor_a': { editKhoiA: true, editKhoiB: false, editKhoiC: false, editThanNhan: false },
+                    'viewer': { editKhoiA: false, editKhoiB: false, editKhoiC: false, editThanNhan: false }
+                },
+                hasPermission(block) {
+                    if (!this.currentUser || !this.currentUser.role) return false;
+                    const roleName = this.currentUser.role.toLowerCase();
+                    if (this.currentUser.email === 'admin@demo.com' || roleName.includes('admin')) return true;
+                    if (roleName.includes('editor khối a') && block === 'editKhoiA') return true;
+                    if (roleName.includes('editor khối b') && block === 'editKhoiB') return true;
+                    if (roleName.includes('editor khối c') && block === 'editKhoiC') return true;
+                    if (roleName.includes('thân nhân') && block === 'editThanNhan') return true;
+                    return false;
+                },
+                
+                // Panel state
+                isPanelOpen: false,
+                activeTab: 'canhan',
+                showColumns: true,
+                selectedPerson: null,
+                formData: {
+                    trips: [{}],
+                    flags: {},
+                    relatives: []
+                },
+                
+                tabs: [
+                    { id: 'canhan', name: 'Cá nhân (52 Trường)' },
+                    { id: 'thannhan', name: 'Thân nhân (26 Trường)' }
+                ],
+                
+                getViewTitle() {
+                    const titles = {
+                        'canbo': 'Danh sách Cán bộ (Lõi)',
+                        'pl1': 'Phụ lục 1: Cán bộ đi nước ngoài',
+                        'pl2': 'Phụ lục 2: Thân nhân ở nước ngoài',
+                        'pl3': 'Phụ lục 3: Lịch sử tiếp xúc & Lưu ý'
+                    };
+                    return titles[this.currentView] || titles['canbo'];
+                },
+                
+                
+                
+                canReadColumn(colId) {
+                    if (this.isAdmin()) return true;
+                    if (!this.currentUser || !this.currentUser.column_permissions) return true; // Default allow if not configured
+                    try {
+                        let perms = typeof this.currentUser.column_permissions === 'string' ? JSON.parse(this.currentUser.column_permissions) : this.currentUser.column_permissions;
+                        if (perms[colId] && perms[colId].read === false) return false;
+                    } catch(e) {}
+                    return true;
+                },
+                canWriteColumn(colId) {
+                    if (this.isAdmin()) return true;
+                    if (!this.currentUser || !this.currentUser.column_permissions) return true; 
+                    try {
+                        let perms = typeof this.currentUser.column_permissions === 'string' ? JSON.parse(this.currentUser.column_permissions) : this.currentUser.column_permissions;
+                        if (perms[colId] && perms[colId].write === false) return false;
+                    } catch(e) {}
+                    return true;
+                },
+                isAdmin() {
+                    if (!this.currentUser || !this.currentUser.role) return false;
+                    return this.currentUser.email === 'admin@demo.com' || this.currentUser.role.toLowerCase().includes('admin');
+                },
+                
+                canEdit(fieldId) {
+                    if (!this.currentUser) return false;
+                    if (this.isAdmin()) return true; // Admins can edit everything
+                    const perms = this.currentUser.column_permissions;
+                    if (perms && perms[fieldId] !== undefined) {
+                        return perms[fieldId].write === true;
+                    }
+                    // If FLS not set for this role, default to false
+                    return false;
+                },
+                canView(fieldId) {
+                    if (!this.currentUser) return false;
+                    if (this.isAdmin()) return true;
+                    const perms = this.currentUser.column_permissions;
+                    if (perms && perms[fieldId] !== undefined) {
+                        return perms[fieldId].read === true;
+                    }
+                    return false;
+                },
+                toggleAllFls(type, checked) {
+                    this.allColumns.forEach(col => {
+                        this.flsMatrix[col.id][type] = checked;
+                    });
+                },
+                init() {
+                    this.fetchData(); this.fetchLogs(); this.fetchUsers();
+                },
+                
+                
+                async fetchUsers() {
+                    try {
+                        const [usersRes, rolesRes] = await Promise.all([
+                            fetch(`${API_URL}/users?fields=id,first_name,email,role,status`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } }),
+                            fetch(`${API_URL}/roles?fields=id,name,column_permissions`, { headers: { 'Authorization': 'Bearer mvp-static-token-999' } })
+                        ]);
+                        
+                        const usersData = await usersRes.json();
+                        const rolesData = await rolesRes.json();
+                        
+                        this.availableRoles = rolesData.data || [];
+                        this.roles = this.availableRoles;
+                        const roleMap = {};
+                        const rolePermsMap = {};
+                        this.availableRoles.forEach(r => {
+                            roleMap[r.id] = r.name;
+                            let perms = r.column_permissions;
+                            if (typeof perms === 'string') {
+                                try { perms = JSON.parse(perms); } catch(e) { perms = null; }
+                            }
+                            rolePermsMap[r.id] = perms || {};
+                            r.column_permissions = perms || {};
+                        });
+
+                        this.users = (usersData.data || []).map(u => ({
+                            id: u.id,
+                            name: u.first_name || 'Không tên',
+                            email: u.email || 'Không có email',
+                            roleId: u.role,
+                            role: roleMap[u.role] || 'No Role',
+                            column_permissions: rolePermsMap[u.role] || {},
+                            status: u.status === 'active' ? 'Active' : 'Inactive'
+                        }));
+                    } catch(e) { console.error("Lỗi fetch Users", e); }
+                },
+                isImportModalOpen: false, importType: "personnel", importTargetPersonnelId: "",
+                importStep: 1,
+                importPasteText: '',
+                importHeaders: [],
+                importRows: [],
+                importMapping: {},
+                isImporting: false,
+                get systemFields() {
+                    if (this.importType === 'relative') {
+                        return [
+                            { key: 'relation', label: 'Quan hệ' },
+                            { key: 'name', label: 'Họ và tên người thân' },
+                            { key: 'birthYear', label: 'Năm sinh' },
+                            { key: 'currentAddress', label: 'Nơi cư trú' },
+                            { key: 'job', label: 'Nghề nghiệp/Nơi làm việc' },
+                            { key: 'country', label: 'Quốc gia (Yếu tố NN)' },
+                            { key: 'time', label: 'Thời gian ở NN' },
+                            { key: 'unit', label: 'Cơ quan/Tổ chức NN' },
+                            { key: 'funding', label: 'Nguồn kinh phí' },
+                            { key: 'currentWork', label: 'Công việc hiện tại (NN)' },
+                            { key: 'married', label: 'Kết hôn với người NN' },
+                            { key: 'fdi', label: 'Làm việc cho FDI' }
+                        ];
+                    }
+                    return [
+                        { key: 'name', label: 'Họ và Tên' },
+                        { key: 'otherName', label: 'Tên khác' },
+                        { key: 'birthYear', label: 'Năm sinh' },
+                        { key: 'ethnicity', label: 'Dân tộc' },
+                        { key: 'religion', label: 'Tôn giáo' },
+                        { key: 'hometown', label: 'Quê quán' },
+                        { key: 'position', label: 'Chức vụ' },
+                        { key: 'hktt', label: 'Nơi ĐKHK thường trú' },
+                        { key: 'currentAddress', label: 'Nơi ở hiện nay' },
+                        { key: 'cccd', label: 'Số CCCD' },
+                        { key: 'passportPersonal', label: 'Hộ chiếu cá nhân' },
+                        { key: 'passportOfficial', label: 'Hộ chiếu công vụ' },
+                        { key: 'tcctResult', label: 'Kết quả thẩm tra TCCT' },
+                        { key: 'departmentId', label: 'Phòng ban' },
+                        { key: 'email', label: 'Email' },
+                        
+                        { key: 'politicalIssue', label: 'Vấn đề TCCT (Tự diễn biến)' },
+                        { key: 'investigating', label: 'Đang bị điều tra' },
+                        { key: 'otherIssue', label: 'Vấn đề khác về lý lịch' },
+                        { key: 'partyDiscipline', label: 'Kỷ luật Đảng' },
+                        { key: 'govDiscipline', label: 'Kỷ luật Chính quyền' },
+                        { key: 'noPermission', label: 'Đi NN không phép' },
+                        { key: 'lawViolation', label: 'Vi phạm PL ở NN' },
+                        { key: 'overstay', label: 'Ở lại NN quá hạn' },
+                        { key: 'gift', label: 'Được tặng quà >50tr' },
+                        { key: 'rent', label: 'Cho thuê nhà/đất' },
+                        { key: 'fdi', label: 'Làm tại cty FDI' },
+                        { key: 'marriedToForeigner', label: 'Kết hôn với người NN' },
+                        { key: 'otherFlags', label: 'Lưu ý khác' }
+                    ];
+                },
+                
+                doLogin() {
+                    const user = this.users.find(u => u.email === this.loginForm.email);
+                    if (user) {
+                        // Normally check password via API, here we simulate basic validation
+                        this.currentUser = user;
+                    } else {
+                        alert('Tài khoản hoặc mật khẩu không chính xác!');
+                    }
+                },
+                openImportModal(type = 'personnel') {
+                    this.importType = type;
+                    this.importTargetPersonnelId = '';
+                    this.isImportModalOpen = true;
+                    this.importStep = 1;
+                    this.importPasteText = '';
+                    this.importHeaders = [];
+                    this.importRows = [];
+                    this.importMapping = {};
+                },
+                loadSampleData() {
+                    if (this.importType === 'relative') {
+                        // 26 columns
+                        const headers = Array.from({length: 26}, (_, i) => {
+                            const map = {
+                                1: 'Quan hệ', 2: 'Họ và tên người thân', 3: 'Năm sinh', 4: 'Nơi cư trú', 5: 'Nghề nghiệp/Nơi làm việc',
+                                6: 'Quốc gia (Yếu tố NN)', 7: 'Thời gian ở NN', 8: 'Cơ quan/Tổ chức NN', 9: 'Nguồn kinh phí', 10: 'Công việc hiện tại (NN)',
+                                11: 'Kết hôn với người NN', 12: 'Làm việc cho FDI'
+                            };
+                            return map[i+1] ? `Cột ${i+53} (${map[i+1]})` : `Cột ${i+53} (Chưa dùng)`;
+                        }).join('\t');
+                        const row1 = Array.from({length: 26}, (_, i) => {
+                            const map = {1: 'Vợ', 2: 'Trần Thị Vợ', 3: '1988', 4: 'Hà Nội', 5: 'Giáo viên', 6: 'Úc', 7: '2020-nay', 8: 'ĐH Sydney', 9: 'Tự túc', 10: 'Nghiên cứu sinh', 11: 'Không', 12: 'Không'};
+                            return map[i+1] || ``;
+                        }).join('\t');
+                        const row2 = Array.from({length: 26}, (_, i) => {
+                            const map = {1: 'Con trai', 2: 'Nguyễn Văn Con', 3: '2015', 4: 'Hà Nội', 5: 'Học sinh'};
+                            return map[i+1] || ``;
+                        }).join('\t');
+                        this.importPasteText = headers + '\n' + row1 + '\n' + row2;
+                    } else {
+                        // 52 columns
+                        const headers = Array.from({length: 52}, (_, i) => {
+                            const map = {
+                                2: 'Họ và Tên', 3: 'Tên khác', 4: 'Năm sinh', 5: 'Dân tộc', 6: 'Tôn giáo',
+                                7: 'Quê quán', 9: 'Chức vụ', 10: 'Nơi ĐKHK thường trú', 11: 'Nơi ở hiện nay', 12: 'Số CCCD',
+                                13: 'Hộ chiếu cá nhân', 14: 'Hộ chiếu công vụ', 15: 'Kết quả thẩm tra TCCT', 16: 'Phòng ban', 17: 'Email',
+                                40: 'Vấn đề TCCT (Tự diễn biến)', 41: 'Đang bị điều tra', 42: 'Vấn đề khác về lý lịch', 43: 'Kỷ luật Đảng', 44: 'Kỷ luật Chính quyền',
+                                45: 'Đi NN không phép', 46: 'Vi phạm PL ở NN', 47: 'Ở lại NN quá hạn', 49: 'Được tặng quà >50tr', 50: 'Cho thuê nhà/đất',
+                                51: 'Làm tại cty FDI', 52: 'Kết hôn với người NN'
+                            };
+                            return map[i+1] ? `Cột ${i+1} (${map[i+1]})` : `Cột ${i+1} (Chưa dùng)`;
+                        }).join('\t');
+                        const row1 = Array.from({length: 52}, (_, i) => {
+                            const map = {2: 'Nguyễn Văn Mẫu', 3: 'Tèo', 4: '1985', 5: 'Kinh', 6: 'Không', 7: 'Hà Nội', 9: 'Trưởng phòng', 10: 'Hà Nội', 11: 'Hà Nội', 12: '001085123456', 13: 'B123', 14: 'C123', 15: 'Sạch', 16: 'D1', 17: 'mau@vn.com'};
+                            return map[i+1] || ``;
+                        }).join('\t');
+                        const row2 = Array.from({length: 52}, (_, i) => {
+                            const map = {2: 'Trần Thị Test', 3: 'Mít', 4: '1990', 5: 'Kinh', 6: 'Không', 7: 'Đà Nẵng', 9: 'Nhân viên', 10: 'Đà Nẵng', 11: 'Đà Nẵng', 12: '001090987654', 16: 'D2'};
+                            return map[i+1] || ``;
+                        }).join('\t');
+                        this.importPasteText = headers + '\n' + row1 + '\n' + row2;
+                    }
+                    this.processPastedData();
+                    this.importMapping = newMapping;
+                    this.importStep = 2; // Jump to step 2 automatically if loading sample data
+                },
+                
+                processPastedData() {
+                    if(!this.importPasteText.trim()) return;
+                    if(this.importType === 'relative' && !this.importTargetPersonnelId) return;
+                    
+                    const rows = this.importPasteText.trim().split('\n').map(r => r.split('\t'));
+                    if (rows.length < 2) return; // need headers and at least 1 row of data
+                    
+                    this.importHeaders = rows[0].map(h => h.trim());
+                    this.importRows = rows.slice(1);
+                    
+                    // Auto mapping (basic guessing based on exact or partial match)
+                    setTimeout(() => {
+                        let newMapping = {};
+                        this.importHeaders.forEach((h, index) => {
+                            const hl = h.toLowerCase();
+                            let match = this.systemFields.find(f => {
+                                const fl = f.label.toLowerCase();
+                                const cleanHl = hl.replace(/cột \d+/g, '').replace(/[()]/g, '').trim();
+                                const cleanFl = fl.replace(/cột \d+/g, '').replace(/[()]/g, '').trim();
+                                return cleanHl.includes(cleanFl) || cleanFl.includes(cleanHl);
+                            });
+                            if (!match) {
+                                if(hl.includes('họ tên') || hl.includes('họ và tên')) match = { key: 'name' };
+                                if(hl.includes('cccd')) match = { key: 'cccd' };
+                            }
+                            newMapping[index] = match ? match.key : "";
+                        });
+                        this.importMapping = newMapping;
+                        this.importStep = 2;
+                    }, 50);
+                },
+                
+                async executeImport() {
+                    if (this.importType === 'relative' && !this.importTargetPersonnelId) {
+                        alert('Vui lòng chọn Cán bộ trước khi import thân nhân!');
+                        return;
+                    }
+                    this.isImporting = true;
+                    try {
+                        if (this.importType === 'relative') {
+                            // Import Relatives Logic
+                            const targetPerson = this.personnel.find(p => p.id === this.importTargetPersonnelId);
+                            if (!targetPerson) throw new Error('Không tìm thấy cán bộ hợp lệ');
+                            
+                            const newRelatives = [];
+                            for (let r of this.importRows) {
+                                const rel = {
+                                    id: 'R' + Date.now() + Math.floor(Math.random()*1000),
+                                    hasForeignElement: false,
+                                    foreignInfo: {}
+                                };
+                                let hasData = false;
+                                for (let i = 0; i < this.importHeaders.length; i++) {
+                                    const fieldKey = this.importMapping[i];
+                                    const val = r[i]?.trim();
+                                    if (fieldKey && val) {
+                                        hasData = true;
+                                        if (['country', 'time', 'unit', 'funding'].includes(fieldKey)) {
+                                            rel.foreignInfo[fieldKey] = val;
+                                            rel.hasForeignElement = true;
+                                        } else {
+                                            rel[fieldKey] = val;
+                                        }
+                                    }
+                                }
+                                if (hasData) newRelatives.push(rel);
+                            }
+                            
+                            if (newRelatives.length === 0) {
+                                alert("Không có dữ liệu hợp lệ!");
+                                this.isImporting = false;
+                                return;
+                            }
+                            
+                            const updatedRelatives = [...targetPerson.relatives, ...newRelatives];
+                            const res = await fetch(`${API_URL}/items/personnels/${targetPerson.id}`, {
+                                method: 'PATCH',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer mvp-static-token-999'
+                                },
+                                body: JSON.stringify({ relatives: updatedRelatives })
+                            });
+                            
+                            if (res.ok) {
+                                alert(`Đã thêm thành công ${newRelatives.length} thân nhân!`);
+                                this.isImportModalOpen = false;
+                                await this.fetchData();
+                            } else {
+                                alert("Có lỗi xảy ra khi lưu thân nhân!");
+                            }
+                            
+                            this.isImporting = false;
+                            return;
+                        }
+
+                        // Original Personnel Import Logic
+                        const payloads = [];
+                        for (let r of this.importRows) {
+                            const payload = { flags: {} };
+                            let hasData = false;
+                            const flagKeys = ['politicalIssue', 'investigating', 'otherIssue', 'partyDiscipline', 'govDiscipline', 'noPermission', 'lawViolation', 'overstay', 'gift', 'rent', 'fdi', 'marriedToForeigner', 'otherFlags'];
+                            for (let i = 0; i < this.importHeaders.length; i++) {
+                                const fieldKey = this.importMapping[i];
+                                if (fieldKey) {
+                                    let val = r[i]?.trim() || null;
+                                    if(val) hasData = true;
+                                    if (fieldKey === 'departmentId' && val) {
+                                        const validIds = this.departments ? this.departments.map(d => String(d.id)) : ['D1', 'D2', 'D3', 'D4', 'D5'];
+                                        if (!validIds.includes(String(val))) {
+                                            val = null; // Prevent invalid foreign key
+                                        }
+                                    }
+                                    if(flagKeys.includes(fieldKey)) {
+                                        payload.flags[fieldKey] = val;
+                                    } else {
+                                        if (val !== null) payload[fieldKey] = val;
+                                    }
+                                }
+                            }
+                            if (hasData) {
+                                if (!payload.id) payload.id = 'CB' + Date.now() + Math.floor(Math.random()*1000); // Generate ID if missing
+                                payloads.push(payload);
+                            }
+                        }
+                        
+                        if(payloads.length === 0) {
+                            alert("Không có dữ liệu hợp lệ để lưu!");
+                            this.isImporting = false;
+                            return;
+                        }
+                        
+                        const res = await fetch(`${API_URL}/items/personnels`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer mvp-static-token-999'
+                            },
+                            body: JSON.stringify(payloads)
+                        });
+                        
+                        if (res.ok) {
+                            alert(`Đã lưu thành công ${payloads.length} dòng dữ liệu!`);
+                            this.isImportModalOpen = false;
+                            await this.fetchData();
+                        } else {
+                            const err = await res.json();
+                            console.error(err);
+                            alert("Có lỗi xảy ra: " + (err.errors?.[0]?.message || 'Unknown error'));
+                        }
+                    } catch(e) {
+                        alert("Lỗi kết nối Server: " + e.message);
+                    } finally {
+                        this.isImporting = false;
+                    }
+                },
+
+                openCreateUser() {
+                    this.newUserForm = { id: null, name: '', email: '', role: '', password: '' };
+                    this.isCreateUserModalOpen = true;
+                },
+                editUser(user) {
+                    this.newUserForm = {
+                        id: user.id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.roleId, // Map to Role ID
+                        password: '' // Only if changing
+                    };
+                    this.isCreateUserModalOpen = true;
+                },
+                openRoleModal() {
+                    this.roleForm = { name: "", description: "" };
+                    this.isRoleModalOpen = true;
+                },
+                async deleteRole(r) {
+                    if(!confirm('Bạn có chắc chắn muốn xóa vai trò "' + r.name + '"?')) return;
+                    try {
+                        const res = await fetch(`${API_URL}/roles/${r.id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                        });
+                        if (res.ok) {
+                            alert('Đã xóa vai trò thành công!');
+                            this.fetchUsers();
+                        } else {
+                            alert('Có lỗi xảy ra khi xóa!');
+                        }
+                    } catch(e) { console.error('Delete role error', e); }
+                },
+                async saveRole() {
+                    if (!this.roleForm.name.trim()) {
+                        alert("Vui lòng nhập tên Vai trò!");
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`${API_URL}/roles`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer mvp-static-token-999'
+                            },
+                            body: JSON.stringify({
+                                name: this.roleForm.name,
+                                description: this.roleForm.description,
+                                icon: 'verified_user'
+                            })
+                        });
+                        if (res.ok) {
+                            alert("Thêm Vai trò thành công!");
+                            this.isRoleModalOpen = false;
+                            
+                            // Tải lại danh sách roles
+                            const rolesRes = await fetch(`${API_URL}/roles`, {
+                                headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                            });
+                            if(rolesRes.ok) {
+                                const data = await rolesRes.json();
+                                this.roles = data.data;
+                            }
+                        } else {
+                            alert("Có lỗi xảy ra khi lưu Vai trò!");
+                        }
+                    } catch(e) {
+                        alert("Lỗi kết nối Server: " + e.message);
+                    }
+                },
+
+                async saveUser() {
+                    if (!this.newUserForm.email || !this.newUserForm.role) {
+                        alert("Vui lòng điền đủ Email và Phân quyền!");
+                        return;
+                    }
+                    try {
+                        const payload = {
+                            first_name: this.newUserForm.name,
+                            email: this.newUserForm.email,
+                            role: this.newUserForm.role
+                        };
+                        if (this.newUserForm.password) payload.password = this.newUserForm.password;
+                        
+                        const method = this.newUserForm.id ? 'PATCH' : 'POST';
+                        const url = this.newUserForm.id ? `${API_URL}/users/${this.newUserForm.id}` : `${API_URL}/users`;
+                        
+                        const res = await fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mvp-static-token-999' },
+                            body: JSON.stringify(payload)
+                        });
+                        if(res.ok) {
+                            this.isCreateUserModalOpen = false;
+                            this.newUserForm = { id: null, name: '', email: '', role: 'editor', password: '' };
+                            await this.fetchUsers();
+                            alert(this.newUserForm.id ? "Đã sửa quyền thành công!" : "Tạo User thành công!");
+                        } else {
+                            const err = await res.json();
+                            alert("Lỗi khi lưu User: " + (err.errors?.[0]?.message || 'Lỗi không xác định'));
+                        }
+                    } catch(e) {
+                        alert("Lỗi kết nối");
+                    }
+                },
+                async fetchData() {
+                    try {
+                        const res = await fetch(`${API_URL}/items/personnels?limit=100`, {
+                            headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                        });
+                        const json = await res.json();
+                        if (json.data) {
+                            this.personnel = json.data.map(p => {
+                                p.trips = Array.isArray(p.trips) ? p.trips : [];
+                                p.flags = p.flags || {};
+                                p.relatives = Array.isArray(p.relatives) ? p.relatives : [];
+                                return p;
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Lỗi kết nối DB:", e);
+                    }
+                },
+                async fetchLogs() {
+                    try {
+                        const res = await fetch(`${API_URL}/activity?sort=-timestamp&limit=50&fields=*,user.first_name,user.email,revisions.*`, {
+                            headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                        });
+                        const json = await res.json();
+                        if (json.data) {
+                            const fieldMap = {};
+                            this.systemFields.forEach(f => fieldMap[f.key] = f.label);
+                            const relFields = [
+                                { key: 'relation', label: 'Quan hệ' }, { key: 'name', label: 'Họ và tên' },
+                                { key: 'birthYear', label: 'Năm sinh' }, { key: 'currentAddress', label: 'Nơi cư trú' },
+                                { key: 'job', label: 'Nghề nghiệp/Nơi làm việc' }, { key: 'country', label: 'Quốc gia (Yếu tố NN)' },
+                                { key: 'time', label: 'Thời gian ở NN' }, { key: 'unit', label: 'Cơ quan/Tổ chức NN' },
+                                { key: 'funding', label: 'Nguồn kinh phí' }, { key: 'currentWork', label: 'Công việc hiện tại (NN)' },
+                                { key: 'married', label: 'Kết hôn với người NN' }, { key: 'fdi', label: 'Làm việc cho FDI' }
+                            ];
+                            relFields.forEach(f => fieldMap[f.key] = f.label);
+
+                            this.globalAuditLogs = json.data
+                                .filter(log => log.collection === 'personnels' || log.collection === 'relatives')
+                                .map(log => {
+                                    let fieldTxt = '';
+                                    let detailsTxt = '';
+                                    
+                                    if (log.revisions && log.revisions.length > 0 && log.revisions[0].delta) {
+                                        const delta = log.revisions[0].delta;
+                                        const fieldsUpdated = [];
+                                        Object.keys(delta).forEach(k => {
+                                            if (k !== 'id' && k !== 'flags' && k !== 'personnelId') {
+                                                const label = fieldMap[k] || k;
+                                                fieldsUpdated.push(label);
+                                            }
+                                        });
+                                        if (fieldsUpdated.length > 0) {
+                                            fieldTxt = fieldsUpdated.join(', ');
+                                            detailsTxt = log.action === 'create' ? 'Nhập dữ liệu các trường: ' + fieldTxt : 'Cập nhật thay đổi các trường: ' + fieldTxt;
+                                        }
+                                        if (log.action === 'delete') {
+                                            detailsTxt = 'Xóa hồ sơ khỏi hệ thống';
+                                        }
+                                    }
+                                    
+                                    return {
+                                        id: log.id,
+                                        time: new Date(log.timestamp).toLocaleString('vi-VN'),
+                                        user: log.user && log.user.first_name ? log.user.first_name : (log.user && log.user.email ? log.user.email : 'System Admin'),
+                                        role: log.user ? log.user.email : 'admin@system.com',
+                                        action: log.action === 'create' ? 'THÊM MỚI' : (log.action === 'update' ? 'CẬP NHẬT' : 'XÓA'),
+                                        entity: (log.collection === 'personnels' ? 'Cán bộ ' : 'Thân nhân ') + log.item,
+                                        field: fieldTxt,
+                                        oldValue: '',
+                                        newValue: '',
+                                        details: detailsTxt || 'Thay đổi dữ liệu hệ thống'
+                                    };
+                                });
+                        }
+                    } catch (e) {
+                        console.error("Lỗi fetch Logs:", e);
+                    }
+                },
+                
+                get filteredPersonnel() {
+                    if (!this.searchQuery) return this.personnel;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.personnel.filter(p => 
+                        (p.name && p.name.toLowerCase().includes(q)) || 
+                        (p.cccd && p.cccd.includes(q)) ||
+                        (p.code && p.code.toLowerCase().includes(q))
+                    );
+                },
+                
+                getDepartmentName(id) {
+                    if(!id) return 'Chưa phân bổ';
+                    const dept = this.departments.find(d => d.id === id);
+                    return dept ? dept.name : 'Chưa phân bổ';
+                },
+                
+                openPanel(person) {
+                    this.selectedPerson = person;
+                    if (person) {
+                        this.formData = JSON.parse(JSON.stringify(person));
+                    } else {
+                        this.formData = { 
+                            name: '', code: '', cccd: '', birthYear: '', departmentId: ''
+                        };
+                    }
+                    if (!this.formData.trips) this.formData.trips = [{}];
+                    if (this.formData.trips.length === 0) this.formData.trips.push({});
+                    if (!this.formData.flags) this.formData.flags = {};
+                    if (!this.formData.relatives) this.formData.relatives = [];
+                    // Ensure relatives have foreignInfo
+                    this.formData.relatives.forEach(r => {
+                        if (!r.foreignInfo) r.foreignInfo = {};
+                    });
+                    
+                    this.activeTab = 'canhan';
+                    this.isPanelOpen = true;
+                },
+                
+                closePanel() {
+                    this.isPanelOpen = false;
+                },
+                
+                async deleteData() {
+                    if (!this.selectedPerson) return;
+                    if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ hồ sơ của cán bộ này?')) return;
+                    
+                    try {
+                        const res = await fetch(`${API_URL}/items/personnels/${this.selectedPerson.id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': 'Bearer mvp-static-token-999' }
+                        });
+                        
+                        if (res.ok) {
+                            alert('Xóa thành công!');
+                            this.closePanel();
+                            this.fetchData();
+                        } else {
+                            alert('Có lỗi xảy ra khi xóa!');
+                        }
+                    } catch(e) {
+                        alert('Lỗi: ' + e.message);
+                    }
+                },
+                async saveData() {
+                    try {
+                        const method = this.selectedPerson ? 'PATCH' : 'POST';
+                        const url = this.selectedPerson 
+                            ? `${API_URL}/items/personnels/${this.selectedPerson.id}` 
+                            : `${API_URL}/items/personnels`;
+                        
+                        // Xóa các trường trống hoặc không hợp lệ khỏi JSON
+                        const payload = JSON.parse(JSON.stringify(this.formData));
+                        Object.keys(payload).forEach(k => {
+                            if (payload[k] === "") payload[k] = null;
+                        });
+                        if (!this.selectedPerson && !payload.id) {
+                            payload.id = 'CB' + Date.now();
+                        }
+                        
+                        const res = await fetch(url, {
+                            method: method,
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer mvp-static-token-999'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if(res.ok) {
+                            this.closePanel();
+                            await this.fetchData();
+                            await this.fetchLogs(); 
+                            alert("Đã lưu thành công vào Database thật!");
+                        } else {
+                            const err = await res.json();
+                            alert("Lỗi khi lưu dữ liệu: " + (err.errors?.[0]?.message || 'Lỗi không xác định'));
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert("Lỗi kết nối tới Database");
+                    }
+                    // Optional alert to confirm success
+                    // alert("Đã lưu thành công (Chế độ giả lập)! Vui lòng kiểm tra Nhật ký Hệ thống.");
+                }
+            }))
+        })
+    </script>
+
+    <!-- LOGIN MODAL -->
+    <div x-show="!currentUser" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm" x-cloak>
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96 border border-gray-100">
+            <div class="flex justify-center mb-6">
+                <div class="w-16 h-16 bg-[#447f28]/10 rounded-full flex items-center justify-center text-[#447f28]">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"></path></svg>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Đăng nhập Hệ thống</h2>
+            <p class="text-sm text-gray-500 mb-6 text-center">Hệ thống Đã Kết nối Database</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                    <input type="email" x-model="loginForm.email" class="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:border-[#447f28] focus:ring-0 transition-colors" placeholder="Nhập email của bạn">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Mật khẩu</label>
+                    <input type="password" x-model="loginForm.password" class="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:border-[#447f28] focus:ring-0 transition-colors" placeholder="Nhập mật khẩu" @keyup.enter="doLogin()">
+                </div>
+                <button @click="doLogin()" class="w-full bg-[#447f28] hover:bg-[#366620] text-white py-3 rounded-lg font-bold shadow-md transition-all active:scale-95 mt-4">ĐĂNG NHẬP</button>
+            </div>
+            
+        </div>
+    </div>
+
+    
+    <!-- FLS MATRIX MODAL -->
+    <div x-show="isFlsModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm" x-cloak>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden" @click.away="isFlsModalOpen = false">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">Ma trận Phân quyền Cột (Field-Level Security)</h3>
+                    <p class="text-sm text-gray-500 mt-1" x-text="'Cấu hình quyền cho Vai trò (Role): ' + (flsRole ? flsRole.name : '')"></p>
+                </div>
+                <button @click="isFlsModalOpen = false" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            
+            <div class="flex-1 overflow-auto p-6">
+                <table class="w-full text-left text-sm text-gray-600">
+                    <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="py-3 px-4 font-bold text-gray-700">Tên Cột (Trường dữ liệu)</th>
+                            <th class="py-3 px-4 font-bold text-center text-blue-600">
+                                <div class="flex items-center justify-center gap-2">
+                                    <input type="checkbox" @change="toggleAllFls('read', $event.target.checked)" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                    Cho phép XEM (Read)
+                                </div>
+                            </th>
+                            <th class="py-3 px-4 font-bold text-center text-green-600">
+                                <div class="flex items-center justify-center gap-2">
+                                    <input type="checkbox" @change="toggleAllFls('write', $event.target.checked)" class="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer">
+                                    Cho phép SỬA (Write)
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <template x-for="col in allColumns" :key="col.id">
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4">
+                                    <div class="font-medium text-gray-800" x-text="col.label"></div>
+                                    <div class="text-xs text-gray-500" x-text="col.group"></div>
+                                </td>
+                                <td class="py-3 px-4 text-center">
+                                    <input type="checkbox" x-model="flsMatrix[col.id].read" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                </td>
+                                <td class="py-3 px-4 text-center">
+                                    <input type="checkbox" x-model="flsMatrix[col.id].write" class="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer">
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <button type="button" @click="isFlsModalOpen = false" class="px-6 py-2.5 rounded-lg font-semibold text-gray-700 hover:bg-gray-200 transition-colors">Hủy</button>
+                <button type="button" @click="saveFls()" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-md transition-all active:scale-95 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Lưu Cấu Hình Cột
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Modal Thêm/Sửa Role -->
+    <div x-cloak x-show="isRoleModalOpen" class="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-[500px] border border-gray-100">
+            <h3 class="text-xl leading-6 font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <svg class="w-6 h-6 text-[#447f28]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                Thêm mới Vai trò (Role)
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tên Vai trò <span class="text-red-500">*</span></label>
+                    <input type="text" x-model="roleForm.name" class="w-full border-gray-300 border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-[#447f28] focus:border-[#447f28] outline-none transition-shadow" placeholder="VD: Quản lý Nhân sự">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+                    <textarea x-model="roleForm.description" rows="3" class="w-full border-gray-300 border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-[#447f28] focus:border-[#447f28] outline-none transition-shadow" placeholder="Mô tả chức năng của vai trò..."></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" @click="isRoleModalOpen = false" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors">Hủy</button>
+                <button type="button" @click="saveRole()" class="px-5 py-2.5 bg-[#447f28] hover:bg-[#366620] text-white rounded-lg font-medium shadow-md transition-colors">Lưu Vai trò</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Modal Import Smart Paste -->
+    <div x-cloak x-show="isImportModalOpen" class="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-4xl border border-gray-100 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl leading-6 font-bold text-gray-900 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Import Dữ liệu từ Excel / Google Sheets
+                </h3>
+                <button @click="isImportModalOpen = false" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            
+            <div class="overflow-y-auto flex-1 pr-2">
+                <div x-show="importStep === 1">
+                    <div x-show="importType === 'relative'" class="mb-4 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <label class="block text-sm font-semibold text-blue-900 mb-2">Chọn Cán bộ để thêm thân nhân <span class="text-red-500">*</span></label>
+                        <select x-model="importTargetPersonnelId" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2">
+                            <option value="">-- Chọn Cán bộ --</option>
+                            <template x-for="p in personnel" :key="p.id">
+                                <option :value="p.id" x-text="p.name + ' - ' + (p.cccd || p.id)"></option>
+                            </template>
+                        </select>
+                        <p x-show="!importTargetPersonnelId && importPasteText.trim() !== ''" class="text-xs text-red-500 mt-1 mt-2">Vui lòng chọn cán bộ trước khi tiếp tục!</p>
+                    </div>
+                    <div class="flex justify-between items-center mb-4">
+                        <p class="text-sm text-gray-600">Copy dữ liệu bảng từ Excel hoặc Google Sheets (bao gồm cả dòng tiêu đề) và Dán (Ctrl+V) vào ô dưới đây:</p>
+                        <button type="button" @click="loadSampleData()" class="text-xs text-blue-600 underline hover:text-blue-800 font-medium">Điền dữ liệu mẫu</button>
+                    </div>
+                    <textarea x-model="importPasteText" class="w-full h-64 border-2 border-dashed border-gray-300 rounded-lg p-4 font-mono text-sm focus:border-blue-500 focus:ring-0 outline-none" placeholder="Dán dữ liệu vào đây..."></textarea>
+                </div>
+
+                <div x-show="importStep === 2">
+                    <p class="text-sm font-medium text-gray-800 mb-2">Bước 2: Ghép Cột (Mapping)</p>
+                    <p class="text-xs text-gray-500 mb-4">Hệ thống đã nhận diện được <span class="font-bold text-blue-600" x-text="importHeaders.length"></span> cột. Hãy chọn trường hệ thống tương ứng cho từng cột.</p>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="font-bold text-sm text-gray-700 bg-gray-100 p-2 rounded">Cột từ Sheet (Dòng đầu)</div>
+                        <div class="font-bold text-sm text-gray-700 bg-gray-100 p-2 rounded">Trường Hệ thống</div>
+                        
+                        <template x-for="(header, index) in importHeaders" :key="index">
+                            <div class="contents">
+                                <div class="flex items-center text-sm font-medium text-gray-800" x-text="header"></div>
+                                <div>
+                                    <select x-model="importMapping[index]" class="w-full border-gray-300 border rounded py-1 px-2 text-sm focus:ring-blue-500">
+                                        <option value="">-- Bỏ qua cột này --</option>
+                                        <template x-for="field in systemFields" :key="field.key">
+                                            <option :value="field.key" x-text="field.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <div class="mt-4 border-t pt-4">
+                        <p class="text-sm font-bold text-gray-700 mb-2">Xem trước dữ liệu (5 dòng đầu)</p>
+                        <div class="overflow-x-auto text-xs">
+                            <table class="w-full border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <template x-for="fieldKey in Object.values(importMapping).filter(Boolean)" :key="fieldKey">
+                                            <th class="border p-2" x-text="systemFields.find(f => f.key === fieldKey)?.label || fieldKey"></th>
+                                        </template>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(row, rIndex) in importRows.slice(0, 5)" :key="rIndex">
+                                        <tr>
+                                            <template x-for="(colIndex, mIndex) in Object.keys(importMapping).filter(k => importMapping[k])" :key="colIndex">
+                                                <td class="border p-2 text-gray-600" x-text="row[colIndex]"></td>
+                                            </template>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end gap-3 border-t pt-4">
+                <button x-show="importStep === 2" type="button" @click="importStep = 1" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors">Quay lại</button>
+                <button x-show="importStep === 1" type="button" @click="processPastedData()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md transition-colors">Tiếp tục (Khớp cột)</button>
+                <button x-show="importStep === 2" type="button" @click="executeImport()" :disabled="isImporting" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md transition-colors disabled:opacity-50 flex gap-2 items-center">
+                    <span x-show="!isImporting">Lưu Dữ liệu (<span x-text="importRows.length"></span> dòng)</span>
+                    <span x-show="isImporting">Đang lưu...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE USER MODAL -->
+    <div x-show="isCreateUserModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm" x-cloak>
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-[500px] border border-gray-100">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Tạo tài khoản mới</h2>
+                <button @click="isCreateUserModalOpen = false" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Họ và tên</label>
+                    <input type="text" x-model="newUserForm.name" class="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Ví dụ: Nguyễn Văn X">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Email đăng nhập</label>
+                    <input type="email" x-model="newUserForm.email" class="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="user@system.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Mật khẩu</label>
+                    <input type="password" x-model="newUserForm.password" class="w-full border border-gray-200 rounded-lg px-3 py-2" placeholder="Để trống nếu không muốn đổi mật khẩu">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Phân quyền (Role)</label>
+                    <select x-model="newUserForm.role" class="w-full rounded-md border border-gray-300 p-2 focus:border-[#447f28] focus:ring-[#447f28] focus:outline-none">
+                                        <template x-for="r in availableRoles" :key="r.id">
+                                            <option :value="r.id" x-text="r.name"></option>
+                                        </template>
+                                    </select>
+                </div>
+                
+
+                <button @click="saveUser()" class="w-full bg-[#447f28] hover:bg-[#366620] text-white py-3 rounded-lg font-bold shadow-md transition-colors mt-6">TẠO TÀI KHOẢN / CẬP NHẬT</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
