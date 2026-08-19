@@ -355,6 +355,24 @@ export const usePersonnelStore = defineStore('personnel', {
         this.loading = false;
       }
     },
+    async deleteMultipleRelatives(ids) {
+      if (!ids || ids.length === 0) return;
+      this.loading = true;
+      try {
+        try {
+          await apiClient.delete('/items/appendix2', { data: ids });
+        } catch (e) {
+          await Promise.allSettled(ids.map((id) => apiClient.delete(`/items/appendix2/${id}`)));
+        }
+        await logActivity('Xóa nhiều Thân nhân', `Xóa hàng loạt ${ids.length} thân nhân`);
+        await this.fetchPersonnel();
+      } catch (e) {
+        console.error('Error deleting multiple relatives:', e);
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
     toggleColumn(colId) {
       if (this.visibleColumns.includes(colId)) {
         if (this.visibleColumns.length <= 1) return;

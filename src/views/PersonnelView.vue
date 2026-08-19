@@ -864,9 +864,8 @@ const handleExportRelativesFull = () => {
 const handleBulkDeleteRelatives = async () => {
   const count = selectedRelatives.value.length;
   if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${count} thân nhân đã chọn không?`)) return;
-  for (const r of selectedRelatives.value) {
-    await personnelStore.deleteRelative(r);
-  }
+  const ids = selectedRelatives.value.map((r) => r.id).filter(Boolean);
+  await personnelStore.deleteMultipleRelatives(ids);
   selectedRelatives.value = [];
 };
 
