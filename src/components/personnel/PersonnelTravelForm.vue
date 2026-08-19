@@ -48,7 +48,6 @@
             dateFormat="dd/mm/yy"
             placeholder="DD/MM/YYYY"
             showIcon
-            iconDisplay="input"
             size="small"
             appendTo="body"
             class="w-full"
@@ -67,7 +66,6 @@
             dateFormat="dd/mm/yy"
             placeholder="DD/MM/YYYY"
             showIcon
-            iconDisplay="input"
             size="small"
             appendTo="body"
             class="w-full"
@@ -81,7 +79,6 @@
             dateFormat="dd/mm/yy"
             placeholder="DD/MM/YYYY"
             showIcon
-            iconDisplay="input"
             size="small"
             appendTo="body"
             class="w-full"

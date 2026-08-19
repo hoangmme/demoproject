@@ -634,3 +634,94 @@ td.col-right {
   background-color: #ffebee;
   color: #c62828;
 }
+
+/* PrimeVue DatePicker Overlay Popup Styling */
+.p-datepicker,
+.p-datepicker-panel,
+.p-datepicker-overlay {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  padding: 0.75rem !important;
+  z-index: 11000 !important;
+  font-family: inherit !important;
+}
+
+.p-datepicker-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-bottom: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  border-bottom: 1px solid #f3f4f6 !important;
+}
+
+.p-datepicker-title {
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  color: #1f2937 !important;
+}
+
+.p-datepicker-prev-button,
+.p-datepicker-next-button {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #4b5563 !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.p-datepicker-prev-button:hover,
+.p-datepicker-next-button:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.p-datepicker-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.p-datepicker-table th {
+  padding: 4px 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  color: #6b7280 !important;
+  text-align: center !important;
+}
+
+.p-datepicker-table td {
+  padding: 2px !important;
+  text-align: center !important;
+}
+
+.p-datepicker-day,
+.p-datepicker-day-view span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 6px !important;
+  font-size: 0.8rem !important;
+  color: #374151 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.p-datepicker-day:hover,
+.p-datepicker-day-view span:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.p-datepicker-day.p-datepicker-day-selected,
+.p-datepicker-day.p-highlight {
+  background-color: #2e7d32 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
