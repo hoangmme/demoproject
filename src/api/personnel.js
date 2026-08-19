@@ -61,15 +61,34 @@ export const updatePersonnel = async (id, data) => {
   }
 };
 
+const deleteChildrenForParents = async (parentIds, collections = ['appendix1', 'appendix2', 'appendix3']) => {
+  if (!parentIds || parentIds.length === 0) return;
+  const filterParams = parentIds.length === 1 
+    ? { 'filter[personnelId][_eq]': parentIds[0], fields: ['id'], limit: -1 }
+    : { 'filter[personnelId][_in]': parentIds.join(','), fields: ['id'], limit: -1 };
+
+  await Promise.allSettled(
+    collections.map(async (col) => {
+      try {
+        const res = await apiClient.get(`/items/${col}`, { params: filterParams });
+        const childIds = (res.data?.data || []).map((x) => x.id).filter(Boolean);
+        if (childIds.length > 0) {
+          try {
+            await apiClient.delete(`/items/${col}`, { data: childIds });
+          } catch (delErr) {
+            await Promise.allSettled(childIds.map((cid) => apiClient.delete(`/items/${col}/${cid}`)));
+          }
+        }
+      } catch (err) {}
+    })
+  );
+};
+
 export const deletePersonnel = async (id) => {
   if (!id) return;
   
-  // 1. Clean up child records concurrently
-  await Promise.allSettled([
-    apiClient.delete('/items/appendix1', { params: { filter: { personnelId: { _eq: id } } } }).catch(() => {}),
-    apiClient.delete('/items/appendix2', { params: { filter: { personnelId: { _eq: id } } } }).catch(() => {}),
-    apiClient.delete('/items/appendix3', { params: { filter: { personnelId: { _eq: id } } } }).catch(() => {}),
-  ]);
+  // 1. Delete all child records in appendix1, appendix2, appendix3 first to satisfy foreign key constraints
+  await deleteChildrenForParents([id]);
 
   // 2. Delete from personnels
   try {
@@ -85,11 +104,7 @@ export const deleteMultiplePersonnel = async (ids) => {
   if (!Array.isArray(ids) || ids.length === 0) return;
 
   // 1. Clean up child records in parallel
-  await Promise.allSettled([
-    apiClient.delete('/items/appendix1', { data: ids, params: { filter: { personnelId: { _in: ids } } } }).catch(() => {}),
-    apiClient.delete('/items/appendix2', { data: ids, params: { filter: { personnelId: { _in: ids } } } }).catch(() => {}),
-    apiClient.delete('/items/appendix3', { data: ids, params: { filter: { personnelId: { _in: ids } } } }).catch(() => {}),
-  ]);
+  await deleteChildrenForParents(ids);
 
   // 2. Batch delete all personnels in 1 single HTTP request
   try {
