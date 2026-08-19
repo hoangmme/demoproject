@@ -53,57 +53,15 @@
                 :key="col.id"
                 :class="'field-item ' + getColClass(col.width)"
               >
-                <label class="field-label">
+                <label class="field-label" :title="col.label">
                   <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
-                  {{ col.label }}
+                  <span class="label-text">{{ col.label }}</span>
                 </label>
                 <DynamicField
                   v-model="rel[col.id]"
                   :col="col"
                 />
               </div>
-            </div>
-          </div>
-        </template>
-
-        <!-- Fallback standard fields if mapping is empty -->
-        <template v-else>
-          <div class="form-grid">
-            <div class="field-item col-3">
-              <label class="field-label">Mối quan hệ</label>
-              <InputText v-model="rel.relationshipName" placeholder="Bố, Mẹ, Vợ, Chồng, Con..." size="small" />
-            </div>
-            <div class="field-item col-5">
-              <label class="field-label">Họ và tên thân nhân</label>
-              <InputText v-model="rel.relativeName" placeholder="Họ và tên" size="small" />
-            </div>
-            <div class="field-item col-2">
-              <label class="field-label">Năm sinh</label>
-              <InputText v-model="rel.birthYear" placeholder="Năm sinh" size="small" />
-            </div>
-            <div class="field-item col-2">
-              <label class="field-label">Số CCCD</label>
-              <InputText v-model="rel.cccd" placeholder="CCCD" size="small" />
-            </div>
-            <div class="field-item col-6">
-              <label class="field-label">Nơi cư trú hiện nay</label>
-              <InputText v-model="rel.currentAddress" placeholder="Địa chỉ cư trú" size="small" />
-            </div>
-            <div class="field-item col-6">
-              <label class="field-label">Nghề nghiệp / Nơi làm việc</label>
-              <InputText v-model="rel.occupation" placeholder="Nghề nghiệp" size="small" />
-            </div>
-            <div class="field-item col-4">
-              <label class="field-label">Quốc gia</label>
-              <InputText v-model="rel.countryName" placeholder="Mỹ, Úc, Đức..." size="small" />
-            </div>
-            <div class="field-item col-4">
-              <label class="field-label">Thời gian ở nước ngoài</label>
-              <InputText v-model="rel.timeAbroad" placeholder="VD: 2018 - 2022" size="small" />
-            </div>
-            <div class="field-item col-4">
-              <label class="field-label">Cơ quan / Tổ chức ở NN</label>
-              <InputText v-model="rel.unitAbroad" placeholder="Tên cơ quan/trường học" size="small" />
             </div>
           </div>
         </template>
@@ -114,7 +72,6 @@
 
 <script setup>
 import { computed } from 'vue';
-import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import DynamicField from '@/components/common/DynamicField.vue';
@@ -148,7 +105,7 @@ const colIndexMap = computed(() => {
 });
 
 const filterRelativeColumns = (cols) => {
-  const ignore = new Set(['stt', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'parentPersonnelCccd']);
+  const ignore = new Set(['stt', 'code', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'parentPersonnelCccd']);
   return (cols || []).filter((c) => !ignore.has(c.id));
 };
 

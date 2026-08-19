@@ -195,6 +195,7 @@ html, body {
   flex-direction: column;
   gap: 0.35rem;
   width: 100%;
+  min-width: 0;
 }
 
 .field-item input,
@@ -205,6 +206,7 @@ html, body {
 .field-item .dynamic-field-wrapper {
   width: 100% !important;
   box-sizing: border-box !important;
+  min-width: 0 !important;
 }
 
 .dynamic-field-wrapper input,
@@ -214,6 +216,7 @@ html, body {
 .dynamic-field-wrapper .app-date-picker-wrapper {
   width: 100% !important;
   box-sizing: border-box !important;
+  min-width: 0 !important;
 }
 
 .field-label {
@@ -222,8 +225,22 @@ html, body {
   color: #374151;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 4px;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+  line-height: 1.4;
+  height: 22px;
+  margin-bottom: 2px;
+}
+
+.field-label .label-text {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  flex: 1;
+  min-width: 0;
 }
 
 /* Dialog */

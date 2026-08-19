@@ -2,7 +2,7 @@
   <div class="form-grid">
     <!-- Readonly Mã Cán bộ -->
     <div class="field-item col-3">
-      <label class="field-label">
+      <label class="field-label" title="Mã Cán bộ">
         <span class="badge-code" style="margin-right: 4px;">Mã CB</span>
       </label>
       <InputText
@@ -17,9 +17,9 @@
     <template v-for="col in basicColumns" :key="col.id">
       <!-- Department Select -->
       <div v-if="col.id === 'departmentId' || col.id === 'departmentName'" class="field-item" :class="getColClass(col.width)">
-        <label class="field-label">
+        <label class="field-label" :title="col.label">
           <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
-          {{ col.label }}
+          <span class="label-text">{{ col.label }}</span>
         </label>
         <Select
           v-model="form.departmentId"
@@ -35,10 +35,10 @@
 
       <!-- General Dynamic Fields -->
       <div v-else class="field-item" :class="getColClass(col.width)">
-        <label class="field-label">
+        <label class="field-label" :title="col.label">
           <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
-          {{ col.label }}
-          <span v-if="col.id === 'name'" style="color: red;">*</span>
+          <span class="label-text">{{ col.label }}</span>
+          <span v-if="col.id === 'name'" style="color: red; margin-left: 2px;">*</span>
         </label>
         <DynamicField
           v-model="form[col.id]"

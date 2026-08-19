@@ -61,16 +61,20 @@
 
     <!-- 5. Checkbox (Nhiều lựa chọn) -->
     <template v-else-if="col.format === 'checkbox'">
-      <div style="display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 0;">
-        <label v-for="opt in parsedOptions" :key="opt" style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer;">
+      <div style="display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 4px 0; align-items: center;">
+        <label
+          v-for="opt in parsedOptions"
+          :key="opt"
+          style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; user-select: none;"
+        >
           <input
             type="checkbox"
             :value="opt"
             :checked="isCheckboxChecked(opt)"
             @change="toggleCheckbox(opt)"
-            style="accent-color: #2e7d32;"
+            style="accent-color: #2e7d32; flex-shrink: 0;"
           />
-          <span>{{ opt }}</span>
+          <span style="white-space: nowrap;">{{ opt }}</span>
         </label>
         <span v-if="parsedOptions.length === 0" style="font-size: 0.75rem; color: #9ca3af; font-style: italic;">
           (Chưa cấu hình tùy chọn trong Cài đặt cột)
