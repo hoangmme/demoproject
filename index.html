@@ -3109,8 +3109,26 @@
                         
                         if (jsonP.data) {
                             this.personnel = jsonP.data.filter(p => !p.isDeleted).map(p => {
+                                if (p.custom_data && typeof p.custom_data === 'string') {
+                                    try { p.custom_data = JSON.parse(p.custom_data); } catch(e) { p.custom_data = {}; }
+                                }
+                                if (!p.custom_data) p.custom_data = {};
+                                
                                 p.trips = jsonA1.data ? jsonA1.data.filter(a => a.personnelId === p.id) : [];
+                                p.trips.forEach(tr => {
+                                    if (tr.custom_data && typeof tr.custom_data === 'string') {
+                                        try { tr.custom_data = JSON.parse(tr.custom_data); } catch(e) { tr.custom_data = {}; }
+                                    }
+                                    if (!tr.custom_data) tr.custom_data = {};
+                                });
+                                
                                 p.relatives = jsonA2.data ? jsonA2.data.filter(a => a.personnelId === p.id && !a.isDeleted) : [];
+                                p.relatives.forEach(rel => {
+                                    if (rel.custom_data && typeof rel.custom_data === 'string') {
+                                        try { rel.custom_data = JSON.parse(rel.custom_data); } catch(e) { rel.custom_data = {}; }
+                                    }
+                                    if (!rel.custom_data) rel.custom_data = {};
+                                });
                                 
                                 const a3 = jsonA3.data ? jsonA3.data.filter(a => a.personnelId === p.id) : [];
                                 p.flags = a3.length > 0 ? a3[0] : {};
@@ -3384,7 +3402,10 @@
                     }
                     if (!this.formData.trips) this.formData.trips = [];
                     if (!this.formData.flags) this.formData.flags = {};
-                    if (!this.formData.custom_data) this.formData.custom_data = {};
+                    if (typeof this.formData.custom_data === 'string') {
+                        try { this.formData.custom_data = JSON.parse(this.formData.custom_data); } catch(e) { this.formData.custom_data = {}; }
+                    }
+                    if (!this.formData.custom_data || typeof this.formData.custom_data !== 'object') this.formData.custom_data = {};
                     if (!this.formData.relatives) this.formData.relatives = [];
                     
                     // Copy flags into formData so checkbox/radio fields in form get bound
@@ -3412,12 +3433,10 @@
                         }
                     }
                     
-                    // Flatten single custom fields
+                    // Flatten all custom fields onto formData
                     if (this.formData.custom_data) {
                         for (let k in this.formData.custom_data) {
-                            if(!Array.isArray(this.formData.custom_data[k])) {
-                                this.formData[k] = this.formData.custom_data[k];
-                            }
+                            this.formData[k] = this.formData.custom_data[k];
                         }
                     }
 
@@ -3426,21 +3445,27 @@
                         this.formData.relatives = [{}];
                     }
 
-                    // Ensure relatives have foreignInfo
+                    // Ensure relatives have foreignInfo & flattened custom_data
                     this.formData.relatives.forEach(r => {
                         if (!r.foreignInfo) r.foreignInfo = {};
-                        if (!r.custom_data) r.custom_data = {};
-                        if (r.custom_data) {
-                            for (let k in r.custom_data) r[k] = r.custom_data[k];
+                        if (typeof r.custom_data === 'string') {
+                            try { r.custom_data = JSON.parse(r.custom_data); } catch(e) { r.custom_data = {}; }
+                        }
+                        if (!r.custom_data || typeof r.custom_data !== 'object') r.custom_data = {};
+                        for (let k in r.custom_data) {
+                            r[k] = r.custom_data[k];
                         }
                     });
                     
                     // Ensure trips have flattened custom fields
                     if (this.formData.trips.length === 0) this.formData.trips.push({});
                     this.formData.trips.forEach(t => {
-                        if (!t.custom_data) t.custom_data = {};
-                        if (t.custom_data) {
-                            for (let k in t.custom_data) t[k] = t.custom_data[k];
+                        if (typeof t.custom_data === 'string') {
+                            try { t.custom_data = JSON.parse(t.custom_data); } catch(e) { t.custom_data = {}; }
+                        }
+                        if (!t.custom_data || typeof t.custom_data !== 'object') t.custom_data = {};
+                        for (let k in t.custom_data) {
+                            t[k] = t.custom_data[k];
                         }
                     });
                     
