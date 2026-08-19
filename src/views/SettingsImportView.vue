@@ -5,7 +5,7 @@
         <div>
           <h3 style="font-size: 1.1rem; font-weight: 700; color: #1f2937;">Cấu hình Cột & Mẫu Import/Export</h3>
           <p style="font-size: 0.82rem; color: #6b7280; margin-top: 2px;">
-            Ghép nối đúng thứ tự cột trong file Excel mẫu với các trường hệ thống và kiểu định dạng (Văn bản, Ngày tháng, Hộp kiểm có điều kiện, List dữ liệu...).
+            Ghép nối đúng thứ tự cột trong file Excel mẫu với các trường hệ thống và kiểu định dạng. Hộp kiểm nhiều lựa chọn sẽ tự động phân rã thành các cột Excel độc lập.
           </p>
         </div>
 
@@ -87,13 +87,26 @@
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
                 <!-- Column Order + Field ID + Field Label -->
                 <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 280px;">
-                  <span class="badge-pill badge-green" style="font-weight: 700; font-size: 0.72rem; min-width: 58px; justify-content: center;">
-                    Cột {{ getGlobalColIndex(gIdx, cIdx) }}
+                  <span class="badge-pill badge-green" style="font-weight: 700; font-size: 0.72rem; min-width: 68px; justify-content: center;">
+                    {{ getColLabelBadge(gIdx, cIdx) }}
                   </span>
-                  <span style="font-family: monospace; color: #4b5563; font-size: 0.75rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; min-width: 90px; text-align: center;">
-                    {{ col.id }}
-                  </span>
-                  <InputText v-model="col.label" placeholder="Tên nhãn hiển thị" size="small" style="font-size: 0.8rem; flex: 1;" />
+                  
+                  <!-- Editable/Readable Field ID -->
+                  <InputText
+                    v-model="col.id"
+                    placeholder="Mã ID"
+                    size="small"
+                    style="font-family: monospace; font-size: 0.75rem; width: 140px; background: #f1f5f9; color: #334155; font-weight: 600;"
+                    title="Mã trường hệ thống (ID)"
+                  />
+
+                  <InputText
+                    v-model="col.label"
+                    placeholder="Tên nhãn hiển thị"
+                    size="small"
+                    style="font-size: 0.8rem; flex: 1;"
+                    @blur="onLabelBlur(col)"
+                  />
                 </div>
 
                 <!-- Format & Width Settings -->
@@ -119,13 +132,13 @@
                     style="width: 120px; font-size: 0.75rem;"
                   />
                   <Button
-                    v-if="col.id && col.id.startsWith('custom_')"
                     icon="pi pi-trash"
                     severity="danger"
                     text
                     size="small"
                     @click="removeColumn(gIdx, cIdx)"
                     style="padding: 2px 4px;"
+                    title="Xóa cột này"
                   />
                 </div>
               </div>
@@ -133,15 +146,29 @@
               <!-- Options Config (for Checkbox, Checkbox_Text, Dropdown) -->
               <div
                 v-if="col.format === 'checkbox' || col.format === 'checkbox_text' || col.format === 'dropdown'"
-                style="padding-left: 66px; display: flex; align-items: center; gap: 8px;"
+                style="padding-left: 76px; display: flex; flex-direction: column; gap: 4px;"
               >
-                <i class="pi pi-list" style="font-size: 0.75rem; color: #6b7280;"></i>
-                <InputText
-                  v-model="col.options"
-                  placeholder="Danh sách tùy chọn (cách nhau bởi dấu phẩy, VD: Tự túc, Học bổng, Mời làm việc...)"
-                  size="small"
-                  style="font-size: 0.75rem; width: 100%;"
-                />
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <i class="pi pi-list" style="font-size: 0.75rem; color: #6b7280;"></i>
+                  <InputText
+                    v-model="col.options"
+                    placeholder="Danh sách tùy chọn (cách nhau bởi dấu phẩy, VD: Ngân sách, Tự túc, Học bổng, Tài trợ)"
+                    size="small"
+                    style="font-size: 0.75rem; width: 100%;"
+                  />
+                </div>
+                
+                <!-- Sub-columns Excel breakdown preview -->
+                <div v-if="getSubOptions(col).length > 1" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px;">
+                  <span style="font-size: 0.7rem; color: #6b7280; font-weight: 600;">Sẽ xuất ra {{ getSubOptions(col).length }} cột Excel riêng biệt:</span>
+                  <span
+                    v-for="(subOpt, sIdx) in getSubOptions(col)"
+                    :key="sIdx"
+                    style="font-size: 0.7rem; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-weight: 600;"
+                  >
+                    Cột +{{ sIdx }}: {{ subOpt }}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -199,10 +226,37 @@ const widthOptions = [
   { label: 'Rộng: 100%', value: '100' },
 ];
 
+const generateSlug = (str) => {
+  if (!str) return 'cot_' + Date.now();
+  const slug = str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return slug || 'cot_' + Date.now();
+};
+
+const getSubOptions = (col) => {
+  if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
+    return String(col.options)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 const normalizeGroupColumns = (groups) => {
   (groups || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (!c.width) c.width = '25';
+      // Clean up legacy custom_ timestamps into readable slugs if available
+      if (c.id && c.id.startsWith('custom_') && c.label) {
+        const cleanSlug = generateSlug(c.label);
+        if (cleanSlug) c.id = cleanSlug;
+      }
     });
   });
   return groups;
@@ -218,13 +272,36 @@ const currentGroups = computed(() => {
   return activeTab.value === 'personnel' ? personnelGroups.value : relativeGroups.value;
 });
 
-const getGlobalColIndex = (groupIndex, columnIndex) => {
+const getColLabelBadge = (groupIndex, columnIndex) => {
   const groups = currentGroups.value;
   let count = 0;
   for (let i = 0; i < groupIndex; i++) {
-    count += (groups[i]?.columns?.length || 0);
+    (groups[i]?.columns || []).forEach((c) => {
+      const sub = getSubOptions(c);
+      count += sub.length > 1 ? sub.length : 1;
+    });
   }
-  return count + columnIndex + 1;
+  for (let j = 0; j < columnIndex; j++) {
+    const prevCol = groups[groupIndex]?.columns?.[j];
+    const sub = prevCol ? getSubOptions(prevCol) : [];
+    count += sub.length > 1 ? sub.length : 1;
+  }
+
+  const currentCol = groups[groupIndex]?.columns?.[columnIndex];
+  const currentSub = currentCol ? getSubOptions(currentCol) : [];
+  const startCol = count + 1;
+
+  if (currentSub.length > 1) {
+    const endCol = count + currentSub.length;
+    return `Cột ${startCol} - ${endCol} (${currentSub.length} cột)`;
+  }
+  return `Cột ${startCol}`;
+};
+
+const onLabelBlur = (col) => {
+  if (!col.id || col.id.startsWith('cot_') || col.id.startsWith('custom_')) {
+    col.id = generateSlug(col.label);
+  }
 };
 
 const addGroup = () => {
@@ -241,10 +318,11 @@ const removeGroup = (gIndex) => {
 };
 
 const addColumn = (gIdx) => {
-  const customId = 'custom_' + Date.now();
+  const label = 'Cột mới ' + (currentGroups.value[gIdx].columns.length + 1);
+  const slugId = generateSlug(label);
   currentGroups.value[gIdx].columns.push({
-    id: customId,
-    label: 'Cột mới ' + (currentGroups.value[gIdx].columns.length + 1),
+    id: slugId,
+    label: label,
     format: 'text',
     width: '25',
     options: '',
@@ -253,76 +331,6 @@ const addColumn = (gIdx) => {
 
 const removeColumn = (gIdx, cIdx) => {
   currentGroups.value[gIdx].columns.splice(cIdx, 1);
-};
-
-const resetToDefault = () => {
-  if (!confirm('Bạn có chắc muốn khôi phục danh sách cột về Mặc định Chuẩn gốc của Hệ thống? (Các cột tùy chỉnh thêm sau sẽ được làm mới)')) return;
-
-  if (activeTab.value === 'personnel') {
-    personnelGroups.value = [
-      {
-        group: 'Khối A: Thông tin cơ bản',
-        isMultiple: false,
-        columns: [
-          { id: 'stt', label: 'TT', format: 'number', width: '25' },
-          { id: 'name', label: 'Họ và tên', format: 'text', width: '25' },
-          { id: 'otherName', label: 'Tên khác', format: 'text', width: '25' },
-          { id: 'birthYear', label: 'Ngày tháng năm sinh', format: 'date', width: '25' },
-          { id: 'ethnicity', label: 'Dân tộc', format: 'text', width: '25' },
-          { id: 'religion', label: 'Tôn giáo', format: 'text', width: '25' },
-          { id: 'hometown', label: 'Quê quán', format: 'text', width: '25' },
-          { id: 'departmentName', label: 'Đơn vị công tác', format: 'text', width: '50' },
-          { id: 'positionName', label: 'Chức vụ', format: 'text', width: '50' },
-          { id: 'thuongTru', label: 'Thường trú', format: 'text', width: '50' },
-          { id: 'tamTru', label: 'Tạm trú', format: 'text', width: '50' },
-          { id: 'cccd', label: 'Số CCCD', format: 'text', width: '25' },
-          { id: 'hcCaNhan', label: 'HC Cá nhân', format: 'text', width: '25' },
-          { id: 'hcCongVu', label: 'HC Công vụ', format: 'text', width: '25' },
-          { id: 'kqThamTra', label: 'Kết quả thẩm tra', format: 'text', width: '100' },
-        ],
-      },
-      {
-        group: 'Khối B: Chuyến đi nước ngoài',
-        isMultiple: true,
-        columns: [
-          { id: 'decisionNumber', label: 'Số Quyết định', format: 'text', width: '25' },
-          { id: 'decisionDate', label: 'Ngày Quyết định', format: 'date', width: '25' },
-          { id: 'decisionIssuer', label: 'Cơ quan ban hành', format: 'text', width: '50' },
-          { id: 'departureDate', label: 'Ngày Xuất cảnh', format: 'date', width: '25' },
-          { id: 'arrivalDate', label: 'Ngày Nhập cảnh', format: 'date', width: '25' },
-          { id: 'countryName', label: 'Quốc gia', format: 'text', width: '25' },
-          { id: 'tripCount', label: 'Số lần', format: 'number', width: '25' },
-          { id: 'purpose', label: 'Mục đích chuyến đi', format: 'text', width: '33' },
-          { id: 'fundingName', label: 'Nguồn kinh phí', format: 'checkbox_text', width: '33', options: 'Ngân sách, Tự túc, Học bổng, Tài trợ, Khác' },
-          { id: 'sponsorUnit', label: 'Đơn vị chọn cử / tài trợ', format: 'text', width: '33' },
-          { id: 'trainingTime', label: 'Thời gian đào tạo', format: 'text', width: '50' },
-          { id: 'trainingPlace', label: 'Nơi đào tạo', format: 'text', width: '50' },
-          { id: 'report', label: 'Đã nộp Báo cáo kết quả', format: 'checkbox', width: '50' },
-          { id: 'nopHC', label: 'Đã nộp lại Hộ chiếu công vụ', format: 'checkbox', width: '50' },
-        ],
-      },
-      {
-        group: 'Khối C: Thông tin Lưu ý & Kỷ luật',
-        isMultiple: false,
-        columns: [
-          { id: 'trongYeu', label: 'Vấn đề về tiêu chuẩn chính trị ("tự diễn biến", "tự chuyển hóa")', format: 'checkbox_text', width: '100' },
-          { id: 'thamNhung', label: 'Đang trong quá trình điều tra, thanh tra hoặc liên quan vụ việc phức tạp', format: 'checkbox_text', width: '100' },
-          { id: 'loiKeo', label: 'Có vấn đề khác về lý lịch (khai man, che dấu lý lịch, bằng cấp...)', format: 'checkbox_text', width: '100' },
-          { id: 'klDang', label: 'Hình thức kỷ luật Đảng', format: 'checkbox_text', width: '50' },
-          { id: 'klChinhQuyen', label: 'Hình thức kỷ luật Chính quyền', format: 'checkbox_text', width: '50' },
-          { id: 'vpChuaPhep', label: 'Đi nước ngoài khi chưa được cấp phép', format: 'checkbox_text', width: '50' },
-          { id: 'vpNuocNgoai', label: 'Vi phạm pháp luật ở nước ngoài / trong nước', format: 'checkbox_text', width: '50' },
-          { id: 'vpQuaHan', label: 'Ở lại nước ngoài quá thời gian quy định', format: 'checkbox_text', width: '50' },
-          { id: 'dienQuanLy', label: 'Đối tượng thuộc diện quản lý đặc biệt', format: 'checkbox_text', width: '50' },
-          { id: 'receivedGiftOver50M', label: 'Được tặng tiền, hàng giá trị từ 50 triệu trở lên', format: 'checkbox_text', width: '33' },
-          { id: 'rentHouseToForeigner', label: 'Cho người nước ngoài thuê nhà, đất', format: 'checkbox_text', width: '33' },
-          { id: 'workInForeignCompany', label: 'Làm việc tại công ty có vốn đầu tư nước ngoài (FDI)', format: 'checkbox_text', width: '33' },
-          { id: 'marriedToForeigner', label: 'Kết hôn với người nước ngoài', format: 'checkbox_text', width: '50' },
-          { id: 'files', label: 'Tệp đính kèm Hồ sơ (Đơn giải trình, Kết luận...)', format: 'file', width: '100' },
-        ],
-      },
-    ];
-  }
 };
 
 const saveConfig = async () => {

@@ -16,18 +16,39 @@ export const exportMultiSheetExcel = (sheets, fileName = 'Bao_cao_tong_hop') => 
   XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
+export const getSubOptionsList = (col) => {
+  if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
+    return String(col.options)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 export const downloadPersonnelTemplate = (mappingConfig = null) => {
   let sampleRow = {};
-  
+
   if (Array.isArray(mappingConfig) && mappingConfig.length > 0) {
+    let colIndex = 1;
+    sampleRow['STT'] = 1;
+
     mappingConfig.forEach((g) => {
       (g.columns || []).forEach((c) => {
-        const header = c.label || c.id;
-        sampleRow[header] = getSampleValueForField(c.id, header);
+        if (c.id === 'stt') return;
+        const subOpts = getSubOptionsList(c);
+        if (subOpts.length > 1) {
+          subOpts.forEach((opt, idx) => {
+            const header = `${c.label || c.id}: ${opt}`;
+            sampleRow[header] = idx === 0 ? 'X' : '';
+          });
+        } else {
+          const header = c.label || c.id;
+          sampleRow[header] = getSampleValueForField(c.id, header);
+        }
       });
     });
   } else {
-    // Full Comprehensive 58-Column Template
     sampleRow = {
       'STT': 1,
       'Mã CB': 'CB-00001',
@@ -57,10 +78,10 @@ export const downloadPersonnelTemplate = (mappingConfig = null) => {
       'Mục đích: Việc riêng': '',
       'Diện đào tạo': 'Ngắn hạn',
       'Nơi đào tạo': 'Tokyo',
-      'Kinh phí: Ngân sách': 'X',
-      'Tự túc': '',
-      'Tài trợ': '',
-      'Học bổng': '',
+      'Nguồn kinh phí: Ngân sách': 'X',
+      'Nguồn kinh phí: Tự túc': '',
+      'Nguồn kinh phí: Học bổng': '',
+      'Nguồn kinh phí: Tài trợ': '',
       'Báo cáo kết quả': 'Đã nộp',
       'Nộp hộ chiếu công vụ': 'Đã nộp',
       'Kỷ luật Đảng': 'Không',
@@ -85,14 +106,23 @@ export const downloadRelativeTemplate = (mappingConfig = null) => {
   let sampleRow = {};
 
   if (Array.isArray(mappingConfig) && mappingConfig.length > 0) {
+    sampleRow['STT'] = 1;
     mappingConfig.forEach((g) => {
       (g.columns || []).forEach((c) => {
-        const header = c.label || c.id;
-        sampleRow[header] = getSampleValueForField(c.id, header);
+        if (c.id === 'stt') return;
+        const subOpts = getSubOptionsList(c);
+        if (subOpts.length > 1) {
+          subOpts.forEach((opt, idx) => {
+            const header = `${c.label || c.id}: ${opt}`;
+            sampleRow[header] = idx === 0 ? 'X' : '';
+          });
+        } else {
+          const header = c.label || c.id;
+          sampleRow[header] = getSampleValueForField(c.id, header);
+        }
       });
     });
   } else {
-    // Full Comprehensive 26-Column Template
     sampleRow = {
       'STT': 1,
       'Mã CB': 'CB-00001',
@@ -113,7 +143,9 @@ export const downloadRelativeTemplate = (mappingConfig = null) => {
       'Quốc Gia': 'Nhật Bản',
       'Thời gian học tập, làm việc, sinh sống ở nước ngoài': '2020 - 2024',
       'Đơn vị học tập, làm việc, sinh sống ở nước ngoài': 'Rakuten Inc',
-      'Nguồn Kinh phí': 'Tự túc',
+      'Nguồn Kinh phí: Tự túc': 'X',
+      'Nguồn Kinh phí: Học bổng': '',
+      'Nguồn Kinh phí: Tài trợ': '',
       'Đơn vị công tác hiện nay': 'Rakuten Inc',
       'Kết hôn với người nước ngoài': 'Không',
       'Làm việc tại công ty có vốn đầu tư nước ngoài': 'Có',
