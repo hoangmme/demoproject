@@ -91,14 +91,14 @@
             style="font-size: 0.8rem;"
           />
 
-          <!-- Advanced Export Button -->
+          <!-- Direct Full Export Button -->
           <Button
-            label="Xuất Excel"
+            :label="selectedPersonnel.length > 0 ? `Xuất Excel (${selectedPersonnel.length} đã chọn)` : 'Xuất Excel Cán bộ'"
             icon="pi pi-file-excel"
             severity="secondary"
             outlined
             size="small"
-            @click="openExportModal"
+            @click="handleExportPersonnelFull"
             style="font-size: 0.8rem;"
           />
 
@@ -225,12 +225,12 @@
 
           <!-- Export Relatives Button -->
           <Button
-            label="Xuất Excel"
+            label="Xuất Excel Thân nhân"
             icon="pi pi-file-excel"
             severity="secondary"
             outlined
             size="small"
-            @click="handleExportRelatives"
+            @click="handleExportRelativesFull"
             style="font-size: 0.8rem;"
           />
         </div>
@@ -474,6 +474,8 @@ import { formatPersonnelCode } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
+  exportFullPersonnelExcel,
+  exportFullRelativesExcel,
   downloadPersonnelTemplate,
   downloadRelativeTemplate,
   parseExcelFile,
@@ -619,124 +621,27 @@ const handleBulkDelete = async () => {
   selectedPersonnel.value = [];
 };
 
-const exportGroupsList = ref([]);
-
-const initExportGroups = () => {
-  const list = [];
-  (personnelStore.importMappingPersonnel || []).forEach((g, idx) => {
-    list.push({
-      id: 'group_' + idx,
-      type: 'personnel_group',
-      title: g.group || `Khối ${idx + 1}`,
-      enabled: true,
-      columns: g.columns || [],
-      columnsCount: g.columns?.length || 0,
-    });
-  });
-
-  list.push({
-    id: 'group_relatives',
-    type: 'relatives',
-    title: 'Danh sách Thân nhân (Phụ lục 2)',
-    enabled: true,
-    columnsCount: personnelStore.importMappingRelative?.reduce((acc, g) => acc + (g.columns?.length || 0), 0) || 26,
-  });
-
-  exportGroupsList.value = list;
-};
-
-const openExportModal = () => {
-  exportScope.value = selectedPersonnel.value.length > 0 ? 'selected' : 'all';
-  initExportGroups();
-  isExportOpen.value = true;
-};
-
-const executeAdvancedExport = () => {
-  const targetPersonnel = exportScope.value === 'selected' && selectedPersonnel.value.length > 0
+const handleExportPersonnelFull = () => {
+  const target = selectedPersonnel.value.length > 0
     ? selectedPersonnel.value
     : personnelStore.personnelList;
 
-  const sheets = [];
-
-  exportGroupsList.value.filter((g) => g.enabled).forEach((grp) => {
-    if (grp.type === 'personnel_group') {
-      const rows = targetPersonnel.map((p, pIdx) => {
-        const row = {};
-        (grp.columns || []).forEach((c) => {
-          if (c.id === 'stt') {
-            row['STT'] = pIdx + 1;
-            return;
-          }
-
-          const subOpts = (c.format === 'checkbox_text' && c.options)
-            ? String(c.options).split(',').map((s) => s.trim()).filter(Boolean)
-            : [];
-
-          if (subOpts.length > 1) {
-            subOpts.forEach((opt) => {
-              const header = `${c.label || c.id}: ${opt}`;
-              const val = p[c.id] || p.custom_data?.[c.id] || '';
-              if (String(val).includes(opt)) {
-                row[header] = 'X';
-              } else {
-                row[header] = '';
-              }
-            });
-          } else {
-            const header = c.label || c.id;
-            let val = p[c.id] !== undefined ? p[c.id] : (p.custom_data?.[c.id] !== undefined ? p.custom_data[c.id] : '');
-            if (c.id === 'departmentId' || c.id === 'departmentName') {
-              val = personnelStore.getDepartmentName(p.departmentId) || val || '';
-            }
-            if (c.id === 'code') {
-              val = p.code || formatPersonnelCode(p.id);
-            }
-            row[header] = val || '';
-          }
-        });
-        return row;
-      });
-
-      sheets.push({
-        name: (grp.title || 'Hồ sơ Cán bộ').substring(0, 31),
-        data: rows,
-      });
-    } else if (grp.type === 'relatives') {
-      const relRows = [];
-      let rIdx = 1;
-      const targetIds = new Set(targetPersonnel.map((p) => p.id));
-      const targetRelatives = (personnelStore.relativesList || []).filter((r) => targetIds.has(r.personnelId));
-
-      targetRelatives.forEach((r) => {
-        const parent = targetPersonnel.find((p) => p.id === r.personnelId) || {};
-        relRows.push({
-          'STT': rIdx++,
-          'Mã CB': parent.code || formatPersonnelCode(parent.id || r.personnelId),
-          'Họ và tên Cán bộ': parent.name || '',
-          'Phòng ban': personnelStore.getDepartmentName(parent.departmentId) || '',
-          'Mối quan hệ': r.relationshipName || '-',
-          'Họ và tên Thân nhân': r.relativeName || '-',
-          'Năm sinh': r.birthYear || '-',
-          'Số CCCD': r.cccd || '-',
-          'Nơi cư trú': r.currentAddress || '-',
-          'Nghề nghiệp': r.occupation || '-',
-          'Quốc gia': r.countryName || '-',
-          'Thời gian ở NN': r.timeAbroad || '-',
-          'Cơ quan ở NN': r.unitAbroad || '-',
-          'Nguồn kinh phí': r.fundingName || '-',
-        });
-      });
-      sheets.push({ name: 'Danh sách Thân nhân (PL2)', data: relRows });
-    }
-  });
-
-  if (sheets.length === 0) {
-    alert('Vui lòng chọn ít nhất 1 Khối dữ liệu cần xuất!');
+  if (target.length === 0) {
+    alert('Không có dữ liệu cán bộ để xuất!');
     return;
   }
 
-  exportMultiSheetExcel(sheets, `Bao_cao_Can_bo_${exportScope.value === 'selected' ? 'Da_Chon' : 'Tat_Ca'}`);
-  isExportOpen.value = false;
+  exportFullPersonnelExcel(target, personnelStore.importMappingPersonnel, personnelStore.getDepartmentName);
+};
+
+const handleExportRelativesFull = () => {
+  const list = flattenedRelatives.value;
+  if (list.length === 0) {
+    alert('Không có dữ liệu thân nhân để xuất!');
+    return;
+  }
+
+  exportFullRelativesExcel(list, personnelStore.importMappingRelative);
 };
 
 const handleExportRelatives = () => {
