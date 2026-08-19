@@ -46,8 +46,18 @@ const hiddenInput = ref(null);
 
 const displayValue = computed({
   get: () => {
-    if (!props.modelValue) return '';
-    return String(props.modelValue);
+    if (!props.modelValue && props.modelValue !== 0) return '';
+    const str = String(props.modelValue).trim();
+    // Auto-convert Excel numeric serial date (e.g. 46142 -> 02/05/2026, 26124 -> 10/07/1971)
+    if (!isNaN(str) && Number(str) > 1000 && Number(str) < 100000 && !str.includes('/') && !str.includes('-')) {
+      const num = Number(str);
+      const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const y = date.getUTCFullYear();
+      return `${d}/${m}/${y}`;
+    }
+    return str;
   },
   set: (val) => {
     emit('update:modelValue', val);

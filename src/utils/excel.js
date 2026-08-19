@@ -281,12 +281,12 @@ export const readExcelWorkbook = (file) => {
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'dd/mm/yyyy' });
         const sheets = workbook.SheetNames || [];
         const sheetsData = {};
         sheets.forEach((sName) => {
           const ws = workbook.Sheets[sName];
-          sheetsData[sName] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+          sheetsData[sName] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' });
         });
         resolve({
           sheetNames: sheets,
@@ -307,10 +307,10 @@ export const parseExcelFile = (file) => {
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'dd/mm/yyyy' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' });
         resolve(rows);
       } catch (err) {
         reject(err);
