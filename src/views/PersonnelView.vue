@@ -997,18 +997,20 @@ const executeImport = async () => {
 
         // Check if Person already exists by CCCD (Unique Key) or Code
         const existingPerson = (cleanCccd && existingByCccd[cleanCccd]) || (cleanCode && existingByCode[cleanCode]) || null;
+        let targetPersonId = '';
 
         if (existingPerson) {
+          targetPersonId = existingPerson.id;
           // Ghi đè / Cập nhật (Update)
+          const mergedFlags = { ...(existingPerson.flags || {}), ...(existingPerson.custom_data?.flags || {}), ...flags };
           const updatedPayload = {
             ...rowData,
-            trips: trips.length > 0 ? trips : (existingPerson.trips || []),
-            flags: { ...(existingPerson.flags || {}), ...flags },
+            flags: mergedFlags,
             custom_data: {
               ...(existingPerson.custom_data || {}),
               ...customData,
               ...rowData,
-              flags: { ...(existingPerson.flags || {}), ...(existingPerson.custom_data?.flags || {}), ...flags },
+              flags: mergedFlags,
             },
           };
           await updatePersonnel(existingPerson.id, updatedPayload);
@@ -1017,8 +1019,9 @@ const executeImport = async () => {
           // Tạo mới (Create)
           const nextIndex = personnelStore.personnelList.length + createdCount + 1;
           const assignedCode = rowData.code || ('CB-' + String(nextIndex).padStart(5, '0'));
+          targetPersonId = 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
           const newPayload = {
-            id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
+            id: targetPersonId,
             ...rowData,
             code: assignedCode,
             trips: trips.length > 0 ? trips : [],
@@ -1033,6 +1036,18 @@ const executeImport = async () => {
           await createPersonnel(newPayload);
           createdCount++;
         }
+
+        // If trip information is present in this row, persist to appendix1
+        if (Object.keys(currentTrip).length > 0 && targetPersonId) {
+          const tripPayload = {
+            id: 'trip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
+            personnelId: targetPersonId,
+            personnelName: rowData.name,
+            ...currentTrip,
+          };
+          await apiClient.post('/items/appendix1', tripPayload).catch(() => {});
+        }
+
         count++;
       }
 

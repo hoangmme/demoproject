@@ -16,7 +16,7 @@
           <span class="label-text">{{ col.label }}</span>
         </label>
         <DynamicField
-          v-model="flags[col.id]"
+          v-model="formModel[col.id]"
           :col="col"
         />
       </div>
@@ -39,14 +39,27 @@ const props = defineProps({
 
 const personnelStore = usePersonnelStore();
 
-const flags = computed({
-  get: () => {
-    if (!props.form.flags) props.form.flags = {};
-    return props.form.flags;
-  },
-  set: (val) => {
-    props.form.flags = val;
-  },
+const formModel = computed(() => {
+  if (!props.form.flags) props.form.flags = {};
+  return new Proxy(props.form, {
+    get(target, prop) {
+      if (target.flags && target.flags[prop] !== undefined && target.flags[prop] !== '') {
+        return target.flags[prop];
+      }
+      if (target.custom_data && target.custom_data[prop] !== undefined && target.custom_data[prop] !== '') {
+        return target.custom_data[prop];
+      }
+      return target[prop] || '';
+    },
+    set(target, prop, val) {
+      target[prop] = val;
+      if (!target.flags) target.flags = {};
+      target.flags[prop] = val;
+      if (!target.custom_data) target.custom_data = {};
+      target.custom_data[prop] = val;
+      return true;
+    },
+  });
 });
 
 const colIndexMap = computed(() => {
