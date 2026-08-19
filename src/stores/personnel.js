@@ -31,21 +31,21 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     allAvailableColumns: (state) => {
       const list = [
-        { id: 'code', label: 'Mã CB', group: 'Mã định danh' },
-        { id: 'name', label: 'Họ và tên', group: 'Thông tin chung' },
-        { id: 'otherName', label: 'Tên gọi khác', group: 'Thông tin chung' },
-        { id: 'birthYear', label: 'Năm sinh', group: 'Thông tin chung' },
-        { id: 'ethnicity', label: 'Dân tộc', group: 'Thông tin chung' },
-        { id: 'religion', label: 'Tôn giáo', group: 'Thông tin chung' },
-        { id: 'hometown', label: 'Quê quán', group: 'Thông tin chung' },
-        { id: 'departmentId', label: 'Phòng ban', group: 'Thông tin chung' },
-        { id: 'position', label: 'Chức vụ', group: 'Thông tin chung' },
-        { id: 'thuongTru', label: 'Nơi ĐKHK thường trú', group: 'Thông tin chung' },
-        { id: 'tamTru', label: 'Nơi ở hiện nay', group: 'Thông tin chung' },
-        { id: 'cccd', label: 'Số CCCD', group: 'Thông tin chung' },
-        { id: 'passportPersonal', label: 'Hộ chiếu cá nhân', group: 'Thông tin chung' },
-        { id: 'passportOfficial', label: 'Hộ chiếu công vụ', group: 'Thông tin chung' },
-        { id: 'tcctResult', label: 'Kết quả thẩm tra TCCT', group: 'Thông tin chung' },
+        { id: 'code', label: 'Mã CB', width: '110px' },
+        { id: 'name', label: 'Họ và tên', width: '200px' },
+        { id: 'otherName', label: 'Tên gọi khác', width: '140px' },
+        { id: 'birthYear', label: 'Năm sinh', width: '120px' },
+        { id: 'ethnicity', label: 'Dân tộc', width: '110px' },
+        { id: 'religion', label: 'Tôn giáo', width: '110px' },
+        { id: 'hometown', label: 'Quê quán', width: '180px' },
+        { id: 'departmentId', label: 'Phòng ban', width: '160px' },
+        { id: 'position', label: 'Chức vụ', width: '140px' },
+        { id: 'thuongTru', label: 'Nơi ĐKHK thường trú', width: '200px' },
+        { id: 'tamTru', label: 'Nơi ở hiện nay', width: '200px' },
+        { id: 'cccd', label: 'Số CCCD', width: '140px' },
+        { id: 'passportPersonal', label: 'Hộ chiếu cá nhân', width: '150px' },
+        { id: 'passportOfficial', label: 'Hộ chiếu công vụ', width: '150px' },
+        { id: 'tcctResult', label: 'Kết quả thẩm tra TCCT', width: '220px' },
       ];
 
       (state.importMappingPersonnel || []).forEach((g) => {
@@ -56,7 +56,7 @@ export const usePersonnelStore = defineStore('personnel', {
               list.push({
                 id: c.id,
                 label: (c.label || c.id).replace(/^\[Cột \d+\]\s*/, ''),
-                group: g.group || 'Thông tin chung',
+                width: '160px',
                 format: c.format || 'text',
               });
             } else if (c.label) {
@@ -91,20 +91,29 @@ export const usePersonnelStore = defineStore('personnel', {
       try {
         const data = await getPersonnelList();
         this.personnelList = data.map((p) => {
-          // Normalize JSON fields
-          if (p.trips && typeof p.trips === 'string') {
-            try { p.trips = JSON.parse(p.trips); } catch (e) { p.trips = []; }
+          let custom = {};
+          if (p.custom_data) {
+            try {
+              custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+            } catch (e) {
+              custom = {};
+            }
           }
-          if (p.relatives && typeof p.relatives === 'string') {
-            try { p.relatives = JSON.parse(p.relatives); } catch (e) { p.relatives = []; }
-          }
-          if (p.flags && typeof p.flags === 'string') {
-            try { p.flags = JSON.parse(p.flags); } catch (e) { p.flags = {}; }
-          }
-          if (p.custom_data && typeof p.custom_data === 'string') {
-            try { p.custom_data = JSON.parse(p.custom_data); } catch (e) { p.custom_data = {}; }
-          }
-          return p;
+
+          const trips = custom.trips || p.trips || custom['Khối B: Chuyến đi nước ngoài'] || [];
+          const relatives = custom.relatives || p.relatives || [];
+          const flags = custom.flags || p.flags || {};
+          const files = custom.files || p.files || [];
+
+          return {
+            ...custom,
+            ...p,
+            trips: Array.isArray(trips) ? trips : [],
+            relatives: Array.isArray(relatives) ? relatives : [],
+            flags: typeof flags === 'object' ? flags : {},
+            files: Array.isArray(files) ? files : [],
+            custom_data: custom,
+          };
         });
       } catch (e) {
         console.error('Error fetching personnel:', e);
@@ -122,17 +131,32 @@ export const usePersonnelStore = defineStore('personnel', {
     async savePerson(formData) {
       this.loading = true;
       try {
-        const payload = { ...formData };
-        if (payload.trips) payload.trips = JSON.stringify(payload.trips);
-        if (payload.relatives) payload.relatives = JSON.stringify(payload.relatives);
-        if (payload.flags) payload.flags = JSON.stringify(payload.flags);
-        if (payload.custom_data) payload.custom_data = JSON.stringify(payload.custom_data);
+        const coreKeys = [
+          'id', 'code', 'name', 'cccd', 'birthYear', 'departmentId',
+          'position', 'positionName', 'departmentName', 'hometown',
+          'ethnicity', 'religion', 'email', 'otherName', 'isDeleted',
+        ];
+
+        const payload = {};
+        const customData = { ...(formData.custom_data || {}) };
+
+        Object.keys(formData).forEach((k) => {
+          if (coreKeys.includes(k)) {
+            payload[k] = formData[k];
+          } else {
+            customData[k] = formData[k];
+          }
+        });
+
+        payload.custom_data = JSON.stringify(customData);
 
         let saved = null;
         if (payload.id) {
           saved = await updatePersonnel(payload.id, payload);
-          await logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name} (Mã: ${formData.code || formData.id})`);
+          await logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name} (${formData.code || formData.id})`);
         } else {
+          payload.id = 'CB-' + Date.now();
+          if (!payload.code) payload.code = payload.id;
           saved = await createPersonnel(payload);
           await logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name}`);
         }

@@ -6,63 +6,63 @@
     :style="{ width: '85vw', maxWidth: '1100px' }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
-    <div style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb;">
-      <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;">
-        <Button
-          :label="'1. Thông tin Cá nhân (' + (form.name || 'Chưa đặt') + ')'"
-          icon="pi pi-user"
-          :severity="activeTab === 0 ? 'primary' : 'secondary'"
-          :text="activeTab !== 0"
-          size="small"
-          @click="activeTab = 0"
-        />
-        <Button
-          :label="'2. Đi nước ngoài (' + (form.trips?.length || 0) + ')'"
-          icon="pi pi-globe"
-          :severity="activeTab === 1 ? 'primary' : 'secondary'"
-          :text="activeTab !== 1"
-          size="small"
-          @click="activeTab = 1"
-        />
-        <Button
-          :label="'3. Thân nhân (' + (form.relatives?.length || 0) + ')'"
-          icon="pi pi-heart"
-          :severity="activeTab === 2 ? 'primary' : 'secondary'"
-          :text="activeTab !== 2"
-          size="small"
-          @click="activeTab = 2"
-        />
-        <Button
-          label="4. Lịch sử & Lưu ý"
-          icon="pi pi-shield"
-          :severity="activeTab === 3 ? 'primary' : 'secondary'"
-          :text="activeTab !== 3"
-          size="small"
-          @click="activeTab = 3"
-        />
-      </div>
+    <!-- 2 Main Tabs: Cá nhân & Thân nhân -->
+    <div style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px;">
+      <Button
+        :label="'1. Thông tin Cán bộ (Cá nhân)'"
+        icon="pi pi-user"
+        :severity="activeTab === 0 ? 'primary' : 'secondary'"
+        :text="activeTab !== 0"
+        size="small"
+        @click="activeTab = 0"
+      />
+      <Button
+        :label="'2. Danh sách Thân nhân (' + (form.relatives?.length || 0) + ')'"
+        icon="pi pi-users"
+        :severity="activeTab === 1 ? 'primary' : 'secondary'"
+        :text="activeTab !== 1"
+        size="small"
+        @click="activeTab = 1"
+      />
     </div>
 
-    <!-- Tab Contents -->
-    <div style="max-height: 65vh; overflow-y: auto; padding-right: 6px;">
-      <PersonnelBasicForm
-        v-show="activeTab === 0"
-        :form="form"
-        :departments="personnelStore.departments"
-        :mapping="personnelStore.importMappingPersonnel"
-      />
-      <PersonnelTravelForm
-        v-show="activeTab === 1"
-        :form="form"
-      />
-      <PersonnelFamilyForm
-        v-show="activeTab === 2"
-        :form="form"
-      />
-      <PersonnelNotesForm
-        v-show="activeTab === 3"
-        :form="form"
-      />
+    <!-- Fixed Height Tab Contents Area to prevent jumping -->
+    <div style="height: 540px; max-height: 65vh; overflow-y: auto; padding-right: 8px;">
+      <!-- TAB 1: CÁN BỘ (Cá nhân, Đi nước ngoài, Kỷ luật & Lưu ý) -->
+      <div v-show="activeTab === 0" style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div>
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
+            A. THÔNG TIN CHUNG & CƯ TRÚ
+          </h4>
+          <PersonnelBasicForm
+            :form="form"
+            :departments="personnelStore.departments"
+            :mapping="personnelStore.importMappingPersonnel"
+          />
+        </div>
+
+        <div>
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
+            B. LỊCH SỬ ĐI NƯỚC NGOÀI ({{ form.trips?.length || 0 }} chuyến)
+          </h4>
+          <PersonnelTravelForm :form="form" />
+        </div>
+
+        <div>
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
+            C. LỊCH SỬ KỶ LUẬT & LƯU Ý CHÍNH TRỊ
+          </h4>
+          <PersonnelNotesForm :form="form" />
+        </div>
+      </div>
+
+      <!-- TAB 2: THÂN NHÂN -->
+      <div v-show="activeTab === 1">
+        <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
+          DANH SÁCH THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI
+        </h4>
+        <PersonnelFamilyForm :form="form" />
+      </div>
     </div>
 
     <template #footer>
@@ -203,6 +203,7 @@ const handleSave = async () => {
   saving.value = true;
   try {
     const saved = await personnelStore.savePerson(form.value);
+    alert('Lưu hồ sơ cán bộ thành công!');
     emit('saved', saved);
     visible.value = false;
   } catch (e) {

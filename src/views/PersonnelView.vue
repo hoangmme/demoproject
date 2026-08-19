@@ -1,6 +1,27 @@
 <template>
   <div class="app-content">
-    <div class="app-card">
+    <!-- Top-level Tab Switcher between Cán bộ (Cá nhân) & Thân nhân -->
+    <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
+      <Button
+        :label="'1. Quản lý Cán bộ (Cá nhân) (' + personnelStore.personnelList.length + ')'"
+        icon="pi pi-user"
+        :severity="mainTab === 'canhan' ? 'primary' : 'secondary'"
+        :text="mainTab !== 'canhan'"
+        size="small"
+        @click="mainTab = 'canhan'"
+      />
+      <Button
+        :label="'2. Quản lý Thân nhân (' + totalRelativesCount + ')'"
+        icon="pi pi-users"
+        :severity="mainTab === 'thannhan' ? 'primary' : 'secondary'"
+        :text="mainTab !== 'thannhan'"
+        size="small"
+        @click="mainTab = 'thannhan'"
+      />
+    </div>
+
+    <!-- TAB 1: DANH SÁCH CÁN BỘ (CÁ NHÂN) -->
+    <div v-show="mainTab === 'canhan'" class="app-card">
       <!-- Toolbar -->
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -80,7 +101,7 @@
         </div>
       </div>
 
-      <!-- PrimeVue DataTable -->
+      <!-- PrimeVue DataTable with Fixed Column Widths -->
       <DataTable
         v-model:selection="selectedPersonnel"
         :value="filteredPersonnel"
@@ -92,10 +113,10 @@
         responsiveLayout="scroll"
         stripedRows
         class="p-datatable-sm"
-        tableStyle="min-width: 50rem"
+        tableStyle="min-width: 60rem; table-layout: fixed;"
         @row-click="onRowClick"
       >
-        <Column selectionMode="multiple" headerStyle="width: 3rem" />
+        <Column selectionMode="multiple" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
 
         <Column
           v-for="col in activeColumns"
@@ -103,6 +124,8 @@
           :field="col.id"
           :header="col.label"
           sortable
+          :headerStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
+          :bodyStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
         >
           <template #body="{ data }">
             <!-- Code column -->
@@ -132,7 +155,7 @@
         </Column>
 
         <!-- Actions column -->
-        <Column header="Thao tác" headerStyle="width: 145px; min-width: 145px; text-align: right;" bodyStyle="width: 145px; min-width: 145px; text-align: right;">
+        <Column header="Thao tác" :headerStyle="{ width: '145px', minWidth: '145px', textAlign: 'right' }" :bodyStyle="{ width: '145px', minWidth: '145px', textAlign: 'right' }">
           <template #body="{ data }">
             <div class="table-actions">
               <Button
@@ -151,6 +174,64 @@
                 @click.stop="handleDeleteOne(data)"
               />
             </div>
+          </template>
+        </Column>
+      </DataTable>
+    </div>
+
+    <!-- TAB 2: DANH SÁCH THÂN NHÂN -->
+    <div v-show="mainTab === 'thannhan'" class="app-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">
+          Danh sách Thân nhân có yếu tố nước ngoài ({{ flattenedRelatives.length }} người)
+        </span>
+        <Button
+          label="Xuất Excel Thân nhân"
+          icon="pi pi-file-excel"
+          severity="secondary"
+          outlined
+          size="small"
+          @click="handleExportRelatives"
+          style="font-size: 0.8rem;"
+        />
+      </div>
+
+      <DataTable
+        :value="flattenedRelatives"
+        paginator
+        :rows="15"
+        :rowsPerPageOptions="[10, 15, 25, 50]"
+        responsiveLayout="scroll"
+        stripedRows
+        class="p-datatable-sm"
+        tableStyle="min-width: 60rem; table-layout: fixed;"
+      >
+        <Column field="stt" header="STT" :headerStyle="{ width: '60px', minWidth: '60px' }" :bodyStyle="{ width: '60px', minWidth: '60px' }" />
+        <Column field="parentName" header="Cán bộ liên quan" sortable :headerStyle="{ width: '200px', minWidth: '200px' }">
+          <template #body="{ data }">
+            <strong style="cursor: pointer;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
+            <div style="font-size: 0.75rem; color: #6b7280;">{{ data.parentDepartment }}</div>
+          </template>
+        </Column>
+        <Column field="relationshipName" header="Mối quan hệ" sortable :headerStyle="{ width: '130px', minWidth: '130px' }">
+          <template #body="{ data }">
+            <span class="badge-pill badge-purple">{{ data.relationshipName || '-' }}</span>
+          </template>
+        </Column>
+        <Column field="relativeName" header="Họ và tên thân nhân" sortable :headerStyle="{ width: '180px', minWidth: '180px' }" />
+        <Column field="birthYear" header="Năm sinh" sortable :headerStyle="{ width: '110px', minWidth: '110px' }" />
+        <Column field="countryName" header="Quốc gia" sortable :headerStyle="{ width: '140px', minWidth: '140px' }" />
+        <Column field="occupation" header="Nghề nghiệp / Nơi làm việc" sortable :headerStyle="{ width: '200px', minWidth: '200px' }" />
+        <Column header="Thao tác" :headerStyle="{ width: '110px', minWidth: '110px', textAlign: 'right' }" :bodyStyle="{ textAlign: 'right' }">
+          <template #body="{ data }">
+            <Button
+              label="Hồ sơ"
+              size="small"
+              outlined
+              severity="info"
+              @click="openEditDialog(data.parentPerson)"
+              style="padding: 2px 8px; font-size: 0.75rem;"
+            />
           </template>
         </Column>
       </DataTable>
@@ -233,6 +314,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 
+const mainTab = ref('canhan'); // 'canhan' or 'thannhan'
 const searchQuery = ref('');
 const selectedPersonnel = ref([]);
 const isDialogOpen = ref(false);
@@ -253,7 +335,7 @@ onMounted(async () => {
 const activeColumns = computed(() => {
   return personnelStore.visibleColumns.map((id) => {
     const found = personnelStore.allAvailableColumns.find((c) => c.id === id);
-    return found || { id, label: id };
+    return found || { id, label: id, width: '160px' };
   });
 });
 
@@ -269,6 +351,33 @@ const filteredPersonnel = computed(() => {
       (p.birthYear && String(p.birthYear).includes(q))
     );
   });
+});
+
+const totalRelativesCount = computed(() => {
+  return personnelStore.personnelList.reduce((acc, p) => acc + (p.relatives?.length || 0), 0);
+});
+
+const flattenedRelatives = computed(() => {
+  const list = [];
+  let stt = 1;
+  personnelStore.personnelList.forEach((p) => {
+    if (Array.isArray(p.relatives)) {
+      p.relatives.forEach((r) => {
+        list.push({
+          stt: stt++,
+          parentPerson: p,
+          parentName: p.name,
+          parentDepartment: personnelStore.getDepartmentName(p.departmentId),
+          relationshipName: r.relationshipName || '-',
+          relativeName: r.relativeName || '-',
+          birthYear: r.birthYear || '-',
+          countryName: r.countryName || '-',
+          occupation: r.occupation || '-',
+        });
+      });
+    }
+  });
+  return list;
 });
 
 const getDisplayValue = (person, colId) => {
@@ -338,6 +447,20 @@ const handleExportExcel = () => {
   exportToExcel(exportData, 'Danh_sach_Can_bo');
 };
 
+const handleExportRelatives = () => {
+  const exportData = flattenedRelatives.value.map((r) => ({
+    'STT': r.stt,
+    'Cán bộ liên quan': r.parentName,
+    'Phòng ban': r.parentDepartment,
+    'Mối quan hệ': r.relationshipName,
+    'Họ và tên thân nhân': r.relativeName,
+    'Năm sinh': r.birthYear,
+    'Quốc gia': r.countryName,
+    'Nghề nghiệp': r.occupation,
+  }));
+  exportToExcel(exportData, 'Danh_sach_Than_nhan');
+};
+
 const openImportModal = () => {
   importPreviewRows.value = [];
   isImportOpen.value = true;
@@ -348,7 +471,6 @@ const onImportFileSelected = async (e) => {
   if (!file) return;
   try {
     const rows = await parseExcelFile(file);
-    // filter header or empty rows
     importPreviewRows.value = rows.filter((r) => r && r.length > 0);
   } catch (err) {
     alert('Lỗi đọc tệp Excel: ' + err.message);
@@ -360,7 +482,6 @@ const executeImport = async () => {
   importing.value = true;
   let count = 0;
   try {
-    // Determine header row index
     let startIdx = 0;
     const firstRowStr = importPreviewRows.value[0]?.join(' ').toLowerCase() || '';
     if (firstRowStr.includes('họ và tên') || firstRowStr.includes('họ tên') || firstRowStr.includes('stt')) {
@@ -379,10 +500,10 @@ const executeImport = async () => {
         cccd: String(row[4] || row[11] || ''),
         position: String(row[5] || row[8] || ''),
         hometown: String(row[6] || ''),
-        trips: '[]',
-        relatives: '[]',
-        flags: '{}',
-        custom_data: '{}',
+        trips: [],
+        relatives: [],
+        flags: {},
+        custom_data: {},
       };
       await createPersonnel(newPerson);
       count++;
