@@ -13,6 +13,25 @@
     </script>
     <style>
         [x-cloak] { display: none !important; }
+        .form-col-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin-left: -0.5rem;
+            margin-right: -0.5rem;
+            row-gap: 1rem;
+        }
+        .form-col-item {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            box-sizing: border-box;
+        }
+        @media (max-width: 640px) {
+            .form-col-item {
+                flex: 0 0 100% !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans text-gray-800 antialiased" x-data="appData()">
@@ -1039,11 +1058,11 @@
         <template x-if="!group.isMultiple">
             <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <h3 class="text-lg font-bold text-[#447f28] mb-4 flex items-center gap-2" x-text="group.group"></h3>
-                <div class="grid grid-cols-12 gap-4">
+                <div class="form-col-container">
                     <template x-for="col in group.columns" :key="col.id">
 
                                                     <template x-if="col.id !== 'stt'">
-                                                        <div :class="getColSpanClass(col)">
+                                                        <div class="form-col-item" :style="getColStyle(col)">
                                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                                 <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
@@ -1234,11 +1253,11 @@
                         <div class="relative p-5 border border-gray-200 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-colors">
                             <button x-show="formData[group.group].length > 1" type="button" @click="formData[group.group].splice(index, 1)" class="absolute -top-3 -right-3 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shadow-sm z-10"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
                             <h4 class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs" x-text="index + 1"></span> Mục</h4>
-                            <div class="grid grid-cols-12 gap-4">
+                            <div class="form-col-container">
                                 <template x-for="col in group.columns" :key="col.id">
 
                                                     <template x-if="col.id !== 'stt'">
-                                                        <div :class="getColSpanClass(col)">
+                                                        <div class="form-col-item" :style="getColStyle(col)">
                                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                                 <span x-text="col.label"></span> <span x-show="showColumns" class="text-blue-600 ml-1" x-text="(() => { let idx = getColIndex(col.id, false); return idx >= 0 ? '[Cột ' + (idx + 2) + ']' : ''; })()"></span>
                                                                 <template x-if="col.id.startsWith('custom_')"><span class="px-1 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded border border-purple-200 ml-1">Tùy chỉnh</span></template>
@@ -1446,11 +1465,11 @@
         <template x-for="group in importMappingRelative" :key="group.group">
             <div class="mb-4">
                 <h4 class="text-sm font-bold text-[#447f28] mb-3 border-b pb-1" x-text="group.group"></h4>
-                <div class="grid grid-cols-12 gap-4">
+                <div class="form-col-container">
                     <template x-for="col in group.columns" :key="col.id">
 
                         <template x-if="col.id !== 'stt'">
-                            <div :class="getColSpanClass(col)">
+                            <div class="form-col-item" :style="getColStyle(col)">
                                 <!-- Trường kế thừa từ Cán bộ (Cột 2, 3, 4, 5...) -->
                                 <template x-if="isParentInfoCol(col)">
                                     <div>
@@ -2160,16 +2179,16 @@
                     };
                     return titles[this.currentView] || titles['canbo'];
                 },
-                getColSpanClass(col) {
-                    if (!col) return 'col-span-12 sm:col-span-6 md:col-span-3';
+                getColStyle(col) {
+                    if (!col) return 'flex: 0 0 25%; max-width: 25%; width: 25%;';
                     const w = parseInt(col.width, 10);
-                    if (w === 100) return 'col-span-12';
-                    if (w === 75) return 'col-span-12 md:col-span-9';
-                    if (w === 50) return 'col-span-12 sm:col-span-6 md:col-span-6';
-                    if (w === 33) return 'col-span-12 sm:col-span-6 md:col-span-4';
-                    if (w === 25) return 'col-span-12 sm:col-span-6 md:col-span-3';
-                    if (col.format === 'text_loop') return 'col-span-12';
-                    return 'col-span-12 sm:col-span-6 md:col-span-3';
+                    if (w === 100) return 'flex: 0 0 100%; max-width: 100%; width: 100%;';
+                    if (w === 75) return 'flex: 0 0 75%; max-width: 75%; width: 75%;';
+                    if (w === 50) return 'flex: 0 0 50%; max-width: 50%; width: 50%;';
+                    if (w === 33) return 'flex: 0 0 33.3333%; max-width: 33.3333%; width: 33.3333%;';
+                    if (w === 25) return 'flex: 0 0 25%; max-width: 25%; width: 25%;';
+                    if (col.format === 'text_loop') return 'flex: 0 0 100%; max-width: 100%; width: 100%;';
+                    return 'flex: 0 0 25%; max-width: 25%; width: 25%;';
                 },
                 
                 canReadColumn(colId) {
