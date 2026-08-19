@@ -178,7 +178,7 @@
                                                 
                                                 <input x-model="colObj.label" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5" placeholder="Tên cột...">
                                                 
-                                                <select x-model="colObj.format" class="w-32 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 bg-green-50 text-green-700 font-medium">
+                                                <select x-model="colObj.format" class="w-36 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-xs py-1.5 bg-green-50 text-green-700 font-medium">
                                                     <option value="text">Văn bản</option>
                                                     <option value="number">Số</option>
                                                     <option value="date">Ngày tháng</option>
@@ -186,10 +186,11 @@
                                                     <option value="checkbox">Hộp kiểm (Nhiều lựa chọn)</option>
                                                     <option value="checkbox_text">Hộp kiểm + Nhập Text</option>
                                                     <option value="dropdown">Dropdown</option>
+                                                    <option value="file">Tệp đính kèm (File/Ảnh/PDF)</option>
                                                 </select>
                                                 
-                                                <template x-if="colObj.format === 'checkbox' || colObj.format === 'dropdown'">
-                                                    <input x-model="colObj.options" class="w-48 rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-xs py-1.5 bg-yellow-50" placeholder="Các tùy chọn, cách nhau bằng phẩy...">
+                                                <template x-if="colObj.format === 'checkbox' || colObj.format === 'dropdown' || colObj.format === 'checkbox_text'">
+                                                    <input x-model="colObj.options" class="w-52 rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-xs py-1.5 bg-yellow-50" :placeholder="colObj.format === 'checkbox_text' ? 'Tùy chọn (VD: Tự túc, Học bổng...)' : 'Các tùy chọn, cách nhau bằng phẩy...'">
                                                 </template>
                                                 
                                                 <template x-if="colObj.id && colObj.id.startsWith('custom_')">
@@ -1041,25 +1042,50 @@
                                                             
                                                             <template x-if="col.format === 'checkbox_text'">
                                                                 <div class="mt-1 space-y-2" x-data="{ 
-                                                                    state: (formData[col.id] && String(formData[col.id]).startsWith('Không')) ? 'no' : (formData[col.id] ? 'yes' : ''),
-                                                                    detail: (formData[col.id] === 'Không' || formData[col.id] === 'Có') ? '' : (formData[col.id] ? String(formData[col.id]).replace(/^Không:\s*/, '') : '')
+                                                                    get options() {
+                                                                        const opts = (col.options || '').split(',').map(s=>s.trim()).filter(Boolean);
+                                                                        return opts.length > 0 ? opts : ['Có', 'Không'];
+                                                                    },
+                                                                    state: '',
+                                                                    detail: '',
+                                                                    init() {
+                                                                        const val = formData[col.id] || '';
+                                                                        const opts = this.options;
+                                                                        const matched = opts.find(o => val === o || String(val).startsWith(o + ':') || String(val).startsWith(o + ' - '));
+                                                                        if (matched) {
+                                                                            this.state = matched;
+                                                                            this.detail = String(val).replace(new RegExp('^' + matched + '[:\\-\\s]+'), '');
+                                                                        } else if (val) {
+                                                                            this.state = opts[0];
+                                                                            this.detail = val;
+                                                                        }
+                                                                    },
+                                                                    updateValue() {
+                                                                        if (!this.state) {
+                                                                            formData[col.id] = '';
+                                                                            return;
+                                                                        }
+                                                                        if (this.detail) {
+                                                                            formData[col.id] = this.state + ': ' + this.detail;
+                                                                        } else {
+                                                                            formData[col.id] = this.state;
+                                                                        }
+                                                                    }
                                                                 }">
-                                                                    <div class="flex items-center gap-4">
-                                                                        <label class="inline-flex items-center cursor-pointer">
-                                                                            <input type="radio" x-model="state" value="yes" @change="formData[col.id] = detail || 'Có'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                                            <span class="ml-1 text-xs text-gray-700">Có</span>
-                                                                        </label>
-                                                                        <label class="inline-flex items-center cursor-pointer">
-                                                                            <input type="radio" x-model="state" value="no" @change="formData[col.id] = detail ? (detail.startsWith('Không') ? detail : 'Không: ' + detail) : 'Không'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                                            <span class="ml-1 text-xs text-gray-700">Không</span>
-                                                                        </label>
+                                                                    <div class="flex flex-wrap items-center gap-3">
+                                                                        <template x-for="opt in options" :key="opt">
+                                                                            <label class="inline-flex items-center cursor-pointer">
+                                                                                <input type="radio" x-model="state" :value="opt" @change="updateValue()" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                                <span class="ml-1.5 text-xs text-gray-700 font-medium" x-text="opt"></span>
+                                                                            </label>
+                                                                        </template>
                                                                     </div>
                                                                     <div x-show="state !== ''">
                                                                         <input type="text" 
                                                                                x-model="detail" 
-                                                                               @input="formData[col.id] = state === 'yes' ? (detail || 'Có') : (detail ? (detail.startsWith('Không') ? detail : 'Không: ' + detail) : 'Không')"
+                                                                               @input="updateValue()"
                                                                                class="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
-                                                                               :placeholder="state === 'yes' ? 'Nhập chi tiết nội dung (Có)...' : 'Nhập chi tiết nội dung / lý do (Không)...'">
+                                                                               :placeholder="'Nhập chi tiết nội dung / ghi chú cho [' + state + ']...'">
                                                                     </div>
                                                                 </div>
                                                             </template>
@@ -1106,6 +1132,42 @@
                                                                     <button @click="items.push('')" class="text-xs text-blue-600 hover:underline mt-1 font-medium">+ Thêm dòng</button>
                                                                 </div>
                                                             </template>
+
+                                                            <template x-if="col.format === 'file'">
+                                                                <div class="mt-1" x-data="{ 
+                                                                    get fileData() {
+                                                                        const val = formData[col.id];
+                                                                        if (!val) return null;
+                                                                        if (typeof val === 'object') return val;
+                                                                        if (typeof val === 'string' && val.startsWith('{')) {
+                                                                            try { return JSON.parse(val); } catch(e) { return { name: 'Tệp đính kèm', url: val }; }
+                                                                        }
+                                                                        return { name: 'Tệp đính kèm', url: val.startsWith('http') ? val : `${API_URL}/assets/${val}` };
+                                                                    }
+                                                                }">
+                                                                    <template x-if="fileData">
+                                                                        <div class="flex items-center justify-between p-2 border border-green-200 bg-green-50 rounded-lg">
+                                                                            <div class="flex items-center gap-2 overflow-hidden mr-2">
+                                                                                <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                                                <a :href="fileData.url" target="_blank" class="text-xs text-green-800 font-medium hover:underline truncate" x-text="fileData.name || 'Xem tệp'"></a>
+                                                                            </div>
+                                                                            <div class="flex items-center gap-1">
+                                                                                <a :href="fileData.url" target="_blank" class="text-[10px] bg-white border border-green-300 text-green-700 hover:bg-green-100 px-2 py-0.5 rounded font-medium shadow-xs">Xem</a>
+                                                                                <button type="button" @click="formData[col.id] = null" class="text-[10px] bg-white border border-red-200 text-red-600 hover:bg-red-50 px-2 py-0.5 rounded font-medium shadow-xs" title="Xóa tệp">Xóa</button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
+                                                                    <template x-if="!fileData">
+                                                                        <div class="relative">
+                                                                            <label class="flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-blue-400 bg-gray-50 hover:bg-blue-50/50 rounded-lg p-2 cursor-pointer transition-colors">
+                                                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                                                                <span class="text-xs text-gray-600 font-medium">Tải lên File/Ảnh/PDF...</span>
+                                                                                <input type="file" @change="handleFileUpload($event, formData, col.id)" class="sr-only" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip">
+                                                                            </label>
+                                                                        </div>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
                                                             
                                                             <template x-if="col.format === 'text'">
                                                                 <input type="text" x-model="formData[col.id]" class="w-full border border-gray-300 rounded px-2 py-1 text-xs mt-1">
@@ -1141,25 +1203,50 @@
                                                             
                                                             <template x-if="col.format === 'checkbox_text'">
                                                                 <div class="mt-1 space-y-2" x-data="{ 
-                                                                    state: (t[col.id] && String(t[col.id]).startsWith('Không')) ? 'no' : (t[col.id] ? 'yes' : ''),
-                                                                    detail: (t[col.id] === 'Không' || t[col.id] === 'Có') ? '' : (t[col.id] ? String(t[col.id]).replace(/^Không:\s*/, '') : '')
+                                                                    get options() {
+                                                                        const opts = (col.options || '').split(',').map(s=>s.trim()).filter(Boolean);
+                                                                        return opts.length > 0 ? opts : ['Có', 'Không'];
+                                                                    },
+                                                                    state: '',
+                                                                    detail: '',
+                                                                    init() {
+                                                                        const val = t[col.id] || '';
+                                                                        const opts = this.options;
+                                                                        const matched = opts.find(o => val === o || String(val).startsWith(o + ':') || String(val).startsWith(o + ' - '));
+                                                                        if (matched) {
+                                                                            this.state = matched;
+                                                                            this.detail = String(val).replace(new RegExp('^' + matched + '[:\\-\\s]+'), '');
+                                                                        } else if (val) {
+                                                                            this.state = opts[0];
+                                                                            this.detail = val;
+                                                                        }
+                                                                    },
+                                                                    updateValue() {
+                                                                        if (!this.state) {
+                                                                            t[col.id] = '';
+                                                                            return;
+                                                                        }
+                                                                        if (this.detail) {
+                                                                            t[col.id] = this.state + ': ' + this.detail;
+                                                                        } else {
+                                                                            t[col.id] = this.state;
+                                                                        }
+                                                                    }
                                                                 }">
-                                                                    <div class="flex items-center gap-4">
-                                                                        <label class="inline-flex items-center cursor-pointer">
-                                                                            <input type="radio" x-model="state" value="yes" @change="t[col.id] = detail || 'Có'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                                            <span class="ml-1 text-xs text-gray-700">Có</span>
-                                                                        </label>
-                                                                        <label class="inline-flex items-center cursor-pointer">
-                                                                            <input type="radio" x-model="state" value="no" @change="t[col.id] = detail ? (detail.startsWith('Không') ? detail : 'Không: ' + detail) : 'Không'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                                            <span class="ml-1 text-xs text-gray-700">Không</span>
-                                                                        </label>
+                                                                    <div class="flex flex-wrap items-center gap-3">
+                                                                        <template x-for="opt in options" :key="opt">
+                                                                            <label class="inline-flex items-center cursor-pointer">
+                                                                                <input type="radio" x-model="state" :value="opt" @change="updateValue()" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                                <span class="ml-1.5 text-xs text-gray-700 font-medium" x-text="opt"></span>
+                                                                            </label>
+                                                                        </template>
                                                                     </div>
                                                                     <div x-show="state !== ''">
                                                                         <input type="text" 
                                                                                x-model="detail" 
-                                                                               @input="t[col.id] = state === 'yes' ? (detail || 'Có') : (detail ? (detail.startsWith('Không') ? detail : 'Không: ' + detail) : 'Không')"
+                                                                               @input="updateValue()"
                                                                                class="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
-                                                                               :placeholder="state === 'yes' ? 'Nhập chi tiết nội dung (Có)...' : 'Nhập chi tiết nội dung / lý do (Không)...'">
+                                                                               :placeholder="'Nhập chi tiết nội dung / ghi chú cho [' + state + ']...'">
                                                                     </div>
                                                                 </div>
                                                             </template>
@@ -1204,6 +1291,42 @@
                                                                         </div>
                                                                     </template>
                                                                     <button @click="items.push('')" class="text-xs text-blue-600 hover:underline mt-1 font-medium">+ Thêm dòng</button>
+                                                                </div>
+                                                            </template>
+
+                                                            <template x-if="col.format === 'file'">
+                                                                <div class="mt-1" x-data="{ 
+                                                                    get fileData() {
+                                                                        const val = t[col.id];
+                                                                        if (!val) return null;
+                                                                        if (typeof val === 'object') return val;
+                                                                        if (typeof val === 'string' && val.startsWith('{')) {
+                                                                            try { return JSON.parse(val); } catch(e) { return { name: 'Tệp đính kèm', url: val }; }
+                                                                        }
+                                                                        return { name: 'Tệp đính kèm', url: val.startsWith('http') ? val : `${API_URL}/assets/${val}` };
+                                                                    }
+                                                                }">
+                                                                    <template x-if="fileData">
+                                                                        <div class="flex items-center justify-between p-2 border border-green-200 bg-green-50 rounded-lg">
+                                                                            <div class="flex items-center gap-2 overflow-hidden mr-2">
+                                                                                <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                                                <a :href="fileData.url" target="_blank" class="text-xs text-green-800 font-medium hover:underline truncate" x-text="fileData.name || 'Xem tệp'"></a>
+                                                                            </div>
+                                                                            <div class="flex items-center gap-1">
+                                                                                <a :href="fileData.url" target="_blank" class="text-[10px] bg-white border border-green-300 text-green-700 hover:bg-green-100 px-2 py-0.5 rounded font-medium shadow-xs">Xem</a>
+                                                                                <button type="button" @click="t[col.id] = null" class="text-[10px] bg-white border border-red-200 text-red-600 hover:bg-red-50 px-2 py-0.5 rounded font-medium shadow-xs" title="Xóa tệp">Xóa</button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
+                                                                    <template x-if="!fileData">
+                                                                        <div class="relative">
+                                                                            <label class="flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-blue-400 bg-gray-50 hover:bg-blue-50/50 rounded-lg p-2 cursor-pointer transition-colors">
+                                                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                                                                <span class="text-xs text-gray-600 font-medium">Tải lên File/Ảnh/PDF...</span>
+                                                                                <input type="file" @change="handleFileUpload($event, t, col.id)" class="sr-only" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip">
+                                                                            </label>
+                                                                        </div>
+                                                                    </template>
                                                                 </div>
                                                             </template>
                                                             
@@ -1271,25 +1394,50 @@
                                         
                                         <template x-if="col.format === 'checkbox_text'">
                                             <div class="mt-1 space-y-2" x-data="{ 
-                                                state: (rel[col.id] && String(rel[col.id]).startsWith('Không')) ? 'no' : (rel[col.id] ? 'yes' : ''),
-                                                detail: (rel[col.id] === 'Không' || rel[col.id] === 'Có') ? '' : (rel[col.id] ? String(rel[col.id]).replace(/^Không:\s*/, '') : '')
+                                                get options() {
+                                                    const opts = (col.options || '').split(',').map(s=>s.trim()).filter(Boolean);
+                                                    return opts.length > 0 ? opts : ['Có', 'Không'];
+                                                },
+                                                state: '',
+                                                detail: '',
+                                                init() {
+                                                    const val = rel[col.id] || '';
+                                                    const opts = this.options;
+                                                    const matched = opts.find(o => val === o || String(val).startsWith(o + ':') || String(val).startsWith(o + ' - '));
+                                                    if (matched) {
+                                                        this.state = matched;
+                                                        this.detail = String(val).replace(new RegExp('^' + matched + '[:\\-\\s]+'), '');
+                                                    } else if (val) {
+                                                        this.state = opts[0];
+                                                        this.detail = val;
+                                                    }
+                                                },
+                                                updateValue() {
+                                                    if (!this.state) {
+                                                        rel[col.id] = '';
+                                                        return;
+                                                    }
+                                                    if (this.detail) {
+                                                        rel[col.id] = this.state + ': ' + this.detail;
+                                                    } else {
+                                                        rel[col.id] = this.state;
+                                                    }
+                                                }
                                             }">
-                                                <div class="flex items-center gap-4">
-                                                    <label class="inline-flex items-center cursor-pointer">
-                                                        <input type="radio" x-model="state" value="yes" @change="rel[col.id] = detail || 'Có'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                        <span class="ml-1 text-xs text-gray-700">Có</span>
-                                                    </label>
-                                                    <label class="inline-flex items-center cursor-pointer">
-                                                        <input type="radio" x-model="state" value="no" @change="rel[col.id] = detail ? (detail.startsWith('Không') ? detail : 'Không: ' + detail) : 'Không'" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                        <span class="ml-1 text-xs text-gray-700">Không</span>
-                                                    </label>
+                                                <div class="flex flex-wrap items-center gap-3">
+                                                    <template x-for="opt in options" :key="opt">
+                                                        <label class="inline-flex items-center cursor-pointer">
+                                                            <input type="radio" x-model="state" :value="opt" @change="updateValue()" class="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                            <span class="ml-1.5 text-xs text-gray-700 font-medium" x-text="opt"></span>
+                                                        </label>
+                                                    </template>
                                                 </div>
                                                 <div x-show="state !== ''">
                                                     <input type="text" 
                                                            x-model="detail" 
-                                                           @input="rel[col.id] = state === 'yes' ? (detail || 'Có') : (detail ? (detail.startsWith('Không') ? detail : 'Không: ' + detail) : 'Không')"
+                                                           @input="updateValue()"
                                                            class="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
-                                                           :placeholder="state === 'yes' ? 'Nhập chi tiết nội dung (Có)...' : 'Nhập chi tiết nội dung / lý do (Không)...'">
+                                                           :placeholder="'Nhập chi tiết nội dung / ghi chú cho [' + state + ']...'">
                                                 </div>
                                             </div>
                                         </template>
@@ -1334,6 +1482,42 @@
                                                     </div>
                                                 </template>
                                                 <button @click="items.push('')" class="text-xs text-blue-600 hover:underline mt-1 font-medium">+ Thêm dòng</button>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="col.format === 'file'">
+                                            <div class="mt-1" x-data="{ 
+                                                get fileData() {
+                                                    const val = rel[col.id];
+                                                    if (!val) return null;
+                                                    if (typeof val === 'object') return val;
+                                                    if (typeof val === 'string' && val.startsWith('{')) {
+                                                        try { return JSON.parse(val); } catch(e) { return { name: 'Tệp đính kèm', url: val }; }
+                                                    }
+                                                    return { name: 'Tệp đính kèm', url: val.startsWith('http') ? val : `${API_URL}/assets/${val}` };
+                                                }
+                                            }">
+                                                <template x-if="fileData">
+                                                    <div class="flex items-center justify-between p-2 border border-green-200 bg-green-50 rounded-lg">
+                                                        <div class="flex items-center gap-2 overflow-hidden mr-2">
+                                                            <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                            <a :href="fileData.url" target="_blank" class="text-xs text-green-800 font-medium hover:underline truncate" x-text="fileData.name || 'Xem tệp'"></a>
+                                                        </div>
+                                                        <div class="flex items-center gap-1">
+                                                            <a :href="fileData.url" target="_blank" class="text-[10px] bg-white border border-green-300 text-green-700 hover:bg-green-100 px-2 py-0.5 rounded font-medium shadow-xs">Xem</a>
+                                                            <button type="button" @click="rel[col.id] = null" class="text-[10px] bg-white border border-red-200 text-red-600 hover:bg-red-50 px-2 py-0.5 rounded font-medium shadow-xs" title="Xóa tệp">Xóa</button>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!fileData">
+                                                    <div class="relative">
+                                                        <label class="flex items-center justify-center gap-2 border border-dashed border-gray-300 hover:border-blue-400 bg-gray-50 hover:bg-blue-50/50 rounded-lg p-2 cursor-pointer transition-colors">
+                                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                                            <span class="text-xs text-gray-600 font-medium">Tải lên File/Ảnh/PDF...</span>
+                                                            <input type="file" @change="handleFileUpload($event, rel, col.id)" class="sr-only" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip">
+                                                        </label>
+                                                    </div>
+                                                </template>
                                             </div>
                                         </template>
                                         
@@ -2999,6 +3183,44 @@
                     if (l.includes('chức vụ')) return this.formData.positionName || this.formData.position || '';
                     if (l.includes('đơn vị') || l.includes('phòng')) return this.getDepartmentName(this.formData.departmentId) || this.formData.departmentName || '';
                     return '';
+                },
+                
+                async handleFileUpload(event, targetObj, key) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
+                    try {
+                        const form = new FormData();
+                        form.append('file', file);
+                        const res = await fetch(`${API_URL}/files`, {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer mvp-static-token-999' },
+                            body: form
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            const f = data.data;
+                            targetObj[key] = {
+                                id: f.id,
+                                name: f.filename_download || file.name,
+                                type: f.type || file.type,
+                                url: `${API_URL}/assets/${f.id}`
+                            };
+                            return;
+                        }
+                    } catch(e) {
+                        console.warn("Directus file upload fallback to base64", e);
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        targetObj[key] = {
+                            name: file.name,
+                            type: file.type,
+                            url: e.target.result
+                        };
+                    };
+                    reader.readAsDataURL(file);
                 },
 
                 async renumberPersonnelCodes() {
