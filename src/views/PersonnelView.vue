@@ -1317,14 +1317,20 @@ const executeImport = async () => {
         if (cccd) pByCccd[String(cccd).trim()] = p;
       });
 
-      // Lookup existing relatives strictly by cccdthannhan
+      // Lookup existing relatives by cccdthannhan and by (parentCccd + relativeName)
       const existingRelatives = [...(personnelStore.relativesList || [])];
       const relByCccd = {};
+      const relByParentAndName = {};
 
       existingRelatives.forEach((r) => {
         const rCccd = String(r.cccdthannhan || r.custom_data?.cccdthannhan || r.cccd || '').trim();
         if (rCccd) {
           relByCccd[rCccd] = r;
+        }
+        const pCccd = String(r.cccd_can_bo || r.custom_data?.cccd_can_bo || '').trim();
+        const rName = normalizeKey(r.relativeName || r.name || r.custom_data?.relativeName || '');
+        if (pCccd && rName) {
+          relByParentAndName[`${pCccd}_${rName}`] = r;
         }
       });
 
@@ -1336,6 +1342,8 @@ const executeImport = async () => {
         let relCccd = '';
         let relativeName = '';
         let relationshipName = '';
+        let parentName = '';
+        let parentPosition = '';
         const relData = {};
 
         headerRow.forEach((rawHeader, colIdx) => {
@@ -1343,6 +1351,7 @@ const executeImport = async () => {
           if (!val) return; // Ô trống -> Bỏ qua
 
           const hKey = normalizeKey(rawHeader);
+          const rawHeaderLower = String(rawHeader || '').toLowerCase();
 
           // 1. Ưu tiên 1: Khớp chính xác 100% theo Tên nhãn hoặc ID
           let matched = relColByLabel[hKey] || relColById[hKey];
@@ -1358,56 +1367,82 @@ const executeImport = async () => {
           if (matched) {
             const fId = matched.id;
             relData[fId] = val;
-            if (fId === 'cccd_can_bo' || fId === 'parentCccd' || fId === 'cccdparent') parentCccd = val;
-            if (fId === 'cccdthannhan' || fId === 'cccd_than_nhan' || fId === 'cccd') relCccd = val;
+            if (fId === 'cccd_can_bo' || fId === 'parentCccd' || fId === 'parentPersonnelCccd') parentCccd = val;
+            if (fId === 'cccdthannhan' || fId === 'cccd_than_nhan') relCccd = val;
             if (fId === 'relationshipName' || fId === 'relationship' || fId === 'moi_quan_he') relationshipName = val;
             if (fId === 'relativeName' || fId === 'name' || fId === 'ten_than_nhan') relativeName = val;
+            if (fId === 'parentName' || fId === 'parentPersonnelName') parentName = val;
+            if (fId === 'parentPosition' || fId === 'chuc_vu_can_bo') parentPosition = val;
           }
 
-          // Khớp trực tiếp theo ID trong tiêu đề cột
-          if (hKey === 'cccdcanbo' || hKey === 'cccd_can_bo' || hKey.includes('cccd_can_bo')) parentCccd = val;
-          if (hKey === 'cccdthannhan' || hKey === 'cccd_than_nhan' || hKey.includes('cccdthannhan')) relCccd = val;
+          // Phân biệt chính xác giữa CCCD Cán bộ và CCCD Thân nhân
+          if (rawHeaderLower.includes('cán bộ') || rawHeaderLower.includes('can bo') || hKey.includes('cccd_can_bo') || hKey === 'cccdcanbo') {
+            if (rawHeaderLower.includes('cccd') || rawHeaderLower.includes('định danh') || rawHeaderLower.includes('dinh danh')) {
+              parentCccd = val;
+            }
+          } else if (rawHeaderLower.includes('thân nhân') || rawHeaderLower.includes('than nhan') || hKey.includes('cccdthannhan') || hKey === 'cccdthannhan') {
+            if (rawHeaderLower.includes('cccd') || rawHeaderLower.includes('định danh') || rawHeaderLower.includes('dinh danh')) {
+              relCccd = val;
+            }
+          } else if (hKey === 'cccd' || hKey === 'socccd' || rawHeaderLower === 'số cccd' || rawHeaderLower === 'cccd') {
+            // Nếu là cột CCCD đơn thuần: kiểm tra nếu chưa có relCccd thì gán
+            if (!relCccd) relCccd = val;
+          }
         });
 
-        // Fallback column positions for Relative Name
-        if (!relativeName) relativeName = String(row[6] || row[4] || row[3] || row[1] || '').trim();
+        // Tự động nhận diện Tên thân nhân nếu chưa có
+        if (!relativeName && relData['relativeName']) relativeName = relData['relativeName'];
+        if (!relativeName && row[6]) relativeName = String(row[6]).trim();
         if (!relativeName || relativeName.toLowerCase() === 'họ và tên thân nhân') continue;
 
         if (!parentCccd && relData['cccd_can_bo']) parentCccd = relData['cccd_can_bo'];
         if (!parentCccd && row[1] && String(row[1]).length >= 9) parentCccd = String(row[1]).trim();
 
         const cleanParentCccd = String(parentCccd || relData['cccd_can_bo'] || '').trim();
-        const cleanRelCccd = String(relCccd || relData['cccdthannhan'] || '').trim();
+        let cleanRelCccd = String(relCccd || relData['cccdthannhan'] || '').trim();
 
-        // NẾU THÂN NHÂN KHÔNG CÓ cccdthannhan HOẶC KHÔNG CÓ cccd_can_bo -> BỎ QUA NGAY LẬP TỨC
-        if (!cleanParentCccd || !cleanRelCccd) {
+        // Nếu CCCD thân nhân bị gán nhầm thành CCCD cán bộ thì tách ra
+        if (cleanRelCccd && cleanRelCccd === cleanParentCccd) {
+          cleanRelCccd = '';
+        }
+
+        // BẮT BUỘC PHẢI CÓ CCCD CÁN BỘ
+        if (!cleanParentCccd) {
           continue;
         }
 
         // Match parent strictly by cccd_can_bo -> cccdparent
         const parentPerson = pByCccd[cleanParentCccd] || null;
 
-        // So khớp / Gộp DUY NHẤT theo 1 KEY là cccdthannhan
-        const existingRel = relByCccd[cleanRelCccd] || null;
+        // So khớp / Gộp: Ưu tiên CCCD thân nhân nếu có, nếu không thì theo (CCCD Cán bộ + Tên thân nhân)
+        let existingRel = null;
+        if (cleanRelCccd && relByCccd[cleanRelCccd]) {
+          existingRel = relByCccd[cleanRelCccd];
+        } else if (cleanParentCccd && relativeName) {
+          const key = `${cleanParentCccd}_${normalizeKey(relativeName)}`;
+          if (relByParentAndName[key]) {
+            existingRel = relByParentAndName[key];
+          }
+        }
 
         if (existingRel) {
-          // GỘP / CẬP NHẬT THÂN NHÂN ĐÃ TỒN TẠI (Theo đúng key cccdthannhan)
+          // GỘP / CẬP NHẬT THÂN NHÂN ĐÃ TỒN TẠI
           const updatedPayload = {
             ...existingRel,
             ...existingRel.custom_data,
             ...relData,
             personnelId: parentPerson ? parentPerson.id : existingRel.personnelId,
             personnelCode: parentPerson ? parentPerson.code : existingRel.personnelCode,
-            personnelName: parentPerson ? parentPerson.name : existingRel.personnelName,
-            parentName: parentPerson ? parentPerson.name : existingRel.parentName,
-            parentPersonnelName: parentPerson ? parentPerson.name : existingRel.parentPersonnelName,
+            personnelName: parentPerson ? parentPerson.name : (parentName || existingRel.personnelName),
+            parentName: parentPerson ? parentPerson.name : (parentName || existingRel.parentName),
+            parentPersonnelName: parentPerson ? parentPerson.name : (parentName || existingRel.parentPersonnelName),
             cccd_can_bo: cleanParentCccd,
-            parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : existingRel.parentPosition,
+            parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : (parentPosition || existingRel.parentPosition),
             parentDepartment: parentPerson ? (parentPerson.departmentName || '') : existingRel.parentDepartment,
             relationshipName: relationshipName || existingRel.relationshipName,
             relativeName: relativeName || existingRel.relativeName,
             birthYear: formatExcelDate(relData['birthYear'] || row[8] || existingRel.birthYear || ''),
-            cccd: cleanRelCccd,
+            cccd: cleanRelCccd || existingRel.cccd || '',
             currentAddress: String(relData['currentAddress'] || row[13] || existingRel.currentAddress || ''),
             occupation: String(relData['occupation'] || row[11] || existingRel.occupation || ''),
             countryName: String(relData['countryName'] || relData['quoc_gia'] || relData['quocGia'] || existingRel.countryName || ''),
@@ -1420,8 +1455,8 @@ const executeImport = async () => {
               ...(existingRel.custom_data || {}),
               ...relData,
               cccd_can_bo: cleanParentCccd,
-              cccdthannhan: cleanRelCccd,
-              parentName: parentPerson?.name || existingRel.parentName || '',
+              cccdthannhan: cleanRelCccd || existingRel.custom_data?.cccdthannhan || '',
+              parentName: parentPerson?.name || parentName || existingRel.parentName || '',
             },
           };
           await apiClient.patch(`/items/appendix2/${existingRel.id}`, updatedPayload);
@@ -1434,11 +1469,11 @@ const executeImport = async () => {
             code: 'TN-' + String(nextTnIndex).padStart(5, '0'),
             personnelId: parentPerson ? parentPerson.id : '',
             personnelCode: parentPerson ? parentPerson.code : '',
-            personnelName: parentPerson ? parentPerson.name : 'Chưa liên kết',
-            parentName: parentPerson ? parentPerson.name : 'Chưa liên kết',
-            parentPersonnelName: parentPerson ? parentPerson.name : 'Chưa liên kết',
+            personnelName: parentPerson ? parentPerson.name : (parentName || 'Chưa liên kết'),
+            parentName: parentPerson ? parentPerson.name : (parentName || 'Chưa liên kết'),
+            parentPersonnelName: parentPerson ? parentPerson.name : (parentName || 'Chưa liên kết'),
             cccd_can_bo: cleanParentCccd,
-            parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : '',
+            parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : (parentPosition || ''),
             parentDepartment: parentPerson ? (parentPerson.departmentName || '') : '',
             relationshipName: relationshipName || String(row[5] || 'Thân nhân'),
             relativeName,
@@ -1456,11 +1491,14 @@ const executeImport = async () => {
               ...relData,
               cccd_can_bo: cleanParentCccd,
               cccdthannhan: cleanRelCccd,
-              parentName: parentPerson?.name || '',
+              parentName: parentPerson?.name || parentName || '',
             },
           };
           await apiClient.post('/items/appendix2', newRel);
-          relByCccd[cleanRelCccd] = newRel;
+          if (cleanRelCccd) relByCccd[cleanRelCccd] = newRel;
+          if (cleanParentCccd && relativeName) {
+            relByParentAndName[`${cleanParentCccd}_${normalizeKey(relativeName)}`] = newRel;
+          }
           relCreatedCount++;
         }
         count++;
