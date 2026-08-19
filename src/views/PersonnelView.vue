@@ -200,7 +200,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem;">
         <div style="display: flex; align-items: center; gap: 12px;">
           <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">
-            Danh sách Thân nhân có yếu tố nước ngoài ({{ flattenedRelatives.length }} người)
+            Danh sách Thân nhân liên quan ({{ flattenedRelatives.length }} người)
           </span>
           <Button
             v-if="selectedRelatives.length > 0"
@@ -291,18 +291,34 @@
         </Column>
         <Column field="relationshipName" header="Mối quan hệ" sortable :headerStyle="{ width: '130px', minWidth: '130px' }">
           <template #body="{ data }">
-            <span class="badge-pill badge-purple">{{ data.relationshipName || '-' }}</span>
+            <span class="badge-pill badge-purple">{{ data.relationshipName || data.relationship || data.moi_quan_he || '-' }}</span>
           </template>
         </Column>
-        <Column field="relativeName" header="Họ và tên thân nhân" sortable :headerStyle="{ width: '180px', minWidth: '180px' }" />
-        <Column field="birthYear" header="Năm sinh" sortable :headerStyle="{ width: '100px', minWidth: '100px' }" />
+        <Column field="relativeName" header="Họ và tên thân nhân" sortable :headerStyle="{ width: '180px', minWidth: '180px' }">
+          <template #body="{ data }">
+            <span style="font-weight: 600; color: #1e293b;">{{ data.relativeName || data.name || data.ten_than_nhan || '-' }}</span>
+          </template>
+        </Column>
+        <Column field="birthYear" header="Năm sinh" sortable :headerStyle="{ width: '100px', minWidth: '100px' }">
+          <template #body="{ data }">
+            {{ data.birthYear || data.nam_sinh || '-' }}
+          </template>
+        </Column>
         <Column field="countryName" header="Quốc gia" sortable :headerStyle="{ width: '130px', minWidth: '130px' }">
           <template #body="{ data }">
-            <span class="badge-pill badge-blue">{{ data.countryName || '-' }}</span>
+            <span class="badge-pill badge-blue">{{ data.countryName || data.quoc_gia || data.quocGia || data.country || '-' }}</span>
           </template>
         </Column>
-        <Column field="currentAddress" header="Nơi cư trú" sortable :headerStyle="{ width: '180px', minWidth: '180px' }" />
-        <Column field="occupation" header="Nghề nghiệp / Nơi làm việc" sortable :headerStyle="{ width: '200px', minWidth: '200px' }" />
+        <Column field="currentAddress" header="Nơi cư trú" sortable :headerStyle="{ width: '180px', minWidth: '180px' }">
+          <template #body="{ data }">
+            {{ data.currentAddress || data.noi_o_hien_nay || data.noiCuTru || data.dia_chi || '-' }}
+          </template>
+        </Column>
+        <Column field="occupation" header="Nghề nghiệp / Nơi làm việc" sortable :headerStyle="{ width: '200px', minWidth: '200px' }">
+          <template #body="{ data }">
+            {{ data.occupation || data.nghe_nghiep || data.job || '-' }}
+          </template>
+        </Column>
         
         <!-- Actions column (Centered with Chi tiết + Xóa) -->
         <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">

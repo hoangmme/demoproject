@@ -2,7 +2,7 @@
   <div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
       <span style="font-size: 0.85rem; font-weight: 600; color: #374151;">
-        Danh sách thân nhân có yếu tố nước ngoài ({{ relatives.length }} người)
+        Danh sách thân nhân liên quan ({{ relatives.length }} người)
       </span>
       <Button
         label="Thêm Thân nhân"
@@ -15,7 +15,7 @@
     </div>
 
     <div v-if="relatives.length === 0" style="text-align: center; padding: 2rem; background: #f9fafb; border-radius: 8px; border: 1px dashed #d1d5db; color: #6b7280; font-size: 0.85rem;">
-      Chưa có thân nhân có yếu tố nước ngoài nào được ghi nhận. Nhấp <b>"+ Thêm Thân nhân"</b> để bổ sung.
+      Chưa có thân nhân liên quan nào được ghi nhận. Nhấp <b>"+ Thêm Thân nhân"</b> để bổ sung.
     </div>
 
     <div v-for="(rel, idx) in relatives" :key="idx" style="margin-bottom: 1.25rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
