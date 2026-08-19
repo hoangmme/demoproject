@@ -1317,20 +1317,14 @@ const executeImport = async () => {
         if (cccd) pByCccd[String(cccd).trim()] = p;
       });
 
-      // Lookup existing relatives by cccdthannhan and by (parentCccd + relativeName)
+      // Lookup existing relatives by cccdthannhan ONLY
       const existingRelatives = [...(personnelStore.relativesList || [])];
       const relByCccd = {};
-      const relByParentAndName = {};
 
       existingRelatives.forEach((r) => {
         const rCccd = String(r.cccdthannhan || r.custom_data?.cccdthannhan || r.cccd || '').trim();
         if (rCccd) {
           relByCccd[rCccd] = r;
-        }
-        const pCccd = String(r.cccd_can_bo || r.custom_data?.cccd_can_bo || '').trim();
-        const rName = normalizeKey(r.relativeName || r.name || r.custom_data?.relativeName || '');
-        if (pCccd && rName) {
-          relByParentAndName[`${pCccd}_${rName}`] = r;
         }
       });
 
@@ -1348,7 +1342,7 @@ const executeImport = async () => {
 
         headerRow.forEach((rawHeader, colIdx) => {
           const val = row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : '';
-          if (!val) return; // Ô trống -> Bỏ qua
+          if (!val) return;
 
           const hKey = normalizeKey(rawHeader);
           const rawHeaderLower = String(rawHeader || '').toLowerCase();
@@ -1384,7 +1378,7 @@ const executeImport = async () => {
             return;
           }
 
-          // 1. Ưu tiên 1: Khớp theo Tên nhãn hoặc ID
+          // Khớp theo Tên nhãn hoặc ID từ cấu hình
           let matched = relColByLabel[hKey] || relColById[hKey] || relColByNum[colNumber];
 
           if (matched) {
@@ -1427,15 +1421,10 @@ const executeImport = async () => {
         // Match parent strictly by cccd_can_bo -> cccdparent
         const parentPerson = pByCccd[cleanParentCccd] || null;
 
-        // So khớp / Gộp: Ưu tiên CCCD thân nhân nếu có, nếu không thì theo (CCCD Cán bộ + Tên thân nhân)
+        // Gộp: CHỈ DUY NHẤT theo CCCD thân nhân, KHÔNG fallback theo tên
         let existingRel = null;
         if (cleanRelCccd && relByCccd[cleanRelCccd]) {
           existingRel = relByCccd[cleanRelCccd];
-        } else if (cleanParentCccd && relativeName) {
-          const key = `${cleanParentCccd}_${normalizeKey(relativeName)}`;
-          if (relByParentAndName[key]) {
-            existingRel = relByParentAndName[key];
-          }
         }
 
         if (existingRel) {
@@ -1508,10 +1497,8 @@ const executeImport = async () => {
             },
           };
           await apiClient.post('/items/appendix2', newRel);
+          // Chỉ thêm vào relByCccd để tránh trùng CCCD, KHÔNG thêm vào relByParentAndName
           if (cleanRelCccd) relByCccd[cleanRelCccd] = newRel;
-          if (cleanParentCccd && relativeName) {
-            relByParentAndName[`${cleanParentCccd}_${normalizeKey(relativeName)}`] = newRel;
-          }
           relCreatedCount++;
         }
         count++;
