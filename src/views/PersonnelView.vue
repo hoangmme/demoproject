@@ -551,12 +551,28 @@ import {
   exportFullRelativesExcel,
   downloadPersonnelTemplate,
   downloadRelativeTemplate,
+  getSubOptionsList,
   parseExcelFile,
   readExcelWorkbook,
 } from '@/utils/excel';
 import { createPersonnel, updatePersonnel } from '@/api/personnel';
 import { logActivity } from '@/api/audit';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
+
+function formatExcelDate(val) {
+  if (!val) return '';
+  if (typeof val === 'number' || (!isNaN(val) && Number(val) > 1000 && !String(val).includes('/') && !String(val).includes('-'))) {
+    const num = Number(val);
+    if (num > 10000 && num < 100000) {
+      const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const y = date.getUTCFullYear();
+      return `${d}/${m}/${y}`;
+    }
+  }
+  return String(val).trim();
+}
 
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
@@ -896,16 +912,44 @@ const executeImport = async () => {
     const headerCols = headerRow.map((h) => normalizeKey(h));
 
     if (currentImportType.value === 'personnel') {
-      // Build mapping for Personnel fields
+      // 1. Build template column map from importMappingPersonnel
+      let currentColIdx = 0;
+      const colByNum = {};
       const allCols = [];
+
       (personnelStore.importMappingPersonnel || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
-          allCols.push({
-            id: c.id,
-            labelKey: normalizeKey(c.label || c.id),
-            group: g.group || '',
-            raw: c,
-          });
+          currentColIdx++;
+          const subOpts = getSubOptionsList(c);
+          if (subOpts.length > 1) {
+            subOpts.forEach((opt, sIdx) => {
+              const colNum = currentColIdx + sIdx;
+              const entry = {
+                id: c.id,
+                colNum: colNum,
+                subOpt: opt,
+                labelKey: normalizeKey(`${c.label || c.id} ${opt}`),
+                baseLabelKey: normalizeKey(c.label || c.id),
+                group: g.group || '',
+                raw: c,
+              };
+              colByNum[colNum] = entry;
+              allCols.push(entry);
+            });
+            currentColIdx += (subOpts.length - 1);
+          } else {
+            const entry = {
+              id: c.id,
+              colNum: currentColIdx,
+              subOpt: null,
+              labelKey: normalizeKey(c.label || c.id),
+              baseLabelKey: normalizeKey(c.label || c.id),
+              group: g.group || '',
+              raw: c,
+            };
+            colByNum[currentColIdx] = entry;
+            allCols.push(entry);
+          }
         });
       });
 
@@ -926,50 +970,87 @@ const executeImport = async () => {
         const trips = [];
         const flags = {};
         const currentTrip = {};
+        const checkboxValues = {};
 
-        headerCols.forEach((hKey, colIdx) => {
-          const val = row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : '';
-          if (!val) return;
+        headerRow.forEach((rawHeader, colIdx) => {
+          const rawCell = row[colIdx];
+          if (rawCell === undefined || rawCell === null) return;
+          const val = typeof rawCell === 'number' ? rawCell : String(rawCell).trim();
+          if (val === '') return;
 
-          // Find matching field in mapping
-          const matched = allCols.find((c) => c.labelKey === hKey || c.id.toLowerCase() === hKey || hKey.includes(c.labelKey) || c.labelKey.includes(hKey));
+          const hKey = normalizeKey(rawHeader);
+
+          // Tier 1: Check if rawHeader has [Cột N] or [Cot N]
+          let matched = null;
+          const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
+          if (colNumMatch && colByNum[Number(colNumMatch[1])]) {
+            matched = colByNum[Number(colNumMatch[1])];
+          }
+
+          // Tier 2: Fuzzy Label / ID matching
+          if (!matched) {
+            matched = allCols.find((c) => c.labelKey === hKey || c.id.toLowerCase() === hKey || hKey.includes(c.labelKey) || c.labelKey.includes(hKey) || hKey.includes(c.baseLabelKey));
+          }
+
           if (matched) {
             const fId = matched.id;
             const grp = String(matched.group || '');
+            let finalVal = val;
 
-            rowData[fId] = val;
-            customData[fId] = val;
+            // Date parsing
+            if (matched.raw?.format === 'date' || fId.toLowerCase().includes('date') || fId.toLowerCase().includes('year') || fId.toLowerCase().includes('sinh')) {
+              finalVal = formatExcelDate(val);
+            }
+
+            // Checkbox multi-options
+            if (matched.subOpt) {
+              const strVal = String(val).toLowerCase().trim();
+              if (['x', '1', 'có', 'co', 'v', 'true', 'yes', 'y'].includes(strVal) || strVal.includes(matched.subOpt.toLowerCase())) {
+                if (!checkboxValues[fId]) checkboxValues[fId] = [];
+                if (!checkboxValues[fId].includes(matched.subOpt)) {
+                  checkboxValues[fId].push(matched.subOpt);
+                }
+              } else if (strVal !== '') {
+                const combined = `${matched.subOpt}: ${val}`;
+                if (!checkboxValues[fId]) checkboxValues[fId] = [];
+                checkboxValues[fId].push(combined);
+              }
+              return;
+            }
+
+            rowData[fId] = finalVal;
+            customData[fId] = finalVal;
 
             if (grp.includes('Khối B') || grp.includes('Chuyến đi')) {
-              currentTrip[fId] = val;
+              currentTrip[fId] = finalVal;
             } else if (grp.includes('Khối C') || grp.includes('Lưu ý') || grp.includes('Kỷ luật')) {
-              flags[fId] = val;
+              flags[fId] = finalVal;
             }
 
             // Standard field aliases
             if (fId === 'positionName' || fId === 'position') {
-              rowData.position = val;
-              rowData.positionName = val;
-              customData.position = val;
-              customData.positionName = val;
+              rowData.position = finalVal;
+              rowData.positionName = finalVal;
+              customData.position = finalVal;
+              customData.positionName = finalVal;
             } else if (fId === 'departmentName' || fId === 'departmentId') {
-              rowData.departmentName = val;
-              customData.departmentName = val;
+              rowData.departmentName = finalVal;
+              customData.departmentName = finalVal;
             } else if (fId === 'hcCaNhan' || fId === 'passportPersonal') {
-              rowData.passportPersonal = val;
-              rowData.hcCaNhan = val;
-              customData.hcCaNhan = val;
-              customData.passportPersonal = val;
+              rowData.passportPersonal = finalVal;
+              rowData.hcCaNhan = finalVal;
+              customData.hcCaNhan = finalVal;
+              customData.passportPersonal = finalVal;
             } else if (fId === 'hcCongVu' || fId === 'passportOfficial') {
-              rowData.passportOfficial = val;
-              rowData.hcCongVu = val;
-              customData.hcCongVu = val;
-              customData.passportOfficial = val;
+              rowData.passportOfficial = finalVal;
+              rowData.hcCongVu = finalVal;
+              customData.hcCongVu = finalVal;
+              customData.passportOfficial = finalVal;
             } else if (fId === 'kqThamTra' || fId === 'tcctResult') {
-              rowData.tcctResult = val;
-              rowData.kqThamTra = val;
-              customData.kqThamTra = val;
-              customData.tcctResult = val;
+              rowData.tcctResult = finalVal;
+              rowData.kqThamTra = finalVal;
+              customData.kqThamTra = finalVal;
+              customData.tcctResult = finalVal;
             }
           } else if (hKey.includes('cccd') || hKey.includes('dinhdanh')) {
             rowData.cccd = val;
@@ -981,6 +1062,15 @@ const executeImport = async () => {
             rowData.code = val;
             customData.code = val;
           }
+        });
+
+        // Merge collected checkbox values
+        Object.keys(checkboxValues).forEach((fId) => {
+          const valJoined = checkboxValues[fId].join(', ');
+          rowData[fId] = valJoined;
+          customData[fId] = valJoined;
+          if (currentTrip && Object.keys(currentTrip).length > 0) currentTrip[fId] = valJoined;
+          if (flags) flags[fId] = valJoined;
         });
 
         if (Object.keys(currentTrip).length > 0) {
@@ -1054,6 +1144,24 @@ const executeImport = async () => {
       await logActivity('Import Excel Cán bộ', `Đã import ${count} cán bộ (Tạo mới: ${createdCount}, Cập nhật ghi đè theo CCCD: ${updatedCount})`);
     } else {
       // Relative Import: Match Parent Personnel by CCCD / Code / Name
+      let currentRelColIdx = 0;
+      const relColByNum = {};
+      const allRelCols = [];
+
+      (personnelStore.importMappingRelative || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          currentRelColIdx++;
+          const entry = {
+            id: c.id,
+            colNum: currentRelColIdx,
+            labelKey: normalizeKey(c.label || c.id),
+            raw: c,
+          };
+          relColByNum[currentRelColIdx] = entry;
+          allRelCols.push(entry);
+        });
+      });
+
       const pByCccd = {};
       const pByCode = {};
       const pByName = {};
@@ -1074,32 +1182,51 @@ const executeImport = async () => {
         let relationshipName = '';
         const relData = {};
 
-        headerCols.forEach((hKey, colIdx) => {
+        headerRow.forEach((rawHeader, colIdx) => {
           const val = row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : '';
           if (!val) return;
 
-          if (hKey.includes('cccdcanbo') || (hKey.includes('cccd') && hKey.includes('cb'))) {
-            parentCccd = val;
-          } else if (hKey.includes('macanbo') || hKey.includes('macb')) {
-            parentCode = val;
-          } else if (hKey.includes('tencanbo') || (hKey.includes('canbo') && !hKey.includes('than'))) {
-            parentName = val;
-          } else if (hKey.includes('moiquanhe') || hKey.includes('quanhe')) {
-            relationshipName = val;
-          } else if (hKey.includes('tenthan') || hKey.includes('hotenthan') || hKey.includes('thannhan')) {
-            relativeName = val;
+          const hKey = normalizeKey(rawHeader);
+
+          let matched = null;
+          const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
+          if (colNumMatch && relColByNum[Number(colNumMatch[1])]) {
+            matched = relColByNum[Number(colNumMatch[1])];
+          }
+          if (!matched) {
+            matched = allRelCols.find((c) => c.labelKey === hKey || c.id.toLowerCase() === hKey || hKey.includes(c.labelKey) || c.labelKey.includes(hKey));
+          }
+
+          if (matched) {
+            const fId = matched.id;
+            relData[fId] = val;
+            if (fId === 'parentPersonnelCccd' || fId === 'cccd_can_bo') parentCccd = val;
+            if (fId === 'parentPersonnelName') parentName = val;
+            if (fId === 'relationshipName') relationshipName = val;
+            if (fId === 'relativeName') relativeName = val;
           } else {
-            relData[hKey] = val;
+            if (hKey.includes('cccdcanbo') || (hKey.includes('cccd') && hKey.includes('cb'))) {
+              parentCccd = val;
+            } else if (hKey.includes('macanbo') || hKey.includes('macb')) {
+              parentCode = val;
+            } else if (hKey.includes('tencanbo') || (hKey.includes('canbo') && !hKey.includes('than'))) {
+              parentName = val;
+            } else if (hKey.includes('moiquanhe') || hKey.includes('quanhe')) {
+              relationshipName = val;
+            } else if (hKey.includes('tenthan') || hKey.includes('hotenthan') || hKey.includes('thannhan')) {
+              relativeName = val;
+            } else {
+              relData[hKey] = val;
+            }
           }
         });
 
         // Fallback column positions
-        if (!relativeName) relativeName = String(row[4] || row[3] || row[1] || '').trim();
+        if (!relativeName) relativeName = String(row[6] || row[4] || row[3] || row[1] || '').trim();
         if (!relativeName || relativeName.toLowerCase() === 'họ và tên thân nhân') continue;
 
-        if (!parentCccd && row[3] && String(row[3]).length >= 9) parentCccd = String(row[3]).trim();
+        if (!parentCccd && row[1] && String(row[1]).length >= 9) parentCccd = String(row[1]).trim();
         if (!parentName && row[2]) parentName = String(row[2]).trim();
-        if (!parentCode && row[1] && String(row[1]).startsWith('CB')) parentCode = String(row[1]).trim();
 
         // Match parent by CCCD -> Code -> Name
         const parentPerson = (parentCccd && pByCccd[parentCccd]) || (parentCode && pByCode[parentCode.toLowerCase()]) || (parentName && pByName[parentName.toLowerCase()]) || null;
@@ -1110,18 +1237,19 @@ const executeImport = async () => {
           code: 'TN-' + String(nextTnIndex).padStart(5, '0'),
           personnelId: parentPerson ? parentPerson.id : (parentCode || 'CB-UNKNOWN'),
           personnelName: parentPerson?.name || parentName || 'Chưa liên kết',
-          relationshipName: relationshipName || String(row[3] || 'Thân nhân'),
+          relationshipName: relationshipName || String(row[5] || 'Thân nhân'),
           relativeName,
-          birthYear: String(row[5] || relData['namsinh'] || ''),
-          cccd: String(row[6] || relData['cccd'] || ''),
-          currentAddress: String(row[7] || relData['noio'] || ''),
-          occupation: String(row[8] || relData['nghenghiep'] || ''),
-          countryName: String(row[9] || relData['quocgia'] || ''),
-          timeAbroad: String(row[10] || relData['thoigian'] || ''),
-          unitAbroad: String(row[11] || relData['coquan'] || ''),
-          fundingName: String(row[12] || relData['kinhphi'] || ''),
-          marriedToForeigner: String(row[13] || '').toLowerCase().includes('có') ? 1 : 0,
-          workInForeignCompany: String(row[14] || '').toLowerCase().includes('có') ? 1 : 0,
+          birthYear: formatExcelDate(relData['birthYear'] || row[8] || ''),
+          cccd: String(relData['cccd'] || row[15] || ''),
+          currentAddress: String(relData['currentAddress'] || row[13] || ''),
+          occupation: String(relData['occupation'] || row[11] || ''),
+          countryName: String(relData['countryName'] || relData['content'] || ''),
+          timeAbroad: String(relData['timeAbroad'] || relData['unitAbroad'] || ''),
+          unitAbroad: String(relData['fileNumber'] || ''),
+          fundingName: String(relData['fundingName'] || ''),
+          marriedToForeigner: String(relData['marriedToForeigner'] || '').toLowerCase().includes('có') ? 1 : 0,
+          workInForeignCompany: String(relData['workInForeignCompany'] || '').toLowerCase().includes('có') ? 1 : 0,
+          custom_data: relData,
         };
 
         await apiClient.post('/items/appendix2', newRel);

@@ -17,7 +17,7 @@ export const exportMultiSheetExcel = (sheets, fileName = 'Bao_cao_tong_hop') => 
 };
 
 export const getSubOptionsList = (col) => {
-  if (col.format === 'checkbox_text' && col.options) {
+  if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
     return String(col.options)
       .split(',')
       .map((s) => s.trim())
