@@ -43,8 +43,8 @@ import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const authStore = useAuthStore();
 
-const email = ref('admin@demo.com');
-const password = ref('321456');
+const email = ref('');
+const password = ref('');
 const loading = ref(false);
 
 const handleLogin = async () => {

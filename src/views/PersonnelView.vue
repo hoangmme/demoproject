@@ -284,8 +284,8 @@
           </template>
         </Column>
         <Column field="parentName" header="Cán bộ liên quan" sortable :headerStyle="{ width: '210px', minWidth: '210px' }">
-          <template #body="{ data, index }">
-            <div v-if="isFirstRelativeOfParent(data, index)">
+          <template #body="{ data }">
+            <div v-if="isFirstRelativeOfParent(data)">
               <strong style="cursor: pointer; color: #1f2937; font-size: 0.82rem;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
               <div v-if="data.parentPosition" style="font-size: 0.72rem; color: #6b7280;">{{ data.parentPosition }}</div>
               <div v-if="data.cccd_can_bo" style="font-size: 0.7rem; color: #64748b; font-family: monospace;">CCCD: {{ data.cccd_can_bo }}</div>
@@ -883,10 +883,11 @@ const handleRelativeDetail = (relData) => {
   }
 };
 
-const isFirstRelativeOfParent = (data, index) => {
-  if (index === 0) return true;
+const isFirstRelativeOfParent = (data) => {
   const list = filteredRelatives.value || [];
-  const prev = list[index - 1];
+  const actualIndex = list.findIndex((item) => item.id === data.id);
+  if (actualIndex <= 0) return true;
+  const prev = list[actualIndex - 1];
   if (!prev) return true;
   const curKey = String(data.cccd_can_bo || data.parentName || data.personnelId || '').trim();
   const prevKey = String(prev.cccd_can_bo || prev.parentName || prev.personnelId || '').trim();
