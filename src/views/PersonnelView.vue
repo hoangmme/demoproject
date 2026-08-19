@@ -1051,21 +1051,15 @@ const executeImport = async () => {
 
           const hKey = normalizeKey(rawHeader);
 
-          // 1. Khớp theo [Cột N]
-          let matched = null;
-          const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
-          if (colNumMatch && colByNum[Number(colNumMatch[1])]) {
-            matched = colByNum[Number(colNumMatch[1])];
-          }
+          // 1. Ưu tiên 1: Khớp chính xác 100% theo Tên nhãn (Label) hoặc Mã trường (ID)
+          let matched = colByLabel[hKey] || colById[hKey];
 
-          // 2. Khớp chính xác theo Label hoặc ID
+          // 2. Ưu tiên 2: Khớp theo [Cột N] nếu Tên nhãn không khớp
           if (!matched) {
-            matched = colByLabel[hKey] || colById[hKey];
-          }
-
-          // 3. Khớp theo vị trí cột thứ tự xuất
-          if (!matched && colByNum[colIdx + 1]) {
-            matched = colByNum[colIdx + 1];
+            const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
+            if (colNumMatch && colByNum[Number(colNumMatch[1])]) {
+              matched = colByNum[Number(colNumMatch[1])];
+            }
           }
 
           if (!matched) return;
@@ -1264,16 +1258,15 @@ const executeImport = async () => {
 
           const hKey = normalizeKey(rawHeader);
 
-          let matched = null;
-          const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
-          if (colNumMatch && relColByNum[Number(colNumMatch[1])]) {
-            matched = relColByNum[Number(colNumMatch[1])];
-          }
+          // 1. Ưu tiên 1: Khớp chính xác 100% theo Tên nhãn hoặc ID
+          let matched = relColByLabel[hKey] || relColById[hKey];
+
+          // 2. Ưu tiên 2: Khớp theo [Cột N] nếu chưa khớp nhãn
           if (!matched) {
-            matched = relColByLabel[hKey] || relColById[hKey];
-          }
-          if (!matched && relColByNum[colIdx + 1]) {
-            matched = relColByNum[colIdx + 1];
+            const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
+            if (colNumMatch && relColByNum[Number(colNumMatch[1])]) {
+              matched = relColByNum[Number(colNumMatch[1])];
+            }
           }
 
           if (matched) {
