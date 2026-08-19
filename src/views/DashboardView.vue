@@ -507,7 +507,7 @@
       v-model:visible="isSettingsOpen"
       modal
       header="Cài đặt Mã Cột cho Dashboard"
-      :style="{ width: '580px', maxWidth: '95vw' }"
+      :style="{ width: '720px', maxWidth: '96vw' }"
     >
       <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 8px;">
         <div style="padding: 8px 12px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #16a34a; font-size: 0.78rem; color: #166534;">
@@ -620,6 +620,7 @@ import Dialog from 'primevue/dialog';
 import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel } from '@/utils/excel';
+import { computeColumnIndexMap } from '@/utils/formatters';
 
 const personnelStore = usePersonnelStore();
 
@@ -885,11 +886,17 @@ const filteredFundingList = computed(() => {
 
 // All Available Columns from Settings for Dropdown selection
 const allAvailableColumns = computed(() => {
+  const colMap = computeColumnIndexMap(personnelStore.importMappingPersonnel);
   const list = [];
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (c.id && c.label) {
-        list.push({ id: c.id, label: `[${g.group || ''}] ${c.label}` });
+        const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
+        const grp = g.group ? `[${g.group}] ` : '';
+        list.push({
+          id: c.id,
+          label: `${colNum}${grp}${c.label} (${c.id})`,
+        });
       }
     });
   });
@@ -1111,11 +1118,12 @@ onMounted(async () => {
 .settings-select {
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 6px 10px;
   font-size: 0.78rem;
   color: #334155;
   background: #ffffff;
-  max-width: 220px;
+  max-width: 320px;
+  font-weight: 500;
 }
 
 /* Drilldown table */

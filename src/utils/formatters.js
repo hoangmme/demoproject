@@ -34,7 +34,7 @@ export const computeColumnIndexMap = (groups) => {
       }
 
       let subCount = 1;
-      if (c.format === 'checkbox_text' && c.options) {
+      if ((c.format === 'checkbox_text' || c.format === 'checkbox') && c.options) {
         const parts = String(c.options).split(',').map((s) => s.trim()).filter(Boolean);
         if (parts.length > 1) {
           subCount = parts.length;
