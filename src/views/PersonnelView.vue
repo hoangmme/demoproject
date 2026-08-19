@@ -29,6 +29,19 @@
             Danh sách Cán bộ ({{ personnelStore.personnelList.length }} hồ sơ)
           </span>
 
+          <!-- Reset / Đánh lại Mã CB Button -->
+          <Button
+            v-if="authStore.isAdmin"
+            icon="pi pi-refresh"
+            label="Đánh lại Mã CB"
+            severity="warn"
+            text
+            size="small"
+            @click="personnelStore.renumberPersonnelCodes"
+            title="Đánh lại Mã CB liên tục (CB-00001, CB-00002...)"
+            style="font-size: 0.8rem;"
+          />
+
           <!-- Bulk delete button -->
           <Button
             v-if="authStore.isAdmin && selectedPersonnel.length > 0"
@@ -157,7 +170,10 @@
         </Column>
 
         <!-- Actions column (Centered) -->
-        <Column header="THAO TÁC" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
+        <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
+          <template #header>
+            <div style="text-align: center; width: 100%; font-weight: 700;">THAO TÁC</div>
+          </template>
           <template #body="{ data }">
             <div class="table-actions">
               <Button
@@ -253,7 +269,10 @@
         <Column field="occupation" header="Nghề nghiệp / Nơi làm việc" sortable :headerStyle="{ width: '200px', minWidth: '200px' }" />
         
         <!-- Actions column (Centered & standardized to Chi tiết) -->
-        <Column header="THAO TÁC" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '130px', minWidth: '130px' }" :bodyStyle="{ width: '130px', minWidth: '130px' }">
+        <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '130px', minWidth: '130px' }" :bodyStyle="{ width: '130px', minWidth: '130px' }">
+          <template #header>
+            <div style="text-align: center; width: 100%; font-weight: 700;">THAO TÁC</div>
+          </template>
           <template #body="{ data }">
             <div class="table-actions">
               <Button

@@ -63,7 +63,11 @@ export const usePersonnelStore = defineStore('personnel', {
                 format: c.format || 'text',
               });
             } else if (c.label) {
-              exist.label = c.label.replace(/^\[Cột \d+\]\s*/, '');
+              if (c.id === 'birthYear') {
+                exist.label = 'Năm sinh';
+              } else {
+                exist.label = c.label.replace(/^\[Cột \d+\]\s*/, '');
+              }
             }
           }
         });
@@ -290,6 +294,33 @@ export const usePersonnelStore = defineStore('personnel', {
     setColumns(cols) {
       this.visibleColumns = cols;
       localStorage.setItem('vue_visible_columns', JSON.stringify(this.visibleColumns));
+    },
+    async renumberPersonnelCodes() {
+      if (this.personnelList.length === 0) {
+        alert('Chưa có cán bộ nào trong danh sách!');
+        return;
+      }
+      if (!confirm(`Bạn có chắc chắn muốn đánh lại Mã CB cho toàn bộ ${this.personnelList.length} cán bộ theo thứ tự từ CB-00001, CB-00002, CB-00003...?`)) {
+        return;
+      }
+      this.loading = true;
+      try {
+        let count = 0;
+        for (let i = 0; i < this.personnelList.length; i++) {
+          const p = this.personnelList[i];
+          const newCode = 'CB-' + String(i + 1).padStart(5, '0');
+          await updatePersonnel(p.id, { code: newCode });
+          p.code = newCode;
+          count++;
+        }
+        await logActivity('Đánh lại Mã CB', `Đã đánh lại Mã CB liên tục cho ${count} cán bộ`);
+        await this.fetchPersonnel();
+        alert(`Đã đánh lại Mã CB thành công cho ${count} cán bộ (từ CB-00001 đến CB-${String(count).padStart(5, '0')})!`);
+      } catch (e) {
+        alert('Lỗi đánh lại mã cán bộ: ' + (e.message || e));
+      } finally {
+        this.loading = false;
+      }
     },
     getDepartmentName(deptId) {
       if (!deptId) return 'Chưa phân bổ';

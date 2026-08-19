@@ -551,11 +551,12 @@ html, body {
 
 /* Table Actions container */
 .table-actions {
-  display: inline-flex !important;
+  display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
   white-space: nowrap !important;
+  margin: 0 auto !important;
   width: 100% !important;
 }
 
@@ -571,21 +572,34 @@ html, body {
 
 /* DataTable Column Alignment Utilities */
 .col-center,
+th.col-center,
 th.col-center .p-column-header-content,
+th.col-center .p-datatable-column-header-content,
 td.col-center {
   justify-content: center !important;
   text-align: center !important;
 }
 
+th.col-center .p-column-title,
+th.col-center .p-datatable-column-title {
+  text-align: center !important;
+  display: block !important;
+  width: 100% !important;
+}
+
 .col-left,
+th.col-left,
 th.col-left .p-column-header-content,
+th.col-left .p-datatable-column-header-content,
 td.col-left {
   justify-content: flex-start !important;
   text-align: left !important;
 }
 
 .col-right,
+th.col-right,
 th.col-right .p-column-header-content,
+th.col-right .p-datatable-column-header-content,
 td.col-right {
   justify-content: flex-end !important;
   text-align: right !important;
