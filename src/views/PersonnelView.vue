@@ -63,20 +63,10 @@
             style="width: 170px; font-size: 0.8rem;"
           />
 
-          <!-- Column Selector MultiSelect -->
-          <MultiSelect
+          <!-- Column Selector -->
+          <ColumnSelector
             v-model="personnelStore.visibleColumns"
             :options="personnelStore.allAvailableColumns"
-            optionLabel="label"
-            optionValue="id"
-            :maxSelectedLabels="1"
-            :selectedItemsLabel="'{0} cột được chọn'"
-            placeholder="Cột hiển thị"
-            size="small"
-            appendTo="body"
-            :showToggleAll="false"
-            :filter="false"
-            style="width: 165px; font-size: 0.8rem;"
             @change="onColumnsChange"
           />
 
@@ -228,19 +218,10 @@
           />
 
           <!-- Column Selector for Relatives -->
-          <MultiSelect
+          <ColumnSelector
             v-model="personnelStore.visibleRelativeColumns"
             :options="personnelStore.allAvailableRelativeColumns"
-            optionLabel="label"
-            optionValue="id"
-            :maxSelectedLabels="1"
-            :selectedItemsLabel="'{0} cột được chọn'"
-            placeholder="Cột hiển thị"
-            size="small"
-            appendTo="self"
-            :showToggleAll="false"
-            :filter="false"
-            style="width: 165px; font-size: 0.8rem;"
+            @change="onRelativeColumnsChange"
           />
 
           <!-- Import Relatives Button -->
@@ -554,8 +535,8 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import MultiSelect from 'primevue/multiselect';
 import Dialog from 'primevue/dialog';
+import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
