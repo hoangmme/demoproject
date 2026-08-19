@@ -535,17 +535,16 @@ html, body {
   background-color: #f9fafb !important;
 }
 
-/* Paginator */
 .p-paginator,
 .p-datatable-paginator-bottom {
   background: #ffffff !important;
   border: none !important;
   border-top: 1px solid #f3f4f6 !important;
-  padding: 0.75rem 1rem !important;
+  padding: 0.85rem 1.25rem !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
-  gap: 0.35rem !important;
+  justify-content: flex-start !important;
+  gap: 0.65rem !important;
   outline: none !important;
   box-shadow: none !important;
 }
@@ -558,6 +557,7 @@ html, body {
   min-width: 32px !important;
   height: 32px !important;
   padding: 0 6px !important;
+  margin: 0 3px !important;
   border-radius: 6px !important;
   border: 1px solid #e5e7eb !important;
   background: #ffffff !important;
@@ -591,16 +591,15 @@ html, body {
 
 .p-paginator-pages {
   display: inline-flex !important;
-  gap: 0.25rem !important;
+  gap: 0.35rem !important;
+  margin: 0 2px !important;
 }
 
-.p-paginator-rpp-select {
-  margin-left: 0.5rem !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 6px !important;
-  height: 32px !important;
-  font-size: 0.8rem !important;
-  outline: none !important;
+.p-paginator-current {
+  margin-left: 1.5rem !important;
+  font-size: 0.82rem !important;
+  color: #4b5563 !important;
+  font-weight: 500 !important;
 }
 
 /* Table Actions container */

@@ -43,13 +43,12 @@ export const getDepartments = async () => {
 };
 
 export const createPersonnel = async (data) => {
-  try {
-    const res = await apiClient.post('/items/personnels', data);
-    return res.data?.data;
-  } catch (e) {
-    const res = await apiClient.post('/items/personnel', data);
-    return res.data?.data;
-  }
+  const payload = {
+    ...data,
+    id: data.id || ('p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7)),
+  };
+  const res = await apiClient.post('/items/personnels', payload);
+  return res.data?.data;
 };
 
 export const updatePersonnel = async (id, data) => {

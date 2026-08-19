@@ -1028,6 +1028,7 @@ const executeImport = async () => {
 
         const nextTnIndex = (personnelStore.relativesList || []).length + count + 1;
         const newRel = {
+          id: 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
           code: 'TN-' + String(nextTnIndex).padStart(5, '0'),
           personnelId: parentPerson ? parentPerson.id : (parentCode || 'CB-UNKNOWN'),
           personnelName: parentPerson?.name || parentName || 'Chưa liên kết',
