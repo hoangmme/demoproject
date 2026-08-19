@@ -16,87 +16,137 @@ export const exportMultiSheetExcel = (sheets, fileName = 'Bao_cao_tong_hop') => 
   XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
-export const downloadPersonnelTemplate = () => {
-  const sampleData = [
-    {
+export const downloadPersonnelTemplate = (mappingConfig = null) => {
+  let sampleRow = {};
+  
+  if (Array.isArray(mappingConfig) && mappingConfig.length > 0) {
+    mappingConfig.forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        const header = c.label || c.id;
+        sampleRow[header] = getSampleValueForField(c.id, header);
+      });
+    });
+  } else {
+    // Full Comprehensive 58-Column Template
+    sampleRow = {
       'STT': 1,
       'Mã CB': 'CB-00001',
       'Họ và tên': 'Nguyễn Văn A',
       'Tên gọi khác': '',
-      'Năm sinh': '1985',
+      'Ngày tháng năm sinh': '15/08/1985',
       'Dân tộc': 'Kinh',
       'Tôn giáo': 'Không',
-      'Số CCCD': '001085000123',
-      'Phòng ban': 'Phòng Kế hoạch',
-      'Chức vụ': 'Chuyên viên',
       'Quê quán': 'Hà Nội',
-      'Nơi ĐKHK thường trú': '123 Phố Huế, Hoàn Kiếm, Hà Nội',
-      'Nơi ở hiện nay': '456 Cầu Giấy, Hà Nội',
-      'Hộ chiếu cá nhân': 'C1234567',
-      'Hộ chiếu công vụ': '',
-      'Kết quả thẩm tra TCCT': 'Đủ điều kiện',
-    },
-    {
-      'STT': 2,
-      'Mã CB': 'CB-00002',
-      'Họ và tên': 'Trần Thị B',
-      'Tên gọi khác': '',
-      'Năm sinh': '1990',
-      'Dân tộc': 'Kinh',
-      'Tôn giáo': 'Không',
-      'Số CCCD': '001090000456',
-      'Phòng ban': 'Phòng Tổ chức',
-      'Chức vụ': 'Phó Trưởng phòng',
-      'Quê quán': 'Hải Phòng',
-      'Nơi ĐKHK thường trú': 'Lê Chân, Hải Phòng',
-      'Nơi ở hiện nay': 'Nam Từ Liêm, Hà Nội',
-      'Hộ chiếu cá nhân': 'C7654321',
-      'Hộ chiếu công vụ': 'A9876543',
-      'Kết quả thẩm tra TCCT': 'Đủ điều kiện',
-    },
-  ];
-  exportToExcel(sampleData, 'Mau_Import_Ho_So_Can_Bo', 'Mẫu Cán bộ');
+      'Đơn vị công tác': 'Phòng Kế hoạch',
+      'Chức vụ': 'Chuyên viên',
+      'Thường trú': '123 Phố Huế, Hoàn Kiếm, Hà Nội',
+      'Tạm trú': '456 Cầu Giấy, Hà Nội',
+      'Số CCCD': '001085000123',
+      'HC Cá nhân': 'C1234567',
+      'HC Công vụ': '',
+      'Kết quả thẩm tra TCCT': 'Đủ điều kiện tiêu chuẩn',
+      'Số Quyết định': '123/QĐ-UBND',
+      'Ngày Quyết định': '10/05/2023',
+      'Cơ quan ban hành': 'UBND TP',
+      'Ngày Xuất cảnh': '15/05/2023',
+      'Ngày Nhập cảnh': '25/05/2023',
+      'Quốc gia': 'Nhật Bản',
+      'Số lần': '1',
+      'Mục đích: Công tác': 'X',
+      'Mục đích: Học tập': '',
+      'Mục đích: Việc riêng': '',
+      'Diện đào tạo': 'Ngắn hạn',
+      'Nơi đào tạo': 'Tokyo',
+      'Kinh phí: Ngân sách': 'X',
+      'Tự túc': '',
+      'Tài trợ': '',
+      'Học bổng': '',
+      'Báo cáo kết quả': 'Đã nộp',
+      'Nộp hộ chiếu công vụ': 'Đã nộp',
+      'Kỷ luật Đảng': 'Không',
+      'Kỷ luật Chính Quyền': 'Không',
+      'Đi nước ngoài không xin phép': 'Không',
+      'Vi phạm pháp luật': 'Không',
+      'Ở lại quá thời hạn': 'Không',
+      'Thuộc diện quản lý đặc biệt': 'Không',
+      'Nhận quà biếu > 50M': 'Không',
+      'Cho người nước ngoài thuê nhà': 'Không',
+      'Làm việc tại công ty FDI': 'Không',
+      'Lưu ý khác': '',
+    };
+  }
+
+  const sampleRow2 = { ...sampleRow, 'STT': 2, 'Mã CB': 'CB-00002', 'Họ và tên': 'Trần Thị B', 'Ngày tháng năm sinh': '20/11/1990', 'Số CCCD': '001090000456', 'Chức vụ': 'Phó Trưởng phòng', 'Quốc gia': 'Úc' };
+
+  exportToExcel([sampleRow, sampleRow2], 'Mau_Import_Ho_So_Can_Bo_Day_Du', 'Mẫu Cán bộ');
 };
 
-export const downloadRelativeTemplate = () => {
-  const sampleData = [
-    {
+export const downloadRelativeTemplate = (mappingConfig = null) => {
+  let sampleRow = {};
+
+  if (Array.isArray(mappingConfig) && mappingConfig.length > 0) {
+    mappingConfig.forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        const header = c.label || c.id;
+        sampleRow[header] = getSampleValueForField(c.id, header);
+      });
+    });
+  } else {
+    // Full Comprehensive 26-Column Template
+    sampleRow = {
       'STT': 1,
       'Mã CB': 'CB-00001',
-      'Họ và tên Cán bộ': 'Nguyễn Văn A',
+      'Tên Cán bộ': 'Nguyễn Văn A',
+      'Số CCCD Cán bộ': '001085000123',
+      'Chức vụ CB': 'Chuyên viên',
+      'Đơn vị CB': 'Phòng Kế hoạch',
       'Mối quan hệ': 'Vợ/chồng',
-      'Họ và tên Thân nhân': 'Lê Thị C',
+      'Tên thân nhân': 'Lê Thị C',
+      'Tên khác': '',
       'Năm sinh': '1988',
-      'Số CCCD': '001088000789',
-      'Nơi cư trú': 'Tokyo, Nhật Bản',
+      'Quê quán': 'Hà Nội',
+      'Quốc tịch': 'Việt Nam',
+      'Số Căn cước công dân': '001088000789',
       'Nghề nghiệp': 'Kỹ sư phần mềm',
-      'Quốc gia': 'Nhật Bản',
-      'Thời gian ở NN': '2020 - 2024',
-      'Cơ quan ở NN': 'Rakuten Inc',
-      'Nguồn kinh phí': 'Tự túc',
-      'Kết hôn với người NN': 'Không',
-      'Làm việc cho DN FDI': 'Có',
-    },
-    {
-      'STT': 2,
-      'Mã CB': 'CB-00001',
-      'Họ và tên Cán bộ': 'Nguyễn Văn A',
-      'Mối quan hệ': 'Con ruột',
-      'Họ và tên Thân nhân': 'Nguyễn Minh D',
-      'Năm sinh': '2015',
-      'Số CCCD': '',
-      'Nơi cư trú': 'Tokyo, Nhật Bản',
-      'Nghề nghiệp': 'Học sinh',
-      'Quốc gia': 'Nhật Bản',
-      'Thời gian ở NN': '2020 - nay',
-      'Cơ quan ở NN': 'Trường Tiểu học Tokyo',
-      'Nguồn kinh phí': 'Gia đình chu cấp',
-      'Kết hôn với người NN': 'Không',
-      'Làm việc cho DN FDI': 'Không',
-    },
-  ];
-  exportToExcel(sampleData, 'Mau_Import_Than_Nhan', 'Mẫu Thân nhân');
+      'Nơi đăng ký HKTT': 'Hoàn Kiếm, Hà Nội',
+      'Nơi ở hiện nay': 'Tokyo, Nhật Bản',
+      'Quốc Gia': 'Nhật Bản',
+      'Thời gian học tập, làm việc, sinh sống ở nước ngoài': '2020 - 2024',
+      'Đơn vị học tập, làm việc, sinh sống ở nước ngoài': 'Rakuten Inc',
+      'Nguồn Kinh phí': 'Tự túc',
+      'Đơn vị công tác hiện nay': 'Rakuten Inc',
+      'Kết hôn với người nước ngoài': 'Không',
+      'Làm việc tại công ty có vốn đầu tư nước ngoài': 'Có',
+      'Ghi chú / Nội dung': '',
+    };
+  }
+
+  const sampleRow2 = { ...sampleRow, 'STT': 2, 'Mối quan hệ': 'Con ruột', 'Tên thân nhân': 'Nguyễn Minh D', 'Năm sinh': '2015', 'Số Căn cước công dân': '', 'Nghề nghiệp': 'Học sinh', 'Đơn vị học tập, làm việc, sinh sống ở nước ngoài': 'Trường Tiểu học Tokyo' };
+
+  exportToExcel([sampleRow, sampleRow2], 'Mau_Import_Than_Nhan_Day_Du', 'Mẫu Thân nhân');
 };
+
+function getSampleValueForField(id, label) {
+  const l = (label + ' ' + id).toLowerCase();
+  if (l.includes('stt')) return 1;
+  if (l.includes('mã cb') || l.includes('code')) return 'CB-00001';
+  if (l.includes('họ và tên') || l.includes('tên cán bộ') || l.includes('parentpersonnelname')) return 'Nguyễn Văn A';
+  if (l.includes('thân nhân') || l.includes('relativename')) return 'Lê Thị C';
+  if (l.includes('quan hệ') || l.includes('relationship')) return 'Vợ/chồng';
+  if (l.includes('sinh') || l.includes('birth')) return '1985';
+  if (l.includes('cccd')) return '001085000123';
+  if (l.includes('phòng') || l.includes('đơn vị')) return 'Phòng Kế hoạch';
+  if (l.includes('chức vụ')) return 'Chuyên viên';
+  if (l.includes('quê')) return 'Hà Nội';
+  if (l.includes('thường trú') || l.includes('hktt')) return '123 Phố Huế, Hà Nội';
+  if (l.includes('tạm trú') || l.includes('nơi ở')) return 'Tokyo, Nhật Bản';
+  if (l.includes('quốc gia') || l.includes('nước')) return 'Nhật Bản';
+  if (l.includes('nghề nghiệp') || l.includes('occupation')) return 'Kỹ sư';
+  if (l.includes('quyết định')) return '123/QĐ-UBND';
+  if (l.includes('kinh phí') || l.includes('funding')) return 'Ngân sách';
+  if (l.includes('kỷ luật')) return 'Không';
+  return '';
+}
 
 export const parseExcelFile = (file) => {
   return new Promise((resolve, reject) => {

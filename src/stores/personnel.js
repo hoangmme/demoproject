@@ -158,8 +158,13 @@ export const usePersonnelStore = defineStore('personnel', {
       this.departments = await getDepartments();
     },
     async loadSettings() {
-      this.importMappingPersonnel = await getAppSettings('importMappingPersonnel', []);
-      this.importMappingRelative = await getAppSettings('importMappingRelative', []);
+      let pMap = await getAppSettings('mapping_config_personnel', null);
+      if (!pMap || pMap.length === 0) pMap = await getAppSettings('importMappingPersonnel', []);
+      this.importMappingPersonnel = pMap || [];
+
+      let rMap = await getAppSettings('mapping_config_relative', null);
+      if (!rMap || rMap.length === 0) rMap = await getAppSettings('importMappingRelative', []);
+      this.importMappingRelative = rMap || [];
     },
     async savePerson(formData) {
       this.loading = true;

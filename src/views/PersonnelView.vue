@@ -67,14 +67,14 @@
             @change="onColumnsChange"
           />
 
-          <!-- Template Button -->
+          <!-- Download Template Button -->
           <Button
             label="Tải File Mẫu"
             icon="pi pi-download"
             severity="secondary"
             outlined
             size="small"
-            @click="downloadPersonnelTemplate"
+            @click="downloadPersonnelTemplate(personnelStore.importMappingPersonnel)"
             style="font-size: 0.8rem;"
           />
 
@@ -112,7 +112,7 @@
         </div>
       </div>
 
-      <!-- PrimeVue DataTable with Fixed Column Widths -->
+      <!-- PrimeVue DataTable with Fixed Column Widths & Centered Actions -->
       <DataTable
         v-model:selection="selectedPersonnel"
         :value="filteredPersonnel"
@@ -127,7 +127,7 @@
         tableStyle="min-width: 60rem; table-layout: fixed;"
         @row-click="onRowClick"
       >
-        <Column selectionMode="multiple" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
+        <Column selectionMode="multiple" :headerStyle="{ width: '48px', minWidth: '48px', textAlign: 'center' }" :bodyStyle="{ width: '48px', minWidth: '48px', textAlign: 'center' }" />
 
         <Column
           v-for="col in activeColumns"
@@ -165,10 +165,10 @@
           </template>
         </Column>
 
-        <!-- Actions column -->
-        <Column header="Thao tác" :headerStyle="{ width: '145px', minWidth: '145px', textAlign: 'right' }" :bodyStyle="{ width: '145px', minWidth: '145px', textAlign: 'right' }">
+        <!-- Actions column (Centered) -->
+        <Column header="THAO TÁC" :headerStyle="{ width: '150px', minWidth: '150px', textAlign: 'center' }" :bodyStyle="{ width: '150px', minWidth: '150px', textAlign: 'center' }">
           <template #body="{ data }">
-            <div class="table-actions">
+            <div class="table-actions" style="justify-content: center;">
               <Button
                 label="Chi tiết"
                 size="small"
@@ -205,14 +205,14 @@
             style="width: 200px; font-size: 0.8rem;"
           />
 
-          <!-- Template Button for Relatives -->
+          <!-- Download Template Button for Relatives -->
           <Button
             label="Tải File Mẫu"
             icon="pi pi-download"
             severity="secondary"
             outlined
             size="small"
-            @click="downloadRelativeTemplate"
+            @click="downloadRelativeTemplate(personnelStore.importMappingRelative)"
             style="font-size: 0.8rem;"
           />
 
@@ -250,10 +250,10 @@
         class="p-datatable-sm"
         tableStyle="min-width: 60rem; table-layout: fixed;"
       >
-        <Column field="stt" header="STT" :headerStyle="{ width: '60px', minWidth: '60px' }" :bodyStyle="{ width: '60px', minWidth: '60px' }" />
+        <Column field="stt" header="STT" :headerStyle="{ width: '60px', minWidth: '60px', textAlign: 'center' }" :bodyStyle="{ width: '60px', minWidth: '60px', textAlign: 'center' }" />
         <Column field="parentName" header="Cán bộ liên quan" sortable :headerStyle="{ width: '200px', minWidth: '200px' }">
           <template #body="{ data }">
-            <strong style="cursor: pointer;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
+            <strong style="cursor: pointer; color: #1f2937;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
             <div style="font-size: 0.75rem; color: #6b7280;">{{ data.parentDepartment }}</div>
           </template>
         </Column>
@@ -271,16 +271,19 @@
         </Column>
         <Column field="currentAddress" header="Nơi cư trú" sortable :headerStyle="{ width: '180px', minWidth: '180px' }" />
         <Column field="occupation" header="Nghề nghiệp / Nơi làm việc" sortable :headerStyle="{ width: '200px', minWidth: '200px' }" />
-        <Column header="Thao tác" :headerStyle="{ width: '110px', minWidth: '110px', textAlign: 'right' }" :bodyStyle="{ textAlign: 'right' }">
+        
+        <!-- Actions column (Centered & standardized to Chi tiết) -->
+        <Column header="THAO TÁC" :headerStyle="{ width: '130px', minWidth: '130px', textAlign: 'center' }" :bodyStyle="{ width: '130px', minWidth: '130px', textAlign: 'center' }">
           <template #body="{ data }">
-            <Button
-              label="Hồ sơ"
-              size="small"
-              outlined
-              severity="info"
-              @click="openEditDialog(data.parentPerson)"
-              style="padding: 2px 8px; font-size: 0.75rem;"
-            />
+            <div class="table-actions" style="justify-content: center;">
+              <Button
+                label="Chi tiết"
+                size="small"
+                outlined
+                severity="info"
+                @click="openEditDialog(data.parentPerson)"
+              />
+            </div>
           </template>
         </Column>
       </DataTable>
@@ -295,7 +298,7 @@
     />
 
     <!-- Advanced Export Modal -->
-    <Dialog v-model:visible="isExportOpen" modal header="Tùy chọn Xuất Dữ liệu Excel" :style="{ width: '550px' }">
+    <Dialog v-model:visible="isExportOpen" modal header="Tùy chọn Xuất Dữ liệu Excel" :style="{ width: '560px' }">
       <div style="display: flex; flex-direction: column; gap: 1.25rem; padding-top: 8px;">
         <!-- Scope -->
         <div>
@@ -317,12 +320,12 @@
         <!-- Sections Selection -->
         <div>
           <label style="font-size: 0.85rem; font-weight: 700; color: #1f2937; margin-bottom: 6px; display: block;">
-            2. Chọn các Khối dữ liệu cần xuất (Tự động chia Sheet):
+            2. Chọn các Khối dữ liệu cần xuất (Tự động chia thành các Sheet):
           </label>
-          <div style="display: flex; flex-direction: column; gap: 8px; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <div style="display: flex; flex-direction: column; gap: 8px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
             <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
               <input type="checkbox" v-model="exportSections.basic" />
-              <strong>Khối A: Thông tin chung & Cư trú (Hồ sơ Cán bộ)</strong>
+              <strong>Khối A: Thông tin chung & Cư trú (Hồ sơ Cán bộ đầy đủ)</strong>
             </label>
             <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer;">
               <input type="checkbox" v-model="exportSections.trips" />
@@ -352,64 +355,109 @@
       </template>
     </Dialog>
 
-    <!-- Import Excel Modal (Supports both Personnel & Relatives with Append / Merge) -->
-    <Dialog v-model:visible="isImportOpen" modal :header="currentImportType === 'personnel' ? 'Import Hồ sơ Cán bộ từ Excel' : 'Import Thân nhân từ Excel (Gộp dữ liệu)'" :style="{ width: '620px' }">
-      <div style="display: flex; flex-direction: column; gap: 1rem; padding-top: 8px;">
-        <p style="font-size: 0.85rem; color: #4b5563;">
+    <!-- Modern Apple Clean Import Excel Modal -->
+    <Dialog
+      v-model:visible="isImportOpen"
+      modal
+      :header="currentImportType === 'personnel' ? 'Import Hồ sơ Cán bộ từ Excel' : 'Import Thân nhân từ Excel (Gộp dữ liệu)'"
+      :style="{ width: '680px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 1.25rem; padding-top: 8px;">
+        <!-- Notice box -->
+        <div style="padding: 10px 14px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #2e7d32; font-size: 0.82rem; color: #1b5e20;">
           <template v-if="currentImportType === 'personnel'">
-            Chọn tệp Excel hoặc CSV chứa danh sách cán bộ để import vào hệ thống.
+            Hệ thống hỗ trợ import file <b>.xlsx, .xls, .csv</b> gồm đầy đủ các khối trường thông tin cán bộ. Nếu Mã CB đã có, hệ thống sẽ cập nhật thông tin tương ứng.
           </template>
           <template v-else>
-            Hệ thống sẽ <b>tự động ghép thân nhân vào hồ sơ cán bộ tương ứng</b> theo Mã CB hoặc Họ tên cán bộ. Nếu cán bộ đã có thân nhân, dữ liệu sẽ được <b>gộp thêm (append)</b> thay vì ghi đè.
+            Hệ thống sẽ <b>tự động ghép thân nhân vào cán bộ tương ứng</b> theo Mã CB hoặc Họ tên. Dữ liệu thân nhân sẽ được <b>gộp thêm (append)</b>, bảo toàn danh sách cũ.
           </template>
-        </p>
-
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <input type="file" ref="importFileInput" accept=".xlsx, .xls, .csv" @change="onImportFileSelected" style="display: none;" />
-          <Button
-            label="Chọn tệp Excel từ máy tính"
-            icon="pi pi-file-excel"
-            severity="primary"
-            outlined
-            @click="$refs.importFileInput.click()"
-            style="flex: 1;"
-          />
-          <Button
-            label="Tải File Mẫu"
-            icon="pi pi-download"
-            severity="secondary"
-            text
-            size="small"
-            @click="currentImportType === 'personnel' ? downloadPersonnelTemplate() : downloadRelativeTemplate()"
-          />
         </div>
 
-        <div v-if="importPreviewRows.length > 0" style="padding: 0.75rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-          <div style="font-size: 0.85rem; font-weight: 700; color: #1f2937; margin-bottom: 6px;">
-            Đã đọc được {{ importPreviewRows.length }} dòng dữ liệu từ tệp:
+        <!-- Big Dropzone Box -->
+        <div
+          style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; background: #fcfdfc; cursor: pointer; transition: all 0.2s ease;"
+          @click="$refs.importFileInput.click()"
+          @dragover.prevent
+          @drop.prevent="onFileDrop"
+        >
+          <input type="file" ref="importFileInput" accept=".xlsx, .xls, .csv" @change="onImportFileSelected" style="display: none;" />
+          
+          <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 16px; background: #e8f5e9; color: #2e7d32; margin-bottom: 12px;">
+            <i class="pi pi-file-excel" style="font-size: 1.75rem;"></i>
           </div>
-          <div style="max-height: 150px; overflow-y: auto; font-size: 0.75rem; color: #6b7280;">
-            <div v-for="(r, i) in importPreviewRows.slice(0, 5)" :key="i" style="padding: 2px 0;">
-              • Dòng {{ i + 1 }}: {{ r[1] || r[0] || 'Dòng trống' }} {{ r[2] ? `(${r[2]})` : '' }} {{ r[3] ? `- ${r[3]}` : '' }}
-            </div>
-            <div v-if="importPreviewRows.length > 5" style="color: #2e7d32; font-weight: 600; margin-top: 4px;">
-              ...và {{ importPreviewRows.length - 5 }} dòng tiếp theo.
+
+          <div style="font-size: 0.95rem; font-weight: 700; color: #1f2937; margin-bottom: 4px;">
+            {{ selectedFileName || 'Kéo thả tệp Excel vào đây hoặc nhấp để tải lên' }}
+          </div>
+          <div style="font-size: 0.78rem; color: #6b7280; margin-bottom: 12px;">
+            Định dạng hỗ trợ: Microsoft Excel (.xlsx, .xls), CSV (.csv)
+          </div>
+
+          <div style="display: inline-flex; gap: 8px;">
+            <Button
+              label="Chọn tệp từ máy tính"
+              icon="pi pi-folder-open"
+              size="small"
+              severity="primary"
+              @click.stop="$refs.importFileInput.click()"
+            />
+            <Button
+              label="Tải File Mẫu Excel Đầy Đủ"
+              icon="pi pi-download"
+              size="small"
+              severity="secondary"
+              outlined
+              @click.stop="currentImportType === 'personnel' ? downloadPersonnelTemplate(personnelStore.importMappingPersonnel) : downloadRelativeTemplate(personnelStore.importMappingRelative)"
+            />
+          </div>
+        </div>
+
+        <!-- Preview Table if rows loaded -->
+        <div v-if="importPreviewRows.length > 0" style="border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; background: #ffffff;">
+          <div style="padding: 0.6rem 1rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: #1f2937;">
+              Xem trước dữ liệu (Tìm thấy {{ importPreviewRows.length }} dòng dữ liệu)
+            </span>
+            <span class="badge-pill badge-green" style="font-size: 0.75rem;">Sẵn sàng Import</span>
+          </div>
+
+          <div style="max-height: 180px; overflow: auto; padding: 0.5rem;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">
+              <tbody>
+                <tr v-for="(r, idx) in importPreviewRows.slice(0, 5)" :key="idx" style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 6px 8px; font-weight: 600; color: #6b7280; width: 40px;">#{{ idx + 1 }}</td>
+                  <td style="padding: 6px 8px; font-weight: 600; color: #1f2937;">{{ r[1] || r[0] || '-' }}</td>
+                  <td style="padding: 6px 8px; color: #4b5563;">{{ r[2] || '-' }}</td>
+                  <td style="padding: 6px 8px; color: #6b7280;">{{ r[3] || '-' }}</td>
+                  <td style="padding: 6px 8px; color: #6b7280;">{{ r[4] || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-if="importPreviewRows.length > 5" style="text-align: center; padding: 6px; font-size: 0.72rem; color: #6b7280;">
+              ...và {{ importPreviewRows.length - 5 }} dòng tiếp theo sẽ được xử lý.
             </div>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <Button label="Hủy" severity="secondary" text size="small" @click="isImportOpen = false" />
-        <Button
-          :label="currentImportType === 'personnel' ? 'Tiến hành Import' : 'Gộp Thân nhân vào Cán bộ'"
-          icon="pi pi-check"
-          severity="success"
-          size="small"
-          :loading="importing"
-          :disabled="importPreviewRows.length === 0"
-          @click="executeImport"
-        />
+        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+          <span style="font-size: 0.78rem; color: #6b7280;">
+            {{ importPreviewRows.length > 0 ? `Đã chọn ${importPreviewRows.length} dòng` : 'Chưa chọn tệp' }}
+          </span>
+          <div style="display: flex; gap: 8px;">
+            <Button label="Hủy" severity="secondary" text size="small" @click="isImportOpen = false" />
+            <Button
+              :label="currentImportType === 'personnel' ? `Bắt đầu Import (${importPreviewRows.length} hồ sơ)` : `Bắt đầu Gộp (${importPreviewRows.length} thân nhân)`"
+              icon="pi pi-check"
+              severity="success"
+              size="small"
+              :loading="importing"
+              :disabled="importPreviewRows.length === 0"
+              @click="executeImport"
+            />
+          </div>
+        </div>
       </template>
     </Dialog>
   </div>
@@ -464,6 +512,7 @@ const currentImportType = ref('personnel'); // 'personnel' or 'relative'
 const importing = ref(false);
 const importPreviewRows = ref([]);
 const importFileInput = ref(null);
+const selectedFileName = ref('');
 
 onMounted(async () => {
   if (personnelStore.personnelList.length === 0) {
@@ -717,12 +766,25 @@ const handleExportRelatives = () => {
 const openImportModal = (type = 'personnel') => {
   currentImportType.value = type;
   importPreviewRows.value = [];
+  selectedFileName.value = '';
   isImportOpen.value = true;
+};
+
+const onFileDrop = (e) => {
+  const files = e.dataTransfer.files;
+  if (files && files[0]) {
+    handleFile(files[0]);
+  }
 };
 
 const onImportFileSelected = async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
+  handleFile(file);
+};
+
+const handleFile = async (file) => {
+  selectedFileName.value = file.name;
   try {
     const rows = await parseExcelFile(file);
     importPreviewRows.value = rows.filter((r) => r && r.length > 0);
@@ -743,7 +805,6 @@ const executeImport = async () => {
     }
 
     if (currentImportType.value === 'personnel') {
-      // Import Personnel
       for (let i = startIdx; i < importPreviewRows.value.length; i++) {
         const row = importPreviewRows.value[i];
         if (!row || row.length === 0) continue;
@@ -776,7 +837,6 @@ const executeImport = async () => {
       }
       await logActivity('Import Excel Cán bộ', `Đã import thành công ${count} hồ sơ cán bộ`);
     } else {
-      // Import Relatives (Gộp dữ liệu vào appendix2 linked với Cán bộ tương ứng)
       const pMap = {};
       personnelStore.personnelList.forEach((p) => {
         if (p.id) pMap[p.id.toLowerCase()] = p;
@@ -815,7 +875,6 @@ const executeImport = async () => {
           workInForeignCompany: String(row[14] || 'Không').toLowerCase().includes('có') ? 1 : 0,
         };
 
-        // Post to appendix2
         await apiClient.post('/items/appendix2', newRel);
         count++;
       }
