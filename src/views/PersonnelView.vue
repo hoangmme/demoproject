@@ -909,13 +909,13 @@ const executeImport = async () => {
     }
 
     const headerRow = rawRows[0] || [];
-    const headerCols = headerRow.map((h) => normalizeKey(h));
 
     if (currentImportType.value === 'personnel') {
-      // 1. Build template column map from importMappingPersonnel
+      // 1. Build exact column dictionary from importMappingPersonnel
       let currentColIdx = 0;
       const colByNum = {};
-      const allCols = [];
+      const colById = {};
+      const colByLabel = {};
 
       (personnelStore.importMappingPersonnel || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
@@ -928,13 +928,13 @@ const executeImport = async () => {
                 id: c.id,
                 colNum: colNum,
                 subOpt: opt,
-                labelKey: normalizeKey(`${c.label || c.id} ${opt}`),
-                baseLabelKey: normalizeKey(c.label || c.id),
                 group: g.group || '',
                 raw: c,
               };
               colByNum[colNum] = entry;
-              allCols.push(entry);
+              colByLabel[normalizeKey(`[Cột ${colNum}] ${c.label || c.id}: ${opt}`)] = entry;
+              colByLabel[normalizeKey(`${c.label || c.id}: ${opt}`)] = entry;
+              colByLabel[normalizeKey(`${c.label || c.id} ${opt}`)] = entry;
             });
             currentColIdx += (subOpts.length - 1);
           } else {
@@ -942,18 +942,18 @@ const executeImport = async () => {
               id: c.id,
               colNum: currentColIdx,
               subOpt: null,
-              labelKey: normalizeKey(c.label || c.id),
-              baseLabelKey: normalizeKey(c.label || c.id),
               group: g.group || '',
               raw: c,
             };
             colByNum[currentColIdx] = entry;
-            allCols.push(entry);
+            colById[c.id.toLowerCase()] = entry;
+            colByLabel[normalizeKey(`[Cột ${currentColIdx}] ${c.label || c.id}`)] = entry;
+            colByLabel[normalizeKey(c.label || c.id)] = entry;
           }
         });
       });
 
-      // Existing Personnel map by CCCD (clean 12-digits) & Code & ID
+      // Existing Personnel map by CCCD (clean 12-digits) & Code
       const existingByCccd = {};
       const existingByCode = {};
       personnelStore.personnelList.forEach((p) => {
@@ -976,95 +976,91 @@ const executeImport = async () => {
           const rawCell = row[colIdx];
           if (rawCell === undefined || rawCell === null) return;
           const val = typeof rawCell === 'number' ? rawCell : String(rawCell).trim();
-          if (val === '') return;
+          if (val === '') return; // Ô trống -> Bỏ qua hoàn toàn, không ghi đè!
 
           const hKey = normalizeKey(rawHeader);
 
-          // Tier 1: Check if rawHeader has [Cột N] or [Cot N]
+          // 1. Khớp theo [Cột N]
           let matched = null;
           const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
           if (colNumMatch && colByNum[Number(colNumMatch[1])]) {
             matched = colByNum[Number(colNumMatch[1])];
           }
 
-          // Tier 2: Fuzzy Label / ID matching
+          // 2. Khớp chính xác theo Label hoặc ID
           if (!matched) {
-            matched = allCols.find((c) => c.labelKey === hKey || c.id.toLowerCase() === hKey || hKey.includes(c.labelKey) || c.labelKey.includes(hKey) || hKey.includes(c.baseLabelKey));
+            matched = colByLabel[hKey] || colById[hKey];
           }
 
-          if (matched) {
-            const fId = matched.id;
-            const grp = String(matched.group || '');
-            let finalVal = val;
+          // 3. Khớp theo vị trí cột thứ tự xuất
+          if (!matched && colByNum[colIdx + 1]) {
+            matched = colByNum[colIdx + 1];
+          }
 
-            // Date parsing
-            if (matched.raw?.format === 'date' || fId.toLowerCase().includes('date') || fId.toLowerCase().includes('year') || fId.toLowerCase().includes('sinh')) {
-              finalVal = formatExcelDate(val);
-            }
+          if (!matched) return;
 
-            // Checkbox multi-options
-            if (matched.subOpt) {
-              const strVal = String(val).toLowerCase().trim();
-              if (['x', '1', 'có', 'co', 'v', 'true', 'yes', 'y'].includes(strVal) || strVal.includes(matched.subOpt.toLowerCase())) {
-                if (!checkboxValues[fId]) checkboxValues[fId] = [];
-                if (!checkboxValues[fId].includes(matched.subOpt)) {
-                  checkboxValues[fId].push(matched.subOpt);
-                }
-              } else if (strVal !== '') {
-                const combined = `${matched.subOpt}: ${val}`;
-                if (!checkboxValues[fId]) checkboxValues[fId] = [];
-                checkboxValues[fId].push(combined);
+          const fId = matched.id;
+          const grp = String(matched.group || '');
+          let finalVal = val;
+
+          // Xử lý Ngày tháng
+          if (matched.raw?.format === 'date' || fId.toLowerCase().includes('date') || fId.toLowerCase().includes('year') || fId.toLowerCase().includes('sinh')) {
+            finalVal = formatExcelDate(val);
+          }
+
+          // Xử lý Hộp kiểm nhiều lựa chọn
+          if (matched.subOpt) {
+            const strVal = String(val).toLowerCase().trim();
+            if (['x', '1', 'có', 'co', 'v', 'true', 'yes', 'y'].includes(strVal) || strVal.includes(matched.subOpt.toLowerCase())) {
+              if (!checkboxValues[fId]) checkboxValues[fId] = [];
+              if (!checkboxValues[fId].includes(matched.subOpt)) {
+                checkboxValues[fId].push(matched.subOpt);
               }
-              return;
+            } else if (strVal !== '') {
+              const combined = `${matched.subOpt}: ${val}`;
+              if (!checkboxValues[fId]) checkboxValues[fId] = [];
+              checkboxValues[fId].push(combined);
             }
+            return;
+          }
 
-            rowData[fId] = finalVal;
-            customData[fId] = finalVal;
+          rowData[fId] = finalVal;
+          customData[fId] = finalVal;
 
-            if (grp.includes('Khối B') || grp.includes('Chuyến đi')) {
-              currentTrip[fId] = finalVal;
-            } else if (grp.includes('Khối C') || grp.includes('Lưu ý') || grp.includes('Kỷ luật')) {
-              flags[fId] = finalVal;
-            }
+          if (grp.includes('Khối B') || grp.includes('Chuyến đi')) {
+            currentTrip[fId] = finalVal;
+          } else if (grp.includes('Khối C') || grp.includes('Lưu ý') || grp.includes('Kỷ luật')) {
+            flags[fId] = finalVal;
+          }
 
-            // Standard field aliases
-            if (fId === 'positionName' || fId === 'position') {
-              rowData.position = finalVal;
-              rowData.positionName = finalVal;
-              customData.position = finalVal;
-              customData.positionName = finalVal;
-            } else if (fId === 'departmentName' || fId === 'departmentId') {
-              rowData.departmentName = finalVal;
-              customData.departmentName = finalVal;
-            } else if (fId === 'hcCaNhan' || fId === 'passportPersonal') {
-              rowData.passportPersonal = finalVal;
-              rowData.hcCaNhan = finalVal;
-              customData.hcCaNhan = finalVal;
-              customData.passportPersonal = finalVal;
-            } else if (fId === 'hcCongVu' || fId === 'passportOfficial') {
-              rowData.passportOfficial = finalVal;
-              rowData.hcCongVu = finalVal;
-              customData.hcCongVu = finalVal;
-              customData.passportOfficial = finalVal;
-            } else if (fId === 'kqThamTra' || fId === 'tcctResult') {
-              rowData.tcctResult = finalVal;
-              rowData.kqThamTra = finalVal;
-              customData.kqThamTra = finalVal;
-              customData.tcctResult = finalVal;
-            }
-          } else if (hKey.includes('cccd') || hKey.includes('dinhdanh')) {
-            rowData.cccd = val;
-            customData.cccd = val;
-          } else if (hKey.includes('hoten') || hKey.includes('hovaten') || hKey.includes('ten')) {
-            rowData.name = val;
-            customData.name = val;
-          } else if (hKey.includes('macb') || hKey.includes('code')) {
-            rowData.code = val;
-            customData.code = val;
+          // Đồng bộ tên trường chuẩn
+          if (fId === 'positionName' || fId === 'position') {
+            rowData.position = finalVal;
+            rowData.positionName = finalVal;
+            customData.position = finalVal;
+            customData.positionName = finalVal;
+          } else if (fId === 'departmentName' || fId === 'departmentId') {
+            rowData.departmentName = finalVal;
+            customData.departmentName = finalVal;
+          } else if (fId === 'hcCaNhan' || fId === 'passportPersonal') {
+            rowData.passportPersonal = finalVal;
+            rowData.hcCaNhan = finalVal;
+            customData.hcCaNhan = finalVal;
+            customData.passportPersonal = finalVal;
+          } else if (fId === 'hcCongVu' || fId === 'passportOfficial') {
+            rowData.passportOfficial = finalVal;
+            rowData.hcCongVu = finalVal;
+            customData.hcCongVu = finalVal;
+            customData.passportOfficial = finalVal;
+          } else if (fId === 'kqThamTra' || fId === 'tcctResult') {
+            rowData.tcctResult = finalVal;
+            rowData.kqThamTra = finalVal;
+            customData.kqThamTra = finalVal;
+            customData.tcctResult = finalVal;
           }
         });
 
-        // Merge collected checkbox values
+        // Nạp kết quả hộp kiểm
         Object.keys(checkboxValues).forEach((fId) => {
           const valJoined = checkboxValues[fId].join(', ');
           rowData[fId] = valJoined;
@@ -1077,7 +1073,7 @@ const executeImport = async () => {
           trips.push(currentTrip);
         }
 
-        // Ensure mandatory Name exists
+        // Bắt buộc phải có tên cán bộ
         if (!rowData.name && row[1]) rowData.name = String(row[1]).trim();
         if (!rowData.name && row[2]) rowData.name = String(row[2]).trim();
         if (!rowData.name || rowData.name.toLowerCase() === 'họ và tên') continue;
@@ -1085,15 +1081,16 @@ const executeImport = async () => {
         const cleanCccd = rowData.cccd ? String(rowData.cccd).trim() : '';
         const cleanCode = rowData.code ? String(rowData.code).trim().toLowerCase() : '';
 
-        // Check if Person already exists by CCCD (Unique Key) or Code
+        // Kiểm tra cán bộ đã tồn tại theo CCCD hoặc Mã CB
         const existingPerson = (cleanCccd && existingByCccd[cleanCccd]) || (cleanCode && existingByCode[cleanCode]) || null;
         let targetPersonId = '';
 
         if (existingPerson) {
           targetPersonId = existingPerson.id;
-          // Ghi đè / Cập nhật (Update)
+          // Ghi đè / Cập nhật (Update) - Giữ nguyên các trường đã có nếu file excel không có giá trị
           const mergedFlags = { ...(existingPerson.flags || {}), ...(existingPerson.custom_data?.flags || {}), ...flags };
           const updatedPayload = {
+            ...existingPerson,
             ...rowData,
             flags: mergedFlags,
             custom_data: {
@@ -1127,7 +1124,7 @@ const executeImport = async () => {
           createdCount++;
         }
 
-        // If trip information is present in this row, persist to appendix1
+        // Tạo bản ghi chuyến đi nếu có thông tin
         if (Object.keys(currentTrip).length > 0 && targetPersonId) {
           const tripPayload = {
             id: 'trip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
@@ -1143,10 +1140,11 @@ const executeImport = async () => {
 
       await logActivity('Import Excel Cán bộ', `Đã import ${count} cán bộ (Tạo mới: ${createdCount}, Cập nhật ghi đè theo CCCD: ${updatedCount})`);
     } else {
-      // Relative Import: Match Parent Personnel by CCCD / Code / Name
+      // Relative Import
       let currentRelColIdx = 0;
       const relColByNum = {};
-      const allRelCols = [];
+      const relColById = {};
+      const relColByLabel = {};
 
       (personnelStore.importMappingRelative || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
@@ -1154,11 +1152,13 @@ const executeImport = async () => {
           const entry = {
             id: c.id,
             colNum: currentRelColIdx,
-            labelKey: normalizeKey(c.label || c.id),
+            group: g.group || '',
             raw: c,
           };
           relColByNum[currentRelColIdx] = entry;
-          allRelCols.push(entry);
+          relColById[c.id.toLowerCase()] = entry;
+          relColByLabel[normalizeKey(`[Cột ${currentRelColIdx}] ${c.label || c.id}`)] = entry;
+          relColByLabel[normalizeKey(c.label || c.id)] = entry;
         });
       });
 
@@ -1184,7 +1184,7 @@ const executeImport = async () => {
 
         headerRow.forEach((rawHeader, colIdx) => {
           const val = row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : '';
-          if (!val) return;
+          if (!val) return; // Ô trống -> Bỏ qua
 
           const hKey = normalizeKey(rawHeader);
 
@@ -1194,7 +1194,10 @@ const executeImport = async () => {
             matched = relColByNum[Number(colNumMatch[1])];
           }
           if (!matched) {
-            matched = allRelCols.find((c) => c.labelKey === hKey || c.id.toLowerCase() === hKey || hKey.includes(c.labelKey) || c.labelKey.includes(hKey));
+            matched = relColByLabel[hKey] || relColById[hKey];
+          }
+          if (!matched && relColByNum[colIdx + 1]) {
+            matched = relColByNum[colIdx + 1];
           }
 
           if (matched) {
@@ -1204,20 +1207,6 @@ const executeImport = async () => {
             if (fId === 'parentPersonnelName') parentName = val;
             if (fId === 'relationshipName') relationshipName = val;
             if (fId === 'relativeName') relativeName = val;
-          } else {
-            if (hKey.includes('cccdcanbo') || (hKey.includes('cccd') && hKey.includes('cb'))) {
-              parentCccd = val;
-            } else if (hKey.includes('macanbo') || hKey.includes('macb')) {
-              parentCode = val;
-            } else if (hKey.includes('tencanbo') || (hKey.includes('canbo') && !hKey.includes('than'))) {
-              parentName = val;
-            } else if (hKey.includes('moiquanhe') || hKey.includes('quanhe')) {
-              relationshipName = val;
-            } else if (hKey.includes('tenthan') || hKey.includes('hotenthan') || hKey.includes('thannhan')) {
-              relativeName = val;
-            } else {
-              relData[hKey] = val;
-            }
           }
         });
 
