@@ -44,7 +44,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span class="badge-code" style="background: #0284c7; color: #ffffff;">
-            {{ rel.code || ('TN-' + String(idx + 1).padStart(5, '0')) }}
+            {{ getRelativeCode(rel, idx) }}
           </span>
           <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">
             {{ rel.relationshipName ? `[${rel.relationshipName}] ` : '' }}{{ rel.relativeName || 'Chưa đặt tên' }} {{ rel.countryName ? `(${rel.countryName})` : '' }}
@@ -138,6 +138,19 @@ const displayedRelatives = computed(() => {
   }
   return relatives.value;
 });
+
+const getRelativeCode = (rel, idx) => {
+  if (rel.code && String(rel.code).startsWith('TN-')) return rel.code;
+  if (props.targetRelativeCode && displayedRelatives.value.length === 1) return props.targetRelativeCode;
+  const globalIdx = (personnelStore.relativesList || []).findIndex(
+    (item) => (rel.id && item.id === rel.id) || (rel.cccd && item.cccd === rel.cccd)
+  );
+  if (globalIdx !== -1) {
+    return 'TN-' + String(globalIdx + 1).padStart(5, '0');
+  }
+  const localIdx = relatives.value.indexOf(rel);
+  return 'TN-' + String((localIdx !== -1 ? localIdx : idx) + 1).padStart(5, '0');
+};
 
 const relativeGroups = computed(() => {
   return personnelStore.importMappingRelative || [];

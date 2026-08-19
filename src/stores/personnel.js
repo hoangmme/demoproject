@@ -137,7 +137,13 @@ export const usePersonnelStore = defineStore('personnel', {
         const rawRelatives = a2Res.data?.data || [];
 
         this.tripsList = rawTrips.filter((x) => x.isDeleted !== 1);
-        this.relativesList = rawRelatives.filter((x) => x.isDeleted !== 1);
+        this.relativesList = rawRelatives.filter((x) => x.isDeleted !== 1).map((r, idx) => {
+          const assignedCode = r.code && r.code.startsWith('TN-') ? r.code : `TN-${String(idx + 1).padStart(5, '0')}`;
+          return {
+            ...r,
+            code: assignedCode,
+          };
+        });
 
         // Build quick lookup maps
         const tripsMap = {};
