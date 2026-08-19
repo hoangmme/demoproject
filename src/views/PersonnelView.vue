@@ -116,6 +116,8 @@
         :loading="personnelStore.loading"
         responsiveLayout="scroll"
         stripedRows
+        removableSort
+        :customSort="customSort"
         class="p-datatable-sm"
         tableStyle="min-width: 60rem; table-layout: fixed;"
         @row-click="onRowClick"
@@ -269,6 +271,8 @@
         currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} thân nhân"
         responsiveLayout="scroll"
         stripedRows
+        removableSort
+        :customSort="customSort"
         class="p-datatable-sm"
         tableStyle="min-width: 60rem; table-layout: fixed;"
       >
@@ -605,6 +609,39 @@ const selectedFileName = ref('');
 const availableSheets = ref([]);
 const selectedSheet = ref('');
 const parsedWorkbookData = ref({});
+
+// Custom Vietnamese and Natural Sort Function
+const customSort = (event) => {
+  event.data.sort((data1, data2) => {
+    let value1 = data1[event.field];
+    let value2 = data2[event.field];
+    let result = null;
+
+    if (value1 == null && value2 != null) result = -1;
+    else if (value1 != null && value2 == null) result = 1;
+    else if (value1 == null && value2 == null) result = 0;
+    else if (typeof value1 === 'string' && typeof value2 === 'string') {
+      const v1 = value1.trim();
+      const v2 = value2.trim();
+      // Date DD/MM/YYYY support
+      const isDate1 = /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v1);
+      const isDate2 = /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v2);
+      if (isDate1 && isDate2) {
+        const [d1, m1, y1] = v1.split('/').map(Number);
+        const [d2, m2, y2] = v2.split('/').map(Number);
+        const t1 = new Date(y1, m1 - 1, d1).getTime();
+        const t2 = new Date(y2, m2 - 1, d2).getTime();
+        result = t1 < t2 ? -1 : (t1 > t2 ? 1 : 0);
+      } else {
+        result = v1.localeCompare(v2, 'vi', { numeric: true, sensitivity: 'base' });
+      }
+    } else {
+      result = value1 < value2 ? -1 : (value1 > value2 ? 1 : 0);
+    }
+
+    return event.order * result;
+  });
+};
 
 onMounted(async () => {
   if (personnelStore.personnelList.length === 0) {

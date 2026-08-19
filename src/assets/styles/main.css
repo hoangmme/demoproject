@@ -524,6 +524,36 @@ html, body {
   white-space: nowrap !important;
 }
 
+.p-datatable-thead > tr > th.p-sortable-column {
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.p-datatable-thead > tr > th.p-sortable-column:hover {
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+.p-datatable-thead > tr > th.p-sortable-column .p-sortable-column-icon {
+  font-size: 0.72rem !important;
+  color: #94a3b8 !important;
+  margin-left: 6px !important;
+  vertical-align: middle !important;
+  transition: all 0.2s ease !important;
+}
+
+.p-datatable-thead > tr > th.p-sortable-column.p-highlight {
+  background: #f0fdf4 !important;
+  color: #15803d !important;
+}
+
+.p-datatable-thead > tr > th.p-sortable-column.p-highlight .p-sortable-column-icon {
+  color: #16a34a !important;
+  font-weight: 700 !important;
+  transform: scale(1.18) !important;
+}
+
 .p-datatable-tbody > tr > td {
   padding: 0.65rem 0.75rem !important;
   border: none !important;
