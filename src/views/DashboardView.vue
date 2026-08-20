@@ -710,17 +710,39 @@
           </div>
         </div>
 
-        <!-- Setting 3: Funding ID -->
-        <div>
-          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            3. ID Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí):
+        <!-- Setting 3: Funding ID & Sub-columns -->
+        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block;">
+            3. Cài đặt Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí & Biểu đồ):
           </label>
-          <div style="display: flex; gap: 8px;">
-            <InputText v-model="tempConfig.funding" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.8rem;" />
-            <select class="settings-select" @change="tempConfig.funding = $event.target.value">
-              <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-            </select>
+          <div>
+            <span style="font-size: 0.72rem; color: #64748b;">a) Cột Nguồn kinh phí chung (nếu gộp 1 cột):</span>
+            <div style="display: flex; gap: 8px; margin-top: 2px;">
+              <InputText v-model="tempConfig.funding" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.78rem;" />
+              <select class="settings-select" @change="tempConfig.funding = $event.target.value">
+                <option value="">-- Chọn cột mẫu --</option>
+                <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 6px; border-top: 1px dashed #e2e8f0;">
+            <div>
+              <span style="font-size: 0.72rem; color: #64748b;">b) Cột Ngân sách nhà nước:</span>
+              <InputText v-model="tempConfig.fundingBudget" placeholder="Ví dụ: fundingBudget" style="width: 100%; font-size: 0.78rem; margin-top: 2px;" />
+            </div>
+            <div>
+              <span style="font-size: 0.72rem; color: #64748b;">c) Cột Cơ quan/Tổ chức tài trợ:</span>
+              <InputText v-model="tempConfig.fundingSponsor" placeholder="Ví dụ: fundingSponsor" style="width: 100%; font-size: 0.78rem; margin-top: 2px;" />
+            </div>
+            <div>
+              <span style="font-size: 0.72rem; color: #64748b;">d) Cột Tự túc:</span>
+              <InputText v-model="tempConfig.fundingSelf" placeholder="Ví dụ: fundingSelf" style="width: 100%; font-size: 0.78rem; margin-top: 2px;" />
+            </div>
+            <div>
+              <span style="font-size: 0.72rem; color: #64748b;">e) Cột Khác:</span>
+              <InputText v-model="tempConfig.fundingOther" placeholder="Ví dụ: fundingOther" style="width: 100%; font-size: 0.78rem; margin-top: 2px;" />
+            </div>
           </div>
         </div>
 
@@ -840,6 +862,8 @@
               <option value="personnel">Hồ sơ Cán bộ (Cá nhân)</option>
               <option value="relatives">Danh sách Thân nhân</option>
               <option value="trips">Lượt đi Nước ngoài (Phụ lục 1)</option>
+              <option value="combined_country">🌐 Tổng hợp Quốc gia (Cả Cán bộ & Thân nhân)</option>
+              <option value="combined_funding">💰 Tổng hợp Kinh phí (4 Cột & Chung)</option>
             </select>
           </div>
 
@@ -955,6 +979,10 @@ const DEFAULT_CONFIG = {
   decision: 'decisionNumber',
   country: 'countryName',
   funding: 'fundingName',
+  fundingBudget: 'fundingBudget',
+  fundingSponsor: 'fundingSponsor',
+  fundingSelf: 'fundingSelf',
+  fundingOther: 'fundingOther',
   approvedDeparture: 'approvedDepartureDate',
   approvedArrival: 'approvedArrivalDate',
   approvedExtension: 'approvedExtensionDate',
@@ -1282,6 +1310,38 @@ const computeWidgetCount = (widget) => {
 };
 
 const computeWidgetChartData = (widget) => {
+  if (widget.source === 'combined_country') {
+    const counts = {};
+    let total = 0;
+    (stats.value.filteredTrips || []).forEach((t) => {
+      const c = t.countryName || getTripValue(t, colConfig.value.country);
+      if (c && c !== 'Chưa rõ' && c !== '-') {
+        counts[c] = (counts[c] || 0) + 1;
+        total++;
+      }
+    });
+    (personnelStore.relativesList || []).forEach((r) => {
+      const c = r.countryName || r.country || getRowFieldValue(r, 'countryName') || getRowFieldValue(r, 'country');
+      if (c && c !== 'Chưa rõ' && c !== '-') {
+        counts[c] = (counts[c] || 0) + 1;
+        total++;
+      }
+    });
+    const chartList = Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+    const max = chartList.length > 0 ? chartList[0].count : 1;
+    return { list: chartList, max, total };
+  }
+
+  if (widget.source === 'combined_funding') {
+    return {
+      list: stats.value.fundingList || [],
+      max: stats.value.maxFunding || 1,
+      total: (stats.value.fundingList || []).reduce((sum, item) => sum + item.count, 0),
+    };
+  }
+
   const list = getSourceList(widget.source);
   if (!widget.columnId) return { list: [], max: 1, total: 0 };
 
@@ -1501,9 +1561,34 @@ const stats = computed(() => {
         countries[c] = (countries[c] || 0) + 1;
       }
 
+      // 4. Funding aggregation (Supports both single combined column and 4 sub-columns)
       const f = enrichedTrip.fundingName;
-      if (f && f !== 'Chưa rõ') {
+      if (f && f !== 'Chưa rõ' && f !== '-') {
         fundings[f] = (fundings[f] || 0) + 1;
+      }
+
+      const budgetVal = getTripValue(t, colConfig.value.fundingBudget);
+      const sponsorVal = getTripValue(t, colConfig.value.fundingSponsor);
+      const selfVal = getTripValue(t, colConfig.value.fundingSelf);
+      const otherVal = getTripValue(t, colConfig.value.fundingOther);
+
+      if (budgetVal && String(budgetVal).trim() && String(budgetVal).trim() !== '-') {
+        fundings['Ngân sách nhà nước'] = (fundings['Ngân sách nhà nước'] || 0) + 1;
+      }
+      if (sponsorVal && String(sponsorVal).trim() && String(sponsorVal).trim() !== '-') {
+        const spLabel = (String(sponsorVal).toLowerCase() === 'x' || String(sponsorVal).toLowerCase() === 'có' || String(sponsorVal).trim() === '1')
+          ? 'Cơ quan / Tổ chức tài trợ'
+          : `Tài trợ (${sponsorVal})`;
+        fundings[spLabel] = (fundings[spLabel] || 0) + 1;
+      }
+      if (selfVal && String(selfVal).trim() && String(selfVal).trim() !== '-') {
+        fundings['Tự túc'] = (fundings['Tự túc'] || 0) + 1;
+      }
+      if (otherVal && String(otherVal).trim() && String(otherVal).trim() !== '-') {
+        const othLabel = (String(otherVal).toLowerCase() === 'x' || String(otherVal).toLowerCase() === 'có' || String(otherVal).trim() === '1')
+          ? 'Nguồn khác'
+          : `Khác (${otherVal})`;
+        fundings[othLabel] = (fundings[othLabel] || 0) + 1;
       }
     });
   });

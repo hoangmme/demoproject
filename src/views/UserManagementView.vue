@@ -419,7 +419,7 @@ const allSystemColumnsList = computed(() => {
         list.push({
           id: c.id,
           label: c.label,
-          colNumStr: pMap[c.id] ? `Cột ${pMap[c.id]}` : '-',
+          colNumStr: pMap[c.id] || '-',
           groupName: g.group || 'Cán bộ',
           source: 'personnel',
         });
@@ -435,7 +435,7 @@ const allSystemColumnsList = computed(() => {
         list.push({
           id: c.id,
           label: c.label,
-          colNumStr: rMap[c.id] ? `Cột ${rMap[c.id]}` : '-',
+          colNumStr: rMap[c.id] || '-',
           groupName: g.group || 'Thân nhân',
           source: 'relative',
         });
