@@ -67,16 +67,14 @@
           <div class="header-menu-wrapper" @mouseenter="isFilterMenuOpen = true" @mouseleave="isFilterMenuOpen = false">
             <Button
               icon="pi pi-sliders-h"
-              :label="smartFilter !== 'all' ? 'Đang lọc' : 'Lọc & Cột'"
+              :label="smartFilter !== 'all' ? 'Đang lọc (Bật)' : 'Lọc & Cột'"
               :severity="smartFilter !== 'all' ? 'primary' : 'secondary'"
               outlined
               size="small"
               @click="isFilterMenuOpen = !isFilterMenuOpen; isDataMenuOpen = false;"
               title="Tùy biến cột hiển thị và Bộ lọc dữ liệu thông minh"
               style="font-size: 0.8rem;"
-            >
-              <span v-if="smartFilter !== 'all'" class="filter-active-dot"></span>
-            </Button>
+            />
 
             <div v-show="isFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown">
               <!-- Phần 1: Bộ lọc thông minh -->
@@ -181,9 +179,7 @@
               size="small"
               @click="isDataMenuOpen = !isDataMenuOpen; isFilterMenuOpen = false;"
               style="font-size: 0.8rem;"
-            >
-              <i class="pi pi-chevron-down" style="font-size: 0.65rem; margin-left: 4px;"></i>
-            </Button>
+            />
 
             <div v-show="isDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
               <div class="menu-action-item" @click="openImportModal('personnel'); isDataMenuOpen = false;">
@@ -385,9 +381,7 @@
               size="small"
               @click="isRelativeDataMenuOpen = !isRelativeDataMenuOpen; isRelativeFilterMenuOpen = false;"
               style="font-size: 0.8rem;"
-            >
-              <i class="pi pi-chevron-down" style="font-size: 0.65rem; margin-left: 4px;"></i>
-            </Button>
+            />
 
             <div v-show="isRelativeDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
               <div class="menu-action-item" @click="openImportModal('relative'); isRelativeDataMenuOpen = false;">

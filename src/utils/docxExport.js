@@ -525,6 +525,24 @@ export async function exportMultiplePersonnelZip(templateBuffer, personnelList, 
  * @param {Boolean} includeRelatives - Có kèm danh sách thân nhân hay không
  * @returns {Promise<Blob>}
  */
+const escapeXml = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+};
+
+/**
+ * Tạo một file Word (.docx) mẫu động dựa trên các Nhóm Cột được chọn (Group A, Group B, Group C...)
+ * @param {Array<Number>} selectedGroupIndices - Mảng các index nhóm được chọn (Group A luôn được thêm)
+ * @param {Array} personnelGroups - Cấu hình nhóm cán bộ từ store
+ * @param {Boolean} includeTrips - Có kèm lịch sử chuyến đi nước ngoài hay không
+ * @param {Boolean} includeRelatives - Có kèm danh sách thân nhân hay không
+ * @returns {Promise<Blob>}
+ */
 export async function createDynamicDocxTemplateBlob(selectedGroupIndices = [0], personnelGroups = [], includeTrips = true, includeRelatives = true) {
   const zip = new JSZip();
 
@@ -580,12 +598,15 @@ export async function createDynamicDocxTemplateBlob(selectedGroupIndices = [0], 
   (personnelGroups || []).forEach((grp, idx) => {
     if (idx === 0) return; // Bỏ qua nhóm 0 vì đã thêm ở Nhóm A
     if (selectedGroupIndices.includes(idx)) {
-      bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* ${grp.group || 'Thông tin bổ sung'}:</w:t></w:r></w:p>`;
+      const grpTitle = escapeXml(grp.group || 'Thông tin bổ sung');
+      bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* ${grpTitle}:</w:t></w:r></w:p>`;
       (grp.columns || []).forEach((col) => {
+        const colLabel = escapeXml(col.label || col.id);
+        const colId = escapeXml(col.id);
         if (col.format === 'table_loop') {
-          bodyContent += `<w:p><w:r><w:t>{#${col.id}}- {col0}: {col1} | {col2}{/${col.id}}</w:t></w:r></w:p>`;
+          bodyContent += `<w:p><w:r><w:t>{#${colId}}- {col0}: {col1} | {col2}{/${colId}}</w:t></w:r></w:p>`;
         } else {
-          bodyContent += `<w:p><w:r><w:t>- ${col.label}: {${col.id}}</w:t></w:r></w:p>`;
+          bodyContent += `<w:p><w:r><w:t>- ${colLabel}: {${colId}}</w:t></w:r></w:p>`;
         }
       });
       bodyContent += `<w:p/>`;
