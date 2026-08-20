@@ -511,7 +511,7 @@ const allAvailableTags = computed(() => {
         category: 'personnel',
         colNum,
       });
-    } else if (col.format === 'checkbox_text' && col.options) {
+    } else if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
       // 1. Thẻ chung toàn bộ
       tags.push({
         label: `${col.label} (Gộp toàn bộ)`,
@@ -521,18 +521,20 @@ const allAvailableTags = computed(() => {
       });
 
       // 2. Thẻ phân rã từng mục
-      const subOpts = String(col.options).split(',').map((s) => s.trim()).filter(Boolean);
+      const subOpts = String(col.options).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
       subOpts.forEach((opt) => {
         const slug = generateSlug(opt);
         if (slug) {
+          if (col.format === 'checkbox_text') {
+            tags.push({
+              label: `${col.label} -> [Text ${opt}]`,
+              tag: `{${col.id}_${slug}}`,
+              category: 'personnel',
+              colNum,
+            });
+          }
           tags.push({
-            label: `${col.label} -> [Text ${opt}]`,
-            tag: `{${col.id}_${slug}}`,
-            category: 'personnel',
-            colNum,
-          });
-          tags.push({
-            label: `${col.label} -> [Dấu X ${opt}]`,
+            label: `${col.label} -> [Tích X ${opt}]`,
             tag: `{is_${col.id}_${slug}}`,
             category: 'personnel',
             colNum,
@@ -593,12 +595,41 @@ const allAvailableTags = computed(() => {
   const relativeCols = personnelStore.allAvailableRelativeColumns || [];
   relativeCols.forEach((col) => {
     const colNum = rMap[col.id] || '';
-    tags.push({
-      label: col.label,
-      tag: `{${col.id}}`,
-      category: 'relatives',
-      colNum,
-    });
+    if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
+      tags.push({
+        label: `${col.label} (Gộp toàn bộ)`,
+        tag: `{${col.id}}`,
+        category: 'relatives',
+        colNum,
+      });
+      const subOpts = String(col.options).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+      subOpts.forEach((opt) => {
+        const slug = generateSlug(opt);
+        if (slug) {
+          if (col.format === 'checkbox_text') {
+            tags.push({
+              label: `${col.label} -> [Text ${opt}]`,
+              tag: `{${col.id}_${slug}}`,
+              category: 'relatives',
+              colNum,
+            });
+          }
+          tags.push({
+            label: `${col.label} -> [Tích X ${opt}]`,
+            tag: `{is_${col.id}_${slug}}`,
+            category: 'relatives',
+            colNum,
+          });
+        }
+      });
+    } else {
+      tags.push({
+        label: col.label,
+        tag: `{${col.id}}`,
+        category: 'relatives',
+        colNum,
+      });
+    }
   });
 
   // 3. Hệ thống & Ngày tháng (Tab 3)

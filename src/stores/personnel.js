@@ -51,6 +51,7 @@ export const usePersonnelStore = defineStore('personnel', {
               label: c.label || c.id,
               width: '160px',
               format: c.format || 'text',
+              options: c.options || '',
               group: g.group,
             });
           }
@@ -64,7 +65,7 @@ export const usePersonnelStore = defineStore('personnel', {
           { id: 'birthYear', label: 'Năm sinh', width: '120px' },
           { id: 'departmentId', label: 'Phòng ban', width: '160px' },
           { id: 'position', label: 'Chức vụ', width: '140px' },
-          { id: 'cccd', label: 'Số CCCD', width: '140px' },
+          { id: 'cccdparent', label: 'Số CCCD', width: '140px' },
         ];
       }
       return list;
@@ -82,6 +83,7 @@ export const usePersonnelStore = defineStore('personnel', {
               label: c.label || c.id,
               width: '160px',
               format: c.format || 'text',
+              options: c.options || '',
               group: g.group,
             });
           }
@@ -95,7 +97,7 @@ export const usePersonnelStore = defineStore('personnel', {
           { id: 'birthYear', label: 'Năm sinh', width: '120px' },
           { id: 'departmentId', label: 'Phòng ban', width: '160px' },
           { id: 'position', label: 'Chức vụ', width: '140px' },
-          { id: 'cccd', label: 'Số CCCD', width: '140px' },
+          { id: 'cccdparent', label: 'Số CCCD', width: '140px' },
         ];
       }
       return list;
@@ -113,6 +115,7 @@ export const usePersonnelStore = defineStore('personnel', {
               label: c.label || c.id,
               width: '160px',
               format: c.format || 'text',
+              options: c.options || '',
               group: g.group,
             });
           }
