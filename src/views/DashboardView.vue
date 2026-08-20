@@ -662,10 +662,18 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(p, idx) in filteredDrilldownData" :key="p.id || idx">
+              <tr
+                v-for="(p, idx) in filteredDrilldownData"
+                :key="p.id || idx"
+                class="clickable-row"
+                @click="openPersonnelDetail(p)"
+                title="Nhấp để mở chi tiết hồ sơ cán bộ này"
+              >
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
                 <td><span class="code-badge">{{ p.code || p.id }}</span></td>
-                <td style="font-weight: 600; color: #1e293b;">{{ p.name }}</td>
+                <td style="font-weight: 600; color: #1e293b;">
+                  <span style="color: #0284c7; text-decoration: underline;">{{ p.name }}</span>
+                </td>
                 <td>{{ p.cccdparent || p.cccd || '-' }}</td>
                 <td>{{ p.positionName || p.position || '-' }}</td>
                 <td>{{ p.departmentName || '-' }}</td>
@@ -688,10 +696,18 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(r, idx) in filteredDrilldownData" :key="r.id || idx">
+              <tr
+                v-for="(r, idx) in filteredDrilldownData"
+                :key="r.id || idx"
+                class="clickable-row"
+                @click="openRelativeDetail(r)"
+                title="Nhấp để mở chi tiết thân nhân này"
+              >
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
                 <td style="font-weight: 600; color: #1e293b;">{{ r.parentName || r.parentPersonnelName || '-' }}</td>
-                <td style="font-weight: 600; color: #6d28d9;">{{ r.relativeName || r.name || '-' }}</td>
+                <td style="font-weight: 600; color: #6d28d9;">
+                  <span style="color: #6d28d9; text-decoration: underline;">{{ r.relativeName || r.name || '-' }}</span>
+                </td>
                 <td><span class="badge-pill badge-neutral">{{ r.relationship || r.relationshipName || '-' }}</span></td>
                 <td><span class="badge-pill badge-green">{{ r.countryName || r.country || '-' }}</span></td>
                 <td>{{ r.fundingName || r.funding || '-' }}</td>
@@ -715,9 +731,17 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(t, idx) in filteredDrilldownData" :key="t.id || idx">
+              <tr
+                v-for="(t, idx) in filteredDrilldownData"
+                :key="t.id || idx"
+                class="clickable-row"
+                @click="openTripDetail(t)"
+                title="Nhấp để mở chi tiết cán bộ & chuyến đi này"
+              >
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
-                <td style="font-weight: 600; color: #1e293b;">{{ t.personnelName || '-' }}</td>
+                <td style="font-weight: 600; color: #1e293b;">
+                  <span style="color: #0284c7; text-decoration: underline;">{{ t.personnelName || '-' }}</span>
+                </td>
                 <td>
                   <span v-if="t.decisionNumber" class="code-badge">{{ t.decisionNumber }}</span>
                   <span v-else class="badge-pill badge-red">Chưa có</span>
@@ -1125,6 +1149,16 @@
         </div>
       </template>
     </Dialog>
+
+    <!-- Detailed Personnel / Relative Dialog -->
+    <PersonnelDialog
+      v-model="isPersonDialogOpen"
+      :personData="selectedPersonForDialog"
+      :initialTab="dialogInitialTab"
+      :targetRelativeCode="dialogTargetRelativeCode"
+      @saved="onPersonSaved"
+      @deleted="onPersonSaved"
+    />
   </div>
 </template>
 
@@ -1134,12 +1168,76 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
 import AppDatePicker from '@/components/common/AppDatePicker.vue';
+import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const personnelStore = usePersonnelStore();
+
+// Dialog state for personnel & relative detail
+const isPersonDialogOpen = ref(false);
+const selectedPersonForDialog = ref(null);
+const dialogInitialTab = ref(0);
+const dialogTargetRelativeCode = ref('');
+
+const openPersonnelDetail = (p) => {
+  if (!p) return;
+  const target = (personnelStore.personnelList || []).find(
+    (x) => x.id === p.id || x.code === p.code || (p.cccdparent && (x.cccdparent === p.cccdparent || x.cccd === p.cccdparent))
+  ) || p;
+  selectedPersonForDialog.value = target;
+  dialogInitialTab.value = 0;
+  dialogTargetRelativeCode.value = '';
+  isPersonDialogOpen.value = true;
+};
+
+const openTripDetail = (t) => {
+  if (!t) return;
+  const p = (personnelStore.personnelList || []).find(
+    (x) => x.id === t.personnelId || x.code === t.personnelId || x.code === t.personnelCode || x.name === t.personnelName
+  );
+  if (p) {
+    selectedPersonForDialog.value = p;
+    dialogInitialTab.value = 2; // Tab 3: Chuyến đi
+    dialogTargetRelativeCode.value = '';
+    isPersonDialogOpen.value = true;
+  }
+};
+
+const openRelativeDetail = (r) => {
+  if (!r) return;
+  let parent = null;
+  if (r.cccd_can_bo) {
+    parent = (personnelStore.personnelList || []).find(
+      (p) => String(p.cccdparent || p.cccd || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim() === String(r.cccd_can_bo).trim()
+    );
+  }
+  if (!parent && r.personnelId) {
+    parent = (personnelStore.personnelList || []).find((p) => p.id === r.personnelId || p.code === r.personnelId);
+  }
+  const relCode = r.code || ('TN-' + String(r.id || '').slice(-5).padStart(5, '0'));
+
+  if (parent) {
+    selectedPersonForDialog.value = parent;
+    dialogInitialTab.value = 1; // Tab 2: Thân nhân
+    dialogTargetRelativeCode.value = relCode;
+    isPersonDialogOpen.value = true;
+  } else {
+    selectedPersonForDialog.value = {
+      name: r.parentName || 'Cán bộ liên quan',
+      relatives: [r],
+    };
+    dialogInitialTab.value = 1;
+    dialogTargetRelativeCode.value = relCode;
+    isPersonDialogOpen.value = true;
+  }
+};
+
+const onPersonSaved = async () => {
+  await personnelStore.fetchPersonnel();
+};
 
 // =========================================================================
 // 1. DEFAULT DASHBOARD COLUMN CONFIGURATION STATE (Persisted in Directus DB)
@@ -2450,5 +2548,18 @@ onMounted(async () => {
 .btn-add-widget-green:hover {
   background: #1b5e20;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clickable-row:hover {
+  background-color: #f0fdf4 !important;
+}
+
+.clickable-row:hover td {
+  color: #0f172a;
 }
 </style>
