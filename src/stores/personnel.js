@@ -64,6 +64,37 @@ export const usePersonnelStore = defineStore('personnel', {
       }
       return list;
     },
+    allAvailablePersonnelColumns: (state) => {
+      const list = [];
+      const seen = new Set();
+
+      (state.importMappingPersonnel || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+            seen.add(c.id);
+            list.push({
+              id: c.id,
+              label: c.label || c.id,
+              width: '160px',
+              format: c.format || 'text',
+              group: g.group,
+            });
+          }
+        });
+      });
+
+      if (list.length === 0) {
+        return [
+          { id: 'code', label: 'Mã CB', width: '110px' },
+          { id: 'name', label: 'Họ và tên', width: '200px' },
+          { id: 'birthYear', label: 'Năm sinh', width: '120px' },
+          { id: 'departmentId', label: 'Phòng ban', width: '160px' },
+          { id: 'position', label: 'Chức vụ', width: '140px' },
+          { id: 'cccd', label: 'Số CCCD', width: '140px' },
+        ];
+      }
+      return list;
+    },
     allAvailableRelativeColumns: (state) => {
       const list = [];
       const seen = new Set();

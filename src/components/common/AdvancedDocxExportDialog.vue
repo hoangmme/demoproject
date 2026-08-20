@@ -396,15 +396,18 @@ const allAvailableTags = computed(() => {
   const pMap = personnelColMap.value;
   const rMap = relativeColMap.value;
 
-  // 1. Cán bộ (Lấy 100% các cột từ importMappingPersonnel)
-  const personnelCols = personnelStore.allAvailablePersonnelColumns || [];
+  // 1. Cán bộ (Lấy 100% các cột từ importMappingPersonnel + Chuyến đi)
+  const personnelCols = (personnelStore.allAvailablePersonnelColumns && personnelStore.allAvailablePersonnelColumns.length > 0)
+    ? personnelStore.allAvailablePersonnelColumns
+    : (personnelStore.allAvailableColumns || []);
+
   personnelCols.forEach((col) => {
     const colNum = pMap[col.id] || '';
     if (col.format === 'table_loop' || col.format === 'table_2col') {
       tags.push({
         label: `Bảng lặp: ${col.label}`,
         tag: `{#${col.id}}...{col0}, {col1}...{/${col.id}}`,
-        category: 'custom_tables',
+        category: 'personnel',
         colNum,
       });
     } else {
@@ -417,7 +420,32 @@ const allAvailableTags = computed(() => {
     }
   });
 
-  // 2. Khối lặp Thân nhân
+  // Chuyến đi nằm trong Hồ sơ Cán bộ (Tab 1)
+  tags.push(
+    {
+      label: 'Khối/Hàng lặp Chuyến đi (Bắt đầu)',
+      tag: '{#chuyen_di}',
+      category: 'personnel',
+      colNum: 'Khối',
+    },
+    {
+      label: 'Khối/Hàng lặp Chuyến đi (Kết thúc)',
+      tag: '{/chuyen_di}',
+      category: 'personnel',
+      colNum: 'Khối',
+    },
+    { label: '[Chuyến đi] Quốc gia đến', tag: '{quoc_gia_den}', category: 'personnel', colNum: 'Đi' },
+    { label: '[Chuyến đi] Mục đích', tag: '{muc_dich}', category: 'personnel', colNum: 'Đi' },
+    { label: '[Chuyến đi] Ngày xuất cảnh', tag: '{ngay_di}', category: 'personnel', colNum: 'Đi' },
+    { label: '[Chuyến đi] Ngày nhập cảnh', tag: '{ngay_ve}', category: 'personnel', colNum: 'Đi' },
+    { label: '[Chuyến đi] Nguồn kinh phí', tag: '{kinh_phi}', category: 'personnel', colNum: 'Đi' },
+    { label: '[Chuyến đi] Số quyết định', tag: '{so_quyet_dinh}', category: 'personnel', colNum: 'Đi' },
+    { label: '[Chuyến đi] Ngày đi được duyệt', tag: '{ngay_di_duoc_duyet}', category: 'personnel', colNum: 'Đi' },
+    { label: '[Chuyến đi] Ngày về được duyệt', tag: '{ngay_ve_duoc_duyet}', category: 'personnel', colNum: 'Đi' },
+    { label: '[Chuyến đi] Ngày gia hạn', tag: '{ngay_gia_han}', category: 'personnel', colNum: 'Đi' }
+  );
+
+  // 2. Khối lặp Thân nhân (Tab 2)
   tags.push(
     {
       label: 'Khối/Hàng lặp Thân nhân (Bắt đầu)',
@@ -444,32 +472,7 @@ const allAvailableTags = computed(() => {
     });
   });
 
-  // 3. Khối lặp Chuyến đi
-  tags.push(
-    {
-      label: 'Khối/Hàng lặp Chuyến đi (Bắt đầu)',
-      tag: '{#chuyen_di}',
-      category: 'trips',
-      colNum: 'Khối',
-    },
-    {
-      label: 'Khối/Hàng lặp Chuyến đi (Kết thúc)',
-      tag: '{/chuyen_di}',
-      category: 'trips',
-      colNum: 'Khối',
-    },
-    { label: 'Quốc gia đến', tag: '{quoc_gia_den}', category: 'trips', colNum: 'Đi' },
-    { label: 'Mục đích chuyến đi', tag: '{muc_dich}', category: 'trips', colNum: 'Đi' },
-    { label: 'Ngày xuất cảnh', tag: '{ngay_di}', category: 'trips', colNum: 'Đi' },
-    { label: 'Ngày nhập cảnh', tag: '{ngay_ve}', category: 'trips', colNum: 'Đi' },
-    { label: 'Nguồn kinh phí', tag: '{kinh_phi}', category: 'trips', colNum: 'Đi' },
-    { label: 'Số quyết định', tag: '{so_quyet_dinh}', category: 'trips', colNum: 'Đi' },
-    { label: 'Ngày đi được duyệt', tag: '{ngay_di_duoc_duyet}', category: 'trips', colNum: 'Đi' },
-    { label: 'Ngày về được duyệt', tag: '{ngay_ve_duoc_duyet}', category: 'trips', colNum: 'Đi' },
-    { label: 'Ngày gia hạn', tag: '{ngay_gia_han}', category: 'trips', colNum: 'Đi' }
-  );
-
-  // 4. Hệ thống & Ngày tháng
+  // 3. Hệ thống & Ngày tháng (Tab 3)
   tags.push(
     { label: 'Số thứ tự cán bộ', tag: '{stt}', category: 'system', colNum: 'HT' },
     { label: 'Ngày xuất file (DD/MM/YYYY)', tag: '{ngay_hien_tai}', category: 'system', colNum: 'HT' },
@@ -484,7 +487,7 @@ const allAvailableTags = computed(() => {
 });
 
 const personnelTagsCount = computed(() => {
-  return allAvailableTags.value.filter((t) => t.category === 'personnel' || t.category === 'custom_tables').length;
+  return allAvailableTags.value.filter((t) => t.category === 'personnel').length;
 });
 
 const relativeTagsCount = computed(() => {
@@ -492,7 +495,7 @@ const relativeTagsCount = computed(() => {
 });
 
 const systemTagsCount = computed(() => {
-  return allAvailableTags.value.filter((t) => t.category === 'system' || t.category === 'trips').length;
+  return allAvailableTags.value.filter((t) => t.category === 'system').length;
 });
 
 const filteredTags = computed(() => {
@@ -502,9 +505,6 @@ const filteredTags = computed(() => {
   return allAvailableTags.value.filter((item) => {
     let matchCat = false;
     if (cat === 'all') matchCat = true;
-    else if (cat === 'personnel') matchCat = item.category === 'personnel' || item.category === 'custom_tables';
-    else if (cat === 'relatives') matchCat = item.category === 'relatives';
-    else if (cat === 'system') matchCat = item.category === 'system' || item.category === 'trips';
     else matchCat = item.category === cat;
 
     const matchQ =

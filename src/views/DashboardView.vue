@@ -643,6 +643,14 @@
               outlined
               @click="exportDrilldownExcel"
             />
+            <Button
+              icon="pi pi-file-word"
+              :label="selectedDrilldownKeys.length > 0 ? `Xuất Word (${selectedDrilldownKeys.length})` : 'Xuất Word (.docx)'"
+              severity="help"
+              size="small"
+              outlined
+              @click="openDrilldownDocxExport"
+            />
           </div>
         </div>
 
@@ -652,6 +660,14 @@
           <table v-if="drilldownCategory === 'personnel'" class="drilldown-table">
             <thead>
               <tr>
+                <th style="width: 38px; text-align: center;">
+                  <input
+                    type="checkbox"
+                    :checked="isAllDrilldownSelected"
+                    @change="toggleSelectAllDrilldown"
+                    style="cursor: pointer; vertical-align: middle;"
+                  />
+                </th>
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Mã CB</th>
                 <th>Họ và tên</th>
@@ -667,6 +683,14 @@
                 @click="openPersonnelDetail(p)"
                 title="Nhấp để mở chi tiết hồ sơ cán bộ này"
               >
+                <td style="text-align: center;" @click.stop>
+                  <input
+                    type="checkbox"
+                    :value="p.id || `p_${idx}`"
+                    v-model="selectedDrilldownKeys"
+                    style="cursor: pointer; vertical-align: middle;"
+                  />
+                </td>
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
                 <td><span class="code-badge">{{ p.code || p.id }}</span></td>
                 <td style="font-weight: 600; color: #1e293b;">
@@ -684,6 +708,14 @@
           <table v-else-if="drilldownCategory === 'relatives' || (drilldownHasDualTabs && drilldownActiveTab === 'relatives')" class="drilldown-table">
             <thead>
               <tr>
+                <th style="width: 38px; text-align: center;">
+                  <input
+                    type="checkbox"
+                    :checked="isAllDrilldownSelected"
+                    @change="toggleSelectAllDrilldown"
+                    style="cursor: pointer; vertical-align: middle;"
+                  />
+                </th>
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Cán bộ liên quan</th>
                 <th v-for="col in activeRelativeColumns" :key="col.id">{{ col.label }}</th>
@@ -697,6 +729,14 @@
                 @click="openRelativeDetail(r)"
                 title="Nhấp để mở chi tiết thân nhân này"
               >
+                <td style="text-align: center;" @click.stop>
+                  <input
+                    type="checkbox"
+                    :value="r.id || `r_${idx}`"
+                    v-model="selectedDrilldownKeys"
+                    style="cursor: pointer; vertical-align: middle;"
+                  />
+                </td>
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
                 <td style="font-weight: 600; color: #1e293b;">{{ r.parentName || r.parentPersonnelName || '-' }}</td>
                 <td v-for="col in activeRelativeColumns" :key="col.id">
@@ -714,6 +754,14 @@
           <table v-else class="drilldown-table">
             <thead>
               <tr>
+                <th style="width: 38px; text-align: center;">
+                  <input
+                    type="checkbox"
+                    :checked="isAllDrilldownSelected"
+                    @change="toggleSelectAllDrilldown"
+                    style="cursor: pointer; vertical-align: middle;"
+                  />
+                </th>
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Mã CB</th>
                 <th>Họ và tên</th>
@@ -734,6 +782,14 @@
                 @click="openTripDetail(t)"
                 title="Nhấp để mở chi tiết cán bộ & chuyến đi này"
               >
+                <td style="text-align: center;" @click.stop>
+                  <input
+                    type="checkbox"
+                    :value="t.id || `t_${idx}`"
+                    v-model="selectedDrilldownKeys"
+                    style="cursor: pointer; vertical-align: middle;"
+                  />
+                </td>
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
                 <td>
                   <span class="code-badge">
@@ -1171,16 +1227,24 @@
       @saved="onPersonSaved"
       @deleted="onPersonSaved"
     />
+
+    <!-- Advanced DOCX Export Dialog for Dashboard -->
+    <AdvancedDocxExportDialog
+      v-model="isDocxExportOpen"
+      :selectedPersonnel="drilldownSelectedPersonnel"
+      :allPersonnel="drilldownAllPersonnel"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
 import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
+import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
 import { computeColumnIndexMap, formatDate } from '@/utils/formatters';
@@ -2298,10 +2362,112 @@ const drilldownActiveTab = ref('trips'); // 'trips' | 'relatives'
 const drilldownTripsList = ref([]);
 const drilldownRelativesList = ref([]);
 
+// Drilldown selection & DOCX export state
+const isDocxExportOpen = ref(false);
+const selectedDrilldownKeys = ref([]);
+
+const isAllDrilldownSelected = computed(() => {
+  if (!filteredDrilldownData.value || filteredDrilldownData.value.length === 0) return false;
+  return selectedDrilldownKeys.value.length === filteredDrilldownData.value.length;
+});
+
+const toggleSelectAllDrilldown = (e) => {
+  if (e.target.checked) {
+    const cat = drilldownCategory.value;
+    const prefix = cat === 'personnel' ? 'p_' : cat === 'relatives' ? 'r_' : 't_';
+    selectedDrilldownKeys.value = (filteredDrilldownData.value || []).map((item, idx) => item.id || `${prefix}${idx}`);
+  } else {
+    selectedDrilldownKeys.value = [];
+  }
+};
+
+const getPersonnelForRelative = (r) => {
+  if (!r) return null;
+  return personnelStore.personnelList.find(
+    (p) => p.id === r.personnelId || (r.parentPersonnelCode && p.code === r.parentPersonnelCode) || (r.parentCode && p.code === r.parentCode) || (r.parentCccd && p.cccd === r.parentCccd)
+  ) || null;
+};
+
+const drilldownAllPersonnel = computed(() => {
+  const cat = drilldownCategory.value;
+  const currentTab = drilldownActiveTab.value;
+  const data = filteredDrilldownData.value || [];
+
+  if (cat === 'personnel' || (drilldownHasDualTabs.value && currentTab === 'personnel')) {
+    return data;
+  }
+
+  if (cat === 'relatives' || (drilldownHasDualTabs.value && currentTab === 'relatives')) {
+    const map = new Map();
+    data.forEach((r) => {
+      const p = getPersonnelForRelative(r);
+      if (p && p.id && !map.has(p.id)) {
+        map.set(p.id, p);
+      }
+    });
+    return Array.from(map.values());
+  }
+
+  if (cat === 'trips') {
+    const map = new Map();
+    data.forEach((t) => {
+      const p = getPersonnelForTrip(t);
+      if (p && p.id && !map.has(p.id)) {
+        map.set(p.id, p);
+      }
+    });
+    return Array.from(map.values());
+  }
+
+  return personnelStore.personnelList;
+});
+
+const drilldownSelectedPersonnel = computed(() => {
+  if (selectedDrilldownKeys.value.length === 0) return [];
+  const keySet = new Set(selectedDrilldownKeys.value);
+  const cat = drilldownCategory.value;
+  const currentTab = drilldownActiveTab.value;
+  const data = filteredDrilldownData.value || [];
+  const prefix = cat === 'personnel' ? 'p_' : cat === 'relatives' ? 'r_' : 't_';
+
+  if (cat === 'personnel' || (drilldownHasDualTabs.value && currentTab === 'personnel')) {
+    return data.filter((item, idx) => keySet.has(item.id || `${prefix}${idx}`));
+  }
+
+  if (cat === 'relatives' || (drilldownHasDualTabs.value && currentTab === 'relatives')) {
+    const map = new Map();
+    data.filter((item, idx) => keySet.has(item.id || `${prefix}${idx}`)).forEach((r) => {
+      const p = getPersonnelForRelative(r);
+      if (p && p.id && !map.has(p.id)) {
+        map.set(p.id, p);
+      }
+    });
+    return Array.from(map.values());
+  }
+
+  if (cat === 'trips') {
+    const map = new Map();
+    data.filter((item, idx) => keySet.has(item.id || `${prefix}${idx}`)).forEach((t) => {
+      const p = getPersonnelForTrip(t);
+      if (p && p.id && !map.has(p.id)) {
+        map.set(p.id, p);
+      }
+    });
+    return Array.from(map.values());
+  }
+
+  return [];
+});
+
+const openDrilldownDocxExport = () => {
+  isDocxExportOpen.value = true;
+};
+
 const openDrilldown = (type, title, filterContext = {}) => {
   drilldownType.value = type;
   drilldownTitle.value = title;
   drilldownSearch.value = '';
+  selectedDrilldownKeys.value = [];
   drilldownHasDualTabs.value = false;
   drilldownTripsList.value = [];
   drilldownRelativesList.value = [];
