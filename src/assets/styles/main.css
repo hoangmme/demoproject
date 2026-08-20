@@ -46,7 +46,7 @@ html, body {
 }
 
 .app-sidebar {
-  width: 250px;
+  width: 275px;
   background: linear-gradient(180deg, #1b3d1b 0%, #0d220d 100%);
   color: #ffffff;
   display: flex;
