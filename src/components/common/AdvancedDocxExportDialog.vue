@@ -187,11 +187,11 @@
           </div>
         </div>
 
-        <!-- 4. Tiến trình & Nút Thực hiện -->
+        <!-- 4. Tiến trình & Nút Thực hiện Xuất -->
         <div style="margin-top: auto; padding-top: 8px;">
           <div v-if="exporting" style="margin-bottom: 10px; background: #eff6ff; padding: 10px 14px; border-radius: 8px; border: 1px solid #bfdbfe;">
             <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #1e40af; margin-bottom: 6px;">
-              <span>Đang xử lý xuất dữ liệu ({{ outputFormat === 'pdf' ? 'PDF' : 'Word' }})...</span>
+              <span>Đang xử lý xuất dữ liệu ({{ exportingFormat === 'pdf' ? 'PDF' : 'Word' }})...</span>
               <span>{{ progressCurrent }} / {{ progressTotal }} ({{ Math.round((progressCurrent / (progressTotal || 1)) * 100) }}%)</span>
             </div>
             <div style="width: 100%; height: 8px; background: #dbeafe; border-radius: 4px; overflow: hidden;">
@@ -202,16 +202,27 @@
             </div>
           </div>
 
-          <Button
-            :label="getExportButtonLabel()"
-            :icon="outputFormat === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-file-word'"
-            :severity="outputFormat === 'pdf' ? 'danger' : 'primary'"
-            class="w-full"
-            :loading="exporting"
-            :disabled="!effectiveTemplateBuffer || exporting"
-            @click="handleExport"
-            style="font-size: 0.92rem; font-weight: 700; padding: 0.75rem 1rem;"
-          />
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <Button
+              :label="getWordButtonLabel()"
+              icon="pi pi-file-word"
+              severity="primary"
+              :loading="exporting && exportingFormat === 'docx'"
+              :disabled="!effectiveTemplateBuffer || exporting"
+              @click="handleExportWithFormat('docx')"
+              style="font-size: 0.86rem; font-weight: 700; padding: 0.75rem 0.5rem;"
+            />
+
+            <Button
+              :label="getPdfButtonLabel()"
+              icon="pi pi-file-pdf"
+              severity="danger"
+              :loading="exporting && exportingFormat === 'pdf'"
+              :disabled="!effectiveTemplateBuffer || exporting"
+              @click="handleExportWithFormat('pdf')"
+              style="font-size: 0.86rem; font-weight: 700; padding: 0.75rem 0.5rem;"
+            />
+          </div>
         </div>
       </div>
 
@@ -335,6 +346,7 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
+import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { saveAs } from 'file-saver';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import {
@@ -382,6 +394,7 @@ const customTemplateBuffer = ref(null);
 const customTemplateFileName = ref('');
 
 const exporting = ref(false);
+const exportingFormat = ref('docx');
 const progressCurrent = ref(0);
 const progressTotal = ref(0);
 
@@ -402,6 +415,48 @@ const effectiveTemplateBuffer = computed(() => {
   return sampleTemplateBuffer.value;
 });
 
+const arrayBufferToBase64 = (buffer) => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+};
+
+const base64ToArrayBuffer = (base64) => {
+  const binaryString = window.atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+};
+
+const loadSavedTemplate = async () => {
+  try {
+    const cachedB64 = localStorage.getItem('cached_custom_docx_template');
+    const cachedName = localStorage.getItem('cached_custom_docx_name');
+    if (cachedB64 && cachedName) {
+      customTemplateBuffer.value = base64ToArrayBuffer(cachedB64);
+      customTemplateFileName.value = cachedName;
+      templateSource.value = 'upload';
+      return;
+    }
+
+    const serverTemplate = await getAppSettings('custom_docx_template', null);
+    if (serverTemplate && serverTemplate.base64) {
+      customTemplateBuffer.value = base64ToArrayBuffer(serverTemplate.base64);
+      customTemplateFileName.value = serverTemplate.fileName || 'Mau_Word_tuy_bien.docx';
+      templateSource.value = 'upload';
+    }
+  } catch (err) {
+    console.warn('Failed to load saved template:', err);
+  }
+};
+
 watch(
   () => [props.modelValue, props.targetPerson, props.selectedPersonnel],
   ([isOpen, p, selected]) => {
@@ -414,6 +469,7 @@ watch(
         exportScope.value = 'all';
       }
       loadSampleTemplate();
+      loadSavedTemplate();
     }
   },
   { immediate: true }
@@ -446,8 +502,16 @@ const handleFileUpload = (e) => {
   templateSource.value = 'upload';
 
   const reader = new FileReader();
-  reader.onload = (event) => {
+  reader.onload = async (event) => {
     customTemplateBuffer.value = event.target.result;
+    try {
+      const b64 = arrayBufferToBase64(event.target.result);
+      localStorage.setItem('cached_custom_docx_template', b64);
+      localStorage.setItem('cached_custom_docx_name', file.name);
+      await saveAppSettings('custom_docx_template', { fileName: file.name, base64: b64 });
+    } catch (err) {
+      console.warn('Could not cache docx template:', err);
+    }
   };
   reader.readAsArrayBuffer(file);
 };
@@ -746,24 +810,34 @@ const copyTag = (tag) => {
   }, 2000);
 };
 
-const getExportButtonLabel = () => {
-  const typeLabel = outputFormat.value === 'pdf' ? 'PDF' : 'Word';
+const getWordButtonLabel = () => {
   if (exportScope.value === 'single') {
-    return `Xuất file ${typeLabel}: ${props.targetPerson?.name || 'Hồ sơ Cán bộ'}`;
+    return `Tải file Word (.docx)`;
   }
   if (exportScope.value === 'selected') {
-    return `Đóng gói ZIP ${typeLabel} (${selectedCount.value} Cán bộ được chọn)`;
+    return `Tải ZIP Word (${selectedCount.value} CB)`;
   }
-  return `Đóng gói ZIP ${typeLabel} (Toàn bộ ${totalPersonnelCount.value} Cán bộ)`;
+  return `Tải ZIP Word (${totalPersonnelCount.value} CB)`;
 };
 
-const handleExport = async () => {
+const getPdfButtonLabel = () => {
+  if (exportScope.value === 'single') {
+    return `Tải file PDF (.pdf)`;
+  }
+  if (exportScope.value === 'selected') {
+    return `Tải ZIP PDF (${selectedCount.value} CB)`;
+  }
+  return `Tải ZIP PDF (${totalPersonnelCount.value} CB)`;
+};
+
+const handleExportWithFormat = async (format) => {
   const buf = effectiveTemplateBuffer.value;
   if (!buf) {
     alert('Vui lòng chọn hoặc tải lên tệp mẫu Word (.docx)');
     return;
   }
 
+  exportingFormat.value = format;
   exporting.value = true;
   progressCurrent.value = 0;
 
@@ -774,7 +848,7 @@ const handleExport = async () => {
         props.targetPerson,
         null,
         personnelStore,
-        outputFormat.value,
+        format,
         authStore.user
       );
       visible.value = false;
@@ -802,7 +876,7 @@ const handleExport = async () => {
           progressCurrent.value = curr;
           progressTotal.value = total;
         },
-        outputFormat.value,
+        format,
         authStore.user
       );
       visible.value = false;

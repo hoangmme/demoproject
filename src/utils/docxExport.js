@@ -411,12 +411,17 @@ import html2pdf from 'html2pdf.js';
 export async function convertDocxBlobToPdfBlob(docxBlob) {
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '-9999px';
   container.style.top = '0';
-  container.style.width = '794px'; // Khổ A4 ở 96 DPI
+  container.style.left = '0';
+  container.style.width = '800px';
+  container.style.minHeight = '1120px';
+  container.style.zIndex = '-99999';
+  container.style.opacity = '1';
+  container.style.pointerEvents = 'none';
   container.style.background = '#ffffff';
   container.style.color = '#000000';
   container.style.padding = '20px';
+  container.style.boxSizing = 'border-box';
   document.body.appendChild(container);
 
   try {
@@ -430,15 +435,30 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       renderEndnotes: true,
     });
 
+    // Chờ 350ms để toàn bộ DOM, phông chữ và bảng biểu render hoàn chỉnh
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
     const opt = {
       margin: [10, 10, 10, 10],
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        letterRendering: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 1024,
+        logging: false,
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
     };
 
     const pdfBlob = await html2pdf().set(opt).from(container).outputPdf('blob');
     return pdfBlob;
+  } catch (err) {
+    console.error('Lỗi chuyển đổi DOCX sang PDF:', err);
+    throw err;
   } finally {
     if (document.body.contains(container)) {
       document.body.removeChild(container);
