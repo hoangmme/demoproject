@@ -802,6 +802,9 @@
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block;">
             3. Cài đặt Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí & Biểu đồ):
           </label>
+          <div style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 6px 10px; border-radius: 6px;">
+            💡 <strong>Mẹo nhanh:</strong> Nếu cột Nguồn kinh phí dạng Tích chọn nhiều ô (Ví dụ: <em>[Cột 37 - 40] Nguồn kinh phí (funding2)</em>), bạn chỉ cần chọn cột đó vào ô <strong>Cột chung</strong>. Hệ thống sẽ tự động bóc tách và đếm đủ 4 nguồn (Ngân sách, Tài trợ, Tự túc, Khác) mà không cần điền 4 ô phụ bên dưới!
+          </div>
 
           <!-- A. Cán bộ (Chuyến đi) -->
           <div style="border-left: 3px solid #0284c7; padding-left: 8px;">
@@ -1575,16 +1578,35 @@ const availableColumnsForWidgetSource = computed(() => {
 
 // All Available Relative Columns from Settings for Dropdown selection
 const allAvailableRelativeColumns = computed(() => {
-  const colMap = computeColumnIndexMap(personnelStore.importMappingRelative);
   const list = [];
+  let currentColIdx = 0;
+
   (personnelStore.importMappingRelative || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
-      if (c.id && c.label) {
-        const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
-        const grp = g.group ? `[${g.group}] ` : '';
+      currentColIdx++;
+      const grp = g.group ? `[${g.group}] ` : '';
+      const subOpts = getSubOptionsList(c);
+
+      if (subOpts.length > 1) {
+        const start = currentColIdx;
+        const end = currentColIdx + subOpts.length - 1;
         list.push({
           id: c.id,
-          label: `${colNum}${grp}${c.label} (${c.id})`,
+          label: `[Cột ${start} - ${end}] ${grp}${c.label || c.id} (${c.id})`,
+        });
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = start + sIdx;
+          list.push({
+            id: c.id,
+            subOpt: opt,
+            label: `  └─ [Cột ${colNum}] ${grp}${c.label || c.id}: ${opt}`,
+          });
+        });
+        currentColIdx = end;
+      } else {
+        list.push({
+          id: c.id,
+          label: `[Cột ${currentColIdx}] ${grp}${c.label || c.id} (${c.id})`,
         });
       }
     });
@@ -1593,16 +1615,35 @@ const allAvailableRelativeColumns = computed(() => {
 });
 
 const allAvailablePersonnelColumns = computed(() => {
-  const colMap = computeColumnIndexMap(personnelStore.importMappingPersonnel);
   const list = [];
+  let currentColIdx = 0;
+
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
-      if (c.id && c.label) {
-        const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
-        const grp = g.group ? `[${g.group}] ` : '';
+      currentColIdx++;
+      const grp = g.group ? `[${g.group}] ` : '';
+      const subOpts = getSubOptionsList(c);
+
+      if (subOpts.length > 1) {
+        const start = currentColIdx;
+        const end = currentColIdx + subOpts.length - 1;
         list.push({
           id: c.id,
-          label: `${colNum}${grp}${c.label} (${c.id})`,
+          label: `[Cột ${start} - ${end}] ${grp}${c.label || c.id} (${c.id})`,
+        });
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = start + sIdx;
+          list.push({
+            id: c.id,
+            subOpt: opt,
+            label: `  └─ [Cột ${colNum}] ${grp}${c.label || c.id}: ${opt}`,
+          });
+        });
+        currentColIdx = end;
+      } else {
+        list.push({
+          id: c.id,
+          label: `[Cột ${currentColIdx}] ${grp}${c.label || c.id} (${c.id})`,
         });
       }
     });
@@ -1803,9 +1844,12 @@ const stats = computed(() => {
 
     // 4. Funding aggregation (Personnel)
     if (fName && fName !== 'Chưa rõ' && fName !== '-') {
-      if (!fundings[fName]) fundings[fName] = { trips: 0, relatives: 0, total: 0 };
-      fundings[fName].trips += 1;
-      fundings[fName].total += 1;
+      const parts = String(fName).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
+      parts.forEach((part) => {
+        if (!fundings[part]) fundings[part] = { trips: 0, relatives: 0, total: 0 };
+        fundings[part].trips += 1;
+        fundings[part].total += 1;
+      });
     }
 
     const budgetVal = getTripValue(t, colConfig.value.fundingBudget);
@@ -1813,33 +1857,42 @@ const stats = computed(() => {
     const selfVal = getTripValue(t, colConfig.value.fundingSelf);
     const otherVal = getTripValue(t, colConfig.value.fundingOther);
 
-    if (budgetVal && String(budgetVal).trim() && String(budgetVal).trim() !== '-') {
-      const k = 'Ngân sách nhà nước';
-      if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
-      fundings[k].trips += 1;
-      fundings[k].total += 1;
+    // Only count sub-columns if they are different from main funding column to prevent double-counting
+    if (colConfig.value.fundingBudget && colConfig.value.fundingBudget !== colConfig.value.funding) {
+      if (budgetVal && String(budgetVal).trim() && String(budgetVal).trim() !== '-') {
+        const k = 'Ngân sách nhà nước';
+        if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
+        fundings[k].trips += 1;
+        fundings[k].total += 1;
+      }
     }
-    if (sponsorVal && String(sponsorVal).trim() && String(sponsorVal).trim() !== '-') {
-      const spLabel = (String(sponsorVal).toLowerCase() === 'x' || String(sponsorVal).toLowerCase() === 'có' || String(sponsorVal).trim() === '1')
-        ? 'Cơ quan / Tổ chức tài trợ'
-        : `Tài trợ (${sponsorVal})`;
-      if (!fundings[spLabel]) fundings[spLabel] = { trips: 0, relatives: 0, total: 0 };
-      fundings[spLabel].trips += 1;
-      fundings[spLabel].total += 1;
+    if (colConfig.value.fundingSponsor && colConfig.value.fundingSponsor !== colConfig.value.funding) {
+      if (sponsorVal && String(sponsorVal).trim() && String(sponsorVal).trim() !== '-') {
+        const spLabel = (String(sponsorVal).toLowerCase() === 'x' || String(sponsorVal).toLowerCase() === 'có' || String(sponsorVal).trim() === '1')
+          ? 'Cơ quan / Tổ chức tài trợ'
+          : `Tài trợ (${sponsorVal})`;
+        if (!fundings[spLabel]) fundings[spLabel] = { trips: 0, relatives: 0, total: 0 };
+        fundings[spLabel].trips += 1;
+        fundings[spLabel].total += 1;
+      }
     }
-    if (selfVal && String(selfVal).trim() && String(selfVal).trim() !== '-') {
-      const k = 'Tự túc';
-      if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
-      fundings[k].trips += 1;
-      fundings[k].total += 1;
+    if (colConfig.value.fundingSelf && colConfig.value.fundingSelf !== colConfig.value.funding) {
+      if (selfVal && String(selfVal).trim() && String(selfVal).trim() !== '-') {
+        const k = 'Tự túc';
+        if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
+        fundings[k].trips += 1;
+        fundings[k].total += 1;
+      }
     }
-    if (otherVal && String(otherVal).trim() && String(otherVal).trim() !== '-') {
-      const othLabel = (String(otherVal).toLowerCase() === 'x' || String(otherVal).toLowerCase() === 'có' || String(otherVal).trim() === '1')
-        ? 'Nguồn khác'
-        : `Khác (${otherVal})`;
-      if (!fundings[othLabel]) fundings[othLabel] = { trips: 0, relatives: 0, total: 0 };
-      fundings[othLabel].trips += 1;
-      fundings[othLabel].total += 1;
+    if (colConfig.value.fundingOther && colConfig.value.fundingOther !== colConfig.value.funding) {
+      if (otherVal && String(otherVal).trim() && String(otherVal).trim() !== '-') {
+        const othLabel = (String(otherVal).toLowerCase() === 'x' || String(otherVal).toLowerCase() === 'có' || String(otherVal).trim() === '1')
+          ? 'Nguồn khác'
+          : `Khác (${otherVal})`;
+        if (!fundings[othLabel]) fundings[othLabel] = { trips: 0, relatives: 0, total: 0 };
+        fundings[othLabel].trips += 1;
+        fundings[othLabel].total += 1;
+      }
     }
   });
 
@@ -1856,9 +1909,12 @@ const stats = computed(() => {
     const rf = getRowFieldValue(r, colConfig.value.fundingRelative);
     if (rf && String(rf).trim() && String(rf).trim() !== '-' && String(rf).trim() !== 'Chưa rõ') {
       const cleanRf = String(rf).trim();
-      if (!fundings[cleanRf]) fundings[cleanRf] = { trips: 0, relatives: 0, total: 0 };
-      fundings[cleanRf].relatives += 1;
-      fundings[cleanRf].total += 1;
+      const parts = cleanRf.split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
+      parts.forEach((part) => {
+        if (!fundings[part]) fundings[part] = { trips: 0, relatives: 0, total: 0 };
+        fundings[part].relatives += 1;
+        fundings[part].total += 1;
+      });
     }
 
     const rBudget = getRowFieldValue(r, colConfig.value.fundingRelativeBudget);
@@ -1866,33 +1922,41 @@ const stats = computed(() => {
     const rSelf = getRowFieldValue(r, colConfig.value.fundingRelativeSelf);
     const rOther = getRowFieldValue(r, colConfig.value.fundingRelativeOther);
 
-    if (rBudget && String(rBudget).trim() && String(rBudget).trim() !== '-') {
-      const k = 'Học bổng / Ngân sách (Thân nhân)';
-      if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
-      fundings[k].relatives += 1;
-      fundings[k].total += 1;
+    if (colConfig.value.fundingRelativeBudget && colConfig.value.fundingRelativeBudget !== colConfig.value.fundingRelative) {
+      if (rBudget && String(rBudget).trim() && String(rBudget).trim() !== '-') {
+        const k = 'Học bổng / Ngân sách (Thân nhân)';
+        if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
+        fundings[k].relatives += 1;
+        fundings[k].total += 1;
+      }
     }
-    if (rSponsor && String(rSponsor).trim() && String(rSponsor).trim() !== '-') {
-      const spLabel = (String(rSponsor).toLowerCase() === 'x' || String(rSponsor).toLowerCase() === 'có' || String(rSponsor).trim() === '1')
-        ? 'Tài trợ (Thân nhân)'
-        : `Tài trợ Thân nhân (${rSponsor})`;
-      if (!fundings[spLabel]) fundings[spLabel] = { trips: 0, relatives: 0, total: 0 };
-      fundings[spLabel].relatives += 1;
-      fundings[spLabel].total += 1;
+    if (colConfig.value.fundingRelativeSponsor && colConfig.value.fundingRelativeSponsor !== colConfig.value.fundingRelative) {
+      if (rSponsor && String(rSponsor).trim() && String(rSponsor).trim() !== '-') {
+        const spLabel = (String(rSponsor).toLowerCase() === 'x' || String(rSponsor).toLowerCase() === 'có' || String(rSponsor).trim() === '1')
+          ? 'Tài trợ (Thân nhân)'
+          : `Tài trợ Thân nhân (${rSponsor})`;
+        if (!fundings[spLabel]) fundings[spLabel] = { trips: 0, relatives: 0, total: 0 };
+        fundings[spLabel].relatives += 1;
+        fundings[spLabel].total += 1;
+      }
     }
-    if (rSelf && String(rSelf).trim() && String(rSelf).trim() !== '-') {
-      const k = 'Tự túc (Thân nhân)';
-      if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
-      fundings[k].relatives += 1;
-      fundings[k].total += 1;
+    if (colConfig.value.fundingRelativeSelf && colConfig.value.fundingRelativeSelf !== colConfig.value.fundingRelative) {
+      if (rSelf && String(rSelf).trim() && String(rSelf).trim() !== '-') {
+        const k = 'Tự túc (Thân nhân)';
+        if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
+        fundings[k].relatives += 1;
+        fundings[k].total += 1;
+      }
     }
-    if (rOther && String(rOther).trim() && String(rOther).trim() !== '-') {
-      const othLabel = (String(rOther).toLowerCase() === 'x' || String(rOther).toLowerCase() === 'có' || String(rOther).trim() === '1')
-        ? 'Nguồn khác (Thân nhân)'
-        : `Khác (${rOther})`;
-      if (!fundings[othLabel]) fundings[othLabel] = { trips: 0, relatives: 0, total: 0 };
-      fundings[othLabel].relatives += 1;
-      fundings[othLabel].total += 1;
+    if (colConfig.value.fundingRelativeOther && colConfig.value.fundingRelativeOther !== colConfig.value.fundingRelative) {
+      if (rOther && String(rOther).trim() && String(rOther).trim() !== '-') {
+        const othLabel = (String(rOther).toLowerCase() === 'x' || String(rOther).toLowerCase() === 'có' || String(rOther).trim() === '1')
+          ? 'Nguồn khác (Thân nhân)'
+          : `Khác (${rOther})`;
+        if (!fundings[othLabel]) fundings[othLabel] = { trips: 0, relatives: 0, total: 0 };
+        fundings[othLabel].relatives += 1;
+        fundings[othLabel].total += 1;
+      }
     }
   });
 
