@@ -655,9 +655,7 @@
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Mã CB</th>
                 <th>Họ và tên</th>
-                <th>Số CCCD</th>
-                <th>Chức vụ</th>
-                <th>Đơn vị</th>
+                <th v-for="col in activePersonnelColumns" :key="col.id">{{ col.label }}</th>
                 <th>Số chuyến đi</th>
               </tr>
             </thead>
@@ -674,9 +672,9 @@
                 <td style="font-weight: 600; color: #1e293b;">
                   <span style="color: #0284c7; text-decoration: underline;">{{ p.name }}</span>
                 </td>
-                <td>{{ p.cccdparent || p.cccd || '-' }}</td>
-                <td>{{ p.positionName || p.position || '-' }}</td>
-                <td>{{ p.departmentName || '-' }}</td>
+                <td v-for="col in activePersonnelColumns" :key="col.id">
+                  {{ getDisplayValue(p, col.id) }}
+                </td>
                 <td><span class="badge-pill badge-green">{{ (p.trips || []).length }} chuyến</span></td>
               </tr>
             </tbody>
@@ -688,11 +686,7 @@
               <tr>
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Cán bộ liên quan</th>
-                <th>Họ tên Thân nhân</th>
-                <th>Quan hệ</th>
-                <th>Quốc gia cư trú</th>
-                <th>Nguồn kinh phí / Học bổng</th>
-                <th>Nghề nghiệp / Tình trạng</th>
+                <th v-for="col in activeRelativeColumns" :key="col.id">{{ col.label }}</th>
               </tr>
             </thead>
             <tbody>
@@ -705,13 +699,13 @@
               >
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
                 <td style="font-weight: 600; color: #1e293b;">{{ r.parentName || r.parentPersonnelName || '-' }}</td>
-                <td style="font-weight: 600; color: #6d28d9;">
-                  <span style="color: #6d28d9; text-decoration: underline;">{{ r.relativeName || r.name || '-' }}</span>
+                <td v-for="col in activeRelativeColumns" :key="col.id">
+                  <span
+                    :class="(col.id === colConfig.countryRelative || col.id === 'countryName' || col.id === 'content') ? 'badge-pill badge-blue' : (col.id === 'relativeName' || col.id === 'name' ? 'badge-pill badge-purple' : '')"
+                  >
+                    {{ getDisplayValue(r, col.id) }}
+                  </span>
                 </td>
-                <td><span class="badge-pill badge-neutral">{{ r.relationship || r.relationshipName || '-' }}</span></td>
-                <td><span class="badge-pill badge-green">{{ r.countryName || r.country || '-' }}</span></td>
-                <td>{{ r.fundingName || r.funding || '-' }}</td>
-                <td>{{ r.occupation || r.job || r.status || '-' }}</td>
               </tr>
             </tbody>
           </table>
@@ -743,16 +737,22 @@
                   <span style="color: #0284c7; text-decoration: underline;">{{ t.personnelName || '-' }}</span>
                 </td>
                 <td>
-                  <span v-if="t.decisionNumber" class="code-badge">{{ t.decisionNumber }}</span>
+                  <span v-if="t.decisionNumber || getTripValue(t, colConfig.decision)" class="code-badge">
+                    {{ t.decisionNumber || getTripValue(t, colConfig.decision) }}
+                  </span>
                   <span v-else class="badge-pill badge-red">Chưa có</span>
                 </td>
-                <td><span class="badge-pill badge-green">{{ t.countryName || '-' }}</span></td>
-                <td>{{ t.fundingName || '-' }}</td>
-                <td>{{ t.departureDate || t.approvedDepartureDate || '-' }}</td>
-                <td>{{ t.arrivalDate || t.approvedArrivalDate || '-' }}</td>
+                <td>
+                  <span class="badge-pill badge-blue">
+                    {{ t.countryName || getTripValue(t, colConfig.country) || '-' }}
+                  </span>
+                </td>
+                <td>{{ t.fundingName || getTripValue(t, colConfig.funding) || '-' }}</td>
+                <td>{{ formatDate(t.departureDate || t.approvedDepartureDate) || '-' }}</td>
+                <td>{{ formatDate(t.arrivalDate || t.approvedArrivalDate) || '-' }}</td>
                 <td>
                   <span v-if="t.approvedExtensionDate" class="badge-pill badge-yellow">
-                    {{ t.approvedExtensionDate }}
+                    {{ formatDate(t.approvedExtensionDate) }}
                   </span>
                   <span v-else style="color: #94a3b8;">-</span>
                 </td>
@@ -1171,10 +1171,72 @@ import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const personnelStore = usePersonnelStore();
+
+const activePersonnelColumns = computed(() => {
+  const map = {};
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id) map[c.id] = c;
+    });
+  });
+
+  return (personnelStore.visibleColumns || [])
+    .filter((id) => id !== 'stt' && id !== 'code' && id !== 'name')
+    .map((id) => {
+      const cfg = map[id];
+      if (cfg && cfg.label) {
+        return { id: cfg.id, label: cfg.label };
+      }
+      const found = personnelStore.allAvailableColumns.find((c) => c.id === id);
+      return found || { id, label: id };
+    });
+});
+
+const activeRelativeColumns = computed(() => {
+  const map = {};
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id) map[c.id] = c;
+    });
+  });
+
+  return (personnelStore.visibleRelativeColumns || [])
+    .filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo')
+    .map((id) => {
+      const cfg = map[id];
+      if (cfg && cfg.label) {
+        return { id: cfg.id, label: cfg.label };
+      }
+      const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
+      return found || { id, label: id };
+    });
+});
+
+const getDisplayValue = (row, colId) => {
+  if (!row || !colId) return '-';
+  const val = getRowFieldValue(row, colId);
+  if (val === undefined || val === null || val === '') return '-';
+  const cLower = String(colId || '').toLowerCase();
+  const str = String(val).trim();
+  if (
+    cLower.includes('birth') ||
+    cLower.includes('date') ||
+    cLower.includes('ngay') ||
+    cLower.includes('nam_sinh') ||
+    cLower.includes('departure') ||
+    cLower.includes('arrival') ||
+    str.includes('GMT') ||
+    str.includes('T00:') ||
+    /^\d{4}-\d{2}-\d{2}/.test(str)
+  ) {
+    return formatDate(str);
+  }
+  return str;
+};
 
 // Dialog state for personnel & relative detail
 const isPersonDialogOpen = ref(false);

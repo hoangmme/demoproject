@@ -1,11 +1,20 @@
 <template>
   <aside class="app-sidebar">
-    <div class="app-sidebar-header">
-      <div style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.15); margin-bottom: 6px;">
-        <i class="pi pi-id-card" style="font-size: 1.25rem; color: #a5d6a7;"></i>
+    <div class="app-sidebar-header" style="padding: 1rem 0.75rem; text-align: center;">
+      <img
+        src="/bo-cong-an-logo.png"
+        alt="Bộ Công An"
+        style="width: 80px; height: 80px; object-fit: contain; margin-bottom: 6px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));"
+      />
+      <div style="font-size: 0.78rem; font-weight: 800; color: #ffffff; text-transform: uppercase; line-height: 1.25; letter-spacing: 0.02em;">
+        CÔNG AN THÀNH PHỐ HỒ CHÍ MINH
       </div>
-      <h1>HỒ SƠ CÁN BỘ</h1>
-      <p>Version 3.0 Enterprise</p>
+      <div style="font-size: 0.72rem; font-weight: 700; color: #fde047; margin-top: 3px; line-height: 1.25;">
+        PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
+      </div>
+      <p style="font-size: 0.65rem; color: #dcfce7; margin: 4px 0 0 0; line-height: 1.25; opacity: 0.9;">
+        Dữ liệu quản lý cán bộ, đảng viên và thân nhân có yếu tố nước ngoài
+      </p>
     </div>
 
     <nav class="app-sidebar-nav">
