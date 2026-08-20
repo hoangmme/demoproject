@@ -76,18 +76,39 @@ const warningRows = computed(() => {
   let stt = 1;
   personnelStore.personnelList.forEach((p) => {
     const f = p.flags || {};
-    const hasWarning = f.partyDiscipline || f.govDiscipline || f.politicalIssue || f.lawViolation || f.investigating || f.noPermission || f.overstay || f.otherIssue;
-    if (hasWarning) {
+    const cd = p.custom_data || {};
+    
+    // Check all possible political notes, discipline, or foreign factors
+    const partyDiscipline = f.partyDiscipline || cd.partyDiscipline || cd['Kỷ luật Đảng'] || cd.ky_luat_dang || '-';
+    const govDiscipline = f.govDiscipline || cd.govDiscipline || cd['Kỷ luật Chính quyền'] || cd.ky_luat_chinh_quyen || '-';
+    const politicalIssue = f.politicalIssue || cd.politicalIssue || cd.kqThamTra || cd.tcctResult || cd['Vấn đề chính trị'] || p.kqThamTra || p.tcctResult || '-';
+    const lawViolation = f.lawViolation || cd.lawViolation || cd['Vi phạm pháp luật'] || '-';
+    
+    // Foreign factors
+    const foreignFactors = [];
+    if (f.marriedToForeigner || cd.marriedToForeigner || String(cd.ket_hon_nuoc_ngoai || '').toLowerCase().includes('có')) foreignFactors.push('Kết hôn với người NN');
+    if (f.giftOver50M || cd.giftOver50M || String(cd.tang_qua_50tr || '').toLowerCase().includes('có')) foreignFactors.push('Nhận quà/tiền >50tr');
+    if (f.rentHouseToForeigner || cd.rentHouseToForeigner || String(cd.thue_nha_dat || '').toLowerCase().includes('có')) foreignFactors.push('Cho người NN thuê nhà/đất');
+    if (f.workInForeignCompany || cd.workInForeignCompany || String(cd.cty_von_nn || '').toLowerCase().includes('có')) foreignFactors.push('Làm việc cty vốn NN');
+
+    const otherIssue = foreignFactors.length > 0 ? foreignFactors.join('; ') : (f.otherIssue || cd.otherIssue || cd.notes || '-');
+
+    const hasAnyRecord = partyDiscipline !== '-' || govDiscipline !== '-' || politicalIssue !== '-' || lawViolation !== '-' || otherIssue !== '-';
+
+    // If there's specific warning, or include personnel with foreign trips/factors
+    if (hasAnyRecord || (p.trips && p.trips.length > 0)) {
       rows.push({
         stt: stt++,
         personCode: p.code || formatPersonnelCode(p.id),
         personName: p.name,
-        departmentName: personnelStore.getDepartmentName(p.departmentId),
-        partyDiscipline: f.partyDiscipline || '-',
-        govDiscipline: f.govDiscipline || '-',
-        politicalIssue: f.politicalIssue || '-',
-        lawViolation: f.lawViolation || '-',
-        otherIssue: f.otherIssue || '-',
+        departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '-',
+        position: p.positionName || p.position || '-',
+        partyDiscipline,
+        govDiscipline,
+        politicalIssue,
+        lawViolation,
+        otherIssue,
+        tripCount: (p.trips || []).length,
       });
     }
   });
@@ -95,6 +116,6 @@ const warningRows = computed(() => {
 });
 
 const handleExport = () => {
-  exportToExcel(warningRows.value, 'Phu_luc_3_Luu_y_va_Ky_luat', 'Phụ lục 3');
+  exportToExcel(warningRows.value, 'Phu_luc_3_Lich_su_va_Luu_y', 'Phụ lục 3');
 };
 </script>
