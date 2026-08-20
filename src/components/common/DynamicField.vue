@@ -59,35 +59,27 @@
       </div>
     </template>
 
-    <!-- 4b. Table Loop (Bảng lặp 2 cột tùy biến tiêu đề) -->
-    <template v-else-if="col.format === 'table_2col'">
-      <div style="display: flex; flex-direction: column; gap: 6px; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #fafafa;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+    <!-- 4b. Table Loop (Bảng lặp nhiều cột tùy biến tiêu đề) -->
+    <template v-else-if="col.format === 'table_2col' || col.format === 'table_loop'">
+      <div style="display: flex; flex-direction: column; gap: 6px; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #fafafa; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 320px;">
           <thead>
             <tr style="background: #f1f5f9; color: #475569; font-weight: 700; text-align: left;">
               <th style="padding: 6px 8px; width: 35px; text-align: center; border-radius: 4px 0 0 4px;">STT</th>
-              <th style="padding: 6px 8px; width: 38%;">{{ tableHeaders[0] }}</th>
-              <th style="padding: 6px 8px;">{{ tableHeaders[1] }}</th>
+              <th v-for="(h, hIdx) in tableHeaders" :key="hIdx" style="padding: 6px 8px;">
+                {{ h }}
+              </th>
               <th style="padding: 6px 8px; width: 32px; text-align: center; border-radius: 0 4px 4px 0;"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(row, rIdx) in tableRows" :key="rIdx" style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 4px; text-align: center; color: #64748b; font-weight: 600;">{{ rIdx + 1 }}</td>
-              <td style="padding: 4px;">
+              <td v-for="(h, hIdx) in tableHeaders" :key="hIdx" style="padding: 4px;">
                 <InputText
-                  v-model="row.col1"
+                  v-model="row['col' + hIdx]"
                   size="small"
-                  :placeholder="'Nhập ' + tableHeaders[0]"
-                  style="width: 100%; font-size: 0.78rem; padding: 4px 6px;"
-                  @input="updateTableModel"
-                />
-              </td>
-              <td style="padding: 4px;">
-                <InputText
-                  v-model="row.col2"
-                  size="small"
-                  :placeholder="'Nhập ' + tableHeaders[1]"
+                  :placeholder="'Nhập ' + h"
                   style="width: 100%; font-size: 0.78rem; padding: 4px 6px;"
                   @input="updateTableModel"
                 />
@@ -104,7 +96,7 @@
               </td>
             </tr>
             <tr v-if="tableRows.length === 0">
-              <td colspan="4" style="text-align: center; padding: 8px; color: #94a3b8; font-style: italic;">
+              <td :colspan="tableHeaders.length + 2" style="text-align: center; padding: 8px; color: #94a3b8; font-style: italic;">
                 Chưa có dữ liệu bảng. Nhấp "+ Thêm hàng" để nhập.
               </td>
             </tr>
@@ -307,41 +299,49 @@ const updateLoopModel = () => {
   emit('update:modelValue', filtered);
 };
 
-// Table Loop (2-Column Custom Headers)
+// Table Loop (Multi-Column Custom Headers)
 const tableHeaders = computed(() => {
   if (props.col?.options) {
     const parts = String(props.col.options).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
-    if (parts.length >= 2) return [parts[0], parts[1]];
-    if (parts.length === 1) return [parts[0], 'Nội dung'];
+    if (parts.length > 0) return parts;
   }
-  return ['Thời gian / Tiêu chí', 'Nội dung chi tiết'];
+  return ['Cột 1', 'Cột 2'];
 });
 
 const tableRows = ref([]);
 
 const initTableRows = (val) => {
+  const headers = tableHeaders.value;
   if (Array.isArray(val)) {
     tableRows.value = val.map((item) => {
+      const row = {};
       if (typeof item === 'object' && item !== null) {
-        return {
-          col1: item.col1 !== undefined ? item.col1 : (item[tableHeaders.value[0]] || ''),
-          col2: item.col2 !== undefined ? item.col2 : (item[tableHeaders.value[1]] || ''),
-        };
+        headers.forEach((h, idx) => {
+          row['col' + idx] = item['col' + idx] !== undefined ? item['col' + idx] : (item['col' + (idx + 1)] !== undefined ? item['col' + (idx + 1)] : (item[h] || ''));
+        });
+      } else {
+        const parts = String(item).split(/[-:;,]/);
+        headers.forEach((_, idx) => {
+          row['col' + idx] = parts[idx]?.trim() || '';
+        });
       }
-      const parts = String(item).split(':');
-      return { col1: parts[0]?.trim() || '', col2: parts.slice(1).join(':')?.trim() || '' };
+      return row;
     });
   } else if (typeof val === 'string' && val.trim()) {
     try {
       const parsed = JSON.parse(val);
       if (Array.isArray(parsed)) {
-        tableRows.value = parsed.map((item) => ({ col1: item.col1 || '', col2: item.col2 || '' }));
+        initTableRows(parsed);
         return;
       }
     } catch (e) {}
     tableRows.value = val.split('\n').filter(Boolean).map((line) => {
-      const parts = line.split(':');
-      return { col1: parts[0]?.trim() || '', col2: parts.slice(1).join(':')?.trim() || '' };
+      const parts = line.split(/[-:;,]/);
+      const row = {};
+      headers.forEach((_, idx) => {
+        row['col' + idx] = parts[idx]?.trim() || '';
+      });
+      return row;
     });
   } else {
     tableRows.value = [];
@@ -349,9 +349,9 @@ const initTableRows = (val) => {
 };
 
 watch(
-  () => [props.modelValue, props.col.format],
+  () => [props.modelValue, props.col.format, props.col.options],
   ([val, fmt]) => {
-    if (fmt === 'table_2col') {
+    if (fmt === 'table_2col' || fmt === 'table_loop') {
       initTableRows(val);
     }
   },
@@ -359,7 +359,11 @@ watch(
 );
 
 const addTableRow = () => {
-  tableRows.value.push({ col1: '', col2: '' });
+  const row = {};
+  tableHeaders.value.forEach((_, idx) => {
+    row['col' + idx] = '';
+  });
+  tableRows.value.push(row);
   updateTableModel();
 };
 
@@ -369,7 +373,10 @@ const removeTableRow = (idx) => {
 };
 
 const updateTableModel = () => {
-  const filtered = tableRows.value.filter((r) => (r.col1 && r.col1.trim()) || (r.col2 && r.col2.trim()));
+  const headers = tableHeaders.value;
+  const filtered = tableRows.value.filter((r) => {
+    return headers.some((_, idx) => r['col' + idx] && String(r['col' + idx]).trim() !== '');
+  });
   emit('update:modelValue', filtered);
 };
 
