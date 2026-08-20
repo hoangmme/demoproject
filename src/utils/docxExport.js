@@ -19,11 +19,14 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   const dayStr = String(today.getDate()).padStart(2, '0');
   const monthStr = String(today.getMonth() + 1).padStart(2, '0');
   const yearStr = String(today.getFullYear());
+  const hourStr = String(today.getHours()).padStart(2, '0');
+  const minuteStr = String(today.getMinutes()).padStart(2, '0');
+  const secondStr = String(today.getSeconds()).padStart(2, '0');
 
   const exporterName = currentUser?.name || currentUser?.fullName || currentUser?.first_name || currentUser?.email || 'Quản trị viên';
 
   const data = {
-    // 1. Hệ thống & Người xuất & Ngày tháng
+    // 1. Hệ thống & Người xuất & Ngày giờ
     stt: index + 1,
     ho_ten_nguoi_xuat: exporterName,
     current_date: `${dayStr}/${monthStr}/${yearStr}`,
@@ -31,6 +34,14 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     ngay: dayStr,
     thang: monthStr,
     nam: yearStr,
+    gio: hourStr,
+    phut: minuteStr,
+    giay: secondStr,
+    gio_xuat: hourStr,
+    phut_xuat: minuteStr,
+    thoi_gian_xuat: `${hourStr}:${minuteStr}`,
+    gio_phut_xuat: `${hourStr}:${minuteStr}`,
+    ngay_gio_xuat: `${dayStr}/${monthStr}/${yearStr} ${hourStr}:${minuteStr}`,
 
     // 2. Thông tin cơ bản
     code: person.code || '',

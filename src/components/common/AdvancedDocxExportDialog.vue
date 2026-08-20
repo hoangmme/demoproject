@@ -662,6 +662,10 @@ const allAvailableTags = computed(() => {
     { label: 'Ngày (DD)', tag: '{ngay}', category: 'system', colNum: 'HT' },
     { label: 'Tháng (MM)', tag: '{thang}', category: 'system', colNum: 'HT' },
     { label: 'Năm (YYYY)', tag: '{nam}', category: 'system', colNum: 'HT' },
+    { label: 'Giờ xuất file (HH)', tag: '{gio}', category: 'system', colNum: 'HT' },
+    { label: 'Phút xuất file (mm)', tag: '{phut}', category: 'system', colNum: 'HT' },
+    { label: 'Thời gian xuất (HH:mm)', tag: '{thoi_gian_xuat}', category: 'system', colNum: 'HT' },
+    { label: 'Ngày giờ xuất đầy đủ (DD/MM/YYYY HH:mm)', tag: '{ngay_gio_xuat}', category: 'system', colNum: 'HT' },
     { label: 'Tổng số thân nhân', tag: '{so_luong_than_nhan}', category: 'system', colNum: 'HT' },
     { label: 'Tổng số chuyến đi', tag: '{so_luong_chuyen_di}', category: 'system', colNum: 'HT' }
   );
