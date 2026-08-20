@@ -202,27 +202,16 @@
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <Button
-              :label="getWordButtonLabel()"
-              icon="pi pi-file-word"
-              severity="primary"
-              :loading="exporting && exportingFormat === 'docx'"
-              :disabled="!effectiveTemplateBuffer || exporting"
-              @click="handleExportWithFormat('docx')"
-              style="font-size: 0.86rem; font-weight: 700; padding: 0.75rem 0.5rem;"
-            />
-
-            <Button
-              :label="getPdfButtonLabel()"
-              icon="pi pi-file-pdf"
-              severity="danger"
-              :loading="exporting && exportingFormat === 'pdf'"
-              :disabled="!effectiveTemplateBuffer || exporting"
-              @click="handleExportWithFormat('pdf')"
-              style="font-size: 0.86rem; font-weight: 700; padding: 0.75rem 0.5rem;"
-            />
-          </div>
+          <Button
+            :label="getDownloadButtonLabel()"
+            :icon="outputFormat === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-file-word'"
+            :severity="outputFormat === 'pdf' ? 'danger' : 'primary'"
+            class="w-full"
+            :loading="exporting"
+            :disabled="!effectiveTemplateBuffer || exporting"
+            @click="handleExport"
+            style="font-size: 0.92rem; font-weight: 700; padding: 0.75rem 1rem;"
+          />
         </div>
       </div>
 
@@ -810,49 +799,53 @@ const copyTag = (tag) => {
   }, 2000);
 };
 
-const getWordButtonLabel = () => {
-  if (exportScope.value === 'single') {
-    return `Tải file Word (.docx)`;
+const getDownloadButtonLabel = () => {
+  const isPdf = outputFormat.value === 'pdf';
+  const typeLabel = isPdf ? 'PDF' : 'Word';
+  const ext = isPdf ? '.pdf' : '.docx';
+
+  const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
+
+  if (isSingle) {
+    const pName = (exportScope.value === 'single' && props.targetPerson?.name)
+      ? props.targetPerson.name
+      : (props.selectedPersonnel[0]?.name || 'Hồ sơ Cán bộ');
+    return `Tải về file ${typeLabel} (${ext}): ${pName}`;
   }
-  if (exportScope.value === 'selected') {
-    return `Tải ZIP Word (${selectedCount.value} CB)`;
-  }
-  return `Tải ZIP Word (${totalPersonnelCount.value} CB)`;
+
+  const count = exportScope.value === 'selected' ? selectedCount.value : totalPersonnelCount.value;
+  return `Tải file ZIP ${typeLabel} (${count} Cán bộ)`;
 };
 
-const getPdfButtonLabel = () => {
-  if (exportScope.value === 'single') {
-    return `Tải file PDF (.pdf)`;
-  }
-  if (exportScope.value === 'selected') {
-    return `Tải ZIP PDF (${selectedCount.value} CB)`;
-  }
-  return `Tải ZIP PDF (${totalPersonnelCount.value} CB)`;
-};
-
-const handleExportWithFormat = async (format) => {
+const handleExport = async () => {
   const buf = effectiveTemplateBuffer.value;
   if (!buf) {
     alert('Vui lòng chọn hoặc tải lên tệp mẫu Word (.docx)');
     return;
   }
 
-  exportingFormat.value = format;
   exporting.value = true;
   progressCurrent.value = 0;
 
   try {
-    if (exportScope.value === 'single' && props.targetPerson) {
+    const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
+    const targetP = (exportScope.value === 'single' && props.targetPerson)
+      ? props.targetPerson
+      : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
+
+    if (isSingle && targetP) {
+      // Xuất 1 file tải trực tiếp về (không nén zip)
       await exportSinglePersonnelDocx(
         buf,
-        props.targetPerson,
+        targetP,
         null,
         personnelStore,
-        format,
+        outputFormat.value,
         authStore.user
       );
       visible.value = false;
     } else {
+      // Xuất từ 2 file trở lên -> Đóng gói ZIP
       let list = [];
       if (exportScope.value === 'selected') {
         list = props.selectedPersonnel;
@@ -876,7 +869,7 @@ const handleExportWithFormat = async (format) => {
           progressCurrent.value = curr;
           progressTotal.value = total;
         },
-        format,
+        outputFormat.value,
         authStore.user
       );
       visible.value = false;
