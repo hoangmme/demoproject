@@ -35,25 +35,40 @@ export const deleteUser = async (id) => {
   return res.data;
 };
 
-export const login = async (email, password) => {
+export const login = async (identifier, password) => {
+  let email = String(identifier || '').trim();
+  if (!email.includes('@')) {
+    if (email.toLowerCase() === 'admin') {
+      email = 'admin@demo.com';
+    } else {
+      email = `${email.toLowerCase()}@demo.com`;
+    }
+  }
+
   try {
     const res = await apiClient.post('/auth/login', { email, password });
     if (res.data?.data?.access_token) {
       const meRes = await apiClient.get('/users/me', {
         headers: { Authorization: `Bearer ${res.data.data.access_token}` },
       });
+      const me = meRes.data?.data || {};
+      const fullName = `${me.first_name || ''} ${me.last_name || ''}`.trim() || me.email || identifier;
       return {
-        ...meRes.data?.data,
+        ...me,
+        name: fullName,
+        fullName: fullName,
         access_token: res.data.data.access_token,
       };
     }
   } catch (e) {
     // Fallback static login if Directus user auth fails
-    if (email === 'admin@demo.com') {
+    if (email === 'admin@demo.com' && (password === '321456' || password === 'admin')) {
       return {
         id: 'admin-id',
         email: 'admin@demo.com',
         first_name: 'Quản trị viên',
+        name: 'Quản trị viên',
+        fullName: 'Quản trị viên',
         role: 'Admin',
       };
     }

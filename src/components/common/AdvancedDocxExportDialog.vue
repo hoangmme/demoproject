@@ -334,6 +334,7 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { usePersonnelStore } from '@/stores/personnel';
+import { useAuthStore } from '@/stores/auth';
 import { saveAs } from 'file-saver';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import {
@@ -363,6 +364,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 const personnelStore = usePersonnelStore();
+const authStore = useAuthStore();
 
 const visible = computed({
   get: () => props.modelValue,
@@ -562,6 +564,7 @@ const allAvailableTags = computed(() => {
 
   // 3. Hệ thống & Ngày tháng (Tab 3)
   tags.push(
+    { label: 'Họ tên cán bộ xuất file', tag: '{ho_ten_nguoi_xuat}', category: 'system', colNum: 'HT' },
     { label: 'Số thứ tự cán bộ', tag: '{stt}', category: 'system', colNum: 'HT' },
     { label: 'Ngày xuất file (DD/MM/YYYY)', tag: '{ngay_hien_tai}', category: 'system', colNum: 'HT' },
     { label: 'Ngày (DD)', tag: '{ngay}', category: 'system', colNum: 'HT' },
@@ -658,7 +661,8 @@ const handleExport = async () => {
         props.targetPerson,
         null,
         personnelStore,
-        outputFormat.value
+        outputFormat.value,
+        authStore.user
       );
       visible.value = false;
     } else {
@@ -685,7 +689,8 @@ const handleExport = async () => {
           progressCurrent.value = curr;
           progressTotal.value = total;
         },
-        outputFormat.value
+        outputFormat.value,
+        authStore.user
       );
       visible.value = false;
     }

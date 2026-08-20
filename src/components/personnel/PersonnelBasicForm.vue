@@ -11,26 +11,13 @@
       </div>
 
       <div class="form-grid">
-        <!-- Readonly Mã Cán bộ only in first group -->
-        <div v-if="gIdx === 0" class="field-item col-3">
-          <label class="field-label" title="Mã Cán bộ">
-            <span class="badge-code" style="margin-right: 4px;">Mã CB</span>
-          </label>
-          <InputText
-            :model-value="form.code || 'Tự động cấp phát'"
-            disabled
-            size="small"
-            style="background: #f1f5f9; color: #334155; font-weight: 700; cursor: not-allowed;"
-          />
-        </div>
-
         <!-- Dynamic Fields in this group -->
         <template v-for="col in group.columns" :key="col.id">
           <div class="field-item" :class="getColClass(col.width)">
             <label class="field-label" :title="col.label">
               <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
               <span class="label-text">{{ col.label }}</span>
-              <span v-if="col.id === 'name'" style="color: red; margin-left: 2px;">*</span>
+              <span v-if="col.id === 'name' || col.id === 'cccd' || col.id === 'so_cccd' || col.id === 'cccdparent'" style="color: red; margin-left: 2px;">*</span>
             </label>
             <DynamicField
               v-model="form[col.id]"

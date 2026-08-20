@@ -21,8 +21,8 @@
 
       <form @submit.prevent="handleLogin" style="display: flex; flex-direction: column; gap: 1rem;">
         <div class="field-item">
-          <label class="field-label">Email tài khoản</label>
-          <InputText v-model="email" placeholder="admin@demo.com" size="small" autofocus />
+          <label class="field-label">Tên tài khoản hoặc Email</label>
+          <InputText v-model="email" placeholder="admin hoặc admin@demo.com" size="small" autofocus />
         </div>
 
         <div class="field-item">

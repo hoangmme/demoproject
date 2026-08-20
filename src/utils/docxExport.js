@@ -11,7 +11,7 @@ import { formatDate } from './formatters';
  * @param {Object} personnelStore - Pinia store chứa danh mục & cấu hình cột
  * @returns {Object} Context data cho docxtemplater
  */
-export function preparePersonnelDocxData(person, index = 0, personnelStore = null) {
+export function preparePersonnelDocxData(person, index = 0, personnelStore = null, currentUser = null) {
   if (!person) return {};
 
   const cd = person.custom_data || {};
@@ -20,9 +20,14 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   const monthStr = String(today.getMonth() + 1).padStart(2, '0');
   const yearStr = String(today.getFullYear());
 
+  const exporterName = currentUser?.name || currentUser?.fullName || currentUser?.first_name || currentUser?.email || 'Quản trị viên';
+
   const data = {
-    // 1. Hệ thống & Ngày tháng
+    // 1. Hệ thống & Người xuất & Ngày tháng
     stt: index + 1,
+    ho_ten_nguoi_xuat: exporterName,
+    nguoi_xuat: exporterName,
+    can_bo_xuat: exporterName,
     current_date: `${dayStr}/${monthStr}/${yearStr}`,
     ngay_hien_tai: `${dayStr}/${monthStr}/${yearStr}`,
     ngay: dayStr,
@@ -271,8 +276,8 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
 /**
  * Xuất 1 file Word hoặc PDF cho 1 cán bộ và tải về máy
  */
-export async function exportSinglePersonnelDocx(templateBuffer, person, filename, personnelStore, outputFormat = 'docx') {
-  const contextData = preparePersonnelDocxData(person, 0, personnelStore);
+export async function exportSinglePersonnelDocx(templateBuffer, person, filename, personnelStore, outputFormat = 'docx', currentUser = null) {
+  const contextData = preparePersonnelDocxData(person, 0, personnelStore, currentUser);
   const docxBlob = generateDocxBlob(templateBuffer, contextData);
   const baseName = `Ho_so_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}`;
 
@@ -287,13 +292,13 @@ export async function exportSinglePersonnelDocx(templateBuffer, person, filename
 /**
  * Xuất nhiều cán bộ và đóng gói thành tệp .ZIP (chứa các file DOCX hoặc PDF)
  */
-export async function exportMultiplePersonnelZip(templateBuffer, personnelList, zipName, personnelStore, onProgress, outputFormat = 'docx') {
+export async function exportMultiplePersonnelZip(templateBuffer, personnelList, zipName, personnelStore, onProgress, outputFormat = 'docx', currentUser = null) {
   const zip = new JSZip();
   const total = personnelList.length;
 
   for (let i = 0; i < total; i++) {
     const person = personnelList[i];
-    const contextData = preparePersonnelDocxData(person, i, personnelStore);
+    const contextData = preparePersonnelDocxData(person, i, personnelStore, currentUser);
     const docxBlob = generateDocxBlob(templateBuffer, contextData);
 
     const safePersonName = (person.name || `Can_bo_${i + 1}`).replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_');
