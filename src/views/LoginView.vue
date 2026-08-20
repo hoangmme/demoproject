@@ -13,9 +13,10 @@
         <div style="font-size: 0.85rem; font-weight: 700; color: #991b1b; margin-top: 4px; line-height: 1.3; white-space: nowrap;">
           PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
         </div>
-        <p style="font-size: 0.78rem; color: #475569; margin-top: 8px; line-height: 1.35;">
-          Dữ liệu quản lý cán bộ, đảng viên và thân nhân có yếu tố nước ngoài
-        </p>
+        <div style="font-size: 0.8rem; color: #475569; margin-top: 10px; line-height: 1.4;">
+          <div>Dữ liệu quản lý cán bộ, đảng viên</div>
+          <div style="margin-top: 2px;">và thân nhân có yếu tố nước ngoài</div>
+        </div>
       </div>
 
       <form @submit.prevent="handleLogin" style="display: flex; flex-direction: column; gap: 1rem;">
