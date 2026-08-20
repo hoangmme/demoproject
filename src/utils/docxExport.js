@@ -145,33 +145,44 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       relativeName: rel.relativeName || rel.name || '',
       ho_ten_tn: rel.relativeName || rel.name || '',
       ho_ten: rel.relativeName || rel.name || '',
+      tn_ho_ten: rel.relativeName || rel.name || '',
       relationshipName: rel.relationshipName || rel.relationship || '',
       quan_he: rel.relationshipName || rel.relationship || '',
+      tn_quan_he: rel.relationshipName || rel.relationship || '',
       birthYear: formatDate(rel.birthYear || rcd.birthYear),
       nam_sinh: formatDate(rel.birthYear || rcd.birthYear),
       ngay_sinh: formatDate(rel.birthYear || rcd.birthYear),
+      tn_nam_sinh: formatDate(rel.birthYear || rcd.birthYear),
+      tn_ngay_sinh: formatDate(rel.birthYear || rcd.birthYear),
       gender: rel.gender || rcd.gender || '',
       gioi_tinh: rel.gender || rcd.gender || '',
+      tn_gioi_tinh: rel.gender || rcd.gender || '',
       countryName: rel.countryName || rel.country || '',
       quoc_gia: rel.countryName || rel.country || '',
+      tn_quoc_gia: rel.countryName || rel.country || '',
       quoc_tich: rel.nationality || rcd.nationality || rel.countryName || '',
       nationality: rel.nationality || rcd.nationality || rel.countryName || '',
       residenceStatus: rel.residenceStatus || rcd.residenceStatus || '',
       tinh_trang_cu_tru: rel.residenceStatus || rcd.residenceStatus || '',
       job: rel.job || rcd.job || '',
       nghe_nghiep: rel.job || rcd.job || '',
+      tn_nghe_nghiep: rel.job || rcd.job || '',
       workplace: rel.workplace || rcd.workplace || '',
       noi_lam_viec: rel.workplace || rcd.workplace || '',
       address: rel.address || rcd.address || '',
       dia_chi: rel.address || rcd.address || '',
-      cccd: rel.cccd || rcd.cccd || '',
-      so_cccd: rel.cccd || rcd.cccd || '',
+      tn_dia_chi: rel.address || rcd.address || '',
+      cccdparent: rel.cccdparent || rcd.cccdparent || person.cccdparent || '',
+      cccdthannhan: rel.cccdthannhan || rcd.cccdthannhan || rel.cccd || '',
+      tn_cccd: rel.cccdthannhan || rcd.cccdthannhan || rel.cccd || '',
     };
 
-    // Đẩy các cột custom của thân nhân vào
+    // Đẩy các cột custom của thân nhân vào (với cả key gốc và key có prefix tn_)
     Object.entries(rcd).forEach(([k, v]) => {
       if (v !== undefined && v !== null) {
-        relObj[k] = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : v;
+        const cleanV = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : v;
+        relObj[k] = cleanV;
+        relObj[`tn_${k}`] = cleanV;
       }
     });
     return relObj;
@@ -181,6 +192,18 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   data.relatives = processedRelatives;
   data.so_luong_than_nhan = processedRelatives.length;
   data.total_relatives = processedRelatives.length;
+
+  // Flatten top 10 thân nhân ra ngoài root context để dùng được ngay cả khi mẫu Word không dùng thẻ lặp
+  processedRelatives.forEach((relItem, idx) => {
+    const num = idx + 1;
+    data[`tn_${num}_ho_ten`] = relItem.ho_ten;
+    data[`tn_${num}_quan_he`] = relItem.quan_he;
+    data[`tn_${num}_nam_sinh`] = relItem.nam_sinh;
+    data[`tn_${num}_nghe_nghiep`] = relItem.nghe_nghiep;
+    data[`tn_${num}_quoc_gia`] = relItem.quoc_gia;
+    data[`tn_${num}_dia_chi`] = relItem.dia_chi;
+    data[`tn_${num}_cccd`] = relItem.cccdthannhan;
+  });
 
   // 7. Danh sách Chuyến đi Nước ngoài (Loop {#chuyen_di} / {#trips})
   const rawTrips = Array.isArray(person.trips) ? person.trips : (cd.trips || []);
