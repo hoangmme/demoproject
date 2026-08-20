@@ -413,16 +413,14 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.style.position = 'fixed';
   container.style.top = '0';
   container.style.left = '0';
-  container.style.width = '820px';
-  container.style.minHeight = '1160px';
-  container.style.zIndex = '999999';
+  container.style.width = '794px';
+  container.style.zIndex = '-9999';
   container.style.opacity = '1';
   container.style.pointerEvents = 'none';
   container.style.backgroundColor = '#ffffff';
   container.style.color = '#000000';
-  container.style.padding = '24px';
+  container.style.padding = '15px';
   container.style.boxSizing = 'border-box';
-  container.style.overflow = 'visible';
   document.body.appendChild(container);
 
   try {
@@ -437,18 +435,16 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       useBase64URL: true,
     });
 
-    // Chờ 400ms để layout, ảnh, font chữ render xong
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    // Chờ 300ms để DOM và phông chữ render hoàn tất
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     const opt = {
-      margin: [10, 10, 10, 10],
-      filename: 'Ho_so.pdf',
+      margin: [8, 8, 8, 8],
+      filename: 'Ho_so_xuat.pdf',
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: {
         scale: 2,
         useCORS: true,
-        allowTaint: true,
-        letterRendering: true,
         scrollX: 0,
         scrollY: 0,
         logging: false,
@@ -457,7 +453,9 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       pagebreak: { mode: ['css', 'legacy'] },
     };
 
-    const pdfBlob = await html2pdf().set(opt).from(container).outputPdf('blob');
+    const worker = html2pdf().from(container).set(opt);
+    const pdfDoc = await worker.toPdf().get('pdf');
+    const pdfBlob = pdfDoc.output('blob');
     return pdfBlob;
   } catch (err) {
     console.error('Lỗi chuyển đổi DOCX sang PDF:', err);
