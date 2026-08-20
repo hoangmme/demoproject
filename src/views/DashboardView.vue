@@ -710,12 +710,14 @@
             </tbody>
           </table>
 
-          <!-- 3. Table for Trips -->
+          <!-- 3. Table for Trips (Cán bộ đi nước ngoài) -->
           <table v-else class="drilldown-table">
             <thead>
               <tr>
                 <th style="width: 40px; text-align: center;">STT</th>
-                <th>Tên Cán bộ</th>
+                <th>Mã CB</th>
+                <th>Họ và tên</th>
+                <th v-for="col in activePersonnelColumns" :key="col.id">{{ col.label }}</th>
                 <th>Số Quyết định</th>
                 <th>Quốc gia đến</th>
                 <th>Nguồn Kinh phí</th>
@@ -733,8 +735,18 @@
                 title="Nhấp để mở chi tiết cán bộ & chuyến đi này"
               >
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
+                <td>
+                  <span class="code-badge">
+                    {{ (getPersonnelForTrip(t).code || t.personnelCode || t.personnelId || '-') }}
+                  </span>
+                </td>
                 <td style="font-weight: 600; color: #1e293b;">
-                  <span style="color: #0284c7; text-decoration: underline;">{{ t.personnelName || '-' }}</span>
+                  <span style="color: #0284c7; text-decoration: underline;">
+                    {{ t.personnelName || getPersonnelForTrip(t).name || '-' }}
+                  </span>
+                </td>
+                <td v-for="col in activePersonnelColumns" :key="col.id">
+                  {{ getDisplayValue(getPersonnelForTrip(t), col.id) }}
                 </td>
                 <td>
                   <span v-if="t.decisionNumber || getTripValue(t, colConfig.decision)" class="code-badge">
@@ -1236,6 +1248,12 @@ const getDisplayValue = (row, colId) => {
     return formatDate(str);
   }
   return str;
+};
+
+const getPersonnelForTrip = (t) => {
+  if (!t) return {};
+  if (t.personnel) return t.personnel;
+  return personnelStore.personnelList.find((p) => p.id === t.personnelId || (t.personnelCode && p.code === t.personnelCode)) || {};
 };
 
 // Dialog state for personnel & relative detail
