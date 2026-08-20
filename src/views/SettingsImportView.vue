@@ -321,28 +321,170 @@
       </div>
     </div>
 
-    <!-- Main Content: Tab 3 (Bảng Tra cứu Mã Thẻ Tag Word / PDF) -->
+    <!-- Main Content: Tab 3 (Quản lý Mẫu Word & Bảng Tra cứu Mã Tag) -->
     <div v-else-if="activeTab === 'tags'" class="app-card" style="padding: 1.25rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
+      <!-- PHẦN 1: QUẢN LÝ MẪU WORD & MẪU MẶC ĐỊNH CHO GROUP -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="pi pi-file-word" style="color: #2563eb; font-size: 1.25rem;"></i>
+            <div>
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0;">1. Quản lý Danh sách Mẫu Word (.docx) & Chọn Mẫu Mặc Định cho Group</h3>
+              <p style="font-size: 0.75rem; color: #64748b; margin: 2px 0 0 0;">
+                Tải lên các mẫu Word (.docx). Mẫu được đánh dấu <strong>[Mặc định]</strong> sẽ tự động được sử dụng khi xuất hồ sơ theo Nhóm Cột.
+              </p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input
+              ref="tplFileInputRef"
+              type="file"
+              accept=".docx"
+              style="display: none;"
+              @change="handleUploadDocxTemplate"
+            />
+            <Button
+              label="Tải lên Mẫu Word mới (.docx)"
+              icon="pi pi-cloud-upload"
+              severity="primary"
+              size="small"
+              @click="tplFileInputRef.click()"
+              style="font-size: 0.8rem; font-weight: 700;"
+            />
+            <Button
+              label="Tải Mẫu Chuẩn Gốc (.docx)"
+              icon="pi pi-download"
+              severity="secondary"
+              outlined
+              size="small"
+              @click="downloadSampleTemplate"
+              style="font-size: 0.8rem;"
+            />
+          </div>
+        </div>
+
+        <!-- Danh sách Mẫu Word đã nạp -->
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; overflow: hidden;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+            <thead style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+              <tr>
+                <th style="padding: 8px 12px; text-align: left; font-weight: 700; color: #475569;">Tên Tệp Mẫu Word</th>
+                <th style="padding: 8px 12px; text-align: left; font-weight: 700; color: #475569; width: 160px;">Thời gian tải lên</th>
+                <th style="padding: 8px 12px; text-align: center; font-weight: 700; color: #475569; width: 170px;">Mẫu Mặc Định Group</th>
+                <th style="padding: 8px 12px; text-align: center; font-weight: 700; color: #475569; width: 130px;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Mẫu động hệ thống -->
+              <tr style="border-bottom: 1px solid #f1f5f9; background: #faf5ff;">
+                <td style="padding: 8px 12px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="pi pi-bolt" style="color: #7c3aed; font-size: 1.1rem;"></i>
+                    <div>
+                      <strong style="color: #6b21a8;">Mẫu Tự Động Theo Nhóm Cột (Sinh trực tiếp từ Cấu hình Cột)</strong>
+                      <div style="font-size: 0.7rem; color: #9333ea;">Tự động co giãn theo các Group bạn đã tích chọn</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="padding: 8px 12px; color: #64748b;">Hệ thống tạo tự động</td>
+                <td style="padding: 8px 12px; text-align: center;">
+                  <span v-if="!hasCustomDefaultTemplate" class="badge-pill badge-green" style="font-size: 0.72rem; font-weight: 700;">
+                    ✓ Đang dùng làm Mặc định
+                  </span>
+                  <Button
+                    v-else
+                    label="Đặt làm Mặc định"
+                    size="small"
+                    text
+                    severity="secondary"
+                    @click="setSystemAsDefault"
+                    style="font-size: 0.72rem; padding: 2px 6px;"
+                  />
+                </td>
+                <td style="padding: 8px 12px; text-align: center;">
+                  <Button
+                    icon="pi pi-download"
+                    size="small"
+                    text
+                    severity="info"
+                    @click="downloadSampleTemplate"
+                    title="Tải mẫu chuẩn về máy"
+                    style="font-size: 0.75rem; padding: 4px;"
+                  />
+                </td>
+              </tr>
+
+              <!-- Các mẫu người dùng tải lên -->
+              <tr
+                v-for="tpl in docxTemplates"
+                :key="tpl.id"
+                style="border-bottom: 1px solid #f1f5f9;"
+                :style="{ backgroundColor: tpl.isDefault ? '#eff6ff' : '#ffffff' }"
+              >
+                <td style="padding: 8px 12px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="pi pi-file-word" style="color: #2563eb; font-size: 1.1rem;"></i>
+                    <div>
+                      <strong style="color: #1e293b;">{{ tpl.name }}</strong>
+                      <div style="font-size: 0.7rem; color: #64748b;">{{ tpl.size ? (tpl.size / 1024).toFixed(1) + ' KB' : 'Mẫu Word người dùng' }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="padding: 8px 12px; color: #64748b; font-size: 0.74rem;">{{ tpl.uploadedAt || 'Mới tải lên' }}</td>
+                <td style="padding: 8px 12px; text-align: center;">
+                  <span v-if="tpl.isDefault" class="badge-pill badge-blue" style="font-size: 0.72rem; font-weight: 700;">
+                    ⭐ Mặc định cho Group
+                  </span>
+                  <Button
+                    v-else
+                    label="Đặt làm Mặc định"
+                    size="small"
+                    outlined
+                    severity="secondary"
+                    @click="setAsDefaultTemplate(tpl.id)"
+                    style="font-size: 0.72rem; padding: 2px 8px;"
+                  />
+                </td>
+                <td style="padding: 8px 12px; text-align: center;">
+                  <div style="display: flex; justify-content: center; gap: 4px;">
+                    <Button
+                      icon="pi pi-download"
+                      size="small"
+                      text
+                      severity="info"
+                      @click="downloadSavedTemplate(tpl)"
+                      title="Tải tệp này về máy"
+                      style="font-size: 0.75rem; padding: 4px;"
+                    />
+                    <Button
+                      icon="pi pi-trash"
+                      size="small"
+                      text
+                      severity="danger"
+                      @click="deleteSavedTemplate(tpl.id)"
+                      title="Xóa mẫu này"
+                      style="font-size: 0.75rem; padding: 4px;"
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PHẦN 2: BẢNG TRA CỨU MÃ THẺ TAG WORD (.DOCX) -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
         <div>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <i class="pi pi-tags" style="color: #7c3aed; font-size: 1.2rem;"></i>
-            <h2 style="font-size: 1.1rem; font-weight: 700; color: #1e293b; margin: 0;">Bảng Tra cứu Toàn bộ Mã Thẻ Tag Word (.docx) & PDF</h2>
+            <i class="pi pi-tags" style="color: #7c3aed; font-size: 1.1rem;"></i>
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0;">2. Bảng Tra cứu Toàn bộ Mã Thẻ Tag Word (.docx) & PDF</h3>
           </div>
-          <p style="font-size: 0.8rem; color: #64748b; margin: 4px 0 0 0;">
+          <p style="font-size: 0.75rem; color: #64748b; margin: 2px 0 0 0;">
             Tra cứu nhanh và sao chép 1-click các mã thẻ tag để dán vào file mẫu Microsoft Word của bạn.
           </p>
         </div>
-
-        <Button
-          label="Tải tệp Mẫu Word chuẩn (.docx)"
-          icon="pi pi-download"
-          severity="info"
-          outlined
-          size="small"
-          @click="downloadSampleTemplate"
-          style="font-size: 0.82rem; font-weight: 600;"
-        />
       </div>
 
       <!-- Filters & Category Navigation -->
@@ -465,7 +607,7 @@ import { ref, computed, onMounted } from 'vue';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
-import { saveAppSettings } from '@/api/settings';
+import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import { createSampleDocxTemplateBlob } from '@/utils/docxExport';
 import { saveAs } from 'file-saver';
@@ -485,6 +627,90 @@ const relativeKeyField = ref('cccdthannhan');
 const tagSearch = ref('');
 const selectedCategory = ref('personnel');
 const copiedTag = ref('');
+
+// Quản lý Danh sách Mẫu Word (.docx)
+const tplFileInputRef = ref(null);
+const docxTemplates = ref([]);
+
+const hasCustomDefaultTemplate = computed(() => {
+  return docxTemplates.value.some((t) => t.isDefault);
+});
+
+const loadDocxTemplates = async () => {
+  try {
+    const saved = await getAppSettings('system_docx_templates', []);
+    if (Array.isArray(saved)) {
+      docxTemplates.value = saved;
+    }
+  } catch (err) {
+    console.error('Error loading docx templates:', err);
+  }
+};
+
+const handleUploadDocxTemplate = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const base64 = e.target.result.split(',')[1];
+      const newTpl = {
+        id: 'tpl_' + Date.now(),
+        name: file.name,
+        size: file.size,
+        base64: base64,
+        isDefault: docxTemplates.value.length === 0,
+        uploadedAt: new Date().toLocaleString('vi-VN'),
+      };
+      const updated = [...docxTemplates.value, newTpl];
+      docxTemplates.value = updated;
+      await saveAppSettings('system_docx_templates', updated);
+      alert(`Đã tải lên tệp mẫu "${file.name}" thành công!`);
+    } catch (err) {
+      alert('Lỗi lưu mẫu: ' + err.message);
+    }
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+};
+
+const setAsDefaultTemplate = async (templateId) => {
+  const updated = docxTemplates.value.map((t) => ({
+    ...t,
+    isDefault: t.id === templateId,
+  }));
+  docxTemplates.value = updated;
+  await saveAppSettings('system_docx_templates', updated);
+};
+
+const setSystemAsDefault = async () => {
+  const updated = docxTemplates.value.map((t) => ({
+    ...t,
+    isDefault: false,
+  }));
+  docxTemplates.value = updated;
+  await saveAppSettings('system_docx_templates', updated);
+};
+
+const deleteSavedTemplate = async (templateId) => {
+  if (!confirm('Bạn có chắc chắn muốn xóa tệp mẫu Word này?')) return;
+  const updated = docxTemplates.value.filter((t) => t.id !== templateId);
+  docxTemplates.value = updated;
+  await saveAppSettings('system_docx_templates', updated);
+};
+
+const downloadSavedTemplate = (tpl) => {
+  if (!tpl.base64) return;
+  const byteCharacters = atob(tpl.base64);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  saveAs(blob, tpl.name || 'Mau_Word.docx');
+};
 
 const availablePersonnelCols = computed(() => {
   const cols = [];
@@ -572,6 +798,7 @@ onMounted(async () => {
   personnelKeyField.value = personnelStore.getPersonnelKeyField();
   relativeParentKeyField.value = personnelStore.getRelativeParentKeyField();
   relativeKeyField.value = personnelStore.getRelativeKeyField();
+  await loadDocxTemplates();
 });
 
 const currentGroups = computed(() => {

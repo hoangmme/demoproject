@@ -401,7 +401,8 @@ export function generateDocxBlob(templateBuffer, contextData) {
 }
 
 import { renderAsync } from 'docx-preview';
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 /**
  * Chuyển đổi một DOCX Blob thành PDF Blob chất lượng cao
@@ -410,17 +411,15 @@ import html2pdf from 'html2pdf.js';
  */
 export async function convertDocxBlobToPdfBlob(docxBlob) {
   const container = document.createElement('div');
+  container.id = 'docx-pdf-sandbox';
   container.style.position = 'fixed';
   container.style.top = '0';
   container.style.left = '0';
   container.style.width = '794px';
-  container.style.minHeight = '1123px';
-  container.style.opacity = '1';
-  container.style.zIndex = '999999';
-  container.style.pointerEvents = 'none';
   container.style.backgroundColor = '#ffffff';
   container.style.color = '#000000';
-  container.style.padding = '20px';
+  container.style.zIndex = '9999999';
+  container.style.pointerEvents = 'none';
   container.style.boxSizing = 'border-box';
   document.body.appendChild(container);
 
@@ -436,27 +435,57 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       useBase64URL: true,
     });
 
-    // Chờ DOM và phông chữ render hoàn tất
+    // Chờ 400ms để DOM vẽ và phông chữ render hoàn tất
     await new Promise((resolve) => setTimeout(resolve, 400));
 
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: 'Ho_so_xuat.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {
+    const sections = container.querySelectorAll('section.docx');
+    const elementsToRender = sections.length > 0 ? Array.from(sections) : [container];
+
+    const pdf = new jsPDF({
+      unit: 'mm',
+      format: 'a4',
+      orientation: 'portrait',
+      compress: true,
+    });
+
+    const pdfWidth = 210;
+    const pdfHeight = 297;
+
+    for (let i = 0; i < elementsToRender.length; i++) {
+      const el = elementsToRender[i];
+      if (i > 0) pdf.addPage('a4', 'portrait');
+
+      const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
         scrollX: 0,
         scrollY: 0,
-        logging: false,
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'] },
-    };
+        windowWidth: 800,
+      });
 
-    // Chạy chu trình trọn vẹn: Render DOM -> Canvas -> jsPDF -> Output Blob
-    const pdfBlob = await html2pdf().set(opt).from(container).output('blob');
-    return pdfBlob;
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      if (imgHeight <= pdfHeight) {
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
+      } else {
+        let heightLeft = imgHeight;
+        let position = 0;
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage('a4', 'portrait');
+          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+          heightLeft -= pdfHeight;
+        }
+      }
+    }
+
+    return pdf.output('blob');
   } catch (err) {
     console.error('Lỗi chuyển đổi DOCX sang PDF:', err);
     throw err;

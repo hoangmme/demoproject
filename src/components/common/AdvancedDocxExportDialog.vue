@@ -177,23 +177,51 @@
           </div>
 
           <!-- Nguồn 2: Tải lên mẫu riêng -->
+          <!-- Nguồn 2: Danh sách Mẫu đã lưu & Tải lên mẫu riêng -->
           <div v-else>
+            <!-- Danh sách các mẫu đã lưu trong hệ thống -->
+            <div v-if="savedTemplatesList.length > 0" style="margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto;">
+              <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 2px;">CHỌN NHANH MẪU ĐÃ LƯU:</div>
+              <label
+                v-for="tpl in savedTemplatesList"
+                :key="tpl.id"
+                class="radio-item"
+                :class="{ 'radio-active': selectedSavedTemplateId === tpl.id }"
+                style="padding: 6px 10px;"
+              >
+                <input
+                  type="radio"
+                  :value="tpl.id"
+                  v-model="selectedSavedTemplateId"
+                  @change="selectSavedTemplate(tpl)"
+                  style="accent-color: #2563eb;"
+                />
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                  <i class="pi pi-file-word" style="color: #2563eb; font-size: 1rem;"></i>
+                  <span style="font-size: 0.8rem; font-weight: 600; color: #1e293b; flex: 1;">{{ tpl.name }}</span>
+                  <span v-if="tpl.isDefault" class="badge-fixed" style="background: #dbeafe; color: #1d4ed8;">Mặc định</span>
+                </div>
+              </label>
+            </div>
+
+            <!-- Khung tải lên / nạp mẫu mới -->
             <div
               v-if="!customTemplateBuffer"
               class="drop-zone"
               @click="triggerFileInput"
+              style="padding: 14px;"
             >
-              <i class="pi pi-cloud-upload" style="font-size: 2.2rem; color: #3b82f6; margin-bottom: 6px;"></i>
-              <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">Nhấp hoặc Kéo thả tệp Mẫu Word (.docx) vào đây</div>
-              <div style="font-size: 0.74rem; color: #64748b; margin-top: 3px;">Hệ thống sẽ điền dữ liệu vào các thẻ tag bạn đã đặt trong file</div>
+              <i class="pi pi-cloud-upload" style="font-size: 1.8rem; color: #3b82f6; margin-bottom: 4px;"></i>
+              <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">+ Tải lên tệp Mẫu Word (.docx) mới</div>
+              <div style="font-size: 0.7rem; color: #64748b;">Hệ thống sẽ điền dữ liệu theo các tag trong file</div>
             </div>
 
             <div v-else class="file-loaded-box">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="pi pi-file-word" style="font-size: 1.8rem; color: #2563eb;"></i>
+              <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                <i class="pi pi-file-word" style="font-size: 1.5rem; color: #2563eb;"></i>
                 <div>
-                  <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">{{ customTemplateFileName }}</div>
-                  <div style="font-size: 0.72rem; color: #16a34a; font-weight: 600;">Đã nạp file mẫu tùy biến thành công (tự động lưu)</div>
+                  <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">{{ customTemplateFileName }}</div>
+                  <div style="font-size: 0.7rem; color: #16a34a; font-weight: 600;">Đang sử dụng mẫu này để xuất</div>
                 </div>
               </div>
               <Button
@@ -203,7 +231,7 @@
                 outlined
                 severity="secondary"
                 @click="triggerFileInput"
-                style="font-size: 0.75rem; padding: 3px 8px;"
+                style="font-size: 0.72rem; padding: 2px 6px;"
               />
             </div>
           </div>
@@ -326,8 +354,34 @@ const base64ToArrayBuffer = (base64) => {
   return bytes.buffer;
 };
 
+const savedTemplatesList = ref([]);
+const selectedSavedTemplateId = ref('');
+
+const selectSavedTemplate = (tpl) => {
+  if (!tpl.base64) return;
+  selectedSavedTemplateId.value = tpl.id;
+  customTemplateBuffer.value = base64ToArrayBuffer(tpl.base64);
+  customTemplateFileName.value = tpl.name;
+};
+
+const loadAllSavedTemplates = async () => {
+  try {
+    const list = await getAppSettings('system_docx_templates', []);
+    if (Array.isArray(list) && list.length > 0) {
+      savedTemplatesList.value = list;
+      const defaultTpl = list.find((t) => t.isDefault) || list[0];
+      if (defaultTpl && !customTemplateBuffer.value) {
+        selectSavedTemplate(defaultTpl);
+      }
+    }
+  } catch (e) {
+    console.error('Error loading saved templates in dialog:', e);
+  }
+};
+
 const loadSavedTemplate = async () => {
   try {
+    await loadAllSavedTemplates();
     const cachedB64 = localStorage.getItem('cached_custom_docx_template');
     const cachedName = localStorage.getItem('cached_custom_docx_name');
     if (cachedB64 && cachedName) {
@@ -395,6 +449,19 @@ const handleFileUpload = (e) => {
     localStorage.setItem('cached_custom_docx_template', b64);
     localStorage.setItem('cached_custom_docx_name', file.name);
     await saveAppSettings('custom_docx_template', { fileName: file.name, base64: b64 });
+
+    const newTpl = {
+      id: 'tpl_' + Date.now(),
+      name: file.name,
+      size: file.size,
+      base64: b64,
+      isDefault: false,
+      uploadedAt: new Date().toLocaleString('vi-VN'),
+    };
+    const updated = [...savedTemplatesList.value.filter((t) => t.name !== file.name), newTpl];
+    savedTemplatesList.value = updated;
+    selectedSavedTemplateId.value = newTpl.id;
+    await saveAppSettings('system_docx_templates', updated);
   };
   reader.readAsArrayBuffer(file);
 };
