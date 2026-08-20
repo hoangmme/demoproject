@@ -217,11 +217,11 @@
         <div style="display: flex; gap: 12px; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
           <span style="display: flex; align-items: center; gap: 4px;">
             <span style="width: 10px; height: 10px; border-radius: 2px; background: #16a34a; display: inline-block;"></span>
-            <strong style="color: #166534;">Cán bộ</strong> (Lượt đi)
+            <strong style="color: #166534;">Cán bộ</strong>
           </span>
           <span style="display: flex; align-items: center; gap: 4px;">
             <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
-            <strong style="color: #6d28d9;">Thân nhân</strong> (Cư trú)
+            <strong style="color: #6d28d9;">Thân nhân</strong>
           </span>
         </div>
 
@@ -813,22 +813,46 @@
                 <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
               </select>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
               <div>
                 <span style="font-size: 0.7rem; color: #64748b;">Ngân sách nhà nước:</span>
-                <InputText v-model="tempConfig.fundingBudget" placeholder="fundingBudget" style="width: 100%; font-size: 0.75rem;" />
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  <InputText v-model="tempConfig.fundingBudget" placeholder="fundingBudget" style="flex: 1; font-size: 0.75rem;" />
+                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingBudget = $event.target.value">
+                    <option value="">-- Chọn cột --</option>
+                    <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <span style="font-size: 0.7rem; color: #64748b;">Tài trợ:</span>
-                <InputText v-model="tempConfig.fundingSponsor" placeholder="fundingSponsor" style="width: 100%; font-size: 0.75rem;" />
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  <InputText v-model="tempConfig.fundingSponsor" placeholder="fundingSponsor" style="flex: 1; font-size: 0.75rem;" />
+                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingSponsor = $event.target.value">
+                    <option value="">-- Chọn cột --</option>
+                    <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <span style="font-size: 0.7rem; color: #64748b;">Tự túc:</span>
-                <InputText v-model="tempConfig.fundingSelf" placeholder="fundingSelf" style="width: 100%; font-size: 0.75rem;" />
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  <InputText v-model="tempConfig.fundingSelf" placeholder="fundingSelf" style="flex: 1; font-size: 0.75rem;" />
+                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingSelf = $event.target.value">
+                    <option value="">-- Chọn cột --</option>
+                    <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <span style="font-size: 0.7rem; color: #64748b;">Khác:</span>
-                <InputText v-model="tempConfig.fundingOther" placeholder="fundingOther" style="width: 100%; font-size: 0.75rem;" />
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  <InputText v-model="tempConfig.fundingOther" placeholder="fundingOther" style="flex: 1; font-size: 0.75rem;" />
+                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingOther = $event.target.value">
+                    <option value="">-- Chọn cột --</option>
+                    <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -843,22 +867,46 @@
                 <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
               </select>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
               <div>
                 <span style="font-size: 0.7rem; color: #64748b;">Học bổng / Ngân sách:</span>
-                <InputText v-model="tempConfig.fundingRelativeBudget" placeholder="fundingRelativeBudget" style="width: 100%; font-size: 0.75rem;" />
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  <InputText v-model="tempConfig.fundingRelativeBudget" placeholder="fundingRelativeBudget" style="flex: 1; font-size: 0.75rem;" />
+                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingRelativeBudget = $event.target.value">
+                    <option value="">-- Chọn cột --</option>
+                    <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <span style="font-size: 0.7rem; color: #64748b;">Tài trợ:</span>
-                <InputText v-model="tempConfig.fundingRelativeSponsor" placeholder="fundingRelativeSponsor" style="width: 100%; font-size: 0.75rem;" />
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  <InputText v-model="tempConfig.fundingRelativeSponsor" placeholder="fundingRelativeSponsor" style="flex: 1; font-size: 0.75rem;" />
+                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingRelativeSponsor = $event.target.value">
+                    <option value="">-- Chọn cột --</option>
+                    <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <span style="font-size: 0.7rem; color: #64748b;">Tự túc:</span>
-                <InputText v-model="tempConfig.fundingRelativeSelf" placeholder="fundingRelativeSelf" style="width: 100%; font-size: 0.75rem;" />
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  <InputText v-model="tempConfig.fundingRelativeSelf" placeholder="fundingRelativeSelf" style="flex: 1; font-size: 0.75rem;" />
+                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingRelativeSelf = $event.target.value">
+                    <option value="">-- Chọn cột --</option>
+                    <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <span style="font-size: 0.7rem; color: #64748b;">Khác:</span>
-                <InputText v-model="tempConfig.fundingRelativeOther" placeholder="fundingRelativeOther" style="width: 100%; font-size: 0.75rem;" />
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  <InputText v-model="tempConfig.fundingRelativeOther" placeholder="fundingRelativeOther" style="flex: 1; font-size: 0.75rem;" />
+                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingRelativeOther = $event.target.value">
+                    <option value="">-- Chọn cột --</option>
+                    <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -1084,7 +1132,7 @@ import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
 import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import { usePersonnelStore } from '@/stores/personnel';
-import { exportToExcel } from '@/utils/excel';
+import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel } from '@/utils/excel';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
@@ -2050,10 +2098,38 @@ const filteredDrilldownData = computed(() => {
 });
 
 const exportDrilldownExcel = () => {
-  if (filteredDrilldownData.value.length === 0) return;
-  const tabSuffix = drilldownHasDualTabs.value ? `_${drilldownActiveTab.value}` : '';
-  const fileName = `Thong_Ke_${drilldownType.value}${tabSuffix}_${new Date().toISOString().slice(0, 10)}`;
-  exportToExcel(filteredDrilldownData.value, fileName, 'Thống kê');
+  const currentList = filteredDrilldownData.value;
+  if (!currentList || currentList.length === 0) {
+    alert('Không có dữ liệu để xuất!');
+    return;
+  }
+  const currentCategory = drilldownHasDualTabs.value ? drilldownActiveTab.value : drilldownCategory.value;
+
+  if (currentCategory === 'relatives') {
+    exportFullRelativesExcel(currentList, personnelStore.importMappingRelative);
+  } else if (currentCategory === 'personnel') {
+    exportFullPersonnelExcel(currentList, personnelStore.importMappingPersonnel, personnelStore.getDepartmentName);
+  } else {
+    // Trips -> Find the corresponding personnel records and export full personnel columns
+    const pMap = {};
+    (personnelStore.personnelList || []).forEach((p) => {
+      pMap[p.id] = p;
+      if (p.code) pMap[p.code] = p;
+    });
+    const targetPersonnelList = [];
+    currentList.forEach((t) => {
+      const p = pMap[t.personnelId] || pMap[t.personnelCode] || (personnelStore.personnelList || []).find((x) => x.id === t.personnelId || x.code === t.personnelId);
+      if (p && !targetPersonnelList.some((item) => item.id === p.id)) {
+        targetPersonnelList.push(p);
+      }
+    });
+
+    if (targetPersonnelList.length > 0) {
+      exportFullPersonnelExcel(targetPersonnelList, personnelStore.importMappingPersonnel, personnelStore.getDepartmentName);
+    } else {
+      exportFullPersonnelExcel(currentList, personnelStore.importMappingPersonnel, personnelStore.getDepartmentName);
+    }
+  }
 };
 
 const refreshData = async () => {
