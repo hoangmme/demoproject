@@ -738,18 +738,20 @@ const activeRelativeColumns = computed(() => {
     });
   });
 
-  return (personnelStore.visibleRelativeColumns || []).map((id) => {
-    const cfg = map[id];
-    if (cfg && cfg.label) {
-      return {
-        id: cfg.id,
-        label: cfg.label,
-        width: '160px',
-      };
-    }
-    const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
-    return found || { id, label: id, width: '160px' };
-  });
+  return (personnelStore.visibleRelativeColumns || [])
+    .filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo')
+    .map((id) => {
+      const cfg = map[id];
+      if (cfg && cfg.label) {
+        return {
+          id: cfg.id,
+          label: cfg.label,
+          width: '160px',
+        };
+      }
+      const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
+      return found || { id, label: id, width: '160px' };
+    });
 });
 
 const filteredPersonnel = computed(() => {
@@ -824,6 +826,10 @@ const getDisplayValue = (person, colId) => {
 
 const onColumnsChange = () => {
   localStorage.setItem('vue_visible_columns', JSON.stringify(personnelStore.visibleColumns));
+};
+
+const onRelativeColumnsChange = () => {
+  localStorage.setItem('vue_visible_relative_columns', JSON.stringify(personnelStore.visibleRelativeColumns));
 };
 
 const openCreateDialog = () => {

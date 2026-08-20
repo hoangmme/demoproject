@@ -65,26 +65,17 @@ export const usePersonnelStore = defineStore('personnel', {
       return list;
     },
     allAvailableRelativeColumns: (state) => {
-      const list = [
-        { id: 'parentName', label: 'Cán bộ liên quan', width: '180px' },
-        { id: 'relationshipName', label: 'Mối quan hệ', width: '130px' },
-        { id: 'relativeName', label: 'Họ và tên Thân nhân', width: '180px' },
-        { id: 'birthYear', label: 'Năm sinh', width: '110px' },
-        { id: 'currentAddress', label: 'Nơi cư trú', width: '180px' },
-        { id: 'occupation', label: 'Nghề nghiệp', width: '160px' },
-        { id: 'countryName', label: 'Quốc gia', width: '140px' },
-        { id: 'timeAbroad', label: 'Thời gian ở NN', width: '140px' },
-        { id: 'unitAbroad', label: 'Cơ quan ở NN', width: '160px' },
-        { id: 'fundingName', label: 'Nguồn kinh phí', width: '140px' },
-      ];
+      const list = [];
+      const seen = new Set();
 
       (state.importMappingRelative || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
-          if (c.id && c.id !== 'stt' && !list.find((x) => x.id === c.id)) {
+          if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+            seen.add(c.id);
             list.push({
               id: c.id,
               label: c.label || c.id,
-              width: '150px',
+              width: '160px',
               format: c.format || 'text',
               group: g.group,
             });
@@ -92,6 +83,16 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
+      if (list.length === 0) {
+        return [
+          { id: 'relationshipName', label: 'Mối quan hệ', width: '130px' },
+          { id: 'relativeName', label: 'Họ và tên Thân nhân', width: '180px' },
+          { id: 'birthYear', label: 'Năm sinh', width: '110px' },
+          { id: 'currentAddress', label: 'Nơi cư trú', width: '180px' },
+          { id: 'occupation', label: 'Nghề nghiệp', width: '160px' },
+          { id: 'countryName', label: 'Quốc gia', width: '140px' },
+        ];
+      }
       return list;
     },
   },
@@ -120,6 +121,26 @@ export const usePersonnelStore = defineStore('personnel', {
         }
       } else {
         this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
+      }
+
+      const validRelativeIds = new Set(this.allAvailableRelativeColumns.map((c) => c.id));
+      const savedRel = localStorage.getItem('vue_visible_relative_columns');
+      if (savedRel) {
+        try {
+          const parsed = JSON.parse(savedRel);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const filtered = parsed.filter((id) => validRelativeIds.has(id));
+            if (filtered.length >= 3) {
+              this.visibleRelativeColumns = filtered;
+            } else {
+              this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
+            }
+          }
+        } catch (e) {
+          this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
+        }
+      } else {
+        this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
       }
 
       await this.fetchPersonnel();
