@@ -21,8 +21,8 @@
 
       <form @submit.prevent="handleLogin" style="display: flex; flex-direction: column; gap: 1.1rem;">
         <div class="field-item">
-          <label class="field-label" style="font-weight: 600; color: #334155;">Tên tài khoản hoặc Email</label>
-          <InputText v-model="email" placeholder="admin hoặc admin@demo.com" size="small" autofocus style="width: 100%;" />
+          <label class="field-label" style="font-weight: 600; color: #334155;">Tài khoản</label>
+          <InputText v-model="email" placeholder="admin" size="small" autofocus style="width: 100%;" />
         </div>
 
         <div class="field-item">
@@ -31,7 +31,7 @@
         </div>
 
         <Button
-          label="Đăng nhập Hệ thống"
+          label="Đăng nhập hệ thống"
           icon="pi pi-sign-in"
           severity="success"
           type="submit"
@@ -80,7 +80,7 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: flex-end;
   min-height: 100vh;
-  background: url('/login-bg.jpeg') no-repeat center center fixed;
+  background: url('/login-bg.jpg') no-repeat center center fixed;
   background-size: cover;
   padding: 2rem 8% 2rem 2rem;
 }

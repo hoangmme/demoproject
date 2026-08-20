@@ -82,11 +82,11 @@
         </div>
       </div>
 
-      <!-- 3. Chọn Tệp Mẫu Word (.docx) -->
+      <!-- 3. Chọn Kiểu Xuất Hồ Sơ -->
       <div class="export-box">
         <div class="box-title" style="display: flex; align-items: center; gap: 6px;">
-          <i class="pi pi-file-word" style="color: #2563eb;"></i>
-          <span>3. Tệp Mẫu DOCX sử dụng</span>
+          <i class="pi pi-th-large" style="color: #2563eb;"></i>
+          <span>3. Chọn kiểu xuất hồ sơ</span>
         </div>
 
         <!-- Tabs chọn nguồn mẫu -->
@@ -105,7 +105,7 @@
             :class="{ 'tpl-src-active': templateSource === 'upload' }"
             @click="setTemplateSource('upload')"
           >
-            <i class="pi pi-upload"></i> Tải lên Mẫu Riêng (.docx)
+            <i class="pi pi-file-edit"></i> Theo Mẫu có sẵn / Tải lên
           </button>
         </div>
 
