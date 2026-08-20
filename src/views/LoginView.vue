@@ -1,6 +1,6 @@
 <template>
-  <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f4f6f8; padding: 1rem;">
-    <div class="app-card" style="width: 100%; max-width: 400px; padding: 2rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
+  <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: url('/bg-login.png') no-repeat center center fixed; background-size: cover; padding: 1.5rem;">
+    <div class="app-card" style="width: 100%; max-width: 420px; padding: 2.25rem 2rem; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);">
       <div style="text-align: center; margin-bottom: 1.5rem;">
         <img
           src="/bo-cong-an-logo.png"
