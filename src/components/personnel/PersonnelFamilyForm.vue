@@ -161,7 +161,7 @@ const colIndexMap = computed(() => {
 });
 
 const filterRelativeColumns = (cols) => {
-  const ignore = new Set(['stt', 'code', 'cccd_can_bo', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'parentPersonnelCccd', 'parentCccd', 'cccdparent']);
+  const ignore = new Set(['stt', 'code', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'parentPersonnelCccd', 'parentCccd', 'cccdparent']);
   return (cols || []).filter((c) => !ignore.has(c.id));
 };
 
@@ -189,16 +189,16 @@ const getColClass = (w) => {
 const addRelative = () => {
   const nextIdx = relatives.value.length + 1;
   const newCode = 'TN-' + String(nextIdx).padStart(5, '0');
-  const parentCccd = props.form.cccdparent || props.form.cccd || '';
+  const parentCccd = props.form.cccdparent || '';
   relatives.value.push({
     code: newCode,
     personnelId: props.form.id || '',
     personnelName: props.form.name || '',
-    cccd_can_bo: parentCccd,
+    cccdparent: parentCccd,
     relationshipName: '',
     relativeName: '',
     birthYear: '',
-    cccd: '',
+    cccdthannhan: '',
     currentAddress: '',
     occupation: '',
     countryName: '',
@@ -208,7 +208,7 @@ const addRelative = () => {
     marriedToForeigner: '',
     workInForeignCompany: '',
     custom_data: {
-      cccd_can_bo: parentCccd,
+      cccdparent: parentCccd,
     },
   });
 };

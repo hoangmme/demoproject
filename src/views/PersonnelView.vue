@@ -299,7 +299,7 @@
             <div v-if="isFirstRelativeOfParent(data)">
               <strong style="cursor: pointer; color: #1f2937; font-size: 0.82rem;" @click="openEditDialog(data.parentPerson)">{{ data.parentName || data.parentPersonnelName || 'Cán bộ' }}</strong>
               <div v-if="data.parentPosition" style="font-size: 0.72rem; color: #6b7280;">{{ data.parentPosition }}</div>
-              <div v-if="data.cccd_can_bo" style="font-size: 0.7rem; color: #64748b; font-family: monospace;">CCCD: {{ data.cccd_can_bo }}</div>
+              <div v-if="data.cccdparent" style="font-size: 0.7rem; color: #64748b; font-family: monospace;">CCCD: {{ data.cccdparent }}</div>
             </div>
             <div v-else style="padding-left: 10px; color: #94a3b8; font-size: 0.74rem; display: flex; align-items: center; gap: 4px;">
               <span style="color: #cbd5e1;">↳</span> <span style="font-style: italic; color: #94a3b8;">(cùng cán bộ)</span>
@@ -894,9 +894,9 @@ const openEditDialog = (person, options = {}) => {
 const handleRelativeDetail = (relData) => {
   if (!relData) return;
   let parent = relData.parentPerson;
-  if (!parent && relData.cccd_can_bo) {
+  if (!parent && relData.cccdparent) {
     parent = personnelStore.personnelList.find(
-      (p) => String(p.cccdparent || p.cccd || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim() === String(relData.cccd_can_bo).trim()
+      (p) => String(p.cccdparent || p.custom_data?.cccdparent || '').trim() === String(relData.cccdparent).trim()
     );
   }
   if (!parent && relData.personnelId) {
@@ -928,8 +928,8 @@ const isFirstRelativeOfParent = (data) => {
   if (actualIndex <= 0) return true;
   const prev = list[actualIndex - 1];
   if (!prev) return true;
-  const curKey = String(data.cccd_can_bo || data.parentName || data.personnelId || '').trim();
-  const prevKey = String(prev.cccd_can_bo || prev.parentName || prev.personnelId || '').trim();
+  const curKey = String(data.cccdparent || data.parentName || data.personnelId || '').trim();
+  const prevKey = String(prev.cccdparent || prev.parentName || prev.personnelId || '').trim();
   return !curKey || curKey !== prevKey;
 };
 

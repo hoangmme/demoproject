@@ -234,7 +234,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
         const relativesMap = {};
         this.relativesList.forEach((r) => {
-          const k = String(r.cccdparent || r.cccd_can_bo || r.personnelId || '').trim();
+          const k = String(r.cccdparent || r.personnelId || '').trim();
           if (k) {
             if (!relativesMap[k]) relativesMap[k] = [];
             relativesMap[k].push(r);
@@ -251,7 +251,7 @@ export const usePersonnelStore = defineStore('personnel', {
             }
           }
 
-          const personCccd = String(p.cccdparent || p.cccd || p.so_cccd || custom.cccdparent || custom.cccd || custom.so_cccd || '').trim();
+          const personCccd = String(p.cccdparent || custom.cccdparent || '').trim();
           const matchedTrips = tripsMap[p.id] || tripsMap[p.code] || custom.trips || custom['Khối B: Chuyến đi nước ngoài'] || [];
           const matchedRelatives = (personCccd && relativesMap[personCccd]) || relativesMap[p.id] || relativesMap[p.code] || custom.relatives || [];
           const flags = custom.flags || p.flags || {};
@@ -261,7 +261,6 @@ export const usePersonnelStore = defineStore('personnel', {
             ...custom,
             ...p,
             cccdparent: personCccd,
-            cccd: personCccd,
             position: p.position || p.positionName || custom.positionName || custom.position || '',
             positionName: p.positionName || p.position || custom.position || custom.positionName || '',
             departmentName: p.departmentName || (p.departmentId ? this.getDepartmentName(p.departmentId) : '') || custom.departmentName || '',
@@ -276,25 +275,23 @@ export const usePersonnelStore = defineStore('personnel', {
           };
         });
 
-        // Fast parent linking on relativesList strictly by cccdparent / cccd_can_bo
+        // Fast parent linking on relativesList strictly by cccdparent
         const personLookup = {};
         this.personnelList.forEach((p) => {
           if (p.cccdparent) personLookup[String(p.cccdparent).trim()] = p;
-          if (p.cccd) personLookup[String(p.cccd).trim()] = p;
           if (p.id) personLookup[p.id] = p;
           if (p.code) personLookup[p.code] = p;
         });
 
         this.relativesList = this.relativesList.map((r) => {
-          const pCccd = r.cccdparent || r.cccd_can_bo;
+          const pCccd = r.cccdparent;
           const parent = (pCccd && personLookup[String(pCccd).trim()]) || (r.personnelId && personLookup[r.personnelId]) || null;
-          const parentCccd = pCccd || (parent ? (parent.cccdparent || parent.cccd) : '');
+          const parentCccd = pCccd || (parent ? parent.cccdparent : '');
           return {
             ...r,
             parentName: parent ? parent.name : (r.parentName || r.personnelName || ''),
             parentPersonnelName: parent ? parent.name : (r.parentPersonnelName || r.parentName || ''),
             cccdparent: parentCccd,
-            cccd_can_bo: parentCccd,
             parentPosition: parent ? (parent.positionName || parent.position || '') : (r.parentPosition || ''),
             parentDepartment: parent ? (parent.departmentName || '') : (r.parentDepartment || ''),
           };

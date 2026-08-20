@@ -254,12 +254,13 @@ const handleSave = async () => {
     activeTab.value = 0;
     return;
   }
-  const cccdVal = form.value.cccd || form.value.so_cccd || form.value.cccdparent;
+  const cccdVal = form.value.cccdparent || form.value.cccd || form.value.so_cccd;
   if (!cccdVal || !String(cccdVal).trim()) {
     alert('Vui lòng nhập Số CCCD của cán bộ (Số CCCD là thông tin bắt buộc để liên kết dữ liệu)!');
     activeTab.value = 0;
     return;
   }
+  form.value.cccdparent = String(cccdVal).trim();
   saving.value = true;
   try {
     const saved = await personnelStore.savePerson(form.value);

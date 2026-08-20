@@ -26,8 +26,6 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     // 1. Hệ thống & Người xuất & Ngày tháng
     stt: index + 1,
     ho_ten_nguoi_xuat: exporterName,
-    nguoi_xuat: exporterName,
-    can_bo_xuat: exporterName,
     current_date: `${dayStr}/${monthStr}/${yearStr}`,
     ngay_hien_tai: `${dayStr}/${monthStr}/${yearStr}`,
     ngay: dayStr,
@@ -64,8 +62,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     thuong_tru: person.thuongTru || cd.thuongTru || '',
     tamTru: person.tamTru || cd.tamTru || '',
     tam_tru: person.tamTru || cd.tamTru || '',
-    cccd: person.cccd || cd.cccd || '',
-    so_cccd: person.cccd || cd.cccd || '',
+    cccdparent: person.cccdparent || cd.cccdparent || '',
     passportPersonal: person.passportPersonal || person.hcCaNhan || cd.passportPersonal || cd.hcCaNhan || '',
     ho_chieu_ca_nhan: person.passportPersonal || person.hcCaNhan || cd.passportPersonal || cd.hcCaNhan || '',
     passportOfficial: person.passportOfficial || person.hcCongVu || cd.passportOfficial || cd.hcCongVu || '',
