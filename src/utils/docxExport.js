@@ -234,20 +234,23 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     data[`tn_${num}_cccd`] = relItem.cccdthannhan;
   });
 
-  // 7. Danh sách Chuyến đi Nước ngoài (Loop {#chuyen_di} / {#trips})
+  // 7. Danh sách Chuyến đi Nước ngoài (Loop {#xuatnhapcanh} / {#chuyen_di} / {#trips})
   const rawTrips = Array.isArray(person.trips) ? person.trips : (cd.trips || []);
   const processedTrips = rawTrips.map((trip, tIdx) => {
     const tcd = trip.custom_data || {};
     const tripObj = {
       stt: tIdx + 1,
       countryName: trip.countryName || trip.country || '',
+      quoc_gia: trip.countryName || trip.country || '',
       quoc_gia_den: trip.countryName || trip.country || '',
       purpose: trip.purpose || '',
       muc_dich: trip.purpose || '',
       departureDate: formatDate(trip.departureDate || trip.approvedDepartureDate),
       ngay_di: formatDate(trip.departureDate || trip.approvedDepartureDate),
+      ngay_xuat_canh: formatDate(trip.departureDate || trip.approvedDepartureDate),
       arrivalDate: formatDate(trip.arrivalDate || trip.approvedArrivalDate),
       ngay_ve: formatDate(trip.arrivalDate || trip.approvedArrivalDate),
+      ngay_nhap_canh: formatDate(trip.arrivalDate || trip.approvedArrivalDate),
       approvedDepartureDate: formatDate(trip.approvedDepartureDate || trip.departureDate),
       ngay_di_duoc_duyet: formatDate(trip.approvedDepartureDate || trip.departureDate),
       approvedArrivalDate: formatDate(trip.approvedArrivalDate || trip.arrivalDate),
@@ -256,8 +259,34 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       ngay_gia_han: formatDate(trip.approvedExtensionDate),
       decisionNumber: trip.decisionNumber || trip.decision || '',
       so_quyet_dinh: trip.decisionNumber || trip.decision || '',
+      decisionDate: formatDate(trip.decisionDate || tcd.decisionDate),
+      ngay_ban_hanh: formatDate(trip.decisionDate || tcd.decisionDate),
+      decisionIssuer: trip.decisionIssuer || tcd.decisionIssuer || '',
+      co_quan_ban_hanh: trip.decisionIssuer || tcd.decisionIssuer || '',
+      tripCount: trip.tripCount || tcd.tripCount || '1',
+      so_lan: trip.tripCount || tcd.tripCount || '1',
+      dienDaoTao: trip.dienDaoTao || tcd.dienDaoTao || '',
+      dien_dao_tao: trip.dienDaoTao || tcd.dienDaoTao || '',
+      noiDaoTao: trip.noiDaoTao || tcd.noiDaoTao || '',
+      noi_dao_tao: trip.noiDaoTao || tcd.noiDaoTao || '',
+      vaiTroDaoTao: trip.vaiTroDaoTao || tcd.vaiTroDaoTao || '',
+      vai_tro_dao_tao: trip.vaiTroDaoTao || tcd.vaiTroDaoTao || '',
+      donViChonCu: trip.donViChonCu || tcd.donViChonCu || '',
+      don_vi_chon_cu: trip.donViChonCu || tcd.donViChonCu || '',
+      kinhPhiDaoTao: trip.kinhPhiDaoTao || tcd.kinhPhiDaoTao || '',
+      kinh_phi_dao_tao: trip.kinhPhiDaoTao || tcd.kinhPhiDaoTao || '',
+      thoiGianDaoTao: trip.thoiGianDaoTao || tcd.thoiGianDaoTao || '',
+      thoi_gian_dao_tao: trip.thoiGianDaoTao || tcd.thoiGianDaoTao || '',
+      truongDoan: trip.truongDoan || tcd.truongDoan || '',
+      truong_doan: trip.truongDoan || tcd.truongDoan || '',
+      thanhPhanDoan: trip.thanhPhanDoan || tcd.thanhPhanDoan || '',
+      thanh_phan_doan: trip.thanhPhanDoan || tcd.thanhPhanDoan || '',
+      soLuongThanhVien: trip.soLuongThanhVien || tcd.soLuongThanhVien || '',
+      so_luong_thanh_vien: trip.soLuongThanhVien || tcd.soLuongThanhVien || '',
       fundingName: trip.fundingName || trip.funding || '',
       kinh_phi: trip.fundingName || trip.funding || '',
+      bao_cao_ket_qua: trip.bao_cao_ket_qua || tcd.bao_cao_ket_qua || trip.baoCaoKetQua || tcd.baoCaoKetQua || '',
+      nop_ho_chieu_cong_vu: trip.nop_ho_chieu_cong_vu || tcd.nop_ho_chieu_cong_vu || trip.nopHoChieuCongVu || tcd.nopHoChieuCongVu || '',
       destinationDetails: trip.destinationDetails || '',
       dia_diem_cu_the: trip.destinationDetails || '',
       status: trip.status || '',
@@ -269,9 +298,65 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
         tripObj[k] = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : v;
       }
     });
+
+    // Phân rã tự động các trường checkbox / checkbox_text trong chuyến đi (purpose, fundingName, kinhPhiDaoTao, v.v.)
+    Object.entries(tripObj).forEach(([k, v]) => {
+      if (typeof v === 'string' && (v.includes(':') || v.includes(';') || v.includes(','))) {
+        const parts = v.split(/[,;]/);
+        const allLabels = [];
+        const allDetails = [];
+        parts.forEach((p) => {
+          const trimmed = p.trim();
+          if (trimmed) {
+            const colon = trimmed.indexOf(':');
+            if (colon !== -1) {
+              const optName = trimmed.substring(0, colon).trim();
+              const optDetail = trimmed.substring(colon + 1).trim();
+              const optSlug = generateSlug(optName);
+              if (optName) allLabels.push(optName);
+              if (optDetail) allDetails.push(optDetail);
+              if (optSlug) {
+                tripObj[`label_${k}_${optSlug}`] = optName;
+                tripObj[`${k}_${optSlug}`] = optDetail || optName;
+                tripObj[`detail_${k}_${optSlug}`] = optDetail;
+                tripObj[`is_${k}_${optSlug}`] = 'X';
+              }
+            } else {
+              const optSlug = generateSlug(trimmed);
+              allLabels.push(trimmed);
+              if (optSlug) {
+                tripObj[`label_${k}_${optSlug}`] = trimmed;
+                tripObj[`${k}_${optSlug}`] = trimmed;
+                tripObj[`is_${k}_${optSlug}`] = 'X';
+              }
+            }
+          }
+        });
+        tripObj[`label_${k}`] = allLabels.join(', ');
+        tripObj[`name_${k}`] = allLabels.join(', ');
+        tripObj[`detail_${k}`] = allDetails.join('; ');
+        tripObj[`content_${k}`] = allDetails.join('; ');
+      } else if (typeof v === 'string' && v) {
+        tripObj[`label_${k}`] = v;
+      }
+    });
+
+    // Aliases đặc biệt cho kinh phí chuyến đi (label_funding2, label_funding, label_kinh_phi)
+    if (tripObj.fundingName) {
+      tripObj.label_funding2 = tripObj.label_fundingName || tripObj.fundingName;
+      tripObj.label_funding = tripObj.label_fundingName || tripObj.fundingName;
+      tripObj.label_kinh_phi = tripObj.label_fundingName || tripObj.fundingName;
+    }
+    if (tripObj.kinhPhiDaoTao) {
+      tripObj.label_kinhPhiDaoTao = tripObj.label_kinhPhiDaoTao || tripObj.kinhPhiDaoTao;
+      tripObj.label_kinh_phi_dao_tao = tripObj.label_kinhPhiDaoTao || tripObj.kinhPhiDaoTao;
+    }
+
     return tripObj;
   });
 
+  data.xuatnhapcanh = processedTrips;
+  data.xuat_nhap_canh = processedTrips;
   data.chuyen_di = processedTrips;
   data.trips = processedTrips;
   data.so_luong_chuyen_di = processedTrips.length;
