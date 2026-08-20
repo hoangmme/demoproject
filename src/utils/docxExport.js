@@ -414,12 +414,13 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.style.top = '0';
   container.style.left = '0';
   container.style.width = '794px';
-  container.style.zIndex = '-9999';
+  container.style.minHeight = '1123px';
   container.style.opacity = '1';
+  container.style.zIndex = '999999';
   container.style.pointerEvents = 'none';
   container.style.backgroundColor = '#ffffff';
   container.style.color = '#000000';
-  container.style.padding = '15px';
+  container.style.padding = '20px';
   container.style.boxSizing = 'border-box';
   document.body.appendChild(container);
 
@@ -435,11 +436,11 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       useBase64URL: true,
     });
 
-    // Chờ 300ms để DOM và phông chữ render hoàn tất
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    // Chờ DOM và phông chữ render hoàn tất
+    await new Promise((resolve) => setTimeout(resolve, 400));
 
     const opt = {
-      margin: [8, 8, 8, 8],
+      margin: [10, 10, 10, 10],
       filename: 'Ho_so_xuat.pdf',
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: {
@@ -453,9 +454,8 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       pagebreak: { mode: ['css', 'legacy'] },
     };
 
-    const worker = html2pdf().from(container).set(opt);
-    const pdfDoc = await worker.toPdf().get('pdf');
-    const pdfBlob = pdfDoc.output('blob');
+    // Chạy chu trình trọn vẹn: Render DOM -> Canvas -> jsPDF -> Output Blob
+    const pdfBlob = await html2pdf().set(opt).from(container).output('blob');
     return pdfBlob;
   } catch (err) {
     console.error('Lỗi chuyển đổi DOCX sang PDF:', err);
@@ -518,10 +518,14 @@ export async function exportMultiplePersonnelZip(templateBuffer, personnelList, 
 }
 
 /**
- * Tạo một file Word (.docx) mẫu chuẩn hoàn chỉnh với các thẻ Tag và Bảng lặp
+ * Tạo một file Word (.docx) mẫu động dựa trên các Nhóm Cột được chọn (Group A, Group B, Group C...)
+ * @param {Array<Number>} selectedGroupIndices - Mảng các index nhóm được chọn (Group A luôn được thêm)
+ * @param {Array} personnelGroups - Cấu hình nhóm cán bộ từ store
+ * @param {Boolean} includeTrips - Có kèm lịch sử chuyến đi nước ngoài hay không
+ * @param {Boolean} includeRelatives - Có kèm danh sách thân nhân hay không
  * @returns {Promise<Blob>}
  */
-export async function createSampleDocxTemplateBlob() {
+export async function createDynamicDocxTemplateBlob(selectedGroupIndices = [0], personnelGroups = [], includeTrips = true, includeRelatives = true) {
   const zip = new JSZip();
 
   const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -536,61 +540,111 @@ export async function createSampleDocxTemplateBlob() {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`;
 
-  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <!-- Header -->
+  let bodyContent = `
+    <!-- HEADER CHUẨN QUỐC GIA -->
     <w:p>
       <w:pPr><w:jc w:val="center"/></w:pPr>
-      <w:r><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="1E293B"/></w:rPr><w:t>SƠ YẾU LÝ LỊCH TRÍCH NGANG CÁN BỘ</w:t></w:r>
+      <w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="1E293B"/></w:rPr><w:t>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</w:t></w:r>
     </w:p>
     <w:p>
       <w:pPr><w:jc w:val="center"/></w:pPr>
-      <w:r><w:rPr><w:i/><w:sz w:val="20"/><w:color w:val="64748B"/></w:rPr><w:t>(Dữ liệu xuất tự động từ hệ thống - Ngày: {ngay_hien_tai})</w:t></w:r>
+      <w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="1E293B"/></w:rPr><w:t>Độc lập - Tự do - Hạnh phúc</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:pPr><w:jc w:val="center"/></w:pPr>
+      <w:r><w:rPr><w:i/><w:sz w:val="18"/><w:color w:val="64748B"/></w:rPr><w:t>-------------------</w:t></w:r>
     </w:p>
     <w:p/>
-
-    <!-- Section A -->
-    <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>I. THÔNG TIN CƠ BẢN</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>1. Họ và tên: </w:t></w:r><w:r><w:rPr><w:b/><w:color w:val="DC2626"/></w:rPr><w:t>{ho_ten}</w:t></w:r><w:r><w:t> (Tên gọi khác: {ten_khac})</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>2. Mã cán bộ: </w:t></w:r><w:r><w:t>{ma_can_bo}  |  </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>Năm sinh: </w:t></w:r><w:r><w:t>{nam_sinh}  |  </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>Dân tộc: </w:t></w:r><w:r><w:t>{dan_toc}  |  </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>Tôn giáo: </w:t></w:r><w:r><w:t>{ton_giao}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>3. Quê quán: </w:t></w:r><w:r><w:t>{que_quan}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>4. Đơn vị công tác: </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>{don_vi}</w:t></w:r><w:r><w:t>  |  </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>Chức vụ: </w:t></w:r><w:r><w:t>{chuc_vu}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>5. Số CCCD: </w:t></w:r><w:r><w:t>{so_cccd}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>6. Nơi thường trú: </w:t></w:r><w:r><w:t>{thuong_tru}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>7. Hộ chiếu cá nhân: </w:t></w:r><w:r><w:t>{ho_chieu_ca_nhan}</w:t></w:r><w:r><w:t>  |  </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>Hộ chiếu công vụ: </w:t></w:r><w:r><w:t>{ho_chieu_cong_vu}</w:t></w:r></w:p>
+    <w:p>
+      <w:pPr><w:jc w:val="center"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="0F172A"/></w:rPr><w:t>THÔNG TIN CÁN BỘ, THÂN NHÂN</w:t></w:r>
+    </w:p>
     <w:p/>
+  `;
 
-    <!-- Section B -->
-    <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>II. LỊCH SỬ ĐI NƯỚC NGOÀI ({so_luong_chuyen_di} chuyến)</w:t></w:r></w:p>
-    <w:p><w:r><w:t>{#chuyen_di}</w:t></w:r></w:p>
-    <w:p><w:r><w:t>- Chuyến {stt}: Quốc gia đến: </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>{quoc_gia_den}</w:t></w:r><w:r><w:t> | Mục đích: {muc_dich} | Xuất cảnh: {ngay_di} | Nhập cảnh: {ngay_ve} | Kinh phí: {kinh_phi} | Số QĐ: {so_quyet_dinh}</w:t></w:r></w:p>
-    <w:p><w:r><w:t>{/chuyen_di}</w:t></w:r></w:p>
+  // 1. Nhóm A: Thông tin cá nhân (LUÔN CÓ ĐẦY ĐỦ)
+  bodyContent += `
+    <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>1. Thông tin cá nhân</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên: </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>{name}</w:t></w:r><w:r><w:t> ; Tên gọi khác: {otherName};</w:t></w:r></w:p>
+    <w:p><w:r><w:t>- Ngày, tháng, năm sinh: {birthYear}; Dân tộc: {ethnicity}; Tôn giáo: {religion};</w:t></w:r></w:p>
+    <w:p><w:r><w:t>- Quê quán: {hometown};</w:t></w:r></w:p>
+    <w:p><w:r><w:t>- Đơn vị công tác: {departmentName}; Chức vụ: {chuc_vu};</w:t></w:r></w:p>
+    <w:p><w:r><w:t>- Nơi đăng ký hộ khẩu thường trú: {thuongTru};</w:t></w:r></w:p>
+    <w:p><w:r><w:t>- Nơi ở hiện nay: {tamTru};</w:t></w:r></w:p>
+    <w:p><w:r><w:t>- Số Căn cước công dân: {cccdparent};</w:t></w:r></w:p>
+    <w:p><w:r><w:t>- Số Hộ chiếu cá nhân: {hcCaNhan}; Số Hộ chiếu công vụ: {hcCongVu};</w:t></w:r></w:p>
     <w:p/>
+  `;
 
-    <!-- Section C -->
-    <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>III. DANH SÁCH THÂN NHÂN LIÊN QUAN ({so_luong_than_nhan} người)</w:t></w:r></w:p>
-    <w:p><w:r><w:t>{#than_nhan}</w:t></w:r></w:p>
-    <w:p><w:r><w:t>- Thân nhân {stt}: </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>{ho_ten_tn}</w:t></w:r><w:r><w:t> | Quan hệ: {quan_he} | Năm sinh: {nam_sinh} | Quốc gia cư trú: {quoc_gia} | Nghề nghiệp: {nghe_nghiep}</w:t></w:r></w:p>
-    <w:p><w:r><w:t>{/than_nhan}</w:t></w:r></w:p>
-    <w:p/>
+  // 2. Các Nhóm được chọn bổ sung từ Cấu hình Cột (Group B, Group C...)
+  (personnelGroups || []).forEach((grp, idx) => {
+    if (idx === 0) return; // Bỏ qua nhóm 0 vì đã thêm ở Nhóm A
+    if (selectedGroupIndices.includes(idx)) {
+      bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* ${grp.group || 'Thông tin bổ sung'}:</w:t></w:r></w:p>`;
+      (grp.columns || []).forEach((col) => {
+        if (col.format === 'table_loop') {
+          bodyContent += `<w:p><w:r><w:t>{#${col.id}}- {col0}: {col1} | {col2}{/${col.id}}</w:t></w:r></w:p>`;
+        } else {
+          bodyContent += `<w:p><w:r><w:t>- ${col.label}: {${col.id}}</w:t></w:r></w:p>`;
+        }
+      });
+      bodyContent += `<w:p/>`;
+    }
+  });
 
-    <!-- Footer -->
+  // 3. Khối Chuyến đi nước ngoài nếu được chọn
+  if (includeTrips) {
+    bodyContent += `
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>2. Thông tin xuất nhập cảnh (Lịch sử chuyến đi):</w:t></w:r></w:p>
+      <w:p><w:r><w:t>{#xuatnhapcanh}</w:t></w:r></w:p>
+      <w:p><w:r><w:t>- Chuyến {stt}: Quốc gia đến: {countryName} | Mục đích: {label_purpose} ({detail_purpose}) | Ngày xuất cảnh: {departureDate} | Ngày nhập cảnh: {arrivalDate} | Nguồn kinh phí: {label_funding2} | Số QĐ: {decisionNumber} | Ngày ban hành: {decisionDate}</w:t></w:r></w:p>
+      <w:p><w:r><w:t>{/xuatnhapcanh}</w:t></w:r></w:p>
+      <w:p/>
+    `;
+  }
+
+  // 4. Khối Thân nhân nếu được chọn
+  if (includeRelatives) {
+    bodyContent += `
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>3. Thông tin thân nhân liên quan:</w:t></w:r></w:p>
+      <w:p><w:r><w:t>{#than_nhan}</w:t></w:r></w:p>
+      <w:p><w:r><w:t>- Thân nhân {stt}: {relationshipName} - {birthYear} | Quê quán: {hometownTN} | Nghề nghiệp: {occupation} | Nơi ở: {currentAddress} | CCCD: {cccdthannhan}</w:t></w:r></w:p>
+      <w:p><w:r><w:t>{/than_nhan}</w:t></w:r></w:p>
+      <w:p/>
+    `;
+  }
+
+  // 5. FOOTER CHUẨN
+  bodyContent += `
     <w:p>
       <w:pPr><w:jc w:val="right"/></w:pPr>
       <w:r><w:rPr><w:i/></w:rPr><w:t>Hồ Chí Minh, ngày {ngay} tháng {thang} năm {nam}</w:t></w:r>
     </w:p>
-  </w:body>
+    <w:p>
+      <w:pPr><w:jc w:val="right"/></w:pPr>
+      <w:r><w:rPr><w:b/></w:rPr><w:t>Người lập biểu / Người xuất: {ho_ten_nguoi_xuat}</w:t></w:r>
+    </w:p>
+  `;
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>${bodyContent}</w:body>
 </w:document>`;
 
   zip.file('[Content_Types].xml', contentTypesXml);
   zip.file('_rels/.rels', rootRelsXml);
   zip.file('word/document.xml', documentXml);
 
-  const blob = await zip.generateAsync({
+  return await zip.generateAsync({
     type: 'blob',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   });
+}
 
-  return blob;
+/**
+ * Tạo một file Word (.docx) mẫu chuẩn hoàn chỉnh với các thẻ Tag và Bảng lặp
+ * @returns {Promise<Blob>}
+ */
+export async function createSampleDocxTemplateBlob() {
+  return await createDynamicDocxTemplateBlob([0, 1, 2, 3, 4], [], true, true);
 }

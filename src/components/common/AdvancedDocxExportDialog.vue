@@ -93,9 +93,9 @@
             type="button"
             class="btn-link"
             @click="downloadSampleTemplate"
-            title="Tải tệp Word mẫu chuẩn đã có sẵn thẻ tag để tham khảo hoặc chỉnh sửa"
+            title="Tải tệp Word mẫu đã chọn để xem hoặc chỉnh sửa"
           >
-            <i class="pi pi-download"></i> Tải mẫu chuẩn (.docx)
+            <i class="pi pi-download"></i> Tải mẫu hiện tại (.docx)
           </button>
         </div>
 
@@ -107,7 +107,7 @@
             :class="{ 'tpl-src-active': templateSource === 'sample' }"
             @click="setTemplateSource('sample')"
           >
-            <i class="pi pi-bookmark"></i> Mẫu Chuẩn Hệ Thống
+            <i class="pi pi-th-large"></i> Theo Nhóm Cột (Group)
           </button>
           <button
             type="button"
@@ -129,24 +129,51 @@
             @change="handleFileUpload"
           />
 
-          <!-- Nguồn 1: Mẫu chuẩn hệ thống -->
-          <div v-if="templateSource === 'sample'" class="file-loaded-box">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <i class="pi pi-file-word" style="font-size: 1.8rem; color: #2563eb;"></i>
-              <div>
-                <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">Mau_so_yeu_ly_lich_chuan.docx</div>
-                <div style="font-size: 0.72rem; color: #16a34a; font-weight: 600;">Mẫu chuẩn tích hợp đầy đủ thẻ Cán bộ & Thân nhân</div>
-              </div>
+          <!-- Nguồn 1: Chọn Group cấu hình cột -->
+          <div v-if="templateSource === 'sample'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+            <div style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: flex; justify-content: space-between;">
+              <span>TÍCH CHỌN CÁC KHỐI/NHÓM CỘT MUỐN XUẤT:</span>
+              <span style="color: #0284c7; font-weight: 600;">(Khối A luôn cố định)</span>
             </div>
-            <Button
-              label="Tải về xem"
-              icon="pi pi-download"
-              size="small"
-              text
-              severity="info"
-              @click="downloadSampleTemplate"
-              style="font-size: 0.75rem; padding: 2px 6px;"
-            />
+
+            <div style="display: flex; flex-direction: column; gap: 5px; max-height: 160px; overflow-y: auto; padding-right: 4px;">
+              <!-- Group 0: Luôn cố định -->
+              <label class="group-select-item group-fixed">
+                <input type="checkbox" checked disabled style="accent-color: #2563eb;" />
+                <span style="font-weight: 700; color: #1e293b;">Khối A: {{ personnelGroups[0]?.group || 'Thông tin cá nhân cơ bản' }}</span>
+                <span class="badge-fixed">Bắt buộc</span>
+              </label>
+
+              <!-- Các Group B, C, D... -->
+              <label
+                v-for="(grp, gIdx) in otherPersonnelGroups"
+                :key="gIdx + 1"
+                class="group-select-item"
+                :class="{ 'group-selected': selectedGroupIndices.includes(gIdx + 1) }"
+              >
+                <input
+                  type="checkbox"
+                  :value="gIdx + 1"
+                  v-model="selectedGroupIndices"
+                  style="accent-color: #2563eb;"
+                />
+                <span style="font-weight: 600; color: #334155; flex: 1;">
+                  Khối {{ String.fromCharCode(66 + gIdx) }}: {{ grp.group || 'Nhóm cột ' + (gIdx + 2) }}
+                  <small style="color: #64748b; font-weight: normal;">({{ grp.columns?.length || 0 }} cột)</small>
+                </span>
+              </label>
+
+              <!-- Khối Chuyến đi & Thân nhân -->
+              <label class="group-select-item" :class="{ 'group-selected': includeTrips }">
+                <input type="checkbox" v-model="includeTrips" style="accent-color: #2563eb;" />
+                <span style="font-weight: 600; color: #334155;">Lịch sử Xuất nhập cảnh & Chuyến đi nước ngoài</span>
+              </label>
+
+              <label class="group-select-item" :class="{ 'group-selected': includeRelatives }">
+                <input type="checkbox" v-model="includeRelatives" style="accent-color: #2563eb;" />
+                <span style="font-weight: 600; color: #334155;">Danh sách Thân nhân liên quan</span>
+              </label>
+            </div>
           </div>
 
           <!-- Nguồn 2: Tải lên mẫu riêng -->
@@ -184,7 +211,7 @@
       </div>
 
       <!-- 4. Tiến trình & Nút Thực hiện Xuất -->
-      <div style="margin-top: 4px;">
+      <div style="margin-top: 6px; width: 100%;">
         <div v-if="exporting" style="margin-bottom: 10px; background: #eff6ff; padding: 10px 14px; border-radius: 8px; border: 1px solid #bfdbfe;">
           <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #1e40af; margin-bottom: 6px;">
             <span>Đang xử lý xuất dữ liệu ({{ outputFormat === 'pdf' ? 'PDF' : 'Word' }})...</span>
@@ -202,11 +229,10 @@
           :label="getDownloadButtonLabel()"
           :icon="outputFormat === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-file-word'"
           :severity="outputFormat === 'pdf' ? 'danger' : 'primary'"
-          class="w-full"
+          style="width: 100%; font-size: 0.95rem; font-weight: 700; padding: 0.8rem 1rem; display: flex; justify-content: center; align-items: center; text-align: center;"
           :loading="exporting"
           :disabled="!effectiveTemplateBuffer || exporting"
           @click="handleExport"
-          style="font-size: 0.92rem; font-weight: 700; padding: 0.75rem 1rem;"
         />
       </div>
 
@@ -236,7 +262,7 @@ import { saveAs } from 'file-saver';
 import {
   exportSinglePersonnelDocx,
   exportMultiplePersonnelZip,
-  createSampleDocxTemplateBlob,
+  createDynamicDocxTemplateBlob,
 } from '@/utils/docxExport';
 
 const props = defineProps({
@@ -257,7 +283,15 @@ const visible = computed({
 
 const outputFormat = ref('docx');
 const exportScope = ref('single');
-const templateSource = ref('sample');
+const templateSource = ref('sample'); // 'sample' (Group) | 'upload'
+
+// Group selector state
+const selectedGroupIndices = ref([1, 2, 3]);
+const includeTrips = ref(true);
+const includeRelatives = ref(true);
+
+const personnelGroups = computed(() => personnelStore.importMappingPersonnel || []);
+const otherPersonnelGroups = computed(() => personnelGroups.value.slice(1));
 
 const fileInputRef = ref(null);
 const sampleTemplateBuffer = ref(null);
@@ -299,17 +333,38 @@ const loadSavedTemplate = async () => {
     if (cachedB64 && cachedName) {
       customTemplateBuffer.value = base64ToArrayBuffer(cachedB64);
       customTemplateFileName.value = cachedName;
-      templateSource.value = 'upload';
       return;
     }
     const serverTemplate = await getAppSettings('custom_docx_template', null);
     if (serverTemplate?.base64) {
       customTemplateBuffer.value = base64ToArrayBuffer(serverTemplate.base64);
       customTemplateFileName.value = serverTemplate.fileName || 'Mau_Word_tuy_bien.docx';
-      templateSource.value = 'upload';
     }
   } catch (err) { console.warn('Failed to load saved template:', err); }
 };
+
+const loadSampleTemplate = async () => {
+  try {
+    const activeIndices = [0, ...selectedGroupIndices.value];
+    const blob = await createDynamicDocxTemplateBlob(
+      activeIndices,
+      personnelGroups.value,
+      includeTrips.value,
+      includeRelatives.value
+    );
+    sampleTemplateBuffer.value = await blob.arrayBuffer();
+  } catch (e) {
+    console.error('Failed to generate dynamic group template:', e);
+  }
+};
+
+watch(
+  () => [selectedGroupIndices.value, includeTrips.value, includeRelatives.value],
+  () => {
+    loadSampleTemplate();
+  },
+  { deep: true }
+);
 
 watch(() => [props.modelValue], ([isOpen]) => {
   if (isOpen) {
@@ -344,19 +399,12 @@ const handleFileUpload = (e) => {
   reader.readAsArrayBuffer(file);
 };
 
-const loadSampleTemplate = async () => {
-  if (!sampleTemplateBuffer.value) {
-    try {
-      const sampleBlob = await createSampleDocxTemplateBlob();
-      sampleTemplateBuffer.value = await sampleBlob.arrayBuffer();
-    } catch (e) { console.error('Failed to init sample docx:', e); }
-  }
-};
-
 const downloadSampleTemplate = async () => {
   try {
-    const blob = await createSampleDocxTemplateBlob();
-    saveAs(blob, 'Mau_Word_Trich_Ngang_Chuan.docx');
+    const buf = effectiveTemplateBuffer.value;
+    if (!buf) return alert('Chưa có mẫu nào được khởi tạo!');
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    saveAs(blob, templateSource.value === 'upload' ? (customTemplateFileName.value || 'Mau_Word_tuy_bien.docx') : 'Mau_Word_Theo_Nhom_Cot.docx');
   } catch (e) { alert('Lỗi tạo mẫu Word: ' + e.message); }
 };
 
@@ -469,6 +517,44 @@ onMounted(() => loadSampleTemplate());
 .radio-active {
   background: #eff6ff !important;
   border-color: #3b82f6 !important;
+}
+
+.group-select-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: all 0.15s ease;
+}
+
+.group-select-item:hover {
+  background: #f1f5f9;
+}
+
+.group-selected {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.group-fixed {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.badge-fixed {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: auto;
 }
 
 .drop-zone {
