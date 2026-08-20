@@ -92,6 +92,18 @@
             style="font-size: 0.8rem;"
           />
 
+          <!-- Advanced Word (.docx) Export Button -->
+          <Button
+            :label="selectedPersonnel.length > 0 ? `Xuất Word (${selectedPersonnel.length})` : 'Xuất Word (.docx)'"
+            icon="pi pi-file-word"
+            severity="help"
+            outlined
+            size="small"
+            @click="openAdvancedDocxExport(null)"
+            v-tooltip.top="'Xuất file Word theo mẫu DOCX tùy biến'"
+            style="font-size: 0.8rem;"
+          />
+
           <!-- Add Button -->
           <Button
             label="Thêm Cán bộ"
@@ -180,6 +192,15 @@
                 outlined
                 severity="info"
                 @click.stop="openEditDialog(data)"
+              />
+              <Button
+                icon="pi pi-file-word"
+                size="small"
+                text
+                severity="help"
+                v-tooltip.top="'Xuất file Word cán bộ này'"
+                @click.stop="openAdvancedDocxExport(data)"
+                style="padding: 4px;"
               />
               <Button
                 v-if="authStore.isAdmin"
@@ -580,6 +601,14 @@
         </div>
       </template>
     </Dialog>
+
+    <!-- Advanced DOCX Export Modal -->
+    <AdvancedDocxExportDialog
+      v-model="isDocxExportOpen"
+      :targetPerson="docxExportTargetPerson"
+      :selectedPersonnel="selectedPersonnel"
+      :allPersonnel="filteredPersonnel"
+    />
   </div>
 </template>
 
@@ -609,6 +638,7 @@ import {
 import { createPersonnel, updatePersonnel } from '@/api/personnel';
 import { logActivity } from '@/api/audit';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
+import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
@@ -622,6 +652,15 @@ const isDialogOpen = ref(false);
 const selectedPerson = ref(null);
 const dialogInitialTab = ref(0);
 const dialogTargetRelativeCode = ref('');
+
+// Advanced DOCX Export Modal State
+const isDocxExportOpen = ref(false);
+const docxExportTargetPerson = ref(null);
+
+const openAdvancedDocxExport = (person = null) => {
+  docxExportTargetPerson.value = person;
+  isDocxExportOpen.value = true;
+};
 
 // Advanced Export Modal
 const isExportOpen = ref(false);

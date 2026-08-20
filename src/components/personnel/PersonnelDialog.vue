@@ -76,6 +76,15 @@
           />
         </div>
         <div style="display: flex; gap: 8px;">
+          <Button
+            v-if="isEdit"
+            label="Xuất Word (.docx)"
+            icon="pi pi-file-word"
+            severity="help"
+            outlined
+            size="small"
+            @click="isDocxExportOpen = true"
+          />
           <Button label="Hủy" severity="secondary" text size="small" @click="visible = false" />
           <Button
             label="Lưu toàn bộ Hồ sơ"
@@ -89,6 +98,12 @@
       </div>
     </template>
   </Dialog>
+
+  <!-- Advanced DOCX Export Dialog for current Person -->
+  <AdvancedDocxExportDialog
+    v-model="isDocxExportOpen"
+    :targetPerson="form"
+  />
 </template>
 
 <script setup>
@@ -101,6 +116,9 @@ import PersonnelBasicForm from './PersonnelBasicForm.vue';
 import PersonnelTravelForm from './PersonnelTravelForm.vue';
 import PersonnelFamilyForm from './PersonnelFamilyForm.vue';
 import PersonnelNotesForm from './PersonnelNotesForm.vue';
+import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
+
+const isDocxExportOpen = ref(false);
 
 const props = defineProps({
   modelValue: {
