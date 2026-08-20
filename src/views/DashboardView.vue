@@ -546,6 +546,26 @@
       :style="{ width: '1000px', maxWidth: '95vw' }"
     >
       <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 6px;">
+        <!-- Dual Tabs Switcher (Cán bộ & Thân nhân) -->
+        <div v-if="drilldownHasDualTabs" style="display: flex; gap: 8px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content;">
+          <button
+            type="button"
+            class="time-btn"
+            :class="{ 'time-btn-active': drilldownActiveTab === 'trips' }"
+            @click="drilldownActiveTab = 'trips'"
+          >
+            <i class="pi pi-send"></i> Cán bộ đi nước ngoài ({{ drilldownTripsList.length }})
+          </button>
+          <button
+            type="button"
+            class="time-btn"
+            :class="{ 'time-btn-active': drilldownActiveTab === 'relatives' }"
+            @click="drilldownActiveTab = 'relatives'"
+          >
+            <i class="pi pi-globe"></i> Thân nhân ở nước ngoài ({{ drilldownRelativesList.length }})
+          </button>
+        </div>
+
         <!-- Modal Toolbar -->
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -603,7 +623,7 @@
           </table>
 
           <!-- 2. Table for Relatives -->
-          <table v-else-if="drilldownCategory === 'relatives'" class="drilldown-table">
+          <table v-else-if="drilldownCategory === 'relatives' || (drilldownHasDualTabs && drilldownActiveTab === 'relatives')" class="drilldown-table">
             <thead>
               <tr>
                 <th style="width: 40px; text-align: center;">STT</th>
@@ -611,6 +631,7 @@
                 <th>Họ tên Thân nhân</th>
                 <th>Quan hệ</th>
                 <th>Quốc gia cư trú</th>
+                <th>Nguồn kinh phí / Học bổng</th>
                 <th>Nghề nghiệp / Tình trạng</th>
               </tr>
             </thead>
@@ -620,7 +641,8 @@
                 <td style="font-weight: 600; color: #1e293b;">{{ r.parentName || r.parentPersonnelName || '-' }}</td>
                 <td style="font-weight: 600; color: #6d28d9;">{{ r.relativeName || r.name || '-' }}</td>
                 <td><span class="badge-pill badge-neutral">{{ r.relationship || r.relationshipName || '-' }}</span></td>
-                <td>{{ r.countryName || r.country || '-' }}</td>
+                <td><span class="badge-pill badge-green">{{ r.countryName || r.country || '-' }}</span></td>
+                <td>{{ r.fundingName || r.funding || '-' }}</td>
                 <td>{{ r.occupation || r.job || r.status || '-' }}</td>
               </tr>
             </tbody>
@@ -674,12 +696,12 @@
     <Dialog
       v-model:visible="isSettingsOpen"
       modal
-      header="Cài đặt Mã Cột Hệ thống cho Dashboard"
-      :style="{ width: '720px', maxWidth: '96vw' }"
+      header="Cài đặt Mã Cột Hệ thống cho Dashboard (Gộp Cán bộ & Thân nhân)"
+      :style="{ width: '820px', maxWidth: '96vw' }"
     >
       <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 8px;">
         <div style="padding: 8px 12px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #16a34a; font-size: 0.78rem; color: #166534;">
-          Cấu hình này được lưu vĩnh viễn trong CSDL hệ thống. Bạn có thể tự gõ ID cột hoặc chọn từ danh sách cột có sẵn.
+          Hệ thống tự động gộp dữ liệu từ các cột của Cán bộ và Thân nhân để tính toán thống kê và biểu đồ phân bổ.
         </div>
 
         <!-- Setting 1: Decision ID -->
@@ -690,58 +712,102 @@
           <div style="display: flex; gap: 8px;">
             <InputText v-model="tempConfig.decision" placeholder="Ví dụ: decisionNumber" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.decision = $event.target.value">
-              <option value="">-- Chọn cột mẫu --</option>
+              <option value="">-- Chọn cột mẫu Cán bộ --</option>
               <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
 
-        <!-- Setting 2: Country ID -->
-        <div>
-          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            2. ID Cột Quốc gia (Đếm toàn bộ Quốc gia):
-          </label>
-          <div style="display: flex; gap: 8px;">
-            <InputText v-model="tempConfig.country" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.8rem;" />
-            <select class="settings-select" @change="tempConfig.country = $event.target.value">
-              <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Setting 3: Funding ID & Sub-columns -->
+        <!-- Setting 2: Country ID (Personnel & Relatives) -->
         <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block;">
-            3. Cài đặt Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí & Biểu đồ):
+            2. Cài đặt Cột Quốc gia (Đếm & Biểu đồ Toàn bộ Quốc gia):
           </label>
           <div>
-            <span style="font-size: 0.72rem; color: #64748b;">a) Cột Nguồn kinh phí chung (nếu gộp 1 cột):</span>
+            <span style="font-size: 0.72rem; color: #64748b;">a) Cột Quốc gia của Cán bộ (Chuyến đi):</span>
             <div style="display: flex; gap: 8px; margin-top: 2px;">
-              <InputText v-model="tempConfig.funding" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.78rem;" />
-              <select class="settings-select" @change="tempConfig.funding = $event.target.value">
-                <option value="">-- Chọn cột mẫu --</option>
+              <InputText v-model="tempConfig.country" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.78rem;" />
+              <select class="settings-select" @change="tempConfig.country = $event.target.value">
+                <option value="">-- Chọn cột Cán bộ --</option>
                 <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
               </select>
             </div>
           </div>
+          <div>
+            <span style="font-size: 0.72rem; color: #64748b;">b) Cột Quốc gia của Thân nhân:</span>
+            <div style="display: flex; gap: 8px; margin-top: 2px;">
+              <InputText v-model="tempConfig.countryRelative" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.78rem;" />
+              <select class="settings-select" @change="tempConfig.countryRelative = $event.target.value">
+                <option value="">-- Chọn cột Thân nhân --</option>
+                <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 6px; border-top: 1px dashed #e2e8f0;">
-            <div>
-              <span style="font-size: 0.72rem; color: #64748b;">b) Cột Ngân sách nhà nước:</span>
-              <InputText v-model="tempConfig.fundingBudget" placeholder="Ví dụ: fundingBudget" style="width: 100%; font-size: 0.78rem; margin-top: 2px;" />
+        <!-- Setting 3: Funding ID & Sub-columns (Personnel & Relatives) -->
+        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block;">
+            3. Cài đặt Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí & Biểu đồ):
+          </label>
+
+          <!-- A. Cán bộ (Chuyến đi) -->
+          <div style="border-left: 3px solid #0284c7; padding-left: 8px;">
+            <span style="font-size: 0.76rem; font-weight: 700; color: #0369a1;">A. Nguồn Kinh phí Cán bộ (Chuyến đi):</span>
+            <div style="display: flex; gap: 8px; margin-top: 4px;">
+              <InputText v-model="tempConfig.funding" placeholder="Cột chung (Ví dụ: fundingName)" style="flex: 1; font-size: 0.78rem;" />
+              <select class="settings-select" @change="tempConfig.funding = $event.target.value">
+                <option value="">-- Chọn cột Cán bộ --</option>
+                <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+              </select>
             </div>
-            <div>
-              <span style="font-size: 0.72rem; color: #64748b;">c) Cột Cơ quan/Tổ chức tài trợ:</span>
-              <InputText v-model="tempConfig.fundingSponsor" placeholder="Ví dụ: fundingSponsor" style="width: 100%; font-size: 0.78rem; margin-top: 2px;" />
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+              <div>
+                <span style="font-size: 0.7rem; color: #64748b;">Ngân sách nhà nước:</span>
+                <InputText v-model="tempConfig.fundingBudget" placeholder="fundingBudget" style="width: 100%; font-size: 0.75rem;" />
+              </div>
+              <div>
+                <span style="font-size: 0.7rem; color: #64748b;">Tài trợ:</span>
+                <InputText v-model="tempConfig.fundingSponsor" placeholder="fundingSponsor" style="width: 100%; font-size: 0.75rem;" />
+              </div>
+              <div>
+                <span style="font-size: 0.7rem; color: #64748b;">Tự túc:</span>
+                <InputText v-model="tempConfig.fundingSelf" placeholder="fundingSelf" style="width: 100%; font-size: 0.75rem;" />
+              </div>
+              <div>
+                <span style="font-size: 0.7rem; color: #64748b;">Khác:</span>
+                <InputText v-model="tempConfig.fundingOther" placeholder="fundingOther" style="width: 100%; font-size: 0.75rem;" />
+              </div>
             </div>
-            <div>
-              <span style="font-size: 0.72rem; color: #64748b;">d) Cột Tự túc:</span>
-              <InputText v-model="tempConfig.fundingSelf" placeholder="Ví dụ: fundingSelf" style="width: 100%; font-size: 0.78rem; margin-top: 2px;" />
+          </div>
+
+          <!-- B. Thân nhân ở Nước ngoài -->
+          <div style="border-left: 3px solid #7c3aed; padding-left: 8px; padding-top: 6px; border-top: 1px dashed #e2e8f0;">
+            <span style="font-size: 0.76rem; font-weight: 700; color: #6d28d9;">B. Nguồn Kinh phí / Học bổng Thân nhân:</span>
+            <div style="display: flex; gap: 8px; margin-top: 4px;">
+              <InputText v-model="tempConfig.fundingRelative" placeholder="Cột chung (Ví dụ: fundingName)" style="flex: 1; font-size: 0.78rem;" />
+              <select class="settings-select" @change="tempConfig.fundingRelative = $event.target.value">
+                <option value="">-- Chọn cột Thân nhân --</option>
+                <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+              </select>
             </div>
-            <div>
-              <span style="font-size: 0.72rem; color: #64748b;">e) Cột Khác:</span>
-              <InputText v-model="tempConfig.fundingOther" placeholder="Ví dụ: fundingOther" style="width: 100%; font-size: 0.78rem; margin-top: 2px;" />
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+              <div>
+                <span style="font-size: 0.7rem; color: #64748b;">Học bổng / Ngân sách:</span>
+                <InputText v-model="tempConfig.fundingRelativeBudget" placeholder="fundingRelativeBudget" style="width: 100%; font-size: 0.75rem;" />
+              </div>
+              <div>
+                <span style="font-size: 0.7rem; color: #64748b;">Tài trợ:</span>
+                <InputText v-model="tempConfig.fundingRelativeSponsor" placeholder="fundingRelativeSponsor" style="width: 100%; font-size: 0.75rem;" />
+              </div>
+              <div>
+                <span style="font-size: 0.7rem; color: #64748b;">Tự túc:</span>
+                <InputText v-model="tempConfig.fundingRelativeSelf" placeholder="fundingRelativeSelf" style="width: 100%; font-size: 0.75rem;" />
+              </div>
+              <div>
+                <span style="font-size: 0.7rem; color: #64748b;">Khác:</span>
+                <InputText v-model="tempConfig.fundingRelativeOther" placeholder="fundingRelativeOther" style="width: 100%; font-size: 0.75rem;" />
+              </div>
             </div>
           </div>
         </div>
@@ -978,11 +1044,17 @@ const personnelStore = usePersonnelStore();
 const DEFAULT_CONFIG = {
   decision: 'decisionNumber',
   country: 'countryName',
+  countryRelative: 'countryName',
   funding: 'fundingName',
   fundingBudget: 'fundingBudget',
   fundingSponsor: 'fundingSponsor',
   fundingSelf: 'fundingSelf',
   fundingOther: 'fundingOther',
+  fundingRelative: 'fundingName',
+  fundingRelativeBudget: 'fundingRelativeBudget',
+  fundingRelativeSponsor: 'fundingRelativeSponsor',
+  fundingRelativeSelf: 'fundingRelativeSelf',
+  fundingRelativeOther: 'fundingRelativeOther',
   approvedDeparture: 'approvedDepartureDate',
   approvedArrival: 'approvedArrivalDate',
   approvedExtension: 'approvedExtensionDate',
@@ -1395,6 +1467,25 @@ const availableColumnsForWidgetSource = computed(() => {
   return list;
 });
 
+// All Available Relative Columns from Settings for Dropdown selection
+const allAvailableRelativeColumns = computed(() => {
+  const colMap = computeColumnIndexMap(personnelStore.importMappingRelative);
+  const list = [];
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.label) {
+        const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
+        const grp = g.group ? `[${g.group}] ` : '';
+        list.push({
+          id: c.id,
+          label: `${colNum}${grp}${c.label} (${c.id})`,
+        });
+      }
+    });
+  });
+  return list;
+});
+
 const allAvailablePersonnelColumns = computed(() => {
   const colMap = computeColumnIndexMap(personnelStore.importMappingPersonnel);
   const list = [];
@@ -1561,7 +1652,7 @@ const stats = computed(() => {
         countries[c] = (countries[c] || 0) + 1;
       }
 
-      // 4. Funding aggregation (Supports both single combined column and 4 sub-columns)
+      // 4. Funding aggregation (Personnel)
       const f = enrichedTrip.fundingName;
       if (f && f !== 'Chưa rõ' && f !== '-') {
         fundings[f] = (fundings[f] || 0) + 1;
@@ -1591,6 +1682,44 @@ const stats = computed(() => {
         fundings[othLabel] = (fundings[othLabel] || 0) + 1;
       }
     });
+  });
+
+  // Also aggregate Relatives Country & Funding
+  rList.forEach((r) => {
+    const rc = getRowFieldValue(r, colConfig.value.countryRelative) || r.countryName || r.country;
+    if (rc && String(rc).trim() && String(rc).trim() !== '-' && String(rc).trim() !== 'Chưa rõ') {
+      const cleanRc = String(rc).trim();
+      countries[cleanRc] = (countries[cleanRc] || 0) + 1;
+    }
+
+    const rf = getRowFieldValue(r, colConfig.value.fundingRelative) || r.fundingName || r.funding;
+    if (rf && String(rf).trim() && String(rf).trim() !== '-' && String(rf).trim() !== 'Chưa rõ') {
+      fundings[String(rf).trim()] = (fundings[String(rf).trim()] || 0) + 1;
+    }
+
+    const rBudget = getRowFieldValue(r, colConfig.value.fundingRelativeBudget);
+    const rSponsor = getRowFieldValue(r, colConfig.value.fundingRelativeSponsor);
+    const rSelf = getRowFieldValue(r, colConfig.value.fundingRelativeSelf);
+    const rOther = getRowFieldValue(r, colConfig.value.fundingRelativeOther);
+
+    if (rBudget && String(rBudget).trim() && String(rBudget).trim() !== '-') {
+      fundings['Học bổng / Ngân sách (Thân nhân)'] = (fundings['Học bổng / Ngân sách (Thân nhân)'] || 0) + 1;
+    }
+    if (rSponsor && String(rSponsor).trim() && String(rSponsor).trim() !== '-') {
+      const spLabel = (String(rSponsor).toLowerCase() === 'x' || String(rSponsor).toLowerCase() === 'có' || String(rSponsor).trim() === '1')
+        ? 'Tài trợ (Thân nhân)'
+        : `Tài trợ Thân nhân (${rSponsor})`;
+      fundings[spLabel] = (fundings[spLabel] || 0) + 1;
+    }
+    if (rSelf && String(rSelf).trim() && String(rSelf).trim() !== '-') {
+      fundings['Tự túc (Thân nhân)'] = (fundings['Tự túc (Thân nhân)'] || 0) + 1;
+    }
+    if (rOther && String(rOther).trim() && String(rOther).trim() !== '-') {
+      const othLabel = (String(rOther).toLowerCase() === 'x' || String(rOther).toLowerCase() === 'có' || String(rOther).trim() === '1')
+        ? 'Nguồn khác (Thân nhân)'
+        : `Khác (${rOther})`;
+      fundings[othLabel] = (fundings[othLabel] || 0) + 1;
+    }
   });
 
   const countryList = Object.entries(countries)
@@ -1640,11 +1769,18 @@ const drilldownType = ref('');
 const drilldownCategory = ref('trips'); // 'personnel' | 'relatives' | 'trips'
 const drilldownData = ref([]);
 const drilldownSearch = ref('');
+const drilldownHasDualTabs = ref(false);
+const drilldownActiveTab = ref('trips'); // 'trips' | 'relatives'
+const drilldownTripsList = ref([]);
+const drilldownRelativesList = ref([]);
 
 const openDrilldown = (type, title, filterContext = {}) => {
   drilldownType.value = type;
   drilldownTitle.value = title;
   drilldownSearch.value = '';
+  drilldownHasDualTabs.value = false;
+  drilldownTripsList.value = [];
+  drilldownRelativesList.value = [];
 
   if (type === 'all_personnel') {
     drilldownCategory.value = 'personnel';
@@ -1671,15 +1807,29 @@ const openDrilldown = (type, title, filterContext = {}) => {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.onTimeTrips];
   } else if (type === 'country' && filterContext.countryName) {
-    drilldownCategory.value = 'trips';
-    drilldownData.value = stats.value.filteredTrips.filter(
-      (t) => t.countryName.toLowerCase() === filterContext.countryName.toLowerCase()
+    const cTarget = filterContext.countryName.toLowerCase().trim();
+    drilldownTripsList.value = stats.value.filteredTrips.filter(
+      (t) => (t.countryName || '').toLowerCase().trim() === cTarget
     );
+    drilldownRelativesList.value = (personnelStore.relativesList || []).filter((r) => {
+      const rc = getRowFieldValue(r, colConfig.value.countryRelative) || r.countryName || r.country || '';
+      return String(rc).toLowerCase().trim() === cTarget;
+    });
+    drilldownHasDualTabs.value = true;
+    drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
+    drilldownCategory.value = drilldownActiveTab.value;
   } else if (type === 'funding' && filterContext.fundingName) {
-    drilldownCategory.value = 'trips';
-    drilldownData.value = stats.value.filteredTrips.filter(
-      (t) => t.fundingName.toLowerCase() === filterContext.fundingName.toLowerCase()
+    const fTarget = filterContext.fundingName.toLowerCase().trim();
+    drilldownTripsList.value = stats.value.filteredTrips.filter(
+      (t) => (t.fundingName || '').toLowerCase().trim() === fTarget
     );
+    drilldownRelativesList.value = (personnelStore.relativesList || []).filter((r) => {
+      const rf = getRowFieldValue(r, colConfig.value.fundingRelative) || r.fundingName || r.funding || '';
+      return String(rf).toLowerCase().trim() === fTarget;
+    });
+    drilldownHasDualTabs.value = true;
+    drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
+    drilldownCategory.value = drilldownActiveTab.value;
   } else {
     drilldownCategory.value = 'trips';
     drilldownData.value = [];
@@ -1694,6 +1844,7 @@ const openCustomWidgetDrilldown = (widget) => {
   drilldownTitle.value = `${widget.title} (Cột: ${widget.columnLabel || widget.columnId})`;
   drilldownCategory.value = widget.source;
   drilldownSearch.value = '';
+  drilldownHasDualTabs.value = false;
 
   const list = getSourceList(widget.source);
   drilldownData.value = list.filter((row) => {
@@ -1716,19 +1867,41 @@ const openCustomChartItemDrilldown = (widget, itemName) => {
   drilldownCategory.value = widget.source;
   drilldownSearch.value = '';
 
-  const list = getSourceList(widget.source);
-  drilldownData.value = list.filter((row) => {
-    const val = getRowFieldValue(row, widget.columnId);
-    return String(val || '').trim().toLowerCase() === String(itemName).trim().toLowerCase();
-  });
+  if (widget.source === 'combined_country') {
+    const cTarget = String(itemName).toLowerCase().trim();
+    drilldownTripsList.value = stats.value.filteredTrips.filter(
+      (t) => (t.countryName || '').toLowerCase().trim() === cTarget
+    );
+    drilldownRelativesList.value = (personnelStore.relativesList || []).filter((r) => {
+      const rc = getRowFieldValue(r, colConfig.value.countryRelative) || r.countryName || r.country || '';
+      return String(rc).toLowerCase().trim() === cTarget;
+    });
+    drilldownHasDualTabs.value = true;
+    drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
+  } else {
+    drilldownHasDualTabs.value = false;
+    const list = getSourceList(widget.source);
+    drilldownData.value = list.filter((row) => {
+      const val = getRowFieldValue(row, widget.columnId);
+      return String(val || '').trim().toLowerCase() === String(itemName).trim().toLowerCase();
+    });
+  }
 
   isDrilldownOpen.value = true;
 };
 
+const currentDrilldownList = computed(() => {
+  if (drilldownHasDualTabs.value) {
+    return drilldownActiveTab.value === 'trips' ? drilldownTripsList.value : drilldownRelativesList.value;
+  }
+  return drilldownData.value;
+});
+
 const filteredDrilldownData = computed(() => {
   const q = (drilldownSearch.value || '').toLowerCase().trim();
-  if (!q) return drilldownData.value;
-  return drilldownData.value.filter((row) => {
+  const raw = currentDrilldownList.value;
+  if (!q) return raw;
+  return raw.filter((row) => {
     return Object.values(row).some((val) => {
       if (typeof val === 'string' || typeof val === 'number') {
         return String(val).toLowerCase().includes(q);
@@ -1740,7 +1913,8 @@ const filteredDrilldownData = computed(() => {
 
 const exportDrilldownExcel = () => {
   if (filteredDrilldownData.value.length === 0) return;
-  const fileName = `Thong_Ke_${drilldownType.value}_${new Date().toISOString().slice(0, 10)}`;
+  const tabSuffix = drilldownHasDualTabs.value ? `_${drilldownActiveTab.value}` : '';
+  const fileName = `Thong_Ke_${drilldownType.value}${tabSuffix}_${new Date().toISOString().slice(0, 10)}`;
   exportToExcel(filteredDrilldownData.value, fileName, 'Thống kê');
 };
 
