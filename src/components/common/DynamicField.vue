@@ -59,6 +59,69 @@
       </div>
     </template>
 
+    <!-- 4b. Table Loop (Bảng lặp 2 cột tùy biến tiêu đề) -->
+    <template v-else-if="col.format === 'table_2col'">
+      <div style="display: flex; flex-direction: column; gap: 6px; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #fafafa;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+          <thead>
+            <tr style="background: #f1f5f9; color: #475569; font-weight: 700; text-align: left;">
+              <th style="padding: 6px 8px; width: 35px; text-align: center; border-radius: 4px 0 0 4px;">STT</th>
+              <th style="padding: 6px 8px; width: 38%;">{{ tableHeaders[0] }}</th>
+              <th style="padding: 6px 8px;">{{ tableHeaders[1] }}</th>
+              <th style="padding: 6px 8px; width: 32px; text-align: center; border-radius: 0 4px 4px 0;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, rIdx) in tableRows" :key="rIdx" style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 4px; text-align: center; color: #64748b; font-weight: 600;">{{ rIdx + 1 }}</td>
+              <td style="padding: 4px;">
+                <InputText
+                  v-model="row.col1"
+                  size="small"
+                  :placeholder="'Nhập ' + tableHeaders[0]"
+                  style="width: 100%; font-size: 0.78rem; padding: 4px 6px;"
+                  @input="updateTableModel"
+                />
+              </td>
+              <td style="padding: 4px;">
+                <InputText
+                  v-model="row.col2"
+                  size="small"
+                  :placeholder="'Nhập ' + tableHeaders[1]"
+                  style="width: 100%; font-size: 0.78rem; padding: 4px 6px;"
+                  @input="updateTableModel"
+                />
+              </td>
+              <td style="padding: 4px; text-align: center;">
+                <Button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  text
+                  size="small"
+                  @click="removeTableRow(rIdx)"
+                  style="padding: 2px 4px; font-size: 0.75rem;"
+                />
+              </td>
+            </tr>
+            <tr v-if="tableRows.length === 0">
+              <td colspan="4" style="text-align: center; padding: 8px; color: #94a3b8; font-style: italic;">
+                Chưa có dữ liệu bảng. Nhấp "+ Thêm hàng" để nhập.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <Button
+          label="Thêm hàng"
+          icon="pi pi-plus"
+          size="small"
+          text
+          severity="success"
+          @click="addTableRow"
+          style="font-size: 0.75rem; align-self: flex-start; padding: 2px 6px; margin-top: 2px;"
+        />
+      </div>
+    </template>
+
     <!-- 5. Checkbox (Nhiều lựa chọn) -->
     <template v-else-if="col.format === 'checkbox'">
       <div style="display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 4px 0; align-items: center;">
@@ -241,6 +304,72 @@ const removeLoopItem = (idx) => {
 
 const updateLoopModel = () => {
   const filtered = loopItems.value.filter((s) => s && s.trim().length > 0);
+  emit('update:modelValue', filtered);
+};
+
+// Table Loop (2-Column Custom Headers)
+const tableHeaders = computed(() => {
+  if (props.col?.options) {
+    const parts = String(props.col.options).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 2) return [parts[0], parts[1]];
+    if (parts.length === 1) return [parts[0], 'Nội dung'];
+  }
+  return ['Thời gian / Tiêu chí', 'Nội dung chi tiết'];
+});
+
+const tableRows = ref([]);
+
+const initTableRows = (val) => {
+  if (Array.isArray(val)) {
+    tableRows.value = val.map((item) => {
+      if (typeof item === 'object' && item !== null) {
+        return {
+          col1: item.col1 !== undefined ? item.col1 : (item[tableHeaders.value[0]] || ''),
+          col2: item.col2 !== undefined ? item.col2 : (item[tableHeaders.value[1]] || ''),
+        };
+      }
+      const parts = String(item).split(':');
+      return { col1: parts[0]?.trim() || '', col2: parts.slice(1).join(':')?.trim() || '' };
+    });
+  } else if (typeof val === 'string' && val.trim()) {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) {
+        tableRows.value = parsed.map((item) => ({ col1: item.col1 || '', col2: item.col2 || '' }));
+        return;
+      }
+    } catch (e) {}
+    tableRows.value = val.split('\n').filter(Boolean).map((line) => {
+      const parts = line.split(':');
+      return { col1: parts[0]?.trim() || '', col2: parts.slice(1).join(':')?.trim() || '' };
+    });
+  } else {
+    tableRows.value = [];
+  }
+};
+
+watch(
+  () => [props.modelValue, props.col.format],
+  ([val, fmt]) => {
+    if (fmt === 'table_2col') {
+      initTableRows(val);
+    }
+  },
+  { immediate: true }
+);
+
+const addTableRow = () => {
+  tableRows.value.push({ col1: '', col2: '' });
+  updateTableModel();
+};
+
+const removeTableRow = (idx) => {
+  tableRows.value.splice(idx, 1);
+  updateTableModel();
+};
+
+const updateTableModel = () => {
+  const filtered = tableRows.value.filter((r) => (r.col1 && r.col1.trim()) || (r.col2 && r.col2.trim()));
   emit('update:modelValue', filtered);
 };
 

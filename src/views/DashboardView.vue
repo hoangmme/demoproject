@@ -113,16 +113,9 @@
           <span class="stat-label">Tổng số Cán bộ</span>
           <i class="pi pi-users" style="color: #2e7d32; font-size: 1.1rem;"></i>
         </div>
-        <div class="stat-value" style="color: #1f2937; display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;">
-          <span>{{ stats.totalPersonnel }}</span>
-          <span style="color: #94a3b8; font-size: 1.3rem; font-weight: 400; margin: 0 1px;">/</span>
-          <span style="color: #16a34a; font-weight: 800;">{{ stats.totalAbroadPersonnel }}</span>
-          <span style="font-size: 0.82rem; font-weight: 600; color: #64748b; margin-left: 4px;">cán bộ</span>
-        </div>
+        <div class="stat-value" style="color: #1f2937;">{{ stats.totalPersonnel }}</div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-          <span class="stat-sub" style="color: #2e7d32;">
-            Hồ sơ trong HT / <strong>{{ stats.totalAbroadPersonnel }}</strong> từng đi nước ngoài
-          </span>
+          <span class="stat-sub" style="color: #2e7d32;">Hồ sơ trong hệ thống</span>
           <span class="view-more-tag">Xem danh sách <i class="pi pi-arrow-right"></i></span>
         </div>
       </div>
@@ -1239,6 +1232,27 @@ const getDisplayValue = (row, colId) => {
   if (!row || !colId) return '-';
   const val = getRowFieldValue(row, colId);
   if (val === undefined || val === null || val === '') return '-';
+  if (typeof val === 'object') {
+    if (val instanceof Date) {
+      return formatDate(val);
+    }
+    if (Array.isArray(val)) {
+      return val
+        .map((x) => {
+          if (typeof x === 'object' && x !== null) {
+            if (x.col1 !== undefined || x.col2 !== undefined) {
+              return `${x.col1 || ''}: ${x.col2 || ''}`.trim().replace(/^:\s*/, '');
+            }
+            return x.name || JSON.stringify(x);
+          }
+          return x;
+        })
+        .filter(Boolean)
+        .join('; ') || '-';
+    }
+    return val.name || JSON.stringify(val) || '-';
+  }
+
   const cLower = String(colId || '').toLowerCase();
   const str = String(val).trim();
   if (

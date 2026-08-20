@@ -805,7 +805,18 @@ const getDisplayValue = (person, colId) => {
       return formatDate(val);
     }
     if (Array.isArray(val)) {
-      return val.map((x) => (typeof x === 'object' ? x.name || JSON.stringify(x) : x)).join(', ') || '-';
+      return val
+        .map((x) => {
+          if (typeof x === 'object' && x !== null) {
+            if (x.col1 !== undefined || x.col2 !== undefined) {
+              return `${x.col1 || ''}: ${x.col2 || ''}`.trim().replace(/^:\s*/, '');
+            }
+            return x.name || JSON.stringify(x);
+          }
+          return x;
+        })
+        .filter(Boolean)
+        .join('; ') || '-';
     }
     return val.name || JSON.stringify(val) || '-';
   }

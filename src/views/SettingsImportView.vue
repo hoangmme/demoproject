@@ -199,16 +199,16 @@
                 </div>
               </div>
 
-              <!-- Options Config (for Checkbox, Checkbox_Text, Dropdown) -->
+              <!-- Options Config (for Checkbox, Checkbox_Text, Dropdown, Table_2col) -->
               <div
-                v-if="col.format === 'checkbox' || col.format === 'checkbox_text' || col.format === 'dropdown'"
+                v-if="col.format === 'checkbox' || col.format === 'checkbox_text' || col.format === 'dropdown' || col.format === 'table_2col'"
                 style="padding-left: 104px; display: flex; flex-direction: column; gap: 4px;"
               >
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <i class="pi pi-list" style="font-size: 0.75rem; color: #6b7280;"></i>
                   <InputText
                     v-model="col.options"
-                    placeholder="Danh sách tùy chọn (cách nhau bởi dấu phẩy, VD: Ngân sách, Tự túc, Học bổng, Tài trợ)"
+                    :placeholder="col.format === 'table_2col' ? 'Cấu hình 2 tiêu đề cột (cách nhau bởi dấu phẩy, VD: Thời gian, Nội dung công tác)' : 'Danh sách tùy chọn (cách nhau bởi dấu phẩy, VD: Ngân sách, Tự túc, Học bổng, Tài trợ)'"
                     size="small"
                     style="font-size: 0.75rem; width: 100%;"
                   />
@@ -267,6 +267,7 @@ const formatOptions = [
   { label: 'Số (Number)', value: 'number' },
   { label: 'Ngày tháng (Date)', value: 'date' },
   { label: 'List Dữ liệu (Text Loop)', value: 'text_loop' },
+  { label: 'Bảng lặp 2 cột (Tùy biến tiêu đề)', value: 'table_2col' },
   { label: 'Hộp kiểm (Nhiều lựa chọn)', value: 'checkbox' },
   { label: 'Hộp kiểm + Nhập Text (Có điều kiện)', value: 'checkbox_text' },
   { label: 'Dropdown (Lựa chọn đơn)', value: 'dropdown' },
