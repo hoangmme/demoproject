@@ -154,26 +154,58 @@
           <span style="font-size: 0.72rem; color: #64748b;">(Bấm để copy dán vào Word)</span>
         </div>
 
+        <!-- Cheat-sheet Category Tabs -->
+        <div style="display: flex; gap: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px; flex-wrap: wrap;">
+          <button
+            type="button"
+            class="cheat-tab-btn"
+            :class="{ 'cheat-tab-active': selectedCategory === 'personnel' }"
+            @click="selectedCategory = 'personnel'"
+          >
+            <i class="pi pi-user"></i> Cán bộ ({{ personnelTagsCount }} cột)
+          </button>
+          <button
+            type="button"
+            class="cheat-tab-btn"
+            :class="{ 'cheat-tab-active': selectedCategory === 'relatives' }"
+            @click="selectedCategory = 'relatives'"
+          >
+            <i class="pi pi-users"></i> Thân nhân ({{ relativeTagsCount }} cột)
+          </button>
+          <button
+            type="button"
+            class="cheat-tab-btn"
+            :class="{ 'cheat-tab-active': selectedCategory === 'trips' }"
+            @click="selectedCategory = 'trips'"
+          >
+            <i class="pi pi-send"></i> Chuyến đi ({{ tripTagsCount }})
+          </button>
+          <button
+            type="button"
+            class="cheat-tab-btn"
+            :class="{ 'cheat-tab-active': selectedCategory === 'system' }"
+            @click="selectedCategory = 'system'"
+          >
+            <i class="pi pi-cog"></i> Hệ thống ({{ systemTagsCount }})
+          </button>
+          <button
+            type="button"
+            class="cheat-tab-btn"
+            :class="{ 'cheat-tab-active': selectedCategory === 'all' }"
+            @click="selectedCategory = 'all'"
+          >
+            Tất cả
+          </button>
+        </div>
+
         <!-- Filter & Search Tag -->
         <div style="display: flex; gap: 8px; margin-bottom: 10px;">
           <InputText
             v-model="tagSearch"
-            placeholder="Tìm mã thẻ / tên trường..."
+            placeholder="Tìm mã thẻ, số cột, tên trường..."
             size="small"
             style="flex: 1; font-size: 0.78rem;"
           />
-          <select
-            v-model="selectedCategory"
-            class="tag-cat-select"
-            style="font-size: 0.78rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff;"
-          >
-            <option value="all">Tất cả danh mục</option>
-            <option value="personnel">Thông tin Cán bộ</option>
-            <option value="relatives">Khối lặp Thân nhân</option>
-            <option value="trips">Khối lặp Chuyến đi</option>
-            <option value="custom_tables">Bảng lặp tùy chỉnh</option>
-            <option value="system">Ngày tháng & Hệ thống</option>
-          </select>
         </div>
 
         <!-- Tags List Container -->
@@ -184,14 +216,21 @@
             class="tag-item-row"
             @click="copyTag(item.tag)"
           >
-            <div style="flex: 1; min-width: 0;">
-              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                <span class="tag-badge" :class="'tag-badge-' + item.category">{{ getCategoryLabel(item.category) }}</span>
-                <strong style="font-size: 0.8rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+              <!-- Col Number Badge -->
+              <span v-if="item.colNum" class="col-num-badge" style="font-size: 0.68rem; padding: 2px 6px; flex-shrink: 0;">
+                {{ item.colNum }}
+              </span>
+              <span v-else class="tag-badge" :class="'tag-badge-' + item.category" style="flex-shrink: 0;">
+                {{ getCategoryLabel(item.category) }}
+              </span>
+
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   {{ item.label }}
-                </strong>
+                </div>
+                <code class="tag-code">{{ item.tag }}</code>
               </div>
-              <code class="tag-code">{{ item.tag }}</code>
             </div>
 
             <button
@@ -231,6 +270,7 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { usePersonnelStore } from '@/stores/personnel';
 import { saveAs } from 'file-saver';
+import { computeColumnIndexMap } from '@/utils/formatters';
 import {
   exportSinglePersonnelDocx,
   exportMultiplePersonnelZip,
@@ -275,7 +315,7 @@ const progressCurrent = ref(0);
 const progressTotal = ref(0);
 
 const tagSearch = ref('');
-const selectedCategory = ref('all');
+const selectedCategory = ref('personnel'); // default to 'personnel'
 const copiedTag = ref('');
 
 const selectedCount = computed(() => props.selectedPersonnel?.length || 0);
@@ -323,7 +363,6 @@ const handleFileUpload = (e) => {
   reader.onload = (event) => {
     templateBuffer.value = event.target.result;
     try {
-      // Lưu tên tệp gần nhất
       localStorage.setItem('lastDocxTemplateName', file.name);
     } catch (err) {}
   };
@@ -332,7 +371,6 @@ const handleFileUpload = (e) => {
 
 const loadLastTemplate = async () => {
   if (!templateBuffer.value) {
-    // Tải mặc định mẫu chuẩn nếu chưa có file nào
     try {
       const sampleBlob = await createSampleDocxTemplateBlob();
       templateBuffer.value = await sampleBlob.arrayBuffer();
@@ -353,85 +391,120 @@ const downloadSampleTemplate = async () => {
 };
 
 // Tra cứu thẻ Tag
+const personnelColMap = computed(() => {
+  return computeColumnIndexMap(personnelStore.importMappingPersonnel || []);
+});
+
+const relativeColMap = computed(() => {
+  return computeColumnIndexMap(personnelStore.importMappingRelative || []);
+});
+
 const allAvailableTags = computed(() => {
   const tags = [];
+  const pMap = personnelColMap.value;
+  const rMap = relativeColMap.value;
 
-  // 1. Hệ thống & Ngày tháng
-  tags.push(
-    { label: 'Số thứ tự', tag: '{stt}', category: 'system' },
-    { label: 'Ngày xuất file (DD/MM/YYYY)', tag: '{ngay_hien_tai}', category: 'system' },
-    { label: 'Ngày (DD)', tag: '{ngay}', category: 'system' },
-    { label: 'Tháng (MM)', tag: '{thang}', category: 'system' },
-    { label: 'Năm (YYYY)', tag: '{nam}', category: 'system' },
-    { label: 'Tổng số thân nhân', tag: '{so_luong_than_nhan}', category: 'system' },
-    { label: 'Tổng số chuyến đi', tag: '{so_luong_chuyen_di}', category: 'system' }
-  );
-
-  // 2. Cán bộ (Lấy 100% các cột từ importMappingPersonnel)
+  // 1. Cán bộ (Lấy 100% các cột từ importMappingPersonnel)
   const personnelCols = personnelStore.allAvailablePersonnelColumns || [];
   personnelCols.forEach((col) => {
+    const colNum = pMap[col.id] || '';
     if (col.format === 'table_loop' || col.format === 'table_2col') {
       tags.push({
         label: `Bảng lặp: ${col.label}`,
         tag: `{#${col.id}}...{col0}, {col1}...{/${col.id}}`,
         category: 'custom_tables',
+        colNum,
       });
     } else {
       tags.push({
         label: col.label,
         tag: `{${col.id}}`,
         category: 'personnel',
+        colNum,
       });
     }
   });
 
-  // 3. Khối lặp Thân nhân
+  // 2. Khối lặp Thân nhân
   tags.push(
     {
       label: 'Khối/Hàng lặp Thân nhân (Bắt đầu)',
       tag: '{#than_nhan}',
       category: 'relatives',
+      colNum: 'Khối',
     },
     {
       label: 'Khối/Hàng lặp Thân nhân (Kết thúc)',
       tag: '{/than_nhan}',
       category: 'relatives',
+      colNum: 'Khối',
     }
   );
 
   const relativeCols = personnelStore.allAvailableRelativeColumns || [];
   relativeCols.forEach((col) => {
+    const colNum = rMap[col.id] || '';
     tags.push({
-      label: `[Thân nhân] ${col.label}`,
+      label: col.label,
       tag: `{${col.id}}`,
       category: 'relatives',
+      colNum,
     });
   });
 
-  // 4. Khối lặp Chuyến đi
+  // 3. Khối lặp Chuyến đi
   tags.push(
     {
       label: 'Khối/Hàng lặp Chuyến đi (Bắt đầu)',
       tag: '{#chuyen_di}',
       category: 'trips',
+      colNum: 'Khối',
     },
     {
       label: 'Khối/Hàng lặp Chuyến đi (Kết thúc)',
       tag: '{/chuyen_di}',
       category: 'trips',
+      colNum: 'Khối',
     },
-    { label: '[Chuyến đi] Quốc gia đến', tag: '{quoc_gia_den}', category: 'trips' },
-    { label: '[Chuyến đi] Mục đích', tag: '{muc_dich}', category: 'trips' },
-    { label: '[Chuyến đi] Ngày xuất cảnh', tag: '{ngay_di}', category: 'trips' },
-    { label: '[Chuyến đi] Ngày nhập cảnh', tag: '{ngay_ve}', category: 'trips' },
-    { label: '[Chuyến đi] Nguồn kinh phí', tag: '{kinh_phi}', category: 'trips' },
-    { label: '[Chuyến đi] Số quyết định', tag: '{so_quyet_dinh}', category: 'trips' },
-    { label: '[Chuyến đi] Ngày đi được duyệt', tag: '{ngay_di_duoc_duyet}', category: 'trips' },
-    { label: '[Chuyến đi] Ngày về được duyệt', tag: '{ngay_ve_duoc_duyet}', category: 'trips' },
-    { label: '[Chuyến đi] Ngày gia hạn', tag: '{ngay_gia_han}', category: 'trips' }
+    { label: 'Quốc gia đến', tag: '{quoc_gia_den}', category: 'trips', colNum: 'Đi' },
+    { label: 'Mục đích chuyến đi', tag: '{muc_dich}', category: 'trips', colNum: 'Đi' },
+    { label: 'Ngày xuất cảnh', tag: '{ngay_di}', category: 'trips', colNum: 'Đi' },
+    { label: 'Ngày nhập cảnh', tag: '{ngay_ve}', category: 'trips', colNum: 'Đi' },
+    { label: 'Nguồn kinh phí', tag: '{kinh_phi}', category: 'trips', colNum: 'Đi' },
+    { label: 'Số quyết định', tag: '{so_quyet_dinh}', category: 'trips', colNum: 'Đi' },
+    { label: 'Ngày đi được duyệt', tag: '{ngay_di_duoc_duyet}', category: 'trips', colNum: 'Đi' },
+    { label: 'Ngày về được duyệt', tag: '{ngay_ve_duoc_duyet}', category: 'trips', colNum: 'Đi' },
+    { label: 'Ngày gia hạn', tag: '{ngay_gia_han}', category: 'trips', colNum: 'Đi' }
+  );
+
+  // 4. Hệ thống & Ngày tháng
+  tags.push(
+    { label: 'Số thứ tự cán bộ', tag: '{stt}', category: 'system', colNum: 'HT' },
+    { label: 'Ngày xuất file (DD/MM/YYYY)', tag: '{ngay_hien_tai}', category: 'system', colNum: 'HT' },
+    { label: 'Ngày (DD)', tag: '{ngay}', category: 'system', colNum: 'HT' },
+    { label: 'Tháng (MM)', tag: '{thang}', category: 'system', colNum: 'HT' },
+    { label: 'Năm (YYYY)', tag: '{nam}', category: 'system', colNum: 'HT' },
+    { label: 'Tổng số thân nhân', tag: '{so_luong_than_nhan}', category: 'system', colNum: 'HT' },
+    { label: 'Tổng số chuyến đi', tag: '{so_luong_chuyen_di}', category: 'system', colNum: 'HT' }
   );
 
   return tags;
+});
+
+const personnelTagsCount = computed(() => {
+  return allAvailableTags.value.filter((t) => t.category === 'personnel' || t.category === 'custom_tables').length;
+});
+
+const relativeTagsCount = computed(() => {
+  return allAvailableTags.value.filter((t) => t.category === 'relatives').length;
+});
+
+const tripTagsCount = computed(() => {
+  return allAvailableTags.value.filter((t) => t.category === 'trips').length;
+});
+
+const systemTagsCount = computed(() => {
+  return allAvailableTags.value.filter((t) => t.category === 'system').length;
 });
 
 const filteredTags = computed(() => {
@@ -439,8 +512,17 @@ const filteredTags = computed(() => {
   const cat = selectedCategory.value;
 
   return allAvailableTags.value.filter((item) => {
-    const matchCat = cat === 'all' || item.category === cat;
-    const matchQ = !q || item.label.toLowerCase().includes(q) || item.tag.toLowerCase().includes(q);
+    let matchCat = false;
+    if (cat === 'all') matchCat = true;
+    else if (cat === 'personnel') matchCat = item.category === 'personnel' || item.category === 'custom_tables';
+    else matchCat = item.category === cat;
+
+    const matchQ =
+      !q ||
+      item.label.toLowerCase().includes(q) ||
+      item.tag.toLowerCase().includes(q) ||
+      (item.colNum && String(item.colNum).toLowerCase().includes(q));
+
     return matchCat && matchQ;
   });
 });
@@ -614,8 +696,31 @@ onMounted(() => {
   text-decoration: underline;
 }
 
-.btn-link:hover {
-  color: #0369a1;
+.cheat-tab-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.cheat-tab-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.cheat-tab-active {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
 }
 
 .tag-item-row {

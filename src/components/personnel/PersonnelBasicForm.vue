@@ -1,32 +1,45 @@
 <template>
-  <div class="form-grid">
-    <!-- Readonly Mã Cán bộ -->
-    <div class="field-item col-3">
-      <label class="field-label" title="Mã Cán bộ">
-        <span class="badge-code" style="margin-right: 4px;">Mã CB</span>
-      </label>
-      <InputText
-        :model-value="form.code || 'Tự động cấp phát'"
-        disabled
-        size="small"
-        style="background: #f1f5f9; color: #334155; font-weight: 700; cursor: not-allowed;"
-      />
-    </div>
-
-    <!-- 100% Dynamic Fields for Khối A based on Cấu hình Cột -->
-    <template v-for="col in basicColumns" :key="col.id">
-      <div class="field-item" :class="getColClass(col.width)">
-        <label class="field-label" :title="col.label">
-          <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
-          <span class="label-text">{{ col.label }}</span>
-          <span v-if="col.id === 'name'" style="color: red; margin-left: 2px;">*</span>
-        </label>
-        <DynamicField
-          v-model="form[col.id]"
-          :col="col"
-        />
+  <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+    <div
+      v-for="(group, gIdx) in dynamicGroups"
+      :key="gIdx"
+      style="background: #ffffff;"
+    >
+      <div v-if="dynamicGroups.length > 1 && group.group" style="font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 0.6rem; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+        <i class="pi pi-folder" style="color: #0284c7; font-size: 0.85rem;"></i>
+        <span>{{ group.group }}</span>
       </div>
-    </template>
+
+      <div class="form-grid">
+        <!-- Readonly Mã Cán bộ only in first group -->
+        <div v-if="gIdx === 0" class="field-item col-3">
+          <label class="field-label" title="Mã Cán bộ">
+            <span class="badge-code" style="margin-right: 4px;">Mã CB</span>
+          </label>
+          <InputText
+            :model-value="form.code || 'Tự động cấp phát'"
+            disabled
+            size="small"
+            style="background: #f1f5f9; color: #334155; font-weight: 700; cursor: not-allowed;"
+          />
+        </div>
+
+        <!-- Dynamic Fields in this group -->
+        <template v-for="col in group.columns" :key="col.id">
+          <div class="field-item" :class="getColClass(col.width)">
+            <label class="field-label" :title="col.label">
+              <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
+              <span class="label-text">{{ col.label }}</span>
+              <span v-if="col.id === 'name'" style="color: red; margin-left: 2px;">*</span>
+            </label>
+            <DynamicField
+              v-model="form[col.id]"
+              :col="col"
+            />
+          </div>
+        </template>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -35,7 +48,6 @@ import { computed } from 'vue';
 import InputText from 'primevue/inputtext';
 import DynamicField from '@/components/common/DynamicField.vue';
 import { computeColumnIndexMap } from '@/utils/formatters';
-
 import { usePersonnelStore } from '@/stores/personnel';
 
 const props = defineProps({
@@ -64,19 +76,28 @@ const colIndexMap = computed(() => {
   return computeColumnIndexMap(effectiveMapping.value);
 });
 
-const basicColumns = computed(() => {
+const dynamicGroups = computed(() => {
   const ignore = new Set(['stt', 'code']);
-  const firstGroup = effectiveMapping.value[0];
-  if (firstGroup && Array.isArray(firstGroup.columns) && firstGroup.columns.length > 0) {
-    return firstGroup.columns.filter((c) => !ignore.has(c.id));
+  const mapping = effectiveMapping.value;
+  if (Array.isArray(mapping) && mapping.length > 0) {
+    return mapping.map((g) => ({
+      group: g.group || '',
+      isMultiple: g.isMultiple,
+      columns: (g.columns || []).filter((c) => !ignore.has(c.id)),
+    })).filter((g) => g.columns.length > 0);
   }
   return [
-    { id: 'name', label: 'Họ và tên', width: '33', format: 'text' },
-    { id: 'otherName', label: 'Tên gọi khác', width: '33', format: 'text' },
-    { id: 'birthYear', label: 'Năm sinh', width: '25', format: 'date' },
-    { id: 'departmentId', label: 'Đơn vị / Phòng ban', width: '33', format: 'dropdown' },
-    { id: 'position', label: 'Chức vụ', width: '33', format: 'text' },
-    { id: 'cccd', label: 'Số CCCD', width: '33', format: 'text' },
+    {
+      group: 'Thông tin chung',
+      columns: [
+        { id: 'name', label: 'Họ và tên', width: '33', format: 'text' },
+        { id: 'otherName', label: 'Tên gọi khác', width: '33', format: 'text' },
+        { id: 'birthYear', label: 'Năm sinh', width: '25', format: 'date' },
+        { id: 'departmentId', label: 'Đơn vị / Phòng ban', width: '33', format: 'dropdown' },
+        { id: 'position', label: 'Chức vụ', width: '33', format: 'text' },
+        { id: 'cccd', label: 'Số CCCD', width: '33', format: 'text' },
+      ],
+    },
   ];
 });
 
