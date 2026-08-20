@@ -60,48 +60,163 @@
             v-model="searchQuery"
             placeholder="Tìm tên, CCCD, chức vụ..."
             size="small"
-            style="width: 170px; font-size: 0.8rem;"
+            style="width: 160px; font-size: 0.8rem;"
           />
 
-          <!-- Column Selector -->
-          <ColumnSelector
-            v-model="personnelStore.visibleColumns"
-            :options="personnelStore.allAvailableColumns"
-            @change="onColumnsChange"
-          />
+          <!-- ⚙️ Cài đặt Cột & Bộ Lọc Thông Minh Popover -->
+          <div class="header-menu-wrapper" @mouseenter="isFilterMenuOpen = true" @mouseleave="isFilterMenuOpen = false">
+            <Button
+              icon="pi pi-sliders-h"
+              :label="smartFilter !== 'all' ? 'Đang lọc' : 'Lọc & Cột'"
+              :severity="smartFilter !== 'all' ? 'primary' : 'secondary'"
+              outlined
+              size="small"
+              @click="isFilterMenuOpen = !isFilterMenuOpen; isDataMenuOpen = false;"
+              title="Tùy biến cột hiển thị và Bộ lọc dữ liệu thông minh"
+              style="font-size: 0.8rem;"
+            >
+              <span v-if="smartFilter !== 'all'" class="filter-active-dot"></span>
+            </Button>
 
-          <!-- Import Excel Button -->
-          <Button
-            label="Import Excel"
-            icon="pi pi-upload"
-            severity="info"
-            outlined
-            size="small"
-            @click="openImportModal('personnel')"
-            style="font-size: 0.8rem;"
-          />
+            <div v-show="isFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown">
+              <!-- Phần 1: Bộ lọc thông minh -->
+              <div class="filter-section">
+                <div class="filter-section-title">
+                  <i class="pi pi-filter" style="color: #2563eb;"></i>
+                  <span>Bộ lọc dữ liệu thông minh</span>
+                </div>
+                <div class="smart-chips-grid">
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': smartFilter === 'all' }"
+                    @click="smartFilter = 'all'"
+                  >
+                    Tất cả ({{ personnelStore.personnelList.length }})
+                  </button>
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': smartFilter === 'has_decision' }"
+                    @click="smartFilter = 'has_decision'"
+                  >
+                    <i class="pi pi-file"></i> Có Số Quyết định
+                  </button>
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': smartFilter === 'has_trips' }"
+                    @click="smartFilter = 'has_trips'"
+                  >
+                    <i class="pi pi-send"></i> Có Chuyến đi / XNC
+                  </button>
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': smartFilter === 'has_relatives' }"
+                    @click="smartFilter = 'has_relatives'"
+                  >
+                    <i class="pi pi-users"></i> Có Thân nhân
+                  </button>
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': smartFilter === 'has_issues' }"
+                    @click="smartFilter = 'has_issues'"
+                  >
+                    <i class="pi pi-exclamation-triangle"></i> Có Vấn đề lưu ý / TCCT
+                  </button>
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': smartFilter === 'has_passport' }"
+                    @click="smartFilter = 'has_passport'"
+                  >
+                    <i class="pi pi-id-card"></i> Có Hộ chiếu
+                  </button>
+                </div>
 
-          <!-- Direct Full Export Button -->
-          <Button
-            :label="selectedPersonnel.length > 0 ? `Xuất Excel (${selectedPersonnel.length} đã chọn)` : 'Xuất Excel Cán bộ'"
-            icon="pi pi-file-excel"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="handleExportPersonnelFull"
-            style="font-size: 0.8rem;"
-          />
+                <!-- Lọc nâng cao theo trường cụ thể -->
+                <div style="margin-top: 8px;">
+                  <div style="font-size: 0.72rem; color: #64748b; margin-bottom: 4px; font-weight: 600;">Hoặc lọc dòng CÓ DỮ LIỆU ở trường:</div>
+                  <select
+                    v-model="smartFilterField"
+                    class="custom-field-filter-select"
+                    @change="smartFilter = smartFilterField ? 'field_not_empty' : 'all'"
+                  >
+                    <option value="">-- Chọn trường để chỉ hiện dòng có dữ liệu --</option>
+                    <option
+                      v-for="c in personnelStore.allAvailableColumns"
+                      :key="c.id"
+                      :value="c.id"
+                    >
+                      Chỉ hiện dòng có: {{ c.label }}
+                    </option>
+                  </select>
+                </div>
+              </div>
 
-          <!-- Advanced PDF / Word Export Button -->
-          <Button
-            :label="selectedPersonnel.length > 0 ? `Xuất PDF (${selectedPersonnel.length} đã chọn)` : 'Xuất PDF / Word'"
-            icon="pi pi-file-pdf"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="openAdvancedDocxExport(null)"
-            style="font-size: 0.8rem;"
-          />
+              <!-- Phần 2: Tùy chọn Ẩn/Hiện Cột -->
+              <div class="filter-section" style="border-top: 1px solid #e2e8f0; margin-top: 10px; padding-top: 10px;">
+                <div class="filter-section-title" style="margin-bottom: 8px;">
+                  <i class="pi pi-table" style="color: #7c3aed;"></i>
+                  <span>Tùy chọn Cột hiển thị</span>
+                </div>
+                <ColumnSelector
+                  v-model="personnelStore.visibleColumns"
+                  :options="personnelStore.allAvailableColumns"
+                  @change="onColumnsChange"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 📥 Gom Import / Xuất Excel / Xuất PDF vào 1 nút Menu -->
+          <div class="header-menu-wrapper" @mouseenter="isDataMenuOpen = true" @mouseleave="isDataMenuOpen = false">
+            <Button
+              label="Xuất / Nhập"
+              icon="pi pi-download"
+              severity="secondary"
+              outlined
+              size="small"
+              @click="isDataMenuOpen = !isDataMenuOpen; isFilterMenuOpen = false;"
+              style="font-size: 0.8rem;"
+            >
+              <i class="pi pi-chevron-down" style="font-size: 0.65rem; margin-left: 4px;"></i>
+            </Button>
+
+            <div v-show="isDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
+              <div class="menu-action-item" @click="openImportModal('personnel'); isDataMenuOpen = false;">
+                <div class="action-icon-box" style="background: #e0f2fe; color: #0284c7;">
+                  <i class="pi pi-upload"></i>
+                </div>
+                <div>
+                  <div class="menu-action-title">Import Excel Cán bộ</div>
+                  <div class="menu-action-sub">Tải dữ liệu từ tệp Excel .xlsx vào hệ thống</div>
+                </div>
+              </div>
+
+              <div class="menu-action-item" @click="handleExportPersonnelFull(); isDataMenuOpen = false;">
+                <div class="action-icon-box" style="background: #dcfce7; color: #16a34a;">
+                  <i class="pi pi-file-excel"></i>
+                </div>
+                <div>
+                  <div class="menu-action-title">{{ selectedPersonnel.length > 0 ? `Xuất Excel (${selectedPersonnel.length} đã chọn)` : 'Xuất Bảng Excel (Toàn bộ cột)' }}</div>
+                  <div class="menu-action-sub">Tải file Excel danh sách cán bộ</div>
+                </div>
+              </div>
+
+              <div class="menu-action-item" @click="openAdvancedDocxExport(null); isDataMenuOpen = false;">
+                <div class="action-icon-box" style="background: #fee2e2; color: #dc2626;">
+                  <i class="pi pi-file-pdf"></i>
+                </div>
+                <div>
+                  <div class="menu-action-title">{{ selectedPersonnel.length > 0 ? `Xuất Word / PDF (${selectedPersonnel.length} đã chọn)` : 'Xuất Hồ sơ theo Mẫu (Word / PDF)' }}</div>
+                  <div class="menu-action-sub">Xuất trích ngang, sơ yếu lý lịch cán bộ</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Add Button -->
           <Button
@@ -229,37 +344,83 @@
             v-model="relativeSearchQuery"
             placeholder="Tìm tên thân nhân, cán bộ..."
             size="small"
-            style="width: 200px; font-size: 0.8rem;"
+            style="width: 190px; font-size: 0.8rem;"
           />
 
-          <!-- Column Selector for Relatives -->
-          <ColumnSelector
-            v-model="personnelStore.visibleRelativeColumns"
-            :options="personnelStore.allAvailableRelativeColumns"
-            @change="onRelativeColumnsChange"
-          />
+          <!-- ⚙️ Cài đặt Cột Thân nhân Popover -->
+          <div class="header-menu-wrapper" @mouseenter="isRelativeFilterMenuOpen = true" @mouseleave="isRelativeFilterMenuOpen = false">
+            <Button
+              icon="pi pi-sliders-h"
+              label="Tùy chọn Cột"
+              severity="secondary"
+              outlined
+              size="small"
+              @click="isRelativeFilterMenuOpen = !isRelativeFilterMenuOpen; isRelativeDataMenuOpen = false;"
+              title="Tùy biến cột hiển thị bảng Thân nhân"
+              style="font-size: 0.8rem;"
+            />
 
-          <!-- Import Relatives Button -->
-          <Button
-            label="Import Thân nhân"
-            icon="pi pi-upload"
-            severity="info"
-            outlined
-            size="small"
-            @click="openImportModal('relative')"
-            style="font-size: 0.8rem;"
-          />
+            <div v-show="isRelativeFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown">
+              <div class="filter-section">
+                <div class="filter-section-title" style="margin-bottom: 8px;">
+                  <i class="pi pi-table" style="color: #7c3aed;"></i>
+                  <span>Tùy chọn Cột hiển thị Thân nhân</span>
+                </div>
+                <ColumnSelector
+                  v-model="personnelStore.visibleRelativeColumns"
+                  :options="personnelStore.allAvailableRelativeColumns"
+                  @change="onRelativeColumnsChange"
+                />
+              </div>
+            </div>
+          </div>
 
-          <!-- Export Relatives Button -->
-          <Button
-            :label="selectedRelatives.length > 0 ? `Xuất Excel (${selectedRelatives.length} đã chọn)` : 'Xuất Excel Thân nhân'"
-            icon="pi pi-file-excel"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="handleExportRelativesFull"
-            style="font-size: 0.8rem;"
-          />
+          <!-- 📥 Gom Import / Xuất Excel Thân nhân vào 1 nút Menu -->
+          <div class="header-menu-wrapper" @mouseenter="isRelativeDataMenuOpen = true" @mouseleave="isRelativeDataMenuOpen = false">
+            <Button
+              label="Xuất / Nhập"
+              icon="pi pi-download"
+              severity="secondary"
+              outlined
+              size="small"
+              @click="isRelativeDataMenuOpen = !isRelativeDataMenuOpen; isRelativeFilterMenuOpen = false;"
+              style="font-size: 0.8rem;"
+            >
+              <i class="pi pi-chevron-down" style="font-size: 0.65rem; margin-left: 4px;"></i>
+            </Button>
+
+            <div v-show="isRelativeDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
+              <div class="menu-action-item" @click="openImportModal('relative'); isRelativeDataMenuOpen = false;">
+                <div class="action-icon-box" style="background: #e0f2fe; color: #0284c7;">
+                  <i class="pi pi-upload"></i>
+                </div>
+                <div>
+                  <div class="menu-action-title">Import Excel Thân nhân</div>
+                  <div class="menu-action-sub">Tải dữ liệu thân nhân từ file .xlsx</div>
+                </div>
+              </div>
+
+              <div class="menu-action-item" @click="handleExportRelativesFull(); isRelativeDataMenuOpen = false;">
+                <div class="action-icon-box" style="background: #dcfce7; color: #16a34a;">
+                  <i class="pi pi-file-excel"></i>
+                </div>
+                <div>
+                  <div class="menu-action-title">{{ selectedRelatives.length > 0 ? `Xuất Excel (${selectedRelatives.length} đã chọn)` : 'Xuất Bảng Excel Thân nhân' }}</div>
+                  <div class="menu-action-sub">Tải file Excel danh sách toàn bộ thân nhân</div>
+                </div>
+              </div>
+
+              <div class="menu-action-item" @click="openAdvancedDocxExport(null); isRelativeDataMenuOpen = false;">
+                <div class="action-icon-box" style="background: #fee2e2; color: #dc2626;">
+                  <i class="pi pi-file-pdf"></i>
+                </div>
+                <div>
+                  <div class="menu-action-title">Xuất Hồ sơ Word / PDF theo Mẫu</div>
+                  <div class="menu-action-sub">Xuất hồ sơ kèm thông tin thân nhân</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Add Relative Button -->
           <Button
@@ -643,6 +804,14 @@ const selectedPerson = ref(null);
 const dialogInitialTab = ref(0);
 const dialogTargetRelativeCode = ref('');
 
+// Menu & Smart Filter State
+const isFilterMenuOpen = ref(false);
+const isDataMenuOpen = ref(false);
+const isRelativeFilterMenuOpen = ref(false);
+const isRelativeDataMenuOpen = ref(false);
+const smartFilter = ref('all'); // 'all' | 'has_decision' | 'has_trips' | 'has_relatives' | 'has_issues' | 'has_passport' | 'field_not_empty'
+const smartFilterField = ref('');
+
 // Advanced DOCX Export Modal State
 const isDocxExportOpen = ref(false);
 const docxExportTargetPerson = ref(null);
@@ -769,9 +938,53 @@ const activeRelativeColumns = computed(() => {
 });
 
 const filteredPersonnel = computed(() => {
+  let list = personnelStore.personnelList;
+
+  // 1. Bộ lọc thông minh (Smart Filter)
+  if (smartFilter.value === 'has_decision') {
+    list = list.filter((p) => {
+      const cd = p.custom_data || {};
+      const trips = cd.chuyen_di || cd.xuatnhapcanh || [];
+      const hasTripDecision = Array.isArray(trips) && trips.some((t) => t.decisionNumber || t.so_quyet_dinh || t.col5);
+      return Boolean(p.decisionNumber || cd.decisionNumber || cd.so_quyet_dinh || hasTripDecision);
+    });
+  } else if (smartFilter.value === 'has_trips') {
+    list = list.filter((p) => {
+      const cd = p.custom_data || {};
+      const trips = cd.chuyen_di || cd.xuatnhapcanh || [];
+      return (Array.isArray(trips) && trips.length > 0) || Boolean(p.countryName || cd.countryName || cd.quoc_gia_den);
+    });
+  } else if (smartFilter.value === 'has_relatives') {
+    const pWithRelatives = new Set(personnelStore.relativesList.map((r) => r.personnelId || r.personnelCode).filter(Boolean));
+    list = list.filter((p) => pWithRelatives.has(p.id) || (p.code && pWithRelatives.has(p.code)));
+  } else if (smartFilter.value === 'has_issues') {
+    list = list.filter((p) => {
+      const cd = p.custom_data || {};
+      return Boolean(
+        p.tcctResult || p.kqThamTra || cd.tcctResult || cd.kqThamTra ||
+        cd.trongYeu || cd.thamNhung || cd.yeuToNuocNgoai || cd.van_de_chinh_tri
+      );
+    });
+  } else if (smartFilter.value === 'has_passport') {
+    list = list.filter((p) => {
+      const cd = p.custom_data || {};
+      return Boolean(p.passportPersonal || p.passportOfficial || p.hcCaNhan || p.hcCongVu || cd.passportPersonal || cd.passportOfficial || cd.hcCaNhan || cd.hcCongVu);
+    });
+  } else if (smartFilter.value === 'field_not_empty' && smartFilterField.value) {
+    const field = smartFilterField.value;
+    list = list.filter((p) => {
+      const val = p[field] !== undefined ? p[field] : (p.custom_data ? p.custom_data[field] : undefined);
+      if (val === undefined || val === null) return false;
+      if (typeof val === 'string') return val.trim() !== '';
+      if (Array.isArray(val)) return val.length > 0;
+      return true;
+    });
+  }
+
+  // 2. Tìm kiếm từ khóa (Search Query)
   const q = searchQuery.value.trim().toLowerCase();
-  if (!q) return personnelStore.personnelList;
-  return personnelStore.personnelList.filter((p) => {
+  if (!q) return list;
+  return list.filter((p) => {
     return (
       (p.name && p.name.toLowerCase().includes(q)) ||
       (p.cccd && p.cccd.toLowerCase().includes(q)) ||
@@ -1554,3 +1767,138 @@ const executeImport = async () => {
 const onPersonSaved = () => {};
 const onPersonDeleted = () => {};
 </script>
+
+<style scoped>
+.header-menu-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.header-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding: 8px;
+}
+
+.data-menu-dropdown {
+  width: 290px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-panel-dropdown {
+  width: 320px;
+  max-width: 90vw;
+}
+
+.menu-action-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.menu-action-item:hover {
+  background: #f1f5f9;
+}
+
+.action-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.menu-action-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.menu-action-sub {
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.filter-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.smart-chips-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.smart-chip {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.smart-chip:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.chip-active {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border-color: #3b82f6 !important;
+  font-weight: 700 !important;
+}
+
+.filter-active-dot {
+  width: 7px;
+  height: 7px;
+  background: #2563eb;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.custom-field-filter-select {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 0.76rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1e293b;
+  outline: none;
+}
+
+.custom-field-filter-select:focus {
+  border-color: #2563eb;
+}
+</style>

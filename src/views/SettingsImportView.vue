@@ -578,6 +578,206 @@ const currentGroups = computed(() => {
   return activeTab.value === 'personnel' ? personnelGroups.value : relativeGroups.value;
 });
 
+// Tra cứu thẻ Tag (Tab 3)
+const personnelColMap = computed(() => {
+  return computeColumnIndexMap(personnelGroups.value || []);
+});
+
+const relativeColMap = computed(() => {
+  return computeColumnIndexMap(relativeGroups.value || []);
+});
+
+const allAvailableTags = computed(() => {
+  const tags = [];
+  const pMap = personnelColMap.value;
+  const rMap = relativeColMap.value;
+
+  // 1. Cán bộ
+  (personnelGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((col) => {
+      const colNum = pMap[col.id] || '';
+      if (col.format === 'table_loop') {
+        tags.push({
+          label: `Bảng lặp: ${col.label}`,
+          tag: `{#${col.id}}...{col0}, {col1}...{/${col.id}}`,
+          category: 'personnel',
+          colNum,
+        });
+      } else if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
+        tags.push({
+          label: `${col.label} (Toàn bộ tên + nội dung)`,
+          tag: `{${col.id}}`,
+          category: 'personnel',
+          colNum,
+        });
+        tags.push({
+          label: `${col.label} -> Tên mục đã tích chọn`,
+          tag: `{label_${col.id}}`,
+          category: 'personnel',
+          colNum,
+        });
+        if (col.format === 'checkbox_text') {
+          tags.push({
+            label: `${col.label} -> Chi tiết Text đã nhập`,
+            tag: `{detail_${col.id}}`,
+            category: 'personnel',
+            colNum,
+          });
+        }
+        const opts = String(col.options).split(',').map((s) => s.trim()).filter(Boolean);
+        opts.forEach((optName) => {
+          const optSlug = generateSlug(optName);
+          if (optSlug) {
+            tags.push({
+              label: `${col.label} -> [Tích X ${optName}]`,
+              tag: `{is_${col.id}_${optSlug}}`,
+              category: 'personnel',
+              colNum,
+            });
+          }
+        });
+      } else {
+        tags.push({
+          label: col.label,
+          tag: `{${col.id}}`,
+          category: 'personnel',
+          colNum,
+        });
+      }
+    });
+  });
+
+  // 2. Thân nhân
+  (relativeGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((col) => {
+      const colNum = rMap[col.id] || '';
+      if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
+        tags.push({
+          label: `[Thân nhân] ${col.label} (Đầy đủ)`,
+          tag: `{${col.id}}`,
+          category: 'relatives',
+          colNum,
+        });
+        tags.push({
+          label: `[Thân nhân] ${col.label} -> Tên mục đã chọn`,
+          tag: `{label_${col.id}}`,
+          category: 'relatives',
+          colNum,
+        });
+        if (col.format === 'checkbox_text') {
+          tags.push({
+            label: `[Thân nhân] ${col.label} -> Chi tiết`,
+            tag: `{detail_${col.id}}`,
+            category: 'relatives',
+            colNum,
+          });
+        }
+      } else {
+        tags.push({
+          label: `[Thân nhân] ${col.label}`,
+          tag: `{${col.id}}`,
+          category: 'relatives',
+          colNum,
+        });
+      }
+    });
+  });
+
+  // 3. Khối lặp Chuyến đi & Thân nhân
+  tags.push(
+    { label: 'Khối lặp Chuyến đi nước ngoài (Bắt đầu)', tag: '{#xuatnhapcanh}', category: 'trips', colNum: 'Chuyến đi' },
+    { label: 'Khối lặp Chuyến đi nước ngoài (Kết thúc)', tag: '{/xuatnhapcanh}', category: 'trips', colNum: 'Chuyến đi' },
+    { label: '[Chuyến đi] Quốc gia đến', tag: '{countryName}', category: 'trips', colNum: '' },
+    { label: '[Chuyến đi] Mục đích chuyến đi', tag: '{label_purpose}', category: 'trips', colNum: '' },
+    { label: '[Chuyến đi] Chi tiết mục đích', tag: '{detail_purpose}', category: 'trips', colNum: '' },
+    { label: '[Chuyến đi] Ngày xuất cảnh', tag: '{departureDate}', category: 'trips', colNum: '' },
+    { label: '[Chuyến đi] Ngày nhập cảnh', tag: '{arrivalDate}', category: 'trips', colNum: '' },
+    { label: '[Chuyến đi] Nguồn kinh phí', tag: '{label_funding2}', category: 'trips', colNum: '' },
+    { label: '[Chuyến đi] Số quyết định', tag: '{decisionNumber}', category: 'trips', colNum: '' },
+    { label: '[Chuyến đi] Ngày ký quyết định', tag: '{decisionDate}', category: 'trips', colNum: '' },
+    { label: 'Khối lặp Thân nhân (Bắt đầu)', tag: '{#than_nhan}', category: 'relatives', colNum: 'Thân nhân' },
+    { label: 'Khối lặp Thân nhân (Kết thúc)', tag: '{/than_nhan}', category: 'relatives', colNum: 'Thân nhân' }
+  );
+
+  // 4. Hệ thống & Ngày giờ
+  tags.push(
+    { label: 'Ngày hiện tại (DD)', tag: '{ngay}', category: 'system', colNum: 'HT' },
+    { label: 'Tháng hiện tại (MM)', tag: '{thang}', category: 'system', colNum: 'HT' },
+    { label: 'Năm hiện tại (YYYY)', tag: '{nam}', category: 'system', colNum: 'HT' },
+    { label: 'Giờ xuất file (HH)', tag: '{gio}', category: 'system', colNum: 'HT' },
+    { label: 'Phút xuất file (mm)', tag: '{phut}', category: 'system', colNum: 'HT' },
+    { label: 'Thời gian xuất (HH:mm)', tag: '{thoi_gian_xuat}', category: 'system', colNum: 'HT' },
+    { label: 'Ngày giờ xuất đầy đủ (DD/MM/YYYY HH:mm)', tag: '{ngay_gio_xuat}', category: 'system', colNum: 'HT' },
+    { label: 'Họ tên Người xuất file', tag: '{ho_ten_nguoi_xuat}', category: 'system', colNum: 'HT' },
+    { label: 'Số thứ tự cán bộ', tag: '{stt}', category: 'system', colNum: 'HT' }
+  );
+
+  return tags;
+});
+
+const personnelTagsCount = computed(() => {
+  return allAvailableTags.value.filter((t) => t.category === 'personnel').length;
+});
+
+const relativeTagsCount = computed(() => {
+  return allAvailableTags.value.filter((t) => t.category === 'relatives').length;
+});
+
+const systemTagsCount = computed(() => {
+  return allAvailableTags.value.filter((t) => t.category === 'system').length;
+});
+
+const filteredTags = computed(() => {
+  const q = (tagSearch.value || '').toLowerCase().trim();
+  const cat = selectedCategory.value;
+
+  return allAvailableTags.value.filter((item) => {
+    let matchCat = false;
+    if (cat === 'all') matchCat = true;
+    else matchCat = item.category === cat;
+
+    const matchQ =
+      !q ||
+      item.label.toLowerCase().includes(q) ||
+      item.tag.toLowerCase().includes(q) ||
+      (item.colNum && String(item.colNum).toLowerCase().includes(q));
+
+    return matchCat && matchQ;
+  });
+});
+
+const getCategoryLabel = (cat) => {
+  switch (cat) {
+    case 'personnel':
+      return 'Cán bộ';
+    case 'relatives':
+      return 'Thân nhân';
+    case 'trips':
+      return 'Chuyến đi';
+    case 'system':
+      return 'Hệ thống';
+    default:
+      return 'Khác';
+  }
+};
+
+const copyTag = (tag) => {
+  navigator.clipboard.writeText(tag);
+  copiedTag.value = tag;
+  setTimeout(() => {
+    if (copiedTag.value === tag) copiedTag.value = '';
+  }, 2000);
+};
+
+const downloadSampleTemplate = async () => {
+  try {
+    const blob = await createSampleDocxTemplateBlob();
+    saveAs(blob, 'Mau_Word_Trich_Ngang_Chuan.docx');
+  } catch (e) {
+    alert('Lỗi tạo mẫu Word: ' + e.message);
+  }
+};
+
 const getColLabelBadge = (groupIndex, columnIndex) => {
   const groups = currentGroups.value;
   let count = 0;
