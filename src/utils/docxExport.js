@@ -115,40 +115,50 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
         }
 
         // Tự động phân rã trường Hộp kiểm + Nhập Text (checkbox_text) và Hộp kiểm (checkbox)
-        if (str.includes(':') || str.includes(';') || str.includes(',')) {
-          const parts = str.split(/[,;]/);
-          parts.forEach((p) => {
-            const trimmed = p.trim();
-            if (trimmed) {
-              const colon = trimmed.indexOf(':');
-              if (colon !== -1) {
-                const optName = trimmed.substring(0, colon).trim();
-                const optDetail = trimmed.substring(colon + 1).trim();
-                const optSlug = generateSlug(optName);
-                if (optSlug) {
-                  data[`label_${key}_${optSlug}`] = optName;
-                  data[`name_${key}_${optSlug}`] = optName;
-                  data[`${key}_${optSlug}`] = optDetail || optName;
-                  data[`detail_${key}_${optSlug}`] = optDetail;
-                  data[`full_${key}_${optSlug}`] = optDetail ? `${optName}: ${optDetail}` : optName;
-                  data[`is_${key}_${optSlug}`] = 'X';
-                  data[`check_${key}_${optSlug}`] = '☑';
-                }
-              } else {
-                const optSlug = generateSlug(trimmed);
-                if (optSlug) {
-                  data[`label_${key}_${optSlug}`] = trimmed;
-                  data[`name_${key}_${optSlug}`] = trimmed;
-                  data[`${key}_${optSlug}`] = trimmed;
-                  data[`detail_${key}_${optSlug}`] = '';
-                  data[`full_${key}_${optSlug}`] = trimmed;
-                  data[`is_${key}_${optSlug}`] = 'X';
-                  data[`check_${key}_${optSlug}`] = '☑';
-                }
+        const parts = str.split(/[,;]/);
+        const allLabels = [];
+        const allDetails = [];
+
+        parts.forEach((p) => {
+          const trimmed = p.trim();
+          if (trimmed) {
+            const colon = trimmed.indexOf(':');
+            if (colon !== -1) {
+              const optName = trimmed.substring(0, colon).trim();
+              const optDetail = trimmed.substring(colon + 1).trim();
+              const optSlug = generateSlug(optName);
+              if (optName) allLabels.push(optName);
+              if (optDetail) allDetails.push(optDetail);
+              if (optSlug) {
+                data[`label_${key}_${optSlug}`] = optName;
+                data[`name_${key}_${optSlug}`] = optName;
+                data[`${key}_${optSlug}`] = optDetail || optName;
+                data[`detail_${key}_${optSlug}`] = optDetail;
+                data[`full_${key}_${optSlug}`] = optDetail ? `${optName}: ${optDetail}` : optName;
+                data[`is_${key}_${optSlug}`] = 'X';
+                data[`check_${key}_${optSlug}`] = '☑';
+              }
+            } else {
+              const optSlug = generateSlug(trimmed);
+              allLabels.push(trimmed);
+              if (optSlug) {
+                data[`label_${key}_${optSlug}`] = trimmed;
+                data[`name_${key}_${optSlug}`] = trimmed;
+                data[`${key}_${optSlug}`] = trimmed;
+                data[`detail_${key}_${optSlug}`] = '';
+                data[`full_${key}_${optSlug}`] = trimmed;
+                data[`is_${key}_${optSlug}`] = 'X';
+                data[`check_${key}_${optSlug}`] = '☑';
               }
             }
-          });
-        }
+          }
+        });
+
+        // Thẻ CHUNG cho toàn bộ trường (Ví dụ {label_purpose}, {detail_purpose})
+        data[`label_${key}`] = allLabels.join(', ');
+        data[`name_${key}`] = allLabels.join(', ');
+        data[`detail_${key}`] = allDetails.join('; ');
+        data[`content_${key}`] = allDetails.join('; ');
       }
     }
   });

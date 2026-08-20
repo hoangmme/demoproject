@@ -514,42 +514,52 @@ const allAvailableTags = computed(() => {
     } else if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
       // 1. Thẻ chung toàn bộ
       tags.push({
-        label: `${col.label} (Gộp toàn bộ)`,
+        label: `${col.label} (Đầy đủ cả tên + chi tiết)`,
         tag: `{${col.id}}`,
         category: 'personnel',
         colNum,
       });
 
-      // 2. Thẻ phân rã từng mục
+      // 2. Thẻ chung: Tên lựa chọn đã tích (VD: ra chữ "Công tác")
+      tags.push({
+        label: `${col.label} (Tên lựa chọn đã tích)`,
+        tag: `{label_${col.id}}`,
+        category: 'personnel',
+        colNum,
+      });
+
+      // 3. Thẻ chung: Nội dung chi tiết text đã nhập (VD: ra chữ "Đi hội thảo...")
+      if (col.format === 'checkbox_text') {
+        tags.push({
+          label: `${col.label} (Nội dung chi tiết đã nhập)`,
+          tag: `{detail_${col.id}}`,
+          category: 'personnel',
+          colNum,
+        });
+      }
+
+      // 4. Thẻ phân rã từng mục cụ thể
       const subOpts = String(col.options).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
       subOpts.forEach((opt) => {
         const slug = generateSlug(opt);
         if (slug) {
-          // Thẻ 1: In ra đúng tên chữ của nhãn (VD: "Ngân sách") khi được chọn
-          tags.push({
-            label: `${col.label} -> [Tên "${opt}"]`,
-            tag: `{label_${col.id}_${slug}}`,
-            category: 'personnel',
-            colNum,
-          });
-
-          // Thẻ 2: In ra text chi tiết gõ vào (nếu là dạng checkbox_text)
-          if (col.format === 'checkbox_text') {
-            tags.push({
-              label: `${col.label} -> [Nội dung text ${opt}]`,
-              tag: `{${col.id}_${slug}}`,
-              category: 'personnel',
-              colNum,
-            });
-          }
-
-          // Thẻ 3: Đánh dấu tích X
+          // Thẻ Đánh dấu tích X
           tags.push({
             label: `${col.label} -> [Tích X ${opt}]`,
             tag: `{is_${col.id}_${slug}}`,
             category: 'personnel',
             colNum,
           });
+
+          // Thẻ Text chi tiết riêng của mục
+          if (col.format === 'checkbox_text') {
+            tags.push({
+              label: `${col.label} -> [Text riêng ${opt}]`,
+              tag: `{${col.id}_${slug}}`,
+              category: 'personnel',
+              colNum,
+            });
+          }
         }
       });
     } else {
@@ -608,40 +618,47 @@ const allAvailableTags = computed(() => {
     const colNum = rMap[col.id] || '';
     if ((col.format === 'checkbox_text' || col.format === 'checkbox') && col.options) {
       tags.push({
-        label: `${col.label} (Gộp toàn bộ)`,
+        label: `${col.label} (Đầy đủ cả tên + chi tiết)`,
         tag: `{${col.id}}`,
         category: 'relatives',
         colNum,
       });
+
+      tags.push({
+        label: `${col.label} (Tên lựa chọn đã tích)`,
+        tag: `{label_${col.id}}`,
+        category: 'relatives',
+        colNum,
+      });
+
+      if (col.format === 'checkbox_text') {
+        tags.push({
+          label: `${col.label} (Nội dung chi tiết đã nhập)`,
+          tag: `{detail_${col.id}}`,
+          category: 'relatives',
+          colNum,
+        });
+      }
+
       const subOpts = String(col.options).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
       subOpts.forEach((opt) => {
         const slug = generateSlug(opt);
         if (slug) {
-          // Thẻ 1: In ra đúng tên chữ của nhãn (VD: "Ngân sách") khi được chọn
-          tags.push({
-            label: `${col.label} -> [Tên "${opt}"]`,
-            tag: `{label_${col.id}_${slug}}`,
-            category: 'relatives',
-            colNum,
-          });
-
-          // Thẻ 2: In ra text chi tiết gõ vào (nếu là dạng checkbox_text)
-          if (col.format === 'checkbox_text') {
-            tags.push({
-              label: `${col.label} -> [Nội dung text ${opt}]`,
-              tag: `{${col.id}_${slug}}`,
-              category: 'relatives',
-              colNum,
-            });
-          }
-
-          // Thẻ 3: Đánh dấu tích X
           tags.push({
             label: `${col.label} -> [Tích X ${opt}]`,
             tag: `{is_${col.id}_${slug}}`,
             category: 'relatives',
             colNum,
           });
+
+          if (col.format === 'checkbox_text') {
+            tags.push({
+              label: `${col.label} -> [Text riêng ${opt}]`,
+              tag: `{${col.id}_${slug}}`,
+              category: 'relatives',
+              colNum,
+            });
+          }
         }
       });
     } else {
