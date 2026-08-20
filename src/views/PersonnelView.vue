@@ -594,7 +594,7 @@ import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { formatPersonnelCode } from '@/utils/formatters';
+import { formatPersonnelCode, formatDate, formatExcelDate } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
@@ -609,21 +609,6 @@ import {
 import { createPersonnel, updatePersonnel } from '@/api/personnel';
 import { logActivity } from '@/api/audit';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
-
-function formatExcelDate(val) {
-  if (!val) return '';
-  if (typeof val === 'number' || (!isNaN(val) && Number(val) > 1000 && !String(val).includes('/') && !String(val).includes('-'))) {
-    const num = Number(val);
-    if (num > 10000 && num < 100000) {
-      const date = new Date(Math.round((num - 25569) * 86400 * 1000));
-      const d = String(date.getUTCDate()).padStart(2, '0');
-      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const y = date.getUTCFullYear();
-      return `${d}/${m}/${y}`;
-    }
-  }
-  return String(val).trim();
-}
 
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
@@ -816,12 +801,31 @@ const getDisplayValue = (person, colId) => {
   }
   if (val === undefined || val === null || val === '') return '-';
   if (typeof val === 'object') {
+    if (val instanceof Date) {
+      return formatDate(val);
+    }
     if (Array.isArray(val)) {
       return val.map((x) => (typeof x === 'object' ? x.name || JSON.stringify(x) : x)).join(', ') || '-';
     }
     return val.name || JSON.stringify(val) || '-';
   }
-  return String(val);
+
+  const str = String(val).trim();
+  const cLower = String(colId || '').toLowerCase();
+  if (
+    cLower.includes('birth') ||
+    cLower.includes('date') ||
+    cLower.includes('ngay') ||
+    cLower.includes('nam_sinh') ||
+    cLower.includes('departure') ||
+    cLower.includes('arrival') ||
+    str.includes('GMT') ||
+    str.includes('T00:') ||
+    /^\d{4}-\d{2}-\d{2}/.test(str)
+  ) {
+    return formatDate(str);
+  }
+  return str;
 };
 
 const onColumnsChange = () => {

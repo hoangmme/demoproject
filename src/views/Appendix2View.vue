@@ -55,6 +55,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
+import { formatDate } from '@/utils/formatters';
 import { exportToExcel } from '@/utils/excel';
 
 const personnelStore = usePersonnelStore();
@@ -77,7 +78,7 @@ const relativeRows = computed(() => {
           parentDepartment: personnelStore.getDepartmentName(p.departmentId),
           relationshipName: r.relationshipName || '-',
           relativeName: r.relativeName || '-',
-          birthYear: r.birthYear || '-',
+          birthYear: formatDate(r.birthYear) || '-',
           countryName: r.countryName || '-',
           timeAbroad: r.timeAbroad || '-',
           unitAbroad: r.unitAbroad || '-',

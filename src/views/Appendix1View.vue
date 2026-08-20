@@ -56,7 +56,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
-import { formatPersonnelCode } from '@/utils/formatters';
+import { formatPersonnelCode, formatDate } from '@/utils/formatters';
 import { exportToExcel } from '@/utils/excel';
 
 const personnelStore = usePersonnelStore();
@@ -81,8 +81,8 @@ const tripRows = computed(() => {
           position: p.position || '-',
           decisionNumber: t.decisionNumber || '-',
           countryName: t.countryName || '-',
-          departureDate: t.departureDate || '-',
-          arrivalDate: t.arrivalDate || '-',
+          departureDate: formatDate(t.departureDate) || '-',
+          arrivalDate: formatDate(t.arrivalDate) || '-',
           purpose: t.purpose || '-',
           fundingName: t.fundingName || '-',
         });
