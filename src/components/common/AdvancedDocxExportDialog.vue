@@ -84,19 +84,9 @@
 
       <!-- 3. Chọn Tệp Mẫu Word (.docx) -->
       <div class="export-box">
-        <div class="box-title" style="display: flex; justify-content: space-between; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-file-word" style="color: #2563eb;"></i>
-            <span>3. Tệp Mẫu DOCX sử dụng</span>
-          </div>
-          <button
-            type="button"
-            class="btn-link"
-            @click="downloadSampleTemplate"
-            title="Tải tệp Word mẫu đã chọn để xem hoặc chỉnh sửa"
-          >
-            <i class="pi pi-download"></i> Tải mẫu hiện tại (.docx)
-          </button>
+        <div class="box-title" style="display: flex; align-items: center; gap: 6px;">
+          <i class="pi pi-file-word" style="color: #2563eb;"></i>
+          <span>3. Tệp Mẫu DOCX sử dụng</span>
         </div>
 
         <!-- Tabs chọn nguồn mẫu -->
@@ -264,39 +254,25 @@
       </div>
 
       <!-- FOOTER -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; padding-top: 0.6rem; border-top: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 0.6rem; padding-top: 0.8rem; border-top: 1px solid #e2e8f0;">
         <Button
           label="Đóng"
           severity="secondary"
           size="small"
-          text
+          outlined
           @click="visible = false"
         />
 
-        <div style="display: flex; gap: 8px;">
-          <!-- Nút Download mẫu để xem trước hoặc cấu hình tag -->
-          <Button
-            label="Tải file Mẫu (.docx)"
-            icon="pi pi-file-word"
-            severity="info"
-            outlined
-            size="small"
-            @click="downloadSampleTemplate"
-            title="Tải tệp mẫu này về máy để xem trước hoặc chỉnh sửa"
-          />
-
-          <!-- Nút Tải Hồ sơ Chính -->
-          <Button
-            :label="getDownloadButtonLabel()"
-            :icon="outputFormat === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-download'"
-            severity="primary"
-            size="small"
-            :loading="exporting"
-            @click="handleExport"
-            style="font-weight: 700; padding: 6px 14px;"
-            :disabled="!effectiveTemplateBuffer || exporting"
-          />
-        </div>
+        <Button
+          :label="getDownloadButtonLabel()"
+          :icon="outputFormat === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-download'"
+          severity="primary"
+          size="small"
+          :loading="exporting"
+          @click="handleExport"
+          style="font-weight: 700; padding: 6px 16px;"
+          :disabled="!effectiveTemplateBuffer || exporting"
+        />
       </div>
     </div>
   </Dialog>
