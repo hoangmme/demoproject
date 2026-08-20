@@ -78,9 +78,9 @@
         <div style="display: flex; gap: 8px;">
           <Button
             v-if="isEdit"
-            label="Xuất Word (.docx)"
-            icon="pi pi-file-word"
-            severity="help"
+            label="Xuất PDF / Word"
+            icon="pi pi-file-pdf"
+            severity="secondary"
             outlined
             size="small"
             @click="isDocxExportOpen = true"

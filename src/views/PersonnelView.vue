@@ -92,15 +92,14 @@
             style="font-size: 0.8rem;"
           />
 
-          <!-- Advanced Word (.docx) Export Button -->
+          <!-- Advanced PDF / Word Export Button -->
           <Button
-            :label="selectedPersonnel.length > 0 ? `Xuất Word (${selectedPersonnel.length})` : 'Xuất Word (.docx)'"
-            icon="pi pi-file-word"
-            severity="help"
+            :label="selectedPersonnel.length > 0 ? `Xuất PDF (${selectedPersonnel.length} đã chọn)` : 'Xuất PDF / Word'"
+            icon="pi pi-file-pdf"
+            severity="secondary"
             outlined
             size="small"
             @click="openAdvancedDocxExport(null)"
-            v-tooltip.top="'Xuất file Word theo mẫu DOCX tùy biến'"
             style="font-size: 0.8rem;"
           />
 
@@ -192,15 +191,6 @@
                 outlined
                 severity="info"
                 @click.stop="openEditDialog(data)"
-              />
-              <Button
-                icon="pi pi-file-word"
-                size="small"
-                text
-                severity="help"
-                v-tooltip.top="'Xuất file Word cán bộ này'"
-                @click.stop="openAdvancedDocxExport(data)"
-                style="padding: 4px;"
               />
               <Button
                 v-if="authStore.isAdmin"

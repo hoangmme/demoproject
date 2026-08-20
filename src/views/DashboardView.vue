@@ -644,9 +644,9 @@
               @click="exportDrilldownExcel"
             />
             <Button
-              icon="pi pi-file-word"
-              :label="selectedDrilldownKeys.length > 0 ? `Xuất Word (${selectedDrilldownKeys.length})` : 'Xuất Word (.docx)'"
-              severity="help"
+              icon="pi pi-file-pdf"
+              :label="selectedDrilldownKeys.length > 0 ? `Xuất PDF (${selectedDrilldownKeys.length})` : 'Xuất PDF / Word'"
+              severity="secondary"
               size="small"
               outlined
               @click="openDrilldownDocxExport"
