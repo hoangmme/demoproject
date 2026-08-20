@@ -136,12 +136,37 @@ export const usePersonnelStore = defineStore('personnel', {
         const rawTrips = a1Res.data?.data || [];
         const rawRelatives = a2Res.data?.data || [];
 
-        this.tripsList = rawTrips.filter((x) => x.isDeleted !== 1);
+        this.tripsList = rawTrips.filter((x) => x.isDeleted !== 1).map((t) => {
+          let custom = {};
+          if (t.custom_data) {
+            try {
+              custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+            } catch (e) {
+              custom = {};
+            }
+          }
+          return {
+            ...custom,
+            ...t,
+            custom_data: custom,
+          };
+        });
+
         this.relativesList = rawRelatives.filter((x) => x.isDeleted !== 1).map((r, idx) => {
           const assignedCode = r.code && r.code.startsWith('TN-') ? r.code : `TN-${String(idx + 1).padStart(5, '0')}`;
+          let custom = {};
+          if (r.custom_data) {
+            try {
+              custom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
+            } catch (e) {
+              custom = {};
+            }
+          }
           return {
+            ...custom,
             ...r,
             code: assignedCode,
+            custom_data: custom,
           };
         });
 

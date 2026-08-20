@@ -1413,11 +1413,6 @@ const getRowFieldValue = (row, colId) => {
       }
     } catch (e) {}
   }
-  if (colId === 'content' || colId === 'countryName' || colId === 'country') {
-    if (row.countryName && String(row.countryName).trim() !== '') return String(row.countryName).trim();
-    if (row.country && String(row.country).trim() !== '') return String(row.country).trim();
-    if (row.content && String(row.content).trim() !== '') return String(row.content).trim();
-  }
   return '';
 };
 
