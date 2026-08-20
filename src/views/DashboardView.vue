@@ -113,9 +113,16 @@
           <span class="stat-label">Tổng số Cán bộ</span>
           <i class="pi pi-users" style="color: #2e7d32; font-size: 1.1rem;"></i>
         </div>
-        <div class="stat-value" style="color: #1f2937;">{{ stats.totalPersonnel }}</div>
+        <div class="stat-value" style="color: #1f2937; display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;">
+          <span>{{ stats.totalPersonnel }}</span>
+          <span style="color: #94a3b8; font-size: 1.3rem; font-weight: 400; margin: 0 1px;">/</span>
+          <span style="color: #16a34a; font-weight: 800;">{{ stats.totalAbroadPersonnel }}</span>
+          <span style="font-size: 0.82rem; font-weight: 600; color: #64748b; margin-left: 4px;">cán bộ</span>
+        </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-          <span class="stat-sub" style="color: #2e7d32;">Hồ sơ trong hệ thống</span>
+          <span class="stat-sub" style="color: #2e7d32;">
+            Hồ sơ trong HT / <strong>{{ stats.totalAbroadPersonnel }}</strong> từng đi nước ngoài
+          </span>
           <span class="view-more-tag">Xem danh sách <i class="pi pi-arrow-right"></i></span>
         </div>
       </div>
@@ -2192,11 +2199,52 @@ const stats = computed(() => {
       return b.count - a.count;
     });
 
+  // 5. Count unique personnel who have traveled abroad
+  const abroadPersonnelSet = new Set();
+  const abroadPersonnelList = [];
+
+  pList.forEach((p) => {
+    let hasAbroad = false;
+    if (Array.isArray(p.trips) && p.trips.length > 0) {
+      hasAbroad = p.trips.some((t) => {
+        const c = getTripValue(t, colConfig.value.country) || t.countryName || t.country;
+        return c && String(c).trim() !== '' && String(c).trim() !== '-' && String(c).trim() !== 'Chưa rõ';
+      });
+    }
+    if (hasAbroad) {
+      const key = String(p.id || p.code || p.name);
+      if (!abroadPersonnelSet.has(key)) {
+        abroadPersonnelSet.add(key);
+        abroadPersonnelList.push(p);
+      }
+    }
+  });
+
+  filteredTrips.forEach((t) => {
+    const c = getTripValue(t, colConfig.value.country) || t.countryName;
+    if (c && String(c).trim() !== '' && String(c).trim() !== '-' && String(c).trim() !== 'Chưa rõ') {
+      const key = String(t.personnelId || t.personnelCode || (t.personnel && (t.personnel.id || t.personnel.code)) || t.personnelName || '');
+      if (key && !abroadPersonnelSet.has(key)) {
+        abroadPersonnelSet.add(key);
+        const matched = pList.find((p) => String(p.id) === key || String(p.code) === key);
+        if (matched) {
+          abroadPersonnelList.push(matched);
+        } else {
+          abroadPersonnelList.push(t.personnel || { name: t.personnelName, trips: [t] });
+        }
+      }
+    }
+  });
+
+  const totalAbroadPersonnel = abroadPersonnelSet.size;
+
   const maxCountry = countryList.length > 0 ? countryList[0].count : 1;
   const maxFunding = fundingList.length > 0 ? fundingList[0].count : 1;
 
   return {
     totalPersonnel: pList.length,
+    totalAbroadPersonnel,
+    abroadPersonnelList,
     totalRelatives,
     filteredTrips,
     missingDecisionTrips,
