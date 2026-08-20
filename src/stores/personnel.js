@@ -24,6 +24,11 @@ export const usePersonnelStore = defineStore('personnel', {
     visibleRelativeColumns: ['parentName', 'relationshipName', 'relativeName', 'birthYear', 'currentAddress', 'occupation', 'countryName'],
     importMappingPersonnel: [],
     importMappingRelative: [],
+    systemKeyConfig: {
+      personnelKeyField: 'cccdparent',
+      relativeParentKeyField: 'cccdparent',
+      relativeKeyField: 'cccdthannhan',
+    },
   }),
   getters: {
     departmentMap: (state) => {
@@ -313,6 +318,24 @@ export const usePersonnelStore = defineStore('personnel', {
       let rMap = await getAppSettings('mapping_config_relative', null);
       if (!rMap || rMap.length === 0) rMap = await getAppSettings('importMappingRelative', []);
       this.importMappingRelative = rMap || [];
+
+      let keyCfg = await getAppSettings('system_key_config', null);
+      if (keyCfg && typeof keyCfg === 'object') {
+        this.systemKeyConfig = {
+          personnelKeyField: keyCfg.personnelKeyField || 'cccdparent',
+          relativeParentKeyField: keyCfg.relativeParentKeyField || 'cccdparent',
+          relativeKeyField: keyCfg.relativeKeyField || 'cccdthannhan',
+        };
+      }
+    },
+    getPersonnelKeyField() {
+      return this.systemKeyConfig?.personnelKeyField || 'cccdparent';
+    },
+    getRelativeParentKeyField() {
+      return this.systemKeyConfig?.relativeParentKeyField || 'cccdparent';
+    },
+    getRelativeKeyField() {
+      return this.systemKeyConfig?.relativeKeyField || 'cccdthannhan';
     },
     async savePerson(formData) {
       this.loading = true;

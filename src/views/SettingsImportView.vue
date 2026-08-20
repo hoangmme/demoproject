@@ -66,6 +66,63 @@
 
     <!-- Main Content -->
     <div class="app-card" style="padding: 1.25rem;">
+      <!-- Khung Cấu hình Khóa Định Danh & Khóa Liên Kết -->
+      <div style="margin-bottom: 1.25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;">
+        <!-- Khi ở Tab Cán bộ -->
+        <div v-if="activeTab === 'personnel'" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
+              <i class="pi pi-key" style="color: #dc2626; font-size: 1.1rem;"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.86rem; font-weight: 700; color: #1e293b;">
+                Cột Khóa Định danh Duy nhất (Primary Unique Key) của Cán bộ:
+              </div>
+              <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">
+                Dùng để định danh chống trùng lặp cán bộ và làm khóa móc nối liên kết với thân nhân.
+              </div>
+            </div>
+          </div>
+
+          <div style="min-width: 280px;">
+            <select v-model="personnelKeyField" class="custom-key-select">
+              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
+                {{ col.label }} (mã: {{ col.id }})
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Khi ở Tab Thân nhân -->
+        <div v-else style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="pi pi-link" style="color: #0284c7; font-size: 0.95rem;"></i>
+              <strong style="color: #1e293b; font-size: 0.82rem;">1. Cột Liên kết Cán bộ liên quan (Parent Link Key):</strong>
+            </div>
+            <select v-model="relativeParentKeyField" class="custom-key-select">
+              <option v-for="col in availableRelativeCols" :key="col.id" :value="col.id">
+                {{ col.label }} (mã: {{ col.id }})
+              </option>
+            </select>
+            <span style="font-size: 0.7rem; color: #64748b;">(Cột chứa số CCCD / Mã định danh của Cán bộ cha/mẹ mà thân nhân trực thuộc)</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="pi pi-id-card" style="color: #16a34a; font-size: 0.95rem;"></i>
+              <strong style="color: #1e293b; font-size: 0.82rem;">2. Cột Định danh riêng Thân nhân (Relative Unique Key):</strong>
+            </div>
+            <select v-model="relativeKeyField" class="custom-key-select">
+              <option v-for="col in availableRelativeCols" :key="col.id" :value="col.id">
+                {{ col.label }} (mã: {{ col.id }})
+              </option>
+            </select>
+            <span style="font-size: 0.7rem; color: #64748b;">(Cột chứa số CCCD / Mã định danh riêng của từng Thân nhân)</span>
+          </div>
+        </div>
+      </div>
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <span style="font-size: 0.95rem; font-weight: 700; color: #1f2937;">
           Danh sách Nhóm & Cột dữ liệu ({{ activeTab === 'personnel' ? 'Hồ sơ Cán bộ' : 'Hồ sơ Thân nhân' }})
@@ -81,7 +138,7 @@
       </div>
 
       <!-- Columns List -->
-      <div style="max-height: 65vh; overflow-y: auto; padding-right: 6px;">
+      <div style="max-height: 60vh; overflow-y: auto; padding-right: 6px;">
         <div v-for="(group, gIdx) in currentGroups" :key="gIdx" style="margin-bottom: 1.5rem; border: 1px solid #e5e7eb; border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
           <!-- Group Header -->
           <div style="padding: 0.75rem 1rem; background: #f8fafc; border-bottom: 1px solid #e5e7eb; border-top-left-radius: 12px; border-top-right-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -262,6 +319,34 @@ const saving = ref(false);
 const personnelGroups = ref([]);
 const relativeGroups = ref([]);
 
+const personnelKeyField = ref('cccdparent');
+const relativeParentKeyField = ref('cccdparent');
+const relativeKeyField = ref('cccdthannhan');
+
+const availablePersonnelCols = computed(() => {
+  const cols = [];
+  (personnelGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') {
+        cols.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+  return cols;
+});
+
+const availableRelativeCols = computed(() => {
+  const cols = [];
+  (relativeGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') {
+        cols.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+  return cols;
+});
+
 const formatOptions = [
   { label: 'Văn bản (Text)', value: 'text' },
   { label: 'Số (Number)', value: 'number' },
@@ -321,6 +406,9 @@ onMounted(async () => {
   await personnelStore.loadSettings();
   personnelGroups.value = normalizeGroupColumns(JSON.parse(JSON.stringify(personnelStore.importMappingPersonnel || [])));
   relativeGroups.value = normalizeGroupColumns(JSON.parse(JSON.stringify(personnelStore.importMappingRelative || [])));
+  personnelKeyField.value = personnelStore.getPersonnelKeyField();
+  relativeParentKeyField.value = personnelStore.getRelativeParentKeyField();
+  relativeKeyField.value = personnelStore.getRelativeKeyField();
 });
 
 const currentGroups = computed(() => {
@@ -423,6 +511,14 @@ const removeColumn = (gIdx, cIdx) => {
 const saveConfig = async () => {
   saving.value = true;
   try {
+    const keyConfig = {
+      personnelKeyField: personnelKeyField.value,
+      relativeParentKeyField: relativeParentKeyField.value,
+      relativeKeyField: relativeKeyField.value,
+    };
+    await saveAppSettings('system_key_config', keyConfig);
+    personnelStore.systemKeyConfig = keyConfig;
+
     if (activeTab.value === 'personnel') {
       await saveAppSettings('mapping_config_personnel', personnelGroups.value);
       await saveAppSettings('importMappingPersonnel', personnelGroups.value);
@@ -432,7 +528,7 @@ const saveConfig = async () => {
       await saveAppSettings('importMappingRelative', relativeGroups.value);
       personnelStore.importMappingRelative = relativeGroups.value;
     }
-    alert('Đã lưu cấu hình cột thành công!');
+    alert('Đã lưu cấu hình cột và khóa liên kết thành công!');
   } catch (err) {
     alert('Lỗi lưu cấu hình: ' + (err.message || err));
   } finally {
@@ -442,6 +538,25 @@ const saveConfig = async () => {
 </script>
 
 <style scoped>
+.custom-key-select {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b;
+  background-color: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.custom-key-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
 .btn-reorder {
   display: inline-flex;
   align-items: center;
