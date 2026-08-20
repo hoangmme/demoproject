@@ -71,6 +71,17 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     ket_qua_tham_tra: person.tcctResult || person.kqThamTra || cd.tcctResult || cd.kqThamTra || '',
   };
 
+  const generateSlug = (str) => {
+    if (!str) return '';
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  };
+
   // 5. Làm phẳng toàn bộ custom_data & các cột tùy chỉnh
   Object.entries(cd).forEach(([key, val]) => {
     if (val !== undefined && val !== null) {
@@ -90,6 +101,34 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
           data[key] = formatDate(str);
         } else {
           data[key] = str;
+        }
+
+        // Tự động phân rã trường Hộp kiểm + Nhập Text (checkbox_text)
+        if (str.includes(':') || str.includes(';')) {
+          const parts = str.split(';');
+          parts.forEach((p) => {
+            const trimmed = p.trim();
+            if (trimmed) {
+              const colon = trimmed.indexOf(':');
+              if (colon !== -1) {
+                const optName = trimmed.substring(0, colon).trim();
+                const optDetail = trimmed.substring(colon + 1).trim();
+                const optSlug = generateSlug(optName);
+                if (optSlug) {
+                  data[`${key}_${optSlug}`] = optDetail;
+                  data[`is_${key}_${optSlug}`] = 'X';
+                  data[`check_${key}_${optSlug}`] = '☑';
+                }
+              } else {
+                const optSlug = generateSlug(trimmed);
+                if (optSlug) {
+                  data[`${key}_${optSlug}`] = trimmed;
+                  data[`is_${key}_${optSlug}`] = 'X';
+                  data[`check_${key}_${optSlug}`] = '☑';
+                }
+              }
+            }
+          });
         }
       }
     }

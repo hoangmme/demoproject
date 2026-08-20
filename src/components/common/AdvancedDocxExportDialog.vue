@@ -491,6 +491,17 @@ const allAvailableTags = computed(() => {
     ? personnelStore.allAvailablePersonnelColumns
     : (personnelStore.allAvailableColumns || []);
 
+  const generateSlug = (str) => {
+    if (!str) return '';
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  };
+
   personnelCols.forEach((col) => {
     const colNum = pMap[col.id] || '';
     if (col.format === 'table_loop' || col.format === 'table_2col') {
@@ -499,6 +510,34 @@ const allAvailableTags = computed(() => {
         tag: `{#${col.id}}...{col0}, {col1}...{/${col.id}}`,
         category: 'personnel',
         colNum,
+      });
+    } else if (col.format === 'checkbox_text' && col.options) {
+      // 1. Thẻ chung toàn bộ
+      tags.push({
+        label: `${col.label} (Gộp toàn bộ)`,
+        tag: `{${col.id}}`,
+        category: 'personnel',
+        colNum,
+      });
+
+      // 2. Thẻ phân rã từng mục
+      const subOpts = String(col.options).split(',').map((s) => s.trim()).filter(Boolean);
+      subOpts.forEach((opt) => {
+        const slug = generateSlug(opt);
+        if (slug) {
+          tags.push({
+            label: `${col.label} -> [Text ${opt}]`,
+            tag: `{${col.id}_${slug}}`,
+            category: 'personnel',
+            colNum,
+          });
+          tags.push({
+            label: `${col.label} -> [Dấu X ${opt}]`,
+            tag: `{is_${col.id}_${slug}}`,
+            category: 'personnel',
+            colNum,
+          });
+        }
       });
     } else {
       tags.push({
