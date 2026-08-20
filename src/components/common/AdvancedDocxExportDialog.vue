@@ -154,8 +154,8 @@
           <span style="font-size: 0.72rem; color: #64748b;">(Bấm để copy dán vào Word)</span>
         </div>
 
-        <!-- Cheat-sheet Category Tabs -->
-        <div style="display: flex; gap: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px; flex-wrap: wrap;">
+        <!-- Cheat-sheet Category Tabs (Khớp cấu trúc Cấu hình Cột) -->
+        <div style="display: flex; gap: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap;">
           <button
             type="button"
             class="cheat-tab-btn"
@@ -175,18 +175,10 @@
           <button
             type="button"
             class="cheat-tab-btn"
-            :class="{ 'cheat-tab-active': selectedCategory === 'trips' }"
-            @click="selectedCategory = 'trips'"
-          >
-            <i class="pi pi-send"></i> Chuyến đi ({{ tripTagsCount }})
-          </button>
-          <button
-            type="button"
-            class="cheat-tab-btn"
             :class="{ 'cheat-tab-active': selectedCategory === 'system' }"
             @click="selectedCategory = 'system'"
           >
-            <i class="pi pi-cog"></i> Hệ thống ({{ systemTagsCount }})
+            <i class="pi pi-cog"></i> Thẻ Hệ thống bổ trợ ({{ systemTagsCount }} thẻ)
           </button>
           <button
             type="button"
@@ -499,12 +491,8 @@ const relativeTagsCount = computed(() => {
   return allAvailableTags.value.filter((t) => t.category === 'relatives').length;
 });
 
-const tripTagsCount = computed(() => {
-  return allAvailableTags.value.filter((t) => t.category === 'trips').length;
-});
-
 const systemTagsCount = computed(() => {
-  return allAvailableTags.value.filter((t) => t.category === 'system').length;
+  return allAvailableTags.value.filter((t) => t.category === 'system' || t.category === 'trips').length;
 });
 
 const filteredTags = computed(() => {
@@ -515,6 +503,8 @@ const filteredTags = computed(() => {
     let matchCat = false;
     if (cat === 'all') matchCat = true;
     else if (cat === 'personnel') matchCat = item.category === 'personnel' || item.category === 'custom_tables';
+    else if (cat === 'relatives') matchCat = item.category === 'relatives';
+    else if (cat === 'system') matchCat = item.category === 'system' || item.category === 'trips';
     else matchCat = item.category === cat;
 
     const matchQ =
