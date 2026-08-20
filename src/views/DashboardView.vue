@@ -1135,7 +1135,7 @@ import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
 import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import { usePersonnelStore } from '@/stores/personnel';
-import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel } from '@/utils/excel';
+import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
