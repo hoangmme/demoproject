@@ -415,34 +415,43 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.style.position = 'fixed';
   container.style.top = '0';
   container.style.left = '0';
-  container.style.width = '210mm';
+  container.style.width = '794px';
   container.style.margin = '0';
   container.style.padding = '0';
   container.style.backgroundColor = '#ffffff';
   container.style.color = '#000000';
-  container.style.zIndex = '9999999';
+  container.style.zIndex = '99999999';
   container.style.pointerEvents = 'none';
-  container.style.boxSizing = 'border-box';
+  container.style.overflow = 'visible';
 
-  const styleEl = document.createElement('style');
-  styleEl.innerHTML = `
-    #docx-pdf-sandbox {
-      background: #ffffff !important;
-    }
-    #docx-pdf-sandbox section.docx {
+  // Inject CSS trực tiếp vào <head> để đè triệt để style nội bộ của docx-preview
+  const globalStyle = document.createElement('style');
+  globalStyle.id = 'docx-pdf-override-style';
+  globalStyle.innerHTML = `
+    #docx-pdf-sandbox,
+    #docx-pdf-sandbox * {
       box-shadow: none !important;
-      margin: 0 !important;
-      border: none !important;
-      outline: none !important;
-      background: #ffffff !important;
+      text-shadow: none !important;
     }
     #docx-pdf-sandbox .docx-wrapper {
       background: #ffffff !important;
       padding: 0 !important;
       margin: 0 !important;
+      border: none !important;
+    }
+    #docx-pdf-sandbox section.docx {
+      margin: 0 !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      background: #ffffff !important;
+      width: 794px !important;
+      min-width: 794px !important;
+      max-width: 794px !important;
+      box-sizing: border-box !important;
     }
   `;
-  container.appendChild(styleEl);
+  document.head.appendChild(globalStyle);
   document.body.appendChild(container);
 
   try {
@@ -460,12 +469,14 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
     // Chờ 400ms để DOM vẽ và phông chữ render hoàn tất
     await new Promise((resolve) => setTimeout(resolve, 400));
 
-    // Đảm bảo loại bỏ bóng đổ trên tất cả các section
+    // Đảm bảo loại bỏ bóng đổ và ép kích thước trên tất cả các section
     const sections = container.querySelectorAll('section.docx');
     sections.forEach((sec) => {
       sec.style.boxShadow = 'none';
       sec.style.margin = '0';
       sec.style.border = 'none';
+      sec.style.width = '794px';
+      sec.style.backgroundColor = '#ffffff';
     });
 
     const elementsToRender = sections.length > 0 ? Array.from(sections) : [container];
@@ -491,13 +502,17 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
         logging: false,
         scrollX: 0,
         scrollY: 0,
+        x: 0,
+        y: 0,
+        width: el.offsetWidth || 794,
+        height: el.offsetHeight || 1123,
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.98);
       const imgProps = pdf.getImageProperties(imgData);
       const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
-      if (Math.abs(imgHeight - pdfHeight) < 5) {
+      if (Math.abs(imgHeight - pdfHeight) < 8) {
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       } else if (imgHeight <= pdfHeight) {
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
@@ -522,6 +537,9 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   } finally {
     if (document.body.contains(container)) {
       document.body.removeChild(container);
+    }
+    if (document.head.contains(globalStyle)) {
+      document.head.removeChild(globalStyle);
     }
   }
 }

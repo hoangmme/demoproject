@@ -64,7 +64,7 @@
           />
 
           <!-- ⚙️ Cài đặt Cột & Bộ Lọc Thông Minh Popover -->
-          <div class="header-menu-wrapper" @mouseenter="isFilterMenuOpen = true" @mouseleave="isFilterMenuOpen = false">
+          <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
             <Button
               icon="pi pi-sliders-h"
               :label="smartFilter !== 'all' ? 'Đang lọc (Bật)' : 'Lọc & Cột'"
@@ -170,7 +170,7 @@
           </div>
 
           <!-- 📥 Gom Import / Xuất Excel / Xuất PDF vào 1 nút Menu -->
-          <div class="header-menu-wrapper" @mouseenter="isDataMenuOpen = true" @mouseleave="isDataMenuOpen = false">
+          <div class="header-menu-wrapper" @mouseenter="onMouseEnterData" @mouseleave="onMouseLeaveData">
             <Button
               label="Xuất / Nhập"
               icon="pi pi-download"
@@ -344,7 +344,7 @@
           />
 
           <!-- ⚙️ Cài đặt Cột Thân nhân Popover -->
-          <div class="header-menu-wrapper" @mouseenter="isRelativeFilterMenuOpen = true" @mouseleave="isRelativeFilterMenuOpen = false">
+          <div class="header-menu-wrapper" @mouseenter="onMouseEnterRelFilter" @mouseleave="onMouseLeaveRelFilter">
             <Button
               icon="pi pi-sliders-h"
               label="Tùy chọn Cột"
@@ -372,7 +372,7 @@
           </div>
 
           <!-- 📥 Gom Import / Xuất Excel Thân nhân vào 1 nút Menu -->
-          <div class="header-menu-wrapper" @mouseenter="isRelativeDataMenuOpen = true" @mouseleave="isRelativeDataMenuOpen = false">
+          <div class="header-menu-wrapper" @mouseenter="onMouseEnterRelData" @mouseleave="onMouseLeaveRelData">
             <Button
               label="Xuất / Nhập"
               icon="pi pi-download"
@@ -805,6 +805,51 @@ const isRelativeFilterMenuOpen = ref(false);
 const isRelativeDataMenuOpen = ref(false);
 const smartFilter = ref('all'); // 'all' | 'has_decision' | 'has_trips' | 'has_relatives' | 'has_issues' | 'has_passport' | 'field_not_empty'
 const smartFilterField = ref('');
+
+let dataMenuTimer = null;
+let filterMenuTimer = null;
+let relDataMenuTimer = null;
+let relFilterMenuTimer = null;
+
+const onMouseEnterData = () => {
+  clearTimeout(dataMenuTimer);
+  isDataMenuOpen.value = true;
+};
+const onMouseLeaveData = () => {
+  dataMenuTimer = setTimeout(() => {
+    isDataMenuOpen.value = false;
+  }, 280);
+};
+
+const onMouseEnterFilter = () => {
+  clearTimeout(filterMenuTimer);
+  isFilterMenuOpen.value = true;
+};
+const onMouseLeaveFilter = () => {
+  filterMenuTimer = setTimeout(() => {
+    isFilterMenuOpen.value = false;
+  }, 280);
+};
+
+const onMouseEnterRelData = () => {
+  clearTimeout(relDataMenuTimer);
+  isRelativeDataMenuOpen.value = true;
+};
+const onMouseLeaveRelData = () => {
+  relDataMenuTimer = setTimeout(() => {
+    isRelativeDataMenuOpen.value = false;
+  }, 280);
+};
+
+const onMouseEnterRelFilter = () => {
+  clearTimeout(relFilterMenuTimer);
+  isRelativeFilterMenuOpen.value = true;
+};
+const onMouseLeaveRelFilter = () => {
+  relFilterMenuTimer = setTimeout(() => {
+    isRelativeFilterMenuOpen.value = false;
+  }, 280);
+};
 
 // Advanced DOCX Export Modal State
 const isDocxExportOpen = ref(false);
@@ -1770,14 +1815,26 @@ const onPersonDeleted = () => {};
 
 .header-menu-dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: 100%;
   right: 0;
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
   z-index: 1000;
   padding: 8px;
+  margin-top: 4px;
+}
+
+/* Cầu nối vô hình giúp chuột di chuyển từ nút bấm xuống menu không bao giờ bị đứt đoạn */
+.header-menu-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: transparent;
 }
 
 .data-menu-dropdown {
