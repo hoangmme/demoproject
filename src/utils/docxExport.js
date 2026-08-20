@@ -415,12 +415,34 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.style.position = 'fixed';
   container.style.top = '0';
   container.style.left = '0';
-  container.style.width = '794px';
+  container.style.width = '210mm';
+  container.style.margin = '0';
+  container.style.padding = '0';
   container.style.backgroundColor = '#ffffff';
   container.style.color = '#000000';
   container.style.zIndex = '9999999';
   container.style.pointerEvents = 'none';
   container.style.boxSizing = 'border-box';
+
+  const styleEl = document.createElement('style');
+  styleEl.innerHTML = `
+    #docx-pdf-sandbox {
+      background: #ffffff !important;
+    }
+    #docx-pdf-sandbox section.docx {
+      box-shadow: none !important;
+      margin: 0 !important;
+      border: none !important;
+      outline: none !important;
+      background: #ffffff !important;
+    }
+    #docx-pdf-sandbox .docx-wrapper {
+      background: #ffffff !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+  `;
+  container.appendChild(styleEl);
   document.body.appendChild(container);
 
   try {
@@ -438,7 +460,14 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
     // Chờ 400ms để DOM vẽ và phông chữ render hoàn tất
     await new Promise((resolve) => setTimeout(resolve, 400));
 
+    // Đảm bảo loại bỏ bóng đổ trên tất cả các section
     const sections = container.querySelectorAll('section.docx');
+    sections.forEach((sec) => {
+      sec.style.boxShadow = 'none';
+      sec.style.margin = '0';
+      sec.style.border = 'none';
+    });
+
     const elementsToRender = sections.length > 0 ? Array.from(sections) : [container];
 
     const pdf = new jsPDF({
@@ -462,14 +491,15 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
         logging: false,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: 800,
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
       const imgProps = pdf.getImageProperties(imgData);
       const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
-      if (imgHeight <= pdfHeight) {
+      if (Math.abs(imgHeight - pdfHeight) < 5) {
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      } else if (imgHeight <= pdfHeight) {
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
       } else {
         let heightLeft = imgHeight;
@@ -572,7 +602,14 @@ const escapeXml = (str) => {
  * @param {Boolean} includeRelatives - Có kèm danh sách thân nhân hay không
  * @returns {Promise<Blob>}
  */
-export async function createDynamicDocxTemplateBlob(selectedGroupIndices = [0], personnelGroups = [], includeTrips = true, includeRelatives = true) {
+export async function createDynamicDocxTemplateBlob(
+  selectedGroupIndices = [0],
+  personnelGroups = [],
+  includeTrips = true,
+  includeRelatives = true,
+  selectedRelativeGroupIndices = [],
+  relativeGroups = []
+) {
   const zip = new JSZip();
 
   const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -623,7 +660,7 @@ export async function createDynamicDocxTemplateBlob(selectedGroupIndices = [0], 
     <w:p/>
   `;
 
-  // 2. Các Nhóm được chọn bổ sung từ Cấu hình Cột (Group B, Group C...)
+  // 2. Các Nhóm được chọn bổ sung từ Cấu hình Cột Cán bộ (Group B, Group C...)
   (personnelGroups || []).forEach((grp, idx) => {
     if (idx === 0) return; // Bỏ qua nhóm 0 vì đã thêm ở Nhóm A
     if (selectedGroupIndices.includes(idx)) {
@@ -653,12 +690,32 @@ export async function createDynamicDocxTemplateBlob(selectedGroupIndices = [0], 
     `;
   }
 
-  // 4. Khối Thân nhân nếu được chọn
+  // 4. Khối Thân nhân nếu được chọn (Hỗ trợ từng nhóm thân nhân từ Tab Thân nhân)
   if (includeRelatives) {
     bodyContent += `
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>3. Thông tin thân nhân liên quan:</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#than_nhan}</w:t></w:r></w:p>
-      <w:p><w:r><w:t>- Thân nhân {stt}: {relationshipName} - {birthYear} | Quê quán: {hometownTN} | Nghề nghiệp: {occupation} | Nơi ở: {currentAddress} | CCCD: {cccdthannhan}</w:t></w:r></w:p>
+    `;
+
+    const activeRelCols = [];
+    (relativeGroups || []).forEach((rGrp, rIdx) => {
+      if (selectedRelativeGroupIndices.length === 0 || selectedRelativeGroupIndices.includes(rIdx)) {
+        (rGrp.columns || []).forEach((col) => {
+          if (col.id && col.id !== 'stt' && !activeRelCols.some((x) => x.id === col.id)) {
+            activeRelCols.push(col);
+          }
+        });
+      }
+    });
+
+    if (activeRelCols.length > 0) {
+      const colTexts = activeRelCols.map((col) => `${escapeXml(col.label)}: {${escapeXml(col.id)}}`).join(' | ');
+      bodyContent += `<w:p><w:r><w:t>- Thân nhân {stt}: ${colTexts}</w:t></w:r></w:p>`;
+    } else {
+      bodyContent += `<w:p><w:r><w:t>- Thân nhân {stt}: {relationshipName} - {birthYear} | Quê quán: {hometownTN} | Nghề nghiệp: {occupation} | Nơi ở: {currentAddress} | CCCD: {cccdthannhan}</w:t></w:r></w:p>`;
+    }
+
+    bodyContent += `
       <w:p><w:r><w:t>{/than_nhan}</w:t></w:r></w:p>
       <w:p/>
     `;

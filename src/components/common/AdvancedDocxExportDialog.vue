@@ -136,7 +136,12 @@
               <span style="color: #0284c7; font-weight: 600;">(Khối A luôn cố định)</span>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 5px; max-height: 160px; overflow-y: auto; padding-right: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 5px; max-height: 190px; overflow-y: auto; padding-right: 4px;">
+              <!-- 1. CÁC KHỐI CỘT CÁN BỘ -->
+              <div style="font-size: 0.72rem; font-weight: 700; color: #1e40af; background: #eff6ff; padding: 2px 6px; border-radius: 4px;">
+                👤 NHÓM CỘT CÁN BỘ:
+              </div>
+
               <!-- Group 0: Luôn cố định -->
               <label class="group-select-item group-fixed">
                 <input type="checkbox" checked disabled style="accent-color: #2563eb;" />
@@ -144,10 +149,10 @@
                 <span class="badge-fixed">Bắt buộc</span>
               </label>
 
-              <!-- Các Group B, C, D... -->
+              <!-- Các Group B, C, D... Cán bộ -->
               <label
                 v-for="(grp, gIdx) in otherPersonnelGroups"
-                :key="gIdx + 1"
+                :key="'p_' + (gIdx + 1)"
                 class="group-select-item"
                 :class="{ 'group-selected': selectedGroupIndices.includes(gIdx + 1) }"
               >
@@ -163,16 +168,44 @@
                 </span>
               </label>
 
-              <!-- Khối Chuyến đi & Thân nhân -->
+              <!-- 2. KHỐI CHUYẾN ĐI -->
+              <div style="font-size: 0.72rem; font-weight: 700; color: #065f46; background: #ecfdf5; padding: 2px 6px; border-radius: 4px; margin-top: 4px;">
+                ✈️ XUẤT NHẬP CẢNH:
+              </div>
               <label class="group-select-item" :class="{ 'group-selected': includeTrips }">
                 <input type="checkbox" v-model="includeTrips" style="accent-color: #2563eb;" />
                 <span style="font-weight: 600; color: #334155;">Lịch sử Xuất nhập cảnh & Chuyến đi nước ngoài</span>
               </label>
 
+              <!-- 3. CÁC KHỐI CỘT THÂN NHÂN -->
+              <div style="font-size: 0.72rem; font-weight: 700; color: #6b21a8; background: #faf5ff; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+                <span>👥 NHÓM CỘT THÂN NHÂN (TAB THÂN NHÂN):</span>
+              </div>
               <label class="group-select-item" :class="{ 'group-selected': includeRelatives }">
-                <input type="checkbox" v-model="includeRelatives" style="accent-color: #2563eb;" />
-                <span style="font-weight: 600; color: #334155;">Danh sách Thân nhân liên quan</span>
+                <input type="checkbox" v-model="includeRelatives" style="accent-color: #7c3aed;" />
+                <span style="font-weight: 700; color: #6b21a8;">Bao gồm Thông tin Thân nhân liên quan</span>
               </label>
+
+              <template v-if="includeRelatives">
+                <label
+                  v-for="(rGrp, rIdx) in relativeGroups"
+                  :key="'rel_' + rIdx"
+                  class="group-select-item"
+                  :class="{ 'group-selected': selectedRelativeGroupIndices.includes(rIdx) }"
+                  style="margin-left: 12px; border-left: 2px solid #c084fc;"
+                >
+                  <input
+                    type="checkbox"
+                    :value="rIdx"
+                    v-model="selectedRelativeGroupIndices"
+                    style="accent-color: #7c3aed;"
+                  />
+                  <span style="font-weight: 600; color: #475569; font-size: 0.78rem;">
+                    Khối TN {{ rIdx + 1 }}: {{ rGrp.group || 'Nhóm thân nhân ' + (rIdx + 1) }}
+                    <small style="color: #64748b;">({{ rGrp.columns?.length || 0 }} cột)</small>
+                  </span>
+                </label>
+              </template>
             </div>
           </div>
 
@@ -317,9 +350,11 @@ const templateSource = ref('sample'); // 'sample' (Group) | 'upload'
 const selectedGroupIndices = ref([1, 2, 3]);
 const includeTrips = ref(true);
 const includeRelatives = ref(true);
+const selectedRelativeGroupIndices = ref([0, 1, 2, 3]);
 
 const personnelGroups = computed(() => personnelStore.importMappingPersonnel || []);
 const otherPersonnelGroups = computed(() => personnelGroups.value.slice(1));
+const relativeGroups = computed(() => personnelStore.importMappingRelative || []);
 
 const fileInputRef = ref(null);
 const sampleTemplateBuffer = ref(null);
@@ -404,7 +439,9 @@ const loadSampleTemplate = async () => {
       activeIndices,
       personnelGroups.value,
       includeTrips.value,
-      includeRelatives.value
+      includeRelatives.value,
+      selectedRelativeGroupIndices.value,
+      relativeGroups.value
     );
     sampleTemplateBuffer.value = await blob.arrayBuffer();
   } catch (e) {
@@ -413,7 +450,7 @@ const loadSampleTemplate = async () => {
 };
 
 watch(
-  () => [selectedGroupIndices.value, includeTrips.value, includeRelatives.value],
+  () => [selectedGroupIndices.value, includeTrips.value, includeRelatives.value, selectedRelativeGroupIndices.value],
   () => {
     loadSampleTemplate();
   },
