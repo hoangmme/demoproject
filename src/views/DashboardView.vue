@@ -302,26 +302,25 @@
     <!-- ========================================================= -->
     <!-- 3. CUSTOM DASHBOARD GROUPS (USER CONFIGURED)              -->
     <!-- ========================================================= -->
-    <div v-for="(group, gIdx) in customGroups" :key="group.id || gIdx" style="margin-bottom: 1.75rem;">
-      <!-- Group Header -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; background: #ffffff; padding: 10px 16px; border-radius: 10px; border: 1px solid #e2e8f0; border-left: 4px solid #2e7d32;">
+    <div v-for="(group, gIdx) in customGroups" :key="group.id || gIdx" class="app-card" style="margin-bottom: 1.5rem;">
+      <!-- Group Header (Inside App Card) -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <i :class="['pi', group.icon || 'pi-folder']" style="color: #2e7d32; font-size: 1.1rem;"></i>
           <div>
-            <h3 style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0;">{{ group.title }}</h3>
+            <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">{{ group.title }}</h3>
             <span v-if="group.description" style="font-size: 0.74rem; color: #64748b;">{{ group.description }}</span>
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <Button
-            icon="pi pi-plus"
-            label="Thêm Khối Thống kê"
-            size="small"
-            severity="success"
-            outlined
+          <button
+            type="button"
+            class="btn-add-widget-green"
             @click="openAddWidgetDialog(group)"
-            style="font-size: 0.75rem; padding: 4px 8px;"
-          />
+            title="Thêm thẻ đếm số lượng hoặc biểu đồ phân bổ vào nhóm này"
+          >
+            <i class="pi pi-plus" style="font-size: 0.75rem;"></i> Thêm Khối Thống kê
+          </button>
           <Button
             icon="pi pi-pencil"
             size="small"
@@ -345,21 +344,27 @@
 
       <!-- Group Widgets Container -->
       <div v-if="!group.widgets || group.widgets.length === 0" style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.82rem;">
-        Chưa có khối thống kê nào trong nhóm này. Bấm <b>"+ Thêm Khối Thống kê"</b> để thêm thẻ đếm số lượng hoặc biểu đồ phân bổ.
+        Chưa có khối thống kê nào trong nhóm này. Bấm 
+        <button type="button" class="btn-add-widget-green" style="display: inline-flex; margin-left: 6px;" @click="openAddWidgetDialog(group)">
+          <i class="pi pi-plus" style="font-size: 0.75rem;"></i> Thêm Khối Thống kê
+        </button>
       </div>
 
-      <!-- Mixed Widgets Grid: Count Cards & Chart Cards -->
-      <div v-else style="display: flex; flex-direction: column; gap: 1rem;">
-        <!-- 1. Sub-Grid for Count Cards -->
+      <!-- Unified Flexible Grid for Group Widgets -->
+      <div v-else style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch;">
         <div
-          v-if="getCountWidgets(group).length > 0"
-          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;"
+          v-for="widget in group.widgets"
+          :key="widget.id"
+          :style="{
+            flex: widget.widthPercent === 100 ? '1 1 100%' : (widget.widthPercent === 50 ? '1 1 calc(50% - 0.5rem)' : (widget.widthPercent === 25 ? '1 1 calc(25% - 0.75rem)' : '1 1 calc(33.333% - 0.67rem)')),
+            minWidth: widget.widthPercent === 100 ? '100%' : (widget.widthPercent === 50 ? '340px' : (widget.widthPercent === 25 ? '200px' : '280px')),
+          }"
         >
+          <!-- 1. Dạng Đếm Số Lượng (Count Metric Card) -->
           <div
-            v-for="widget in getCountWidgets(group)"
-            :key="widget.id"
+            v-if="widget.displayType === 'count'"
             class="stat-card"
-            :style="{ borderLeft: `4px solid ${widget.color || '#2e7d32'}` }"
+            :style="{ borderLeft: `4px solid ${widget.color || '#2e7d32'}`, height: '100%' }"
             @click="openCustomWidgetDrilldown(widget)"
           >
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -384,35 +389,29 @@
               <span class="view-more-tag" :style="{ color: widget.color || '#1e293b' }">Xem <i class="pi pi-arrow-right"></i></span>
             </div>
           </div>
-        </div>
 
-        <!-- 2. Sub-Grid for Chart/Breakdown Cards -->
-        <div
-          v-if="getChartWidgets(group).length > 0"
-          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem;"
-        >
+          <!-- 2. Dạng Biểu đồ Phân bổ (Breakdown Chart Card) -->
           <div
-            v-for="widget in getChartWidgets(group)"
-            :key="widget.id"
-            class="app-card"
+            v-else
+            style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;"
           >
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
               <div style="display: flex; align-items: center; gap: 6px;">
                 <i :class="['pi', widget.icon || 'pi-chart-pie']" :style="{ color: widget.color || '#2e7d32', fontSize: '1.05rem' }"></i>
                 <div>
-                  <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
+                  <h4 style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin: 0;">
                     {{ widget.title }} ({{ computeWidgetChartData(widget).list.length }} phân loại)
-                  </h3>
-                  <span style="font-size: 0.72rem; color: #64748b;">
+                  </h4>
+                  <span style="font-size: 0.7rem; color: #64748b;">
                     {{ getSourceLabel(widget.source) }} - Cột: <b>{{ widget.columnLabel || widget.columnId }}</b>
                   </span>
                 </div>
               </div>
-              <div style="display: flex; align-items: center; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 4px;">
                 <InputText
                   v-model="customChartSearches[widget.id]"
-                  placeholder="Tìm phân loại..."
-                  style="font-size: 0.75rem; padding: 4px 8px; width: 140px; height: 28px;"
+                  placeholder="Tìm..."
+                  style="font-size: 0.72rem; padding: 2px 6px; width: 100px; height: 26px;"
                 />
                 <button type="button" class="btn-card-setting" @click="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
                   <i class="pi pi-pencil"></i>
@@ -423,8 +422,8 @@
               </div>
             </div>
 
-            <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
-              <div v-if="getFilteredChartList(widget).length === 0" style="text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.8rem;">
+            <div style="max-height: 240px; overflow-y: auto; padding-right: 4px; flex: 1;">
+              <div v-if="getFilteredChartList(widget).length === 0" style="text-align: center; color: #94a3b8; padding: 1.5rem 0; font-size: 0.78rem;">
                 Không có dữ liệu phân loại phù hợp.
               </div>
               <div
@@ -438,18 +437,18 @@
                     <span class="badge-num" :style="{ background: getLightColor(widget.color), color: widget.color || '#2e7d32' }">
                       #{{ cIdx + 1 }}
                     </span>
-                    <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
+                    <span style="font-size: 0.8rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
                   </div>
                   <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-size: 0.8rem; font-weight: 700;" :style="{ color: widget.color || '#2e7d32' }">
+                    <span style="font-size: 0.78rem; font-weight: 700;" :style="{ color: widget.color || '#2e7d32' }">
                       {{ item.count }} hồ sơ
                     </span>
-                    <span style="font-size: 0.7rem; color: #94a3b8;">
+                    <span style="font-size: 0.68rem; color: #94a3b8;">
                       ({{ computeWidgetChartData(widget).total > 0 ? Math.round((item.count / computeWidgetChartData(widget).total) * 100) : 0 }}%)
                     </span>
                   </div>
                 </div>
-                <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+                <div style="height: 5px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
                   <div
                     style="height: 100%; border-radius: 4px; transition: width 0.4s ease;"
                     :style="{
@@ -856,14 +855,26 @@
           </div>
         </div>
 
-        <div class="field-item">
-          <label class="field-label">Cột dữ liệu cần Thống kê / Đếm <span style="color: #ef4444;">*</span></label>
-          <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; max-width: 100%;" @change="onWidgetColumnSelect">
-            <option value="">-- Nhấp để chọn Cột trong hệ thống --</option>
-            <option v-for="c in availableColumnsForWidgetSource" :key="c.id" :value="c.id">
-              {{ c.label }}
-            </option>
-          </select>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+          <div class="field-item">
+            <label class="field-label">Cột dữ liệu cần Thống kê / Đếm <span style="color: #ef4444;">*</span></label>
+            <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; max-width: 100%;" @change="onWidgetColumnSelect">
+              <option value="">-- Nhấp để chọn Cột trong hệ thống --</option>
+              <option v-for="c in availableColumnsForWidgetSource" :key="c.id" :value="c.id">
+                {{ c.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">Độ rộng của Khối</label>
+            <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option :value="25">25% (1/4 hàng)</option>
+              <option :value="33">33% (1/3 hàng)</option>
+              <option :value="50">50% (1/2 hàng)</option>
+              <option :value="100">100% (Toàn hàng)</option>
+            </select>
+          </div>
         </div>
 
         <!-- Extra settings for COUNT type -->
@@ -1031,6 +1042,7 @@ const widgetForm = ref({
   columnId: '',
   columnLabel: '',
   displayType: 'count',
+  widthPercent: 33,
   countCondition: 'not_empty',
   countValue: '',
   color: '#2e7d32',
@@ -1116,6 +1128,7 @@ const openAddWidgetDialog = (group) => {
     columnId: '',
     columnLabel: '',
     displayType: 'count',
+    widthPercent: 33,
     countCondition: 'not_empty',
     countValue: '',
     color: '#2e7d32',
@@ -1127,7 +1140,10 @@ const openAddWidgetDialog = (group) => {
 const openEditWidgetDialog = (group, widget) => {
   activeGroupForWidget.value = group;
   editingWidget.value = widget;
-  widgetForm.value = JSON.parse(JSON.stringify(widget));
+  widgetForm.value = {
+    widthPercent: 33,
+    ...JSON.parse(JSON.stringify(widget)),
+  };
   isWidgetDialogOpen.value = true;
 };
 
@@ -1840,5 +1856,26 @@ onMounted(async () => {
 .badge-neutral {
   background: #f1f5f9;
   color: #475569;
+}
+
+.btn-add-widget-green {
+  background: #2e7d32;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-add-widget-green:hover {
+  background: #1b5e20;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style>
