@@ -568,17 +568,19 @@ html, body {
 }
 
 .p-paginator,
-.p-datatable-paginator-bottom {
+.p-datatable-paginator-bottom,
+.p-datatable-paginator-top {
   background: #ffffff !important;
   border: none !important;
   border-top: 1px solid #f3f4f6 !important;
   padding: 0.85rem 1.25rem !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: flex-start !important;
+  justify-content: center !important;
   gap: 0.65rem !important;
   outline: none !important;
   box-shadow: none !important;
+  width: 100% !important;
 }
 
 .p-paginator-first,
