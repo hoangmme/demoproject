@@ -508,7 +508,53 @@ const removeColumn = (gIdx, cIdx) => {
   currentGroups.value[gIdx].columns.splice(cIdx, 1);
 };
 
+const validateUniqueIds = () => {
+  // 1. Kiểm tra trùng lặp trong nội bộ Cán bộ
+  const pSeen = new Map();
+  for (const g of personnelGroups.value) {
+    for (const c of (g.columns || [])) {
+      if (c.id && c.id !== 'stt') {
+        if (pSeen.has(c.id)) {
+          return `Trong Cấu hình Cán bộ: Mã ID "${c.id}" (${c.label}) bị trùng với "${pSeen.get(c.id)}". Vui lòng đổi lại mã ID khác.`;
+        }
+        pSeen.set(c.id, c.label || c.id);
+      }
+    }
+  }
+
+  // 2. Kiểm tra trùng lặp trong nội bộ Thân nhân
+  const rSeen = new Map();
+  for (const g of relativeGroups.value) {
+    for (const c of (g.columns || [])) {
+      if (c.id && c.id !== 'stt') {
+        if (rSeen.has(c.id)) {
+          return `Trong Cấu hình Thân nhân: Mã ID "${c.id}" (${c.label}) bị trùng với "${rSeen.get(c.id)}". Vui lòng đổi lại mã ID khác.`;
+        }
+        rSeen.set(c.id, c.label || c.id);
+      }
+    }
+  }
+
+  // 3. Kiểm tra trùng lặp GIỮA Cán bộ và Thân nhân (trừ khóa liên kết cccdparent)
+  const allowedOverlap = new Set(['cccdparent', personnelKeyField.value, relativeParentKeyField.value]);
+  for (const [rId, rLabel] of rSeen.entries()) {
+    if (!allowedOverlap.has(rId) && pSeen.has(rId)) {
+      const pLabel = pSeen.get(rId);
+      return `Trùng mã ID giữa Cán bộ và Thân nhân:\nMã ID "${rId}" đang được dùng ở cả Cán bộ (${pLabel}) và Thân nhân (${rLabel}).\n\nVui lòng đổi mã ID ở Thân nhân (ví dụ: tn_${rId}) để xuất mẫu không bị trùng.`;
+    }
+  }
+
+  return null;
+};
+
 const saveConfig = async () => {
+  // Kiểm tra trùng lặp ID trước khi lưu
+  const errorMsg = validateUniqueIds();
+  if (errorMsg) {
+    alert(errorMsg);
+    return;
+  }
+
   saving.value = true;
   try {
     const keyConfig = {
