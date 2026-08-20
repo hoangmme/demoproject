@@ -355,10 +355,7 @@
         <div
           v-for="widget in group.widgets"
           :key="widget.id"
-          :style="{
-            flex: widget.widthPercent === 100 ? '1 1 100%' : (widget.widthPercent === 50 ? '1 1 calc(50% - 0.5rem)' : (widget.widthPercent === 25 ? '1 1 calc(25% - 0.75rem)' : '1 1 calc(33.333% - 0.67rem)')),
-            minWidth: widget.widthPercent === 100 ? '100%' : (widget.widthPercent === 50 ? '340px' : (widget.widthPercent === 25 ? '200px' : '280px')),
-          }"
+          :style="getWidgetStyle(widget)"
         >
           <!-- 1. Dạng Đếm Số Lượng (Count Metric Card) -->
           <div
@@ -1168,17 +1165,56 @@ const saveWidget = async () => {
   if (!group) return;
   if (!group.widgets) group.widgets = [];
 
+  const payload = {
+    ...widgetForm.value,
+    widthPercent: Number(widgetForm.value.widthPercent) || 33,
+  };
+
   if (editingWidget.value) {
     const idx = group.widgets.findIndex((w) => w.id === editingWidget.value.id);
     if (idx !== -1) {
-      group.widgets[idx] = { ...widgetForm.value };
+      group.widgets[idx] = payload;
     }
   } else {
-    group.widgets.push({ ...widgetForm.value });
+    group.widgets.push(payload);
   }
 
   await saveCustomGroupsToDb();
   isWidgetDialogOpen.value = false;
+};
+
+const getWidgetStyle = (widget) => {
+  const wp = Number(widget.widthPercent) || 33;
+  if (wp === 100) {
+    return {
+      flex: '0 0 100%',
+      width: '100%',
+      maxWidth: '100%',
+    };
+  }
+  if (wp === 50) {
+    return {
+      flex: '0 0 calc(50% - 0.5rem)',
+      width: 'calc(50% - 0.5rem)',
+      maxWidth: 'calc(50% - 0.5rem)',
+      minWidth: '280px',
+    };
+  }
+  if (wp === 25) {
+    return {
+      flex: '0 0 calc(25% - 0.75rem)',
+      width: 'calc(25% - 0.75rem)',
+      maxWidth: 'calc(25% - 0.75rem)',
+      minWidth: '200px',
+    };
+  }
+  // Default 33.333%
+  return {
+    flex: '0 0 calc(33.333% - 0.67rem)',
+    width: 'calc(33.333% - 0.67rem)',
+    maxWidth: 'calc(33.333% - 0.67rem)',
+    minWidth: '240px',
+  };
 };
 
 const deleteWidget = async (group, widget) => {
