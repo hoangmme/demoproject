@@ -605,7 +605,6 @@ const escapeXml = (str) => {
 export async function createDynamicDocxTemplateBlob(
   selectedGroupIndices = [0],
   personnelGroups = [],
-  includeTrips = true,
   includeRelatives = true,
   selectedRelativeGroupIndices = [],
   relativeGroups = []
@@ -679,21 +678,10 @@ export async function createDynamicDocxTemplateBlob(
     }
   });
 
-  // 3. Khối Chuyến đi nước ngoài nếu được chọn
-  if (includeTrips) {
-    bodyContent += `
-      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>2. Thông tin xuất nhập cảnh (Lịch sử chuyến đi):</w:t></w:r></w:p>
-      <w:p><w:r><w:t>{#xuatnhapcanh}</w:t></w:r></w:p>
-      <w:p><w:r><w:t>- Chuyến {stt}: Quốc gia đến: {countryName} | Mục đích: {label_purpose} ({detail_purpose}) | Ngày xuất cảnh: {departureDate} | Ngày nhập cảnh: {arrivalDate} | Nguồn kinh phí: {label_funding2} | Số QĐ: {decisionNumber} | Ngày ban hành: {decisionDate}</w:t></w:r></w:p>
-      <w:p><w:r><w:t>{/xuatnhapcanh}</w:t></w:r></w:p>
-      <w:p/>
-    `;
-  }
-
-  // 4. Khối Thân nhân nếu được chọn (Hỗ trợ từng nhóm thân nhân từ Tab Thân nhân)
+  // 3. Khối Thân nhân nếu được chọn (Hỗ trợ từng nhóm thân nhân từ Tab Thân nhân)
   if (includeRelatives) {
     bodyContent += `
-      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>3. Thông tin thân nhân liên quan:</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* Thông tin thân nhân liên quan:</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#than_nhan}</w:t></w:r></w:p>
     `;
 

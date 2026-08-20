@@ -168,17 +168,8 @@
                 </span>
               </label>
 
-              <!-- 2. KHỐI CHUYẾN ĐI -->
-              <div style="font-size: 0.72rem; font-weight: 700; color: #065f46; background: #ecfdf5; padding: 2px 6px; border-radius: 4px; margin-top: 4px;">
-                ✈️ XUẤT NHẬP CẢNH:
-              </div>
-              <label class="group-select-item" :class="{ 'group-selected': includeTrips }">
-                <input type="checkbox" v-model="includeTrips" style="accent-color: #2563eb;" />
-                <span style="font-weight: 600; color: #334155;">Lịch sử Xuất nhập cảnh & Chuyến đi nước ngoài</span>
-              </label>
-
-              <!-- 3. CÁC KHỐI CỘT THÂN NHÂN -->
-              <div style="font-size: 0.72rem; font-weight: 700; color: #6b21a8; background: #faf5ff; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+              <!-- 2. CÁC KHỐI CỘT THÂN NHÂN -->
+              <div style="font-size: 0.72rem; font-weight: 700; color: #6b21a8; background: #faf5ff; padding: 2px 6px; border-radius: 4px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
                 <span>👥 NHÓM CỘT THÂN NHÂN (TAB THÂN NHÂN):</span>
               </div>
               <label class="group-select-item" :class="{ 'group-selected': includeRelatives }">
@@ -348,7 +339,6 @@ const templateSource = ref('sample'); // 'sample' (Group) | 'upload'
 
 // Group selector state
 const selectedGroupIndices = ref([1, 2, 3]);
-const includeTrips = ref(true);
 const includeRelatives = ref(true);
 const selectedRelativeGroupIndices = ref([0, 1, 2, 3]);
 
@@ -438,7 +428,6 @@ const loadSampleTemplate = async () => {
     const blob = await createDynamicDocxTemplateBlob(
       activeIndices,
       personnelGroups.value,
-      includeTrips.value,
       includeRelatives.value,
       selectedRelativeGroupIndices.value,
       relativeGroups.value
@@ -450,7 +439,7 @@ const loadSampleTemplate = async () => {
 };
 
 watch(
-  () => [selectedGroupIndices.value, includeTrips.value, includeRelatives.value, selectedRelativeGroupIndices.value],
+  () => [selectedGroupIndices.value, includeRelatives.value, selectedRelativeGroupIndices.value],
   () => {
     loadSampleTemplate();
   },
