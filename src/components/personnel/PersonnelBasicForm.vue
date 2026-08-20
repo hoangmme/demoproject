@@ -36,6 +36,8 @@ import InputText from 'primevue/inputtext';
 import DynamicField from '@/components/common/DynamicField.vue';
 import { computeColumnIndexMap } from '@/utils/formatters';
 
+import { usePersonnelStore } from '@/stores/personnel';
+
 const props = defineProps({
   form: {
     type: Object,
@@ -51,17 +53,31 @@ const props = defineProps({
   },
 });
 
+const personnelStore = usePersonnelStore();
+
+const effectiveMapping = computed(() => {
+  if (props.mapping && props.mapping.length > 0) return props.mapping;
+  return personnelStore.importMappingPersonnel || [];
+});
+
 const colIndexMap = computed(() => {
-  return computeColumnIndexMap(props.mapping);
+  return computeColumnIndexMap(effectiveMapping.value);
 });
 
 const basicColumns = computed(() => {
   const ignore = new Set(['stt', 'code']);
-  const firstGroup = (props.mapping || [])[0];
-  if (firstGroup && Array.isArray(firstGroup.columns)) {
+  const firstGroup = effectiveMapping.value[0];
+  if (firstGroup && Array.isArray(firstGroup.columns) && firstGroup.columns.length > 0) {
     return firstGroup.columns.filter((c) => !ignore.has(c.id));
   }
-  return [];
+  return [
+    { id: 'name', label: 'Họ và tên', width: '33', format: 'text' },
+    { id: 'otherName', label: 'Tên gọi khác', width: '33', format: 'text' },
+    { id: 'birthYear', label: 'Năm sinh', width: '25', format: 'date' },
+    { id: 'departmentId', label: 'Đơn vị / Phòng ban', width: '33', format: 'dropdown' },
+    { id: 'position', label: 'Chức vụ', width: '33', format: 'text' },
+    { id: 'cccd', label: 'Số CCCD', width: '33', format: 'text' },
+  ];
 });
 
 const getColClass = (width) => {

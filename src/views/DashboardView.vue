@@ -2204,13 +2204,64 @@ const openDrilldown = (type, title, filterContext = {}) => {
   } else if (type === 'funding' && filterContext.fundingName) {
     const fTarget = String(filterContext.fundingName).toLowerCase().trim();
     drilldownTripsList.value = stats.value.filteredTrips.filter((t) => {
-      const f = String(getTripValue(t, colConfig.value.funding)).toLowerCase().trim();
-      return f === fTarget;
+      const f = String(
+        getTripValue(t, colConfig.value.funding) ||
+        (t.personnelId && personnelStore.personnelList.find((p) => p.id === t.personnelId)?.funding2) ||
+        (t.personnelId && personnelStore.personnelList.find((p) => p.id === t.personnelId)?.custom_data?.funding2) ||
+        t.fundingName ||
+        t.funding ||
+        ''
+      ).toLowerCase().trim();
+
+      const bVal = colConfig.value.fundingBudget ? String(getTripValue(t, colConfig.value.fundingBudget)).toLowerCase().trim() : '';
+      const spVal = colConfig.value.fundingSponsor ? String(getTripValue(t, colConfig.value.fundingSponsor)).toLowerCase().trim() : '';
+      const slfVal = colConfig.value.fundingSelf ? String(getTripValue(t, colConfig.value.fundingSelf)).toLowerCase().trim() : '';
+      const othVal = colConfig.value.fundingOther ? String(getTripValue(t, colConfig.value.fundingOther)).toLowerCase().trim() : '';
+
+      if (fTarget.includes('ngân sách') || fTarget.includes('ngan sach')) {
+        return f.includes('ngân sách') || f.includes('ngan sach') || (bVal && bVal !== '-');
+      }
+      if (fTarget.includes('tài trợ') || fTarget.includes('tai tro') || fTarget.includes('học bổng') || fTarget.includes('hoc bong')) {
+        return f.includes('tài trợ') || f.includes('tai tro') || f.includes('học bổng') || f.includes('hoc bong') || (spVal && spVal !== '-');
+      }
+      if (fTarget.includes('tự túc') || fTarget.includes('tu tuc')) {
+        return f.includes('tự túc') || f.includes('tu tuc') || (slfVal && slfVal !== '-');
+      }
+      if (fTarget.includes('khác') || fTarget.includes('khac')) {
+        return f.includes('khác') || f.includes('khac') || (othVal && othVal !== '-');
+      }
+      return f === fTarget || f.includes(fTarget);
     });
+
     drilldownRelativesList.value = (personnelStore.relativesList || []).filter((r) => {
-      const rf = String(getRowFieldValue(r, colConfig.value.fundingRelative)).toLowerCase().trim();
-      return rf === fTarget;
+      const rf = String(
+        getRowFieldValue(r, colConfig.value.fundingRelative) ||
+        r.fundingName ||
+        r.funding ||
+        r.custom_data?.fundingName ||
+        ''
+      ).toLowerCase().trim();
+
+      const rBudget = colConfig.value.fundingRelativeBudget ? String(getRowFieldValue(r, colConfig.value.fundingRelativeBudget)).toLowerCase().trim() : '';
+      const rSponsor = colConfig.value.fundingRelativeSponsor ? String(getRowFieldValue(r, colConfig.value.fundingRelativeSponsor)).toLowerCase().trim() : '';
+      const rSelf = colConfig.value.fundingRelativeSelf ? String(getRowFieldValue(r, colConfig.value.fundingRelativeSelf)).toLowerCase().trim() : '';
+      const rOther = colConfig.value.fundingRelativeOther ? String(getRowFieldValue(r, colConfig.value.fundingRelativeOther)).toLowerCase().trim() : '';
+
+      if (fTarget.includes('ngân sách') || fTarget.includes('ngan sach')) {
+        return rf.includes('ngân sách') || rf.includes('ngan sach') || (rBudget && rBudget !== '-');
+      }
+      if (fTarget.includes('tài trợ') || fTarget.includes('tai tro') || fTarget.includes('học bổng') || fTarget.includes('hoc bong')) {
+        return rf.includes('tài trợ') || rf.includes('tai tro') || rf.includes('học bổng') || rf.includes('hoc bong') || (rSponsor && rSponsor !== '-');
+      }
+      if (fTarget.includes('tự túc') || fTarget.includes('tu tuc')) {
+        return rf.includes('tự túc') || rf.includes('tu tuc') || (rSelf && rSelf !== '-');
+      }
+      if (fTarget.includes('khác') || fTarget.includes('khac')) {
+        return rf.includes('khác') || rf.includes('khac') || (rOther && rOther !== '-');
+      }
+      return rf === fTarget || rf.includes(fTarget);
     });
+
     drilldownHasDualTabs.value = true;
     drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
     drilldownCategory.value = drilldownActiveTab.value;
@@ -2337,6 +2388,7 @@ const refreshData = async () => {
 onMounted(async () => {
   await loadDashboardSettings();
   await loadCustomGroups();
+  await personnelStore.loadSettings();
   if (personnelStore.personnelList.length === 0) {
     await personnelStore.init();
   }
