@@ -1040,48 +1040,13 @@ const widgetForm = ref({
 const loadCustomGroups = async () => {
   try {
     const dbGroups = await getAppSettings('dashboard_custom_groups');
-    if (dbGroups && Array.isArray(dbGroups) && dbGroups.length > 0) {
+    if (dbGroups && Array.isArray(dbGroups)) {
       customGroups.value = dbGroups;
       localStorage.setItem('dashboard_custom_groups', JSON.stringify(dbGroups));
     } else {
       const local = localStorage.getItem('dashboard_custom_groups');
       if (local) {
         customGroups.value = JSON.parse(local);
-      }
-      if (!customGroups.value || customGroups.value.length === 0) {
-        // Initialize default sample group so the user can see widgets and add buttons immediately
-        customGroups.value = [
-          {
-            id: 'grp_sample_1',
-            title: 'Thống kê Mở rộng Tùy chỉnh (Nhóm mẫu)',
-            description: 'Bạn có thể tự do chỉnh sửa, xóa hoặc thêm mới các nhóm & khối thống kê theo nhu cầu',
-            icon: 'pi-folder',
-            widgets: [
-              {
-                id: 'w_sample_1',
-                title: 'Tổng số Thân nhân có CCCD',
-                source: 'relatives',
-                columnId: 'cccdthannhan',
-                columnLabel: 'Số CCCD Thân nhân',
-                displayType: 'count',
-                countCondition: 'not_empty',
-                countValue: '',
-                color: '#7c3aed',
-                icon: 'pi-id-card',
-              },
-              {
-                id: 'w_sample_2',
-                title: 'Phân bổ Cán bộ theo Đơn vị / Chức vụ',
-                source: 'personnel',
-                columnId: 'departmentName',
-                columnLabel: 'Đơn vị công tác',
-                displayType: 'chart',
-                color: '#2e7d32',
-                icon: 'pi-building',
-              }
-            ]
-          }
-        ];
       }
     }
   } catch (e) {
