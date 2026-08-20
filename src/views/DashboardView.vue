@@ -1585,19 +1585,18 @@ const isWithinTimeFilter = (dateStr) => {
   return true;
 };
 
-const getTripValue = (trip, colId, fallbacks = []) => {
-  if (!trip) return '';
-  if (colId) {
-    if (trip[colId] !== undefined && trip[colId] !== null && String(trip[colId]).trim() !== '') return trip[colId];
-    if (trip.custom_data && trip.custom_data[colId] !== undefined && trip.custom_data[colId] !== null && String(trip.custom_data[colId]).trim() !== '') {
-      return trip.custom_data[colId];
-    }
+const getTripValue = (trip, colId) => {
+  if (!trip || !colId) return '';
+  if (trip[colId] !== undefined && trip[colId] !== null && String(trip[colId]).trim() !== '') {
+    return String(trip[colId]).trim();
   }
-  for (const fb of fallbacks) {
-    if (trip[fb] !== undefined && trip[fb] !== null && String(trip[fb]).trim() !== '') return trip[fb];
-    if (trip.custom_data && trip.custom_data[fb] !== undefined && trip.custom_data[fb] !== null && String(trip.custom_data[fb]).trim() !== '') {
-      return trip.custom_data[fb];
-    }
+  if (trip.custom_data) {
+    try {
+      const cd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data) : trip.custom_data;
+      if (cd && cd[colId] !== undefined && cd[colId] !== null && String(cd[colId]).trim() !== '') {
+        return String(cd[colId]).trim();
+      }
+    } catch (e) {}
   }
   return '';
 };
@@ -1655,12 +1654,12 @@ const stats = computed(() => {
       return;
     }
 
-    const cName = getTripValue(t, colConfig.value.country, ['countryName', 'country', 'countryDestination', 'quocGia', 'quoc_gia']) || 'Chưa rõ';
-    const fName = getTripValue(t, colConfig.value.funding, ['fundingName', 'funding', 'fundingSource', 'nguonKinhPhi', 'nguon_kinh_phi']) || 'Chưa rõ';
-    const dNum = getTripValue(t, colConfig.value.decision, ['decisionNumber', 'decision', 'soQuyetDinh', 'so_quyet_dinh']) || '';
-    const appDep = getTripValue(t, colConfig.value.approvedDeparture, ['approvedDepartureDate', 'departureDate', 'ngayDi', 'ngay_di']) || t.departureDate || '';
-    const appArr = getTripValue(t, colConfig.value.approvedArrival, ['approvedArrivalDate', 'arrivalDate', 'ngayVe', 'ngay_ve']) || t.arrivalDate || '';
-    const appExt = getTripValue(t, colConfig.value.approvedExtension, ['approvedExtensionDate', 'extensionDate', 'ngayGiaHan', 'ngay_gia_han']) || '';
+    const cName = getTripValue(t, colConfig.value.country) || 'Chưa rõ';
+    const fName = getTripValue(t, colConfig.value.funding) || 'Chưa rõ';
+    const dNum = getTripValue(t, colConfig.value.decision) || '';
+    const appDep = getTripValue(t, colConfig.value.approvedDeparture) || t.departureDate || '';
+    const appArr = getTripValue(t, colConfig.value.approvedArrival) || t.arrivalDate || '';
+    const appExt = getTripValue(t, colConfig.value.approvedExtension) || '';
 
     const enrichedTrip = {
       ...t,
@@ -1699,10 +1698,10 @@ const stats = computed(() => {
       fundings[fName] = (fundings[fName] || 0) + 1;
     }
 
-    const budgetVal = getTripValue(t, colConfig.value.fundingBudget, ['fundingBudget', 'nganSach']);
-    const sponsorVal = getTripValue(t, colConfig.value.fundingSponsor, ['fundingSponsor', 'taiTro']);
-    const selfVal = getTripValue(t, colConfig.value.fundingSelf, ['fundingSelf', 'tuTuc']);
-    const otherVal = getTripValue(t, colConfig.value.fundingOther, ['fundingOther', 'khac']);
+    const budgetVal = getTripValue(t, colConfig.value.fundingBudget);
+    const sponsorVal = getTripValue(t, colConfig.value.fundingSponsor);
+    const selfVal = getTripValue(t, colConfig.value.fundingSelf);
+    const otherVal = getTripValue(t, colConfig.value.fundingOther);
 
     if (budgetVal && String(budgetVal).trim() && String(budgetVal).trim() !== '-') {
       fundings['Ngân sách nhà nước'] = (fundings['Ngân sách nhà nước'] || 0) + 1;
@@ -1724,15 +1723,15 @@ const stats = computed(() => {
     }
   });
 
-  // Also aggregate Relatives Country & Funding
+  // Also aggregate Relatives Country & Funding strictly by configured columns
   rList.forEach((r) => {
-    const rc = getRowFieldValue(r, colConfig.value.countryRelative) || r.countryName || r.country;
+    const rc = getRowFieldValue(r, colConfig.value.countryRelative);
     if (rc && String(rc).trim() && String(rc).trim() !== '-' && String(rc).trim() !== 'Chưa rõ') {
       const cleanRc = String(rc).trim();
       countries[cleanRc] = (countries[cleanRc] || 0) + 1;
     }
 
-    const rf = getRowFieldValue(r, colConfig.value.fundingRelative) || r.fundingName || r.funding;
+    const rf = getRowFieldValue(r, colConfig.value.fundingRelative);
     if (rf && String(rf).trim() && String(rf).trim() !== '-' && String(rf).trim() !== 'Chưa rõ') {
       fundings[String(rf).trim()] = (fundings[String(rf).trim()] || 0) + 1;
     }
@@ -1847,27 +1846,27 @@ const openDrilldown = (type, title, filterContext = {}) => {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.onTimeTrips];
   } else if (type === 'country' && filterContext.countryName) {
-    const cTarget = filterContext.countryName.toLowerCase().trim();
+    const cTarget = String(filterContext.countryName).toLowerCase().trim();
     drilldownTripsList.value = stats.value.filteredTrips.filter((t) => {
-      const c = (t.countryName || getTripValue(t, colConfig.value.country, ['countryName', 'country', 'quocGia', 'quoc_gia']) || '').toLowerCase().trim();
-      return c === cTarget || (cTarget.length > 2 && c.includes(cTarget)) || (c.length > 2 && cTarget.includes(c));
+      const c = String(getTripValue(t, colConfig.value.country)).toLowerCase().trim();
+      return c === cTarget;
     });
     drilldownRelativesList.value = (personnelStore.relativesList || []).filter((r) => {
-      const rc = (getRowFieldValue(r, colConfig.value.countryRelative, ['countryName', 'country', 'quocGia', 'quoc_gia']) || '').toLowerCase().trim();
-      return rc === cTarget || (cTarget.length > 2 && rc.includes(cTarget)) || (rc.length > 2 && cTarget.includes(rc));
+      const rc = String(getRowFieldValue(r, colConfig.value.countryRelative)).toLowerCase().trim();
+      return rc === cTarget;
     });
     drilldownHasDualTabs.value = true;
     drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
     drilldownCategory.value = drilldownActiveTab.value;
   } else if (type === 'funding' && filterContext.fundingName) {
-    const fTarget = filterContext.fundingName.toLowerCase().trim();
+    const fTarget = String(filterContext.fundingName).toLowerCase().trim();
     drilldownTripsList.value = stats.value.filteredTrips.filter((t) => {
-      const f = (t.fundingName || getTripValue(t, colConfig.value.funding, ['fundingName', 'funding', 'fundingSource']) || '').toLowerCase().trim();
-      return f === fTarget || (fTarget.length > 2 && f.includes(fTarget)) || (f.length > 2 && fTarget.includes(f));
+      const f = String(getTripValue(t, colConfig.value.funding)).toLowerCase().trim();
+      return f === fTarget;
     });
     drilldownRelativesList.value = (personnelStore.relativesList || []).filter((r) => {
-      const rf = (getRowFieldValue(r, colConfig.value.fundingRelative, ['fundingName', 'funding', 'fundingSource']) || '').toLowerCase().trim();
-      return rf === fTarget || (fTarget.length > 2 && rf.includes(fTarget)) || (rf.length > 2 && fTarget.includes(rf));
+      const rf = String(getRowFieldValue(r, colConfig.value.fundingRelative)).toLowerCase().trim();
+      return rf === fTarget;
     });
     drilldownHasDualTabs.value = true;
     drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
