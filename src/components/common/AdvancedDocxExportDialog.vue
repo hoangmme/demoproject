@@ -2,22 +2,53 @@
   <Dialog
     v-model:visible="visible"
     modal
-    header="Xuất Hồ sơ Word (.docx) Nâng cao theo Mẫu"
-    :style="{ width: '92vw', maxWidth: '1080px' }"
+    header="Xuất Hồ sơ Nâng cao theo Mẫu (Word / PDF)"
+    :style="{ width: '1160px', maxWidth: '96vw' }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
-    <div style="display: grid; grid-template-columns: 1fr 1.15fr; gap: 1.25rem; max-height: 68vh; min-height: 480px;">
+    <div class="docx-export-container">
       <!-- ========================================== -->
       <!-- CỘT TRÁI: CẤU HÌNH XUẤT & CHỌN FILE MẪU   -->
       <!-- ========================================== -->
-      <div style="display: flex; flex-direction: column; gap: 1.25rem; padding-right: 0.5rem; overflow-y: auto;">
-        <!-- 1. Phạm vi xuất -->
+      <div class="docx-left-panel">
+        <!-- 1. Chọn định dạng xuất -->
+        <div class="export-box">
+          <div class="box-title">
+            <i class="pi pi-file" style="color: #0284c7;"></i>
+            <span>1. Định dạng Tệp xuất</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+            <label class="radio-item" :class="{ 'radio-active': outputFormat === 'docx' }">
+              <input type="radio" v-model="outputFormat" value="docx" style="accent-color: #2563eb;" />
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="pi pi-file-word" style="color: #2563eb; font-size: 1.25rem;"></i>
+                <div>
+                  <strong style="color: #1e293b; display: block; font-size: 0.84rem;">File Word (.docx)</strong>
+                  <span style="font-size: 0.7rem; color: #64748b;">Chỉnh sửa được trong Word</span>
+                </div>
+              </div>
+            </label>
+
+            <label class="radio-item" :class="{ 'radio-active': outputFormat === 'pdf' }">
+              <input type="radio" v-model="outputFormat" value="pdf" style="accent-color: #dc2626;" />
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="pi pi-file-pdf" style="color: #dc2626; font-size: 1.25rem;"></i>
+                <div>
+                  <strong style="color: #1e293b; display: block; font-size: 0.84rem;">File PDF (.pdf)</strong>
+                  <span style="font-size: 0.7rem; color: #64748b;">Khóa nội dung, in ấn chuẩn</span>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. Phạm vi xuất -->
         <div class="export-box">
           <div class="box-title">
             <i class="pi pi-users" style="color: #0284c7;"></i>
-            <span>1. Chọn Phạm vi xuất Cán bộ</span>
+            <span>2. Chọn Phạm vi xuất Cán bộ</span>
           </div>
-          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+          <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
             <label
               v-if="targetPerson"
               class="radio-item"
@@ -48,31 +79,52 @@
             >
               <input type="radio" v-model="exportScope" value="all" style="accent-color: #0284c7;" />
               <div>
-                <strong style="color: #1e293b;">Toàn bộ cán bộ trong hệ thống:</strong>
+                <strong style="color: #1e293b;">Toàn bộ cán bộ trong danh sách:</strong>
                 <span style="color: #16a34a; margin-left: 4px; font-weight: 700;">{{ totalPersonnelCount }} cán bộ</span>
               </div>
             </label>
           </div>
         </div>
 
-        <!-- 2. Chọn Tệp Mẫu Word (.docx) -->
+        <!-- 3. Chọn Tệp Mẫu Word (.docx) -->
         <div class="export-box">
           <div class="box-title" style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="pi pi-file-word" style="color: #2563eb;"></i>
-              <span>2. Chọn Tệp Mẫu Word (.docx)</span>
+              <span>3. Tệp Mẫu DOCX sử dụng</span>
             </div>
             <button
               type="button"
               class="btn-link"
               @click="downloadSampleTemplate"
-              title="Tải tệp Word mẫu đã có sẵn thẻ tag để tham khảo hoặc chỉnh sửa"
+              title="Tải tệp Word mẫu chuẩn đã có sẵn thẻ tag để tham khảo hoặc chỉnh sửa"
             >
-              <i class="pi pi-download"></i> Tải mẫu chuẩn
+              <i class="pi pi-download"></i> Tải mẫu chuẩn (.docx)
             </button>
           </div>
 
-          <div style="margin-top: 10px;">
+          <!-- Tabs chọn nguồn mẫu -->
+          <div style="display: flex; gap: 6px; margin: 8px 0;">
+            <button
+              type="button"
+              class="tpl-src-btn"
+              :class="{ 'tpl-src-active': templateSource === 'sample' }"
+              @click="setTemplateSource('sample')"
+            >
+              <i class="pi pi-bookmark"></i> Mẫu Chuẩn Hệ Thống
+            </button>
+            <button
+              type="button"
+              class="tpl-src-btn"
+              :class="{ 'tpl-src-active': templateSource === 'upload' }"
+              @click="setTemplateSource('upload')"
+            >
+              <i class="pi pi-upload"></i> Tải lên Mẫu Riêng (.docx)
+            </button>
+          </div>
+
+          <!-- Khu vực hiển thị theo nguồn mẫu -->
+          <div style="margin-top: 6px;">
             <input
               ref="fileInputRef"
               type="file"
@@ -81,27 +133,48 @@
               @change="handleFileUpload"
             />
 
-            <div
-              v-if="!templateFile && !templateBuffer"
-              class="drop-zone"
-              @click="triggerFileInput"
-            >
-              <i class="pi pi-cloud-upload" style="font-size: 2rem; color: #3b82f6; margin-bottom: 6px;"></i>
-              <div style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">Nhấp để chọn tệp Mẫu Word (.docx)</div>
-              <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">Chỉ hỗ trợ định dạng Microsoft Word .docx</div>
-            </div>
-
-            <div v-else class="file-loaded-box">
+            <!-- Nguồn 1: Mẫu chuẩn hệ thống -->
+            <div v-if="templateSource === 'sample'" class="file-loaded-box">
               <div style="display: flex; align-items: center; gap: 10px;">
                 <i class="pi pi-file-word" style="font-size: 1.8rem; color: #2563eb;"></i>
                 <div>
-                  <div style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">{{ templateFileName }}</div>
-                  <div style="font-size: 0.72rem; color: #16a34a; font-weight: 600;">Đã sẵn sàng xuất dữ liệu</div>
+                  <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">Mau_so_yeu_ly_lich_chuan.docx</div>
+                  <div style="font-size: 0.72rem; color: #16a34a; font-weight: 600;">Mẫu có sẵn tích hợp đầy đủ thẻ Cán bộ & Thân nhân</div>
                 </div>
               </div>
-              <div style="display: flex; gap: 6px;">
+              <Button
+                label="Tải về xem"
+                icon="pi pi-download"
+                size="small"
+                text
+                severity="info"
+                @click="downloadSampleTemplate"
+                style="font-size: 0.75rem; padding: 2px 6px;"
+              />
+            </div>
+
+            <!-- Nguồn 2: Tải lên mẫu riêng -->
+            <div v-else>
+              <div
+                v-if="!customTemplateBuffer"
+                class="drop-zone"
+                @click="triggerFileInput"
+              >
+                <i class="pi pi-cloud-upload" style="font-size: 2.2rem; color: #3b82f6; margin-bottom: 6px;"></i>
+                <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">Nhấp hoặc Kéo thả tệp Mẫu Word (.docx) vào đây</div>
+                <div style="font-size: 0.74rem; color: #64748b; margin-top: 3px;">Hệ thống sẽ điền dữ liệu vào các thẻ tag bạn đã đặt trong file</div>
+              </div>
+
+              <div v-else class="file-loaded-box">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <i class="pi pi-file-word" style="font-size: 1.8rem; color: #2563eb;"></i>
+                  <div>
+                    <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">{{ customTemplateFileName }}</div>
+                    <div style="font-size: 0.72rem; color: #16a34a; font-weight: 600;">Đã nạp file mẫu tùy biến thành công</div>
+                  </div>
+                </div>
                 <Button
-                  label="Đổi file"
+                  label="Đổi file khác"
                   icon="pi pi-sync"
                   size="small"
                   outlined
@@ -114,11 +187,11 @@
           </div>
         </div>
 
-        <!-- 3. Tiến trình & Nút Thực hiện -->
-        <div style="margin-top: auto; padding-top: 10px;">
-          <div v-if="exporting" style="margin-bottom: 12px; background: #eff6ff; padding: 10px 14px; border-radius: 8px; border: 1px solid #bfdbfe;">
+        <!-- 4. Tiến trình & Nút Thực hiện -->
+        <div style="margin-top: auto; padding-top: 8px;">
+          <div v-if="exporting" style="margin-bottom: 10px; background: #eff6ff; padding: 10px 14px; border-radius: 8px; border: 1px solid #bfdbfe;">
             <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #1e40af; margin-bottom: 6px;">
-              <span>Đang xử lý xuất dữ liệu...</span>
+              <span>Đang xử lý xuất dữ liệu ({{ outputFormat === 'pdf' ? 'PDF' : 'Word' }})...</span>
               <span>{{ progressCurrent }} / {{ progressTotal }} ({{ Math.round((progressCurrent / (progressTotal || 1)) * 100) }}%)</span>
             </div>
             <div style="width: 100%; height: 8px; background: #dbeafe; border-radius: 4px; overflow: hidden;">
@@ -131,11 +204,11 @@
 
           <Button
             :label="getExportButtonLabel()"
-            :icon="exportScope === 'single' ? 'pi pi-file-word' : 'pi pi-folder-open'"
-            severity="primary"
+            :icon="outputFormat === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-file-word'"
+            :severity="outputFormat === 'pdf' ? 'danger' : 'primary'"
             class="w-full"
             :loading="exporting"
-            :disabled="!templateBuffer || exporting"
+            :disabled="!effectiveTemplateBuffer || exporting"
             @click="handleExport"
             style="font-size: 0.92rem; font-weight: 700; padding: 0.75rem 1rem;"
           />
@@ -145,7 +218,7 @@
       <!-- ========================================== -->
       <!-- CỘT PHẢI: BẢNG TRA CỨU MÃ THẺ TAG (CHEAT-SHEET) -->
       <!-- ========================================== -->
-      <div style="display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; overflow: hidden;">
+      <div class="docx-right-panel">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 6px;">
             <i class="pi pi-tags" style="color: #7c3aed; font-size: 1rem;"></i>
@@ -296,24 +369,35 @@ const visible = computed({
   set: (val) => emit('update:modelValue', val),
 });
 
+const outputFormat = ref('docx'); // 'docx' | 'pdf'
 const exportScope = ref('single');
+const templateSource = ref('sample'); // 'sample' | 'upload'
+
 const fileInputRef = ref(null);
-const templateFile = ref(null);
-const templateBuffer = ref(null);
-const templateFileName = ref('');
+const sampleTemplateBuffer = ref(null);
+const customTemplateFile = ref(null);
+const customTemplateBuffer = ref(null);
+const customTemplateFileName = ref('');
 
 const exporting = ref(false);
 const progressCurrent = ref(0);
 const progressTotal = ref(0);
 
 const tagSearch = ref('');
-const selectedCategory = ref('personnel'); // default to 'personnel'
+const selectedCategory = ref('personnel');
 const copiedTag = ref('');
 
 const selectedCount = computed(() => props.selectedPersonnel?.length || 0);
 const totalPersonnelCount = computed(() => {
   if (props.allPersonnel && props.allPersonnel.length > 0) return props.allPersonnel.length;
   return personnelStore.personnelList.length;
+});
+
+const effectiveTemplateBuffer = computed(() => {
+  if (templateSource.value === 'upload') {
+    return customTemplateBuffer.value;
+  }
+  return sampleTemplateBuffer.value;
 });
 
 watch(
@@ -327,11 +411,18 @@ watch(
       } else {
         exportScope.value = 'all';
       }
-      loadLastTemplate();
+      loadSampleTemplate();
     }
   },
   { immediate: true }
 );
+
+const setTemplateSource = (src) => {
+  templateSource.value = src;
+  if (src === 'upload' && !customTemplateBuffer.value) {
+    triggerFileInput();
+  }
+};
 
 const triggerFileInput = () => {
   if (fileInputRef.value) {
@@ -348,25 +439,22 @@ const handleFileUpload = (e) => {
     return;
   }
 
-  templateFile.value = file;
-  templateFileName.value = file.name;
+  customTemplateFile.value = file;
+  customTemplateFileName.value = file.name;
+  templateSource.value = 'upload';
 
   const reader = new FileReader();
   reader.onload = (event) => {
-    templateBuffer.value = event.target.result;
-    try {
-      localStorage.setItem('lastDocxTemplateName', file.name);
-    } catch (err) {}
+    customTemplateBuffer.value = event.target.result;
   };
   reader.readAsArrayBuffer(file);
 };
 
-const loadLastTemplate = async () => {
-  if (!templateBuffer.value) {
+const loadSampleTemplate = async () => {
+  if (!sampleTemplateBuffer.value) {
     try {
       const sampleBlob = await createSampleDocxTemplateBlob();
-      templateBuffer.value = await sampleBlob.arrayBuffer();
-      templateFileName.value = 'Mau_so_yeu_ly_lich_chuan.docx';
+      sampleTemplateBuffer.value = await sampleBlob.arrayBuffer();
     } catch (e) {
       console.error('Failed to init sample docx:', e);
     }
@@ -543,17 +631,19 @@ const copyTag = (tag) => {
 };
 
 const getExportButtonLabel = () => {
+  const typeLabel = outputFormat.value === 'pdf' ? 'PDF' : 'Word';
   if (exportScope.value === 'single') {
-    return `Xuất file Word: ${props.targetPerson?.name || 'Hồ sơ Cán bộ'}`;
+    return `Xuất file ${typeLabel}: ${props.targetPerson?.name || 'Hồ sơ Cán bộ'}`;
   }
   if (exportScope.value === 'selected') {
-    return `Đóng gói ZIP (${selectedCount.value} Cán bộ được chọn)`;
+    return `Đóng gói ZIP ${typeLabel} (${selectedCount.value} Cán bộ được chọn)`;
   }
-  return `Đóng gói ZIP (Toàn bộ ${totalPersonnelCount.value} Cán bộ)`;
+  return `Đóng gói ZIP ${typeLabel} (Toàn bộ ${totalPersonnelCount.value} Cán bộ)`;
 };
 
 const handleExport = async () => {
-  if (!templateBuffer.value) {
+  const buf = effectiveTemplateBuffer.value;
+  if (!buf) {
     alert('Vui lòng chọn hoặc tải lên tệp mẫu Word (.docx)');
     return;
   }
@@ -563,11 +653,12 @@ const handleExport = async () => {
 
   try {
     if (exportScope.value === 'single' && props.targetPerson) {
-      exportSinglePersonnelDocx(
-        templateBuffer.value,
+      await exportSinglePersonnelDocx(
+        buf,
         props.targetPerson,
-        `Ho_so_${(props.targetPerson.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.docx`,
-        personnelStore
+        null,
+        personnelStore,
+        outputFormat.value
       );
       visible.value = false;
     } else {
@@ -586,35 +677,97 @@ const handleExport = async () => {
       progressTotal.value = list.length;
 
       await exportMultiplePersonnelZip(
-        templateBuffer.value,
+        buf,
         list,
-        `Danh_sach_Ho_so_${list.length}_can_bo.zip`,
+        null,
         personnelStore,
         (curr, total) => {
           progressCurrent.value = curr;
           progressTotal.value = total;
-        }
+        },
+        outputFormat.value
       );
       visible.value = false;
     }
   } catch (error) {
-    alert('Lỗi trong quá trình xuất Word:\n' + (error.message || error));
+    alert('Lỗi trong quá trình xuất:\n' + (error.message || error));
   } finally {
     exporting.value = false;
   }
 };
 
 onMounted(() => {
-  loadLastTemplate();
+  loadSampleTemplate();
 });
 </script>
 
 <style scoped>
+.docx-export-container {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: 1.25rem;
+  max-height: 72vh;
+  min-height: 520px;
+}
+
+@media (max-width: 900px) {
+  .docx-export-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.docx-left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-right: 0.5rem;
+  overflow-y: auto;
+}
+
+.docx-right-panel {
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.tpl-src-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.tpl-src-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.tpl-src-active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+}
+
 .export-box {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 10px 14px;
 }
 
 .box-title {

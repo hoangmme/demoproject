@@ -222,20 +222,72 @@ export function generateDocxBlob(templateBuffer, contextData) {
   }
 }
 
+import { renderAsync } from 'docx-preview';
+import html2pdf from 'html2pdf.js';
+
 /**
- * Xuất 1 file Word cho 1 cán bộ và tải về máy
+ * Chuyển đổi một DOCX Blob thành PDF Blob chất lượng cao
+ * @param {Blob} docxBlob
+ * @returns {Promise<Blob>}
  */
-export function exportSinglePersonnelDocx(templateBuffer, person, filename, personnelStore) {
-  const contextData = preparePersonnelDocxData(person, 0, personnelStore);
-  const blob = generateDocxBlob(templateBuffer, contextData);
-  const safeName = filename || `Ho_so_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.docx`;
-  saveAs(blob, safeName);
+export async function convertDocxBlobToPdfBlob(docxBlob) {
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.style.width = '794px'; // Khổ A4 ở 96 DPI
+  container.style.background = '#ffffff';
+  container.style.color = '#000000';
+  container.style.padding = '20px';
+  document.body.appendChild(container);
+
+  try {
+    await renderAsync(docxBlob, container, null, {
+      inWrapper: false,
+      ignoreWidth: false,
+      ignoreHeight: false,
+      renderHeaders: true,
+      renderFooters: true,
+      renderFootnotes: true,
+      renderEndnotes: true,
+    });
+
+    const opt = {
+      margin: [10, 10, 10, 10],
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    };
+
+    const pdfBlob = await html2pdf().set(opt).from(container).outputPdf('blob');
+    return pdfBlob;
+  } finally {
+    if (document.body.contains(container)) {
+      document.body.removeChild(container);
+    }
+  }
 }
 
 /**
- * Xuất nhiều cán bộ và đóng gói thành tệp .ZIP
+ * Xuất 1 file Word hoặc PDF cho 1 cán bộ và tải về máy
  */
-export async function exportMultiplePersonnelZip(templateBuffer, personnelList, zipName, personnelStore, onProgress) {
+export async function exportSinglePersonnelDocx(templateBuffer, person, filename, personnelStore, outputFormat = 'docx') {
+  const contextData = preparePersonnelDocxData(person, 0, personnelStore);
+  const docxBlob = generateDocxBlob(templateBuffer, contextData);
+  const baseName = `Ho_so_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}`;
+
+  if (outputFormat === 'pdf') {
+    const pdfBlob = await convertDocxBlobToPdfBlob(docxBlob);
+    saveAs(pdfBlob, `${baseName}.pdf`);
+  } else {
+    saveAs(docxBlob, `${baseName}.docx`);
+  }
+}
+
+/**
+ * Xuất nhiều cán bộ và đóng gói thành tệp .ZIP (chứa các file DOCX hoặc PDF)
+ */
+export async function exportMultiplePersonnelZip(templateBuffer, personnelList, zipName, personnelStore, onProgress, outputFormat = 'docx') {
   const zip = new JSZip();
   const total = personnelList.length;
 
@@ -245,9 +297,15 @@ export async function exportMultiplePersonnelZip(templateBuffer, personnelList, 
     const docxBlob = generateDocxBlob(templateBuffer, contextData);
 
     const safePersonName = (person.name || `Can_bo_${i + 1}`).replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_');
-    const fileName = `${String(i + 1).padStart(3, '0')}_${safePersonName}_${person.code || 'CB'}.docx`;
+    const ext = outputFormat === 'pdf' ? 'pdf' : 'docx';
+    const fileName = `${String(i + 1).padStart(3, '0')}_${safePersonName}_${person.code || 'CB'}.${ext}`;
 
-    zip.file(fileName, docxBlob);
+    if (outputFormat === 'pdf') {
+      const pdfBlob = await convertDocxBlobToPdfBlob(docxBlob);
+      zip.file(fileName, pdfBlob);
+    } else {
+      zip.file(fileName, docxBlob);
+    }
 
     if (typeof onProgress === 'function') {
       onProgress(i + 1, total);
@@ -255,7 +313,8 @@ export async function exportMultiplePersonnelZip(templateBuffer, personnelList, 
   }
 
   const zipBlob = await zip.generateAsync({ type: 'blob' });
-  const finalZipName = zipName || `Danh_sach_Ho_so_${total}_can_bo.zip`;
+  const extLabel = outputFormat === 'pdf' ? 'PDF' : 'Word';
+  const finalZipName = zipName || `Danh_sach_Ho_so_${total}_can_bo_${extLabel}.zip`;
   saveAs(zipBlob, finalZipName);
 }
 
