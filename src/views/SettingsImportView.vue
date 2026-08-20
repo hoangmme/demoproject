@@ -62,10 +62,29 @@
         <i class="pi pi-users" style="margin-right: 6px;"></i>
         Cấu hình Cột Thân nhân
       </button>
+
+      <button
+        type="button"
+        @click="activeTab = 'tags'"
+        :style="{
+          padding: '8px 16px',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          border: 'none',
+          background: 'none',
+          cursor: 'pointer',
+          color: activeTab === 'tags' ? '#7c3aed' : '#6b7280',
+          borderBottom: activeTab === 'tags' ? '3px solid #7c3aed' : '3px solid transparent',
+          marginBottom: '-6px'
+        }"
+      >
+        <i class="pi pi-tags" style="margin-right: 6px;"></i>
+        Bảng Tra cứu Mã Thẻ Tag (Word / PDF)
+      </button>
     </div>
 
-    <!-- Main Content -->
-    <div class="app-card" style="padding: 1.25rem;">
+    <!-- Main Content: Tab 1 & 2 (Cấu hình Cột Cán bộ & Thân nhân) -->
+    <div v-if="activeTab === 'personnel' || activeTab === 'relative'" class="app-card" style="padding: 1.25rem;">
       <!-- Khung Cấu hình Khóa Định Danh & Khóa Liên Kết -->
       <div style="margin-bottom: 1.25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;">
         <!-- Khi ở Tab Cán bộ -->
@@ -301,6 +320,143 @@
         </div>
       </div>
     </div>
+
+    <!-- Main Content: Tab 3 (Bảng Tra cứu Mã Thẻ Tag Word / PDF) -->
+    <div v-else-if="activeTab === 'tags'" class="app-card" style="padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="pi pi-tags" style="color: #7c3aed; font-size: 1.2rem;"></i>
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: #1e293b; margin: 0;">Bảng Tra cứu Toàn bộ Mã Thẻ Tag Word (.docx) & PDF</h2>
+          </div>
+          <p style="font-size: 0.8rem; color: #64748b; margin: 4px 0 0 0;">
+            Tra cứu nhanh và sao chép 1-click các mã thẻ tag để dán vào file mẫu Microsoft Word của bạn.
+          </p>
+        </div>
+
+        <Button
+          label="Tải tệp Mẫu Word chuẩn (.docx)"
+          icon="pi pi-download"
+          severity="info"
+          outlined
+          size="small"
+          @click="downloadSampleTemplate"
+          style="font-size: 0.82rem; font-weight: 600;"
+        />
+      </div>
+
+      <!-- Filters & Category Navigation -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button
+            type="button"
+            class="cheat-tab-btn"
+            :class="{ 'cheat-tab-active': selectedCategory === 'personnel' }"
+            @click="selectedCategory = 'personnel'"
+          >
+            <i class="pi pi-user"></i> Cán bộ ({{ personnelTagsCount }} cột)
+          </button>
+          <button
+            type="button"
+            class="cheat-tab-btn"
+            :class="{ 'cheat-tab-active': selectedCategory === 'relatives' }"
+            @click="selectedCategory = 'relatives'"
+          >
+            <i class="pi pi-users"></i> Thân nhân ({{ relativeTagsCount }} cột)
+          </button>
+          <button
+            type="button"
+            class="cheat-tab-btn"
+            :class="{ 'cheat-tab-active': selectedCategory === 'system' }"
+            @click="selectedCategory = 'system'"
+          >
+            <i class="pi pi-cog"></i> Thẻ Hệ thống & Ngày giờ ({{ systemTagsCount }} thẻ)
+          </button>
+          <button
+            type="button"
+            class="cheat-tab-btn"
+            :class="{ 'cheat-tab-active': selectedCategory === 'all' }"
+            @click="selectedCategory = 'all'"
+          >
+            Tất cả ({{ allAvailableTags.length }} thẻ)
+          </button>
+        </div>
+
+        <div style="min-width: 260px;">
+          <InputText
+            v-model="tagSearch"
+            placeholder="🔍 Tìm mã thẻ, số cột, tên trường..."
+            size="small"
+            style="width: 100%; font-size: 0.82rem;"
+          />
+        </div>
+      </div>
+
+      <!-- Tags Table Grid -->
+      <div style="max-height: 62vh; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+          <thead style="background: #f8fafc; position: sticky; top: 0; z-index: 10; border-bottom: 1.5px solid #e2e8f0;">
+            <tr>
+              <th style="padding: 10px 12px; text-align: left; font-weight: 700; color: #475569; width: 100px;">Vị trí Cột</th>
+              <th style="padding: 10px 12px; text-align: left; font-weight: 700; color: #475569; width: 120px;">Phân loại</th>
+              <th style="padding: 10px 12px; text-align: left; font-weight: 700; color: #475569;">Tên Trường Dữ liệu</th>
+              <th style="padding: 10px 12px; text-align: left; font-weight: 700; color: #475569;">Cú pháp Thẻ Tag Word</th>
+              <th style="padding: 10px 12px; text-align: center; font-weight: 700; color: #475569; width: 100px;">Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="item in filteredTags"
+              :key="item.tag"
+              style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s ease;"
+              class="tag-table-row"
+            >
+              <td style="padding: 10px 12px;">
+                <span v-if="item.colNum" class="col-num-badge">{{ item.colNum }}</span>
+                <span v-else style="color: #94a3b8; font-size: 0.75rem;">—</span>
+              </td>
+              <td style="padding: 10px 12px;">
+                <span class="tag-badge" :class="'tag-badge-' + item.category">
+                  {{ getCategoryLabel(item.category) }}
+                </span>
+              </td>
+              <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;">
+                {{ item.label }}
+              </td>
+              <td style="padding: 10px 12px;">
+                <code class="tag-code">{{ item.tag }}</code>
+              </td>
+              <td style="padding: 10px 12px; text-align: center;">
+                <button
+                  type="button"
+                  class="btn-copy"
+                  :class="{ 'btn-copy-success': copiedTag === item.tag }"
+                  @click="copyTag(item.tag)"
+                >
+                  <i :class="copiedTag === item.tag ? 'pi pi-check' : 'pi pi-copy'"></i>
+                  <span>{{ copiedTag === item.tag ? 'Đã chép!' : 'Chép' }}</span>
+                </button>
+              </td>
+            </tr>
+            <tr v-if="filteredTags.length === 0">
+              <td colspan="5" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
+                Không tìm thấy mã thẻ tag nào phù hợp với từ khóa "{{ tagSearch }}".
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Quick Guide Footer -->
+      <div style="margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div style="background: #eff6ff; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #2563eb; font-size: 0.76rem; color: #1e40af; line-height: 1.45;">
+          <strong>💡 Thẻ Lặp Thân nhân:</strong> Đặt <code>&#123;#than_nhan&#125;</code> ở đầu dòng/hàng bảng và <code>&#123;/than_nhan&#125;</code> ở cuối hàng. Hệ thống sẽ tự động nhân bản theo số lượng thân nhân!
+        </div>
+        <div style="background: #fdf4ff; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #c026d3; font-size: 0.76rem; color: #86198f; line-height: 1.45;">
+          <strong>💡 Thẻ Lặp Chuyến đi:</strong> Đặt <code>&#123;#xuatnhapcanh&#125;</code> ở đầu hàng và <code>&#123;/xuatnhapcanh&#125;</code> ở cuối hàng để tự động in danh sách các chuyến đi nước ngoài!
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -310,6 +466,9 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import { saveAppSettings } from '@/api/settings';
+import { computeColumnIndexMap } from '@/utils/formatters';
+import { createSampleDocxTemplateBlob } from '@/utils/docxExport';
+import { saveAs } from 'file-saver';
 
 const personnelStore = usePersonnelStore();
 
@@ -322,6 +481,10 @@ const relativeGroups = ref([]);
 const personnelKeyField = ref('cccdparent');
 const relativeParentKeyField = ref('cccdparent');
 const relativeKeyField = ref('cccdthannhan');
+
+const tagSearch = ref('');
+const selectedCategory = ref('personnel');
+const copiedTag = ref('');
 
 const availablePersonnelCols = computed(() => {
   const cols = [];
@@ -509,7 +672,6 @@ const removeColumn = (gIdx, cIdx) => {
 };
 
 const validateUniqueIds = () => {
-  // 1. Kiểm tra trùng lặp trong nội bộ Cán bộ
   const pSeen = new Map();
   for (const g of personnelGroups.value) {
     for (const c of (g.columns || [])) {
@@ -522,7 +684,6 @@ const validateUniqueIds = () => {
     }
   }
 
-  // 2. Kiểm tra trùng lặp trong nội bộ Thân nhân
   const rSeen = new Map();
   for (const g of relativeGroups.value) {
     for (const c of (g.columns || [])) {
@@ -535,12 +696,10 @@ const validateUniqueIds = () => {
     }
   }
 
-  // 3. Kiểm tra trùng lặp GIỮA Cán bộ và Thân nhân (trừ khóa liên kết cccdparent)
-  const allowedOverlap = new Set(['cccdparent', personnelKeyField.value, relativeParentKeyField.value]);
+  // 3. Cảnh báo nếu trùng ID giữa Cán bộ và Thân nhân (trừ trường khóa liên kết cha mẹ)
   for (const [rId, rLabel] of rSeen.entries()) {
-    if (!allowedOverlap.has(rId) && pSeen.has(rId)) {
-      const pLabel = pSeen.get(rId);
-      return `Trùng mã ID giữa Cán bộ và Thân nhân:\nMã ID "${rId}" đang được dùng ở cả Cán bộ (${pLabel}) và Thân nhân (${rLabel}).\n\nVui lòng đổi mã ID ở Thân nhân (ví dụ: tn_${rId}) để xuất mẫu không bị trùng.`;
+    if (pSeen.has(rId) && rId !== 'cccdparent' && rId !== relativeParentKeyField.value) {
+      return `Mã ID "${rId}" đang tồn tại ở cả bảng Cán bộ (${pSeen.get(rId)}) và Thân nhân (${rLabel}). Vui lòng đặt mã khác nhau để xuất báo cáo không bị nhầm lẫn.`;
     }
   }
 
@@ -548,19 +707,18 @@ const validateUniqueIds = () => {
 };
 
 const saveConfig = async () => {
-  // Kiểm tra trùng lặp ID trước khi lưu
   const errorMsg = validateUniqueIds();
   if (errorMsg) {
-    alert(errorMsg);
+    alert('⚠️ KHÔNG THỂ LƯU CẤU HÌNH:\n\n' + errorMsg);
     return;
   }
 
   saving.value = true;
   try {
     const keyConfig = {
-      personnelKeyField: personnelKeyField.value,
-      relativeParentKeyField: relativeParentKeyField.value,
-      relativeKeyField: relativeKeyField.value,
+      personnelKeyField: personnelKeyField.value || 'cccdparent',
+      relativeParentKeyField: relativeParentKeyField.value || 'cccdparent',
+      relativeKeyField: relativeKeyField.value || 'cccdthannhan',
     };
     await saveAppSettings('system_key_config', keyConfig);
     personnelStore.systemKeyConfig = keyConfig;
