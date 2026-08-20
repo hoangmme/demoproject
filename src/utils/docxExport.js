@@ -23,7 +23,30 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   const minuteStr = String(today.getMinutes()).padStart(2, '0');
   const secondStr = String(today.getSeconds()).padStart(2, '0');
 
-  const exporterName = currentUser?.name || currentUser?.fullName || currentUser?.first_name || currentUser?.email || 'Quản trị viên';
+  let exporterName = '';
+  if (currentUser) {
+    const fn = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
+    exporterName = fn || currentUser.name || currentUser.fullName || currentUser.first_name || (currentUser.email ? currentUser.email.split('@')[0] : '');
+  }
+
+  if (!exporterName || exporterName === 'Quản trị viên') {
+    try {
+      const raw = localStorage.getItem('mvp_session');
+      if (raw) {
+        const u = JSON.parse(raw);
+        const fn = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+        if (fn && fn !== 'Quản trị viên') exporterName = fn;
+        else if (u.name && u.name !== 'Quản trị viên') exporterName = u.name;
+        else if (u.fullName && u.fullName !== 'Quản trị viên') exporterName = u.fullName;
+        else if (u.first_name && u.first_name !== 'Quản trị viên') exporterName = u.first_name;
+        else if (u.email) exporterName = u.email.split('@')[0];
+      }
+    } catch (e) {}
+  }
+
+  if (!exporterName || exporterName === 'Quản trị viên') {
+    exporterName = currentUser?.first_name || 'Admin';
+  }
 
   const data = {
     // 1. Hệ thống & Người xuất & Ngày giờ

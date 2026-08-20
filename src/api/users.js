@@ -66,9 +66,9 @@ export const login = async (identifier, password) => {
       return {
         id: 'admin-id',
         email: 'admin@demo.com',
-        first_name: 'Quản trị viên',
-        name: 'Quản trị viên',
-        fullName: 'Quản trị viên',
+        first_name: 'Admin',
+        name: 'Admin',
+        fullName: 'Admin',
         role: 'Admin',
       };
     }
