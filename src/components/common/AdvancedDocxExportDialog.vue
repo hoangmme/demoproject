@@ -183,7 +183,6 @@
                   :key="'rel_' + rIdx"
                   class="group-select-item"
                   :class="{ 'group-selected': selectedRelativeGroupIndices.includes(rIdx) }"
-                  style="margin-left: 12px; border-left: 2px solid #c084fc;"
                 >
                   <input
                     type="checkbox"
@@ -191,16 +190,15 @@
                     v-model="selectedRelativeGroupIndices"
                     style="accent-color: #7c3aed;"
                   />
-                  <span style="font-weight: 600; color: #475569; font-size: 0.78rem;">
+                  <span style="font-weight: 600; color: #334155; flex: 1;">
                     Khối TN {{ rIdx + 1 }}: {{ rGrp.group || 'Nhóm thân nhân ' + (rIdx + 1) }}
-                    <small style="color: #64748b;">({{ rGrp.columns?.length || 0 }} cột)</small>
+                    <small style="color: #64748b; font-weight: normal;">({{ rGrp.columns?.length || 0 }} cột)</small>
                   </span>
                 </label>
               </template>
             </div>
           </div>
 
-          <!-- Nguồn 2: Tải lên mẫu riêng -->
           <!-- Nguồn 2: Danh sách Mẫu đã lưu & Tải lên mẫu riêng -->
           <div v-else>
             <!-- Danh sách các mẫu đã lưu trong hệ thống -->
@@ -211,13 +209,13 @@
                 :key="tpl.id"
                 class="radio-item"
                 :class="{ 'radio-active': selectedSavedTemplateId === tpl.id }"
-                style="padding: 6px 10px;"
+                style="padding: 6px 10px; cursor: pointer;"
+                @click="selectSavedTemplate(tpl)"
               >
                 <input
                   type="radio"
                   :value="tpl.id"
                   v-model="selectedSavedTemplateId"
-                  @change="selectSavedTemplate(tpl)"
                   style="accent-color: #2563eb;"
                 />
                 <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
@@ -240,66 +238,67 @@
               <div style="font-size: 0.7rem; color: #64748b;">Hệ thống sẽ điền dữ liệu theo các tag trong file</div>
             </div>
 
-            <div v-else class="file-loaded-box">
-              <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                <i class="pi pi-file-word" style="font-size: 1.5rem; color: #2563eb;"></i>
-                <div>
-                  <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">{{ customTemplateFileName }}</div>
-                  <div style="font-size: 0.7rem; color: #16a34a; font-weight: 600;">Đang sử dụng mẫu này để xuất</div>
-                </div>
+            <!-- Trạng thái tệp mẫu tùy biến hiện tại -->
+            <div
+              v-else
+              class="uploaded-info"
+              style="padding: 8px 12px; margin-top: 6px; display: flex; align-items: center; gap: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;"
+            >
+              <i class="pi pi-file-word" style="font-size: 1.5rem; color: #2563eb;"></i>
+              <div style="flex: 1; min-width: 0;">
+                <div class="uploaded-filename" style="font-size: 0.82rem; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ customTemplateFileName || 'Mau_Word_tuy_bien.docx' }}</div>
+                <div class="uploaded-filesize" style="color: #16a34a; font-weight: 600; font-size: 0.7rem;">Đang sử dụng mẫu này để xuất</div>
               </div>
               <Button
                 label="Đổi file khác"
-                icon="pi pi-sync"
+                icon="pi pi-refresh"
+                severity="secondary"
                 size="small"
                 outlined
-                severity="secondary"
                 @click="triggerFileInput"
-                style="font-size: 0.72rem; padding: 2px 6px;"
+                style="font-size: 0.72rem; padding: 4px 8px;"
               />
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 4. Tiến trình & Nút Thực hiện Xuất -->
-      <div style="margin-top: 6px; width: 100%;">
-        <div v-if="exporting" style="margin-bottom: 10px; background: #eff6ff; padding: 10px 14px; border-radius: 8px; border: 1px solid #bfdbfe;">
-          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #1e40af; margin-bottom: 6px;">
-            <span>Đang xử lý xuất dữ liệu ({{ outputFormat === 'pdf' ? 'PDF' : 'Word' }})...</span>
-            <span>{{ progressCurrent }} / {{ progressTotal }} ({{ Math.round((progressCurrent / (progressTotal || 1)) * 100) }}%)</span>
-          </div>
-          <div style="width: 100%; height: 8px; background: #dbeafe; border-radius: 4px; overflow: hidden;">
-            <div
-              style="height: 100%; background: #2563eb; transition: width 0.2s ease;"
-              :style="{ width: ((progressCurrent / (progressTotal || 1)) * 100) + '%' }"
-            ></div>
-          </div>
-        </div>
-
+      <!-- FOOTER -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; padding-top: 0.6rem; border-top: 1px solid #e2e8f0;">
         <Button
-          :label="getDownloadButtonLabel()"
-          :icon="outputFormat === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-file-word'"
-          :severity="outputFormat === 'pdf' ? 'danger' : 'primary'"
-          style="width: 100%; font-size: 0.95rem; font-weight: 700; padding: 0.8rem 1rem; display: flex; justify-content: center; align-items: center; text-align: center;"
-          :loading="exporting"
-          :disabled="!effectiveTemplateBuffer || exporting"
-          @click="handleExport"
+          label="Đóng"
+          severity="secondary"
+          size="small"
+          text
+          @click="visible = false"
         />
-      </div>
 
-      <!-- Gợi ý tra cứu thẻ tag -->
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.73rem; color: #64748b; display: flex; align-items: center; gap: 6px;">
-        <i class="pi pi-info-circle" style="color: #7c3aed;"></i>
-        <span>Tra cứu toàn bộ danh sách mã thẻ tag tại <strong>Cấu hình Cột & Mẫu Dữ liệu Excel</strong> (Tab Bảng Tra cứu Mã Thẻ Tag).</span>
+        <div style="display: flex; gap: 8px;">
+          <!-- Nút Download mẫu để xem trước hoặc cấu hình tag -->
+          <Button
+            label="Tải file Mẫu (.docx)"
+            icon="pi pi-file-word"
+            severity="info"
+            outlined
+            size="small"
+            @click="downloadSampleTemplate"
+            title="Tải tệp mẫu này về máy để xem trước hoặc chỉnh sửa"
+          />
+
+          <!-- Nút Tải Hồ sơ Chính -->
+          <Button
+            :label="getDownloadButtonLabel()"
+            :icon="outputFormat === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-download'"
+            severity="primary"
+            size="small"
+            :loading="exporting"
+            @click="handleExport"
+            style="font-weight: 700; padding: 6px 14px;"
+            :disabled="!effectiveTemplateBuffer || exporting"
+          />
+        </div>
       </div>
     </div>
-
-    <template #footer>
-      <div style="display: flex; justify-content: flex-end;">
-        <Button label="Đóng" severity="secondary" text size="small" @click="visible = false" />
-      </div>
-    </template>
   </Dialog>
 </template>
 
@@ -309,13 +308,13 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { saveAs } from 'file-saver';
 import {
   exportSinglePersonnelDocx,
   exportMultiplePersonnelZip,
   createDynamicDocxTemplateBlob,
 } from '@/utils/docxExport';
+import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -389,30 +388,16 @@ const selectSavedTemplate = (tpl) => {
   customTemplateFileName.value = tpl.name;
 };
 
-const loadAllSavedTemplates = async () => {
+const loadSavedTemplate = async () => {
   try {
     const list = await getAppSettings('system_docx_templates', []);
     if (Array.isArray(list) && list.length > 0) {
       savedTemplatesList.value = list;
       const defaultTpl = list.find((t) => t.isDefault) || list[0];
-      if (defaultTpl && !customTemplateBuffer.value) {
+      if (defaultTpl) {
         selectSavedTemplate(defaultTpl);
+        return;
       }
-    }
-  } catch (e) {
-    console.error('Error loading saved templates in dialog:', e);
-  }
-};
-
-const loadSavedTemplate = async () => {
-  try {
-    await loadAllSavedTemplates();
-    const cachedB64 = localStorage.getItem('cached_custom_docx_template');
-    const cachedName = localStorage.getItem('cached_custom_docx_name');
-    if (cachedB64 && cachedName) {
-      customTemplateBuffer.value = base64ToArrayBuffer(cachedB64);
-      customTemplateFileName.value = cachedName;
-      return;
     }
     const serverTemplate = await getAppSettings('custom_docx_template', null);
     if (serverTemplate?.base64) {
