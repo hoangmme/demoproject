@@ -213,6 +213,18 @@
           </div>
         </div>
 
+        <!-- Legend for 2 colors -->
+        <div style="display: flex; gap: 12px; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <span style="width: 10px; height: 10px; border-radius: 2px; background: #16a34a; display: inline-block;"></span>
+            <strong style="color: #166534;">Cán bộ</strong> (Lượt đi)
+          </span>
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
+            <strong style="color: #6d28d9;">Thân nhân</strong> (Cư trú)
+          </span>
+        </div>
+
         <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
           <div v-if="filteredCountryList.length === 0" style="text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.8rem;">
             Không tìm thấy quốc gia phù hợp.
@@ -221,7 +233,7 @@
             v-for="(item, idx) in filteredCountryList"
             :key="item.name"
             class="breakdown-row"
-            @click="openDrilldown('country', `Danh sách Cán bộ đi: ${item.name}`, { countryName: item.name })"
+            @click="openDrilldown('country', `Danh sách đi / ở: ${item.name}`, { countryName: item.name })"
           >
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -229,16 +241,30 @@
                 <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 0.8rem; font-weight: 700; color: #16a34a;">{{ item.count }} lượt</span>
-                <span style="font-size: 0.7rem; color: #94a3b8;">
-                  ({{ stats.filteredTrips.length > 0 ? Math.round((item.count / stats.filteredTrips.length) * 100) : 0 }}%)
+                <span v-if="item.tripsCount > 0" class="badge-pill badge-green" style="font-size: 0.68rem; padding: 1px 6px;">
+                  {{ item.tripsCount }} CB
+                </span>
+                <span v-if="item.relativesCount > 0" class="badge-pill" style="font-size: 0.68rem; padding: 1px 6px; background: #f3e8ff; color: #6d28d9; border: 1px solid #e9d5ff;">
+                  {{ item.relativesCount }} TN
+                </span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #1e293b;">
+                  Tổng: {{ item.count }}
                 </span>
               </div>
             </div>
-            <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+            <!-- 2-Color Stacked Progress Bar -->
+            <div style="height: 7px; background: #f1f5f9; border-radius: 4px; overflow: hidden; display: flex;">
               <div
-                style="height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); border-radius: 4px; transition: width 0.4s ease;"
-                :style="{ width: `${(item.count / stats.maxCountry) * 100}%` }"
+                v-if="item.tripsCount > 0"
+                style="height: 100%; background: #16a34a; transition: width 0.4s ease;"
+                :style="{ width: `${(item.tripsCount / stats.maxCountry) * 100}%` }"
+                :title="`Cán bộ: ${item.tripsCount} lượt`"
+              ></div>
+              <div
+                v-if="item.relativesCount > 0"
+                style="height: 100%; background: #7c3aed; transition: width 0.4s ease;"
+                :style="{ width: `${(item.relativesCount / stats.maxCountry) * 100}%` }"
+                :title="`Thân nhân: ${item.relativesCount} người`"
               ></div>
             </div>
           </div>
@@ -266,6 +292,18 @@
           </div>
         </div>
 
+        <!-- Legend for 2 colors -->
+        <div style="display: flex; gap: 12px; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <span style="width: 10px; height: 10px; border-radius: 2px; background: #0284c7; display: inline-block;"></span>
+            <strong style="color: #0369a1;">Cán bộ</strong>
+          </span>
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
+            <strong style="color: #6d28d9;">Thân nhân</strong>
+          </span>
+        </div>
+
         <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
           <div v-if="filteredFundingList.length === 0" style="text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.8rem;">
             Không tìm thấy nguồn kinh phí phù hợp.
@@ -274,7 +312,7 @@
             v-for="(item, idx) in filteredFundingList"
             :key="item.name"
             class="breakdown-row"
-            @click="openDrilldown('funding', `Danh sách Cán bộ theo Kinh phí: ${item.name}`, { fundingName: item.name })"
+            @click="openDrilldown('funding', `Danh sách theo Kinh phí: ${item.name}`, { fundingName: item.name })"
           >
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -282,16 +320,30 @@
                 <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 0.8rem; font-weight: 700; color: #0284c7;">{{ item.count }} lượt</span>
-                <span style="font-size: 0.7rem; color: #94a3b8;">
-                  ({{ stats.filteredTrips.length > 0 ? Math.round((item.count / stats.filteredTrips.length) * 100) : 0 }}%)
+                <span v-if="item.tripsCount > 0" class="badge-pill badge-blue" style="font-size: 0.68rem; padding: 1px 6px;">
+                  {{ item.tripsCount }} CB
+                </span>
+                <span v-if="item.relativesCount > 0" class="badge-pill" style="font-size: 0.68rem; padding: 1px 6px; background: #f3e8ff; color: #6d28d9; border: 1px solid #e9d5ff;">
+                  {{ item.relativesCount }} TN
+                </span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #1e293b;">
+                  Tổng: {{ item.count }}
                 </span>
               </div>
             </div>
-            <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+            <!-- 2-Color Stacked Progress Bar -->
+            <div style="height: 7px; background: #f1f5f9; border-radius: 4px; overflow: hidden; display: flex;">
               <div
-                style="height: 100%; background: linear-gradient(90deg, #38bdf8, #0284c7); border-radius: 4px; transition: width 0.4s ease;"
-                :style="{ width: `${(item.count / stats.maxFunding) * 100}%` }"
+                v-if="item.tripsCount > 0"
+                style="height: 100%; background: #0284c7; transition: width 0.4s ease;"
+                :style="{ width: `${(item.tripsCount / stats.maxFunding) * 100}%` }"
+                :title="`Cán bộ: ${item.tripsCount} lượt`"
+              ></div>
+              <div
+                v-if="item.relativesCount > 0"
+                style="height: 100%; background: #7c3aed; transition: width 0.4s ease;"
+                :style="{ width: `${(item.relativesCount / stats.maxFunding) * 100}%` }"
+                :title="`Thân nhân: ${item.relativesCount} người`"
               ></div>
             </div>
           </div>
@@ -1348,12 +1400,23 @@ const getLightColor = (hex = '#2e7d32') => {
   return '#f1f5f9';
 };
 
-// Dynamic Computation of Custom Widgets
 const getRowFieldValue = (row, colId) => {
-  if (!row) return '';
-  if (row[colId] !== undefined && row[colId] !== null) return row[colId];
-  if (row.custom_data && row.custom_data[colId] !== undefined && row.custom_data[colId] !== null) {
-    return row.custom_data[colId];
+  if (!row || !colId) return '';
+  if (row[colId] !== undefined && row[colId] !== null && String(row[colId]).trim() !== '') {
+    return String(row[colId]).trim();
+  }
+  if (row.custom_data) {
+    try {
+      const cd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data) : row.custom_data;
+      if (cd && cd[colId] !== undefined && cd[colId] !== null && String(cd[colId]).trim() !== '') {
+        return String(cd[colId]).trim();
+      }
+    } catch (e) {}
+  }
+  if (colId === 'content' || colId === 'countryName' || colId === 'country') {
+    if (row.countryName && String(row.countryName).trim() !== '') return String(row.countryName).trim();
+    if (row.country && String(row.country).trim() !== '') return String(row.country).trim();
+    if (row.content && String(row.content).trim() !== '') return String(row.content).trim();
   }
   return '';
 };
@@ -1393,7 +1456,7 @@ const computeWidgetChartData = (widget) => {
       }
     });
     (personnelStore.relativesList || []).forEach((r) => {
-      const c = r.countryName || r.country || getRowFieldValue(r, 'countryName') || getRowFieldValue(r, 'country');
+      const c = getRowFieldValue(r, colConfig.value.countryRelative);
       if (c && c !== 'Chưa rõ' && c !== '-') {
         counts[c] = (counts[c] || 0) + 1;
         total++;
@@ -1612,8 +1675,8 @@ const stats = computed(() => {
   const overdueTrips = [];
   const onTimeTrips = [];
 
-  const countries = {};
-  const fundings = {};
+  const countries = {}; // { [key]: { trips: 0, relatives: 0, total: 0 } }
+  const fundings = {};  // { [key]: { trips: 0, relatives: 0, total: 0 } }
 
   // Build unified list of trips from both personnel.trips and store.tripsList
   const allTripsToProcess = [];
@@ -1689,13 +1752,17 @@ const stats = computed(() => {
       }
     }
 
-    if (cName && cName !== 'Chưa rõ') {
-      countries[cName] = (countries[cName] || 0) + 1;
+    if (cName && cName !== 'Chưa rõ' && cName !== '-') {
+      if (!countries[cName]) countries[cName] = { trips: 0, relatives: 0, total: 0 };
+      countries[cName].trips += 1;
+      countries[cName].total += 1;
     }
 
     // 4. Funding aggregation (Personnel)
     if (fName && fName !== 'Chưa rõ' && fName !== '-') {
-      fundings[fName] = (fundings[fName] || 0) + 1;
+      if (!fundings[fName]) fundings[fName] = { trips: 0, relatives: 0, total: 0 };
+      fundings[fName].trips += 1;
+      fundings[fName].total += 1;
     }
 
     const budgetVal = getTripValue(t, colConfig.value.fundingBudget);
@@ -1704,22 +1771,32 @@ const stats = computed(() => {
     const otherVal = getTripValue(t, colConfig.value.fundingOther);
 
     if (budgetVal && String(budgetVal).trim() && String(budgetVal).trim() !== '-') {
-      fundings['Ngân sách nhà nước'] = (fundings['Ngân sách nhà nước'] || 0) + 1;
+      const k = 'Ngân sách nhà nước';
+      if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
+      fundings[k].trips += 1;
+      fundings[k].total += 1;
     }
     if (sponsorVal && String(sponsorVal).trim() && String(sponsorVal).trim() !== '-') {
       const spLabel = (String(sponsorVal).toLowerCase() === 'x' || String(sponsorVal).toLowerCase() === 'có' || String(sponsorVal).trim() === '1')
         ? 'Cơ quan / Tổ chức tài trợ'
         : `Tài trợ (${sponsorVal})`;
-      fundings[spLabel] = (fundings[spLabel] || 0) + 1;
+      if (!fundings[spLabel]) fundings[spLabel] = { trips: 0, relatives: 0, total: 0 };
+      fundings[spLabel].trips += 1;
+      fundings[spLabel].total += 1;
     }
     if (selfVal && String(selfVal).trim() && String(selfVal).trim() !== '-') {
-      fundings['Tự túc'] = (fundings['Tự túc'] || 0) + 1;
+      const k = 'Tự túc';
+      if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
+      fundings[k].trips += 1;
+      fundings[k].total += 1;
     }
     if (otherVal && String(otherVal).trim() && String(otherVal).trim() !== '-') {
       const othLabel = (String(otherVal).toLowerCase() === 'x' || String(otherVal).toLowerCase() === 'có' || String(otherVal).trim() === '1')
         ? 'Nguồn khác'
         : `Khác (${otherVal})`;
-      fundings[othLabel] = (fundings[othLabel] || 0) + 1;
+      if (!fundings[othLabel]) fundings[othLabel] = { trips: 0, relatives: 0, total: 0 };
+      fundings[othLabel].trips += 1;
+      fundings[othLabel].total += 1;
     }
   });
 
@@ -1728,12 +1805,17 @@ const stats = computed(() => {
     const rc = getRowFieldValue(r, colConfig.value.countryRelative);
     if (rc && String(rc).trim() && String(rc).trim() !== '-' && String(rc).trim() !== 'Chưa rõ') {
       const cleanRc = String(rc).trim();
-      countries[cleanRc] = (countries[cleanRc] || 0) + 1;
+      if (!countries[cleanRc]) countries[cleanRc] = { trips: 0, relatives: 0, total: 0 };
+      countries[cleanRc].relatives += 1;
+      countries[cleanRc].total += 1;
     }
 
     const rf = getRowFieldValue(r, colConfig.value.fundingRelative);
     if (rf && String(rf).trim() && String(rf).trim() !== '-' && String(rf).trim() !== 'Chưa rõ') {
-      fundings[String(rf).trim()] = (fundings[String(rf).trim()] || 0) + 1;
+      const cleanRf = String(rf).trim();
+      if (!fundings[cleanRf]) fundings[cleanRf] = { trips: 0, relatives: 0, total: 0 };
+      fundings[cleanRf].relatives += 1;
+      fundings[cleanRf].total += 1;
     }
 
     const rBudget = getRowFieldValue(r, colConfig.value.fundingRelativeBudget);
@@ -1742,31 +1824,51 @@ const stats = computed(() => {
     const rOther = getRowFieldValue(r, colConfig.value.fundingRelativeOther);
 
     if (rBudget && String(rBudget).trim() && String(rBudget).trim() !== '-') {
-      fundings['Học bổng / Ngân sách (Thân nhân)'] = (fundings['Học bổng / Ngân sách (Thân nhân)'] || 0) + 1;
+      const k = 'Học bổng / Ngân sách (Thân nhân)';
+      if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
+      fundings[k].relatives += 1;
+      fundings[k].total += 1;
     }
     if (rSponsor && String(rSponsor).trim() && String(rSponsor).trim() !== '-') {
       const spLabel = (String(rSponsor).toLowerCase() === 'x' || String(rSponsor).toLowerCase() === 'có' || String(rSponsor).trim() === '1')
         ? 'Tài trợ (Thân nhân)'
         : `Tài trợ Thân nhân (${rSponsor})`;
-      fundings[spLabel] = (fundings[spLabel] || 0) + 1;
+      if (!fundings[spLabel]) fundings[spLabel] = { trips: 0, relatives: 0, total: 0 };
+      fundings[spLabel].relatives += 1;
+      fundings[spLabel].total += 1;
     }
     if (rSelf && String(rSelf).trim() && String(rSelf).trim() !== '-') {
-      fundings['Tự túc (Thân nhân)'] = (fundings['Tự túc (Thân nhân)'] || 0) + 1;
+      const k = 'Tự túc (Thân nhân)';
+      if (!fundings[k]) fundings[k] = { trips: 0, relatives: 0, total: 0 };
+      fundings[k].relatives += 1;
+      fundings[k].total += 1;
     }
     if (rOther && String(rOther).trim() && String(rOther).trim() !== '-') {
       const othLabel = (String(rOther).toLowerCase() === 'x' || String(rOther).toLowerCase() === 'có' || String(rOther).trim() === '1')
         ? 'Nguồn khác (Thân nhân)'
         : `Khác (${rOther})`;
-      fundings[othLabel] = (fundings[othLabel] || 0) + 1;
+      if (!fundings[othLabel]) fundings[othLabel] = { trips: 0, relatives: 0, total: 0 };
+      fundings[othLabel].relatives += 1;
+      fundings[othLabel].total += 1;
     }
   });
 
   const countryList = Object.entries(countries)
-    .map(([name, count]) => ({ name, count }))
+    .map(([name, data]) => ({
+      name,
+      count: data.total,
+      tripsCount: data.trips,
+      relativesCount: data.relatives,
+    }))
     .sort((a, b) => b.count - a.count);
 
   const fundingList = Object.entries(fundings)
-    .map(([name, count]) => ({ name, count }))
+    .map(([name, data]) => ({
+      name,
+      count: data.total,
+      tripsCount: data.trips,
+      relativesCount: data.relatives,
+    }))
     .sort((a, b) => b.count - a.count);
 
   const maxCountry = countryList.length > 0 ? countryList[0].count : 1;
