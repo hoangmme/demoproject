@@ -525,14 +525,25 @@ const allAvailableTags = computed(() => {
       subOpts.forEach((opt) => {
         const slug = generateSlug(opt);
         if (slug) {
+          // Thẻ 1: In ra đúng tên chữ của nhãn (VD: "Ngân sách") khi được chọn
+          tags.push({
+            label: `${col.label} -> [Tên "${opt}"]`,
+            tag: `{label_${col.id}_${slug}}`,
+            category: 'personnel',
+            colNum,
+          });
+
+          // Thẻ 2: In ra text chi tiết gõ vào (nếu là dạng checkbox_text)
           if (col.format === 'checkbox_text') {
             tags.push({
-              label: `${col.label} -> [Text ${opt}]`,
+              label: `${col.label} -> [Nội dung text ${opt}]`,
               tag: `{${col.id}_${slug}}`,
               category: 'personnel',
               colNum,
             });
           }
+
+          // Thẻ 3: Đánh dấu tích X
           tags.push({
             label: `${col.label} -> [Tích X ${opt}]`,
             tag: `{is_${col.id}_${slug}}`,
@@ -606,14 +617,25 @@ const allAvailableTags = computed(() => {
       subOpts.forEach((opt) => {
         const slug = generateSlug(opt);
         if (slug) {
+          // Thẻ 1: In ra đúng tên chữ của nhãn (VD: "Ngân sách") khi được chọn
+          tags.push({
+            label: `${col.label} -> [Tên "${opt}"]`,
+            tag: `{label_${col.id}_${slug}}`,
+            category: 'relatives',
+            colNum,
+          });
+
+          // Thẻ 2: In ra text chi tiết gõ vào (nếu là dạng checkbox_text)
           if (col.format === 'checkbox_text') {
             tags.push({
-              label: `${col.label} -> [Text ${opt}]`,
+              label: `${col.label} -> [Nội dung text ${opt}]`,
               tag: `{${col.id}_${slug}}`,
               category: 'relatives',
               colNum,
             });
           }
+
+          // Thẻ 3: Đánh dấu tích X
           tags.push({
             label: `${col.label} -> [Tích X ${opt}]`,
             tag: `{is_${col.id}_${slug}}`,

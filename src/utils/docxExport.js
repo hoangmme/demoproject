@@ -115,14 +115,22 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
                 const optDetail = trimmed.substring(colon + 1).trim();
                 const optSlug = generateSlug(optName);
                 if (optSlug) {
+                  data[`label_${key}_${optSlug}`] = optName;
+                  data[`name_${key}_${optSlug}`] = optName;
                   data[`${key}_${optSlug}`] = optDetail || optName;
+                  data[`detail_${key}_${optSlug}`] = optDetail;
+                  data[`full_${key}_${optSlug}`] = optDetail ? `${optName}: ${optDetail}` : optName;
                   data[`is_${key}_${optSlug}`] = 'X';
                   data[`check_${key}_${optSlug}`] = '☑';
                 }
               } else {
                 const optSlug = generateSlug(trimmed);
                 if (optSlug) {
+                  data[`label_${key}_${optSlug}`] = trimmed;
+                  data[`name_${key}_${optSlug}`] = trimmed;
                   data[`${key}_${optSlug}`] = trimmed;
+                  data[`detail_${key}_${optSlug}`] = '';
+                  data[`full_${key}_${optSlug}`] = trimmed;
                   data[`is_${key}_${optSlug}`] = 'X';
                   data[`check_${key}_${optSlug}`] = '☑';
                 }
