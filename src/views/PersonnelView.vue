@@ -286,7 +286,7 @@
         <Column field="parentName" header="Cán bộ liên quan" sortable :headerStyle="{ width: '210px', minWidth: '210px' }">
           <template #body="{ data }">
             <div v-if="isFirstRelativeOfParent(data)">
-              <strong style="cursor: pointer; color: #1f2937; font-size: 0.82rem;" @click="openEditDialog(data.parentPerson)">{{ data.parentName }}</strong>
+              <strong style="cursor: pointer; color: #1f2937; font-size: 0.82rem;" @click="openEditDialog(data.parentPerson)">{{ data.parentName || data.parentPersonnelName || 'Cán bộ' }}</strong>
               <div v-if="data.parentPosition" style="font-size: 0.72rem; color: #6b7280;">{{ data.parentPosition }}</div>
               <div v-if="data.cccd_can_bo" style="font-size: 0.7rem; color: #64748b; font-family: monospace;">CCCD: {{ data.cccd_can_bo }}</div>
             </div>
@@ -295,34 +295,23 @@
             </div>
           </template>
         </Column>
-        <Column field="relationshipName" header="Mối quan hệ" sortable :headerStyle="{ width: '130px', minWidth: '130px' }">
+
+        <!-- Dynamic Relative Columns from Settings -->
+        <Column
+          v-for="col in activeRelativeColumns"
+          :key="col.id"
+          :field="col.id"
+          :header="col.label"
+          sortable
+          :headerClass="'col-left'"
+          :bodyClass="'col-left'"
+          :headerStyle="{ width: col.width || '150px', minWidth: col.width || '150px' }"
+          :bodyStyle="{ width: col.width || '150px', minWidth: col.width || '150px' }"
+        >
           <template #body="{ data }">
-            <span class="badge-pill badge-purple">{{ data.relationshipName || data.relationship || data.moi_quan_he || '-' }}</span>
-          </template>
-        </Column>
-        <Column field="relativeName" header="Họ và tên thân nhân" sortable :headerStyle="{ width: '180px', minWidth: '180px' }">
-          <template #body="{ data }">
-            <span style="font-weight: 600; color: #1e293b;">{{ data.relativeName || data.name || data.ten_than_nhan || '-' }}</span>
-          </template>
-        </Column>
-        <Column field="birthYear" header="Năm sinh" sortable :headerStyle="{ width: '100px', minWidth: '100px' }">
-          <template #body="{ data }">
-            {{ data.birthYear || data.nam_sinh || '-' }}
-          </template>
-        </Column>
-        <Column field="countryName" header="Quốc gia" sortable :headerStyle="{ width: '130px', minWidth: '130px' }">
-          <template #body="{ data }">
-            <span class="badge-pill badge-blue">{{ data.countryName || data.quoc_gia || data.quocGia || data.country || '-' }}</span>
-          </template>
-        </Column>
-        <Column field="currentAddress" header="Nơi cư trú" sortable :headerStyle="{ width: '180px', minWidth: '180px' }">
-          <template #body="{ data }">
-            {{ data.currentAddress || data.noi_o_hien_nay || data.noiCuTru || data.dia_chi || '-' }}
-          </template>
-        </Column>
-        <Column field="occupation" header="Nghề nghiệp / Nơi làm việc" sortable :headerStyle="{ width: '200px', minWidth: '200px' }">
-          <template #body="{ data }">
-            {{ data.occupation || data.nghe_nghiep || data.job || '-' }}
+            <span :class="col.id === 'countryName' || col.id === 'country' || col.id === 'content' ? 'badge-pill badge-blue' : ''">
+              {{ getDisplayValue(data, col.id) }}
+            </span>
           </template>
         </Column>
         
@@ -1293,6 +1282,7 @@ const executeImport = async () => {
       await logActivity('Import Excel Cán bộ', `Đã import ${count} cán bộ (Tạo mới: ${createdCount}, Cập nhật ghi đè theo CCCD: ${updatedCount})`);
     } else {
       // Relative Import
+      // 1. Build sequential column dictionary from importMappingRelative (with sub-options support)
       let currentRelColIdx = 0;
       const relColByNum = {};
       const relColById = {};
@@ -1301,22 +1291,42 @@ const executeImport = async () => {
       (personnelStore.importMappingRelative || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
           currentRelColIdx++;
-          const entry = {
-            id: c.id,
-            colNum: currentRelColIdx,
-            group: g.group || '',
-            raw: c,
-          };
-          relColByNum[currentRelColIdx] = entry;
-          relColById[c.id.toLowerCase()] = entry;
-          relColByLabel[normalizeKey(`[Cột ${currentRelColIdx}] ${c.label || c.id}`)] = entry;
-          relColByLabel[normalizeKey(c.label || c.id)] = entry;
+          const subOpts = getSubOptionsList(c);
+          if (subOpts.length > 1) {
+            subOpts.forEach((opt, sIdx) => {
+              const colNum = currentRelColIdx + sIdx;
+              const entry = {
+                id: c.id,
+                colNum: colNum,
+                subOpt: opt,
+                group: g.group || '',
+                raw: c,
+              };
+              relColByNum[colNum] = entry;
+              relColByLabel[normalizeKey(`[Cột ${colNum}] ${c.label || c.id}: ${opt}`)] = entry;
+              relColByLabel[normalizeKey(`${c.label || c.id}: ${opt}`)] = entry;
+              relColByLabel[normalizeKey(`${c.label || c.id} ${opt}`)] = entry;
+            });
+            currentRelColIdx += (subOpts.length - 1);
+          } else {
+            const entry = {
+              id: c.id,
+              colNum: currentRelColIdx,
+              subOpt: null,
+              group: g.group || '',
+              raw: c,
+            };
+            relColByNum[currentRelColIdx] = entry;
+            relColById[c.id.toLowerCase()] = entry;
+            relColByLabel[normalizeKey(`[Cột ${currentRelColIdx}] ${c.label || c.id}`)] = entry;
+            relColByLabel[normalizeKey(c.label || c.id)] = entry;
+          }
         });
       });
 
       const pByCccd = {};
       personnelStore.personnelList.forEach((p) => {
-        const cccd = p.cccdparent || p.custom_data?.cccdparent;
+        const cccd = p.cccdparent || p.custom_data?.cccdparent || p.cccd;
         if (cccd) pByCccd[String(cccd).trim()] = p;
       });
 
@@ -1335,87 +1345,83 @@ const executeImport = async () => {
         const row = rawRows[i];
         if (!row || row.length === 0 || !row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== '')) continue;
 
-        let parentCccd = '';
-        let relCccd = '';
-        let relativeName = '';
-        let relationshipName = '';
-        let parentName = '';
-        let parentPosition = '';
         const relData = {};
+        const checkboxValues = {};
 
         headerRow.forEach((rawHeader, colIdx) => {
-          const val = row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : '';
-          if (!val) return;
+          const rawCell = row[colIdx];
+          if (rawCell === undefined || rawCell === null) return;
+          const val = typeof rawCell === 'number' ? rawCell : String(rawCell).trim();
+          if (val === '') return;
 
           const hKey = normalizeKey(rawHeader);
-          const rawHeaderLower = String(rawHeader || '').toLowerCase();
-          const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
-          const colNumber = colNumMatch ? Number(colNumMatch[1]) : (colIdx + 1);
+          let matched = relColByLabel[hKey] || relColById[hKey];
 
-          // Cột CCCD cán bộ (Cột 2 hoặc ID cccd_can_bo)
-          if (colNumber === 2 || hKey === 'cccdcanbo' || hKey === 'cccd_can_bo' || rawHeaderLower.includes('cccd cán bộ') || rawHeaderLower.includes('cccd can bo')) {
-            parentCccd = val;
-            relData.cccd_can_bo = val;
-            return;
+          if (!matched) {
+            const colNumMatch = String(rawHeader || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
+            if (colNumMatch) {
+              const num = parseInt(colNumMatch[1], 10);
+              matched = relColByNum[num];
+            }
           }
 
-          // Cột CCCD thân nhân (Cột 15 hoặc ID cccdthannhan hoặc Số Căn cước công dân)
-          if (colNumber === 15 || hKey === 'cccdthannhan' || hKey === 'cccd_than_nhan' || rawHeaderLower.includes('căn cước') || rawHeaderLower.includes('can cuoc') || rawHeaderLower.includes('cccd thân nhân') || rawHeaderLower.includes('cccd than nhan')) {
-            relCccd = val;
-            relData.cccdthannhan = val;
-            relData.cccd = val;
-            return;
+          // Strict fallback to column index order if header name does not match
+          if (!matched) {
+            matched = relColByNum[colIdx + 1];
           }
-
-          // Cột Họ và tên thân nhân (Cột 7 hoặc ID relativeName)
-          if (colNumber === 7 || hKey === 'relativename' || rawHeaderLower.includes('tên thân nhân') || (rawHeaderLower.includes('họ và tên') && !rawHeaderLower.includes('cán bộ'))) {
-            relativeName = val;
-            relData.relativeName = val;
-            return;
-          }
-
-          // Cột Mối quan hệ (Cột 6 hoặc ID relationshipName)
-          if (colNumber === 6 || hKey === 'relationshipname' || rawHeaderLower.includes('quan hệ') || rawHeaderLower.includes('mối quan hệ')) {
-            relationshipName = val;
-            relData.relationshipName = val;
-            return;
-          }
-
-          // Khớp theo Tên nhãn hoặc ID từ cấu hình
-          let matched = relColByLabel[hKey] || relColById[hKey] || relColByNum[colNumber];
 
           if (matched) {
-            const fId = matched.id;
-            relData[fId] = val;
-            if (fId === 'cccd_can_bo' || fId === 'parentCccd' || fId === 'parentPersonnelCccd') parentCccd = val;
-            if (fId === 'cccdthannhan' || fId === 'cccd_than_nhan') relCccd = val;
-            if (fId === 'relationshipName' || fId === 'relationship' || fId === 'moi_quan_he') relationshipName = val;
-            if (fId === 'relativeName' || fId === 'name' || fId === 'ten_than_nhan') relativeName = val;
-            if (fId === 'parentName' || fId === 'parentPersonnelName') parentName = val;
-            if (fId === 'parentPosition' || fId === 'chuc_vu_can_bo') parentPosition = val;
+            if (matched.subOpt) {
+              const isChecked = String(val).toLowerCase() === 'x' || String(val).toLowerCase() === '1' || String(val).toLowerCase() === 'true' || String(val).toLowerCase() === 'có' || String(val).toLowerCase().includes(matched.subOpt.toLowerCase());
+              if (isChecked) {
+                if (!checkboxValues[matched.id]) checkboxValues[matched.id] = [];
+                checkboxValues[matched.id].push(matched.subOpt);
+              }
+            } else {
+              relData[matched.id] = val;
+            }
           }
         });
 
-        // Fallback nhận diện theo vị trí cột thực tế nếu chưa được gán:
-        if (!parentCccd && row[1] && String(row[1]).trim()) parentCccd = String(row[1]).trim();
-        if (!relCccd && row[14] && String(row[14]).trim()) relCccd = String(row[14]).trim();
-        if (!relativeName && row[6] && String(row[6]).trim()) relativeName = String(row[6]).trim();
-        if (!relationshipName && row[5] && String(row[5]).trim()) relationshipName = String(row[5]).trim();
+        // Merge checkbox sub-options
+        Object.entries(checkboxValues).forEach(([k, arr]) => {
+          if (arr.length > 0) {
+            relData[k] = arr.join(', ');
+          }
+        });
 
-        // Nếu ô Tên thân nhân bị để trống trong Excel thì tự động lấy theo Mối quan hệ
+        // Resolve essential identifiers directly from relData or configured column positions
+        const cleanParentCccd = String(
+          relData['cccd_can_bo'] ||
+          relData['cccdparent'] ||
+          relData['parentCccd'] ||
+          (relColByNum[2] ? relData[relColByNum[2].id] : '') ||
+          ''
+        ).trim();
+
+        const cleanRelCccd = String(
+          relData['cccdthannhan'] ||
+          relData['cccd'] ||
+          (relColByNum[15] ? relData[relColByNum[15].id] : '') ||
+          ''
+        ).trim();
+
+        let relativeName = String(
+          relData['relativeName'] ||
+          relData['name'] ||
+          (relColByNum[7] ? relData[relColByNum[7].id] : '') ||
+          ''
+        ).trim();
+
+        const relationshipName = String(
+          relData['relationshipName'] ||
+          relData['relationship'] ||
+          (relColByNum[6] ? relData[relColByNum[6].id] : '') ||
+          'Thân nhân'
+        ).trim();
+
         if (!relativeName) {
           relativeName = relationshipName || 'Thân nhân';
-        }
-        const cleanRelName = String(relativeName || '').trim();
-        if (cleanRelName.toLowerCase() === 'họ và tên thân nhân' || cleanRelName.toLowerCase() === 'tên thân nhân') continue;
-        relativeName = cleanRelName;
-
-        const cleanParentCccd = String(parentCccd || relData['cccd_can_bo'] || '').trim();
-        let cleanRelCccd = String(relCccd || relData['cccdthannhan'] || '').trim();
-
-        // Đảm bảo không nhầm CCCD cán bộ thành CCCD thân nhân nếu trùng lặp
-        if (cleanRelCccd && cleanRelCccd === cleanParentCccd) {
-          cleanRelCccd = '';
         }
 
         // BẮT BUỘC PHẢI CÓ CCCD CÁN BỘ
@@ -1423,10 +1429,9 @@ const executeImport = async () => {
           continue;
         }
 
-        // Match parent strictly by cccd_can_bo -> cccdparent
         const parentPerson = pByCccd[cleanParentCccd] || null;
 
-        // Gộp: CHỈ DUY NHẤT theo CCCD thân nhân, KHÔNG fallback theo tên
+        // Lookup existing relative by CCCD thân nhân
         let existingRel = null;
         if (cleanRelCccd && relByCccd[cleanRelCccd]) {
           existingRel = relByCccd[cleanRelCccd];
@@ -1440,30 +1445,16 @@ const executeImport = async () => {
             ...relData,
             personnelId: parentPerson ? parentPerson.id : existingRel.personnelId,
             personnelCode: parentPerson ? parentPerson.code : existingRel.personnelCode,
-            personnelName: parentPerson ? parentPerson.name : (parentName || existingRel.personnelName),
-            parentName: parentPerson ? parentPerson.name : (parentName || existingRel.parentName),
-            parentPersonnelName: parentPerson ? parentPerson.name : (parentName || existingRel.parentPersonnelName),
+            personnelName: parentPerson ? parentPerson.name : existingRel.personnelName,
+            parentName: parentPerson ? parentPerson.name : existingRel.parentName,
             cccd_can_bo: cleanParentCccd,
-            parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : (parentPosition || existingRel.parentPosition),
-            parentDepartment: parentPerson ? (parentPerson.departmentName || '') : existingRel.parentDepartment,
             relationshipName: relationshipName || existingRel.relationshipName,
             relativeName: relativeName || existingRel.relativeName,
-            birthYear: formatExcelDate(relData['birthYear'] || row[8] || existingRel.birthYear || ''),
-            cccd: cleanRelCccd || existingRel.cccd || '',
-            currentAddress: String(relData['currentAddress'] || row[13] || existingRel.currentAddress || ''),
-            occupation: String(relData['occupation'] || row[11] || existingRel.occupation || ''),
-            countryName: String(relData['countryName'] || relData['quoc_gia'] || relData['quocGia'] || existingRel.countryName || ''),
-            timeAbroad: String(relData['timeAbroad'] || relData['unitAbroad'] || existingRel.timeAbroad || ''),
-            unitAbroad: String(relData['fileNumber'] || existingRel.unitAbroad || ''),
-            fundingName: String(relData['fundingName'] || existingRel.fundingName || ''),
-            marriedToForeigner: relData['marriedToForeigner'] !== undefined ? (String(relData['marriedToForeigner']).toLowerCase().includes('có') ? 1 : 0) : existingRel.marriedToForeigner,
-            workInForeignCompany: relData['workInForeignCompany'] !== undefined ? (String(relData['workInForeignCompany']).toLowerCase().includes('có') ? 1 : 0) : existingRel.workInForeignCompany,
             custom_data: {
               ...(existingRel.custom_data || {}),
               ...relData,
               cccd_can_bo: cleanParentCccd,
-              cccdthannhan: cleanRelCccd || existingRel.custom_data?.cccdthannhan || '',
-              parentName: parentPerson?.name || parentName || existingRel.parentName || '',
+              cccdthannhan: cleanRelCccd,
             },
           };
           await apiClient.patch(`/items/appendix2/${existingRel.id}`, updatedPayload);
@@ -1476,33 +1467,19 @@ const executeImport = async () => {
             code: 'TN-' + String(nextTnIndex).padStart(5, '0'),
             personnelId: parentPerson ? parentPerson.id : '',
             personnelCode: parentPerson ? parentPerson.code : '',
-            personnelName: parentPerson ? parentPerson.name : (parentName || 'Chưa liên kết'),
-            parentName: parentPerson ? parentPerson.name : (parentName || 'Chưa liên kết'),
-            parentPersonnelName: parentPerson ? parentPerson.name : (parentName || 'Chưa liên kết'),
+            personnelName: parentPerson ? parentPerson.name : 'Chưa liên kết',
+            parentName: parentPerson ? parentPerson.name : 'Chưa liên kết',
             cccd_can_bo: cleanParentCccd,
-            parentPosition: parentPerson ? (parentPerson.positionName || parentPerson.position || '') : (parentPosition || ''),
-            parentDepartment: parentPerson ? (parentPerson.departmentName || '') : '',
-            relationshipName: relationshipName || String(row[5] || 'Thân nhân'),
-            relativeName,
-            birthYear: formatExcelDate(relData['birthYear'] || row[8] || ''),
-            cccd: cleanRelCccd,
-            currentAddress: String(relData['currentAddress'] || row[13] || ''),
-            occupation: String(relData['occupation'] || row[11] || ''),
-            countryName: String(relData['countryName'] || relData['quoc_gia'] || relData['quocGia'] || ''),
-            timeAbroad: String(relData['timeAbroad'] || relData['unitAbroad'] || ''),
-            unitAbroad: String(relData['fileNumber'] || ''),
-            fundingName: String(relData['fundingName'] || ''),
-            marriedToForeigner: String(relData['marriedToForeigner'] || '').toLowerCase().includes('có') ? 1 : 0,
-            workInForeignCompany: String(relData['workInForeignCompany'] || '').toLowerCase().includes('có') ? 1 : 0,
+            relationshipName: relationshipName || 'Thân nhân',
+            relativeName: relativeName || 'Thân nhân',
+            ...relData,
             custom_data: {
               ...relData,
               cccd_can_bo: cleanParentCccd,
               cccdthannhan: cleanRelCccd,
-              parentName: parentPerson?.name || parentName || '',
             },
           };
           await apiClient.post('/items/appendix2', newRel);
-          // Chỉ thêm vào relByCccd để tránh trùng CCCD, KHÔNG thêm vào relByParentAndName
           if (cleanRelCccd) relByCccd[cleanRelCccd] = newRel;
           relCreatedCount++;
         }
