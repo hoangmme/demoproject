@@ -103,9 +103,9 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
           data[key] = str;
         }
 
-        // Tự động phân rã trường Hộp kiểm + Nhập Text (checkbox_text)
-        if (str.includes(':') || str.includes(';')) {
-          const parts = str.split(';');
+        // Tự động phân rã trường Hộp kiểm + Nhập Text (checkbox_text) và Hộp kiểm (checkbox)
+        if (str.includes(':') || str.includes(';') || str.includes(',')) {
+          const parts = str.split(/[,;]/);
           parts.forEach((p) => {
             const trimmed = p.trim();
             if (trimmed) {
@@ -115,7 +115,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
                 const optDetail = trimmed.substring(colon + 1).trim();
                 const optSlug = generateSlug(optName);
                 if (optSlug) {
-                  data[`${key}_${optSlug}`] = optDetail;
+                  data[`${key}_${optSlug}`] = optDetail || optName;
                   data[`is_${key}_${optSlug}`] = 'X';
                   data[`check_${key}_${optSlug}`] = '☑';
                 }
