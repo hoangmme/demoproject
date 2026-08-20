@@ -125,18 +125,8 @@ const emit = defineEmits(['update:modelValue', 'saved', 'deleted']);
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 
-const activeTab = ref(props.initialTab || 0);
+const activeTab = ref(Number(props.initialTab) === 1 ? 1 : 0);
 const saving = ref(false);
-
-watch(
-  () => [props.modelValue, props.initialTab],
-  ([isOpen, tab]) => {
-    if (isOpen) {
-      activeTab.value = tab !== undefined ? tab : 0;
-    }
-  },
-  { immediate: true }
-);
 
 const visible = computed({
   get: () => props.modelValue,
@@ -178,60 +168,66 @@ const form = ref({
   files: [],
 });
 
+const initFormData = (val) => {
+  if (val) {
+    const cd = val.custom_data || {};
+    const parsedVal = JSON.parse(JSON.stringify(val));
+    form.value = {
+      ...cd,
+      ...parsedVal,
+      position: parsedVal.position || parsedVal.positionName || cd.positionName || cd.position || '',
+      positionName: parsedVal.positionName || parsedVal.position || cd.position || cd.positionName || '',
+      departmentName: parsedVal.departmentName || (parsedVal.departmentId ? personnelStore.getDepartmentName(parsedVal.departmentId) : '') || cd.departmentName || '',
+      hcCaNhan: parsedVal.hcCaNhan || parsedVal.passportPersonal || cd.hcCaNhan || cd.passportPersonal || '',
+      hcCongVu: parsedVal.hcCongVu || parsedVal.passportOfficial || cd.hcCongVu || cd.passportOfficial || '',
+      kqThamTra: parsedVal.kqThamTra || parsedVal.tcctResult || cd.kqThamTra || cd.tcctResult || '',
+      trips: Array.isArray(parsedVal.trips) ? parsedVal.trips : (cd.trips || []),
+      relatives: Array.isArray(parsedVal.relatives) ? parsedVal.relatives : (cd.relatives || []),
+      flags: (typeof parsedVal.flags === 'object' && parsedVal.flags) ? parsedVal.flags : (cd.flags || {}),
+      files: Array.isArray(parsedVal.files) ? parsedVal.files : (cd.files || []),
+      custom_data: { ...cd, ...parsedVal },
+    };
+  } else {
+    form.value = {
+      id: null,
+      code: '',
+      name: '',
+      otherName: '',
+      birthYear: '',
+      ethnicity: 'Kinh',
+      religion: 'Không',
+      hometown: '',
+      departmentId: null,
+      departmentName: '',
+      position: '',
+      positionName: '',
+      thuongTru: '',
+      tamTru: '',
+      cccd: '',
+      hcCaNhan: '',
+      hcCongVu: '',
+      kqThamTra: '',
+      passportPersonal: '',
+      passportOfficial: '',
+      tcctResult: '',
+      trips: [],
+      relatives: [],
+      flags: {},
+      custom_data: {},
+      files: [],
+    };
+  }
+};
+
 watch(
-  () => props.personData,
-  (val) => {
-    if (val) {
-      const cd = val.custom_data || {};
-      const parsedVal = JSON.parse(JSON.stringify(val));
-      form.value = {
-        ...cd,
-        ...parsedVal,
-        position: parsedVal.position || parsedVal.positionName || cd.positionName || cd.position || '',
-        positionName: parsedVal.positionName || parsedVal.position || cd.position || cd.positionName || '',
-        departmentName: parsedVal.departmentName || (parsedVal.departmentId ? personnelStore.getDepartmentName(parsedVal.departmentId) : '') || cd.departmentName || '',
-        hcCaNhan: parsedVal.hcCaNhan || parsedVal.passportPersonal || cd.hcCaNhan || cd.passportPersonal || '',
-        hcCongVu: parsedVal.hcCongVu || parsedVal.passportOfficial || cd.hcCongVu || cd.passportOfficial || '',
-        kqThamTra: parsedVal.kqThamTra || parsedVal.tcctResult || cd.kqThamTra || cd.tcctResult || '',
-        trips: Array.isArray(parsedVal.trips) ? parsedVal.trips : (cd.trips || []),
-        relatives: Array.isArray(parsedVal.relatives) ? parsedVal.relatives : (cd.relatives || []),
-        flags: (typeof parsedVal.flags === 'object' && parsedVal.flags) ? parsedVal.flags : (cd.flags || {}),
-        files: Array.isArray(parsedVal.files) ? parsedVal.files : (cd.files || []),
-        custom_data: { ...cd, ...parsedVal },
-      };
-    } else {
-      form.value = {
-        id: null,
-        code: '',
-        name: '',
-        otherName: '',
-        birthYear: '',
-        ethnicity: 'Kinh',
-        religion: 'Không',
-        hometown: '',
-        departmentId: null,
-        departmentName: '',
-        position: '',
-        positionName: '',
-        thuongTru: '',
-        tamTru: '',
-        cccd: '',
-        hcCaNhan: '',
-        hcCongVu: '',
-        kqThamTra: '',
-        passportPersonal: '',
-        passportOfficial: '',
-        tcctResult: '',
-        trips: [],
-        relatives: [],
-        flags: {},
-        custom_data: {},
-        files: [],
-      };
+  () => [props.modelValue, props.initialTab, props.personData],
+  ([isOpen, tab, pData]) => {
+    if (isOpen) {
+      activeTab.value = Number(tab) === 1 ? 1 : 0;
+      initFormData(pData || props.personData);
     }
-    activeTab.value = props.initialTab !== undefined ? props.initialTab : 0;
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 );
 
 const handleSave = async () => {
