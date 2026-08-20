@@ -415,7 +415,7 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.style.position = 'fixed';
   container.style.top = '0';
   container.style.left = '0';
-  container.style.width = '794px';
+  container.style.width = '210mm';
   container.style.margin = '0';
   container.style.padding = '0';
   container.style.backgroundColor = '#ffffff';
@@ -445,9 +445,9 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       outline: none !important;
       box-shadow: none !important;
       background: #ffffff !important;
-      width: 794px !important;
-      min-width: 794px !important;
-      max-width: 794px !important;
+      width: 210mm !important;
+      max-width: 210mm !important;
+      min-height: 297mm !important;
       box-sizing: border-box !important;
     }
   `;
@@ -469,14 +469,23 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
     // Chờ 400ms để DOM vẽ và phông chữ render hoàn tất
     await new Promise((resolve) => setTimeout(resolve, 400));
 
-    // Đảm bảo loại bỏ bóng đổ và ép kích thước trên tất cả các section
     const sections = container.querySelectorAll('section.docx');
     sections.forEach((sec) => {
       sec.style.boxShadow = 'none';
       sec.style.margin = '0';
       sec.style.border = 'none';
-      sec.style.width = '794px';
+      sec.style.width = '210mm';
+      sec.style.boxSizing = 'border-box';
       sec.style.backgroundColor = '#ffffff';
+
+      // Đảm bảo có lề trang nếu mẫu bị thiếu lề
+      const cs = window.getComputedStyle(sec);
+      const pLeft = parseFloat(cs.paddingLeft);
+      const pRight = parseFloat(cs.paddingRight);
+      if (isNaN(pLeft) || pLeft < 15) sec.style.paddingLeft = '20mm';
+      if (isNaN(pRight) || pRight < 15) sec.style.paddingRight = '15mm';
+      if (parseFloat(cs.paddingTop) < 15) sec.style.paddingTop = '20mm';
+      if (parseFloat(cs.paddingBottom) < 15) sec.style.paddingBottom = '20mm';
     });
 
     const elementsToRender = sections.length > 0 ? Array.from(sections) : [container];
@@ -504,8 +513,8 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
         scrollY: 0,
         x: 0,
         y: 0,
-        width: el.offsetWidth || 794,
-        height: el.offsetHeight || 1123,
+        width: el.getBoundingClientRect().width || 794,
+        height: el.getBoundingClientRect().height || 1123,
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -561,45 +570,42 @@ export async function exportSinglePersonnelDocx(templateBuffer, person, filename
 }
 
 /**
- * Xuất nhiều cán bộ và đóng gói thành tệp .ZIP (chứa các file DOCX hoặc PDF)
+ * Xuất nhiều cán bộ thành 1 tệp ZIP chứa các file Word hoặc PDF
  */
-export async function exportMultiplePersonnelZip(templateBuffer, personnelList, zipName, personnelStore, onProgress, outputFormat = 'docx', currentUser = null) {
+export async function exportMultiplePersonnelZip(templateBuffer, personnelList, zipFileName, personnelStore, onProgress = null, outputFormat = 'docx', currentUser = null) {
   const zip = new JSZip();
-  const total = personnelList.length;
+  const folder = zip.folder('Ho_so_can_bo');
+  const ext = outputFormat === 'pdf' ? 'pdf' : 'docx';
 
-  for (let i = 0; i < total; i++) {
+  for (let i = 0; i < personnelList.length; i++) {
     const person = personnelList[i];
     const contextData = preparePersonnelDocxData(person, i, personnelStore, currentUser);
     const docxBlob = generateDocxBlob(templateBuffer, contextData);
-
-    const safePersonName = (person.name || `Can_bo_${i + 1}`).replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_');
-    const ext = outputFormat === 'pdf' ? 'pdf' : 'docx';
-    const fileName = `${String(i + 1).padStart(3, '0')}_${safePersonName}_${person.code || 'CB'}.${ext}`;
+    const baseName = `${String(i + 1).padStart(3, '0')}_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}_${person.code || ''}`;
 
     if (outputFormat === 'pdf') {
       const pdfBlob = await convertDocxBlobToPdfBlob(docxBlob);
-      zip.file(fileName, pdfBlob);
+      folder.file(`${baseName}.${ext}`, pdfBlob);
     } else {
-      zip.file(fileName, docxBlob);
+      folder.file(`${baseName}.${ext}`, docxBlob);
     }
 
-    if (typeof onProgress === 'function') {
-      onProgress(i + 1, total);
+    if (onProgress) {
+      onProgress(i + 1, personnelList.length);
     }
   }
 
-  const zipBlob = await zip.generateAsync({ type: 'blob' });
-  const extLabel = outputFormat === 'pdf' ? 'PDF' : 'Word';
-  const finalZipName = zipName || `Danh_sach_Ho_so_${total}_can_bo_${extLabel}.zip`;
-  saveAs(zipBlob, finalZipName);
+  const content = await zip.generateAsync({ type: 'blob' });
+  saveAs(content, zipFileName.endsWith('.zip') ? zipFileName : `${zipFileName}.zip`);
 }
 
 /**
  * Tạo một file Word (.docx) mẫu động dựa trên các Nhóm Cột được chọn (Group A, Group B, Group C...)
  * @param {Array<Number>} selectedGroupIndices - Mảng các index nhóm được chọn (Group A luôn được thêm)
  * @param {Array} personnelGroups - Cấu hình nhóm cán bộ từ store
- * @param {Boolean} includeTrips - Có kèm lịch sử chuyến đi nước ngoài hay không
  * @param {Boolean} includeRelatives - Có kèm danh sách thân nhân hay không
+ * @param {Array<Number>} selectedRelativeGroupIndices - Mảng index các nhóm thân nhân được chọn
+ * @param {Array} relativeGroups - Cấu hình nhóm thân nhân từ store
  * @returns {Promise<Blob>}
  */
 const escapeXml = (str) => {
@@ -616,8 +622,9 @@ const escapeXml = (str) => {
  * Tạo một file Word (.docx) mẫu động dựa trên các Nhóm Cột được chọn (Group A, Group B, Group C...)
  * @param {Array<Number>} selectedGroupIndices - Mảng các index nhóm được chọn (Group A luôn được thêm)
  * @param {Array} personnelGroups - Cấu hình nhóm cán bộ từ store
- * @param {Boolean} includeTrips - Có kèm lịch sử chuyến đi nước ngoài hay không
  * @param {Boolean} includeRelatives - Có kèm danh sách thân nhân hay không
+ * @param {Array<Number>} selectedRelativeGroupIndices - Mảng index các nhóm thân nhân được chọn
+ * @param {Array} relativeGroups - Cấu hình nhóm thân nhân từ store
  * @returns {Promise<Blob>}
  */
 export async function createDynamicDocxTemplateBlob(
@@ -727,7 +734,7 @@ export async function createDynamicDocxTemplateBlob(
     `;
   }
 
-  // 5. FOOTER CHUẨN
+  // 4. FOOTER CHUẨN
   bodyContent += `
     <w:p>
       <w:pPr><w:jc w:val="right"/></w:pPr>
@@ -737,6 +744,16 @@ export async function createDynamicDocxTemplateBlob(
       <w:pPr><w:jc w:val="right"/></w:pPr>
       <w:r><w:rPr><w:b/></w:rPr><w:t>Người lập biểu / Người xuất: {ho_ten_nguoi_xuat}</w:t></w:r>
     </w:p>
+  `;
+
+  // Thêm thiết lập lề trang và kích thước A4 chuẩn Nghị định 30/2020/NĐ-CP (Trái 30mm, Phải 20mm, Trên/Dưới 25mm)
+  bodyContent += `
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="1418" w:right="1134" w:bottom="1418" w:left="1701" w:header="708" w:footer="708" w:gutter="0"/>
+      <w:cols w:space="708"/>
+      <w:docGrid w:linePitch="360"/>
+    </w:sectPr>
   `;
 
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -759,5 +776,5 @@ export async function createDynamicDocxTemplateBlob(
  * @returns {Promise<Blob>}
  */
 export async function createSampleDocxTemplateBlob() {
-  return await createDynamicDocxTemplateBlob([0, 1, 2, 3, 4], [], true, true);
+  return await createDynamicDocxTemplateBlob([0, 1, 2, 3, 4], [], true, [0, 1], []);
 }
