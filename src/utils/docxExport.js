@@ -693,17 +693,24 @@ export async function createDynamicDocxTemplateBlob(
     <w:p/>
   `;
 
-  // 1. Nhóm A: Thông tin cá nhân (LUÔN CÓ ĐẦY ĐỦ)
+  // 1. Nhóm A: Thông tin cá nhân (LUÔN CÓ ĐẦY ĐỦ - Mỗi field 1 hàng, Tiêu đề in đậm, Nội dung không đậm)
   bodyContent += `
     <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>1. Thông tin cá nhân</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên: </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>{name}</w:t></w:r><w:r><w:t> ; Tên gọi khác: {otherName};</w:t></w:r></w:p>
-    <w:p><w:r><w:t>- Ngày, tháng, năm sinh: {birthYear}; Dân tộc: {ethnicity}; Tôn giáo: {religion};</w:t></w:r></w:p>
-    <w:p><w:r><w:t>- Quê quán: {hometown};</w:t></w:r></w:p>
-    <w:p><w:r><w:t>- Đơn vị công tác: {departmentName}; Chức vụ: {chuc_vu};</w:t></w:r></w:p>
-    <w:p><w:r><w:t>- Nơi đăng ký hộ khẩu thường trú: {thuongTru};</w:t></w:r></w:p>
-    <w:p><w:r><w:t>- Nơi ở hiện nay: {tamTru};</w:t></w:r></w:p>
-    <w:p><w:r><w:t>- Số Căn cước công dân: {cccdparent};</w:t></w:r></w:p>
-    <w:p><w:r><w:t>- Số Hộ chiếu cá nhân: {hcCaNhan}; Số Hộ chiếu công vụ: {hcCongVu};</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tên gọi khác: </w:t></w:r><w:r><w:t>{otherName}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Ngày, tháng, năm sinh: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Giới tính: </w:t></w:r><w:r><w:t>{gender}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Dân tộc: </w:t></w:r><w:r><w:t>{ethnicity}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tôn giáo: </w:t></w:r><w:r><w:t>{religion}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Quê quán: </w:t></w:r><w:r><w:t>{hometown}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Đơn vị công tác: </w:t></w:r><w:r><w:t>{departmentName}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Chức vụ: </w:t></w:r><w:r><w:t>{chuc_vu}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi đăng ký hộ khẩu thường trú: </w:t></w:r><w:r><w:t>{thuongTru}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi ở hiện nay: </w:t></w:r><w:r><w:t>{tamTru}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Căn cước công dân: </w:t></w:r><w:r><w:t>{cccdparent}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu cá nhân: </w:t></w:r><w:r><w:t>{hcCaNhan}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu công vụ: </w:t></w:r><w:r><w:t>{hcCongVu}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Kết quả thẩm tra tiêu chuẩn chính trị: </w:t></w:r><w:r><w:t>{tcctResult}</w:t></w:r></w:p>
     <w:p/>
   `;
 
@@ -717,9 +724,10 @@ export async function createDynamicDocxTemplateBlob(
         const colLabel = escapeXml(col.label || col.id);
         const colId = escapeXml(col.id);
         if (col.format === 'table_loop') {
-          bodyContent += `<w:p><w:r><w:t>{#${colId}}- {col0}: {col1} | {col2}{/${colId}}</w:t></w:r></w:p>`;
+          bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}:</w:t></w:r></w:p>`;
+          bodyContent += `<w:p><w:r><w:t>{#${colId}}+ Dòng {stt}: {col0} | {col1} | {col2} | {col3}{/${colId}}</w:t></w:r></w:p>`;
         } else {
-          bodyContent += `<w:p><w:r><w:t>- ${colLabel}: {${colId}}</w:t></w:r></w:p>`;
+          bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
         }
       });
       bodyContent += `<w:p/>`;
@@ -731,6 +739,7 @@ export async function createDynamicDocxTemplateBlob(
     bodyContent += `
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* Thông tin thân nhân liên quan:</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#than_nhan}</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Thân nhân {stt} ({relationshipName}): {name}</w:t></w:r></w:p>
     `;
 
     const activeRelCols = [];
@@ -745,13 +754,25 @@ export async function createDynamicDocxTemplateBlob(
     });
 
     if (activeRelCols.length > 0) {
-      const colTexts = activeRelCols.map((col) => `${escapeXml(col.label)}: {${escapeXml(col.id)}}`).join(' | ');
-      bodyContent += `<w:p><w:r><w:t>- Thân nhân {stt}: ${colTexts}</w:t></w:r></w:p>`;
+      activeRelCols.forEach((col) => {
+        const colLabel = escapeXml(col.label || col.id);
+        const colId = escapeXml(col.id);
+        bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
+      });
     } else {
-      bodyContent += `<w:p><w:r><w:t>- Thân nhân {stt}: {relationshipName} - {birthYear} | Quê quán: {hometownTN} | Nghề nghiệp: {occupation} | Nơi ở: {currentAddress} | CCCD: {cccdthannhan}</w:t></w:r></w:p>`;
+      bodyContent += `
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quan hệ: </w:t></w:r><w:r><w:t>{relationshipName}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Họ và tên: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Năm sinh: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quê quán: </w:t></w:r><w:r><w:t>{hometownTN}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nghề nghiệp: </w:t></w:r><w:r><w:t>{occupation}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nơi ở hiện nay: </w:t></w:r><w:r><w:t>{currentAddress}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Số Căn cước công dân: </w:t></w:r><w:r><w:t>{cccdthannhan}</w:t></w:r></w:p>
+      `;
     }
 
     bodyContent += `
+      <w:p/>
       <w:p><w:r><w:t>{/than_nhan}</w:t></w:r></w:p>
       <w:p/>
     `;
