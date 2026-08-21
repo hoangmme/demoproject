@@ -119,72 +119,129 @@
             @change="handleFileUpload"
           />
 
-          <!-- Nguồn 1: Chọn Group cấu hình cột -->
+          <!-- Nguồn 1: Chọn Cấu trúc Cột & Trường dữ liệu (Dạng Phân Cấp: Cá Nhân > Group > Field) -->
           <div v-if="templateSource === 'sample'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
-            <div style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: flex; justify-content: space-between;">
-              <span>TÍCH CHỌN CÁC KHỐI/NHÓM CỘT MUỐN XUẤT:</span>
-              <span style="color: #0284c7; font-weight: 600;">(Khối A luôn cố định)</span>
+            <div style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <span>TÍCH CHỌN CÁC TRƯỜNG DỮ LIỆU MUỐN XUẤT:</span>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-tree-action" @click="selectAllFields">Chọn tất cả</button>
+                <button type="button" class="btn-tree-action" @click="deselectAllFields">Bỏ chọn hết</button>
+              </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 5px; max-height: 190px; overflow-y: auto; padding-right: 4px;">
-              <!-- 1. CÁC KHỐI CỘT CÁN BỘ -->
-              <div style="font-size: 0.72rem; font-weight: 700; color: #1e40af; background: #eff6ff; padding: 2px 6px; border-radius: 4px;">
-                👤 NHÓM CỘT CÁN BỘ:
+            <div class="tree-container">
+              <!-- CẤP 1: CÁ NHÂN -->
+              <div class="tree-root-header tree-header-personnel">
+                <i class="pi pi-user"></i>
+                <span>Cá Nhân</span>
+                <span class="tree-badge-count">({{ selectedFieldIds.length }} trường được chọn)</span>
               </div>
 
-              <!-- Group 0: Luôn cố định -->
-              <label class="group-select-item group-fixed">
-                <input type="checkbox" checked disabled style="accent-color: #2563eb;" />
-                <span style="font-weight: 700; color: #1e293b;">Khối A: {{ personnelGroups[0]?.group || 'Thông tin cá nhân cơ bản' }}</span>
-                <span class="badge-fixed">Bắt buộc</span>
-              </label>
-
-              <!-- Các Group B, C, D... Cán bộ -->
-              <label
-                v-for="(grp, gIdx) in otherPersonnelGroups"
-                :key="'p_' + (gIdx + 1)"
-                class="group-select-item"
-                :class="{ 'group-selected': selectedGroupIndices.includes(gIdx + 1) }"
+              <!-- CÁC GROUP TRONG CÁ NHÂN (Thụt lề cấp 1) -->
+              <div
+                v-for="(grp, gIdx) in personnelGroups"
+                :key="'p_grp_' + gIdx"
+                class="tree-group-box"
               >
-                <input
-                  type="checkbox"
-                  :value="gIdx + 1"
-                  v-model="selectedGroupIndices"
-                  style="accent-color: #2563eb;"
-                />
-                <span style="font-weight: 600; color: #334155; flex: 1;">
-                  Khối {{ String.fromCharCode(66 + gIdx) }}: {{ grp.group || 'Nhóm cột ' + (gIdx + 2) }}
-                  <small style="color: #64748b; font-weight: normal;">({{ grp.columns?.length || 0 }} cột)</small>
-                </span>
-              </label>
-
-              <!-- 2. CÁC KHỐI CỘT THÂN NHÂN -->
-              <div style="font-size: 0.72rem; font-weight: 700; color: #6b21a8; background: #faf5ff; padding: 2px 6px; border-radius: 4px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <span>👥 NHÓM CỘT THÂN NHÂN (TAB THÂN NHÂN):</span>
-              </div>
-              <label class="group-select-item" :class="{ 'group-selected': includeRelatives }">
-                <input type="checkbox" v-model="includeRelatives" style="accent-color: #7c3aed;" />
-                <span style="font-weight: 700; color: #6b21a8;">Bao gồm Thông tin Thân nhân liên quan</span>
-              </label>
-
-              <template v-if="includeRelatives">
-                <label
-                  v-for="(rGrp, rIdx) in relativeGroups"
-                  :key="'rel_' + rIdx"
-                  class="group-select-item"
-                  :class="{ 'group-selected': selectedRelativeGroupIndices.includes(rIdx) }"
-                >
+                <!-- CẤP 2: GROUP HEADER (Thụt vô cấp 1) -->
+                <div class="tree-group-header" @click="toggleGroup(grp)">
                   <input
                     type="checkbox"
-                    :value="rIdx"
-                    v-model="selectedRelativeGroupIndices"
-                    style="accent-color: #7c3aed;"
+                    :checked="isGroupAllSelected(grp)"
+                    @click.stop="toggleGroup(grp)"
+                    style="accent-color: #2563eb; cursor: pointer;"
                   />
-                  <span style="font-weight: 600; color: #334155; flex: 1;">
-                    Khối TN {{ rIdx + 1 }}: {{ rGrp.group || 'Nhóm thân nhân ' + (rIdx + 1) }}
-                    <small style="color: #64748b; font-weight: normal;">({{ rGrp.columns?.length || 0 }} cột)</small>
+                  <span class="group-title-text">
+                    Khối {{ String.fromCharCode(65 + gIdx) }}: {{ grp.group || 'Nhóm cột ' + (gIdx + 1) }}
                   </span>
+                  <span class="group-meta-count">
+                    ({{ getGroupSelectedCount(grp) }}/{{ getGroupTotalCount(grp) }})
+                  </span>
+                </div>
+
+                <!-- CẤP 3: FIELDS TRONG GROUP (Thụt vô thêm cấp 2) -->
+                <div class="tree-fields-container">
+                  <label
+                    v-for="(col, cIdx) in (grp.columns || []).filter(c => c.id && c.id !== 'stt')"
+                    :key="col.id"
+                    class="tree-field-item"
+                    :class="{ 'field-selected': selectedFieldIds.includes(col.id) }"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="col.id"
+                      v-model="selectedFieldIds"
+                      style="accent-color: #2563eb;"
+                    />
+                    <span class="field-label-text">
+                      {{ col.label || col.id }}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- CẤP 1: THÂN NHÂN -->
+              <div class="tree-root-header tree-header-relative" style="margin-top: 10px;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
+                  <input
+                    type="checkbox"
+                    v-model="includeRelatives"
+                    style="accent-color: #7c3aed; width: 15px; height: 15px;"
+                  />
+                  <i class="pi pi-users"></i>
+                  <span>Thân Nhân</span>
                 </label>
+                <span class="tree-badge-count tree-badge-purple" v-if="includeRelatives">
+                  ({{ selectedRelativeFieldIds.length }} trường được chọn)
+                </span>
+                <span v-else style="font-size: 0.72rem; color: #94a3b8; font-weight: normal;">
+                  (Bỏ qua thân nhân)
+                </span>
+              </div>
+
+              <!-- CÁC GROUP TRONG THÂN NHÂN (Nếu includeRelatives = true) -->
+              <template v-if="includeRelatives">
+                <div
+                  v-for="(rGrp, rIdx) in relativeGroups"
+                  :key="'r_grp_' + rIdx"
+                  class="tree-group-box rel-group-box"
+                >
+                  <!-- CẤP 2: GROUP THÂN NHÂN HEADER (Thụt vô cấp 1) -->
+                  <div class="tree-group-header rel-group-header" @click="toggleRelGroup(rGrp)">
+                    <input
+                      type="checkbox"
+                      :checked="isRelGroupAllSelected(rGrp)"
+                      @click.stop="toggleRelGroup(rGrp)"
+                      style="accent-color: #7c3aed; cursor: pointer;"
+                    />
+                    <span class="group-title-text" style="color: #6b21a8;">
+                      Khối TN {{ rIdx + 1 }}: {{ rGrp.group || 'Nhóm thân nhân ' + (rIdx + 1) }}
+                    </span>
+                    <span class="group-meta-count">
+                      ({{ getRelGroupSelectedCount(rGrp) }}/{{ getRelGroupTotalCount(rGrp) }})
+                    </span>
+                  </div>
+
+                  <!-- CẤP 3: FIELDS TRONG GROUP THÂN NHÂN (Thụt vô cấp 2) -->
+                  <div class="tree-fields-container">
+                    <label
+                      v-for="(col, rcIdx) in (rGrp.columns || []).filter(c => c.id && c.id !== 'stt')"
+                      :key="'r_col_' + col.id"
+                      class="tree-field-item rel-field-item"
+                      :class="{ 'rel-field-selected': selectedRelativeFieldIds.includes(col.id) }"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="col.id"
+                        v-model="selectedRelativeFieldIds"
+                        style="accent-color: #7c3aed;"
+                      />
+                      <span class="field-label-text">
+                        {{ col.label || col.id }}
+                      </span>
+                    </label>
+                  </div>
+                </div>
               </template>
             </div>
           </div>
@@ -310,14 +367,111 @@ const outputFormat = ref('docx');
 const exportScope = ref('single');
 const templateSource = ref('sample'); // 'sample' (Group) | 'upload'
 
-// Group selector state
-const selectedGroupIndices = ref([1, 2, 3]);
+// Group & Field selector state (Dạng phân cấp Tree)
+const selectedFieldIds = ref([]);
+const selectedRelativeFieldIds = ref([]);
+
+const selectedGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 const includeRelatives = ref(true);
-const selectedRelativeGroupIndices = ref([0, 1, 2, 3]);
+const selectedRelativeGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 
 const personnelGroups = computed(() => personnelStore.importMappingPersonnel || []);
 const otherPersonnelGroups = computed(() => personnelGroups.value.slice(1));
 const relativeGroups = computed(() => personnelStore.importMappingRelative || []);
+
+const initAllFields = () => {
+  const pIds = [];
+  (personnelGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') pIds.push(c.id);
+    });
+  });
+  selectedFieldIds.value = pIds;
+
+  const rIds = [];
+  (relativeGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') rIds.push(c.id);
+    });
+  });
+  selectedRelativeFieldIds.value = rIds;
+};
+
+const selectAllFields = () => {
+  initAllFields();
+  includeRelatives.value = true;
+};
+
+const deselectAllFields = () => {
+  selectedFieldIds.value = [];
+  selectedRelativeFieldIds.value = [];
+};
+
+const getGroupTotalCount = (grp) => {
+  return (grp.columns || []).filter((c) => c.id && c.id !== 'stt').length;
+};
+
+const getGroupSelectedCount = (grp) => {
+  const cols = (grp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  return cols.filter((c) => selectedFieldIds.value.includes(c.id)).length;
+};
+
+const isGroupAllSelected = (grp) => {
+  const cols = (grp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  if (cols.length === 0) return false;
+  return cols.every((c) => selectedFieldIds.value.includes(c.id));
+};
+
+const isGroupSomeSelected = (grp) => {
+  const cols = (grp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  if (cols.length === 0) return false;
+  const count = cols.filter((c) => selectedFieldIds.value.includes(c.id)).length;
+  return count > 0 && count < cols.length;
+};
+
+const toggleGroup = (grp) => {
+  const cols = (grp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  const allSel = isGroupAllSelected(grp);
+  if (allSel) {
+    selectedFieldIds.value = selectedFieldIds.value.filter((id) => !cols.some((c) => c.id === id));
+  } else {
+    const toAdd = cols.map((c) => c.id).filter((id) => !selectedFieldIds.value.includes(id));
+    selectedFieldIds.value = [...selectedFieldIds.value, ...toAdd];
+  }
+};
+
+const getRelGroupTotalCount = (rGrp) => {
+  return (rGrp.columns || []).filter((c) => c.id && c.id !== 'stt').length;
+};
+
+const getRelGroupSelectedCount = (rGrp) => {
+  const cols = (rGrp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  return cols.filter((c) => selectedRelativeFieldIds.value.includes(c.id)).length;
+};
+
+const isRelGroupAllSelected = (rGrp) => {
+  const cols = (rGrp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  if (cols.length === 0) return false;
+  return cols.every((c) => selectedRelativeFieldIds.value.includes(c.id));
+};
+
+const isRelGroupSomeSelected = (rGrp) => {
+  const cols = (rGrp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  if (cols.length === 0) return false;
+  const count = cols.filter((c) => selectedRelativeFieldIds.value.includes(c.id)).length;
+  return count > 0 && count < cols.length;
+};
+
+const toggleRelGroup = (rGrp) => {
+  const cols = (rGrp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  const allSel = isRelGroupAllSelected(rGrp);
+  if (allSel) {
+    selectedRelativeFieldIds.value = selectedRelativeFieldIds.value.filter((id) => !cols.some((c) => c.id === id));
+  } else {
+    const toAdd = cols.map((c) => c.id).filter((id) => !selectedRelativeFieldIds.value.includes(id));
+    selectedRelativeFieldIds.value = [...selectedRelativeFieldIds.value, ...toAdd];
+  }
+};
 
 const fileInputRef = ref(null);
 const sampleTemplateBuffer = ref(null);
@@ -387,13 +541,16 @@ const loadSavedTemplate = async () => {
 
 const loadSampleTemplate = async () => {
   try {
-    const activeIndices = [0, ...selectedGroupIndices.value];
+    const activeIndices = (personnelGroups.value || []).map((_, i) => i);
+    const activeRelIndices = (relativeGroups.value || []).map((_, i) => i);
     const blob = await createDynamicDocxTemplateBlob(
       activeIndices,
       personnelGroups.value,
       includeRelatives.value,
-      selectedRelativeGroupIndices.value,
-      relativeGroups.value
+      activeRelIndices,
+      relativeGroups.value,
+      selectedFieldIds.value,
+      selectedRelativeFieldIds.value
     );
     sampleTemplateBuffer.value = await blob.arrayBuffer();
   } catch (e) {
@@ -402,7 +559,7 @@ const loadSampleTemplate = async () => {
 };
 
 watch(
-  () => [selectedGroupIndices.value, includeRelatives.value, selectedRelativeGroupIndices.value],
+  () => [selectedFieldIds.value, includeRelatives.value, selectedRelativeFieldIds.value],
   () => {
     loadSampleTemplate();
   },
@@ -414,6 +571,9 @@ watch(() => [props.modelValue], ([isOpen]) => {
     if (props.targetPerson) exportScope.value = 'single';
     else if (selectedCount.value > 0) exportScope.value = 'selected';
     else exportScope.value = 'all';
+    if (selectedFieldIds.value.length === 0) {
+      initAllFields();
+    }
     loadSampleTemplate();
     loadSavedTemplate();
   }
@@ -485,9 +645,11 @@ const handleExport = async () => {
   progressCurrent.value = 0;
   try {
     const exportOptions = {
-      selectedGroupIndices: selectedGroupIndices.value,
+      selectedGroupIndices: (personnelGroups.value || []).map((_, i) => i),
       includeRelatives: includeRelatives.value,
-      selectedRelativeGroupIndices: selectedRelativeGroupIndices.value,
+      selectedRelativeGroupIndices: (relativeGroups.value || []).map((_, i) => i),
+      selectedFieldIds: selectedFieldIds.value,
+      selectedRelativeFieldIds: selectedRelativeFieldIds.value,
     };
     const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
     const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
@@ -504,7 +666,11 @@ const handleExport = async () => {
   } catch (error) { alert('Lỗi: ' + (error.message || error)); } finally { exporting.value = false; }
 };
 
-onMounted(() => loadSampleTemplate());
+onMounted(() => {
+  initAllFields();
+  loadSampleTemplate();
+  loadSavedTemplate();
+});
 </script>
 
 <style scoped>
