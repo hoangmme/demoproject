@@ -1,14 +1,15 @@
 import axios from 'axios';
 
-const getBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+export const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:8055';
+    if (hostname === 'hscb.online' || hostname.endsWith('.hscb.online')) {
+      return `${window.location.protocol}//api.${hostname}`;
     }
+    // For localhost, 127.0.0.1, or local IP (offline)
+    return `${window.location.protocol}//${hostname}:8055`;
   }
-  return 'https://api.hscb.online';
+  return 'http://localhost:8055';
 };
 
 export const API_URL = getBaseUrl();

@@ -1,4 +1,4 @@
-import apiClient, { API_URL, STATIC_TOKEN } from './client';
+import apiClient, { getBaseUrl, STATIC_TOKEN } from './client';
 
 export const uploadFile = async (file) => {
   const formData = new FormData();
@@ -13,13 +13,18 @@ export const uploadFile = async (file) => {
 
 export const getFileUrl = (fileId) => {
   if (!fileId) return '';
-  if (fileId.startsWith('http') || fileId.startsWith('data:')) {
+  const currentBaseUrl = getBaseUrl();
+  if (typeof fileId === 'string' && (fileId.includes('/assets/') || fileId.startsWith('http') || fileId.startsWith('data:'))) {
+    if (fileId.includes('/assets/')) {
+      const assetId = fileId.split('/assets/')[1]?.split('?')[0];
+      return `${currentBaseUrl}/assets/${assetId}?access_token=${STATIC_TOKEN}`;
+    }
     if (fileId.startsWith('http') && !fileId.includes('access_token=')) {
       return `${fileId}${fileId.includes('?') ? '&' : '?'}access_token=${STATIC_TOKEN}`;
     }
     return fileId;
   }
-  return `${API_URL}/assets/${fileId}?access_token=${STATIC_TOKEN}`;
+  return `${currentBaseUrl}/assets/${fileId}?access_token=${STATIC_TOKEN}`;
 };
 
 export const deleteFile = async (fileId) => {

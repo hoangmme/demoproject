@@ -1,0 +1,26 @@
+========================================================================
+   HƯỚNG DẪN CÀI ĐẶT & CHẠY HỆ THỐNG QUẢN LÝ HỒ SƠ CÁN BỘ (OFFLINE)
+========================================================================
+
+THƯ MỤC NÀY ĐÃ BAO GỒM ĐẦY ĐỦ:
+- Bộ cài đặt Node.js LTS cho Windows (trong thư mục installer)
+- Bản build hoàn chỉnh của Web Frontend (trong thư mục frontend)
+- File Database SQLite chứa toàn bộ dữ liệu & cấu hình cột (trong thư mục database)
+- Toàn bộ hình ảnh nền & tệp đính kèm (trong thư mục uploads)
+
+------------------------------------------------------------------------
+CÁCH CÀI ĐẶT TRÊN MÁY TÍNH WINDOWS MỚI (LÀM 1 LẦN DUY NHẤT):
+------------------------------------------------------------------------
+1. Copy toàn bộ thư mục này từ USB vào ổ đĩa C:\ hoặc D:\ trên máy Windows.
+2. Nhấp đúp chuột vào file: "1_CAI_DAT_NODEJS.bat"
+   -> Cửa sổ cài đặt Node.js hiện lên, bạn chỉ cần bấm "Next" liên tục đến khi "Finish".
+
+------------------------------------------------------------------------
+CÁCH SỬ DỤNG HÀNG NGÀY:
+------------------------------------------------------------------------
+1. Nhấp đúp chuột vào file: "2_KHOI_DONG_HE_THONG.bat"
+2. Trình duyệt sẽ tự động mở trang web: http://localhost
+3. Đăng nhập với tài khoản:
+   - Email: admin@demo.com
+   - Mật khẩu: 321456
+========================================================================

