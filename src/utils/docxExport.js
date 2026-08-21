@@ -562,7 +562,7 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       width: 794px !important;
       max-width: 794px !important;
       box-sizing: border-box !important;
-      padding: 24px 36px !important;
+      padding: 10px 24px !important;
     }
   `;
   document.head.appendChild(globalStyle);
@@ -601,19 +601,40 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
     // Kích thước chuẩn A4 (mm)
     const PDF_PAGE_WIDTH = 210;
     const PDF_PAGE_HEIGHT = 297;
-    const MARGIN_TOP = 20;
-    const MARGIN_BOTTOM = 20;
-    const MARGIN_LEFT = 15;
-    const MARGIN_RIGHT = 15;
+    const MARGIN_TOP = 14;
+    const MARGIN_BOTTOM = 14;
+    const MARGIN_LEFT = 14;
+    const MARGIN_RIGHT = 14;
 
-    const CONTENT_WIDTH_MM = PDF_PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT; // 180mm
-    const CONTENT_HEIGHT_MM = PDF_PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM; // 257mm
+    const CONTENT_WIDTH_MM = PDF_PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT; // 182mm
+    const CONTENT_HEIGHT_MM = PDF_PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM; // 269mm
 
     // Tỉ lệ scale từ pixel sang mm
     const pxPerMm = cWidth / CONTENT_WIDTH_MM;
     const maxSliceHeightPx = Math.floor(CONTENT_HEIGHT_MM * pxPerMm);
 
     const pdf = new jsPDF('p', 'mm', 'a4');
+
+    // Tự động tìm vị trí xuất hiện nội dung đầu tiên trên trang (cắt bỏ phần trắng dư thừa ở đỉnh văn bản)
+    let initialTopPadding = 0;
+    for (let y = 0; y < Math.min(300, cHeight); y += 2) {
+      const rowData = ctx.getImageData(0, y, cWidth, 1).data;
+      let hasInk = false;
+      for (let i = 0; i < rowData.length; i += 16) {
+        const r = rowData[i];
+        const g = rowData[i + 1];
+        const b = rowData[i + 2];
+        const a = rowData[i + 3];
+        if (a > 20 && (r < 235 || g < 235 || b < 235)) {
+          hasInk = true;
+          break;
+        }
+      }
+      if (hasInk) {
+        initialTopPadding = Math.max(0, y - 6);
+        break;
+      }
+    }
 
     // Thuật toán Smart White-Space Slicer
     const findSmartCutY = (startY, targetHeightPx) => {
@@ -654,7 +675,7 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       return bestCutY;
     };
 
-    let currentY = 0;
+    let currentY = initialTopPadding;
     let pageIndex = 0;
 
     while (currentY < cHeight) {
