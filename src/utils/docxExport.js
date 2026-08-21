@@ -498,7 +498,7 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.style.position = 'fixed';
   container.style.top = '0';
   container.style.left = '0';
-  container.style.width = '210mm';
+  container.style.width = '794px';
   container.style.margin = '0';
   container.style.padding = '0';
   container.style.backgroundColor = '#ffffff';
@@ -507,7 +507,7 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.style.pointerEvents = 'none';
   container.style.overflow = 'visible';
 
-  // Inject CSS trực tiếp vào <head> để đè triệt để style nội bộ của docx-preview
+  // Inject CSS trực tiếp vào <head> để kiểm soát chặt chẽ layout và phông chữ
   const globalStyle = document.createElement('style');
   globalStyle.id = 'docx-pdf-override-style';
   globalStyle.innerHTML = `
@@ -521,21 +521,33 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       background: #ffffff !important;
       padding: 0 !important;
       margin: 0 !important;
-      width: 210mm !important;
-      max-width: 210mm !important;
+      width: 794px !important;
+      max-width: 794px !important;
       display: block !important;
       box-shadow: none !important;
       border: none !important;
     }
     #docx-pdf-sandbox section.docx {
-      margin: 0 auto !important;
+      margin: 0 !important;
       box-shadow: none !important;
       border: none !important;
       background: #ffffff !important;
-      width: 210mm !important;
-      max-width: 210mm !important;
-      min-height: 297mm !important;
+      width: 794px !important;
+      max-width: 794px !important;
       box-sizing: border-box !important;
+    }
+    .pdf-a4-page-box {
+      width: 794px !important;
+      min-height: 1123px !important;
+      max-height: 1123px !important;
+      height: 1123px !important;
+      padding: 65px 45px 65px 65px !important;
+      box-sizing: border-box !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      overflow: hidden !important;
+      position: relative !important;
+      page-break-after: always !important;
     }
   `;
   document.head.appendChild(globalStyle);
@@ -544,6 +556,8 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   try {
     await renderAsync(docxBlob, container, null, {
       inWrapper: false,
+      breakPages: true,
+      experimental: true,
       ignoreWidth: false,
       ignoreHeight: false,
       renderHeaders: true,
@@ -553,29 +567,67 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       useBase64URL: true,
     });
 
-    // Chờ 400ms để DOM vẽ và phông chữ render hoàn tất
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    // Chờ 350ms để DOM vẽ và phông chữ render hoàn tất
+    await new Promise((resolve) => setTimeout(resolve, 350));
 
-    const sections = container.querySelectorAll('section.docx');
-    sections.forEach((sec) => {
-      sec.style.boxShadow = 'none';
-      sec.style.margin = '0';
-      sec.style.border = 'none';
-      sec.style.width = '210mm';
-      sec.style.boxSizing = 'border-box';
-      sec.style.backgroundColor = '#ffffff';
+    // Thu thập tất cả các node nội dung từ các section hoặc container
+    const rawSections = container.querySelectorAll('section.docx');
+    const contentNodes = [];
+    if (rawSections.length > 0) {
+      rawSections.forEach((sec) => {
+        Array.from(sec.children).forEach((child) => {
+          contentNodes.push(child);
+        });
+      });
+    } else {
+      Array.from(container.children).forEach((child) => {
+        contentNodes.push(child);
+      });
+    }
 
-      // Đảm bảo có lề trang nếu mẫu bị thiếu lề
-      const cs = window.getComputedStyle(sec);
-      const pLeft = parseFloat(cs.paddingLeft);
-      const pRight = parseFloat(cs.paddingRight);
-      if (isNaN(pLeft) || pLeft < 15) sec.style.paddingLeft = '20mm';
-      if (isNaN(pRight) || pRight < 15) sec.style.paddingRight = '15mm';
-      if (parseFloat(cs.paddingTop) < 15) sec.style.paddingTop = '20mm';
-      if (parseFloat(cs.paddingBottom) < 15) sec.style.paddingBottom = '20mm';
-    });
+    // Bộ phân trang thông minh: Đảm bảo mỗi trang đúng kích thước A4 (794x1123px), có padding top/bottom chuẩn, không bao giờ bị cắt đôi dòng chữ
+    const pagesContainer = document.createElement('div');
+    pagesContainer.style.width = '794px';
+    pagesContainer.style.background = '#ffffff';
 
-    const elementsToRender = sections.length > 0 ? Array.from(sections) : [container];
+    const PAGE_HEIGHT_PX = 1123;
+    const PADDING_TOP_PX = 65; // ~20mm
+    const PADDING_BOTTOM_PX = 65; // ~20mm
+    const MAX_PAGE_BODY_HEIGHT = PAGE_HEIGHT_PX - PADDING_TOP_PX - PADDING_BOTTOM_PX; // 993px
+
+    const pages = [];
+    const createNewPage = () => {
+      const pageEl = document.createElement('div');
+      pageEl.className = 'pdf-a4-page-box';
+      pagesContainer.appendChild(pageEl);
+      pages.push(pageEl);
+      return pageEl;
+    };
+
+    let currentPage = createNewPage();
+    let currentHeight = 0;
+
+    for (let i = 0; i < contentNodes.length; i++) {
+      const node = contentNodes[i];
+      const clone = node.cloneNode(true);
+      currentPage.appendChild(clone);
+
+      const nodeHeight = clone.offsetHeight || clone.getBoundingClientRect().height || 24;
+
+      if (currentHeight + nodeHeight > MAX_PAGE_BODY_HEIGHT && currentHeight > 0) {
+        // Chuyển toàn bộ đoạn/dòng bị tràn sang trang mới
+        currentPage.removeChild(clone);
+        currentPage = createNewPage();
+        currentPage.appendChild(clone);
+        currentHeight = clone.offsetHeight || 24;
+      } else {
+        currentHeight += nodeHeight;
+      }
+    }
+
+    // Thay thế container nội dung bằng container các trang đã phân trang chuẩn
+    container.innerHTML = '';
+    container.appendChild(pagesContainer);
 
     const pdf = new jsPDF({
       unit: 'mm',
@@ -584,43 +636,27 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       compress: true,
     });
 
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const pdfWidth = 210;
+    const pdfHeight = 297;
 
-    for (let i = 0; i < elementsToRender.length; i++) {
-      const el = elementsToRender[i];
-      if (i > 0) pdf.addPage('a4', 'portrait');
+    for (let i = 0; i < pages.length; i++) {
+      const pageEl = pages[i];
+      if (i > 0) {
+        pdf.addPage('a4', 'portrait');
+      }
 
-      const canvas = await html2canvas(el, {
+      const canvas = await html2canvas(pageEl, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
         windowWidth: 794,
         width: 794,
-        height: el.getBoundingClientRect().height || 1123,
+        height: 1123,
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.98);
-      const imgProps = pdf.getImageProperties(imgData);
-      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      if (Math.abs(imgHeight - pdfHeight) < 8) {
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      } else if (imgHeight <= pdfHeight) {
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
-      } else {
-        let heightLeft = imgHeight;
-        let position = 0;
-        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-        heightLeft -= pdfHeight;
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage('a4', 'portrait');
-          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-          heightLeft -= pdfHeight;
-        }
-      }
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
     }
 
     return pdf.output('blob');
