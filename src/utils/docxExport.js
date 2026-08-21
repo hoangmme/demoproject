@@ -11,7 +11,7 @@ import { formatDate } from './formatters';
  * @param {Object} personnelStore - Pinia store chứa danh mục & cấu hình cột
  * @returns {Object} Context data cho docxtemplater
  */
-export function preparePersonnelDocxData(person, index = 0, personnelStore = null, currentUser = null) {
+export function preparePersonnelDocxData(person, index = 0, personnelStore = null, currentUser = null, exportOptions = {}) {
   if (!person) return {};
 
   const cd = person.custom_data || {};
