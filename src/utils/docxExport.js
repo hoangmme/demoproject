@@ -5,6 +5,106 @@ import JSZip from 'jszip';
 import { formatDate } from './formatters';
 
 /**
+ * Chuyển đổi giá trị của một cột thành chuỗi hiển thị chuẩn cho file xuất (Word / PDF)
+ * Dựa trên đúng định dạng của cột: table_loop, checkbox_text, file, checkbox, dropdown, text_loop, date, text
+ */
+export function formatFieldValueForDocx(val, col = {}) {
+  if (val === undefined || val === null || val === '') return '';
+
+  const format = col.format || '';
+
+  // 1. Format: Bảng lặp nhiều cột (table_loop / table_2col)
+  if (format === 'table_loop' || format === 'table_2col') {
+    let rows = [];
+    if (Array.isArray(val)) {
+      rows = val;
+    } else if (typeof val === 'string' && val.trim()) {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) rows = parsed;
+      } catch (e) {
+        return val;
+      }
+    }
+    if (rows.length === 0) return '';
+
+    const headers = col.options
+      ? String(col.options).split(/[,;]/).map((s) => s.trim()).filter(Boolean)
+      : ['Thời gian', 'Đơn vị công tác'];
+
+    const formattedRows = rows.map((r, rIdx) => {
+      const colTexts = [];
+      headers.forEach((h, hIdx) => {
+        const cellVal = r['col' + hIdx] !== undefined ? r['col' + hIdx] : (r['col' + (hIdx + 1)] !== undefined ? r['col' + (hIdx + 1)] : (r[h] || ''));
+        if (cellVal !== undefined && cellVal !== null && String(cellVal).trim() !== '') {
+          colTexts.push(`${h}: ${cellVal}`);
+        }
+      });
+      return colTexts.length > 0 ? `   • Hàng ${rIdx + 1}: ${colTexts.join(' | ')}` : '';
+    }).filter(Boolean);
+
+    return formattedRows.length > 0 ? '\n' + formattedRows.join('\n') : '';
+  }
+
+  // 2. Format: Hộp kiểm + Nhập Text (checkbox_text)
+  if (format === 'checkbox_text') {
+    if (Array.isArray(val)) {
+      const items = val.map((v) => {
+        if (typeof v === 'object' && v !== null) {
+          return v.detail ? `${v.label || v.name || 'Chi tiết'}: ${v.detail}` : (v.label || v.name || '');
+        }
+        return String(v).trim();
+      }).filter(Boolean);
+      return items.join('; ');
+    }
+    if (typeof val === 'object' && val !== null) {
+      const pairs = [];
+      Object.entries(val).forEach(([k, v]) => {
+        if (v && typeof v !== 'object') pairs.push(`${k}: ${v}`);
+      });
+      return pairs.join('; ');
+    }
+    return String(val).trim();
+  }
+
+  // 3. Format: Tệp đính kèm (file)
+  if (format === 'file') {
+    if (Array.isArray(val)) {
+      const fileNames = val.map((f) => {
+        if (typeof f === 'object' && f !== null) return f.name || f.filename_download || f.id || '';
+        return String(f).trim();
+      }).filter(Boolean);
+      return fileNames.join(', ');
+    }
+    if (typeof val === 'object' && val !== null) {
+      return val.name || val.filename_download || '';
+    }
+    return String(val).trim();
+  }
+
+  // 4. Format: Hộp kiểm nhiều lựa chọn (checkbox) & Dropdown & Text Loop
+  if (format === 'checkbox' || format === 'text_loop') {
+    if (Array.isArray(val)) {
+      return val.map((x) => (typeof x === 'object' ? JSON.stringify(x) : String(x).trim())).filter(Boolean).join(', ');
+    }
+    return String(val).trim();
+  }
+
+  // 5. Format: Date
+  if (format === 'date') {
+    return formatDate(val);
+  }
+
+  if (typeof val === 'object' && val instanceof Date) {
+    return formatDate(val);
+  }
+  if (Array.isArray(val)) {
+    return val.map((x) => (typeof x === 'object' ? JSON.stringify(x) : String(x).trim())).filter(Boolean).join(', ');
+  }
+  return String(val).trim();
+}
+
+/**
  * Chuẩn hóa dữ liệu của một cán bộ thành dictionary để khớp với các Tag trong Word
  * @param {Object} person - Đối tượng Cán bộ
  * @param {Number} index - Số thứ tự trong danh sách (0-indexed)
@@ -192,52 +292,62 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   });
 
   // 6. Danh sách Thân nhân (Loop {#than_nhan} / {#relatives})
-  const rawRelatives = Array.isArray(person.relatives) ? person.relatives : (cd.relatives || []);
-  const processedRelatives = rawRelatives.map((rel, rIdx) => {
+  let rawRelatives = Array.isArray(person.relatives) && person.relatives.length > 0 ? person.relatives : (cd.relatives || []);
+  if ((!rawRelatives || rawRelatives.length === 0) && personnelStore?.relativesList?.length > 0) {
+    const pCccd = String(person.cccdparent || cd.cccdparent || person.cccd || '').trim();
+    const pId = String(person.id || '').trim();
+    const pCode = String(person.code || '').trim();
+    rawRelatives = personnelStore.relativesList.filter((r) => {
+      const rParent = String(r.cccdparent || r.personnelId || r.personnelCode || '').trim();
+      return (pCccd && rParent === pCccd) || (pId && rParent === pId) || (pCode && rParent === pCode);
+    });
+  }
+
+  const processedRelatives = (rawRelatives || []).map((rel, rIdx) => {
     const rcd = rel.custom_data || {};
     const relObj = {
       stt: rIdx + 1,
       code: rel.code || `TN-${String(rIdx + 1).padStart(4, '0')}`,
       ma_than_nhan: rel.code || `TN-${String(rIdx + 1).padStart(4, '0')}`,
-      relativeName: rel.relativeName || rel.name || '',
-      ho_ten_tn: rel.relativeName || rel.name || '',
-      ho_ten: rel.relativeName || rel.name || '',
-      tn_ho_ten: rel.relativeName || rel.name || '',
-      relationshipName: rel.relationshipName || rel.relationship || '',
-      quan_he: rel.relationshipName || rel.relationship || '',
-      tn_quan_he: rel.relationshipName || rel.relationship || '',
-      birthYear: formatDate(rel.birthYear || rcd.birthYear),
-      nam_sinh: formatDate(rel.birthYear || rcd.birthYear),
-      ngay_sinh: formatDate(rel.birthYear || rcd.birthYear),
-      tn_nam_sinh: formatDate(rel.birthYear || rcd.birthYear),
-      tn_ngay_sinh: formatDate(rel.birthYear || rcd.birthYear),
-      gender: rel.gender || rcd.gender || '',
-      gioi_tinh: rel.gender || rcd.gender || '',
-      tn_gioi_tinh: rel.gender || rcd.gender || '',
-      countryName: rel.countryName || rel.country || '',
-      quoc_gia: rel.countryName || rel.country || '',
-      tn_quoc_gia: rel.countryName || rel.country || '',
-      quoc_tich: rel.nationality || rcd.nationality || rel.countryName || '',
-      nationality: rel.nationality || rcd.nationality || rel.countryName || '',
+      relativeName: rel.relativeName || rel.name || rel.ho_ten || '',
+      ho_ten_tn: rel.relativeName || rel.name || rel.ho_ten || '',
+      ho_ten: rel.relativeName || rel.name || rel.ho_ten || '',
+      name: rel.relativeName || rel.name || rel.ho_ten || '',
+      relationshipName: rel.relationshipName || rel.relationship || rel.quan_he || '',
+      relationship: rel.relationshipName || rel.relationship || rel.quan_he || '',
+      quan_he: rel.relationshipName || rel.relationship || rel.quan_he || '',
+      birthYear: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
+      nam_sinh: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
+      ngay_sinh: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
+      tn_nam_sinh: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
+      tn_ngay_sinh: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
+      gender: rel.gender || rcd.gender || rel.gioi_tinh || '',
+      gioi_tinh: rel.gender || rcd.gender || rel.gioi_tinh || '',
+      tn_gioi_tinh: rel.gender || rcd.gender || rel.gioi_tinh || '',
+      countryName: rel.countryName || rel.country || rel.quoc_gia || '',
+      quoc_gia: rel.countryName || rel.country || rel.quoc_gia || '',
+      tn_quoc_gia: rel.countryName || rel.country || rel.quoc_gia || '',
+      nationality: rel.nationality || rcd.nationality || rel.quoc_tich || '',
+      quoc_tich: rel.nationality || rcd.nationality || rel.quoc_tich || '',
       residenceStatus: rel.residenceStatus || rcd.residenceStatus || '',
       tinh_trang_cu_tru: rel.residenceStatus || rcd.residenceStatus || '',
-      job: rel.job || rcd.job || '',
-      nghe_nghiep: rel.job || rcd.job || '',
-      tn_nghe_nghiep: rel.job || rcd.job || '',
-      workplace: rel.workplace || rcd.workplace || '',
-      noi_lam_viec: rel.workplace || rcd.workplace || '',
-      address: rel.address || rcd.address || '',
-      dia_chi: rel.address || rcd.address || '',
-      tn_dia_chi: rel.address || rcd.address || '',
+      job: rel.job || rel.occupation || rcd.job || rel.nghe_nghiep || '',
+      nghe_nghiep: rel.job || rel.occupation || rcd.job || rel.nghe_nghiep || '',
+      tn_nghe_nghiep: rel.job || rel.occupation || rcd.job || rel.nghe_nghiep || '',
+      workplace: rel.workplace || rcd.workplace || rel.noi_lam_viec || '',
+      noi_lam_viec: rel.workplace || rcd.workplace || rel.noi_lam_viec || '',
+      address: rel.address || rel.currentAddress || rcd.address || rel.dia_chi || '',
+      dia_chi: rel.address || rel.currentAddress || rcd.address || rel.dia_chi || '',
+      tn_dia_chi: rel.address || rel.currentAddress || rcd.address || rel.dia_chi || '',
       cccdparent: rel.cccdparent || rcd.cccdparent || person.cccdparent || '',
-      cccdthannhan: rel.cccdthannhan || rcd.cccdthannhan || rel.cccd || '',
+      cccdthannhan: rel.cccdthannhan || rel.cccd || rcd.cccdthannhan || '',
       tn_cccd: rel.cccdthannhan || rcd.cccdthannhan || rel.cccd || '',
     };
 
     // Đẩy các cột custom của thân nhân vào (với cả key gốc và key có prefix tn_)
-    Object.entries(rcd).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) {
-        const cleanV = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : v;
+    Object.entries({ ...rcd, ...rel }).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && k !== 'custom_data') {
+        const cleanV = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : formatFieldValueForDocx(v);
         relObj[k] = cleanV;
         relObj[`tn_${k}`] = cleanV;
       }
@@ -437,8 +547,9 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
         if (selFields && Array.isArray(selFields) && !selFields.includes(col.id)) return;
         let label = col.label || col.id;
         if (!label.includes('(')) label = `${label} (${runningIdx++})`;
-        const val = data[col.id] || cd[col.id] || person[col.id] || '';
-        groupLines.push(`- ${label}: ${val}`);
+        const rawVal = cd[col.id] !== undefined ? cd[col.id] : (person[col.id] !== undefined ? person[col.id] : data[col.id]);
+        const formattedVal = formatFieldValueForDocx(rawVal, col);
+        groupLines.push(`- ${label}: ${formattedVal}`);
       });
 
       if (groupLines.length > 0) {
@@ -453,16 +564,50 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   const canIncludeRelatives = exportOptions?.includeRelatives !== false;
   if (canIncludeRelatives && processedRelatives.length > 0) {
     formgroupLines.push('');
-    formgroupLines.push('* Thông tin thân nhân liên quan:');
+    formgroupLines.push('* Thông tin thân nhân có yếu tố nước ngoài:');
+    
+    // Lấy cấu hình các nhóm cột thân nhân từ store
+    const relGroups = personnelStore?.importMappingRelative || [];
+    
     processedRelatives.forEach((rel, rIdx) => {
-      formgroupLines.push(`▶ Thân nhân ${rIdx + 1} (${rel.relationshipName || 'Thân nhân'}): ${rel.name || rel.ho_ten || ''}`);
-      if (!selRelFields || selRelFields.includes('name') || selRelFields.includes('ho_ten')) formgroupLines.push(`   - Họ và tên (1): ${rel.name || rel.ho_ten || ''}`);
-      if (!selRelFields || selRelFields.includes('relationship') || selRelFields.includes('quan_he')) formgroupLines.push(`   - Quan hệ (2): ${rel.relationshipName || rel.quan_he || ''}`);
-      if (!selRelFields || selRelFields.includes('birthYear') || selRelFields.includes('nam_sinh')) formgroupLines.push(`   - Năm sinh (3): ${rel.birthYear || rel.nam_sinh || ''}`);
-      if (!selRelFields || selRelFields.includes('hometown') || selRelFields.includes('que_quan')) formgroupLines.push(`   - Quê quán (4): ${rel.hometown || rel.hometownTN || ''}`);
-      if (!selRelFields || selRelFields.includes('occupation') || selRelFields.includes('job') || selRelFields.includes('nghe_nghiep')) formgroupLines.push(`   - Nghề nghiệp (5): ${rel.occupation || rel.job || rel.nghe_nghiep || ''}`);
-      if (!selRelFields || selRelFields.includes('address') || selRelFields.includes('dia_chi')) formgroupLines.push(`   - Nơi ở hiện nay (6): ${rel.address || rel.currentAddress || rel.dia_chi || ''}`);
-      if (!selRelFields || selRelFields.includes('cccdthannhan') || selRelFields.includes('cccd')) formgroupLines.push(`   - Số Căn cước công dân (7): ${rel.cccdthannhan || rel.cccd || ''}`);
+      const rcd = rel.custom_data || {};
+      const relHeader = `▶ Thân nhân ${rIdx + 1} (${rel.relationshipName || rel.quan_he || 'Thân nhân'}): ${rel.relativeName || rel.name || rel.ho_ten || ''}`;
+      formgroupLines.push(relHeader);
+      
+      let rColIdx = 1;
+      if (relGroups.length > 0) {
+        relGroups.forEach((rGrp) => {
+          (rGrp.columns || []).forEach((col) => {
+            if (!col.id || col.id === 'stt') return;
+            if (selRelFields && Array.isArray(selRelFields) && !selRelFields.includes(col.id)) return;
+            
+            let label = col.label || col.id;
+            if (!label.includes('(')) label = `${label} (${rColIdx++})`;
+            
+            const rawVal = rcd[col.id] !== undefined ? rcd[col.id] : (rel[col.id] !== undefined ? rel[col.id] : rel[`tn_${col.id}`]);
+            const formattedVal = formatFieldValueForDocx(rawVal, col);
+            formgroupLines.push(`   - ${label}: ${formattedVal !== undefined && formattedVal !== null ? formattedVal : ''}`);
+          });
+        });
+      } else {
+        const defaultFields = [
+          { id: 'relativeName', label: 'Họ và tên' },
+          { id: 'relationshipName', label: 'Quan hệ' },
+          { id: 'birthYear', label: 'Năm sinh' },
+          { id: 'gender', label: 'Giới tính' },
+          { id: 'countryName', label: 'Quốc gia' },
+          { id: 'job', label: 'Nghề nghiệp' },
+          { id: 'address', label: 'Nơi ở hiện nay' },
+          { id: 'cccdthannhan', label: 'Số Căn cước công dân' },
+        ];
+        defaultFields.forEach((col, idx) => {
+          if (!selRelFields || selRelFields.includes(col.id) || selRelFields.includes(`tn_${col.id}`) || selRelFields.includes('name') || selRelFields.includes('ho_ten')) {
+            const rawVal = rel[col.id];
+            const formattedVal = formatFieldValueForDocx(rawVal, col);
+            formgroupLines.push(`   - ${col.label} (${idx + 1}): ${formattedVal || ''}`);
+          }
+        });
+      }
     });
   }
 
