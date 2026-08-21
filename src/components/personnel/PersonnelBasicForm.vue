@@ -5,8 +5,8 @@
       :key="gIdx"
       style="background: #ffffff;"
     >
-      <div v-if="dynamicGroups.length > 1 && group.group" style="font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 0.6rem; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-        <i class="pi pi-folder" style="color: #0284c7; font-size: 0.85rem;"></i>
+      <div v-if="gIdx > 0 && group.group" style="font-size: 0.85rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+        <i class="pi pi-folder" style="color: #0284c7; font-size: 0.95rem;"></i>
         <span>{{ group.group }}</span>
       </div>
 
@@ -67,15 +67,18 @@ const dynamicGroups = computed(() => {
   const ignore = new Set(['stt', 'code']);
   const mapping = effectiveMapping.value;
   if (Array.isArray(mapping) && mapping.length > 0) {
-    return mapping.map((g) => ({
-      group: g.group || '',
-      isMultiple: g.isMultiple,
-      columns: (g.columns || []).filter((c) => !ignore.has(c.id)),
-    })).filter((g) => g.columns.length > 0);
+    return mapping
+      .map((g, idx) => ({
+        idx,
+        group: g.group || '',
+        isMultiple: g.isMultiple,
+        columns: (g.columns || []).filter((c) => !ignore.has(c.id)),
+      }))
+      .filter((g) => g.idx !== 1 && g.idx !== 2 && g.columns.length > 0);
   }
   return [
     {
-      group: 'Thông tin chung',
+      group: 'Thông tin cơ bản',
       columns: [
         { id: 'name', label: 'Họ và tên', width: '33', format: 'text' },
         { id: 'otherName', label: 'Tên gọi khác', width: '33', format: 'text' },

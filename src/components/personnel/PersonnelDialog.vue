@@ -31,8 +31,9 @@
       <!-- TAB 1: CÁN BỘ (Cá nhân, Đi nước ngoài, Kỷ luật & Lưu ý) -->
       <div v-show="activeTab === 0" style="display: flex; flex-direction: column; gap: 1.5rem;">
         <div>
-          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
-            A. THÔNG TIN CHUNG & CƯ TRÚ
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-user" style="color: #16a34a; font-size: 0.95rem;"></i>
+            <span>{{ personnelStore.importMappingPersonnel?.[0]?.group || 'Khối A: Thông tin cơ bản' }}</span>
           </h4>
           <PersonnelBasicForm
             :form="form"
@@ -42,15 +43,17 @@
         </div>
 
         <div>
-          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
-            B. LỊCH SỬ ĐI NƯỚC NGOÀI ({{ form.trips?.length || 0 }} chuyến)
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-globe" style="color: #0284c7; font-size: 0.95rem;"></i>
+            <span>{{ personnelStore.importMappingPersonnel?.[1]?.group || 'Khối B: Chuyến đi nước ngoài' }} ({{ form.trips?.length || 0 }} chuyến)</span>
           </h4>
           <PersonnelTravelForm :form="form" />
         </div>
 
         <div>
-          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px;">
-            C. LỊCH SỬ KỶ LUẬT & LƯU Ý CHÍNH TRỊ
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-exclamation-triangle" style="color: #f59e0b; font-size: 0.95rem;"></i>
+            <span>{{ personnelStore.importMappingPersonnel?.[2]?.group || 'Khối C: Lịch sử kỷ luật & Lưu ý chính trị' }}</span>
           </h4>
           <PersonnelNotesForm :form="form" />
         </div>
