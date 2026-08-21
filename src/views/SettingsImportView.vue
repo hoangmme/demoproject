@@ -708,7 +708,7 @@ const loadLoginBg = async () => {
 
 const triggerUploadLoginBg = () => loginBgFileInputRef.value?.click();
 
-const compressImage = (file, maxWidth = 1920, maxHeight = 1080, quality = 0.85) => {
+const compressImage = (file, maxWidth = 3840, maxHeight = 2160, quality = 0.95) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -716,6 +716,7 @@ const compressImage = (file, maxWidth = 1920, maxHeight = 1080, quality = 0.85) 
       img.onload = () => {
         let w = img.width;
         let h = img.height;
+        // Chỉ thu nhỏ nếu ảnh vượt quá chuẩn 4K UHD (3840x2160)
         if (w > maxWidth || h > maxHeight) {
           const ratio = Math.min(maxWidth / w, maxHeight / h);
           w = Math.round(w * ratio);
@@ -725,6 +726,8 @@ const compressImage = (file, maxWidth = 1920, maxHeight = 1080, quality = 0.85) 
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, w, h);
         const dataUrl = canvas.toDataURL('image/jpeg', quality);
         resolve(dataUrl);
@@ -742,11 +745,12 @@ const handleUploadLoginBg = async (event) => {
   if (!file) return;
 
   try {
-    const compressedBase64 = await compressImage(file, 1920, 1080, 0.85);
+    // Tối ưu hóa lưu trữ ảnh nền độ nét cao 4K UHD (3840x2160)
+    const compressedBase64 = await compressImage(file, 3840, 2160, 0.95);
     currentLoginBg.value = compressedBase64;
     localStorage.setItem('custom_login_bg', compressedBase64);
     await saveAppSettings('custom_login_bg', compressedBase64);
-    alert('Đã cập nhật và lưu ảnh nền đăng nhập thành công!');
+    alert('Đã cập nhật và lưu ảnh nền đăng nhập độ nét cao (4K) thành công!');
   } catch (err) {
     alert('Lỗi lưu ảnh nền: ' + err.message);
   } finally {

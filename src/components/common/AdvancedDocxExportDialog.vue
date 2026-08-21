@@ -306,6 +306,26 @@
         </div>
       </div>
 
+      <!-- Khung Tiến độ Xuất hàng loạt ZIP -->
+      <div v-if="exporting && progressTotal > 0" class="export-progress-panel">
+        <div class="progress-info-row">
+          <div class="progress-status-text">
+            <i class="pi pi-spin pi-spinner" style="color: #2563eb; margin-right: 6px;"></i>
+            <span>Đang tạo tài liệu: <strong>{{ progressCurrent }} / {{ progressTotal }}</strong> hồ sơ cán bộ</span>
+          </div>
+          <div class="progress-percent-badge">
+            {{ Math.round((progressCurrent / progressTotal) * 100) }}%
+          </div>
+        </div>
+
+        <div class="progress-track">
+          <div
+            class="progress-fill"
+            :style="{ width: `${Math.round((progressCurrent / progressTotal) * 100)}%` }"
+          ></div>
+        </div>
+      </div>
+
       <!-- FOOTER -->
       <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 0.6rem; padding-top: 0.8rem; border-top: 1px solid #e2e8f0;">
         <Button
@@ -313,6 +333,7 @@
           size="small"
           @click="visible = false"
           class="btn-close-custom"
+          :disabled="exporting"
         />
 
         <Button
@@ -661,6 +682,11 @@ const getDownloadButtonLabel = () => {
   const typeLabel = outputFormat.value === 'pdf' ? 'PDF' : 'Word';
   const ext = outputFormat.value === 'pdf' ? '.pdf' : '.docx';
 
+  if (exporting.value && progressTotal.value > 0) {
+    const pct = Math.round((progressCurrent.value / progressTotal.value) * 100);
+    return `Đang xuất ${progressCurrent.value}/${progressTotal.value} (${pct}%)...`;
+  }
+
   if (isSingle) {
     const pName = (exportScope.value === 'single' && props.targetPerson)
       ? props.targetPerson.name
@@ -990,5 +1016,53 @@ onMounted(() => {
   opacity: 0.65 !important;
   box-shadow: none !important;
   cursor: not-allowed !important;
+}
+
+.export-progress-panel {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 8px;
+}
+
+.progress-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.progress-status-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+}
+
+.progress-percent-badge {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: #ffffff;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #bfdbfe;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: #dbeafe;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  border-radius: 4px;
+  transition: width 0.25s ease;
 }
 </style>
