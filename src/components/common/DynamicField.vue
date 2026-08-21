@@ -352,10 +352,14 @@ watch(
   () => [props.modelValue, props.col.format, props.col.options],
   ([val, fmt]) => {
     if (fmt === 'table_2col' || fmt === 'table_loop') {
-      initTableRows(val);
+      const currentJson = JSON.stringify(tableRows.value);
+      const incomingJson = JSON.stringify(val);
+      if (currentJson !== incomingJson) {
+        initTableRows(val);
+      }
     }
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 );
 
 const addTableRow = () => {
@@ -364,20 +368,16 @@ const addTableRow = () => {
     row['col' + idx] = '';
   });
   tableRows.value.push(row);
-  updateTableModel();
+  emit('update:modelValue', [...tableRows.value]);
 };
 
 const removeTableRow = (idx) => {
   tableRows.value.splice(idx, 1);
-  updateTableModel();
+  emit('update:modelValue', [...tableRows.value]);
 };
 
 const updateTableModel = () => {
-  const headers = tableHeaders.value;
-  const filtered = tableRows.value.filter((r) => {
-    return headers.some((_, idx) => r['col' + idx] && String(r['col' + idx]).trim() !== '');
-  });
-  emit('update:modelValue', filtered);
+  emit('update:modelValue', [...tableRows.value]);
 };
 
 // Checkbox (Multi-select)
