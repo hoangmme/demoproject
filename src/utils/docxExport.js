@@ -519,13 +519,13 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.id = 'docx-pdf-sandbox';
   container.style.position = 'fixed';
   container.style.top = '0';
-  container.style.left = '0';
+  container.style.left = '-9999px';
   container.style.width = '794px';
   container.style.margin = '0';
   container.style.padding = '0';
   container.style.backgroundColor = '#ffffff';
   container.style.color = '#000000';
-  container.style.zIndex = '99999999';
+  container.style.zIndex = '-9999';
   container.style.pointerEvents = 'none';
   container.style.overflow = 'visible';
 
@@ -601,82 +601,96 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
     const MARGIN_LEFT = 15;
     const MARGIN_RIGHT = 15;
 
-    const PRINTABLE_WIDTH = PDF_PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT; // 180mm
-    const PRINTABLE_HEIGHT = PDF_PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM; // 257mm
+    const CONTENT_WIDTH_MM = PDF_PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT; // 180mm
+    const CONTENT_HEIGHT_MM = PDF_PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM; // 257mm
 
-    // Chiều cao tối đa của 1 lát cắt trên canvas (theo pixel canvas)
-    const maxSliceHeight = (PRINTABLE_HEIGHT / PRINTABLE_WIDTH) * cWidth;
+    // Tỉ lệ scale từ pixel sang mm
+    const pxPerMm = cWidth / CONTENT_WIDTH_MM;
+    const maxSliceHeightPx = Math.floor(CONTENT_HEIGHT_MM * pxPerMm);
 
-    const pdf = new jsPDF({
-      unit: 'mm',
-      format: 'a4',
-      orientation: 'portrait',
-      compress: true,
-    });
+    const pdf = new jsPDF('p', 'mm', 'a4');
+
+    // Thuật toán Smart White-Space Slicer
+    const findSmartCutY = (startY, targetHeightPx) => {
+      const idealCutY = Math.min(startY + targetHeightPx, cHeight);
+      if (idealCutY >= cHeight) return cHeight;
+
+      const searchZoneTop = Math.max(startY + Math.floor(targetHeightPx * 0.75), startY + 50);
+      const searchZoneBottom = idealCutY;
+
+      let bestCutY = idealCutY;
+      let minInkScore = Infinity;
+
+      for (let y = searchZoneBottom; y >= searchZoneTop; y -= 2) {
+        const rowData = ctx.getImageData(0, y, cWidth, 1).data;
+        let inkScore = 0;
+
+        for (let i = 0; i < rowData.length; i += 16) {
+          const r = rowData[i];
+          const g = rowData[i + 1];
+          const b = rowData[i + 2];
+          const a = rowData[i + 3];
+
+          if (a > 20 && (r < 235 || g < 235 || b < 235)) {
+            inkScore++;
+          }
+        }
+
+        if (inkScore === 0) {
+          return y;
+        }
+
+        if (inkScore < minInkScore) {
+          minInkScore = inkScore;
+          bestCutY = y;
+        }
+      }
+
+      return bestCutY;
+    };
 
     let currentY = 0;
     let pageIndex = 0;
 
-    // Helper: Tìm vị trí cắt thông minh (hàng pixel trắng giữa các dòng chữ)
-    const findSmartCutY = (startY, targetEndY) => {
-      if (targetEndY >= cHeight) return cHeight;
-
-      // Quét lùi từ targetEndY lên tối đa 160px canvas để tìm dòng trống hoàn toàn
-      const scanLimit = Math.max(startY + 100, targetEndY - 180);
-      const imgData = ctx.getImageData(0, scanLimit, cWidth, targetEndY - scanLimit);
-      const data = imgData.data;
-
-      for (let y = targetEndY - 1; y >= scanLimit; y--) {
-        const localY = y - scanLimit;
-        let isWhiteRow = true;
-        for (let step = 0; step < 30; step++) {
-          const x = Math.floor((step / 30) * cWidth);
-          const idx = (localY * cWidth + x) * 4;
-          const r = data[idx];
-          const g = data[idx + 1];
-          const b = data[idx + 2];
-          if (r < 245 || g < 245 || b < 245) {
-            isWhiteRow = false;
-            break;
-          }
-        }
-        if (isWhiteRow) {
-          return y;
-        }
-      }
-      return targetEndY;
-    };
-
     while (currentY < cHeight) {
       if (pageIndex > 0) {
-        pdf.addPage('a4', 'portrait');
+        pdf.addPage('a4', 'p');
       }
 
-      const targetEnd = Math.min(currentY + maxSliceHeight, cHeight);
-      const cutY = (targetEnd === cHeight) ? cHeight : findSmartCutY(currentY, targetEnd);
-      const sliceHeight = cutY - currentY;
+      const cutY = findSmartCutY(currentY, maxSliceHeightPx);
+      const sliceHeightPx = cutY - currentY;
 
-      // Tạo canvas tạm cho lát cắt trang này
+      if (sliceHeightPx <= 0) break;
+
       const sliceCanvas = document.createElement('canvas');
       sliceCanvas.width = cWidth;
-      sliceCanvas.height = sliceHeight;
+      sliceCanvas.height = sliceHeightPx;
       const sliceCtx = sliceCanvas.getContext('2d');
+
+      sliceCtx.fillStyle = '#ffffff';
+      sliceCtx.fillRect(0, 0, cWidth, sliceHeightPx);
 
       sliceCtx.drawImage(
         fullCanvas,
-        0, currentY, cWidth, sliceHeight,
-        0, 0, cWidth, sliceHeight
+        0,
+        currentY,
+        cWidth,
+        sliceHeightPx,
+        0,
+        0,
+        cWidth,
+        sliceHeightPx
       );
 
-      const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-      const sliceHeightMm = (sliceHeight / cWidth) * PRINTABLE_WIDTH;
+      const sliceImgData = sliceCanvas.toDataURL('image/jpeg', 0.95);
+      const sliceHeightMm = sliceHeightPx / pxPerMm;
 
       pdf.addImage(
-        sliceData,
+        sliceImgData,
         'JPEG',
         MARGIN_LEFT,
         MARGIN_TOP,
-        PRINTABLE_WIDTH,
+        CONTENT_WIDTH_MM,
         sliceHeightMm
       );
 
@@ -704,13 +718,13 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
 export async function exportSinglePersonnelDocx(templateBuffer, person, filename, personnelStore, outputFormat = 'docx', currentUser = null, exportOptions = {}) {
   const contextData = preparePersonnelDocxData(person, 0, personnelStore, currentUser, exportOptions);
   const docxBlob = generateDocxBlob(templateBuffer, contextData);
-  const baseName = `Ho_so_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}`;
+  const baseName = filename || `Ho_so_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}`;
 
   if (outputFormat === 'pdf') {
     const pdfBlob = await convertDocxBlobToPdfBlob(docxBlob);
-    saveAs(pdfBlob, `${baseName}.pdf`);
+    saveAs(pdfBlob, `${baseName.replace(/\.pdf$/i, '')}.pdf`);
   } else {
-    saveAs(docxBlob, `${baseName}.docx`);
+    saveAs(docxBlob, `${baseName.replace(/\.docx$/i, '')}.docx`);
   }
 }
 
@@ -718,6 +732,7 @@ export async function exportSinglePersonnelDocx(templateBuffer, person, filename
  * Xuất nhiều cán bộ thành 1 tệp ZIP chứa các file Word hoặc PDF
  */
 export async function exportMultiplePersonnelZip(templateBuffer, personnelList, zipFileName, personnelStore, onProgress = null, outputFormat = 'docx', currentUser = null, exportOptions = {}) {
+  const safeZipName = zipFileName || `Ho_so_${personnelList.length}_can_bo.zip`;
   const zip = new JSZip();
   const folder = zip.folder('Ho_so_can_bo');
   const ext = outputFormat === 'pdf' ? 'pdf' : 'docx';
@@ -741,7 +756,7 @@ export async function exportMultiplePersonnelZip(templateBuffer, personnelList, 
   }
 
   const content = await zip.generateAsync({ type: 'blob' });
-  saveAs(content, zipFileName.endsWith('.zip') ? zipFileName : `${zipFileName}.zip`);
+  saveAs(content, safeZipName.endsWith('.zip') ? safeZipName : `${safeZipName}.zip`);
 }
 
 /**

@@ -686,13 +686,15 @@ const handleExport = async () => {
     const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
     const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
     if (isSingle && targetP) {
-      await exportSinglePersonnelDocx(buf, targetP, null, personnelStore, outputFormat.value, authStore.user, exportOptions);
+      const fileName = `Ho_so_${(targetP.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}_${targetP.code || ''}`;
+      await exportSinglePersonnelDocx(buf, targetP, fileName, personnelStore, outputFormat.value, authStore.user, exportOptions);
       visible.value = false;
     } else {
       let list = exportScope.value === 'selected' ? props.selectedPersonnel : (props.allPersonnel?.length > 0 ? props.allPersonnel : personnelStore.personnelList);
       if (!list?.length) return alert('Không có dữ liệu cán bộ!');
       progressTotal.value = list.length;
-      await exportMultiplePersonnelZip(buf, list, null, personnelStore, (curr, total) => { progressCurrent.value = curr; progressTotal.value = total; }, outputFormat.value, authStore.user, exportOptions);
+      const zipName = `Ho_so_${list.length}_can_bo.zip`;
+      await exportMultiplePersonnelZip(buf, list, zipName, personnelStore, (curr, total) => { progressCurrent.value = curr; progressTotal.value = total; }, outputFormat.value, authStore.user, exportOptions);
       visible.value = false;
     }
   } catch (error) { alert('Lỗi: ' + (error.message || error)); } finally { exporting.value = false; }
