@@ -209,8 +209,8 @@
                   <i class="pi pi-file-pdf"></i>
                 </div>
                 <div>
-                  <div class="menu-action-title">{{ selectedPersonnel.length > 0 ? `Xuất Word / PDF (${selectedPersonnel.length} đã chọn)` : 'Xuất Hồ sơ theo Mẫu (Word / PDF)' }}</div>
-                  <div class="menu-action-sub">Xuất trích ngang, sơ yếu lý lịch cán bộ</div>
+                  <div class="menu-action-title">{{ selectedPersonnel.length > 0 ? `Xuất Hồ sơ PDF (${selectedPersonnel.length} đã chọn)` : 'Xuất Hồ sơ Cán bộ (PDF)' }}</div>
+                  <div class="menu-action-sub">Xuất trích ngang, sơ yếu lý lịch cán bộ ra PDF</div>
                 </div>
               </div>
             </div>

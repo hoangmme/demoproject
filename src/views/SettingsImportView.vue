@@ -1088,6 +1088,9 @@ const allAvailableTags = computed(() => {
   // 4. Hệ thống & Ngày giờ & Khối tổng hợp Group
   tags.push(
     { label: '🌟 TỔNG HỢP TOÀN BỘ CÁC GROUP (Tự động điền toàn bộ trường cán bộ & thân nhân theo khối)', tag: '{formgroup}', category: 'system', colNum: 'Auto Group' },
+    { label: 'Ngày hiện tại dạng chữ (Ví dụ: Ngày 22, tháng 12, năm 2026)', tag: '{ngay_hien_tai_text}', category: 'system', colNum: 'HT' },
+    { label: 'Địa điểm & Ngày tháng đầy đủ (Ví dụ: Tp. Hồ Chí Minh, ngày 22 tháng 12 năm 2026)', tag: '{dia_diem_ngay_thang}', category: 'system', colNum: 'HT' },
+    { label: 'Ngày hiện tại (DD/MM/YYYY)', tag: '{ngay_hien_tai}', category: 'system', colNum: 'HT' },
     { label: 'Ngày hiện tại (DD)', tag: '{ngay}', category: 'system', colNum: 'HT' },
     { label: 'Tháng hiện tại (MM)', tag: '{thang}', category: 'system', colNum: 'HT' },
     { label: 'Năm hiện tại (YYYY)', tag: '{nam}', category: 'system', colNum: 'HT' },

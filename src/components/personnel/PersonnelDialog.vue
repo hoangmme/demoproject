@@ -78,7 +78,7 @@
         <div style="display: flex; gap: 8px;">
           <Button
             v-if="isEdit"
-            label="Xuất PDF / Word"
+            label="Xuất Hồ sơ PDF"
             icon="pi pi-file-pdf"
             severity="secondary"
             outlined

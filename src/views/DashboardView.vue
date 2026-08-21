@@ -645,7 +645,7 @@
             />
             <Button
               icon="pi pi-file-pdf"
-              :label="selectedDrilldownKeys.length > 0 ? `Xuất PDF (${selectedDrilldownKeys.length})` : 'Xuất PDF / Word'"
+              :label="selectedDrilldownKeys.length > 0 ? `Xuất PDF (${selectedDrilldownKeys.length})` : 'Xuất Hồ sơ PDF'"
               severity="secondary"
               size="small"
               outlined

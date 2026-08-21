@@ -29,6 +29,7 @@
 import { ref, computed } from 'vue';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
+import { formatDate } from '@/utils/formatters';
 
 const props = defineProps({
   modelValue: {
@@ -47,17 +48,8 @@ const hiddenInput = ref(null);
 const displayValue = computed({
   get: () => {
     if (!props.modelValue && props.modelValue !== 0) return '';
-    const str = String(props.modelValue).trim();
-    // Auto-convert Excel numeric serial date (e.g. 46142 -> 02/05/2026, 26124 -> 10/07/1971)
-    if (!isNaN(str) && Number(str) > 1000 && Number(str) < 100000 && !str.includes('/') && !str.includes('-')) {
-      const num = Number(str);
-      const date = new Date(Math.round((num - 25569) * 86400 * 1000));
-      const d = String(date.getUTCDate()).padStart(2, '0');
-      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const y = date.getUTCFullYear();
-      return `${d}/${m}/${y}`;
-    }
-    return str;
+    const formatted = formatDate(props.modelValue);
+    return formatted === '-' ? '' : formatted;
   },
   set: (val) => {
     emit('update:modelValue', val);
@@ -83,7 +75,7 @@ const triggerPicker = () => {
 const onDateChange = (e) => {
   const val = e.target.value; // YYYY-MM-DD
   if (val) {
-    emit('update:modelValue', val);
+    emit('update:modelValue', formatDate(val));
   }
 };
 </script>

@@ -2,47 +2,16 @@
   <Dialog
     v-model:visible="visible"
     modal
-    header="Xuất Hồ sơ theo Mẫu (Word / PDF)"
+    header="Xuất Hồ sơ Cán bộ (PDF)"
     :style="{ width: '560px', maxWidth: '95vw' }"
     :breakpoints="{ '640px': '98vw' }"
   >
     <div class="docx-export-container">
-      <!-- 1. Chọn định dạng xuất -->
-      <div class="export-box">
-        <div class="box-title">
-          <i class="pi pi-file" style="color: #0284c7;"></i>
-          <span>1. Định dạng Tệp xuất</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
-          <label class="radio-item" :class="{ 'radio-active': outputFormat === 'docx' }">
-            <input type="radio" v-model="outputFormat" value="docx" style="accent-color: #2563eb;" />
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <i class="pi pi-file-word" style="color: #2563eb; font-size: 1.25rem;"></i>
-              <div>
-                <strong style="color: #1e293b; display: block; font-size: 0.84rem;">File Word (.docx)</strong>
-                <span style="font-size: 0.7rem; color: #64748b;">Chỉnh sửa được trong Word</span>
-              </div>
-            </div>
-          </label>
-
-          <label class="radio-item" :class="{ 'radio-active': outputFormat === 'pdf' }">
-            <input type="radio" v-model="outputFormat" value="pdf" style="accent-color: #dc2626;" />
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <i class="pi pi-file-pdf" style="color: #dc2626; font-size: 1.25rem;"></i>
-              <div>
-                <strong style="color: #1e293b; display: block; font-size: 0.84rem;">File PDF (.pdf)</strong>
-                <span style="font-size: 0.7rem; color: #64748b;">Khóa nội dung, in ấn chuẩn</span>
-              </div>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- 2. Phạm vi xuất -->
+      <!-- 1. Phạm vi xuất -->
       <div class="export-box">
         <div class="box-title">
           <i class="pi pi-users" style="color: #0284c7;"></i>
-          <span>2. Chọn Phạm vi xuất Cán bộ</span>
+          <span>1. Chọn Phạm vi xuất Cán bộ</span>
         </div>
         <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
           <label
@@ -82,11 +51,11 @@
         </div>
       </div>
 
-      <!-- 3. Chọn Kiểu Xuất Hồ Sơ -->
+      <!-- 2. Chọn Kiểu Xuất Hồ Sơ -->
       <div class="export-box">
         <div class="box-title" style="display: flex; align-items: center; gap: 6px;">
           <i class="pi pi-th-large" style="color: #2563eb;"></i>
-          <span>3. Chọn kiểu xuất hồ sơ</span>
+          <span>2. Chọn kiểu xuất hồ sơ</span>
         </div>
 
         <!-- Tabs chọn nguồn mẫu -->
@@ -380,7 +349,7 @@ const visible = computed({
   set: (val) => emit('update:modelValue', val),
 });
 
-const outputFormat = ref('docx');
+const outputFormat = ref('pdf');
 const exportScope = ref('single');
 const templateSource = ref('sample'); // 'sample' (Group) | 'upload'
 
@@ -679,21 +648,19 @@ const downloadSampleTemplate = async () => {
 
 const getDownloadButtonLabel = () => {
   const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
-  const typeLabel = outputFormat.value === 'pdf' ? 'PDF' : 'Word';
-  const ext = outputFormat.value === 'pdf' ? '.pdf' : '.docx';
 
   if (exporting.value && progressTotal.value > 0) {
     const pct = Math.round((progressCurrent.value / progressTotal.value) * 100);
-    return `Đang xuất ${progressCurrent.value}/${progressTotal.value} (${pct}%)...`;
+    return `Đang xuất PDF ${progressCurrent.value}/${progressTotal.value} (${pct}%)...`;
   }
 
   if (isSingle) {
     const pName = (exportScope.value === 'single' && props.targetPerson)
       ? props.targetPerson.name
       : (props.selectedPersonnel[0]?.name || 'Cán bộ');
-    return `Tải về file ${typeLabel} (${ext}): ${pName}`;
+    return `Tải về file PDF (.pdf): ${pName}`;
   }
-  return `Tải file ZIP ${typeLabel} (${exportScope.value === 'selected' ? selectedCount.value : totalPersonnelCount.value} Cán bộ)`;
+  return `Tải file ZIP PDF (${exportScope.value === 'selected' ? selectedCount.value : totalPersonnelCount.value} Cán bộ)`;
 };
 
 const handleExport = async () => {
