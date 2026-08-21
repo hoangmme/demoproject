@@ -121,9 +121,9 @@
       </div>
 
       <!-- Total Trips -->
-      <div class="stat-card" style="border-left: 4px solid #0284c7;" @click="openDrilldown('all_trips', 'Danh sách Lượt đi Nước ngoài')">
+      <div class="stat-card" style="border-left: 4px solid #0284c7;" @click="openDrilldown('all_trips', 'Danh sách Cá nhân đi Nước ngoài')">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <span class="stat-label">Lượt đi Nước ngoài</span>
+          <span class="stat-label">Cá nhân đi nước ngoài</span>
           <i class="pi pi-send" style="color: #0284c7; font-size: 1.1rem;"></i>
         </div>
         <div class="stat-value" style="color: #0369a1;">{{ stats.filteredTrips.length }}</div>
@@ -1122,7 +1122,7 @@
             <select v-model="widgetForm.source" class="settings-select" style="width: 100%; max-width: 100%;">
               <option value="personnel">Hồ sơ Cán bộ (Cá nhân)</option>
               <option value="relatives">Danh sách Thân nhân</option>
-              <option value="trips">Lượt đi Nước ngoài (Phụ lục 1)</option>
+              <option value="trips">Cá nhân đi Nước ngoài (Phụ lục 1)</option>
               <option value="combined_country">🌐 Tổng hợp Quốc gia (Cả Cán bộ & Thân nhân)</option>
               <option value="combined_funding">💰 Tổng hợp Kinh phí (4 Cột & Chung)</option>
             </select>
