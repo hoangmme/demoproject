@@ -447,24 +447,26 @@
                   />
                 </td>
                 <td style="padding: 8px 12px; text-align: center;">
-                  <div style="display: flex; justify-content: center; gap: 4px;">
+                  <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
                     <Button
                       icon="pi pi-download"
+                      label="Tải"
                       size="small"
-                      text
+                      outlined
                       severity="info"
                       @click="downloadSavedTemplate(tpl)"
                       title="Tải tệp này về máy"
-                      style="font-size: 0.75rem; padding: 4px;"
+                      style="font-size: 0.72rem; padding: 3px 8px;"
                     />
                     <Button
                       icon="pi pi-trash"
+                      label="Xóa"
                       size="small"
-                      text
+                      outlined
                       severity="danger"
                       @click="deleteSavedTemplate(tpl.id)"
-                      title="Xóa mẫu này"
-                      style="font-size: 0.75rem; padding: 4px;"
+                      title="Xóa mẫu này khỏi hệ thống"
+                      style="font-size: 0.72rem; padding: 3px 8px;"
                     />
                   </div>
                 </td>
@@ -694,10 +696,14 @@ const setSystemAsDefault = async () => {
 };
 
 const deleteSavedTemplate = async (templateId) => {
-  if (!confirm('Bạn có chắc chắn muốn xóa tệp mẫu Word này?')) return;
+  const tpl = docxTemplates.value.find((t) => t.id === templateId);
+  const name = tpl?.name || 'mẫu này';
+  if (!confirm(`Bạn có chắc chắn muốn xóa tệp mẫu "${name}" khỏi hệ thống không?`)) return;
   const updated = docxTemplates.value.filter((t) => t.id !== templateId);
   docxTemplates.value = updated;
   await saveAppSettings('system_docx_templates', updated);
+  await saveAppSettings('custom_docx_template', null);
+  alert(`Đã xóa tệp mẫu "${name}" thành công!`);
 };
 
 const downloadSavedTemplate = (tpl) => {
