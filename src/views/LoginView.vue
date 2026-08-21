@@ -96,7 +96,7 @@ const handleLogin = async () => {
   loading.value = true;
   try {
     await authStore.login(email.value, password.value);
-    router.push('/personnel');
+    router.push('/dashboard');
   } catch (e) {
     alert('Đăng nhập không thành công: ' + (e.response?.data?.errors?.[0]?.message || e.message || 'Sai thông tin'));
   } finally {

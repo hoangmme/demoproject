@@ -658,7 +658,7 @@ const getDownloadButtonLabel = () => {
     const pName = (exportScope.value === 'single' && props.targetPerson)
       ? props.targetPerson.name
       : (props.selectedPersonnel[0]?.name || 'Cán bộ');
-    return `Tải về file PDF (.pdf): ${pName}`;
+    return `Tải về file PDF: ${pName}`;
   }
   return `Tải file ZIP PDF (${exportScope.value === 'selected' ? selectedCount.value : totalPersonnelCount.value} Cán bộ)`;
 };

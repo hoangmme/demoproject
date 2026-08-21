@@ -19,17 +19,17 @@
     </div>
 
     <nav class="app-sidebar-nav">
+      <router-link to="/dashboard" class="app-nav-item">
+        <i class="pi pi-chart-pie"></i>
+        <span>Dashboard Thống kê</span>
+      </router-link>
+
       <router-link to="/personnel" class="app-nav-item">
         <i class="pi pi-users"></i>
         <span>Quản lý Cán bộ</span>
       </router-link>
 
       <div class="app-nav-heading">Báo cáo Phụ lục</div>
-
-      <router-link to="/dashboard" class="app-nav-item">
-        <i class="pi pi-chart-pie"></i>
-        <span>Dashboard Thống kê</span>
-      </router-link>
 
       <router-link to="/pl1" class="app-nav-item">
         <i class="pi pi-globe"></i>
