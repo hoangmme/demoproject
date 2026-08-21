@@ -535,19 +535,7 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       width: 794px !important;
       max-width: 794px !important;
       box-sizing: border-box !important;
-      padding: 60px 45px 60px 60px !important;
-    }
-    .pdf-a4-page-box {
-      width: 794px !important;
-      min-height: 1123px !important;
-      max-height: 1123px !important;
-      height: 1123px !important;
-      padding: 60px 45px 60px 60px !important;
-      box-sizing: border-box !important;
-      background: #ffffff !important;
-      color: #000000 !important;
-      overflow: hidden !important;
-      position: relative !important;
+      padding: 24px 36px !important;
     }
   `;
   document.head.appendChild(globalStyle);
@@ -556,8 +544,6 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   try {
     await renderAsync(docxBlob, container, null, {
       inWrapper: false,
-      breakPages: true,
-      experimental: true,
       ignoreWidth: false,
       ignoreHeight: false,
       renderHeaders: true,
@@ -570,77 +556,34 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
     // Chờ 400ms để DOM vẽ và phông chữ render hoàn tất
     await new Promise((resolve) => setTimeout(resolve, 400));
 
-    const rawSections = container.querySelectorAll('section.docx');
-    let pagesToRender = [];
+    const targetEl = container.querySelector('.docx-wrapper') || container.querySelector('section.docx') || container;
 
-    // Kiểm tra xem docx-preview có tự chia trang section chuẩn hay không
-    let allSectionsNormalHeight = rawSections.length > 1;
-    if (allSectionsNormalHeight) {
-      rawSections.forEach((sec) => {
-        if ((sec.offsetHeight || sec.getBoundingClientRect().height) > 1200) {
-          allSectionsNormalHeight = false;
-        }
-      });
-    }
+    const fullCanvas = await html2canvas(targetEl, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      windowWidth: 794,
+      width: 794,
+    });
 
-    if (allSectionsNormalHeight) {
-      pagesToRender = Array.from(rawSections);
-    } else {
-      // Thu thập tất cả các phần tử con để chia trang thông minh trong DOM
-      const contentNodes = [];
-      if (rawSections.length > 0) {
-        rawSections.forEach((sec) => {
-          Array.from(sec.children).forEach((child) => {
-            contentNodes.push(child);
-          });
-        });
-      } else {
-        Array.from(container.children).forEach((child) => {
-          contentNodes.push(child);
-        });
-      }
+    const ctx = fullCanvas.getContext('2d');
+    const cWidth = fullCanvas.width;
+    const cHeight = fullCanvas.height;
 
-      // Xóa container và gắn pagesContainer trực tiếp vào DOM để tính toán offsetHeight chuẩn xác
-      container.innerHTML = '';
-      const pagesContainer = document.createElement('div');
-      pagesContainer.style.width = '794px';
-      pagesContainer.style.background = '#ffffff';
-      container.appendChild(pagesContainer);
+    // Kích thước chuẩn A4 (mm)
+    const PDF_PAGE_WIDTH = 210;
+    const PDF_PAGE_HEIGHT = 297;
+    const MARGIN_TOP = 20;
+    const MARGIN_BOTTOM = 20;
+    const MARGIN_LEFT = 15;
+    const MARGIN_RIGHT = 15;
 
-      const MAX_BODY_HEIGHT = 1123 - 130; // 993px cho phần nội dung (đã trừ padding top 60px và bottom 60px)
-      const createPage = () => {
-        const p = document.createElement('div');
-        p.className = 'pdf-a4-page-box';
-        pagesContainer.appendChild(p);
-        pagesToRender.push(p);
-        return p;
-      };
+    const PRINTABLE_WIDTH = PDF_PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT; // 180mm
+    const PRINTABLE_HEIGHT = PDF_PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM; // 257mm
 
-      let curPage = createPage();
-      let curHeight = 0;
-
-      for (let i = 0; i < contentNodes.length; i++) {
-        const node = contentNodes[i];
-        const clone = node.cloneNode(true);
-        curPage.appendChild(clone);
-
-        // Vì curPage đã nằm trong document.body, offsetHeight luôn trả về giá trị thực chính xác
-        const nodeHeight = clone.offsetHeight || clone.getBoundingClientRect().height || 28;
-
-        if (curHeight + nodeHeight > MAX_BODY_HEIGHT && curHeight > 0) {
-          curPage.removeChild(clone);
-          curPage = createPage();
-          curPage.appendChild(clone);
-          curHeight = clone.offsetHeight || clone.getBoundingClientRect().height || 28;
-        } else {
-          curHeight += nodeHeight;
-        }
-      }
-    }
-
-    if (pagesToRender.length === 0) {
-      pagesToRender = [container];
-    }
+    // Chiều cao tối đa của 1 lát cắt trên canvas (theo pixel canvas)
+    const maxSliceHeight = (PRINTABLE_HEIGHT / PRINTABLE_WIDTH) * cWidth;
 
     const pdf = new jsPDF({
       unit: 'mm',
@@ -649,27 +592,74 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       compress: true,
     });
 
-    const pdfWidth = 210;
-    const pdfHeight = 297;
+    let currentY = 0;
+    let pageIndex = 0;
 
-    for (let i = 0; i < pagesToRender.length; i++) {
-      const pageEl = pagesToRender[i];
-      if (i > 0) {
+    // Helper: Tìm vị trí cắt thông minh (hàng pixel trắng giữa các dòng chữ)
+    const findSmartCutY = (startY, targetEndY) => {
+      if (targetEndY >= cHeight) return cHeight;
+
+      // Quét lùi từ targetEndY lên tối đa 160px canvas để tìm dòng trống hoàn toàn
+      const scanLimit = Math.max(startY + 100, targetEndY - 180);
+      const imgData = ctx.getImageData(0, scanLimit, cWidth, targetEndY - scanLimit);
+      const data = imgData.data;
+
+      for (let y = targetEndY - 1; y >= scanLimit; y--) {
+        const localY = y - scanLimit;
+        let isWhiteRow = true;
+        for (let step = 0; step < 30; step++) {
+          const x = Math.floor((step / 30) * cWidth);
+          const idx = (localY * cWidth + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          if (r < 245 || g < 245 || b < 245) {
+            isWhiteRow = false;
+            break;
+          }
+        }
+        if (isWhiteRow) {
+          return y;
+        }
+      }
+      return targetEndY;
+    };
+
+    while (currentY < cHeight) {
+      if (pageIndex > 0) {
         pdf.addPage('a4', 'portrait');
       }
 
-      const canvas = await html2canvas(pageEl, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        windowWidth: 794,
-        width: 794,
-        height: pageEl.offsetHeight || 1123,
-      });
+      const targetEnd = Math.min(currentY + maxSliceHeight, cHeight);
+      const cutY = (targetEnd === cHeight) ? cHeight : findSmartCutY(currentY, targetEnd);
+      const sliceHeight = cutY - currentY;
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.98);
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      // Tạo canvas tạm cho lát cắt trang này
+      const sliceCanvas = document.createElement('canvas');
+      sliceCanvas.width = cWidth;
+      sliceCanvas.height = sliceHeight;
+      const sliceCtx = sliceCanvas.getContext('2d');
+
+      sliceCtx.drawImage(
+        fullCanvas,
+        0, currentY, cWidth, sliceHeight,
+        0, 0, cWidth, sliceHeight
+      );
+
+      const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
+      const sliceHeightMm = (sliceHeight / cWidth) * PRINTABLE_WIDTH;
+
+      pdf.addImage(
+        sliceData,
+        'JPEG',
+        MARGIN_LEFT,
+        MARGIN_TOP,
+        PRINTABLE_WIDTH,
+        sliceHeightMm
+      );
+
+      currentY = cutY;
+      pageIndex++;
     }
 
     return pdf.output('blob');
