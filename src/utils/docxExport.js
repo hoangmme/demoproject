@@ -372,7 +372,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     }
     if (tripObj.kinhPhiDaoTao) {
       tripObj.label_kinhPhiDaoTao = tripObj.label_kinhPhiDaoTao || tripObj.kinhPhiDaoTao;
-      tripObj.label_kinh_phi_dao_tao = tripObj.label_kinhPhiDaoTao || tripObj.kinhPhiDaoTao;
+        tripObj.label_kinh_phi_dao_tao = tripObj.label_kinhPhiDaoTao || tripObj.kinhPhiDaoTao;
     }
 
     return tripObj;
@@ -404,11 +404,13 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   formgroupLines.push(`- Số Hộ chiếu công vụ (14): ${data.passportOfficial || ''}`);
   formgroupLines.push(`- Kết quả thẩm tra tiêu chuẩn chính trị (15): ${data.politicalVerificationResult || ''}`);
 
-  // Thêm các nhóm bổ sung từ store
+  // Thêm các nhóm bổ sung từ store theo tùy chọn tích chọn
+  const allowedGroups = exportOptions?.selectedGroupIndices;
   if (personnelStore?.importMappingPersonnel) {
     let runningIdx = 16;
     personnelStore.importMappingPersonnel.forEach((grp, gIdx) => {
       if (gIdx === 0) return;
+      if (allowedGroups && !allowedGroups.includes(gIdx)) return;
       formgroupLines.push('');
       formgroupLines.push(`* ${grp.group || 'Thông tin bổ sung'}:`);
       (grp.columns || []).forEach((col) => {
@@ -420,8 +422,9 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     });
   }
 
-  // Thêm thân nhân
-  if (processedRelatives.length > 0) {
+  // Thêm thân nhân nếu được tích chọn
+  const canIncludeRelatives = exportOptions?.includeRelatives !== false;
+  if (canIncludeRelatives && processedRelatives.length > 0) {
     formgroupLines.push('');
     formgroupLines.push('* Thông tin thân nhân liên quan:');
     processedRelatives.forEach((rel, rIdx) => {
@@ -512,18 +515,22 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
     #docx-pdf-sandbox * {
       box-shadow: none !important;
       text-shadow: none !important;
+      filter: none !important;
     }
     #docx-pdf-sandbox .docx-wrapper {
       background: #ffffff !important;
       padding: 0 !important;
       margin: 0 !important;
+      width: 210mm !important;
+      max-width: 210mm !important;
+      display: block !important;
+      box-shadow: none !important;
       border: none !important;
     }
     #docx-pdf-sandbox section.docx {
-      margin: 0 !important;
-      border: none !important;
-      outline: none !important;
+      margin: 0 auto !important;
       box-shadow: none !important;
+      border: none !important;
       background: #ffffff !important;
       width: 210mm !important;
       max-width: 210mm !important;
@@ -577,8 +584,8 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       compress: true,
     });
 
-    const pdfWidth = 210;
-    const pdfHeight = 297;
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
 
     for (let i = 0; i < elementsToRender.length; i++) {
       const el = elementsToRender[i];
@@ -589,11 +596,8 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
-        scrollX: 0,
-        scrollY: 0,
-        x: 0,
-        y: 0,
-        width: el.getBoundingClientRect().width || 794,
+        windowWidth: 794,
+        width: 794,
         height: el.getBoundingClientRect().height || 1123,
       });
 
@@ -636,8 +640,8 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
 /**
  * Xuất 1 file Word hoặc PDF cho 1 cán bộ và tải về máy
  */
-export async function exportSinglePersonnelDocx(templateBuffer, person, filename, personnelStore, outputFormat = 'docx', currentUser = null) {
-  const contextData = preparePersonnelDocxData(person, 0, personnelStore, currentUser);
+export async function exportSinglePersonnelDocx(templateBuffer, person, filename, personnelStore, outputFormat = 'docx', currentUser = null, exportOptions = {}) {
+  const contextData = preparePersonnelDocxData(person, 0, personnelStore, currentUser, exportOptions);
   const docxBlob = generateDocxBlob(templateBuffer, contextData);
   const baseName = `Ho_so_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}`;
 
@@ -652,14 +656,14 @@ export async function exportSinglePersonnelDocx(templateBuffer, person, filename
 /**
  * Xuất nhiều cán bộ thành 1 tệp ZIP chứa các file Word hoặc PDF
  */
-export async function exportMultiplePersonnelZip(templateBuffer, personnelList, zipFileName, personnelStore, onProgress = null, outputFormat = 'docx', currentUser = null) {
+export async function exportMultiplePersonnelZip(templateBuffer, personnelList, zipFileName, personnelStore, onProgress = null, outputFormat = 'docx', currentUser = null, exportOptions = {}) {
   const zip = new JSZip();
   const folder = zip.folder('Ho_so_can_bo');
   const ext = outputFormat === 'pdf' ? 'pdf' : 'docx';
 
   for (let i = 0; i < personnelList.length; i++) {
     const person = personnelList[i];
-    const contextData = preparePersonnelDocxData(person, i, personnelStore, currentUser);
+    const contextData = preparePersonnelDocxData(person, i, personnelStore, currentUser, exportOptions);
     const docxBlob = generateDocxBlob(templateBuffer, contextData);
     const baseName = `${String(i + 1).padStart(3, '0')}_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}_${person.code || ''}`;
 

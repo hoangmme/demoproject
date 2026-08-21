@@ -335,7 +335,11 @@ const totalPersonnelCount = computed(() => {
 });
 
 const effectiveTemplateBuffer = computed(() => {
-  return templateSource.value === 'upload' ? customTemplateBuffer.value : sampleTemplateBuffer.value;
+  // Ưu tiên tệp mẫu mặc định đã lưu / đã chọn nếu có
+  if (customTemplateBuffer.value) {
+    return customTemplateBuffer.value;
+  }
+  return sampleTemplateBuffer.value;
 });
 
 const arrayBufferToBase64 = (buffer) => {
@@ -461,12 +465,14 @@ const downloadSampleTemplate = async () => {
 };
 
 const getDownloadButtonLabel = () => {
-  const isPdf = outputFormat.value === 'pdf';
-  const typeLabel = isPdf ? 'PDF' : 'Word';
-  const ext = isPdf ? '.pdf' : '.docx';
   const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
+  const typeLabel = outputFormat.value === 'pdf' ? 'PDF' : 'Word';
+  const ext = outputFormat.value === 'pdf' ? '.pdf' : '.docx';
+
   if (isSingle) {
-    const pName = (exportScope.value === 'single' && props.targetPerson?.name) ? props.targetPerson.name : (props.selectedPersonnel[0]?.name || 'Hồ sơ Cán bộ');
+    const pName = (exportScope.value === 'single' && props.targetPerson)
+      ? props.targetPerson.name
+      : (props.selectedPersonnel[0]?.name || 'Cán bộ');
     return `Tải về file ${typeLabel} (${ext}): ${pName}`;
   }
   return `Tải file ZIP ${typeLabel} (${exportScope.value === 'selected' ? selectedCount.value : totalPersonnelCount.value} Cán bộ)`;
@@ -478,16 +484,21 @@ const handleExport = async () => {
   exporting.value = true;
   progressCurrent.value = 0;
   try {
+    const exportOptions = {
+      selectedGroupIndices: selectedGroupIndices.value,
+      includeRelatives: includeRelatives.value,
+      selectedRelativeGroupIndices: selectedRelativeGroupIndices.value,
+    };
     const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
     const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
     if (isSingle && targetP) {
-      await exportSinglePersonnelDocx(buf, targetP, null, personnelStore, outputFormat.value, authStore.user);
+      await exportSinglePersonnelDocx(buf, targetP, null, personnelStore, outputFormat.value, authStore.user, exportOptions);
       visible.value = false;
     } else {
       let list = exportScope.value === 'selected' ? props.selectedPersonnel : (props.allPersonnel?.length > 0 ? props.allPersonnel : personnelStore.personnelList);
       if (!list?.length) return alert('Không có dữ liệu cán bộ!');
       progressTotal.value = list.length;
-      await exportMultiplePersonnelZip(buf, list, null, personnelStore, (curr, total) => { progressCurrent.value = curr; progressTotal.value = total; }, outputFormat.value, authStore.user);
+      await exportMultiplePersonnelZip(buf, list, null, personnelStore, (curr, total) => { progressCurrent.value = curr; progressTotal.value = total; }, outputFormat.value, authStore.user, exportOptions);
       visible.value = false;
     }
   } catch (error) { alert('Lỗi: ' + (error.message || error)); } finally { exporting.value = false; }
