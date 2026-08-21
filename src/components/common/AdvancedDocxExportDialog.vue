@@ -210,7 +210,7 @@
                 />
                 <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
                   <i class="pi pi-file-word" style="color: #2563eb; font-size: 1rem;"></i>
-                  <span style="font-size: 0.8rem; font-weight: 600; color: #1e293b; flex: 1;">{{ tpl.name }}</span>
+                  <span style="font-size: 0.8rem; font-weight: 600; color: #1e293b; flex: 1;">{{ (tpl.name || '').replace(/\.docx$/i, '') }}</span>
                   <span v-if="tpl.isDefault" class="badge-fixed" style="background: #dbeafe; color: #1d4ed8;">Mặc định</span>
                 </div>
               </label>
@@ -236,7 +236,7 @@
             >
               <i class="pi pi-file-word" style="font-size: 1.5rem; color: #2563eb;"></i>
               <div style="flex: 1; min-width: 0;">
-                <div class="uploaded-filename" style="font-size: 0.82rem; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ customTemplateFileName || 'Mau_Word_tuy_bien.docx' }}</div>
+                <div class="uploaded-filename" style="font-size: 0.82rem; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ (customTemplateFileName || 'Mau_Word_tuy_bien').replace(/\.docx$/i, '') }}</div>
                 <div class="uploaded-filesize" style="color: #16a34a; font-weight: 600; font-size: 0.7rem;">Đang sử dụng mẫu này để xuất</div>
               </div>
               <Button
@@ -257,20 +257,18 @@
       <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 0.6rem; padding-top: 0.8rem; border-top: 1px solid #e2e8f0;">
         <Button
           label="Đóng"
-          severity="secondary"
           size="small"
-          outlined
           @click="visible = false"
+          class="btn-close-custom"
         />
 
         <Button
           :label="getDownloadButtonLabel()"
           :icon="outputFormat === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-download'"
-          severity="primary"
           size="small"
           :loading="exporting"
           @click="handleExport"
-          style="font-weight: 700; padding: 6px 16px;"
+          class="btn-download-primary"
           :disabled="!effectiveTemplateBuffer || exporting"
         />
       </div>
@@ -636,16 +634,46 @@ onMounted(() => loadSampleTemplate());
   padding: 10px 14px;
 }
 
-.btn-link {
-  background: none;
-  border: none;
-  color: #0284c7;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  text-decoration: underline;
+.btn-close-custom {
+  background: #ffffff !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+  font-weight: 600 !important;
+  padding: 7px 16px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+}
+
+.btn-close-custom:hover {
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  border-color: #94a3b8 !important;
+}
+
+.btn-download-primary {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border: 1px solid #2563eb !important;
+  font-weight: 700 !important;
+  padding: 7px 20px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-download-primary:hover:not(:disabled) {
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45) !important;
+}
+
+.btn-download-primary:disabled {
+  background: #94a3b8 !important;
+  border-color: #94a3b8 !important;
+  color: #ffffff !important;
+  opacity: 0.65 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
 }
 </style>
