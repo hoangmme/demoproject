@@ -92,4 +92,31 @@ npm run build
 
 ---
 
+## 5. Hướng dẫn Đóng gói & Cập nhật Bản Offline Windows (`WINDOWS_OFFLINE_APP`)
+
+### 🔄 Cách cập nhật Giao diện & Tính năng mới sang máy Offline (Giữ nguyên dữ liệu):
+Khi có thay đổi code giao diện, sửa nút bấm, tối ưu xuất PDF/Word hoặc thêm chức năng mới:
+```bash
+# 1. Build phiên bản mới
+npm run build
+
+# 2. Cập nhật bản build vào gói offline
+rm -rf WINDOWS_OFFLINE_APP/frontend && cp -r dist WINDOWS_OFFLINE_APP/frontend
+```
+👉 **Cách đưa sang máy Offline:**
+- Copy **duy nhất thư mục `WINDOWS_OFFLINE_APP/frontend`** vào USB.
+- Sang máy Windows Offline, chép đè vào thư mục `frontend` của hệ thống.
+- **Lợi ích:** Máy Offline có ngay tính năng mới nhất mà **toàn bộ dữ liệu hồ sơ cán bộ đã nhập trên máy Offline không bị ảnh hưởng (giữ nguyên 100%)**.
+
+---
+
+### 📥 Cách đồng bộ Dữ liệu từ Online về gói Offline (Khi cần tạo bản cài mới):
+```bash
+# Đồng bộ toàn bộ dữ liệu & file uploads từ web online
+node scripts/sync_online_data.cjs
+node scripts/export_db_json.cjs
+```
+
+---
+
 *Hệ thống phát triển bởi đội ngũ [Hoang MMe] - Bản quyền mã nguồn mở phục vụ quản trị doanh nghiệp & cơ quan nhà nước.*
