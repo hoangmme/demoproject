@@ -693,35 +693,39 @@ export async function createDynamicDocxTemplateBlob(
     <w:p/>
   `;
 
-  // 1. Nhóm A: Thông tin cá nhân (LUÔN CÓ ĐẦY ĐỦ - Mỗi field 1 hàng, Tiêu đề in đậm, Nội dung không đậm)
+  // 1. Nhóm A: Thông tin cá nhân (LUÔN CÓ ĐẦY ĐỦ - Mỗi field 1 hàng, Tiêu đề in đậm có số cột, Nội dung không đậm)
   bodyContent += `
     <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>1. Thông tin cá nhân</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tên gọi khác: </w:t></w:r><w:r><w:t>{otherName}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Ngày, tháng, năm sinh: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Giới tính: </w:t></w:r><w:r><w:t>{gender}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Dân tộc: </w:t></w:r><w:r><w:t>{ethnicity}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tôn giáo: </w:t></w:r><w:r><w:t>{religion}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Quê quán: </w:t></w:r><w:r><w:t>{hometown}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Đơn vị công tác: </w:t></w:r><w:r><w:t>{departmentName}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Chức vụ: </w:t></w:r><w:r><w:t>{chuc_vu}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi đăng ký hộ khẩu thường trú: </w:t></w:r><w:r><w:t>{thuongTru}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi ở hiện nay: </w:t></w:r><w:r><w:t>{tamTru}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Căn cước công dân: </w:t></w:r><w:r><w:t>{cccdparent}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu cá nhân: </w:t></w:r><w:r><w:t>{hcCaNhan}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu công vụ: </w:t></w:r><w:r><w:t>{hcCongVu}</w:t></w:r></w:p>
-    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Kết quả thẩm tra tiêu chuẩn chính trị: </w:t></w:r><w:r><w:t>{tcctResult}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên (1): </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tên gọi khác (2): </w:t></w:r><w:r><w:t>{otherName}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Ngày, tháng, năm sinh (3): </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Giới tính (4): </w:t></w:r><w:r><w:t>{gender}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Dân tộc (5): </w:t></w:r><w:r><w:t>{ethnicity}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tôn giáo (6): </w:t></w:r><w:r><w:t>{religion}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Quê quán (7): </w:t></w:r><w:r><w:t>{hometown}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Đơn vị công tác (8): </w:t></w:r><w:r><w:t>{departmentName}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Chức vụ (9): </w:t></w:r><w:r><w:t>{chuc_vu}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi đăng ký hộ khẩu thường trú (10): </w:t></w:r><w:r><w:t>{thuongTru}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi ở hiện nay (11): </w:t></w:r><w:r><w:t>{tamTru}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Căn cước công dân (12): </w:t></w:r><w:r><w:t>{cccdparent}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu cá nhân (13): </w:t></w:r><w:r><w:t>{hcCaNhan}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu công vụ (14): </w:t></w:r><w:r><w:t>{hcCongVu}</w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Kết quả thẩm tra tiêu chuẩn chính trị (15): </w:t></w:r><w:r><w:t>{tcctResult}</w:t></w:r></w:p>
     <w:p/>
   `;
 
   // 2. Các Nhóm được chọn bổ sung từ Cấu hình Cột Cán bộ (Group B, Group C...)
+  let runningPersonnelColIndex = 16;
   (personnelGroups || []).forEach((grp, idx) => {
     if (idx === 0) return; // Bỏ qua nhóm 0 vì đã thêm ở Nhóm A
     if (selectedGroupIndices.includes(idx)) {
       const grpTitle = escapeXml(grp.group || 'Thông tin bổ sung');
       bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* ${grpTitle}:</w:t></w:r></w:p>`;
       (grp.columns || []).forEach((col) => {
-        const colLabel = escapeXml(col.label || col.id);
+        let colLabel = escapeXml(col.label || col.id);
+        if (!colLabel.includes('(')) {
+          colLabel = `${colLabel} (${runningPersonnelColIndex++})`;
+        }
         const colId = escapeXml(col.id);
         if (col.format === 'table_loop') {
           bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}:</w:t></w:r></w:p>`;
@@ -754,20 +758,23 @@ export async function createDynamicDocxTemplateBlob(
     });
 
     if (activeRelCols.length > 0) {
-      activeRelCols.forEach((col) => {
-        const colLabel = escapeXml(col.label || col.id);
+      activeRelCols.forEach((col, relColIdx) => {
+        let colLabel = escapeXml(col.label || col.id);
+        if (!colLabel.includes('(')) {
+          colLabel = `${colLabel} (${relColIdx + 1})`;
+        }
         const colId = escapeXml(col.id);
         bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
       });
     } else {
       bodyContent += `
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quan hệ: </w:t></w:r><w:r><w:t>{relationshipName}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Họ và tên: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Năm sinh: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quê quán: </w:t></w:r><w:r><w:t>{hometownTN}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nghề nghiệp: </w:t></w:r><w:r><w:t>{occupation}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nơi ở hiện nay: </w:t></w:r><w:r><w:t>{currentAddress}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Số Căn cước công dân: </w:t></w:r><w:r><w:t>{cccdthannhan}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Họ và tên (1): </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quan hệ (2): </w:t></w:r><w:r><w:t>{relationshipName}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Năm sinh (3): </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quê quán (4): </w:t></w:r><w:r><w:t>{hometownTN}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nghề nghiệp (5): </w:t></w:r><w:r><w:t>{occupation}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nơi ở hiện nay (6): </w:t></w:r><w:r><w:t>{currentAddress}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Số Căn cước công dân (7): </w:t></w:r><w:r><w:t>{cccdthannhan}</w:t></w:r></w:p>
       `;
     }
 
