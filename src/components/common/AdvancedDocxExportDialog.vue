@@ -119,7 +119,7 @@
             @change="handleFileUpload"
           />
 
-          <!-- Nguồn 1: Chọn Cấu trúc Cột & Trường dữ liệu (Dạng Phân Cấp: Cá Nhân > Group > Field) -->
+          <!-- Nguồn 1: Chọn Cấu trúc Cột & Trường dữ liệu (Dạng Phân Cấp: Cá Nhân > Group > Field Ngang hàng) -->
           <div v-if="templateSource === 'sample'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
             <div style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
               <span>TÍCH CHỌN CÁC TRƯỜNG DỮ LIỆU MUỐN XUẤT:</span>
@@ -137,13 +137,13 @@
                 <span class="tree-badge-count">({{ selectedFieldIds.length }} trường được chọn)</span>
               </div>
 
-              <!-- CÁC GROUP TRONG CÁ NHÂN (Thụt lề cấp 1) -->
+              <!-- CÁC GROUP TRONG CÁ NHÂN (Thụt lề cấp 1: 12px) -->
               <div
                 v-for="(grp, gIdx) in personnelGroups"
                 :key="'p_grp_' + gIdx"
                 class="tree-group-box"
               >
-                <!-- CẤP 2: GROUP HEADER (Thụt vô cấp 1) -->
+                <!-- CẤP 2: GROUP HEADER -->
                 <div class="tree-group-header" @click="toggleGroup(grp)">
                   <input
                     type="checkbox"
@@ -152,30 +152,28 @@
                     style="accent-color: #2563eb; cursor: pointer;"
                   />
                   <span class="group-title-text">
-                    Khối {{ String.fromCharCode(65 + gIdx) }}: {{ grp.group || 'Nhóm cột ' + (gIdx + 1) }}
+                    {{ getCleanGroupName(grp, gIdx) }}
                   </span>
                   <span class="group-meta-count">
                     ({{ getGroupSelectedCount(grp) }}/{{ getGroupTotalCount(grp) }})
                   </span>
                 </div>
 
-                <!-- CẤP 3: FIELDS TRONG GROUP (Thụt vô thêm cấp 2) -->
-                <div class="tree-fields-container">
+                <!-- CẤP 3: FIELDS TRONG GROUP (Ngang hàng, Thụt lề cấp 2: 18px) -->
+                <div class="tree-fields-inline-wrap">
                   <label
                     v-for="(col, cIdx) in (grp.columns || []).filter(c => c.id && c.id !== 'stt')"
                     :key="col.id"
-                    class="tree-field-item"
-                    :class="{ 'field-selected': selectedFieldIds.includes(col.id) }"
+                    class="tree-field-chip"
+                    :class="{ 'chip-selected': selectedFieldIds.includes(col.id) }"
                   >
                     <input
                       type="checkbox"
                       :value="col.id"
                       v-model="selectedFieldIds"
-                      style="accent-color: #2563eb;"
+                      style="accent-color: #2563eb; cursor: pointer;"
                     />
-                    <span class="field-label-text">
-                      {{ col.label || col.id }}
-                    </span>
+                    <span>{{ getCleanFieldLabel(col, getPersonnelColNum(gIdx, cIdx)) }}</span>
                   </label>
                 </div>
               </div>
@@ -206,7 +204,7 @@
                   :key="'r_grp_' + rIdx"
                   class="tree-group-box rel-group-box"
                 >
-                  <!-- CẤP 2: GROUP THÂN NHÂN HEADER (Thụt vô cấp 1) -->
+                  <!-- CẤP 2: GROUP THÂN NHÂN HEADER -->
                   <div class="tree-group-header rel-group-header" @click="toggleRelGroup(rGrp)">
                     <input
                       type="checkbox"
@@ -215,30 +213,28 @@
                       style="accent-color: #7c3aed; cursor: pointer;"
                     />
                     <span class="group-title-text" style="color: #6b21a8;">
-                      Khối TN {{ rIdx + 1 }}: {{ rGrp.group || 'Nhóm thân nhân ' + (rIdx + 1) }}
+                      {{ getCleanRelGroupName(rGrp, rIdx) }}
                     </span>
                     <span class="group-meta-count">
                       ({{ getRelGroupSelectedCount(rGrp) }}/{{ getRelGroupTotalCount(rGrp) }})
                     </span>
                   </div>
 
-                  <!-- CẤP 3: FIELDS TRONG GROUP THÂN NHÂN (Thụt vô cấp 2) -->
-                  <div class="tree-fields-container">
+                  <!-- CẤP 3: FIELDS TRONG GROUP THÂN NHÂN (Ngang hàng, Thụt lề cấp 2) -->
+                  <div class="tree-fields-inline-wrap">
                     <label
                       v-for="(col, rcIdx) in (rGrp.columns || []).filter(c => c.id && c.id !== 'stt')"
                       :key="'r_col_' + col.id"
-                      class="tree-field-item rel-field-item"
-                      :class="{ 'rel-field-selected': selectedRelativeFieldIds.includes(col.id) }"
+                      class="tree-field-chip rel-field-chip"
+                      :class="{ 'rel-chip-selected': selectedRelativeFieldIds.includes(col.id) }"
                     >
                       <input
                         type="checkbox"
                         :value="col.id"
                         v-model="selectedRelativeFieldIds"
-                        style="accent-color: #7c3aed;"
+                        style="accent-color: #7c3aed; cursor: pointer;"
                       />
-                      <span class="field-label-text">
-                        {{ col.label || col.id }}
-                      </span>
+                      <span>{{ getCleanFieldLabel(col, getRelativeColNum(rIdx, rcIdx)) }}</span>
                     </label>
                   </div>
                 </div>
@@ -471,6 +467,42 @@ const toggleRelGroup = (rGrp) => {
     const toAdd = cols.map((c) => c.id).filter((id) => !selectedRelativeFieldIds.value.includes(id));
     selectedRelativeFieldIds.value = [...selectedRelativeFieldIds.value, ...toAdd];
   }
+};
+
+const getCleanGroupName = (grp, gIdx) => {
+  let raw = grp.group || `Nhóm cột ${gIdx + 1}`;
+  raw = raw.replace(/^Khối\s+[A-Z0-9]+[:\s-]*/i, '').trim();
+  return `Khối ${String.fromCharCode(65 + gIdx)}: ${raw}`;
+};
+
+const getCleanRelGroupName = (rGrp, rIdx) => {
+  let raw = rGrp.group || `Nhóm thân nhân ${rIdx + 1}`;
+  raw = raw.replace(/^Khối\s+TN\s+\d+[:\s-]*/i, '').trim();
+  return `Khối TN ${rIdx + 1}: ${raw}`;
+};
+
+const getPersonnelColNum = (gIdx, cIdx) => {
+  let count = 0;
+  for (let i = 0; i < gIdx; i++) {
+    const cols = (personnelGroups.value[i]?.columns || []).filter((c) => c.id && c.id !== 'stt');
+    count += cols.length;
+  }
+  return count + cIdx + 1;
+};
+
+const getRelativeColNum = (rIdx, cIdx) => {
+  let count = 0;
+  for (let i = 0; i < rIdx; i++) {
+    const cols = (relativeGroups.value[i]?.columns || []).filter((c) => c.id && c.id !== 'stt');
+    count += cols.length;
+  }
+  return count + cIdx + 1;
+};
+
+const getCleanFieldLabel = (col, num) => {
+  let label = col.label || col.id;
+  label = label.replace(/\s*\(\d+\)$/, '').trim();
+  return `${label} (${num})`;
 };
 
 const fileInputRef = ref(null);
@@ -748,42 +780,146 @@ onMounted(() => {
   border-color: #3b82f6 !important;
 }
 
-.group-select-item {
+.tree-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.btn-tree-action {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.btn-tree-action:hover {
+  color: #1d4ed8;
+}
+
+.tree-root-header {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  transition: all 0.15s ease;
+  gap: 6px;
+}
+.tree-header-personnel {
+  background: #eff6ff;
+  color: #1e40af;
+}
+.tree-header-relative {
+  background: #faf5ff;
+  color: #6b21a8;
 }
 
-.group-select-item:hover {
+.tree-badge-count {
+  font-size: 0.7rem;
+  font-weight: normal;
+  color: #3b82f6;
+  margin-left: auto;
+}
+.tree-badge-purple {
+  color: #9333ea;
+}
+
+.tree-group-box {
+  margin-left: 12px; /* Thụt vô Group A, B */
+  border-left: 2px solid #bfdbfe;
+  padding-left: 8px;
+  margin-bottom: 6px;
+}
+.rel-group-box {
+  border-left-color: #e9d5ff;
+}
+
+.tree-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #1e293b;
+  padding: 3px 6px;
   background: #f1f5f9;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.tree-group-header:hover {
+  background: #e2e8f0;
+}
+.rel-group-header {
+  background: #fdf4ff;
+}
+.rel-group-header:hover {
+  background: #fae8ff;
 }
 
-.group-selected {
+.group-title-text {
+  flex: 1;
+}
+.group-meta-count {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: normal;
+}
+
+.tree-fields-inline-wrap {
+  margin-left: 18px; /* Thụt vô Field trong Group */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 4px;
+  margin-bottom: 6px;
+  padding: 4px 6px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #f1f5f9;
+}
+
+.tree-field-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  color: #334155;
+  cursor: pointer;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.1s ease;
+  user-select: none;
+}
+.tree-field-chip:hover {
   background: #eff6ff;
   border-color: #93c5fd;
 }
-
-.group-fixed {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  cursor: not-allowed;
+.chip-selected {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  font-weight: 600;
 }
-
-.badge-fixed {
-  font-size: 0.65rem;
-  font-weight: 700;
-  background: #fee2e2;
-  color: #dc2626;
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-left: auto;
+.rel-field-chip:hover {
+  background: #faf5ff;
+  border-color: #d8b4fe;
+}
+.rel-chip-selected {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+  color: #7e22ce;
+  font-weight: 600;
 }
 
 .drop-zone {

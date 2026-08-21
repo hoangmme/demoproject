@@ -1,5 +1,8 @@
 <template>
-  <div class="login-wrapper">
+  <div
+    class="login-wrapper"
+    :style="{ backgroundImage: customLoginBg ? `url(${customLoginBg})` : 'url(/login-bg.jpg)' }"
+  >
     <div class="app-card login-card">
       <div style="text-align: center; margin-bottom: 1.5rem;">
         <img
@@ -44,11 +47,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import { useAuthStore } from '@/stores/auth';
+import { getAppSettings } from '@/api/settings';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -56,6 +60,21 @@ const authStore = useAuthStore();
 const email = ref('');
 const password = ref('');
 const loading = ref(false);
+const customLoginBg = ref('');
+
+onMounted(async () => {
+  const cached = localStorage.getItem('custom_login_bg');
+  if (cached) customLoginBg.value = cached;
+  try {
+    const bgData = await getAppSettings('custom_login_bg', null);
+    if (bgData) {
+      customLoginBg.value = bgData;
+      localStorage.setItem('custom_login_bg', bgData);
+    }
+  } catch (e) {
+    // fallback to /login-bg.jpg
+  }
+});
 
 const handleLogin = async () => {
   if (!email.value || !password.value) {
@@ -80,9 +99,13 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: flex-end;
   min-height: 100vh;
-  background: url('/login-bg.jpg') no-repeat center center fixed;
+  background-color: #1e293b;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-attachment: fixed;
   background-size: cover;
   padding: 2rem 8% 2rem 2rem;
+  transition: background-image 0.3s ease;
 }
 
 .login-card {

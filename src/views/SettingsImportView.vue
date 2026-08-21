@@ -81,6 +81,25 @@
         <i class="pi pi-tags" style="margin-right: 6px;"></i>
         Bảng Tra cứu Mã Thẻ Tag (Word / PDF)
       </button>
+
+      <button
+        type="button"
+        @click="activeTab = 'general'"
+        :style="{
+          padding: '8px 16px',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          border: 'none',
+          background: 'none',
+          cursor: 'pointer',
+          color: activeTab === 'general' ? '#ea580c' : '#6b7280',
+          borderBottom: activeTab === 'general' ? '3px solid #ea580c' : '3px solid transparent',
+          marginBottom: '-6px'
+        }"
+      >
+        <i class="pi pi-image" style="margin-right: 6px;"></i>
+        Tùy chỉnh Ảnh Nền Đăng nhập
+      </button>
     </div>
 
     <!-- Main Content: Tab 1 & 2 (Cấu hình Cột Cán bộ & Thân nhân) -->
@@ -601,6 +620,83 @@
         </div>
       </div>
     </div>
+
+    <!-- Tab 4: Cài đặt Chung & Ảnh nền Đăng nhập -->
+    <div v-else-if="activeTab === 'general'" class="app-card" style="padding: 1.5rem;">
+      <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <i class="pi pi-image" style="color: #ea580c; font-size: 1.15rem;"></i>
+          Tùy chỉnh Hình nền Trang Đăng nhập (Login Background)
+        </h3>
+        <p style="font-size: 0.78rem; color: #64748b; margin: 4px 0 0 0;">
+          Tải lên hình ảnh tùy biến để thay đổi giao diện màn hình Đăng nhập của Hệ thống.
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+        <!-- Cột 1: Preview ảnh hiện tại -->
+        <div>
+          <div style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 8px;">
+            Ảnh nền Đăng nhập đang áp dụng:
+          </div>
+          <div style="width: 100%; height: 230px; border-radius: 12px; overflow: hidden; border: 2px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; background: #0f172a;">
+            <img
+              :src="currentLoginBg || '/login-bg.jpg'"
+              alt="Login Background Preview"
+              style="width: 100%; height: 100%; object-fit: cover;"
+            />
+            <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.65); color: #ffffff; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; backdrop-filter: blur(4px);">
+              {{ currentLoginBg ? 'Ảnh tùy biến người dùng' : 'Ảnh nền mặc định hệ thống' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Cột 2: Các nút thao tác tải lên / khôi phục -->
+        <div style="display: flex; flex-direction: column; gap: 14px; background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0;">
+          <div>
+            <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+              Tải lên Ảnh nền Mới:
+            </div>
+            <div style="font-size: 0.74rem; color: #64748b; line-height: 1.4; margin-bottom: 10px;">
+              Hỗ trợ định dạng: JPG, PNG, WEBP (Khuyến nghị độ phân giải 1920x1080 hoặc tỷ lệ 16:9 để hiển thị đẹp nhất).
+            </div>
+            <input
+              type="file"
+              ref="loginBgFileInputRef"
+              accept="image/jpeg,image/png,image/webp,image/jpg"
+              style="display: none;"
+              @change="handleUploadLoginBg"
+            />
+            <Button
+              label="Chọn Tệp Ảnh & Lưu Ngay"
+              icon="pi pi-upload"
+              severity="warn"
+              size="small"
+              @click="triggerUploadLoginBg"
+              style="font-size: 0.82rem;"
+            />
+          </div>
+
+          <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
+            <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+              Khôi phục Ảnh Mặc định:
+            </div>
+            <div style="font-size: 0.74rem; color: #64748b; margin-bottom: 10px;">
+              Trở về ảnh nền gốc của Công An TP. Hồ Chí Minh.
+            </div>
+            <Button
+              label="Khôi phục Ảnh Mặc định"
+              icon="pi pi-refresh"
+              severity="secondary"
+              outlined
+              size="small"
+              @click="resetDefaultLoginBg"
+              style="font-size: 0.82rem;"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -629,6 +725,56 @@ const relativeKeyField = ref('cccdthannhan');
 const tagSearch = ref('');
 const selectedCategory = ref('personnel');
 const copiedTag = ref('');
+
+// Cài đặt Ảnh nền Đăng nhập
+const loginBgFileInputRef = ref(null);
+const currentLoginBg = ref('');
+
+const loadLoginBg = async () => {
+  try {
+    const bgData = await getAppSettings('custom_login_bg', null);
+    if (bgData) {
+      currentLoginBg.value = bgData;
+      localStorage.setItem('custom_login_bg', bgData);
+    }
+  } catch (err) {
+    console.warn('Failed to load login bg:', err);
+  }
+};
+
+const triggerUploadLoginBg = () => loginBgFileInputRef.value?.click();
+
+const handleUploadLoginBg = (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Vui lòng chọn ảnh có dung lượng dưới 5MB!');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const base64Url = e.target.result;
+      currentLoginBg.value = base64Url;
+      localStorage.setItem('custom_login_bg', base64Url);
+      await saveAppSettings('custom_login_bg', base64Url);
+      alert('Đã cập nhật và lưu ảnh nền đăng nhập thành công!');
+    } catch (err) {
+      alert('Lỗi lưu ảnh nền: ' + err.message);
+    }
+  };
+  reader.readAsDataURL(file);
+};
+
+const resetDefaultLoginBg = async () => {
+  if (!confirm('Bạn có chắc muốn khôi phục lại ảnh nền đăng nhập mặc định?')) return;
+  currentLoginBg.value = '';
+  localStorage.removeItem('custom_login_bg');
+  await saveAppSettings('custom_login_bg', null);
+  alert('Đã khôi phục ảnh nền đăng nhập mặc định!');
+};
 
 // Quản lý Danh sách Mẫu Word (.docx)
 const tplFileInputRef = ref(null);
@@ -805,6 +951,7 @@ onMounted(async () => {
   relativeParentKeyField.value = personnelStore.getRelativeParentKeyField();
   relativeKeyField.value = personnelStore.getRelativeKeyField();
   await loadDocxTemplates();
+  await loadLoginBg();
 });
 
 const currentGroups = computed(() => {
