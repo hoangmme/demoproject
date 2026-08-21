@@ -926,8 +926,9 @@ const allAvailableTags = computed(() => {
     { label: 'Khối lặp Thân nhân (Kết thúc)', tag: '{/than_nhan}', category: 'relatives', colNum: 'Thân nhân' }
   );
 
-  // 4. Hệ thống & Ngày giờ
+  // 4. Hệ thống & Ngày giờ & Khối tổng hợp Group
   tags.push(
+    { label: '🌟 TỔNG HỢP TOÀN BỘ CÁC GROUP (Tự động điền toàn bộ trường cán bộ & thân nhân theo khối)', tag: '{formgroup}', category: 'system', colNum: 'Auto Group' },
     { label: 'Ngày hiện tại (DD)', tag: '{ngay}', category: 'system', colNum: 'HT' },
     { label: 'Tháng hiện tại (MM)', tag: '{thang}', category: 'system', colNum: 'HT' },
     { label: 'Năm hiện tại (YYYY)', tag: '{nam}', category: 'system', colNum: 'HT' },

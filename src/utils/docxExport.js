@@ -385,6 +385,63 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   data.so_luong_chuyen_di = processedTrips.length;
   data.total_trips = processedTrips.length;
 
+  // 8. Tự động sinh nội dung toàn bộ các nhóm {formgroup} (Khối A + các Khối bổ sung + Thân nhân)
+  const formgroupLines = [];
+  formgroupLines.push('1. Thông tin cá nhân');
+  formgroupLines.push(`- Họ và tên (1): ${data.name || ''}`);
+  if (data.otherName) formgroupLines.push(`- Tên gọi khác (2): ${data.otherName}`);
+  formgroupLines.push(`- Ngày, tháng, năm sinh (3): ${data.birthYear || ''}`);
+  formgroupLines.push(`- Giới tính (4): ${data.gender || ''}`);
+  formgroupLines.push(`- Dân tộc (5): ${data.ethnicity || 'Kinh'}`);
+  formgroupLines.push(`- Tôn giáo (6): ${data.religion || 'Không'}`);
+  formgroupLines.push(`- Quê quán (7): ${data.hometown || ''}`);
+  formgroupLines.push(`- Đơn vị công tác (8): ${data.departmentName || ''}`);
+  formgroupLines.push(`- Chức vụ (9): ${data.chuc_vu || ''}`);
+  formgroupLines.push(`- Nơi đăng ký hộ khẩu thường trú (10): ${data.thuongTru || ''}`);
+  formgroupLines.push(`- Nơi ở hiện nay (11): ${data.tamTru || ''}`);
+  formgroupLines.push(`- Số Căn cước công dân (12): ${data.cccdparent || ''}`);
+  formgroupLines.push(`- Số Hộ chiếu cá nhân (13): ${data.passportPersonal || ''}`);
+  formgroupLines.push(`- Số Hộ chiếu công vụ (14): ${data.passportOfficial || ''}`);
+  formgroupLines.push(`- Kết quả thẩm tra tiêu chuẩn chính trị (15): ${data.politicalVerificationResult || ''}`);
+
+  // Thêm các nhóm bổ sung từ store
+  if (personnelStore?.importMappingPersonnel) {
+    let runningIdx = 16;
+    personnelStore.importMappingPersonnel.forEach((grp, gIdx) => {
+      if (gIdx === 0) return;
+      formgroupLines.push('');
+      formgroupLines.push(`* ${grp.group || 'Thông tin bổ sung'}:`);
+      (grp.columns || []).forEach((col) => {
+        let label = col.label || col.id;
+        if (!label.includes('(')) label = `${label} (${runningIdx++})`;
+        const val = data[col.id] || cd[col.id] || person[col.id] || '';
+        formgroupLines.push(`- ${label}: ${val}`);
+      });
+    });
+  }
+
+  // Thêm thân nhân
+  if (processedRelatives.length > 0) {
+    formgroupLines.push('');
+    formgroupLines.push('* Thông tin thân nhân liên quan:');
+    processedRelatives.forEach((rel, rIdx) => {
+      formgroupLines.push(`▶ Thân nhân ${rIdx + 1} (${rel.relationshipName || 'Thân nhân'}): ${rel.name || rel.ho_ten || ''}`);
+      formgroupLines.push(`   - Họ và tên (1): ${rel.name || rel.ho_ten || ''}`);
+      formgroupLines.push(`   - Quan hệ (2): ${rel.relationshipName || rel.quan_he || ''}`);
+      formgroupLines.push(`   - Năm sinh (3): ${rel.birthYear || rel.nam_sinh || ''}`);
+      formgroupLines.push(`   - Quê quán (4): ${rel.hometown || rel.hometownTN || ''}`);
+      formgroupLines.push(`   - Nghề nghiệp (5): ${rel.occupation || rel.job || rel.nghe_nghiep || ''}`);
+      formgroupLines.push(`   - Nơi ở hiện nay (6): ${rel.address || rel.currentAddress || rel.dia_chi || ''}`);
+      formgroupLines.push(`   - Số Căn cước công dân (7): ${rel.cccdthannhan || rel.cccd || ''}`);
+    });
+  }
+
+  const fullFormgroupText = formgroupLines.join('\n');
+  data.formgroup = fullFormgroupText;
+  data.form_group = fullFormgroupText;
+  data.noi_dung_group = fullFormgroupText;
+  data.thong_tin_group = fullFormgroupText;
+
   return data;
 }
 
