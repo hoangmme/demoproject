@@ -122,7 +122,7 @@ const handleLogin = async () => {
 
 .login-card-grid {
   width: 100%;
-  max-width: 860px;
+  max-width: 920px;
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -130,13 +130,13 @@ const handleLogin = async () => {
   border: 1px solid rgba(255, 255, 255, 0.9);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   display: grid;
-  grid-template-columns: 310px 1px 1fr;
+  grid-template-columns: 360px 1px 1fr;
   padding: 0;
   overflow: hidden;
 }
 
 .login-left-col {
-  padding: 2.5rem 1.75rem;
+  padding: 2.75rem 1.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -154,22 +154,24 @@ const handleLogin = async () => {
 }
 
 .agency-title-main {
-  font-size: 1.02rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #dc2626;
   text-transform: uppercase;
   line-height: 1.35;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .agency-title-sub {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: #dc2626;
   text-transform: uppercase;
   margin-top: 4px;
   line-height: 1.35;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .login-divider {
@@ -178,14 +180,15 @@ const handleLogin = async () => {
 }
 
 .login-right-col {
-  padding: 2.5rem 2.25rem;
+  padding: 2.75rem 2.5rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
 .software-header {
-  margin-bottom: 1.5rem;
+  text-align: center;
+  margin-bottom: 1.75rem;
 }
 
 .software-title-main,
@@ -223,7 +226,7 @@ const handleLogin = async () => {
   font-size: 0.95rem;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 860px) {
   .login-card-grid {
     grid-template-columns: 1fr;
     max-width: 480px;
@@ -250,6 +253,11 @@ const handleLogin = async () => {
   .software-title-main,
   .software-title-sub {
     font-size: 1.1rem;
+  }
+  
+  .agency-title-main,
+  .agency-title-sub {
+    white-space: normal;
   }
 }
 </style>
