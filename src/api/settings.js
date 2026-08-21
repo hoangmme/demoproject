@@ -10,14 +10,25 @@ export const getAppSettings = async (key, defaultValue = null) => {
     });
     if (res.data?.data && res.data.data.length > 0) {
       const val = res.data.data[0].value;
-      return typeof val === 'string' ? JSON.parse(val) : val;
+      if (val === null || val === undefined || val === '') return defaultValue;
+      if (typeof val === 'string') {
+        try {
+          return JSON.parse(val);
+        } catch {
+          // Chuỗi thường (như base64 ảnh, URL, text) -> trả về nguyên bản
+          return val;
+        }
+      }
+      return val;
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Error fetching app settings for key:', key, e);
+  }
   return defaultValue;
 };
 
 export const saveAppSettings = async (key, value) => {
-  const serialized = typeof value === 'object' ? JSON.stringify(value) : String(value);
+  const serialized = (typeof value === 'object' && value !== null) ? JSON.stringify(value) : (value === null ? '' : String(value));
   try {
     const res = await apiClient.get('/items/app_settings', {
       params: {

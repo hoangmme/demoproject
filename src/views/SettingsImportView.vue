@@ -744,28 +744,50 @@ const loadLoginBg = async () => {
 
 const triggerUploadLoginBg = () => loginBgFileInputRef.value?.click();
 
-const handleUploadLoginBg = (event) => {
+const compressImage = (file, maxWidth = 1920, maxHeight = 1080, quality = 0.85) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxWidth || h > maxHeight) {
+          const ratio = Math.min(maxWidth / w, maxHeight / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error('Không thể xử lý tệp ảnh này'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Không thể đọc tệp'));
+    reader.readAsDataURL(file);
+  });
+};
+
+const handleUploadLoginBg = async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
 
-  if (file.size > 5 * 1024 * 1024) {
-    alert('Vui lòng chọn ảnh có dung lượng dưới 5MB!');
-    return;
+  try {
+    const compressedBase64 = await compressImage(file, 1920, 1080, 0.85);
+    currentLoginBg.value = compressedBase64;
+    localStorage.setItem('custom_login_bg', compressedBase64);
+    await saveAppSettings('custom_login_bg', compressedBase64);
+    alert('Đã cập nhật và lưu ảnh nền đăng nhập thành công!');
+  } catch (err) {
+    alert('Lỗi lưu ảnh nền: ' + err.message);
+  } finally {
+    event.target.value = '';
   }
-
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      const base64Url = e.target.result;
-      currentLoginBg.value = base64Url;
-      localStorage.setItem('custom_login_bg', base64Url);
-      await saveAppSettings('custom_login_bg', base64Url);
-      alert('Đã cập nhật và lưu ảnh nền đăng nhập thành công!');
-    } catch (err) {
-      alert('Lỗi lưu ảnh nền: ' + err.message);
-    }
-  };
-  reader.readAsDataURL(file);
 };
 
 const resetDefaultLoginBg = async () => {
