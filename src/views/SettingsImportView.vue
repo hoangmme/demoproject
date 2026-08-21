@@ -23,82 +23,46 @@
       </div>
     </div>
 
-    <!-- Tabs Navigation -->
-    <div style="display: flex; gap: 8px; margin-bottom: 1.25rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px;">
+    <!-- Tabs Navigation (Segmented Pill Style) -->
+    <div style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content; margin-bottom: 1.25rem;">
       <button
         type="button"
+        class="segmented-tab-btn"
+        :class="{ 'tab-active': activeTab === 'personnel' }"
         @click="activeTab = 'personnel'"
-        :style="{
-          padding: '8px 16px',
-          fontWeight: 700,
-          fontSize: '0.85rem',
-          border: 'none',
-          background: 'none',
-          cursor: 'pointer',
-          color: activeTab === 'personnel' ? '#2e7d32' : '#6b7280',
-          borderBottom: activeTab === 'personnel' ? '3px solid #2e7d32' : '3px solid transparent',
-          marginBottom: '-6px'
-        }"
       >
-        <i class="pi pi-user" style="margin-right: 6px;"></i>
-        Cấu hình Cột Cán bộ (Cá nhân)
+        <i class="pi pi-user"></i>
+        <span>Cấu hình Cột Cán bộ (Cá nhân)</span>
       </button>
 
       <button
         type="button"
+        class="segmented-tab-btn"
+        :class="{ 'tab-active': activeTab === 'relative' }"
         @click="activeTab = 'relative'"
-        :style="{
-          padding: '8px 16px',
-          fontWeight: 700,
-          fontSize: '0.85rem',
-          border: 'none',
-          background: 'none',
-          cursor: 'pointer',
-          color: activeTab === 'relative' ? '#2e7d32' : '#6b7280',
-          borderBottom: activeTab === 'relative' ? '3px solid #2e7d32' : '3px solid transparent',
-          marginBottom: '-6px'
-        }"
       >
-        <i class="pi pi-users" style="margin-right: 6px;"></i>
-        Cấu hình Cột Thân nhân
+        <i class="pi pi-users"></i>
+        <span>Cấu hình Cột Thân nhân</span>
       </button>
 
       <button
         type="button"
+        class="segmented-tab-btn"
+        :class="{ 'tab-active': activeTab === 'tags' }"
         @click="activeTab = 'tags'"
-        :style="{
-          padding: '8px 16px',
-          fontWeight: 700,
-          fontSize: '0.85rem',
-          border: 'none',
-          background: 'none',
-          cursor: 'pointer',
-          color: activeTab === 'tags' ? '#7c3aed' : '#6b7280',
-          borderBottom: activeTab === 'tags' ? '3px solid #7c3aed' : '3px solid transparent',
-          marginBottom: '-6px'
-        }"
       >
-        <i class="pi pi-tags" style="margin-right: 6px;"></i>
-        Bảng Tra cứu Mã Thẻ Tag (Word / PDF)
+        <i class="pi pi-tags"></i>
+        <span>Bảng Tra cứu Mã Thẻ Tag (Word / PDF)</span>
       </button>
 
       <button
         type="button"
+        class="segmented-tab-btn"
+        :class="{ 'tab-active': activeTab === 'general' }"
         @click="activeTab = 'general'"
-        :style="{
-          padding: '8px 16px',
-          fontWeight: 700,
-          fontSize: '0.85rem',
-          border: 'none',
-          background: 'none',
-          cursor: 'pointer',
-          color: activeTab === 'general' ? '#ea580c' : '#6b7280',
-          borderBottom: activeTab === 'general' ? '3px solid #ea580c' : '3px solid transparent',
-          marginBottom: '-6px'
-        }"
       >
-        <i class="pi pi-image" style="margin-right: 6px;"></i>
-        Tùy chỉnh Ảnh Nền Đăng nhập
+        <i class="pi pi-image"></i>
+        <span>Tùy chỉnh Ảnh Nền Đăng nhập</span>
       </button>
     </div>
 
@@ -1405,5 +1369,32 @@ const saveConfig = async () => {
 .custom-col-select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.segmented-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.segmented-tab-btn:hover {
+  color: #1e293b;
+}
+
+.segmented-tab-btn.tab-active {
+  background: #ffffff;
+  color: #16a34a !important;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 </style>

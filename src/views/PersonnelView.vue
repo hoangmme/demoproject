@@ -1,23 +1,25 @@
 <template>
   <div class="app-content">
     <!-- Top-level Tab Switcher between Cán bộ (Cá nhân) & Thân nhân -->
-    <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
-      <Button
-        :label="'1. Quản lý Cán bộ (Cá nhân) (' + personnelStore.personnelList.length + ')'"
-        icon="pi pi-user"
-        :severity="mainTab === 'canhan' ? 'primary' : 'secondary'"
-        :text="mainTab !== 'canhan'"
-        size="small"
+    <div style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content; margin-bottom: 1rem;">
+      <button
+        type="button"
+        class="segmented-tab-btn"
+        :class="{ 'tab-active': mainTab === 'canhan' }"
         @click="mainTab = 'canhan'"
-      />
-      <Button
-        :label="'2. Quản lý Thân nhân (' + personnelStore.relativesList.length + ')'"
-        icon="pi pi-users"
-        :severity="mainTab === 'thannhan' ? 'primary' : 'secondary'"
-        :text="mainTab !== 'thannhan'"
-        size="small"
+      >
+        <i class="pi pi-user"></i>
+        <span>1. Quản lý Cán bộ (Cá nhân) ({{ personnelStore.personnelList.length }})</span>
+      </button>
+      <button
+        type="button"
+        class="segmented-tab-btn"
+        :class="{ 'tab-active': mainTab === 'thannhan' }"
         @click="mainTab = 'thannhan'"
-      />
+      >
+        <i class="pi pi-users"></i>
+        <span>2. Quản lý Thân nhân ({{ personnelStore.relativesList.length }})</span>
+      </button>
     </div>
 
     <!-- TAB 1: DANH SÁCH CÁN BỘ (CÁ NHÂN) -->
@@ -1951,5 +1953,32 @@ const onPersonDeleted = () => {};
 
 .custom-field-filter-select:focus {
   border-color: #2563eb;
+}
+
+.segmented-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.segmented-tab-btn:hover {
+  color: #1e293b;
+}
+
+.segmented-tab-btn.tab-active {
+  background: #ffffff;
+  color: #16a34a !important;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 </style>
