@@ -157,15 +157,37 @@
               </label>
             </div>
 
-            <Button
-              label="Xóa Nhóm"
-              icon="pi pi-trash"
-              severity="danger"
-              text
-              size="small"
-              @click="removeGroup(gIdx)"
-              style="font-size: 0.75rem;"
-            />
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <Button
+                icon="pi pi-arrow-up"
+                severity="secondary"
+                text
+                size="small"
+                :disabled="gIdx === 0"
+                @click="moveGroupUp(gIdx)"
+                title="Dời nhóm lên trên"
+                style="width: 28px; height: 28px; padding: 0;"
+              />
+              <Button
+                icon="pi pi-arrow-down"
+                severity="secondary"
+                text
+                size="small"
+                :disabled="gIdx === currentGroups.length - 1"
+                @click="moveGroupDown(gIdx)"
+                title="Dời nhóm xuống dưới"
+                style="width: 28px; height: 28px; padding: 0;"
+              />
+              <Button
+                label="Xóa Nhóm"
+                icon="pi pi-trash"
+                severity="danger"
+                text
+                size="small"
+                @click="removeGroup(gIdx)"
+                style="font-size: 0.75rem;"
+              />
+            </div>
           </div>
 
           <!-- Group Columns List -->
@@ -1243,6 +1265,22 @@ const addGroup = () => {
 const removeGroup = (gIndex) => {
   if (!confirm(`Bạn có chắc muốn xóa nhóm "${currentGroups.value[gIndex]?.group}" cùng tất cả cột bên trong không?`)) return;
   currentGroups.value.splice(gIndex, 1);
+};
+
+const moveGroupUp = (gIndex) => {
+  if (gIndex <= 0) return;
+  const list = currentGroups.value;
+  const temp = list[gIndex];
+  list[gIndex] = list[gIndex - 1];
+  list[gIndex - 1] = temp;
+};
+
+const moveGroupDown = (gIndex) => {
+  const list = currentGroups.value;
+  if (gIndex >= list.length - 1) return;
+  const temp = list[gIndex];
+  list[gIndex] = list[gIndex + 1];
+  list[gIndex + 1] = temp;
 };
 
 const addColumn = (gIdx) => {

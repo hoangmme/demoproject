@@ -28,35 +28,40 @@
 
     <!-- Fixed Height Tab Contents Area to prevent jumping -->
     <div style="height: 540px; max-height: 65vh; overflow-y: auto; padding-right: 8px;">
-      <!-- TAB 1: CÁN BỘ (Cá nhân, Đi nước ngoài, Kỷ luật & Lưu ý) -->
+      <!-- TAB 1: CÁN BỘ (Hiển thị toàn bộ các nhóm theo đúng thứ tự cấu hình) -->
       <div v-show="activeTab === 0" style="display: flex; flex-direction: column; gap: 1.5rem;">
-        <div>
-          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-user" style="color: #16a34a; font-size: 0.95rem;"></i>
-            <span>{{ personnelStore.importMappingPersonnel?.[0]?.group || 'Khối A: Thông tin cơ bản' }}</span>
-          </h4>
-          <PersonnelBasicForm
-            :form="form"
-            :departments="personnelStore.departments"
-            :mapping="personnelStore.importMappingPersonnel"
-          />
-        </div>
+        <template v-for="(grp, gIdx) in (personnelStore.importMappingPersonnel || [])" :key="gIdx">
+          <!-- Nhóm Chuyến đi nước ngoài -->
+          <div v-if="isTripsGroup(grp, gIdx)">
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+              <i class="pi pi-globe" style="color: #0284c7; font-size: 0.95rem;"></i>
+              <span>{{ grp.group || 'Chuyến đi nước ngoài' }} ({{ form.trips?.length || 0 }} chuyến)</span>
+            </h4>
+            <PersonnelTravelForm :form="form" :group="grp" />
+          </div>
 
-        <div>
-          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-globe" style="color: #0284c7; font-size: 0.95rem;"></i>
-            <span>{{ personnelStore.importMappingPersonnel?.[1]?.group || 'Khối B: Chuyến đi nước ngoài' }} ({{ form.trips?.length || 0 }} chuyến)</span>
-          </h4>
-          <PersonnelTravelForm :form="form" />
-        </div>
+          <!-- Nhóm Kỷ luật & Lưu ý chính trị -->
+          <div v-else-if="isNotesGroup(grp, gIdx)">
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+              <i class="pi pi-exclamation-triangle" style="color: #f59e0b; font-size: 0.95rem;"></i>
+              <span>{{ grp.group || 'Lịch sử kỷ luật & Lưu ý chính trị' }}</span>
+            </h4>
+            <PersonnelNotesForm :form="form" :group="grp" />
+          </div>
 
-        <div>
-          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-exclamation-triangle" style="color: #f59e0b; font-size: 0.95rem;"></i>
-            <span>{{ personnelStore.importMappingPersonnel?.[2]?.group || 'Khối C: Lịch sử kỷ luật & Lưu ý chính trị' }}</span>
-          </h4>
-          <PersonnelNotesForm :form="form" />
-        </div>
+          <!-- Các nhóm thông tin khác (Khối A, Quá trình công tác, v.v.) -->
+          <div v-else>
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+              <i :class="gIdx === 0 ? 'pi pi-user' : 'pi pi-folder'" :style="{ color: gIdx === 0 ? '#16a34a' : '#0284c7', fontSize: '0.95rem' }"></i>
+              <span>{{ grp.group || 'Thông tin bổ sung' }}</span>
+            </h4>
+            <PersonnelBasicForm
+              :form="form"
+              :departments="personnelStore.departments"
+              :group="grp"
+            />
+          </div>
+        </template>
       </div>
 
       <!-- TAB 2: THÂN NHÂN -->
@@ -157,6 +162,20 @@ const visible = computed({
 const isEdit = computed(() => Boolean(form.value.id));
 
 const isRelativeDetail = computed(() => Boolean(props.targetRelativeCode));
+
+const isTripsGroup = (grp, idx) => {
+  if (!grp) return false;
+  if (grp.isMultiple && (grp.columns || []).some((c) => c.id === 'countryName' || c.id === 'decisionNumber' || c.id === 'departureDate')) return true;
+  if (grp.group && (grp.group.includes('Chuyến đi') || grp.group.includes('nước ngoài') || grp.group.includes('Khối B'))) return true;
+  return false;
+};
+
+const isNotesGroup = (grp, idx) => {
+  if (!grp) return false;
+  if (grp.group && (grp.group.includes('kỷ luật') || grp.group.includes('Lưu ý') || grp.group.includes('Khối C'))) return true;
+  if ((grp.columns || []).some((c) => c.format === 'checkbox_text' || c.id === 'politicalVerificationResult')) return true;
+  return false;
+};
 
 const dialogHeader = computed(() => {
   if (props.targetRelativeCode) {

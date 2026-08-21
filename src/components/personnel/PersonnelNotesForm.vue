@@ -35,6 +35,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  group: {
+    type: Object,
+    default: null,
+  },
 });
 
 const personnelStore = usePersonnelStore();
@@ -68,9 +72,9 @@ const colIndexMap = computed(() => {
 
 const notesColumns = computed(() => {
   const ignore = new Set(['stt']);
-  const thirdGroup = (personnelStore.importMappingPersonnel || [])[2];
-  if (thirdGroup && Array.isArray(thirdGroup.columns)) {
-    return thirdGroup.columns.filter((c) => !ignore.has(c.id));
+  const targetGroup = props.group || (personnelStore.importMappingPersonnel || [])[2];
+  if (targetGroup && Array.isArray(targetGroup.columns)) {
+    return targetGroup.columns.filter((c) => !ignore.has(c.id));
   }
   return [];
 });
