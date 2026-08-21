@@ -670,6 +670,7 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
+import { uploadFile, getFileUrl } from '@/api/files';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import { createSampleDocxTemplateBlob } from '@/utils/docxExport';
 import { saveAs } from 'file-saver';
@@ -745,14 +746,29 @@ const handleUploadLoginBg = async (event) => {
   if (!file) return;
 
   try {
-    // Tối ưu hóa lưu trữ ảnh nền độ nét cao 4K UHD (3840x2160)
-    const compressedBase64 = await compressImage(file, 3840, 2160, 0.95);
-    currentLoginBg.value = compressedBase64;
-    localStorage.setItem('custom_login_bg', compressedBase64);
-    await saveAppSettings('custom_login_bg', compressedBase64);
-    alert('Đã cập nhật và lưu ảnh nền đăng nhập độ nét cao (4K) thành công!');
+    // 1. Tải tệp lên Directus File Storage để lưu trữ ảnh gốc 4K sắc nét tuyệt đối
+    const uploaded = await uploadFile(file);
+    if (uploaded && uploaded.id) {
+      const bgUrl = getFileUrl(uploaded.id);
+      currentLoginBg.value = bgUrl;
+      localStorage.setItem('custom_login_bg', bgUrl);
+      await saveAppSettings('custom_login_bg', bgUrl);
+      alert('Đã tải lên và lưu ảnh nền đăng nhập độ nét cao (4K) thành công!');
+      return;
+    }
+    throw new Error('Không nhận được mã tệp từ máy chủ');
   } catch (err) {
-    alert('Lỗi lưu ảnh nền: ' + err.message);
+    console.warn('Lỗi tải tệp Directus Files, chuyển sang chế độ nén Canvas:', err);
+    try {
+      // Fallback: Nếu không upload được file, nén qua Canvas 1920x1080
+      const compressedBase64 = await compressImage(file, 1920, 1080, 0.85);
+      currentLoginBg.value = compressedBase64;
+      localStorage.setItem('custom_login_bg', compressedBase64);
+      await saveAppSettings('custom_login_bg', compressedBase64);
+      alert('Đã lưu ảnh nền đăng nhập thành công!');
+    } catch (fallbackErr) {
+      alert('Lỗi lưu ảnh nền: ' + (err.response?.data?.errors?.[0]?.message || err.message || fallbackErr.message));
+    }
   } finally {
     event.target.value = '';
   }
