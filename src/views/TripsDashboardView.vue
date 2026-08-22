@@ -352,6 +352,131 @@
       </template>
     </Dialog>
 
+    <!-- Dedicated Add / Edit Trip Dialog -->
+    <Dialog
+      v-model:visible="isTripFormDialogOpen"
+      modal
+      :header="editingTripItem ? 'Chỉnh sửa Chuyến đi' : 'Thêm Chuyến đi Nước ngoài Mới'"
+      :style="{ width: '680px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 4px 0;">
+        <!-- 1. Chọn đối tượng đi: Cán bộ hay Thân nhân -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px;">
+          <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">
+            1. ĐỐI TƯỢNG ĐI NƯỚC NGOÀI:
+          </label>
+          <div style="display: flex; gap: 18px; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer; font-weight: 600; color: #1e293b;">
+              <input type="radio" value="personnel" v-model="tripTargetType" style="accent-color: #1e3a8a;" />
+              <span>👤 Cán bộ (Cá nhân)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer; font-weight: 600; color: #7c3aed;">
+              <input type="radio" value="relative" v-model="tripTargetType" style="accent-color: #7c3aed;" />
+              <span>👥 Thân nhân của Cán bộ</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. Chọn Cán bộ / Thân nhân cụ thể hoặc nhập CCCD -->
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+            2. CHỌN {{ tripTargetType === 'personnel' ? 'CÁN BỘ' : 'THÂN NHÂN' }} LIÊN QUAN: <span style="color: red;">*</span>
+          </label>
+          <select v-if="tripTargetType === 'personnel'" v-model="selectedTargetKey" class="filter-select" style="width: 100%; font-size: 0.82rem;" @change="onTargetPersonChange">
+            <option value="">-- Chọn Cán bộ từ danh sách --</option>
+            <option v-for="p in personnelStore.personnelList" :key="p.id" :value="p.cccd || p.cccdparent || p.id">
+              {{ p.name }} - {{ p.positionName || p.position || 'Cán bộ' }} (CCCD: {{ p.cccd || p.cccdparent || '-' }})
+            </option>
+          </select>
+
+          <select v-else v-model="selectedTargetKey" class="filter-select" style="width: 100%; font-size: 0.82rem;" @change="onTargetRelativeChange">
+            <option value="">-- Chọn Thân nhân từ danh sách --</option>
+            <option v-for="r in personnelStore.relativesList" :key="r.id || r.code" :value="r.cccd || r.cccdthannhan || r.code || r.id">
+              {{ r.relativeName || r.name }} ({{ r.relationshipName }} của {{ r.parentName || r.parentPersonnelName }}) - CCCD: {{ r.cccd || r.cccdthannhan || '-' }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Thẻ tóm tắt thông tin đối tượng được chọn (Matching upload style) -->
+        <div v-if="selectedTargetSummary" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 10px 14px;">
+          <div style="font-size: 0.7rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">
+            {{ tripTargetType === 'personnel' ? 'Cán bộ liên quan' : 'Thân nhân liên quan' }}
+          </div>
+          <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+            {{ selectedTargetSummary.name }}
+          </div>
+          <div style="font-size: 0.8rem; color: #334155; margin: 2px 0;">
+            {{ selectedTargetSummary.sub }}
+          </div>
+          <div style="font-size: 0.74rem; color: #64748b; font-family: monospace;">
+            CCCD: <strong>{{ selectedTargetSummary.cccd }}</strong>
+          </div>
+        </div>
+
+        <!-- 3. Thông tin chuyến đi -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+              Quốc gia / Nơi đến: <span style="color: red;">*</span>
+            </label>
+            <InputText v-model="tripFormData.countryName" placeholder="VD: Nhật Bản, Hoa Kỳ, Pháp..." size="small" style="width: 100%; font-size: 0.82rem;" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+              Nguồn kinh phí:
+            </label>
+            <select v-model="tripFormData.fundingName" class="filter-select" style="width: 100%; font-size: 0.82rem;">
+              <option value="Ngân sách nhà nước">Ngân sách nhà nước</option>
+              <option value="Tài trợ">Tài trợ</option>
+              <option value="Tự túc">Tự túc</option>
+              <option value="Khác">Khác</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+              Ngày xuất cảnh (Ngày đi):
+            </label>
+            <InputText v-model="tripFormData.departureDate" placeholder="DD/MM/YYYY" size="small" style="width: 100%; font-size: 0.82rem;" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+              Ngày nhập cảnh (Ngày về thực tế / dự kiến):
+            </label>
+            <InputText v-model="tripFormData.arrivalDate" placeholder="DD/MM/YYYY" size="small" style="width: 100%; font-size: 0.82rem;" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+              Số quyết định duyệt:
+            </label>
+            <InputText v-model="tripFormData.decisionNumber" placeholder="VD: 1234/QĐ-CATP" size="small" style="width: 100%; font-size: 0.82rem;" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+              Số Hộ chiếu:
+            </label>
+            <InputText v-model="tripFormData.passportNumber" placeholder="VD: B1234567" size="small" style="width: 100%; font-size: 0.82rem;" />
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+            Mục đích chuyến đi:
+          </label>
+          <InputText v-model="tripFormData.purpose" placeholder="VD: Công tác, Hội thảo, Du lịch, Thăm thân nhân..." size="small" style="width: 100%; font-size: 0.82rem;" />
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Hủy" severity="secondary" text size="small" @click="isTripFormDialogOpen = false" />
+        <Button label="Lưu Chuyến đi" severity="success" size="small" icon="pi pi-check" @click="saveTripForm" />
+      </template>
+    </Dialog>
+
     <!-- Personnel Edit / Add Dialog -->
     <PersonnelDialog
       v-model="isPersonnelDialogOpen"
@@ -440,6 +565,20 @@ const pageSize = ref(30);
 const isColumnPickerOpen = ref(false);
 const isPersonnelDialogOpen = ref(false);
 const activePersonData = ref(null);
+
+const isTripFormDialogOpen = ref(false);
+const editingTripItem = ref(null);
+const tripTargetType = ref('personnel'); // 'personnel' | 'relative'
+const selectedTargetKey = ref('');
+const tripFormData = ref({
+  countryName: '',
+  departureDate: '',
+  arrivalDate: '',
+  decisionNumber: '',
+  fundingName: 'Ngân sách nhà nước',
+  purpose: '',
+  passportNumber: '',
+});
 
 // Default columns definition
 const DEFAULT_TRIP_COLUMNS = [
@@ -798,11 +937,105 @@ const openPersonnelDetail = (trip) => {
   }
 };
 
+const selectedTargetSummary = computed(() => {
+  if (!selectedTargetKey.value) return null;
+  if (tripTargetType.value === 'personnel') {
+    const p = personnelStore.findPersonByCccd(selectedTargetKey.value);
+    if (!p) return null;
+    return {
+      name: p.name || 'Cán bộ',
+      sub: `${p.positionName || p.position || 'Cán bộ'}${p.departmentName ? ' · ' + p.departmentName : ''}`,
+      cccd: p.cccd || p.cccdparent || selectedTargetKey.value,
+      raw: p,
+    };
+  } else {
+    const r = personnelStore.findRelativeByCccd(selectedTargetKey.value);
+    if (!r) return null;
+    return {
+      name: r.relativeName || r.name || 'Thân nhân',
+      sub: `${r.relationshipName || 'Thân nhân'} của ${r.parentName || r.parentPersonnelName || 'Cán bộ'}`,
+      cccd: r.cccd || r.cccdthannhan || selectedTargetKey.value,
+      raw: r,
+    };
+  }
+});
+
+const onTargetPersonChange = () => {};
+const onTargetRelativeChange = () => {};
+
 const openAddTripDialog = () => {
-  activePersonData.value = {
-    trips: [{ departureDate: '', countryName: '', decisionNumber: '', fundingName: '' }],
+  editingTripItem.value = null;
+  selectedTargetKey.value = (personnelStore.personnelList[0]?.cccd || personnelStore.personnelList[0]?.id) || '';
+  tripTargetType.value = 'personnel';
+  tripFormData.value = {
+    countryName: '',
+    departureDate: '',
+    arrivalDate: '',
+    decisionNumber: '',
+    fundingName: 'Ngân sách nhà nước',
+    purpose: '',
+    passportNumber: '',
   };
-  isPersonnelDialogOpen.value = true;
+  isTripFormDialogOpen.value = true;
+};
+
+const saveTripForm = async () => {
+  if (!selectedTargetSummary.value) {
+    alert('Vui lòng chọn Cán bộ hoặc Thân nhân liên quan!');
+    return;
+  }
+  if (!tripFormData.value.countryName || !tripFormData.value.countryName.trim()) {
+    alert('Vui lòng nhập Quốc gia / Nơi đến của chuyến đi!');
+    return;
+  }
+
+  try {
+    const newTrip = {
+      ...tripFormData.value,
+      id: 'trip_' + Date.now(),
+    };
+
+    if (tripTargetType.value === 'personnel') {
+      const targetPerson = selectedTargetSummary.value.raw;
+      const updatedPerson = JSON.parse(JSON.stringify(targetPerson));
+      if (!Array.isArray(updatedPerson.trips)) updatedPerson.trips = [];
+      updatedPerson.trips.push(newTrip);
+      await personnelStore.savePerson(updatedPerson);
+    } else {
+      const targetRel = selectedTargetSummary.value.raw;
+      // Tìm cán bộ cha của thân nhân này
+      const parentCccd = targetRel.cccdparent || targetRel.parentCccd || targetRel.parentPersonnelCccd;
+      const parentPerson = personnelStore.findPersonByCccd(parentCccd) || (personnelStore.personnelList || []).find((p) => p.id === targetRel.personnelId);
+      
+      if (parentPerson) {
+        const updatedParent = JSON.parse(JSON.stringify(parentPerson));
+        if (!Array.isArray(updatedParent.relatives)) updatedParent.relatives = [];
+        const relIdx = updatedParent.relatives.findIndex((r) => {
+          const rCccd = r.cccd || r.cccdthannhan || r.code || r.id;
+          return rCccd === selectedTargetKey.value || r.id === targetRel.id;
+        });
+        if (relIdx !== -1) {
+          if (!Array.isArray(updatedParent.relatives[relIdx].trips)) {
+            updatedParent.relatives[relIdx].trips = [];
+          }
+          updatedParent.relatives[relIdx].trips.push(newTrip);
+          await personnelStore.savePerson(updatedParent);
+        } else {
+          alert('Không tìm thấy thân nhân trong hồ sơ cán bộ tương ứng!');
+          return;
+        }
+      } else {
+        alert('Không tìm thấy cán bộ quản lý thân nhân này!');
+        return;
+      }
+    }
+
+    await personnelStore.fetchPersonnel();
+    isTripFormDialogOpen.value = false;
+    alert('Đã lưu chuyến đi thành công!');
+  } catch (err) {
+    alert('Lỗi lưu chuyến đi: ' + (err.message || err));
+  }
 };
 
 const handlePersonnelSaved = async () => {

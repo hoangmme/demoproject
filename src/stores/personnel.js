@@ -375,6 +375,8 @@ export const usePersonnelStore = defineStore('personnel', {
           personnelKeyField: keyCfg.personnelKeyField || 'cccdparent',
           relativeParentKeyField: keyCfg.relativeParentKeyField || 'cccdparent',
           relativeKeyField: keyCfg.relativeKeyField || 'cccdthannhan',
+          tripPersonnelKeyField: keyCfg.tripPersonnelKeyField || 'cccdparent',
+          tripRelativeKeyField: keyCfg.tripRelativeKeyField || 'cccdthannhan',
         };
       }
     },
@@ -386,6 +388,34 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     getRelativeKeyField() {
       return this.systemKeyConfig?.relativeKeyField || 'cccdthannhan';
+    },
+    getTripPersonnelKeyField() {
+      return this.systemKeyConfig?.tripPersonnelKeyField || 'cccdparent';
+    },
+    getTripRelativeKeyField() {
+      return this.systemKeyConfig?.tripRelativeKeyField || 'cccdthannhan';
+    },
+    findPersonByCccd(val) {
+      if (!val) return null;
+      const cleanVal = String(val).trim().toLowerCase();
+      const pField = this.getPersonnelKeyField();
+      return (this.personnelList || []).find((p) => {
+        const cccd = String(p[pField] || p.cccd || p.cccdparent || p.custom_data?.[pField] || '').trim().toLowerCase();
+        const code = String(p.code || '').trim().toLowerCase();
+        const id = String(p.id || '').trim().toLowerCase();
+        return cccd === cleanVal || code === cleanVal || id === cleanVal;
+      }) || null;
+    },
+    findRelativeByCccd(val) {
+      if (!val) return null;
+      const cleanVal = String(val).trim().toLowerCase();
+      const rField = this.getRelativeKeyField();
+      return (this.relativesList || []).find((r) => {
+        const cccd = String(r[rField] || r.cccd || r.cccdthannhan || r.custom_data?.[rField] || '').trim().toLowerCase();
+        const code = String(r.code || '').trim().toLowerCase();
+        const id = String(r.id || '').trim().toLowerCase();
+        return cccd === cleanVal || code === cleanVal || id === cleanVal;
+      }) || null;
     },
     async savePerson(formData) {
       this.loading = true;

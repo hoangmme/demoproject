@@ -63,6 +63,25 @@
 
       <!-- Dynamic Content of relative card based on importMappingRelative -->
       <div style="padding: 1rem;">
+        <!-- Thẻ tóm tắt thông tin Cán bộ liên quan -->
+        <div v-if="getParentPersonnelInfo(rel)" style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div>
+            <div style="font-size: 0.7rem; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
+              <i class="pi pi-user"></i>
+              <span>Cán bộ liên quan</span>
+            </div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: #0f172a;">
+              {{ getParentPersonnelInfo(rel).name }}
+            </div>
+            <div style="font-size: 0.78rem; color: #475569;">
+              {{ getParentPersonnelInfo(rel).position }} <span v-if="getParentPersonnelInfo(rel).departmentName">· {{ getParentPersonnelInfo(rel).departmentName }}</span>
+            </div>
+          </div>
+          <div style="font-size: 0.75rem; color: #64748b; font-family: monospace; background: #ffffff; padding: 3px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+            CCCD: <strong>{{ getParentPersonnelInfo(rel).cccd || '-' }}</strong>
+          </div>
+        </div>
+
         <template v-if="relativeGroups.length > 0">
           <div v-for="(group, gIdx) in relativeGroups" :key="gIdx" style="margin-bottom: 1rem;">
             <div v-if="relativeGroups.length > 1" style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px;">
@@ -181,10 +200,55 @@ const getRelativeFieldValue = (rel, colId) => {
   return '';
 };
 
+const getParentPersonnelInfo = (rel) => {
+  // 1. First check props.form (if opened inside personnel detail)
+  if (props.form && (props.form.name || props.form.cccd || props.form.cccdparent)) {
+    return {
+      name: props.form.name || props.form.fullName || 'Chưa đặt tên',
+      position: props.form.positionName || props.form.position || 'Cán bộ',
+      departmentName: props.form.departmentName || '',
+      cccd: props.form.cccd || props.form.cccdparent || '',
+    };
+  }
+  // 2. Otherwise lookup by rel.cccdparent or rel.parentPersonnelCccd from personnelStore
+  const parentKey = rel.cccdparent || rel.parentPersonnelCccd || rel.parentCccd || rel.custom_data?.cccdparent;
+  if (parentKey) {
+    const found = personnelStore.findPersonByCccd(parentKey);
+    if (found) {
+      return {
+        name: found.name || found.fullName || 'Chưa đặt tên',
+        position: found.positionName || found.position || 'Cán bộ',
+        departmentName: found.departmentName || '',
+        cccd: found.cccd || found.cccdparent || parentKey,
+      };
+    }
+  }
+  if (rel.parentName || rel.parentPersonnelName) {
+    return {
+      name: rel.parentName || rel.parentPersonnelName,
+      position: rel.parentPosition || '',
+      departmentName: rel.parentDepartment || '',
+      cccd: parentKey || '',
+    };
+  }
+  return null;
+};
+
 const setRelativeFieldValue = (rel, colId, val) => {
   rel[colId] = val;
   if (!rel.custom_data) rel.custom_data = {};
   rel.custom_data[colId] = val;
+
+  if (colId === 'cccdparent' || colId === 'parentCccd') {
+    const found = personnelStore.findPersonByCccd(val);
+    if (found) {
+      rel.parentName = found.name;
+      rel.parentPersonnelName = found.name;
+      rel.parentPosition = found.positionName || found.position;
+      rel.parentDepartment = found.departmentName;
+      rel.personnelId = found.id;
+    }
+  }
 };
 
 const getColClass = (w) => {
