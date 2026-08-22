@@ -87,11 +87,25 @@ const trips = computed({
 });
 
 const colIndexMap = computed(() => {
+  if (personnelStore.importMappingTrips && personnelStore.importMappingTrips.length > 0) {
+    return computeColumnIndexMap(personnelStore.importMappingTrips);
+  }
   return computeColumnIndexMap(personnelStore.importMappingPersonnel);
 });
 
 const tripColumns = computed(() => {
-  const ignore = new Set(['stt']);
+  const ignore = new Set(['stt', 'cccdchuyendi', 'cccdparent', 'cccdthannhan']);
+  if (personnelStore.importMappingTrips && personnelStore.importMappingTrips.length > 0) {
+    const cols = [];
+    personnelStore.importMappingTrips.forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && !ignore.has(c.id) && !cols.some((x) => x.id === c.id)) {
+          cols.push(c);
+        }
+      });
+    });
+    if (cols.length > 0) return cols;
+  }
   const targetGroup = props.group || (personnelStore.importMappingPersonnel || [])[1];
   if (targetGroup && Array.isArray(targetGroup.columns)) {
     return targetGroup.columns.filter((c) => !ignore.has(c.id));
@@ -109,19 +123,23 @@ const getColClass = (w) => {
 };
 
 const addTrip = () => {
+  const isRelative = !!props.form.relationshipName || !!props.form.relativeName;
+  const pKey = props.form.cccd || props.form.cccdparent || props.form.id || '';
+  const rKey = props.form.cccdthannhan || props.form.cccd || '';
+
   trips.value.push({
+    id: 'trip_' + Date.now(),
+    cccdchuyendi: 'cd_' + Date.now(),
+    cccdparent: isRelative ? (props.form.cccdparent || '') : pKey,
+    cccdthannhan: isRelative ? rKey : '',
     decisionNumber: '',
     decisionDate: '',
-    decisionIssuer: '',
     departureDate: '',
     arrivalDate: '',
     countryName: '',
-    tripCount: '1',
     purpose: '',
-    fundingName: '',
-    sponsorUnit: '',
-    trainingTime: '',
-    trainingPlace: '',
+    fundingName: 'Ngân sách nhà nước',
+    passportNumber: '',
   });
 };
 

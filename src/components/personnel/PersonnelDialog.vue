@@ -6,8 +6,8 @@
     :style="{ width: '85vw', maxWidth: '1100px' }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
-    <!-- 3 Main Tabs: Cá nhân, Chuyến đi & Thân nhân -->
-    <div style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px; flex-wrap: wrap;">
+    <!-- 2 Main Tabs: Cá nhân & Thân nhân -->
+    <div style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px;">
       <Button
         :label="'1. Thông tin Cán bộ (Cá nhân)'"
         icon="pi pi-user"
@@ -17,26 +17,18 @@
         @click="activeTab = 0"
       />
       <Button
-        :label="'2. Chuyến đi nước ngoài (' + (form.trips?.length || 0) + ')'"
-        icon="pi pi-send"
+        :label="'2. Danh sách Thân nhân (' + (form.relatives?.length || 0) + ')'"
+        icon="pi pi-users"
         :severity="activeTab === 1 ? 'primary' : 'secondary'"
         :text="activeTab !== 1"
         size="small"
         @click="activeTab = 1"
       />
-      <Button
-        :label="'3. Danh sách Thân nhân (' + (form.relatives?.length || 0) + ')'"
-        icon="pi pi-users"
-        :severity="activeTab === 2 ? 'primary' : 'secondary'"
-        :text="activeTab !== 2"
-        size="small"
-        @click="activeTab = 2"
-      />
     </div>
 
     <!-- Fixed Height Tab Contents Area to prevent jumping -->
     <div style="height: 540px; max-height: 65vh; overflow-y: auto; padding-right: 8px;">
-      <!-- TAB 1: CÁN BỘ (Hiển thị toàn bộ các nhóm Cán bộ) -->
+      <!-- TAB 1: CÁN BỘ (Cá nhân + Khối Chuyến đi nước ngoài của Cán bộ) -->
       <div v-show="activeTab === 0" style="display: flex; flex-direction: column; gap: 1.5rem;">
         <template v-for="(grp, gIdx) in (personnelStore.importMappingPersonnel || [])" :key="gIdx">
           <!-- Nhóm Kỷ luật & Lưu ý chính trị -->
@@ -61,15 +53,19 @@
             />
           </div>
         </template>
+
+        <!-- Khối Chuyến đi nước ngoài của Cán bộ (Nằm trực tiếp bên trong Tab Cá nhân) -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-top: 0.5rem;">
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
+            <span>Chuyến đi nước ngoài của Cán bộ ({{ form.trips?.length || 0 }} chuyến)</span>
+          </h4>
+          <PersonnelTravelForm :form="form" />
+        </div>
       </div>
 
-      <!-- TAB 2: CHUYẾN ĐI NƯỚC NGOÀI -->
+      <!-- TAB 2: THÂN NHÂN (Danh sách thân nhân + Chuyến đi riêng bên trong từng thân nhân) -->
       <div v-show="activeTab === 1">
-        <PersonnelTravelForm :form="form" />
-      </div>
-
-      <!-- TAB 3: THÂN NHÂN -->
-      <div v-show="activeTab === 2">
         <PersonnelFamilyForm :form="form" :targetRelativeCode="targetRelativeCode" />
       </div>
     </div>
