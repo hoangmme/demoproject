@@ -1238,7 +1238,7 @@ const loadCustomDashboards = async () => {
       if (local) customDashboards.value = JSON.parse(local);
     }
   } catch (e) {
-    console.error('Error loading custom dashboards in TripsDashboardView:', e);
+    console.error('Error loading custom dashboards in ChildDashboardView:', e);
   }
 };
 

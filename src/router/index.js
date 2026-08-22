@@ -21,7 +21,7 @@ const routes = [
   {
     path: '/trips',
     name: 'Trips',
-    component: () => import('@/views/TripsDashboardView.vue'),
+    component: () => import('@/views/ChildDashboardView.vue'),
     meta: { title: 'Danh sách Chuyến đi', requiresAuth: true },
   },
   {
@@ -60,7 +60,7 @@ const routes = [
   {
     path: '/dashboard-topic/:id',
     name: 'DynamicTopicDashboard',
-    component: () => import('@/views/TripsDashboardView.vue'),
+    component: () => import('@/views/ChildDashboardView.vue'),
     meta: { title: 'Dashboard Chuyên đề', requiresAuth: true },
   },
   {
