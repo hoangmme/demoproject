@@ -214,8 +214,7 @@
     <template v-else-if="col.format === 'dropdown'">
       <select
         v-model="model"
-        class="custom-col-select w-full"
-        style="height: 33px; font-size: 0.82rem;"
+        class="custom-col-select"
       >
         <option value="">-- Chọn --</option>
         <option v-for="opt in parsedOptions" :key="opt" :value="opt">
@@ -449,5 +448,26 @@ const syncSingleConditional = () => {
 <style scoped>
 .dynamic-field-wrapper {
   width: 100%;
+}
+
+.custom-col-select {
+  width: 100% !important;
+  height: 33px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #1e293b;
+  box-sizing: border-box;
+  outline: none;
+  display: block;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.custom-col-select:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
 }
 </style>

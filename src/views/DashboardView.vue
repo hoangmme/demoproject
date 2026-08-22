@@ -192,11 +192,11 @@
     <!-- 2. DEFAULT BREAKDOWN GRIDS (QUỐC GIA & KINH PHÍ)          -->
     <!-- ========================================================= -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
-      <!-- FULL COUNTRIES CARD -->
+      <!-- FULL COUNTRIES CARD (DẠNG BIỂU ĐỒ CỘT ĐỨNG XẾP CHỒNG) -->
       <div class="app-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
           <div style="display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-map-marker" style="color: #16a34a; font-size: 1.05rem;"></i>
+            <i class="pi pi-chart-bar" style="color: #16a34a; font-size: 1.05rem;"></i>
             <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
               Thống kê Toàn bộ Quốc gia ({{ stats.countryList.length }} quốc gia)
             </h3>
@@ -208,64 +208,74 @@
             <InputText
               v-model="countrySearch"
               placeholder="Tìm quốc gia..."
-              style="font-size: 0.75rem; padding: 4px 8px; width: 140px; height: 28px;"
+              style="font-size: 0.75rem; padding: 4px 8px; width: 130px; height: 28px;"
             />
           </div>
         </div>
 
         <!-- Legend for 2 colors -->
-        <div style="display: flex; gap: 12px; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
-          <span style="display: flex; align-items: center; gap: 4px;">
-            <span style="width: 10px; height: 10px; border-radius: 2px; background: #16a34a; display: inline-block;"></span>
-            <strong style="color: #166534;">Cán bộ</strong>
-          </span>
-          <span style="display: flex; align-items: center; gap: 4px;">
-            <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
-            <strong style="color: #6d28d9;">Thân nhân</strong>
-          </span>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
+          <div style="display: flex; gap: 12px;">
+            <span style="display: flex; align-items: center; gap: 4px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: #16a34a; display: inline-block;"></span>
+              <strong style="color: #166534;">Cán bộ (CB)</strong>
+            </span>
+            <span style="display: flex; align-items: center; gap: 4px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
+              <strong style="color: #6d28d9;">Thân nhân (TN)</strong>
+            </span>
+          </div>
+          <span style="font-size: 0.68rem; color: #94a3b8; font-style: italic;">(Nhấp vào cột để xem chi tiết)</span>
         </div>
 
-        <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
-          <div v-if="filteredCountryList.length === 0" style="text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.8rem;">
+        <!-- Vertical Column Chart Area with Horizontal Scroll -->
+        <div style="height: 270px; overflow-x: auto; overflow-y: hidden; display: flex; align-items: flex-end; padding: 12px 6px 4px 6px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: 8px;">
+          <div v-if="filteredCountryList.length === 0" style="width: 100%; text-align: center; color: #94a3b8; padding: 4rem 0; font-size: 0.8rem;">
             Không tìm thấy quốc gia phù hợp.
           </div>
           <div
-            v-for="(item, idx) in filteredCountryList"
-            :key="item.name"
-            class="breakdown-row"
-            @click="openDrilldown('country', `Danh sách đi / ở: ${item.name}`, { countryName: item.name })"
+            v-else
+            style="display: flex; align-items: flex-end; gap: 14px; min-width: 100%; height: 100%; padding-bottom: 2px;"
           >
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="badge-num">#{{ idx + 1 }}</span>
-                <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
+            <div
+              v-for="(item, idx) in filteredCountryList"
+              :key="item.name"
+              class="country-column-item"
+              @click="openDrilldown('country', `Danh sách đi / ở: ${item.name}`, { countryName: item.name })"
+              :title="`${item.name}\n- Cán bộ: ${item.tripsCount} lượt\n- Thân nhân: ${item.relativesCount} người\n- Tổng: ${item.count} lượt`"
+            >
+              <!-- Total Number Badge on Top -->
+              <span class="column-top-total">{{ item.count }}</span>
+
+              <!-- Stacked Bar Track -->
+              <div class="column-bar-track">
+                <!-- Top: Thân nhân (Purple) -->
+                <div
+                  v-if="item.relativesCount > 0"
+                  class="column-segment-tn"
+                  :style="{ height: `${(item.relativesCount / (stats.maxCountry || 1)) * 100}%` }"
+                >
+                  <span v-if="item.relativesCount >= 2" class="segment-label">{{ item.relativesCount }}</span>
+                </div>
+                <!-- Bottom: Cán bộ (Green) -->
+                <div
+                  v-if="item.tripsCount > 0"
+                  class="column-segment-cb"
+                  :style="{ height: `${(item.tripsCount / (stats.maxCountry || 1)) * 100}%` }"
+                >
+                  <span v-if="item.tripsCount >= 2" class="segment-label">{{ item.tripsCount }}</span>
+                </div>
               </div>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span v-if="item.tripsCount > 0" class="badge-pill badge-green" style="font-size: 0.68rem; padding: 1px 6px;">
-                  {{ item.tripsCount }} CB
-                </span>
-                <span v-if="item.relativesCount > 0" class="badge-pill" style="font-size: 0.68rem; padding: 1px 6px; background: #f3e8ff; color: #6d28d9; border: 1px solid #e9d5ff;">
-                  {{ item.relativesCount }} TN
-                </span>
-                <span style="font-size: 0.8rem; font-weight: 700; color: #1e293b;">
-                  Tổng: {{ item.count }}
-                </span>
+
+              <!-- Country Label Below -->
+              <div class="column-label" :title="item.name">
+                {{ item.name }}
               </div>
-            </div>
-            <!-- 2-Color Stacked Progress Bar -->
-            <div style="height: 7px; background: #f1f5f9; border-radius: 4px; overflow: hidden; display: flex;">
-              <div
-                v-if="item.tripsCount > 0"
-                style="height: 100%; background: #16a34a; transition: width 0.4s ease;"
-                :style="{ width: `${(item.tripsCount / stats.maxCountry) * 100}%` }"
-                :title="`Cán bộ: ${item.tripsCount} lượt`"
-              ></div>
-              <div
-                v-if="item.relativesCount > 0"
-                style="height: 100%; background: #7c3aed; transition: width 0.4s ease;"
-                :style="{ width: `${(item.relativesCount / stats.maxCountry) * 100}%` }"
-                :title="`Thân nhân: ${item.relativesCount} người`"
-              ></div>
+              <div class="column-sub-badges">
+                <span v-if="item.tripsCount > 0" style="color: #16a34a; font-weight: 700;">{{ item.tripsCount }}CB</span>
+                <span v-if="item.tripsCount > 0 && item.relativesCount > 0" style="color: #cbd5e1;">·</span>
+                <span v-if="item.relativesCount > 0" style="color: #7c3aed; font-weight: 700;">{{ item.relativesCount }}TN</span>
+              </div>
             </div>
           </div>
         </div>
@@ -2949,6 +2959,90 @@ onMounted(async () => {
 .clickable-row {
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+/* Vertical Stacked Column Chart styles */
+.country-column-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 58px;
+  min-width: 58px;
+  height: 100%;
+  justify-content: flex-end;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  padding: 4px 2px;
+  border-radius: 6px;
+}
+
+.country-column-item:hover {
+  transform: translateY(-4px);
+  background-color: rgba(226, 232, 240, 0.6);
+}
+
+.column-top-total {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.column-bar-track {
+  width: 28px;
+  height: 155px;
+  background: #f1f5f9;
+  border-radius: 6px 6px 2px 2px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+  border: 1px solid #e2e8f0;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.column-segment-cb {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: height 0.4s ease;
+}
+
+.column-segment-tn {
+  background: linear-gradient(180deg, #9333ea 0%, #7c3aed 100%);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: height 0.4s ease;
+}
+
+.segment-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.column-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #334155;
+  margin-top: 6px;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.column-sub-badges {
+  font-size: 0.63rem;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .clickable-row:hover {
