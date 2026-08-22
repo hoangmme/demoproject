@@ -994,44 +994,76 @@
               Chưa có thẻ thống kê nào. Nhấp vào <b>"+ Thêm Khối Thống kê"</b> để tạo thẻ đếm!
             </div>
 
-            <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
+            <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
               <div
                 v-for="(card, cIdx) in currentSelectedDashboard.metricCards"
                 :key="card.id || cIdx"
-                style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; background: #fafafa; display: flex; flex-direction: column; gap: 6px;"
+                style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #fafafa; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
               >
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <!-- Tiêu đề thẻ & Nút xóa -->
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                   <input
                     v-model="card.label"
-                    placeholder="Tên thẻ (VD: Toàn bộ)"
-                    style="font-size: 0.8rem; font-weight: 700; color: #1e293b; border: 1px solid transparent; background: transparent; padding: 2px 4px; border-radius: 4px; width: 80%;"
-                    onfocus="this.style.borderColor='#cbd5e1'; this.style.background='#fff';"
-                    onblur="this.style.borderColor='transparent'; this.style.background='transparent';"
+                    placeholder="Tên thẻ (VD: Có vấn đề chính trị, Đi Nhật...)"
+                    style="font-size: 0.82rem; font-weight: 700; color: #1e293b; border: 1px solid #cbd5e1; background: #fff; padding: 3px 6px; border-radius: 4px; flex: 1;"
                   />
+                  <select v-model="card.color" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; width: 100px;">
+                    <option value="blue">🔵 Xanh dương</option>
+                    <option value="green">🟢 Xanh lá</option>
+                    <option value="amber">🟠 Vàng cam</option>
+                    <option value="red">🔴 Đỏ</option>
+                    <option value="purple">🟣 Tím</option>
+                  </select>
                   <button
                     type="button"
                     @click="removeMetricCard(currentSelectedDashboard, cIdx)"
                     style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 2px;"
                     title="Xóa thẻ này"
                   >
-                    <i class="pi pi-times" style="font-size: 0.75rem;"></i>
+                    <i class="pi pi-trash" style="font-size: 0.8rem;"></i>
                   </button>
                 </div>
 
-                <div style="display: flex; gap: 6px; align-items: center;">
+                <!-- Chọn Cột để đếm -->
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Cột cần đếm / lọc:</label>
+                  <select v-model="card.field" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
+                    <option value="">-- Toàn bộ danh sách (Đếm tất cả) --</option>
+                    <option v-for="col in availableDashboardCols" :key="col.id" :value="col.id">
+                      {{ col.label }} (mã: {{ col.id }})
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Điều kiện đếm / lọc -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;" v-if="card.field">
+                  <div>
+                    <label style="font-size: 0.68rem; font-weight: 600; color: #475569;">Cách đếm:</label>
+                    <select v-model="card.operator" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px;">
+                      <option value="has_value">Có dữ liệu (khác rỗng)</option>
+                      <option value="equals">Khớp chính xác (=)</option>
+                      <option value="contains">Chứa từ khóa</option>
+                      <option value="completed" v-if="currentSelectedDashboard.source === 'trips'">Đã về nước</option>
+                      <option value="abroad" v-if="currentSelectedDashboard.source === 'trips'">Đang ở nước ngoài</option>
+                      <option value="overdue" v-if="currentSelectedDashboard.source === 'trips'">Quá hạn chưa về</option>
+                    </select>
+                  </div>
+                  <div v-if="card.operator === 'equals' || card.operator === 'contains'">
+                    <label style="font-size: 0.68rem; font-weight: 600; color: #475569;">Giá trị so sánh:</label>
+                    <input
+                      v-model="card.value"
+                      placeholder="Nhập giá trị..."
+                      style="font-size: 0.75rem; border: 1px solid #cbd5e1; background: #fff; padding: 3px 6px; border-radius: 4px; width: 100%;"
+                    />
+                  </div>
+                </div>
+                <div v-else-if="currentSelectedDashboard.source === 'trips'">
+                  <label style="font-size: 0.68rem; font-weight: 600; color: #475569;">Trạng thái chuyến đi:</label>
                   <select v-model="card.condition" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px;">
                     <option value="all">Toàn bộ</option>
                     <option value="completed">Đã về nước</option>
                     <option value="abroad">Đang ở nước ngoài</option>
                     <option value="overdue">Quá hạn chưa về</option>
-                  </select>
-
-                  <select v-model="card.color" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; width: 90px;">
-                    <option value="blue">🔵 Xanh dương</option>
-                    <option value="green">🟢 Xanh lá</option>
-                    <option value="amber">🟠 Vàng cam</option>
-                    <option value="red">🔴 Đỏ</option>
-                    <option value="purple">🟣 Tím</option>
                   </select>
                 </div>
               </div>
@@ -1044,15 +1076,33 @@
               <div>
                 <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
                   <i class="pi pi-table" style="color: #16a34a;"></i>
-                  2. Cấu hình Cột hiển thị trên Bảng danh sách trực tiếp ({{ (currentSelectedDashboard.columns || []).length }} cột):
+                  2. Cấu hình Cột hiển thị trên Bảng danh sách trực tiếp ({{ (currentSelectedDashboard.columns || []).length }} / {{ availableDashboardCols.length }} cột):
                 </span>
                 <span style="font-size: 0.72rem; color: #64748b;">
-                  Tích chọn các cột từ nguồn dữ liệu để hiển thị trực tiếp trên bảng dữ liệu bên dưới thay vì popup.
+                  Tích chọn các cột từ toàn bộ {{ availableDashboardCols.length }} cột của nguồn dữ liệu để hiển thị trực tiếp trên bảng dữ liệu.
                 </span>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <Button
+                  label="Chọn tất cả"
+                  size="small"
+                  text
+                  severity="primary"
+                  @click="currentSelectedDashboard.columns = availableDashboardCols.map(c => c.id)"
+                  style="font-size: 0.75rem; padding: 2px 6px;"
+                />
+                <Button
+                  label="Bỏ chọn"
+                  size="small"
+                  text
+                  severity="secondary"
+                  @click="currentSelectedDashboard.columns = []"
+                  style="font-size: 0.75rem; padding: 2px 6px;"
+                />
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; max-height: 240px; overflow-y: auto; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; max-height: 260px; overflow-y: auto; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
               <label
                 v-for="col in availableDashboardCols"
                 :key="col.id"

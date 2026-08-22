@@ -57,11 +57,12 @@
     <!-- Quick Metric Pill Cards (Top Row) -->
     <div style="display: flex; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap;">
       <div
-        v-for="card in activeMetricCards"
-        :key="card.id"
+        v-for="(card, cIdx) in activeMetricCards"
+        :key="card.id || cIdx"
         class="quick-stat-card"
-        :class="{ 'stat-active': statusFilter === card.condition }"
-        @click="statusFilter = card.condition"
+        :class="{ 'stat-active': activeMetricCardId === (card.id || card.label || cIdx) }"
+        @click="toggleMetricCardFilter(card, cIdx)"
+        style="cursor: pointer;"
       >
         <div style="display: flex; align-items: center; gap: 8px;">
           <span :class="['dot-indicator', `dot-${card.color || 'blue'}`]"></span>
@@ -323,18 +324,34 @@
     <Dialog
       v-model:visible="isColumnPickerOpen"
       modal
-      header="Tùy chọn cột hiển thị trên bảng Chuyến đi"
-      :style="{ width: '540px' }"
+      :header="`Chọn cột hiển thị (${selectedColIds.length} / ${allAvailableColumnsList.length} cột)`"
+      :style="{ width: '680px' }"
     >
-      <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 1rem;">
-        Đánh dấu chọn các cột thông tin cần xuất hiện trên bảng dữ liệu:
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 8px; flex-wrap: wrap;">
+        <span style="font-size: 0.8rem; color: #64748b;">
+          Đánh dấu chọn các cột thông tin từ toàn bộ <b>{{ allAvailableColumnsList.length }} cột</b> để xuất hiện trên bảng dữ liệu:
+        </span>
+        <div style="display: flex; gap: 6px;">
+          <Button label="Chọn tất cả" size="small" text severity="primary" @click="selectedColIds = allAvailableColumnsList.map(c => c.id)" style="font-size: 0.75rem; padding: 2px 6px;" />
+          <Button label="Bỏ chọn" size="small" text severity="secondary" @click="selectedColIds = []" style="font-size: 0.75rem; padding: 2px 6px;" />
+          <Button label="Mặc định (10 cột)" size="small" text severity="info" @click="resetDefaultColumns" style="font-size: 0.75rem; padding: 2px 6px;" />
+        </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 360px; overflow-y: auto; padding: 4px;">
+      <div style="margin-bottom: 8px;">
+        <InputText
+          v-model="columnSearchQuery"
+          placeholder="🔍 Tìm nhanh tên cột..."
+          size="small"
+          style="width: 100%; font-size: 0.8rem;"
+        />
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 380px; overflow-y: auto; padding: 4px; border: 1px solid #f1f5f9; border-radius: 8px; background: #f8fafc;">
         <label
-          v-for="col in allColumns"
+          v-for="col in filteredPickerColumns"
           :key="col.id"
-          style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer; padding: 6px 8px; border-radius: 6px; border: 1px solid #f1f5f9; background: #fafafa;"
+          style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0; background: #ffffff;"
         >
           <input
             type="checkbox"
@@ -342,13 +359,15 @@
             v-model="selectedColIds"
             style="accent-color: #1e3a8a;"
           />
-          <span style="font-weight: 500; color: #1e293b;">{{ col.label }}</span>
+          <span style="font-weight: 500; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="col.label">
+            {{ col.label }}
+          </span>
         </label>
       </div>
 
       <template #footer>
-        <Button label="Mặc định" severity="secondary" text size="small" @click="resetDefaultColumns" />
-        <Button label="Đóng" severity="primary" size="small" @click="saveColumnSelection" />
+        <Button label="Khôi phục Mặc định" severity="secondary" text size="small" @click="resetDefaultColumns" />
+        <Button label="Đóng & Áp dụng" severity="primary" size="small" @click="saveColumnSelection" />
       </template>
     </Dialog>
 
@@ -538,12 +557,50 @@ const activeMetricCards = computed(() => {
   ];
 });
 
+const activeMetricCardId = ref('all');
+
+const matchCardCondition = (item, card) => {
+  if (!card) return true;
+  // 1. If card has a specific field configured
+  if (card.field) {
+    const fieldVal = item[card.field] !== undefined && item[card.field] !== null
+      ? String(item[card.field]).trim()
+      : (item.rawTrip?.[card.field] || item.rawPerson?.[card.field] || item.custom_data?.[card.field] || item.rawPerson?.custom_data?.[card.field] || '');
+    
+    const op = card.operator || 'has_value';
+    if (op === 'has_value') {
+      return !!fieldVal;
+    }
+    if (op === 'equals') {
+      return String(fieldVal).toLowerCase() === String(card.value || '').trim().toLowerCase();
+    }
+    if (op === 'contains') {
+      return String(fieldVal).toLowerCase().includes(String(card.value || '').trim().toLowerCase());
+    }
+  }
+
+  // 2. Fallback to status / trip condition
+  const cond = card.condition || card.operator || 'all';
+  if (cond === 'completed') return !item.isAbroad && !item.isOverdue;
+  if (cond === 'abroad') return item.isAbroad && !item.isOverdue;
+  if (cond === 'overdue') return item.isOverdue;
+  return true;
+};
+
 const getCardMetricValue = (card) => {
-  const cond = card.condition || 'all';
-  if (cond === 'completed') return tripStats.value.completed;
-  if (cond === 'abroad') return tripStats.value.abroad;
-  if (cond === 'overdue') return tripStats.value.overdue;
-  return tripStats.value.total;
+  if (!card) return 0;
+  return unifiedTripsList.value.filter((item) => matchCardCondition(item, card)).length;
+};
+
+const toggleMetricCardFilter = (card, cIdx) => {
+  const cardKey = card.id || card.label || cIdx;
+  if (activeMetricCardId.value === cardKey) {
+    activeMetricCardId.value = 'all';
+    statusFilter.value = 'all';
+  } else {
+    activeMetricCardId.value = cardKey;
+    if (card.condition) statusFilter.value = card.condition;
+  }
 };
 
 // Filters
@@ -563,6 +620,7 @@ const pageSize = ref(30);
 
 // Dialogs
 const isColumnPickerOpen = ref(false);
+const columnSearchQuery = ref('');
 const isPersonnelDialogOpen = ref(false);
 const activePersonData = ref(null);
 
@@ -594,11 +652,55 @@ const DEFAULT_TRIP_COLUMNS = [
   { id: 'status', label: 'Tiến độ Đi - Về', width: '140px' },
 ];
 
-const allColumns = ref([...DEFAULT_TRIP_COLUMNS]);
+const allAvailableColumnsList = computed(() => {
+  const base = [...DEFAULT_TRIP_COLUMNS];
+  const seen = new Set(base.map((c) => c.id));
+  const list = [...base];
+
+  // Nạp toàn bộ cột từ Cấu hình Chuyến đi
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+        seen.add(c.id);
+        list.push({ id: c.id, label: c.label || c.id, width: '150px' });
+      }
+    });
+  });
+
+  // Nạp toàn bộ cột từ Cấu hình Cán bộ
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+        seen.add(c.id);
+        list.push({ id: c.id, label: `[CB] ${c.label || c.id}`, width: '150px' });
+      }
+    });
+  });
+
+  // Nạp toàn bộ cột từ Cấu hình Thân nhân
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+        seen.add(c.id);
+        list.push({ id: c.id, label: `[TN] ${c.label || c.id}`, width: '150px' });
+      }
+    });
+  });
+
+  return list;
+});
+
+const filteredPickerColumns = computed(() => {
+  if (!columnSearchQuery.value.trim()) return allAvailableColumnsList.value;
+  const q = columnSearchQuery.value.trim().toLowerCase();
+  return allAvailableColumnsList.value.filter((c) => (c.label || '').toLowerCase().includes(q) || (c.id || '').toLowerCase().includes(q));
+});
+
+const allColumns = computed(() => allAvailableColumnsList.value);
 const selectedColIds = ref(DEFAULT_TRIP_COLUMNS.map((c) => c.id));
 
 const visibleColumns = computed(() => {
-  return allColumns.value.filter((c) => selectedColIds.value.includes(c.id));
+  return allAvailableColumnsList.value.filter((c) => selectedColIds.value.includes(c.id));
 });
 
 // Build unified list of trips from both Personnel.trips and Relatives
@@ -757,6 +859,14 @@ const availableFundings = computed(() => {
 const filteredList = computed(() => {
   let list = [...unifiedTripsList.value];
 
+  // 0. Active Metric Card Filter (Top KPI Pill)
+  if (activeMetricCardId.value && activeMetricCardId.value !== 'all') {
+    const targetCard = activeMetricCards.value.find((c, idx) => (c.id || c.label || idx) === activeMetricCardId.value);
+    if (targetCard) {
+      list = list.filter((t) => matchCardCondition(t, targetCard));
+    }
+  }
+
   // 1. Status Filter
   if (statusFilter.value === 'completed') {
     list = list.filter((t) => !t.isAbroad && !t.isOverdue);
@@ -838,7 +948,19 @@ const formatDisplayDate = (dStr) => {
 };
 
 const getCellValue = (trip, colId) => {
-  return trip[colId] || '-';
+  if (trip[colId] !== undefined && trip[colId] !== null && trip[colId] !== '') {
+    return trip[colId];
+  }
+  if (trip.rawTrip && trip.rawTrip[colId] !== undefined && trip.rawTrip[colId] !== null && trip.rawTrip[colId] !== '') {
+    return trip.rawTrip[colId];
+  }
+  if (trip.rawPerson && trip.rawPerson[colId] !== undefined && trip.rawPerson[colId] !== null && trip.rawPerson[colId] !== '') {
+    return trip.rawPerson[colId];
+  }
+  if (trip.rawPerson?.custom_data && trip.rawPerson.custom_data[colId] !== undefined && trip.rawPerson.custom_data[colId] !== null) {
+    return trip.rawPerson.custom_data[colId];
+  }
+  return '-';
 };
 
 const getStatusBadgeClass = (trip) => {
