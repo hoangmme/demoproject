@@ -1193,16 +1193,32 @@ const drilldownDisplayPersonnelColumns = computed(() => {
   });
 
   const selectedIds = customDrilldownColsPersonnel.value.length > 0
-    ? customDrilldownColsPersonnel.value
+    ? [...customDrilldownColsPersonnel.value]
     : (personnelStore.visibleColumns || []).filter((id) => id !== 'stt' && id !== 'code' && id !== 'name');
 
-  return selectedIds.map((id) => {
+  const baseCols = selectedIds.map((id) => {
     if (id === 'code') return { id: 'code', label: 'Mã CB' };
     const cfg = map[id];
     if (cfg && cfg.label) return { ...cfg, id: cfg.id, label: cfg.label };
     const found = personnelStore.allAvailableColumns.find((c) => c.id === id);
     return found ? { ...found } : { id, label: id };
   });
+
+  // Tự động đính kèm cột dữ liệu được bấm vào ở cuối bảng nếu chưa có
+  if (drilldownTargetCriterion.value && drilldownTargetCriterion.value.columnId) {
+    const targetId = drilldownTargetCriterion.value.columnId;
+    const exists = baseCols.some((c) => c.id === targetId);
+    if (!exists) {
+      const cfg = map[targetId];
+      baseCols.push({
+        id: targetId,
+        label: drilldownTargetCriterion.value.label || cfg?.label || targetId,
+        isDynamicTargetCol: true,
+      });
+    }
+  }
+
+  return baseCols;
 });
 
 const drilldownDisplayRelativeColumns = computed(() => {
@@ -1214,10 +1230,10 @@ const drilldownDisplayRelativeColumns = computed(() => {
   });
 
   const selectedIds = customDrilldownColsRelatives.value.length > 0
-    ? customDrilldownColsRelatives.value
+    ? [...customDrilldownColsRelatives.value]
     : (personnelStore.visibleRelativeColumns || []).filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo');
 
-  return selectedIds.map((id) => {
+  const baseCols = selectedIds.map((id) => {
     if (id === 'code') return { id: 'code', label: 'Mã TN' };
     if (id === 'cccd_can_bo') return { id: 'cccd_can_bo', label: 'CCCD Cán bộ' };
     const cfg = map[id];
@@ -1225,6 +1241,22 @@ const drilldownDisplayRelativeColumns = computed(() => {
     const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
     return found ? { ...found } : { id, label: id };
   });
+
+  // Tự động đính kèm cột dữ liệu được bấm vào ở cuối bảng nếu chưa có
+  if (drilldownTargetCriterion.value && drilldownTargetCriterion.value.columnId) {
+    const targetId = drilldownTargetCriterion.value.columnId;
+    const exists = baseCols.some((c) => c.id === targetId);
+    if (!exists) {
+      const cfg = map[targetId];
+      baseCols.push({
+        id: targetId,
+        label: drilldownTargetCriterion.value.label || cfg?.label || targetId,
+        isDynamicTargetCol: true,
+      });
+    }
+  }
+
+  return baseCols;
 });
 
 const activePersonnelColumns = computed(() => {
