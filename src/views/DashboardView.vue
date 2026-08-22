@@ -2179,18 +2179,26 @@ const isWithinTimeFilter = (dateStr) => {
 
 const getTripValue = (trip, colId) => {
   if (!trip || !colId) return '';
-  if (trip[colId] !== undefined && trip[colId] !== null && String(trip[colId]).trim() !== '') {
-    return String(trip[colId]).trim();
+  let raw = trip[colId];
+  if (raw === undefined || raw === null || raw === '') {
+    if (trip.custom_data) {
+      try {
+        const cd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data) : trip.custom_data;
+        if (cd) raw = cd[colId];
+      } catch (e) {}
+    }
   }
-  if (trip.custom_data) {
-    try {
-      const cd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data) : trip.custom_data;
-      if (cd && cd[colId] !== undefined && cd[colId] !== null && String(cd[colId]).trim() !== '') {
-        return String(cd[colId]).trim();
-      }
-    } catch (e) {}
+  if (raw === undefined || raw === null || raw === '') return '';
+  if (typeof raw === 'object') {
+    if (Array.isArray(raw)) {
+      return raw
+        .map((x) => (typeof x === 'object' && x !== null ? (x.name || x.label || x.col1 || x.value || JSON.stringify(x)) : x))
+        .filter(Boolean)
+        .join(', ');
+    }
+    return raw.name || raw.label || raw.value || JSON.stringify(raw);
   }
-  return '';
+  return String(raw).trim();
 };
 
 const stats = computed(() => {
@@ -2288,9 +2296,11 @@ const stats = computed(() => {
     }
 
     // 4. Funding aggregation (Personnel)
+    const pObj = t.personnelId ? pList.find((p) => p.id === t.personnelId) : null;
     const fVal = getTripValue(t, colConfig.value.funding) ||
-                 (t.personnelId && pList.find((p) => p.id === t.personnelId)?.funding2) ||
-                 (t.personnelId && pList.find((p) => p.id === t.personnelId)?.custom_data?.funding2) ||
+                 (pObj && getRowFieldValue(pObj, colConfig.value.funding)) ||
+                 (pObj && getTripValue(pObj, colConfig.value.funding)) ||
+                 (pObj && (pObj.funding2 || pObj.custom_data?.funding2 || pObj.funding)) ||
                  t.fundingName || t.funding || '';
 
     const budgetVal = colConfig.value.fundingBudget ? getTripValue(t, colConfig.value.fundingBudget) : '';
@@ -2304,30 +2314,31 @@ const stats = computed(() => {
     let countedOther = false;
 
     if (fVal && fVal !== 'Chưa rõ' && fVal !== '-') {
-      const parts = String(fVal).split(/[,;+]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
-      parts.forEach((part) => {
-        if (part.includes('ngân sách') || part.includes('ngan sach')) {
+      const parts = String(fVal).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
+      parts.forEach((rawPart) => {
+        const part = rawPart.toLowerCase();
+        if (part.includes('ngân sách') || part.includes('ngan sach') || part.includes('budget')) {
           if (!fundings['Ngân sách nhà nước']) fundings['Ngân sách nhà nước'] = { trips: 0, relatives: 0, total: 0 };
           fundings['Ngân sách nhà nước'].trips += 1;
           fundings['Ngân sách nhà nước'].total += 1;
           countedBudget = true;
-        } else if (part.includes('tài trợ') || part.includes('tai tro') || part.includes('học bổng') || part.includes('hoc bong')) {
+        } else if (part.includes('tài trợ') || part.includes('tai tro') || part.includes('học bổng') || part.includes('hoc bong') || part.includes('sponsor') || part.includes('scholarship')) {
           if (!fundings['Tài trợ']) fundings['Tài trợ'] = { trips: 0, relatives: 0, total: 0 };
           fundings['Tài trợ'].trips += 1;
           fundings['Tài trợ'].total += 1;
           countedSponsor = true;
-        } else if (part.includes('tự túc') || part.includes('tu tuc')) {
+        } else if (part.includes('tự túc') || part.includes('tu tuc') || part.includes('self')) {
           if (!fundings['Tự túc']) fundings['Tự túc'] = { trips: 0, relatives: 0, total: 0 };
           fundings['Tự túc'].trips += 1;
           fundings['Tự túc'].total += 1;
           countedSelf = true;
-        } else if (part.includes('khác') || part.includes('khac')) {
+        } else if (part.includes('khác') || part.includes('khac') || part.includes('other')) {
           if (!fundings['Khác']) fundings['Khác'] = { trips: 0, relatives: 0, total: 0 };
           fundings['Khác'].trips += 1;
           fundings['Khác'].total += 1;
           countedOther = true;
-        } else if (part) {
-          const origKey = String(fVal).trim();
+        } else if (rawPart) {
+          const origKey = rawPart.charAt(0).toUpperCase() + rawPart.slice(1);
           if (!fundings[origKey]) fundings[origKey] = { trips: 0, relatives: 0, total: 0 };
           fundings[origKey].trips += 1;
           fundings[origKey].total += 1;
@@ -2359,7 +2370,7 @@ const stats = computed(() => {
 
   // Also aggregate Relatives Country & Funding strictly by configured columns
   rList.forEach((r) => {
-    const rc = getRowFieldValue(r, colConfig.value.countryRelative);
+    const rc = getRowFieldValue(r, colConfig.value.countryRelative) || getTripValue(r, colConfig.value.countryRelative);
     if (rc && String(rc).trim() && String(rc).trim() !== '-' && String(rc).trim() !== 'Chưa rõ') {
       const cleanRc = String(rc).trim();
       if (!countries[cleanRc]) countries[cleanRc] = { trips: 0, relatives: 0, total: 0 };
@@ -2367,7 +2378,9 @@ const stats = computed(() => {
       countries[cleanRc].total += 1;
     }
 
-    const rfVal = getRowFieldValue(r, colConfig.value.fundingRelative) || r.fundingName || r.funding || r.custom_data?.fundingName || '';
+    const rfVal = getRowFieldValue(r, colConfig.value.fundingRelative) ||
+                  getTripValue(r, colConfig.value.fundingRelative) ||
+                  r.fundingName || r.funding || r.custom_data?.fundingName || '';
     const rBudget = colConfig.value.fundingRelativeBudget ? getRowFieldValue(r, colConfig.value.fundingRelativeBudget) : '';
     const rSponsor = colConfig.value.fundingRelativeSponsor ? getRowFieldValue(r, colConfig.value.fundingRelativeSponsor) : '';
     const rSelf = colConfig.value.fundingRelativeSelf ? getRowFieldValue(r, colConfig.value.fundingRelativeSelf) : '';

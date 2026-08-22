@@ -31,19 +31,17 @@
 
       <div class="app-nav-heading">Báo cáo Phụ lục</div>
 
-      <router-link to="/pl1" class="app-nav-item">
-        <i class="pi pi-globe"></i>
-        <span>PL1: Đi nước ngoài</span>
-      </router-link>
-
-      <router-link to="/pl2" class="app-nav-item">
-        <i class="pi pi-heart"></i>
-        <span>PL2: Thân nhân NN</span>
-      </router-link>
-
-      <router-link to="/pl3" class="app-nav-item">
-        <i class="pi pi-exclamation-triangle"></i>
-        <span>PL3: Lịch sử & Lưu ý</span>
+      <router-link
+        v-for="pl in dynamicAppendices"
+        :key="pl.id"
+        :to="getAppendixRoute(pl)"
+        class="app-nav-item"
+        :title="pl.title"
+      >
+        <i :class="getAppendixIcon(pl.source)"></i>
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          {{ getAppendixNavLabel(pl) }}
+        </span>
       </router-link>
 
       <template v-if="authStore.isAdmin">
@@ -61,7 +59,7 @@
 
         <router-link to="/settings-import" class="app-nav-item">
           <i class="pi pi-cog"></i>
-          <span>Cấu hình Cột Import</span>
+          <span>Cấu hình Cột & Phụ lục</span>
         </router-link>
       </template>
     </nav>
@@ -69,7 +67,56 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { getAppSettings } from '@/api/settings';
 
 const authStore = useAuthStore();
+
+const DEFAULT_APPENDICES = [
+  { id: 'pl1', code: 'PL1', title: 'PL1: Đi nước ngoài', source: 'trips' },
+  { id: 'pl2', code: 'PL2', title: 'PL2: Thân nhân NN', source: 'relatives' },
+  { id: 'pl3', code: 'PL3', title: 'PL3: Lịch sử & Lưu ý', source: 'personnel' },
+];
+
+const dynamicAppendices = ref([...DEFAULT_APPENDICES]);
+
+const loadSidebarAppendices = async () => {
+  try {
+    const saved = await getAppSettings('custom_appendices_config', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      dynamicAppendices.value = saved;
+    } else {
+      const local = localStorage.getItem('custom_appendices_config');
+      if (local) dynamicAppendices.value = JSON.parse(local);
+    }
+  } catch (e) {
+    console.error('Error loading sidebar appendices:', e);
+  }
+};
+
+onMounted(() => {
+  loadSidebarAppendices();
+});
+
+const getAppendixRoute = (pl) => {
+  if (pl.id === 'pl1') return '/pl1';
+  if (pl.id === 'pl2') return '/pl2';
+  if (pl.id === 'pl3') return '/pl3';
+  return `/appendix/${pl.id}`;
+};
+
+const getAppendixIcon = (source) => {
+  if (source === 'trips') return 'pi pi-globe';
+  if (source === 'relatives') return 'pi pi-heart';
+  return 'pi pi-exclamation-triangle';
+};
+
+const getAppendixNavLabel = (pl) => {
+  if (pl.code) {
+    const cleanTitle = (pl.title || '').replace(/^Phụ lục \d+:\s*/i, '').replace(/^PL\d+:\s*/i, '').trim();
+    return `${pl.code}: ${cleanTitle || pl.title}`;
+  }
+  return pl.title || 'Phụ lục';
+};
 </script>
