@@ -736,68 +736,37 @@
           </div>
         </div>
 
-        <!-- Setting 2: Country ID (Trip & Relatives) -->
-        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block;">
+        <!-- Setting 2: Country ID (Trip) -->
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
             2. Cài đặt Cột Quốc gia (Đếm & Biểu đồ Toàn bộ Quốc gia):
           </label>
-          <div>
-            <span style="font-size: 0.72rem; color: #64748b;">a) Cột Quốc gia đến (Bảng Chuyến đi):</span>
-            <div style="display: flex; gap: 8px; margin-top: 2px;">
-              <InputText v-model="tempConfig.country" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.78rem;" />
-              <select class="settings-select" @change="tempConfig.country = $event.target.value">
-                <option value="">-- Chọn cột Chuyến đi --</option>
-                <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-              </select>
-            </div>
+          <div style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px;">
+            💡 Hệ thống tự động bóc tách và phân loại số lượt đi của Cán bộ (CB) hoặc Thân nhân (TN) dựa theo CCCD/Mã người đi trong chuyến đi.
           </div>
-          <div>
-            <span style="font-size: 0.72rem; color: #64748b;">b) Cột Quốc gia định cư / lưu trú (Bảng Thân nhân):</span>
-            <div style="display: flex; gap: 8px; margin-top: 2px;">
-              <InputText v-model="tempConfig.countryRelative" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.78rem;" />
-              <select class="settings-select" @change="tempConfig.countryRelative = $event.target.value">
-                <option value="">-- Chọn cột Thân nhân --</option>
-                <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-              </select>
-            </div>
+          <div style="display: flex; gap: 8px;">
+            <InputText v-model="tempConfig.country" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.8rem;" />
+            <select class="settings-select" @change="tempConfig.country = $event.target.value">
+              <option value="">-- Chọn cột Quốc gia (Chuyến đi) --</option>
+              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+            </select>
           </div>
         </div>
 
-        <!-- Setting 3: Funding ID (2 Dropdowns: Chuyến đi & Thân nhân) -->
-        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
-          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block;">
+        <!-- Setting 3: Funding ID (Trip) -->
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
             3. Cài đặt Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí & Biểu đồ):
           </label>
-          <div style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 6px 10px; border-radius: 6px;">
+          <div style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px;">
             💡 Hệ thống tự động so khớp CCCD chuyến đi với Cán bộ hoặc Thân nhân và gom vào 4 nhóm: Ngân sách nhà nước, Tài trợ, Tự túc, Khác.
           </div>
-
-          <!-- A. Chuyến đi -->
-          <div>
-            <span style="font-size: 0.74rem; font-weight: 600; color: #0369a1; display: block; margin-bottom: 2px;">
-              a) Cột Nguồn Kinh phí (Bảng Chuyến đi):
-            </span>
-            <div style="display: flex; gap: 8px;">
-              <InputText v-model="tempConfig.funding" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.78rem;" />
-              <select class="settings-select" @change="tempConfig.funding = $event.target.value">
-                <option value="">-- Chọn cột Chuyến đi --</option>
-                <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- B. Thân nhân -->
-          <div>
-            <span style="font-size: 0.74rem; font-weight: 600; color: #6d28d9; display: block; margin-bottom: 2px;">
-              b) Cột Nguồn Kinh phí / Học bổng (Bảng Thân nhân nếu có):
-            </span>
-            <div style="display: flex; gap: 8px;">
-              <InputText v-model="tempConfig.fundingRelative" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.78rem;" />
-              <select class="settings-select" @change="tempConfig.fundingRelative = $event.target.value">
-                <option value="">-- Chọn cột Thân nhân --</option>
-                <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-              </select>
-            </div>
+          <div style="display: flex; gap: 8px;">
+            <InputText v-model="tempConfig.funding" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.8rem;" />
+            <select class="settings-select" @change="tempConfig.funding = $event.target.value">
+              <option value="">-- Chọn cột Nguồn kinh phí (Chuyến đi) --</option>
+              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+            </select>
           </div>
         </div>
 
@@ -2405,10 +2374,8 @@ const stats = computed(() => {
       countries[cleanRc].total += 1;
     }
 
-    const rfVal = getRowFieldValue(r, colConfig.value.fundingRelative) ||
-                  getTripValue(r, colConfig.value.fundingRelative) ||
+    const rfVal = getRowFieldValue(r, colConfig.value.funding || 'fundingName') ||
                   r.fundingName || r.funding || r.kinhphiTN || r.custom_data?.kinhphiTN || r.custom_data?.fundingName || '';
-    let countedROther = false;
 
     if (rfVal && String(rfVal).trim() && String(rfVal).trim() !== '-' && String(rfVal).trim() !== 'Chưa rõ') {
       const parts = String(rfVal).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
@@ -2418,29 +2385,8 @@ const stats = computed(() => {
           if (!fundings[norm]) fundings[norm] = { trips: 0, relatives: 0, total: 0 };
           fundings[norm].relatives += 1;
           fundings[norm].total += 1;
-          if (norm === 'Ngân sách nhà nước') countedRBudget = true;
-          if (norm === 'Tài trợ') countedRSponsor = true;
-          if (norm === 'Tự túc') countedRSelf = true;
-          if (norm === 'Khác') countedROther = true;
         }
       });
-    }
-
-    if (!countedRBudget && rBudget && String(rBudget).trim() && String(rBudget).trim() !== '-') {
-      fundings['Ngân sách nhà nước'].relatives += 1;
-      fundings['Ngân sách nhà nước'].total += 1;
-    }
-    if (!countedRSponsor && rSponsor && String(rSponsor).trim() && String(rSponsor).trim() !== '-') {
-      fundings['Tài trợ'].relatives += 1;
-      fundings['Tài trợ'].total += 1;
-    }
-    if (!countedRSelf && rSelf && String(rSelf).trim() && String(rSelf).trim() !== '-') {
-      fundings['Tự túc'].relatives += 1;
-      fundings['Tự túc'].total += 1;
-    }
-    if (!countedROther && rOther && String(rOther).trim() && String(rOther).trim() !== '-') {
-      fundings['Khác'].relatives += 1;
-      fundings['Khác'].total += 1;
     }
   });
 
