@@ -104,180 +104,7 @@
     </div>
 
     <!-- ========================================================= -->
-    <!-- 2. DEFAULT BREAKDOWN GRIDS (QUỐC GIA & KINH PHÍ)          -->
-    <!-- ========================================================= -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
-      <!-- FULL COUNTRIES CARD (DẠNG BIỂU ĐỒ CỘT ĐỨNG XẾP CHỒNG) -->
-      <div class="app-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-chart-bar" style="color: #16a34a; font-size: 1.05rem;"></i>
-            <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
-              Thống kê Toàn bộ Quốc gia ({{ stats.countryList.length }} quốc gia)
-            </h3>
-            <button type="button" class="btn-card-setting" @click="openSingleSetting('country')" title="Cài đặt cột Quốc gia">
-              <i class="pi pi-cog"></i>
-            </button>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <InputText
-              v-model="countrySearch"
-              placeholder="Tìm quốc gia..."
-              style="font-size: 0.75rem; padding: 4px 8px; width: 130px; height: 28px;"
-            />
-          </div>
-        </div>
-
-        <!-- Legend for 2 colors -->
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
-          <div style="display: flex; gap: 12px;">
-            <span style="display: flex; align-items: center; gap: 4px;">
-              <span style="width: 10px; height: 10px; border-radius: 2px; background: #16a34a; display: inline-block;"></span>
-              <strong style="color: #166534;">Cán bộ (CB)</strong>
-            </span>
-            <span style="display: flex; align-items: center; gap: 4px;">
-              <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
-              <strong style="color: #6d28d9;">Thân nhân (TN)</strong>
-            </span>
-          </div>
-          <span style="font-size: 0.68rem; color: #94a3b8; font-style: italic;">(Nhấp vào cột để xem chi tiết)</span>
-        </div>
-
-        <!-- Vertical Column Chart Area with Horizontal Scroll -->
-        <div style="height: 270px; overflow-x: auto; overflow-y: hidden; display: flex; align-items: flex-end; padding: 12px 6px 4px 6px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: 8px;">
-          <div v-if="filteredCountryList.length === 0" style="width: 100%; text-align: center; color: #94a3b8; padding: 4rem 0; font-size: 0.8rem;">
-            Không tìm thấy quốc gia phù hợp.
-          </div>
-          <div
-            v-else
-            style="display: flex; align-items: flex-end; gap: 14px; min-width: 100%; height: 100%; padding-bottom: 2px;"
-          >
-            <div
-              v-for="(item, idx) in filteredCountryList"
-              :key="item.name"
-              class="country-column-item"
-              @click="openDrilldown('country', `Danh sách đi / ở: ${item.name}`, { countryName: item.name })"
-              :title="`${item.name}\n- Cán bộ: ${item.tripsCount} lượt\n- Thân nhân: ${item.relativesCount} người\n- Tổng: ${item.count} lượt`"
-            >
-              <!-- Total Number Badge on Top -->
-              <span class="column-top-total">{{ item.count }}</span>
-
-              <!-- Stacked Bar Track -->
-              <div class="column-bar-track">
-                <!-- Top: Thân nhân (Purple) -->
-                <div
-                  v-if="item.relativesCount > 0"
-                  class="column-segment-tn"
-                  :style="{ height: `${(item.relativesCount / (stats.maxCountry || 1)) * 100}%` }"
-                >
-                  <span v-if="item.relativesCount >= 2" class="segment-label">{{ item.relativesCount }}</span>
-                </div>
-                <!-- Bottom: Cán bộ (Green) -->
-                <div
-                  v-if="item.tripsCount > 0"
-                  class="column-segment-cb"
-                  :style="{ height: `${(item.tripsCount / (stats.maxCountry || 1)) * 100}%` }"
-                >
-                  <span v-if="item.tripsCount >= 2" class="segment-label">{{ item.tripsCount }}</span>
-                </div>
-              </div>
-
-              <!-- Country Label Below -->
-              <div class="column-label" :title="item.name">
-                {{ item.name }}
-              </div>
-              <div class="column-sub-badges">
-                <span v-if="item.tripsCount > 0" style="color: #16a34a; font-weight: 700;">{{ item.tripsCount }}CB</span>
-                <span v-if="item.tripsCount > 0 && item.relativesCount > 0" style="color: #cbd5e1;">·</span>
-                <span v-if="item.relativesCount > 0" style="color: #7c3aed; font-weight: 700;">{{ item.relativesCount }}TN</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- FULL FUNDING SOURCES CARD -->
-      <div class="app-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-wallet" style="color: #0284c7; font-size: 1.05rem;"></i>
-            <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
-              Thống kê Toàn bộ Nguồn Kinh phí ({{ stats.fundingList.length }} nguồn)
-            </h3>
-            <button type="button" class="btn-card-setting" @click="openSingleSetting('funding')" title="Cài đặt cột Nguồn kinh phí">
-              <i class="pi pi-cog"></i>
-            </button>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <InputText
-              v-model="fundingSearch"
-              placeholder="Tìm nguồn kinh phí..."
-              style="font-size: 0.75rem; padding: 4px 8px; width: 140px; height: 28px;"
-            />
-          </div>
-        </div>
-
-        <!-- Legend for 2 colors -->
-        <div style="display: flex; gap: 12px; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
-          <span style="display: flex; align-items: center; gap: 4px;">
-            <span style="width: 10px; height: 10px; border-radius: 2px; background: #0284c7; display: inline-block;"></span>
-            <strong style="color: #0369a1;">Cán bộ</strong>
-          </span>
-          <span style="display: flex; align-items: center; gap: 4px;">
-            <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
-            <strong style="color: #6d28d9;">Thân nhân</strong>
-          </span>
-        </div>
-
-        <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
-          <div v-if="filteredFundingList.length === 0" style="text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.8rem;">
-            Không tìm thấy nguồn kinh phí phù hợp.
-          </div>
-          <div
-            v-for="(item, idx) in filteredFundingList"
-            :key="item.name"
-            class="breakdown-row"
-            @click="openDrilldown('funding', `Danh sách theo Kinh phí: ${item.name}`, { fundingName: item.name })"
-          >
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="badge-num" style="background: #e0f2fe; color: #0369a1;">#{{ idx + 1 }}</span>
-                <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span v-if="item.tripsCount > 0" class="badge-pill badge-blue" style="font-size: 0.68rem; padding: 1px 6px;">
-                  {{ item.tripsCount }} CB
-                </span>
-                <span v-if="item.relativesCount > 0" class="badge-pill" style="font-size: 0.68rem; padding: 1px 6px; background: #f3e8ff; color: #6d28d9; border: 1px solid #e9d5ff;">
-                  {{ item.relativesCount }} TN
-                </span>
-                <span style="font-size: 0.8rem; font-weight: 700; color: #1e293b;">
-                  Tổng: {{ item.count }}
-                </span>
-              </div>
-            </div>
-            <!-- 2-Color Stacked Progress Bar -->
-            <div style="height: 7px; background: #f1f5f9; border-radius: 4px; overflow: hidden; display: flex;">
-              <div
-                v-if="item.tripsCount > 0"
-                style="height: 100%; background: #0284c7; transition: width 0.4s ease;"
-                :style="{ width: `${(item.tripsCount / stats.maxFunding) * 100}%` }"
-                :title="`Cán bộ: ${item.tripsCount} lượt`"
-              ></div>
-              <div
-                v-if="item.relativesCount > 0"
-                style="height: 100%; background: #7c3aed; transition: width 0.4s ease;"
-                :style="{ width: `${(item.relativesCount / stats.maxFunding) * 100}%` }"
-                :title="`Thân nhân: ${item.relativesCount} người`"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- 3. CUSTOM DASHBOARD GROUPS (USER CONFIGURED)              -->
+    <!-- 1. CUSTOM DASHBOARD GROUPS (USER CONFIGURED - AT TOP)     -->
     <!-- ========================================================= -->
     <div v-for="(group, gIdx) in customGroups" :key="group.id || gIdx" class="app-card" style="margin-bottom: 1.5rem;">
       <!-- Group Header (Inside App Card) -->
@@ -451,6 +278,179 @@
                   ></div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 2. DEFAULT BREAKDOWN GRIDS (QUỐC GIA & KINH PHÍ)          -->
+    <!-- ========================================================= -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+      <!-- FULL COUNTRIES CARD (DẠNG BIỂU ĐỒ CỘT ĐỨNG XẾP CHỒNG) -->
+      <div class="app-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-chart-bar" style="color: #16a34a; font-size: 1.05rem;"></i>
+            <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
+              Thống kê Toàn bộ Quốc gia ({{ stats.countryList.length }} quốc gia)
+            </h3>
+            <button type="button" class="btn-card-setting" @click="openSingleSetting('country')" title="Cài đặt cột Quốc gia">
+              <i class="pi pi-cog"></i>
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <InputText
+              v-model="countrySearch"
+              placeholder="Tìm quốc gia..."
+              style="font-size: 0.75rem; padding: 4px 8px; width: 130px; height: 28px;"
+            />
+          </div>
+        </div>
+
+        <!-- Legend for 2 colors -->
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
+          <div style="display: flex; gap: 12px;">
+            <span style="display: flex; align-items: center; gap: 4px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: #16a34a; display: inline-block;"></span>
+              <strong style="color: #166534;">Cán bộ (CB)</strong>
+            </span>
+            <span style="display: flex; align-items: center; gap: 4px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
+              <strong style="color: #6d28d9;">Thân nhân (TN)</strong>
+            </span>
+          </div>
+          <span style="font-size: 0.68rem; color: #94a3b8; font-style: italic;">(Nhấp vào cột để xem chi tiết)</span>
+        </div>
+
+        <!-- Vertical Column Chart Area with Horizontal Scroll -->
+        <div style="height: 270px; overflow-x: auto; overflow-y: hidden; display: flex; align-items: flex-end; padding: 12px 6px 4px 6px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: 8px;">
+          <div v-if="filteredCountryList.length === 0" style="width: 100%; text-align: center; color: #94a3b8; padding: 4rem 0; font-size: 0.8rem;">
+            Không tìm thấy quốc gia phù hợp.
+          </div>
+          <div
+            v-else
+            style="display: flex; align-items: flex-end; gap: 14px; min-width: 100%; height: 100%; padding-bottom: 2px;"
+          >
+            <div
+              v-for="(item, idx) in filteredCountryList"
+              :key="item.name"
+              class="country-column-item"
+              @click="openDrilldown('country', `Danh sách đi / ở: ${item.name}`, { countryName: item.name })"
+              :title="`${item.name}\n- Cán bộ: ${item.tripsCount} lượt\n- Thân nhân: ${item.relativesCount} người\n- Tổng: ${item.count} lượt`"
+            >
+              <!-- Total Number Badge on Top -->
+              <span class="column-top-total">{{ item.count }}</span>
+
+              <!-- Stacked Bar Track -->
+              <div class="column-bar-track">
+                <!-- Top: Thân nhân (Purple) -->
+                <div
+                  v-if="item.relativesCount > 0"
+                  class="column-segment-tn"
+                  :style="{ height: `${(item.relativesCount / (stats.maxCountry || 1)) * 100}%` }"
+                >
+                  <span v-if="item.relativesCount >= 2" class="segment-label">{{ item.relativesCount }}</span>
+                </div>
+                <!-- Bottom: Cán bộ (Green) -->
+                <div
+                  v-if="item.tripsCount > 0"
+                  class="column-segment-cb"
+                  :style="{ height: `${(item.tripsCount / (stats.maxCountry || 1)) * 100}%` }"
+                >
+                  <span v-if="item.tripsCount >= 2" class="segment-label">{{ item.tripsCount }}</span>
+                </div>
+              </div>
+
+              <!-- Country Label Below -->
+              <div class="column-label" :title="item.name">
+                {{ item.name }}
+              </div>
+              <div class="column-sub-badges">
+                <span v-if="item.tripsCount > 0" style="color: #16a34a; font-weight: 700;">{{ item.tripsCount }}CB</span>
+                <span v-if="item.tripsCount > 0 && item.relativesCount > 0" style="color: #cbd5e1;">·</span>
+                <span v-if="item.relativesCount > 0" style="color: #7c3aed; font-weight: 700;">{{ item.relativesCount }}TN</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FULL FUNDING SOURCES CARD -->
+      <div class="app-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-wallet" style="color: #0284c7; font-size: 1.05rem;"></i>
+            <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
+              Thống kê Toàn bộ Nguồn Kinh phí ({{ stats.fundingList.length }} nguồn)
+            </h3>
+            <button type="button" class="btn-card-setting" @click="openSingleSetting('funding')" title="Cài đặt cột Nguồn kinh phí">
+              <i class="pi pi-cog"></i>
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <InputText
+              v-model="fundingSearch"
+              placeholder="Tìm nguồn kinh phí..."
+              style="font-size: 0.75rem; padding: 4px 8px; width: 140px; height: 28px;"
+            />
+          </div>
+        </div>
+
+        <!-- Legend for 2 colors -->
+        <div style="display: flex; gap: 12px; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <span style="width: 10px; height: 10px; border-radius: 2px; background: #0284c7; display: inline-block;"></span>
+            <strong style="color: #0369a1;">Cán bộ</strong>
+          </span>
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
+            <strong style="color: #6d28d9;">Thân nhân</strong>
+          </span>
+        </div>
+
+        <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
+          <div v-if="filteredFundingList.length === 0" style="text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.8rem;">
+            Không tìm thấy nguồn kinh phí phù hợp.
+          </div>
+          <div
+            v-for="(item, idx) in filteredFundingList"
+            :key="item.name"
+            class="breakdown-row"
+            @click="openDrilldown('funding', `Danh sách theo Kinh phí: ${item.name}`, { fundingName: item.name })"
+          >
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge-num" style="background: #e0f2fe; color: #0369a1;">#{{ idx + 1 }}</span>
+                <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span v-if="item.tripsCount > 0" class="badge-pill badge-blue" style="font-size: 0.68rem; padding: 1px 6px;">
+                  {{ item.tripsCount }} CB
+                </span>
+                <span v-if="item.relativesCount > 0" class="badge-pill" style="font-size: 0.68rem; padding: 1px 6px; background: #f3e8ff; color: #6d28d9; border: 1px solid #e9d5ff;">
+                  {{ item.relativesCount }} TN
+                </span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #1e293b;">
+                  Tổng: {{ item.count }}
+                </span>
+              </div>
+            </div>
+            <!-- 2-Color Stacked Progress Bar -->
+            <div style="height: 7px; background: #f1f5f9; border-radius: 4px; overflow: hidden; display: flex;">
+              <div
+                v-if="item.tripsCount > 0"
+                style="height: 100%; background: #0284c7; transition: width 0.4s ease;"
+                :style="{ width: `${(item.tripsCount / stats.maxFunding) * 100}%` }"
+                :title="`Cán bộ: ${item.tripsCount} lượt`"
+              ></div>
+              <div
+                v-if="item.relativesCount > 0"
+                style="height: 100%; background: #7c3aed; transition: width 0.4s ease;"
+                :style="{ width: `${(item.relativesCount / stats.maxFunding) * 100}%` }"
+                :title="`Thân nhân: ${item.relativesCount} người`"
+              ></div>
             </div>
           </div>
         </div>
@@ -1786,18 +1786,26 @@ const getLightColor = (hex = '#2e7d32') => {
 
 const getRowFieldValue = (row, colId) => {
   if (!row || !colId) return '';
-  if (row[colId] !== undefined && row[colId] !== null && String(row[colId]).trim() !== '') {
-    return String(row[colId]).trim();
+  let raw = row[colId];
+  if (raw === undefined || raw === null || raw === '') {
+    if (row.custom_data) {
+      try {
+        const cd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data) : row.custom_data;
+        if (cd) raw = cd[colId];
+      } catch (e) {}
+    }
   }
-  if (row.custom_data) {
-    try {
-      const cd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data) : row.custom_data;
-      if (cd && cd[colId] !== undefined && cd[colId] !== null && String(cd[colId]).trim() !== '') {
-        return String(cd[colId]).trim();
-      }
-    } catch (e) {}
+  if (raw === undefined || raw === null || raw === '') return '';
+  if (typeof raw === 'object') {
+    if (Array.isArray(raw)) {
+      return raw
+        .map((x) => (typeof x === 'object' && x !== null ? (x.name || x.label || x.col1 || x.value || JSON.stringify(x)) : x))
+        .filter(Boolean)
+        .join(', ');
+    }
+    return raw.name || raw.label || raw.col1 || raw.value || JSON.stringify(raw);
   }
-  return '';
+  return String(raw).trim();
 };
 
 const getSourceList = (source) => {
@@ -2256,9 +2264,71 @@ const stats = computed(() => {
     }
   });
 
+  // Also include funding on Personnel profiles not attached to a trip
+  pList.forEach((p) => {
+    const pfVal = getRowFieldValue(p, colConfig.value.funding) ||
+                  p.funding2 ||
+                  p.custom_data?.funding2 ||
+                  p.funding || '';
+    if (pfVal && pfVal !== 'Chưa rõ' && pfVal !== '-') {
+      const parts = String(pfVal).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
+      parts.forEach((rawPart) => {
+        const part = rawPart.toLowerCase();
+        if (part.includes('ngân sách') || part.includes('ngan sach') || part.includes('budget')) {
+          if (!fundings['Ngân sách nhà nước']) fundings['Ngân sách nhà nước'] = { trips: 0, relatives: 0, total: 0 };
+          fundings['Ngân sách nhà nước'].trips += 1;
+          fundings['Ngân sách nhà nước'].total += 1;
+        } else if (part.includes('tài trợ') || part.includes('tai tro') || part.includes('học bổng') || part.includes('hoc bong') || part.includes('sponsor') || part.includes('scholarship')) {
+          if (!fundings['Tài trợ']) fundings['Tài trợ'] = { trips: 0, relatives: 0, total: 0 };
+          fundings['Tài trợ'].trips += 1;
+          fundings['Tài trợ'].total += 1;
+        } else if (part.includes('tự túc') || part.includes('tu tuc') || part.includes('self')) {
+          if (!fundings['Tự túc']) fundings['Tự túc'] = { trips: 0, relatives: 0, total: 0 };
+          fundings['Tự túc'].trips += 1;
+          fundings['Tự túc'].total += 1;
+        } else if (part.includes('khác') || part.includes('khac') || part.includes('other')) {
+          if (!fundings['Khác']) fundings['Khác'] = { trips: 0, relatives: 0, total: 0 };
+          fundings['Khác'].trips += 1;
+          fundings['Khác'].total += 1;
+        } else if (rawPart) {
+          const origKey = rawPart.charAt(0).toUpperCase() + rawPart.slice(1);
+          if (!fundings[origKey]) fundings[origKey] = { trips: 0, relatives: 0, total: 0 };
+          fundings[origKey].trips += 1;
+          fundings[origKey].total += 1;
+        }
+      });
+    }
+  });
+
   // Also aggregate Relatives Country & Funding strictly by configured columns
-  rList.forEach((r) => {
-    const rc = getRowFieldValue(r, colConfig.value.countryRelative) || getTripValue(r, colConfig.value.countryRelative);
+  const allRelativesToProcess = [];
+  const processedRelativeKeys = new Set();
+
+  pList.forEach((p) => {
+    (p.relatives || []).forEach((r) => {
+      const rKey = r.id || `${p.id}_${r.relativeName || r.name || ''}_${r.countryName || r.country || ''}`;
+      if (!processedRelativeKeys.has(rKey)) {
+        processedRelativeKeys.add(rKey);
+        allRelativesToProcess.push({
+          ...r,
+          parentPersonnelId: p.id,
+          parentPersonnelName: p.name,
+          parentDepartment: p.departmentId,
+        });
+      }
+    });
+  });
+
+  (personnelStore.relativesList || []).forEach((r) => {
+    const rKey = r.id || `${r.personnelId || r.cccdparent || ''}_${r.relativeName || r.name || ''}_${r.countryName || r.country || ''}`;
+    if (!processedRelativeKeys.has(rKey)) {
+      processedRelativeKeys.add(rKey);
+      allRelativesToProcess.push(r);
+    }
+  });
+
+  allRelativesToProcess.forEach((r) => {
+    const rc = getRowFieldValue(r, colConfig.value.countryRelative) || getTripValue(r, colConfig.value.countryRelative) || r.countryName || r.country;
     if (rc && String(rc).trim() && String(rc).trim() !== '-' && String(rc).trim() !== 'Chưa rõ') {
       const cleanRc = String(rc).trim();
       if (!countries[cleanRc]) countries[cleanRc] = { trips: 0, relatives: 0, total: 0 };
@@ -2268,7 +2338,7 @@ const stats = computed(() => {
 
     const rfVal = getRowFieldValue(r, colConfig.value.fundingRelative) ||
                   getTripValue(r, colConfig.value.fundingRelative) ||
-                  r.fundingName || r.funding || r.custom_data?.fundingName || '';
+                  r.fundingName || r.funding || r.kinhphiTN || r.custom_data?.kinhphiTN || r.custom_data?.fundingName || '';
     const rBudget = colConfig.value.fundingRelativeBudget ? getRowFieldValue(r, colConfig.value.fundingRelativeBudget) : '';
     const rSponsor = colConfig.value.fundingRelativeSponsor ? getRowFieldValue(r, colConfig.value.fundingRelativeSponsor) : '';
     const rSelf = colConfig.value.fundingRelativeSelf ? getRowFieldValue(r, colConfig.value.fundingRelativeSelf) : '';
@@ -2282,7 +2352,7 @@ const stats = computed(() => {
     if (rfVal && String(rfVal).trim() && String(rfVal).trim() !== '-' && String(rfVal).trim() !== 'Chưa rõ') {
       const parts = String(rfVal).split(/[,;+]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
       parts.forEach((part) => {
-        if (part.includes('ngân sách') || part.includes('ngan sach')) {
+        if (part.includes('ngân sách') || part.includes('ngan sach') || part.includes('budget')) {
           if (!fundings['Ngân sách nhà nước']) fundings['Ngân sách nhà nước'] = { trips: 0, relatives: 0, total: 0 };
           fundings['Ngân sách nhà nước'].relatives += 1;
           fundings['Ngân sách nhà nước'].total += 1;
@@ -2592,8 +2662,31 @@ const openDrilldown = (type, title, filterContext = {}) => {
       const c = String(getTripValue(t, colConfig.value.country)).toLowerCase().trim();
       return c === cTarget;
     });
-    drilldownRelativesList.value = (personnelStore.relativesList || []).filter((r) => {
-      const rc = String(getRowFieldValue(r, colConfig.value.countryRelative)).toLowerCase().trim();
+    const allRelativesForDrilldown = [];
+    const seenRelKeys = new Set();
+    (personnelStore.personnelList || []).forEach((p) => {
+      (p.relatives || []).forEach((r) => {
+        const rid = r.id || `${p.id}_${r.relativeName || r.name || ''}`;
+        if (!seenRelKeys.has(rid)) {
+          seenRelKeys.add(rid);
+          allRelativesForDrilldown.push({
+            ...r,
+            parentName: p.name,
+            parentDepartment: personnelStore.getDepartmentName(p.departmentId),
+          });
+        }
+      });
+    });
+    (personnelStore.relativesList || []).forEach((r) => {
+      const rid = r.id || `${r.personnelId || r.cccdparent || ''}_${r.relativeName || r.name || ''}`;
+      if (!seenRelKeys.has(rid)) {
+        seenRelKeys.add(rid);
+        allRelativesForDrilldown.push(r);
+      }
+    });
+
+    drilldownRelativesList.value = allRelativesForDrilldown.filter((r) => {
+      const rc = String(getRowFieldValue(r, colConfig.value.countryRelative) || r.countryName || r.country || '').toLowerCase().trim();
       return rc === cTarget;
     });
     drilldownHasDualTabs.value = true;
@@ -2632,11 +2725,36 @@ const openDrilldown = (type, title, filterContext = {}) => {
       return f === fTarget || f.includes(fTarget);
     });
 
-    drilldownRelativesList.value = (personnelStore.relativesList || []).filter((r) => {
+    const allRelativesForDrilldown = [];
+    const seenRelKeys = new Set();
+    (personnelStore.personnelList || []).forEach((p) => {
+      (p.relatives || []).forEach((r) => {
+        const rid = r.id || `${p.id}_${r.relativeName || r.name || ''}`;
+        if (!seenRelKeys.has(rid)) {
+          seenRelKeys.add(rid);
+          allRelativesForDrilldown.push({
+            ...r,
+            parentName: p.name,
+            parentDepartment: personnelStore.getDepartmentName(p.departmentId),
+          });
+        }
+      });
+    });
+    (personnelStore.relativesList || []).forEach((r) => {
+      const rid = r.id || `${r.personnelId || r.cccdparent || ''}_${r.relativeName || r.name || ''}`;
+      if (!seenRelKeys.has(rid)) {
+        seenRelKeys.add(rid);
+        allRelativesForDrilldown.push(r);
+      }
+    });
+
+    drilldownRelativesList.value = allRelativesForDrilldown.filter((r) => {
       const rf = String(
         getRowFieldValue(r, colConfig.value.fundingRelative) ||
         r.fundingName ||
         r.funding ||
+        r.kinhphiTN ||
+        r.custom_data?.kinhphiTN ||
         r.custom_data?.fundingName ||
         ''
       ).toLowerCase().trim();

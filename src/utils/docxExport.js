@@ -968,7 +968,8 @@ export async function createDynamicDocxTemplateBlob(
   selectedRelativeGroupIndices = [],
   relativeGroups = [],
   selectedFieldIds = null,
-  selectedRelativeFieldIds = null
+  selectedRelativeFieldIds = null,
+  options = {}
 ) {
   const zip = new JSZip();
 
@@ -1006,7 +1007,7 @@ export async function createDynamicDocxTemplateBlob(
     <w:p/>
   `;
 
-  const showColNumbers = options?.showColumnNumbers === true;
+  const showColNumbers = typeof options === 'object' && options !== null && options.showColumnNumbers === true;
   const pfx = (num) => (showColNumbers ? ` (${num})` : '');
 
   const isFieldIncluded = (id, fallbackIds = []) => {
