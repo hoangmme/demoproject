@@ -5,7 +5,7 @@
       :key="gIdx"
       style="background: #ffffff;"
     >
-      <div v-if="gIdx > 0 && group.group" style="font-size: 0.85rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+      <div v-if="!props.group && gIdx > 0 && group.group" style="font-size: 0.85rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
         <i class="pi pi-folder" style="color: #0284c7; font-size: 0.95rem;"></i>
         <span>{{ group.group }}</span>
       </div>
@@ -50,6 +50,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  group: {
+    type: Object,
+    default: null,
+  },
 });
 
 const personnelStore = usePersonnelStore();
@@ -65,6 +69,16 @@ const colIndexMap = computed(() => {
 
 const dynamicGroups = computed(() => {
   const ignore = new Set(['stt', 'code']);
+  if (props.group) {
+    return [
+      {
+        idx: 0,
+        group: props.group.group || '',
+        isMultiple: props.group.isMultiple,
+        columns: (props.group.columns || []).filter((c) => !ignore.has(c.id)),
+      },
+    ];
+  }
   const mapping = effectiveMapping.value;
   if (Array.isArray(mapping) && mapping.length > 0) {
     return mapping

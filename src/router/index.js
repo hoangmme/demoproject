@@ -19,6 +19,12 @@ const routes = [
     meta: { title: 'Quản lý Cán bộ', requiresAuth: true },
   },
   {
+    path: '/trips',
+    name: 'Trips',
+    component: () => import('@/views/TripsDashboardView.vue'),
+    meta: { title: 'Danh sách Chuyến đi', requiresAuth: true },
+  },
+  {
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('@/views/DashboardView.vue'),

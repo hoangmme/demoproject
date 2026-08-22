@@ -68,6 +68,16 @@
       <button
         type="button"
         class="segmented-tab-btn"
+        :class="{ 'tab-active': activeTab === 'tripsDashboard' }"
+        @click="activeTab = 'tripsDashboard'"
+      >
+        <i class="pi pi-send"></i>
+        <span>Cấu hình Dashboard Chuyến đi</span>
+      </button>
+
+      <button
+        type="button"
+        class="segmented-tab-btn"
         :class="{ 'tab-active': activeTab === 'general' }"
         @click="activeTab = 'general'"
       >
@@ -816,6 +826,70 @@
               @click="saveAppendicesConfig"
               style="font-size: 0.82rem;"
             />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Cấu hình Dashboard Chuyên đề Chuyến đi -->
+    <div v-else-if="activeTab === 'tripsDashboard'" class="app-card" style="padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="pi pi-send" style="color: #1e3a8a; font-size: 1.2rem;"></i>
+            <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0;">
+              Cấu hình Dashboard Chuyên đề Chuyến đi (CD-03)
+            </h3>
+          </div>
+          <p style="font-size: 0.75rem; color: #64748b; margin: 4px 0 0 0;">
+            Tùy biến các thẻ thống kê nhanh ở đầu trang và cấu hình danh sách các cột hiển thị trên bảng dữ liệu Chuyến đi.
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <Button
+            label="Xem Trang Chuyến đi"
+            icon="pi pi-external-link"
+            severity="secondary"
+            outlined
+            size="small"
+            @click="router.push('/trips')"
+            style="font-size: 0.78rem;"
+          />
+        </div>
+      </div>
+
+      <!-- Quick Guidance & Instructions -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+          <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-th-large" style="color: #0284c7;"></i>
+            1. Các thẻ chỉ số nhanh ở đầu trang (Metric KPI Cards):
+          </div>
+          <div style="font-size: 0.78rem; color: #475569; line-height: 1.5;">
+            Trang Danh sách Chuyến đi được thiết kế dạng <b>Dashboard Chuyên đề</b> với 4 thẻ chỉ số nhanh tự động đếm thời gian thực:
+            <ul style="margin: 6px 0 0 16px; padding: 0;">
+              <li><b>Toàn bộ:</b> Tổng hợp toàn bộ lượt đi nước ngoài của Cán bộ và Thân nhân.</li>
+              <li><b>Đã về nước:</b> Các chuyến đi đã có ngày nhập cảnh hợp lệ.</li>
+              <li><b>Đang ở nước ngoài:</b> Các chuyến đi chưa có ngày về và trong hạn duyệt.</li>
+              <li><b>Quá hạn chưa về:</b> Các chuyến đi quá hạn ngày về theo quyết định.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+          <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-table" style="color: #16a34a;"></i>
+            2. Cấu hình bảng danh sách trực tiếp:
+          </div>
+          <div style="font-size: 0.78rem; color: #475569; line-height: 1.5;">
+            Khác với Dashboard chung mở popup drill-down, Dashboard Chuyên đề hiển thị <b>Bảng dữ liệu trực tiếp</b> ngay bên dưới với đầy đủ tính năng:
+            <ul style="margin: 6px 0 0 16px; padding: 0;">
+              <li>Tìm kiếm trực tiếp theo họ tên, đơn vị, số quyết định, quốc gia.</li>
+              <li>Lọc đa chiều theo Năm, Quốc gia, Đơn vị công tác, Nguồn kinh phí.</li>
+              <li>Nút <b>Chọn cột hiển thị</b> cho phép người dùng tùy chọn ẩn / hiện các cột tùy ý.</li>
+              <li>Xuất dữ liệu tức thì ra file Excel chuẩn định dạng.</li>
+            </ul>
           </div>
         </div>
       </div>

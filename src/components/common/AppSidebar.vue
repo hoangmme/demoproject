@@ -29,6 +29,11 @@
         <span>Quản lý Cán bộ</span>
       </router-link>
 
+      <router-link to="/trips" class="app-nav-item">
+        <i class="pi pi-send"></i>
+        <span>Danh sách Chuyến đi</span>
+      </router-link>
+
       <div class="app-nav-heading">Báo cáo Phụ lục</div>
 
       <router-link

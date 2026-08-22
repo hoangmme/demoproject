@@ -156,6 +156,8 @@ export const parseDateValue = (val) => {
   }
 };
 
+export const parseDateObj = parseDateValue;
+
 /**
  * Tính toán Trạng thái Hiện diện (Trong nước / Nước ngoài) theo thời gian thực
  * Duyệt qua toàn bộ danh sách chuyến đi của một cá nhân/thân nhân.
