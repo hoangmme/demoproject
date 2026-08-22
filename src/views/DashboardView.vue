@@ -719,30 +719,16 @@
     >
       <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 8px;">
         <div style="padding: 8px 12px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #16a34a; font-size: 0.78rem; color: #166534;">
-          Hệ thống tự động gộp dữ liệu từ các cột của Cán bộ và Thân nhân để tính toán thống kê và biểu đồ phân bổ.
+          Hệ thống tự động liên kết CCCD trong bảng Chuyến đi với Cán bộ hoặc Thân nhân để phân loại chính xác số lượt đi.
         </div>
 
-        <!-- Setting 1: Decision ID -->
+        <!-- Setting 1: Country ID (Trip) -->
         <div>
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            1. ID Cột Số Quyết định (Kiểm tra chưa có Quyết định):
-          </label>
-          <div style="display: flex; gap: 8px;">
-            <InputText v-model="tempConfig.decision" placeholder="Ví dụ: decisionNumber" style="flex: 1; font-size: 0.8rem;" />
-            <select class="settings-select" @change="tempConfig.decision = $event.target.value">
-              <option value="">-- Chọn cột Chuyến đi --</option>
-              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Setting 2: Country ID (Trip) -->
-        <div>
-          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            2. Cài đặt Cột Quốc gia (Đếm & Biểu đồ Toàn bộ Quốc gia):
+            1. Cài đặt Cột Quốc gia (Đếm & Biểu đồ Toàn bộ Quốc gia):
           </label>
           <div style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px;">
-            💡 Hệ thống tự động bóc tách và phân loại số lượt đi của Cán bộ (CB) hoặc Thân nhân (TN) dựa theo CCCD/Mã người đi trong chuyến đi.
+            💡 Hệ thống tự động bóc tách và phân loại số lượt đi của Cán bộ (CB) hoặc Thân nhân (TN) dựa theo CCCD người đi.
           </div>
           <div style="display: flex; gap: 8px;">
             <InputText v-model="tempConfig.country" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.8rem;" />
@@ -753,10 +739,10 @@
           </div>
         </div>
 
-        <!-- Setting 3: Funding ID (Trip) -->
+        <!-- Setting 2: Funding ID (Trip) -->
         <div>
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            3. Cài đặt Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí & Biểu đồ):
+            2. Cài đặt Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí & Biểu đồ):
           </label>
           <div style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px;">
             💡 Hệ thống tự động so khớp CCCD chuyến đi với Cán bộ hoặc Thân nhân và gom vào 4 nhóm: Ngân sách nhà nước, Tài trợ, Tự túc, Khác.
@@ -765,48 +751,6 @@
             <InputText v-model="tempConfig.funding" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.funding = $event.target.value">
               <option value="">-- Chọn cột Nguồn kinh phí (Chuyến đi) --</option>
-              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Setting 4: Approved Departure Date ID -->
-        <div>
-          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            4. Thời gian duyệt đi:
-          </label>
-          <div style="display: flex; gap: 8px;">
-            <InputText v-model="tempConfig.approvedDeparture" placeholder="Ví dụ: approvedDepartureDate" style="flex: 1; font-size: 0.8rem;" />
-            <select class="settings-select" @change="tempConfig.approvedDeparture = $event.target.value">
-              <option value="">-- Chọn cột Chuyến đi --</option>
-              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Setting 5: Approved Arrival Date ID -->
-        <div>
-          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            5. Thời gian duyệt về:
-          </label>
-          <div style="display: flex; gap: 8px;">
-            <InputText v-model="tempConfig.approvedArrival" placeholder="Ví dụ: approvedArrivalDate" style="flex: 1; font-size: 0.8rem;" />
-            <select class="settings-select" @change="tempConfig.approvedArrival = $event.target.value">
-              <option value="">-- Chọn cột Chuyến đi --</option>
-              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Setting 6: Approved Extension Date ID -->
-        <div>
-          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            6. Thời gian duyệt gia hạn:
-          </label>
-          <div style="display: flex; gap: 8px;">
-            <InputText v-model="tempConfig.approvedExtension" placeholder="Ví dụ: approvedExtensionDate" style="flex: 1; font-size: 0.8rem;" />
-            <select class="settings-select" @change="tempConfig.approvedExtension = $event.target.value">
-              <option value="">-- Chọn cột Chuyến đi --</option>
               <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
@@ -1406,22 +1350,8 @@ const onPersonSaved = async () => {
 // 1. DEFAULT DASHBOARD COLUMN CONFIGURATION STATE (Persisted in Directus DB)
 // =========================================================================
 const DEFAULT_CONFIG = {
-  decision: 'decisionNumber',
   country: 'countryName',
-  countryRelative: 'countryName',
   funding: 'fundingName',
-  fundingBudget: 'fundingBudget',
-  fundingSponsor: 'fundingSponsor',
-  fundingSelf: 'fundingSelf',
-  fundingOther: 'fundingOther',
-  fundingRelative: 'fundingName',
-  fundingRelativeBudget: 'fundingRelativeBudget',
-  fundingRelativeSponsor: 'fundingRelativeSponsor',
-  fundingRelativeSelf: 'fundingRelativeSelf',
-  fundingRelativeOther: 'fundingRelativeOther',
-  approvedDeparture: 'approvedDepartureDate',
-  approvedArrival: 'approvedArrivalDate',
-  approvedExtension: 'approvedExtensionDate',
 };
 
 const colConfig = ref({ ...DEFAULT_CONFIG });
@@ -2222,14 +2152,20 @@ const stats = computed(() => {
       return;
     }
 
-    const rawCountry = getTripValue(t, colConfig.value.country) || t.countryName || t.country || 'Chưa rõ';
-    const cName = String(rawCountry).trim();
-    const rawFunding = getTripValue(t, colConfig.value.funding) || t.fundingName || t.funding || 'Chưa rõ';
-    const fName = String(rawFunding).trim();
-    const dNum = getTripValue(t, colConfig.value.decision) || t.decisionNumber || '';
-    const appDep = getTripValue(t, colConfig.value.approvedDeparture) || t.departureDate || '';
-    const appArr = getTripValue(t, colConfig.value.approvedArrival) || t.arrivalDate || '';
-    const appExt = getTripValue(t, colConfig.value.approvedExtension) || '';
+    const rawCountry = getTripValue(t, colConfig.value.country);
+    const cName = (rawCountry && String(rawCountry).trim() !== '-' && String(rawCountry).trim() !== 'Chưa rõ')
+      ? String(rawCountry).trim()
+      : '';
+
+    const rawFunding = getTripValue(t, colConfig.value.funding);
+    const fName = (rawFunding && String(rawFunding).trim() !== '-' && String(rawFunding).trim() !== 'Chưa rõ')
+      ? String(rawFunding).trim()
+      : '';
+
+    const dNum = getTripValue(t, 'decisionNumber') || t.decisionNumber || '';
+    const appDep = getTripValue(t, 'approvedDepartureDate') || t.departureDate || '';
+    const appArr = getTripValue(t, 'approvedArrivalDate') || t.arrivalDate || '';
+    const appExt = getTripValue(t, 'approvedExtensionDate') || '';
 
     // Check if trip belongs to Cán bộ (CB) or Thân nhân (TN)
     const tripKey = String(t.cccdchuyendi || t.personnelId || t.code || t.cccd || '').trim();
@@ -2239,8 +2175,8 @@ const stats = computed(() => {
 
     const enrichedTrip = {
       ...t,
-      countryName: cName,
-      fundingName: fName,
+      countryName: cName || 'Chưa rõ',
+      fundingName: fName || 'Chưa rõ',
       decisionNumber: dNum,
       approvedDepartureDate: appDep,
       approvedArrivalDate: appArr,
@@ -2267,7 +2203,7 @@ const stats = computed(() => {
     }
 
     // Country aggregation (Trips)
-    if (cName && cName !== 'Chưa rõ' && cName !== '-') {
+    if (cName) {
       if (isFundingKeyword(cName)) {
         const normalizedF = normalizeFundingCategory(cName) || 'Tự túc';
         if (!fundings[normalizedF]) fundings[normalizedF] = { trips: 0, relatives: 0, total: 0 };
@@ -2289,7 +2225,7 @@ const stats = computed(() => {
     }
 
     // Funding aggregation (Trips)
-    if (fName && fName !== 'Chưa rõ' && fName !== '-') {
+    if (fName) {
       const parts = String(fName).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
       parts.forEach((rawPart) => {
         const norm = normalizeFundingCategory(rawPart);
@@ -2300,90 +2236,6 @@ const stats = computed(() => {
           } else {
             fundings[norm].trips += 1;
           }
-          fundings[norm].total += 1;
-        }
-      });
-    }
-  });
-
-  // Also include funding on Personnel profiles not attached to a trip
-  pList.forEach((p) => {
-    const pfVal = getRowFieldValue(p, colConfig.value.funding) ||
-                  p.funding2 ||
-                  p.custom_data?.funding2 ||
-                  p.funding || '';
-    if (pfVal && pfVal !== 'Chưa rõ' && pfVal !== '-') {
-      const parts = String(pfVal).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
-      parts.forEach((rawPart) => {
-        const norm = normalizeFundingCategory(rawPart);
-        if (norm) {
-          if (!fundings[norm]) fundings[norm] = { trips: 0, relatives: 0, total: 0 };
-          fundings[norm].trips += 1;
-          fundings[norm].total += 1;
-        }
-      });
-    }
-  });
-
-  // Also aggregate Relatives Country & Funding strictly by configured columns
-  const allRelativesToProcess = [];
-  const processedRelativeKeys = new Set();
-
-  pList.forEach((p) => {
-    (p.relatives || []).forEach((r) => {
-      const rKey = r.id || `${p.id}_${r.relativeName || r.name || ''}_${r.countryName || r.country || ''}`;
-      if (!processedRelativeKeys.has(rKey)) {
-        processedRelativeKeys.add(rKey);
-        allRelativesToProcess.push({
-          ...r,
-          parentPersonnelId: p.id,
-          parentPersonnelName: p.name,
-          parentDepartment: p.departmentId,
-        });
-      }
-    });
-  });
-
-  (personnelStore.relativesList || []).forEach((r) => {
-    const rKey = r.id || `${r.personnelId || r.cccdparent || ''}_${r.relativeName || r.name || ''}_${r.countryName || r.country || ''}`;
-    if (!processedRelativeKeys.has(rKey)) {
-      processedRelativeKeys.add(rKey);
-      allRelativesToProcess.push(r);
-    }
-  });
-
-  allRelativesToProcess.forEach((r) => {
-    let rc = getRowFieldValue(r, colConfig.value.countryRelative) || getTripValue(r, colConfig.value.countryRelative) || r.countryName || r.country || '';
-    
-    // If the country field accidentally holds a funding keyword (e.g. "Tự túc")
-    if (rc && isFundingKeyword(rc)) {
-      const normF = normalizeFundingCategory(rc) || 'Tự túc';
-      if (!fundings[normF]) fundings[normF] = { trips: 0, relatives: 0, total: 0 };
-      fundings[normF].relatives += 1;
-      fundings[normF].total += 1;
-      // Try extract real country from address
-      rc = extractCountryFromAddress(r.currentAddress || r.address || '');
-    } else if (!rc || rc === '-' || rc === 'Chưa rõ') {
-      rc = extractCountryFromAddress(r.currentAddress || r.address || '');
-    }
-
-    if (rc && String(rc).trim() && String(rc).trim() !== '-' && String(rc).trim() !== 'Chưa rõ' && !isFundingKeyword(rc)) {
-      const cleanRc = String(rc).trim();
-      if (!countries[cleanRc]) countries[cleanRc] = { trips: 0, relatives: 0, total: 0 };
-      countries[cleanRc].relatives += 1;
-      countries[cleanRc].total += 1;
-    }
-
-    const rfVal = getRowFieldValue(r, colConfig.value.funding || 'fundingName') ||
-                  r.fundingName || r.funding || r.kinhphiTN || r.custom_data?.kinhphiTN || r.custom_data?.fundingName || '';
-
-    if (rfVal && String(rfVal).trim() && String(rfVal).trim() !== '-' && String(rfVal).trim() !== 'Chưa rõ') {
-      const parts = String(rfVal).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
-      parts.forEach((rawPart) => {
-        const norm = normalizeFundingCategory(rawPart);
-        if (norm) {
-          if (!fundings[norm]) fundings[norm] = { trips: 0, relatives: 0, total: 0 };
-          fundings[norm].relatives += 1;
           fundings[norm].total += 1;
         }
       });
