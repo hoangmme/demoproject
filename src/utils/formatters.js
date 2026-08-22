@@ -160,7 +160,7 @@ export const parseDateObj = parseDateValue;
 
 /**
  * Tính toán Trạng thái Hiện diện (Trong nước / Nước ngoài) theo thời gian thực
- * Duyệt qua toàn bộ danh sách chuyến đi của một cá nhân/thân nhân.
+ * Duyệt qua danh sách chuyến đi hoặc tính toán trực tiếp trên 1 chuyến đi.
  */
 export const computePresenceStatus = (record, formulaConfig = {}) => {
   if (!record) return { status: 'domestic', label: 'Trong nước', isAbroad: false };
@@ -174,14 +174,80 @@ export const computePresenceStatus = (record, formulaConfig = {}) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Collect all trip items
+  // Nếu là 1 bản ghi Chuyến đi trực tiếp (không phải là Object chứa mảng .trips)
+  if (!Array.isArray(record.trips) && !Array.isArray(record.tripList)) {
+    const t = record;
+    const depRaw = t[depCol] || t.departureDate || t.approvedDepartureDate || t.custom_data?.[depCol];
+    const arrRaw = t[arrCol] || t.arrivalDate || t.approvedArrivalDate || t.approvedExtensionDate || t.custom_data?.[arrCol];
+    const country = t[countryCol] || t.countryName || t.custom_data?.[countryCol] || '';
+
+    const depDate = parseDateValue(depRaw);
+    const arrDate = parseDateValue(arrRaw);
+
+    if (depDate) {
+      const depNormalized = new Date(depDate);
+      depNormalized.setHours(0, 0, 0, 0);
+
+      // Nếu hôm nay >= Ngày đi
+      if (today >= depNormalized) {
+        if (arrDate) {
+          const arrNormalized = new Date(arrDate);
+          arrNormalized.setHours(23, 59, 59, 999);
+
+          // Hôm nay nằm trong khoảng từ Ngày đi đến Ngày về
+          if (today <= arrNormalized) {
+            const countrySuffix = country ? `: ${country}` : '';
+            return {
+              status: 'abroad',
+              isAbroad: true,
+              label: `${labelAbroad}${countrySuffix}`,
+              shortLabel: labelAbroad,
+              country,
+              trip: t,
+            };
+          } else {
+            return {
+              status: 'completed',
+              isAbroad: false,
+              label: 'Đã về nước',
+              shortLabel: 'Đã về nước',
+              country,
+              trip: t,
+            };
+          }
+        } else {
+          // Chưa có ngày về -> Đang ở nước ngoài
+          const countrySuffix = country ? `: ${country}` : '';
+          return {
+            status: 'abroad',
+            isAbroad: true,
+            label: `${labelAbroad}${countrySuffix}`,
+            shortLabel: labelAbroad,
+            country,
+            trip: t,
+          };
+        }
+      } else {
+        // Chưa đến ngày đi
+        return {
+          status: 'upcoming',
+          isAbroad: false,
+          label: 'Chưa khởi hành',
+          shortLabel: 'Chưa khởi hành',
+          country,
+          trip: t,
+        };
+      }
+    }
+  }
+
+  // Nếu là Hồ sơ Cán bộ / Thân nhân chứa danh sách nhiều chuyến đi
   let trips = [];
   if (Array.isArray(record.trips) && record.trips.length > 0) {
     trips = record.trips;
   } else if (Array.isArray(record.tripList) && record.tripList.length > 0) {
     trips = record.tripList;
   } else {
-    // Single trip or relative item
     trips = [record];
   }
 
@@ -199,19 +265,16 @@ export const computePresenceStatus = (record, formulaConfig = {}) => {
       const depNormalized = new Date(depDate);
       depNormalized.setHours(0, 0, 0, 0);
 
-      // Nếu hôm nay >= Ngày xuất cảnh
       if (today >= depNormalized) {
         if (arrDate) {
           const arrNormalized = new Date(arrDate);
           arrNormalized.setHours(23, 59, 59, 999);
 
-          // Nếu hôm nay < Ngày nhập cảnh (chuyến đi đang diễn ra)
           if (today <= arrNormalized) {
             activeAbroadTrip = { trip: t, country, departureDate: depDate, arrivalDate: arrDate };
             break;
           }
         } else {
-          // Chưa có ngày về -> Mặc định đang ở nước ngoài
           activeAbroadTrip = { trip: t, country, departureDate: depDate, arrivalDate: null };
           break;
         }

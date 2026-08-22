@@ -504,14 +504,11 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
-import { formatDate, parseDateObj } from '@/utils/formatters';
+import { formatDate, parseDateObj, computePresenceStatus } from '@/utils/formatters';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
@@ -974,6 +971,29 @@ const formatDisplayDate = (dStr) => {
 };
 
 const getCellValue = (trip, colId) => {
+  if (!trip || !colId) return '-';
+
+  // Check if col is Formula column in Trips mapping
+  const allMap = {};
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+
+  const colDef = allMap[colId];
+  if (colDef && colDef.format === 'formula') {
+    const status = computePresenceStatus(trip, {
+      departureCol: colDef.formulaDepartureCol,
+      arrivalCol: colDef.formulaArrivalCol,
+      countryCol: colDef.formulaCountryCol,
+      labelDomestic: colDef.formulaLabelDomestic,
+      labelAbroad: colDef.formulaLabelAbroad,
+    });
+    return status.label;
+  }
+
   if (trip[colId] !== undefined && trip[colId] !== null && trip[colId] !== '') {
     return trip[colId];
   }

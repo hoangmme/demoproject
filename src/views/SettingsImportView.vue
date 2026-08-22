@@ -376,7 +376,7 @@
                       <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Xuất cảnh (Đi):</span>
                       <select v-model="col.formulaDepartureCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
                         <option value="">-- Mặc định hệ thống (departureDate) --</option>
-                        <option v-for="c in (activeTab === 'personnel' ? availablePersonnelCols : availableRelativeCols)" :key="c.id" :value="c.id">
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
                           {{ c.label }} ({{ c.id }})
                         </option>
                       </select>
@@ -385,7 +385,7 @@
                       <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Nhập cảnh (Về):</span>
                       <select v-model="col.formulaArrivalCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
                         <option value="">-- Mặc định hệ thống (arrivalDate) --</option>
-                        <option v-for="c in (activeTab === 'personnel' ? availablePersonnelCols : availableRelativeCols)" :key="c.id" :value="c.id">
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
                           {{ c.label }} ({{ c.id }})
                         </option>
                       </select>
@@ -394,7 +394,7 @@
                       <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Quốc gia (Tùy chọn):</span>
                       <select v-model="col.formulaCountryCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
                         <option value="">-- Mặc định (countryName) --</option>
-                        <option v-for="c in (activeTab === 'personnel' ? availablePersonnelCols : availableRelativeCols)" :key="c.id" :value="c.id">
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
                           {{ c.label }} ({{ c.id }})
                         </option>
                       </select>
@@ -1762,6 +1762,12 @@ const availableTripCols = computed(() => {
     });
   });
   return cols;
+});
+
+const currentActiveFormulaCols = computed(() => {
+  if (activeTab.value === 'personnel') return availablePersonnelCols.value;
+  if (activeTab.value === 'trips') return availableTripCols.value;
+  return availableRelativeCols.value;
 });
 
 const DEFAULT_RELATIVE_MAPPING = [
