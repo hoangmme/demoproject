@@ -155,32 +155,17 @@
         </div>
 
         <!-- Khi ở Tab Chuyến đi -->
-        <div v-else style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%;">
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="pi pi-user" style="color: #0284c7; font-size: 0.95rem;"></i>
-              <strong style="color: #1e293b; font-size: 0.82rem;">1. Cột Liên kết Cán bộ liên quan (Trip Personnel Key):</strong>
-            </div>
-            <select v-model="tripPersonnelKeyField" class="custom-key-select">
-              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                {{ col.label }} (mã: {{ col.id }})
-              </option>
-            </select>
-            <span style="font-size: 0.7rem; color: #64748b;">(Cột chứa số CCCD / Mã định danh của Cán bộ khi chuyến đi thuộc về Cán bộ)</span>
+        <div v-else style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-link" style="color: #0284c7; font-size: 0.95rem;"></i>
+            <strong style="color: #1e293b; font-size: 0.82rem;">Cột Liên kết Đối tượng chuyến đi (Trip Link Key / cccdchuyendi):</strong>
           </div>
-
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="pi pi-users" style="color: #7c3aed; font-size: 0.95rem;"></i>
-              <strong style="color: #1e293b; font-size: 0.82rem;">2. Cột Liên kết Thân nhân (Trip Relative Key):</strong>
-            </div>
-            <select v-model="tripRelativeKeyField" class="custom-key-select">
-              <option v-for="col in availableRelativeCols" :key="col.id" :value="col.id">
-                {{ col.label }} (mã: {{ col.id }})
-              </option>
-            </select>
-            <span style="font-size: 0.7rem; color: #64748b;">(Cột chứa số CCCD / Mã định danh của Thân nhân khi chuyến đi thuộc về Thân nhân)</span>
-          </div>
+          <select v-model="tripKeyField" class="custom-key-select" style="max-width: 480px;">
+            <option v-for="col in availableTripCols" :key="col.id" :value="col.id">
+              {{ col.label }} (mã: {{ col.id }})
+            </option>
+          </select>
+          <span style="font-size: 0.72rem; color: #64748b;">(Cột trong bảng Chuyến đi chứa số CCCD / Mã định danh của người đi. Hệ thống tự động nhận diện gán vào Cán bộ nếu khớp CCCD Cán bộ, hoặc vào Thân nhân nếu khớp CCCD Thân nhân)</span>
         </div>
       </div>
 
@@ -1367,8 +1352,7 @@ const tripsGroups = ref([]);
 const personnelKeyField = ref('cccdparent');
 const relativeParentKeyField = ref('cccdparent');
 const relativeKeyField = ref('cccdthannhan');
-const tripPersonnelKeyField = ref('cccdparent');
-const tripRelativeKeyField = ref('cccdthannhan');
+const tripKeyField = ref('cccdchuyendi');
 
 const tagSearch = ref('');
 const selectedCategory = ref('personnel');
@@ -1767,6 +1751,7 @@ const DEFAULT_TRIPS_MAPPING = [
     group: 'Thông tin chuyến đi xuất nhập cảnh',
     isMultiple: false,
     columns: [
+      { id: 'cccdchuyendi', label: 'CCCD / Định danh người đi (cccdchuyendi)', width: '25', format: 'text', placeholder: 'Nhập CCCD Cán bộ hoặc Thân nhân' },
       { id: 'countryName', label: 'Quốc gia / Nơi đến', width: '33', format: 'text', placeholder: 'Nhập quốc gia' },
       { id: 'departureDate', label: 'Ngày xuất cảnh', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
       { id: 'arrivalDate', label: 'Ngày nhập cảnh', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
@@ -1985,8 +1970,7 @@ onMounted(async () => {
   personnelKeyField.value = personnelStore.getPersonnelKeyField();
   relativeParentKeyField.value = personnelStore.getRelativeParentKeyField();
   relativeKeyField.value = personnelStore.getRelativeKeyField();
-  tripPersonnelKeyField.value = personnelStore.getTripPersonnelKeyField();
-  tripRelativeKeyField.value = personnelStore.getTripRelativeKeyField();
+  tripKeyField.value = personnelStore.getTripKeyField();
   await loadDocxTemplates();
   await loadLoginBg();
   await loadCustomAppendices();
@@ -2386,8 +2370,7 @@ const saveConfig = async () => {
       personnelKeyField: personnelKeyField.value || 'cccdparent',
       relativeParentKeyField: relativeParentKeyField.value || 'cccdparent',
       relativeKeyField: relativeKeyField.value || 'cccdthannhan',
-      tripPersonnelKeyField: tripPersonnelKeyField.value || 'cccdparent',
-      tripRelativeKeyField: tripRelativeKeyField.value || 'cccdthannhan',
+      tripKeyField: tripKeyField.value || 'cccdchuyendi',
     };
     await saveAppSettings('system_key_config', keyConfig);
     personnelStore.systemKeyConfig = keyConfig;

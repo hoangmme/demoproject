@@ -352,6 +352,7 @@ export const usePersonnelStore = defineStore('personnel', {
             group: 'Thông tin chuyến đi xuất nhập cảnh',
             isMultiple: false,
             columns: [
+              { id: 'cccdchuyendi', label: 'CCCD / Định danh người đi (cccdchuyendi)', width: '25', format: 'text', placeholder: 'Nhập CCCD Cán bộ hoặc Thân nhân' },
               { id: 'countryName', label: 'Quốc gia / Nơi đến', width: '33', format: 'text', placeholder: 'Nhập quốc gia' },
               { id: 'departureDate', label: 'Ngày xuất cảnh', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
               { id: 'arrivalDate', label: 'Ngày nhập cảnh', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
@@ -375,8 +376,7 @@ export const usePersonnelStore = defineStore('personnel', {
           personnelKeyField: keyCfg.personnelKeyField || 'cccdparent',
           relativeParentKeyField: keyCfg.relativeParentKeyField || 'cccdparent',
           relativeKeyField: keyCfg.relativeKeyField || 'cccdthannhan',
-          tripPersonnelKeyField: keyCfg.tripPersonnelKeyField || 'cccdparent',
-          tripRelativeKeyField: keyCfg.tripRelativeKeyField || 'cccdthannhan',
+          tripKeyField: keyCfg.tripKeyField || 'cccdchuyendi',
         };
       }
     },
@@ -389,11 +389,8 @@ export const usePersonnelStore = defineStore('personnel', {
     getRelativeKeyField() {
       return this.systemKeyConfig?.relativeKeyField || 'cccdthannhan';
     },
-    getTripPersonnelKeyField() {
-      return this.systemKeyConfig?.tripPersonnelKeyField || 'cccdparent';
-    },
-    getTripRelativeKeyField() {
-      return this.systemKeyConfig?.tripRelativeKeyField || 'cccdthannhan';
+    getTripKeyField() {
+      return this.systemKeyConfig?.tripKeyField || 'cccdchuyendi';
     },
     findPersonByCccd(val) {
       if (!val) return null;
