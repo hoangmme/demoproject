@@ -87,6 +87,15 @@
             </div>
           </div>
         </template>
+
+        <!-- Chuyến đi xuất nhập cảnh của thân nhân này -->
+        <div style="margin-top: 1.25rem; border-top: 1px dashed #cbd5e1; padding-top: 12px;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: #0369a1; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-send"></i>
+            <span>Chuyến đi nước ngoài của Thân nhân này ({{ (rel.trips || []).length }} chuyến)</span>
+          </div>
+          <PersonnelTravelForm :form="rel" />
+        </div>
       </div>
     </div>
   </div>
@@ -97,6 +106,7 @@ import { ref, computed, watch, nextTick } from 'vue';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import DynamicField from '@/components/common/DynamicField.vue';
+import PersonnelTravelForm from '@/components/personnel/PersonnelTravelForm.vue';
 import { computeColumnIndexMap } from '@/utils/formatters';
 
 const props = defineProps({

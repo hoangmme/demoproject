@@ -208,6 +208,67 @@
                   </div>
                 </div>
               </template>
+
+              <!-- CẤP 1: CHUYẾN ĐI (XUẤT NHẬP CẢNH) -->
+              <div class="tree-root-header tree-header-trips" style="margin-top: 10px; background: #f0f9ff; border-left-color: #0284c7;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
+                  <input
+                    type="checkbox"
+                    v-model="includeTrips"
+                    style="accent-color: #0284c7; width: 15px; height: 15px;"
+                  />
+                  <i class="pi pi-send" style="color: #0284c7;"></i>
+                  <span style="color: #0369a1; font-weight: 700;">Chuyến Đi (Xuất Nhập Cảnh)</span>
+                </label>
+                <span class="tree-badge-count" style="background: #e0f2fe; color: #0369a1;" v-if="includeTrips">
+                  ({{ selectedTripFieldIds.length }} trường được chọn)
+                </span>
+                <span v-else style="font-size: 0.72rem; color: #94a3b8; font-weight: normal;">
+                  (Bỏ qua chuyến đi)
+                </span>
+              </div>
+
+              <!-- CÁC GROUP TRONG CHUYẾN ĐI (Nếu includeTrips = true) -->
+              <template v-if="includeTrips">
+                <div
+                  v-for="(tGrp, tIdx) in tripsGroups"
+                  :key="'t_grp_' + tIdx"
+                  class="tree-group-box trip-group-box"
+                  style="border-color: #bae6fd;"
+                >
+                  <div class="tree-group-header trip-group-header" @click="toggleTripGroup(tGrp)" style="background: #f8fafc;">
+                    <input
+                      type="checkbox"
+                      :checked="isTripGroupAllSelected(tGrp)"
+                      @click.stop="toggleTripGroup(tGrp)"
+                      style="accent-color: #0284c7; cursor: pointer;"
+                    />
+                    <span class="group-title-text" style="color: #0369a1;">
+                      {{ tGrp.group || 'Thông tin chuyến đi' }}
+                    </span>
+                    <span class="group-meta-count">
+                      ({{ getTripGroupSelectedCount(tGrp) }}/{{ getTripGroupTotalCount(tGrp) }})
+                    </span>
+                  </div>
+
+                  <div class="tree-fields-inline-wrap">
+                    <label
+                      v-for="(col, tcIdx) in (tGrp.columns || []).filter(c => c.id && c.id !== 'stt')"
+                      :key="'t_col_' + col.id"
+                      class="tree-field-chip trip-field-chip"
+                      :class="{ 'chip-selected': selectedTripFieldIds.includes(col.id) }"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="col.id"
+                        v-model="selectedTripFieldIds"
+                        style="accent-color: #0284c7; cursor: pointer;"
+                      />
+                      <span>{{ col.label || col.id }}</span>
+                    </label>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
 
@@ -364,14 +425,17 @@ const templateSource = ref('sample'); // 'sample' (Group) | 'upload'
 // Group & Field selector state (Dạng phân cấp Tree)
 const selectedFieldIds = ref([]);
 const selectedRelativeFieldIds = ref([]);
+const selectedTripFieldIds = ref([]);
 
 const selectedGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 const includeRelatives = ref(true);
+const includeTrips = ref(true);
 const selectedRelativeGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 
 const personnelGroups = computed(() => personnelStore.importMappingPersonnel || []);
 const otherPersonnelGroups = computed(() => personnelGroups.value.slice(1));
 const relativeGroups = computed(() => personnelStore.importMappingRelative || []);
+const tripsGroups = computed(() => personnelStore.importMappingTrips || []);
 
 const initAllFields = () => {
   const pIds = [];
@@ -389,16 +453,26 @@ const initAllFields = () => {
     });
   });
   selectedRelativeFieldIds.value = rIds;
+
+  const tIds = [];
+  (tripsGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') tIds.push(c.id);
+    });
+  });
+  selectedTripFieldIds.value = tIds;
 };
 
 const selectAllFields = () => {
   initAllFields();
   includeRelatives.value = true;
+  includeTrips.value = true;
 };
 
 const deselectAllFields = () => {
   selectedFieldIds.value = [];
   selectedRelativeFieldIds.value = [];
+  selectedTripFieldIds.value = [];
 };
 
 const getGroupTotalCount = (grp) => {
@@ -464,6 +538,32 @@ const toggleRelGroup = (rGrp) => {
   } else {
     const toAdd = cols.map((c) => c.id).filter((id) => !selectedRelativeFieldIds.value.includes(id));
     selectedRelativeFieldIds.value = [...selectedRelativeFieldIds.value, ...toAdd];
+  }
+};
+
+const getTripGroupTotalCount = (tGrp) => {
+  return (tGrp.columns || []).filter((c) => c.id && c.id !== 'stt').length;
+};
+
+const getTripGroupSelectedCount = (tGrp) => {
+  const cols = (tGrp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  return cols.filter((c) => selectedTripFieldIds.value.includes(c.id)).length;
+};
+
+const isTripGroupAllSelected = (tGrp) => {
+  const cols = (tGrp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  if (cols.length === 0) return false;
+  return cols.every((c) => selectedTripFieldIds.value.includes(c.id));
+};
+
+const toggleTripGroup = (tGrp) => {
+  const cols = (tGrp.columns || []).filter((c) => c.id && c.id !== 'stt');
+  const allSel = isTripGroupAllSelected(tGrp);
+  if (allSel) {
+    selectedTripFieldIds.value = selectedTripFieldIds.value.filter((id) => !cols.some((c) => c.id === id));
+  } else {
+    const toAdd = cols.map((c) => c.id).filter((id) => !selectedTripFieldIds.value.includes(id));
+    selectedTripFieldIds.value = [...selectedTripFieldIds.value, ...toAdd];
   }
 };
 
@@ -581,7 +681,11 @@ const loadSampleTemplate = async () => {
       activeRelIndices,
       relativeGroups.value,
       selectedFieldIds.value,
-      selectedRelativeFieldIds.value
+      selectedRelativeFieldIds.value,
+      {},
+      includeTrips.value,
+      selectedTripFieldIds.value,
+      tripsGroups.value
     );
     sampleTemplateBuffer.value = await blob.arrayBuffer();
   } catch (e) {
@@ -590,7 +694,7 @@ const loadSampleTemplate = async () => {
 };
 
 watch(
-  () => [selectedFieldIds.value, includeRelatives.value, selectedRelativeFieldIds.value],
+  () => [selectedFieldIds.value, includeRelatives.value, selectedRelativeFieldIds.value, includeTrips.value, selectedTripFieldIds.value],
   () => {
     loadSampleTemplate();
   },

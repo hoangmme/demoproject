@@ -1728,6 +1728,26 @@ const availableTripCols = computed(() => {
   return cols;
 });
 
+const DEFAULT_RELATIVE_MAPPING = [
+  {
+    group: 'Thông tin Thân nhân',
+    isMultiple: true,
+    columns: [
+      { id: 'parentName', label: 'Họ tên Cán bộ', width: '25', format: 'text' },
+      { id: 'cccdparent', label: 'CCCD Cán bộ liên quan', width: '25', format: 'text' },
+      { id: 'relationshipName', label: 'Mối quan hệ', width: '25', format: 'dropdown', options: 'Bố, Mẹ, Vợ, Chồng, Con đẻ, Con nuôi, Anh, Chị, Em ruột, Bố chồng/vợ, Mẹ chồng/vợ' },
+      { id: 'relativeName', label: 'Họ và tên thân nhân', width: '25', format: 'text' },
+      { id: 'cccdthannhan', label: 'CCCD thân nhân', width: '25', format: 'text' },
+      { id: 'birthYear', label: 'Năm sinh', width: '25', format: 'number' },
+      { id: 'currentAddress', label: 'Nơi ở hiện nay', width: '50', format: 'text' },
+      { id: 'occupation', label: 'Nghề nghiệp / Nơi làm việc', width: '50', format: 'text' },
+      { id: 'countryName', label: 'Quốc gia định cư / lưu trú', width: '33', format: 'text' },
+      { id: 'passportNumber', label: 'Số Hộ chiếu thân nhân', width: '25', format: 'text' },
+      { id: 'notes', label: 'Ghi chú', width: '50', format: 'text' },
+    ],
+  },
+];
+
 const DEFAULT_TRIPS_MAPPING = [
   {
     group: 'Thông tin chuyến đi xuất nhập cảnh',
@@ -1938,7 +1958,11 @@ onMounted(async () => {
   }
   await personnelStore.loadSettings();
   personnelGroups.value = normalizeGroupColumns(JSON.parse(JSON.stringify(personnelStore.importMappingPersonnel || [])));
-  relativeGroups.value = normalizeGroupColumns(JSON.parse(JSON.stringify(personnelStore.importMappingRelative || [])));
+  relativeGroups.value = normalizeGroupColumns(
+    personnelStore.importMappingRelative && personnelStore.importMappingRelative.length > 0
+      ? JSON.parse(JSON.stringify(personnelStore.importMappingRelative))
+      : JSON.parse(JSON.stringify(DEFAULT_RELATIVE_MAPPING))
+  );
   tripsGroups.value = normalizeGroupColumns(
     personnelStore.importMappingTrips && personnelStore.importMappingTrips.length > 0
       ? JSON.parse(JSON.stringify(personnelStore.importMappingTrips))

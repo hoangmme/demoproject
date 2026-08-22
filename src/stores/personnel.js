@@ -321,11 +321,53 @@ export const usePersonnelStore = defineStore('personnel', {
 
       let rMap = await getAppSettings('mapping_config_relative', null);
       if (!rMap || rMap.length === 0) rMap = await getAppSettings('importMappingRelative', []);
-      this.importMappingRelative = rMap || [];
+      if (!rMap || rMap.length === 0) {
+        rMap = [
+          {
+            group: 'Thông tin Thân nhân',
+            isMultiple: true,
+            columns: [
+              { id: 'parentName', label: 'Họ tên Cán bộ', width: '25', format: 'text' },
+              { id: 'cccdparent', label: 'CCCD Cán bộ liên quan', width: '25', format: 'text' },
+              { id: 'relationshipName', label: 'Mối quan hệ', width: '25', format: 'dropdown', options: 'Bố, Mẹ, Vợ, Chồng, Con đẻ, Con nuôi, Anh, Chị, Em ruột, Bố chồng/vợ, Mẹ chồng/vợ' },
+              { id: 'relativeName', label: 'Họ và tên thân nhân', width: '25', format: 'text' },
+              { id: 'cccdthannhan', label: 'CCCD thân nhân', width: '25', format: 'text' },
+              { id: 'birthYear', label: 'Năm sinh', width: '25', format: 'number' },
+              { id: 'currentAddress', label: 'Nơi ở hiện nay', width: '50', format: 'text' },
+              { id: 'occupation', label: 'Nghề nghiệp / Nơi làm việc', width: '50', format: 'text' },
+              { id: 'countryName', label: 'Quốc gia định cư / lưu trú', width: '33', format: 'text' },
+              { id: 'passportNumber', label: 'Số Hộ chiếu thân nhân', width: '25', format: 'text' },
+              { id: 'notes', label: 'Ghi chú', width: '50', format: 'text' },
+            ],
+          },
+        ];
+      }
+      this.importMappingRelative = rMap;
 
       let tMap = await getAppSettings('mapping_config_trips', null);
       if (!tMap || tMap.length === 0) tMap = await getAppSettings('importMappingTrips', []);
-      this.importMappingTrips = tMap || [];
+      if (!tMap || tMap.length === 0) {
+        tMap = [
+          {
+            group: 'Thông tin chuyến đi xuất nhập cảnh',
+            isMultiple: false,
+            columns: [
+              { id: 'countryName', label: 'Quốc gia / Nơi đến', width: '33', format: 'text', placeholder: 'Nhập quốc gia' },
+              { id: 'departureDate', label: 'Ngày xuất cảnh', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
+              { id: 'arrivalDate', label: 'Ngày nhập cảnh', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
+              { id: 'decisionNumber', label: 'Số quyết định duyệt', width: '33', format: 'text', placeholder: 'VD: 1234/QĐ-UBND' },
+              { id: 'decisionDate', label: 'Ngày quyết định', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
+              { id: 'fundingName', label: 'Nguồn kinh phí', width: '33', format: 'dropdown', options: 'Ngân sách nhà nước, Tài trợ, Tự túc, Khác' },
+              { id: 'purpose', label: 'Mục đích chuyến đi', width: '50', format: 'text', placeholder: 'Công tác, Du lịch, Thăm thân...' },
+              { id: 'passportNumber', label: 'Số Hộ chiếu', width: '25', format: 'text' },
+              { id: 'approvedDepartureDate', label: 'Ngày đi duyệt', width: '25', format: 'date' },
+              { id: 'approvedArrivalDate', label: 'Ngày về duyệt', width: '25', format: 'date' },
+              { id: 'approvedExtensionDate', label: 'Ngày gia hạn duyệt', width: '25', format: 'date' },
+            ],
+          },
+        ];
+      }
+      this.importMappingTrips = tMap;
 
       let keyCfg = await getAppSettings('system_key_config', null);
       if (keyCfg && typeof keyCfg === 'object') {

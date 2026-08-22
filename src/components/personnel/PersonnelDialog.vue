@@ -6,8 +6,8 @@
     :style="{ width: '85vw', maxWidth: '1100px' }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
-    <!-- 2 Main Tabs: Cá nhân & Thân nhân -->
-    <div style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px;">
+    <!-- 3 Main Tabs: Cá nhân, Chuyến đi & Thân nhân -->
+    <div style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px; flex-wrap: wrap;">
       <Button
         :label="'1. Thông tin Cán bộ (Cá nhân)'"
         icon="pi pi-user"
@@ -17,31 +17,30 @@
         @click="activeTab = 0"
       />
       <Button
-        :label="'2. Danh sách Thân nhân (' + (form.relatives?.length || 0) + ')'"
-        icon="pi pi-users"
+        :label="'2. Chuyến đi nước ngoài (' + (form.trips?.length || 0) + ')'"
+        icon="pi pi-send"
         :severity="activeTab === 1 ? 'primary' : 'secondary'"
         :text="activeTab !== 1"
         size="small"
         @click="activeTab = 1"
       />
+      <Button
+        :label="'3. Danh sách Thân nhân (' + (form.relatives?.length || 0) + ')'"
+        icon="pi pi-users"
+        :severity="activeTab === 2 ? 'primary' : 'secondary'"
+        :text="activeTab !== 2"
+        size="small"
+        @click="activeTab = 2"
+      />
     </div>
 
     <!-- Fixed Height Tab Contents Area to prevent jumping -->
     <div style="height: 540px; max-height: 65vh; overflow-y: auto; padding-right: 8px;">
-      <!-- TAB 1: CÁN BỘ (Hiển thị toàn bộ các nhóm theo đúng thứ tự cấu hình) -->
+      <!-- TAB 1: CÁN BỘ (Hiển thị toàn bộ các nhóm Cán bộ) -->
       <div v-show="activeTab === 0" style="display: flex; flex-direction: column; gap: 1.5rem;">
         <template v-for="(grp, gIdx) in (personnelStore.importMappingPersonnel || [])" :key="gIdx">
-          <!-- Nhóm Chuyến đi nước ngoài -->
-          <div v-if="isTripsGroup(grp, gIdx)">
-            <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-              <i class="pi pi-globe" style="color: #0284c7; font-size: 0.95rem;"></i>
-              <span>{{ grp.group || 'Chuyến đi nước ngoài' }} ({{ form.trips?.length || 0 }} chuyến)</span>
-            </h4>
-            <PersonnelTravelForm :form="form" :group="grp" />
-          </div>
-
           <!-- Nhóm Kỷ luật & Lưu ý chính trị -->
-          <div v-else-if="isNotesGroup(grp, gIdx)">
+          <div v-if="isNotesGroup(grp, gIdx)">
             <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
               <i class="pi pi-exclamation-triangle" style="color: #f59e0b; font-size: 0.95rem;"></i>
               <span>{{ grp.group || 'Lịch sử kỷ luật & Lưu ý chính trị' }}</span>
@@ -64,8 +63,13 @@
         </template>
       </div>
 
-      <!-- TAB 2: THÂN NHÂN -->
+      <!-- TAB 2: CHUYẾN ĐI NƯỚC NGOÀI -->
       <div v-show="activeTab === 1">
+        <PersonnelTravelForm :form="form" />
+      </div>
+
+      <!-- TAB 3: THÂN NHÂN -->
+      <div v-show="activeTab === 2">
         <PersonnelFamilyForm :form="form" :targetRelativeCode="targetRelativeCode" />
       </div>
     </div>

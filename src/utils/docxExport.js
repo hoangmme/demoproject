@@ -969,7 +969,10 @@ export async function createDynamicDocxTemplateBlob(
   relativeGroups = [],
   selectedFieldIds = null,
   selectedRelativeFieldIds = null,
-  options = {}
+  options = {},
+  includeTrips = true,
+  selectedTripFieldIds = null,
+  tripsGroups = []
 ) {
   const zip = new JSZip();
 
@@ -1115,6 +1118,49 @@ export async function createDynamicDocxTemplateBlob(
     bodyContent += `
       <w:p/>
       <w:p><w:r><w:t>{/than_nhan}</w:t></w:r></w:p>
+      <w:p/>
+    `;
+  }
+
+  // 4. Khối Chuyến đi xuất nhập cảnh nếu được chọn
+  if (includeTrips) {
+    bodyContent += `
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* Thông tin chuyến đi nước ngoài (xuất nhập cảnh):</w:t></w:r></w:p>
+      <w:p><w:r><w:t>{#xuatnhapcanh}</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Chuyến {stt}: Quốc gia {countryName} (Từ {departureDate} đến {arrivalDate})</w:t></w:r></w:p>
+    `;
+
+    const activeTripCols = [];
+    (tripsGroups || []).forEach((tGrp) => {
+      (tGrp.columns || []).forEach((col) => {
+        if (col.id && col.id !== 'stt' && !activeTripCols.some((x) => x.id === col.id)) {
+          if (!selectedTripFieldIds || selectedTripFieldIds.includes(col.id)) {
+            activeTripCols.push(col);
+          }
+        }
+      });
+    });
+
+    if (activeTripCols.length > 0) {
+      activeTripCols.forEach((col, tripColIdx) => {
+        let colLabel = escapeXml(col.label || col.id);
+        const colId = escapeXml(col.id);
+        bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
+      });
+    } else {
+      bodyContent += `
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quốc gia / Nơi đến: </w:t></w:r><w:r><w:t>{countryName}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Ngày xuất cảnh: </w:t></w:r><w:r><w:t>{departureDate}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Ngày nhập cảnh: </w:t></w:r><w:r><w:t>{arrivalDate}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Số quyết định: </w:t></w:r><w:r><w:t>{decisionNumber}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nguồn kinh phí: </w:t></w:r><w:r><w:t>{fundingName}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Mục đích: </w:t></w:r><w:r><w:t>{purpose}</w:t></w:r></w:p>
+      `;
+    }
+
+    bodyContent += `
+      <w:p/>
+      <w:p><w:r><w:t>{/xuatnhapcanh}</w:t></w:r></w:p>
       <w:p/>
     `;
   }
