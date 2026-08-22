@@ -112,3 +112,127 @@ export const computeColumnIndexMap = (groups) => {
 
   return map;
 };
+
+export const parseDateValue = (val) => {
+  if (val === undefined || val === null || val === '') return null;
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? null : val;
+  }
+  if (typeof val === 'number' || (!isNaN(val) && Number(val) > 1000 && !String(val).includes('/') && !String(val).includes('-'))) {
+    const num = Number(val);
+    if (num > 10000 && num < 100000) {
+      const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+  const str = String(val).trim();
+  if (!str || str === '-') return null;
+
+  // DD/MM/YYYY or D/M/YYYY or DD-MM-YYYY
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(str)) {
+    const parts = str.split(/[\/\-]/);
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    const d = new Date(year, month, day);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // YYYY-MM-DD or YYYY/MM/DD
+  if (/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/.test(str)) {
+    const parts = str.split(/[\/\-]/);
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const d = new Date(year, month, day);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  try {
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  } catch (e) {
+    return null;
+  }
+};
+
+/**
+ * Tính toán Trạng thái Hiện diện (Trong nước / Nước ngoài) theo thời gian thực
+ * Duyệt qua toàn bộ danh sách chuyến đi của một cá nhân/thân nhân.
+ */
+export const computePresenceStatus = (record, formulaConfig = {}) => {
+  if (!record) return { status: 'domestic', label: 'Trong nước', isAbroad: false };
+
+  const depCol = formulaConfig.departureCol || 'departureDate';
+  const arrCol = formulaConfig.arrivalCol || 'arrivalDate';
+  const countryCol = formulaConfig.countryCol || 'countryName';
+  const labelDomestic = formulaConfig.labelDomestic || 'Trong nước';
+  const labelAbroad = formulaConfig.labelAbroad || 'Đang ở nước ngoài';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Collect all trip items
+  let trips = [];
+  if (Array.isArray(record.trips) && record.trips.length > 0) {
+    trips = record.trips;
+  } else if (Array.isArray(record.tripList) && record.tripList.length > 0) {
+    trips = record.tripList;
+  } else {
+    // Single trip or relative item
+    trips = [record];
+  }
+
+  let activeAbroadTrip = null;
+
+  for (const t of trips) {
+    const depRaw = t[depCol] || t.departureDate || t.approvedDepartureDate || t.custom_data?.[depCol];
+    const arrRaw = t[arrCol] || t.arrivalDate || t.approvedArrivalDate || t.approvedExtensionDate || t.custom_data?.[arrCol];
+    const country = t[countryCol] || t.countryName || t.custom_data?.[countryCol] || '';
+
+    const depDate = parseDateValue(depRaw);
+    const arrDate = parseDateValue(arrRaw);
+
+    if (depDate) {
+      const depNormalized = new Date(depDate);
+      depNormalized.setHours(0, 0, 0, 0);
+
+      // Nếu hôm nay >= Ngày xuất cảnh
+      if (today >= depNormalized) {
+        if (arrDate) {
+          const arrNormalized = new Date(arrDate);
+          arrNormalized.setHours(23, 59, 59, 999);
+
+          // Nếu hôm nay < Ngày nhập cảnh (chuyến đi đang diễn ra)
+          if (today <= arrNormalized) {
+            activeAbroadTrip = { trip: t, country, departureDate: depDate, arrivalDate: arrDate };
+            break;
+          }
+        } else {
+          // Chưa có ngày về -> Mặc định đang ở nước ngoài
+          activeAbroadTrip = { trip: t, country, departureDate: depDate, arrivalDate: null };
+          break;
+        }
+      }
+    }
+  }
+
+  if (activeAbroadTrip) {
+    const countrySuffix = activeAbroadTrip.country ? `: ${activeAbroadTrip.country}` : '';
+    return {
+      status: 'abroad',
+      isAbroad: true,
+      label: `${labelAbroad}${countrySuffix}`,
+      shortLabel: labelAbroad,
+      country: activeAbroadTrip.country,
+      trip: activeAbroadTrip.trip,
+    };
+  }
+
+  return {
+    status: 'domestic',
+    isAbroad: false,
+    label: labelDomestic,
+    shortLabel: labelDomestic,
+  };
+};

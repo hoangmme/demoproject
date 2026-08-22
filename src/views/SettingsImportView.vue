@@ -307,6 +307,57 @@
                   </span>
                 </div>
               </div>
+
+              <!-- Formula Builder Config (When format === 'formula') -->
+              <div
+                v-if="col.format === 'formula'"
+                style="margin-left: 104px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px; background: #f0fdf4; padding: 10px 14px; border-radius: 8px; border: 1px solid #bbf7d0;"
+              >
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <i class="pi pi-calculator" style="color: #16a34a; font-size: 0.85rem;"></i>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #166534;">Cấu hình Công thức Tự động:</span>
+                  </div>
+                  <select v-model="col.formulaType" class="custom-col-select" style="width: auto; min-width: 260px; height: 28px; font-size: 0.75rem;">
+                    <option value="presence_status">Trạng thái Hiện diện (Trong nước / Nước ngoài)</option>
+                  </select>
+                </div>
+
+                <div v-if="!col.formulaType || col.formulaType === 'presence_status'" style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="font-size: 0.72rem; color: #15803d; line-height: 1.4;">
+                    💡 <strong>Nguyên lý:</strong> Tự động duyệt qua toàn bộ các chuyến đi của người này. Nếu có bất kỳ chuyến đi nào đang diễn ra tại thời điểm <strong>Ngày hiện tại (Today)</strong>, hệ thống tự động gán trạng thái <strong>"Đang ở nước ngoài"</strong>. Ngược lại gán <strong>"Trong nước"</strong>.
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Xuất cảnh (Đi):</span>
+                      <select v-model="col.formulaDepartureCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định hệ thống (departureDate) --</option>
+                        <option v-for="c in (activeTab === 'personnel' ? availablePersonnelCols : availableRelativeCols)" :key="c.id" :value="c.id">
+                          {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Nhập cảnh (Về):</span>
+                      <select v-model="col.formulaArrivalCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định hệ thống (arrivalDate) --</option>
+                        <option v-for="c in (activeTab === 'personnel' ? availablePersonnelCols : availableRelativeCols)" :key="c.id" :value="c.id">
+                          {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Quốc gia (Tùy chọn):</span>
+                      <select v-model="col.formulaCountryCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định (countryName) --</option>
+                        <option v-for="c in (activeTab === 'personnel' ? availablePersonnelCols : availableRelativeCols)" :key="c.id" :value="c.id">
+                          {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Add column button -->
@@ -925,6 +976,7 @@ const formatOptions = [
   { label: 'Hộp kiểm (Nhiều lựa chọn)', value: 'checkbox' },
   { label: 'Hộp kiểm + Nhập Text (Có điều kiện)', value: 'checkbox_text' },
   { label: 'Dropdown (Lựa chọn đơn)', value: 'dropdown' },
+  { label: 'Cột Công thức (Formula / Trạng thái)', value: 'formula' },
   { label: 'Tệp đính kèm (File/Ảnh/PDF)', value: 'file' },
 ];
 

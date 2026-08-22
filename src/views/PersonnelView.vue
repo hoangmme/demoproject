@@ -285,9 +285,16 @@
               </span>
             </template>
 
-            <!-- Default value rendering -->
+            <!-- Default value or Badge for formula column -->
             <template v-else>
-              <span>{{ getDisplayValue(data, col.id) }}</span>
+              <span
+                v-if="isFormulaCol(col.id)"
+                :class="getFormulaStatus(data, col.id).isAbroad ? 'badge-pill badge-red' : 'badge-pill badge-green'"
+                style="font-size: 0.76rem;"
+              >
+                {{ getFormulaStatus(data, col.id).label }}
+              </span>
+              <span v-else>{{ getDisplayValue(data, col.id) }}</span>
             </template>
           </template>
         </Column>
@@ -772,7 +779,7 @@ import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { formatPersonnelCode, formatDate, formatExcelDate } from '@/utils/formatters';
+import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
@@ -1076,8 +1083,40 @@ const filteredRelatives = computed(() => {
   });
 });
 
+const allColumnDefsMap = computed(() => {
+  const map = {};
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) map[c.id] = c; });
+  });
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) map[c.id] = c; });
+  });
+  return map;
+});
+
+const isFormulaCol = (colId) => {
+  const colDef = allColumnDefsMap.value[colId];
+  return colDef && colDef.format === 'formula';
+};
+
+const getFormulaStatus = (record, colId) => {
+  const colDef = allColumnDefsMap.value[colId] || {};
+  return computePresenceStatus(record, {
+    departureCol: colDef.formulaDepartureCol,
+    arrivalCol: colDef.formulaArrivalCol,
+    countryCol: colDef.formulaCountryCol,
+    labelDomestic: colDef.formulaLabelDomestic,
+    labelAbroad: colDef.formulaLabelAbroad,
+  });
+};
+
 const getDisplayValue = (person, colId) => {
   if (!person) return '-';
+
+  if (isFormulaCol(colId)) {
+    return getFormulaStatus(person, colId).label;
+  }
+
   let val = person[colId];
   if (val === undefined || val === null || val === '') {
     if (person.custom_data && typeof person.custom_data === 'object') {

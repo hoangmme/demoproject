@@ -639,11 +639,20 @@
             </span>
           </div>
 
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <InputText
               v-model="drilldownSearch"
               placeholder="Tìm kiếm trong danh sách..."
-              style="font-size: 0.78rem; padding: 4px 8px; width: 220px;"
+              style="font-size: 0.78rem; padding: 4px 8px; width: 200px;"
+            />
+            <Button
+              icon="pi pi-sliders-h"
+              label="Tùy chọn cột"
+              severity="secondary"
+              size="small"
+              outlined
+              @click="openDrilldownColDialog"
+              title="Tùy chỉnh các cột hiển thị trong bảng chi tiết này"
             />
             <Button
               icon="pi pi-download"
@@ -681,7 +690,7 @@
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Mã CB</th>
                 <th>Họ và tên</th>
-                <th v-for="col in activePersonnelColumns" :key="col.id">{{ col.label }}</th>
+                <th v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">{{ col.label }}</th>
                 <th>Số chuyến đi</th>
               </tr>
             </thead>
@@ -706,7 +715,7 @@
                 <td style="font-weight: 600; color: #1e293b;">
                   <span style="color: #0284c7; text-decoration: underline;">{{ p.name }}</span>
                 </td>
-                <td v-for="col in activePersonnelColumns" :key="col.id">
+                <td v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">
                   {{ getDisplayValue(p, col.id) }}
                 </td>
                 <td><span class="badge-pill badge-green">{{ (p.trips || []).length }} chuyến</span></td>
@@ -728,7 +737,7 @@
                 </th>
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Cán bộ liên quan</th>
-                <th v-for="col in activeRelativeColumns" :key="col.id">{{ col.label }}</th>
+                <th v-for="col in drilldownDisplayRelativeColumns" :key="col.id">{{ col.label }}</th>
               </tr>
             </thead>
             <tbody>
@@ -749,7 +758,7 @@
                 </td>
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
                 <td style="font-weight: 600; color: #1e293b;">{{ r.parentName || r.parentPersonnelName || '-' }}</td>
-                <td v-for="col in activeRelativeColumns" :key="col.id">
+                <td v-for="col in drilldownDisplayRelativeColumns" :key="col.id">
                   <span
                     :class="(col.id === colConfig.countryRelative || col.id === 'countryName' || col.id === 'content') ? 'badge-pill badge-blue' : (col.id === 'relativeName' || col.id === 'name' ? 'badge-pill badge-purple' : '')"
                   >
@@ -775,7 +784,7 @@
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Mã CB</th>
                 <th>Họ và tên</th>
-                <th v-for="col in activePersonnelColumns" :key="col.id">{{ col.label }}</th>
+                <th v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">{{ col.label }}</th>
                 <th>Số Quyết định</th>
                 <th>Quốc gia đến</th>
                 <th>Nguồn Kinh phí</th>
@@ -811,7 +820,7 @@
                     {{ t.personnelName || getPersonnelForTrip(t).name || '-' }}
                   </span>
                 </td>
-                <td v-for="col in activePersonnelColumns" :key="col.id">
+                <td v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">
                   {{ getDisplayValue(getPersonnelForTrip(t), col.id) }}
                 </td>
                 <td>
@@ -899,120 +908,40 @@
           </div>
         </div>
 
-        <!-- Setting 3: Funding ID & Sub-columns (Personnel & Relatives) -->
-        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
+        <!-- Setting 3: Funding ID (2 Dropdowns: Cán bộ & Thân nhân) -->
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block;">
             3. Cài đặt Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí & Biểu đồ):
           </label>
           <div style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 6px 10px; border-radius: 6px;">
-            💡 <strong>Mẹo nhanh:</strong> Nếu cột Nguồn kinh phí dạng Tích chọn nhiều ô (Ví dụ: <em>[Cột 37 - 40] Nguồn kinh phí (funding2)</em>), bạn chỉ cần chọn cột đó vào ô <strong>Cột chung</strong>. Hệ thống sẽ tự động bóc tách và đếm đủ 4 nguồn (Ngân sách, Tài trợ, Tự túc, Khác) mà không cần điền 4 ô phụ bên dưới!
+            💡 Bạn chỉ cần chọn đúng 2 cột (1 cột ở Cán bộ và 1 cột ở Thân nhân). Hệ thống sẽ tự động bóc tách và thống kê đầy đủ các nguồn kinh phí (Ngân sách, Tài trợ, Tự túc, Khác...).
           </div>
 
           <!-- A. Cán bộ (Chuyến đi) -->
-          <div style="border-left: 3px solid #0284c7; padding-left: 8px;">
-            <span style="font-size: 0.76rem; font-weight: 700; color: #0369a1;">A. Nguồn Kinh phí Cán bộ (Chuyến đi):</span>
-            <div style="display: flex; gap: 8px; margin-top: 4px;">
-              <InputText v-model="tempConfig.funding" placeholder="Cột chung (Ví dụ: fundingName)" style="flex: 1; font-size: 0.78rem;" />
+          <div>
+            <span style="font-size: 0.74rem; font-weight: 600; color: #0369a1; display: block; margin-bottom: 2px;">
+              a) Cột Nguồn Kinh phí của Cán bộ (Chuyến đi):
+            </span>
+            <div style="display: flex; gap: 8px;">
+              <InputText v-model="tempConfig.funding" placeholder="Ví dụ: funding2 hoặc fundingName" style="flex: 1; font-size: 0.78rem;" />
               <select class="settings-select" @change="tempConfig.funding = $event.target.value">
                 <option value="">-- Chọn cột Cán bộ --</option>
                 <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
               </select>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
-              <div>
-                <span style="font-size: 0.7rem; color: #64748b;">Ngân sách nhà nước:</span>
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <InputText v-model="tempConfig.fundingBudget" placeholder="fundingBudget" style="flex: 1; font-size: 0.75rem;" />
-                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingBudget = $event.target.value">
-                    <option value="">-- Chọn cột --</option>
-                    <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span style="font-size: 0.7rem; color: #64748b;">Tài trợ:</span>
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <InputText v-model="tempConfig.fundingSponsor" placeholder="fundingSponsor" style="flex: 1; font-size: 0.75rem;" />
-                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingSponsor = $event.target.value">
-                    <option value="">-- Chọn cột --</option>
-                    <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span style="font-size: 0.7rem; color: #64748b;">Tự túc:</span>
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <InputText v-model="tempConfig.fundingSelf" placeholder="fundingSelf" style="flex: 1; font-size: 0.75rem;" />
-                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingSelf = $event.target.value">
-                    <option value="">-- Chọn cột --</option>
-                    <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span style="font-size: 0.7rem; color: #64748b;">Khác:</span>
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <InputText v-model="tempConfig.fundingOther" placeholder="fundingOther" style="flex: 1; font-size: 0.75rem;" />
-                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingOther = $event.target.value">
-                    <option value="">-- Chọn cột --</option>
-                    <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-                  </select>
-                </div>
-              </div>
-            </div>
           </div>
 
-          <!-- B. Thân nhân ở Nước ngoài -->
-          <div style="border-left: 3px solid #7c3aed; padding-left: 8px; padding-top: 6px; border-top: 1px dashed #e2e8f0;">
-            <span style="font-size: 0.76rem; font-weight: 700; color: #6d28d9;">B. Nguồn Kinh phí / Học bổng Thân nhân:</span>
-            <div style="display: flex; gap: 8px; margin-top: 4px;">
-              <InputText v-model="tempConfig.fundingRelative" placeholder="Cột chung (Ví dụ: fundingName)" style="flex: 1; font-size: 0.78rem;" />
+          <!-- B. Thân nhân -->
+          <div>
+            <span style="font-size: 0.74rem; font-weight: 600; color: #6d28d9; display: block; margin-bottom: 2px;">
+              b) Cột Nguồn Kinh phí / Học bổng của Thân nhân:
+            </span>
+            <div style="display: flex; gap: 8px;">
+              <InputText v-model="tempConfig.fundingRelative" placeholder="Ví dụ: funding hoặc fundingName" style="flex: 1; font-size: 0.78rem;" />
               <select class="settings-select" @change="tempConfig.fundingRelative = $event.target.value">
                 <option value="">-- Chọn cột Thân nhân --</option>
                 <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
               </select>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
-              <div>
-                <span style="font-size: 0.7rem; color: #64748b;">Học bổng / Ngân sách:</span>
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <InputText v-model="tempConfig.fundingRelativeBudget" placeholder="fundingRelativeBudget" style="flex: 1; font-size: 0.75rem;" />
-                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingRelativeBudget = $event.target.value">
-                    <option value="">-- Chọn cột --</option>
-                    <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span style="font-size: 0.7rem; color: #64748b;">Tài trợ:</span>
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <InputText v-model="tempConfig.fundingRelativeSponsor" placeholder="fundingRelativeSponsor" style="flex: 1; font-size: 0.75rem;" />
-                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingRelativeSponsor = $event.target.value">
-                    <option value="">-- Chọn cột --</option>
-                    <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span style="font-size: 0.7rem; color: #64748b;">Tự túc:</span>
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <InputText v-model="tempConfig.fundingRelativeSelf" placeholder="fundingRelativeSelf" style="flex: 1; font-size: 0.75rem;" />
-                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingRelativeSelf = $event.target.value">
-                    <option value="">-- Chọn cột --</option>
-                    <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <span style="font-size: 0.7rem; color: #64748b;">Khác:</span>
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <InputText v-model="tempConfig.fundingRelativeOther" placeholder="fundingRelativeOther" style="flex: 1; font-size: 0.75rem;" />
-                  <select class="settings-select" style="max-width: 140px; font-size: 0.72rem;" @change="tempConfig.fundingRelativeOther = $event.target.value">
-                    <option value="">-- Chọn cột --</option>
-                    <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
-                  </select>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1244,6 +1173,51 @@
       :selectedPersonnel="drilldownSelectedPersonnel"
       :allPersonnel="drilldownAllPersonnel"
     />
+
+    <!-- Dialog Tùy chọn Cột cho Drilldown Popup -->
+    <Dialog
+      v-model:visible="isDrilldownColDialogOpen"
+      modal
+      :header="`Tùy chọn Cột hiển thị: ${isRelativeView ? 'Thân nhân ở Nước ngoài' : 'Cán bộ / Chuyến đi'}`"
+      :style="{ width: '580px', maxWidth: '96vw' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+          <span style="font-size: 0.78rem; color: #64748b;">
+            Tích chọn các cột bạn muốn hiển thị trong bảng chi tiết này:
+          </span>
+          <div style="display: flex; gap: 6px;">
+            <Button label="Chọn tất cả" text size="small" style="font-size: 0.72rem; padding: 2px 6px;" @click="selectAllDrilldownCols" />
+            <Button label="Mặc định" text severity="secondary" size="small" style="font-size: 0.72rem; padding: 2px 6px;" @click="resetDefaultDrilldownCols" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 360px; overflow-y: auto; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa;">
+          <label
+            v-for="col in currentDrilldownAllAvailableCols"
+            :key="col.id"
+            style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; cursor: pointer; padding: 6px 8px; border-radius: 6px; background: #ffffff; border: 1px solid #f1f5f9;"
+          >
+            <input
+              type="checkbox"
+              :value="col.id"
+              v-model="tempSelectedDrilldownCols"
+              style="cursor: pointer; accent-color: #16a34a; width: 15px; height: 15px;"
+            />
+            <span style="color: #334155; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="col.label">
+              {{ col.label }}
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
+          <Button label="Hủy" severity="secondary" text size="small" @click="isDrilldownColDialogOpen = false" />
+          <Button label="Lưu & Áp dụng" icon="pi pi-check" severity="success" size="small" @click="saveDrilldownCols" />
+        </div>
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -1257,10 +1231,123 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap, formatDate } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, computePresenceStatus } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const personnelStore = usePersonnelStore();
+
+// =========================================================================
+// DRILLDOWN COLUMN CUSTOMIZATION
+// =========================================================================
+const isDrilldownColDialogOpen = ref(false);
+const tempSelectedDrilldownCols = ref([]);
+const customDrilldownColsPersonnel = ref([]);
+const customDrilldownColsRelatives = ref([]);
+
+const loadDrilldownColSettings = () => {
+  try {
+    const pCols = localStorage.getItem('dashboard_drilldown_cols_personnel');
+    if (pCols) customDrilldownColsPersonnel.value = JSON.parse(pCols);
+    const rCols = localStorage.getItem('dashboard_drilldown_cols_relatives');
+    if (rCols) customDrilldownColsRelatives.value = JSON.parse(rCols);
+  } catch (e) {
+    console.error('Error loading drilldown col settings:', e);
+  }
+};
+loadDrilldownColSettings();
+
+const isRelativeView = computed(() => {
+  return drilldownCategory.value === 'relatives' || (drilldownHasDualTabs.value && drilldownActiveTab.value === 'relatives');
+});
+
+const currentDrilldownAllAvailableCols = computed(() => {
+  if (isRelativeView.value) {
+    return allAvailableRelativeColumns.value;
+  }
+  return allAvailablePersonnelColumns.value;
+});
+
+const openDrilldownColDialog = () => {
+  if (isRelativeView.value) {
+    tempSelectedDrilldownCols.value = customDrilldownColsRelatives.value.length > 0
+      ? [...customDrilldownColsRelatives.value]
+      : (personnelStore.visibleRelativeColumns || []).filter(
+          (id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo'
+        );
+  } else {
+    tempSelectedDrilldownCols.value = customDrilldownColsPersonnel.value.length > 0
+      ? [...customDrilldownColsPersonnel.value]
+      : (personnelStore.visibleColumns || []).filter((id) => id !== 'stt' && id !== 'code' && id !== 'name');
+  }
+  isDrilldownColDialogOpen.value = true;
+};
+
+const selectAllDrilldownCols = () => {
+  tempSelectedDrilldownCols.value = currentDrilldownAllAvailableCols.value.map((c) => c.id);
+};
+
+const resetDefaultDrilldownCols = () => {
+  if (isRelativeView.value) {
+    tempSelectedDrilldownCols.value = (personnelStore.visibleRelativeColumns || []).filter(
+      (id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo'
+    );
+  } else {
+    tempSelectedDrilldownCols.value = (personnelStore.visibleColumns || []).filter(
+      (id) => id !== 'stt' && id !== 'code' && id !== 'name'
+    );
+  }
+};
+
+const saveDrilldownCols = () => {
+  if (isRelativeView.value) {
+    customDrilldownColsRelatives.value = [...tempSelectedDrilldownCols.value];
+    localStorage.setItem('dashboard_drilldown_cols_relatives', JSON.stringify(customDrilldownColsRelatives.value));
+  } else {
+    customDrilldownColsPersonnel.value = [...tempSelectedDrilldownCols.value];
+    localStorage.setItem('dashboard_drilldown_cols_personnel', JSON.stringify(customDrilldownColsPersonnel.value));
+  }
+  isDrilldownColDialogOpen.value = false;
+};
+
+const drilldownDisplayPersonnelColumns = computed(() => {
+  const map = {};
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id) map[c.id] = c;
+    });
+  });
+
+  const selectedIds = customDrilldownColsPersonnel.value.length > 0
+    ? customDrilldownColsPersonnel.value
+    : (personnelStore.visibleColumns || []).filter((id) => id !== 'stt' && id !== 'code' && id !== 'name');
+
+  return selectedIds.map((id) => {
+    const cfg = map[id];
+    if (cfg && cfg.label) return { ...cfg, id: cfg.id, label: cfg.label };
+    const found = personnelStore.allAvailableColumns.find((c) => c.id === id);
+    return found ? { ...found } : { id, label: id };
+  });
+});
+
+const drilldownDisplayRelativeColumns = computed(() => {
+  const map = {};
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id) map[c.id] = c;
+    });
+  });
+
+  const selectedIds = customDrilldownColsRelatives.value.length > 0
+    ? customDrilldownColsRelatives.value
+    : (personnelStore.visibleRelativeColumns || []).filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo');
+
+  return selectedIds.map((id) => {
+    const cfg = map[id];
+    if (cfg && cfg.label) return { ...cfg, id: cfg.id, label: cfg.label };
+    const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
+    return found ? { ...found } : { id, label: id };
+  });
+});
 
 const activePersonnelColumns = computed(() => {
   const map = {};
@@ -1304,6 +1391,28 @@ const activeRelativeColumns = computed(() => {
 
 const getDisplayValue = (row, colId) => {
   if (!row || !colId) return '-';
+
+  // Check if column is a Formula Column
+  const allMap = {};
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+
+  const colDef = allMap[colId];
+  if (colDef && colDef.format === 'formula') {
+    const status = computePresenceStatus(row, {
+      departureCol: colDef.formulaDepartureCol,
+      arrivalCol: colDef.formulaArrivalCol,
+      countryCol: colDef.formulaCountryCol,
+      labelDomestic: colDef.formulaLabelDomestic,
+      labelAbroad: colDef.formulaLabelAbroad,
+    });
+    return status.label;
+  }
+
   const val = getRowFieldValue(row, colId);
   if (val === undefined || val === null || val === '') return '-';
   if (typeof val === 'object') {
