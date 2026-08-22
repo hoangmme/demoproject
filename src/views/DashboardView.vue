@@ -688,10 +688,16 @@
                   />
                 </th>
                 <th style="width: 40px; text-align: center;">STT</th>
-                <th>Mã CB</th>
                 <th>Họ và tên</th>
                 <th v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">{{ col.label }}</th>
                 <th>Số chuyến đi</th>
+                <!-- Cột So Chiếu / Tiêu chí lọc tự động của ô Dashboard -->
+                <th
+                  v-if="shouldShowDrilldownCriterion"
+                  style="background: #fef3c7; color: #92400e; font-weight: 700; border-left: 2px solid #f59e0b; text-align: center; white-space: nowrap;"
+                >
+                  <i class="pi pi-crosshair"></i> {{ drilldownTargetCriterion.label }}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -711,14 +717,21 @@
                   />
                 </td>
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
-                <td><span class="code-badge">{{ p.code || p.id }}</span></td>
                 <td style="font-weight: 600; color: #1e293b;">
                   <span style="color: #0284c7; text-decoration: underline;">{{ p.name }}</span>
                 </td>
                 <td v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">
-                  {{ getDisplayValue(p, col.id) }}
+                  <span v-if="col.id === 'code'" class="code-badge">{{ p.code || p.id }}</span>
+                  <span v-else>{{ getDisplayValue(p, col.id) }}</span>
                 </td>
                 <td><span class="badge-pill badge-green">{{ (p.trips || []).length }} chuyến</span></td>
+                <!-- Giá trị Cột So Chiếu -->
+                <td
+                  v-if="shouldShowDrilldownCriterion"
+                  style="background: #fffbeb; font-weight: 600; color: #b45309; text-align: center; border-left: 2px solid #fde68a;"
+                >
+                  <span class="badge-pill badge-yellow">{{ getDisplayValue(p, drilldownTargetCriterion.columnId) }}</span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -738,6 +751,13 @@
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Cán bộ liên quan</th>
                 <th v-for="col in drilldownDisplayRelativeColumns" :key="col.id">{{ col.label }}</th>
+                <!-- Cột So Chiếu / Tiêu chí lọc tự động của ô Dashboard -->
+                <th
+                  v-if="shouldShowDrilldownCriterion"
+                  style="background: #fef3c7; color: #92400e; font-weight: 700; border-left: 2px solid #f59e0b; text-align: center; white-space: nowrap;"
+                >
+                  <i class="pi pi-crosshair"></i> {{ drilldownTargetCriterion.label }}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -759,11 +779,20 @@
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
                 <td style="font-weight: 600; color: #1e293b;">{{ r.parentName || r.parentPersonnelName || '-' }}</td>
                 <td v-for="col in drilldownDisplayRelativeColumns" :key="col.id">
+                  <span v-if="col.id === 'code'" class="code-badge">{{ r.code || r.id }}</span>
                   <span
+                    v-else
                     :class="(col.id === colConfig.countryRelative || col.id === 'countryName' || col.id === 'content') ? 'badge-pill badge-blue' : (col.id === 'relativeName' || col.id === 'name' ? 'badge-pill badge-purple' : '')"
                   >
                     {{ getDisplayValue(r, col.id) }}
                   </span>
+                </td>
+                <!-- Giá trị Cột So Chiếu -->
+                <td
+                  v-if="shouldShowDrilldownCriterion"
+                  style="background: #fffbeb; font-weight: 600; color: #b45309; text-align: center; border-left: 2px solid #fde68a;"
+                >
+                  <span class="badge-pill badge-yellow">{{ getDisplayValue(r, drilldownTargetCriterion.columnId) }}</span>
                 </td>
               </tr>
             </tbody>
@@ -782,7 +811,6 @@
                   />
                 </th>
                 <th style="width: 40px; text-align: center;">STT</th>
-                <th>Mã CB</th>
                 <th>Họ và tên</th>
                 <th v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">{{ col.label }}</th>
                 <th>Số Quyết định</th>
@@ -791,6 +819,13 @@
                 <th>Ngày đi</th>
                 <th>Ngày về</th>
                 <th>Duyệt Gia hạn</th>
+                <!-- Cột So Chiếu / Tiêu chí lọc tự động của ô Dashboard -->
+                <th
+                  v-if="shouldShowDrilldownCriterion"
+                  style="background: #fef3c7; color: #92400e; font-weight: 700; border-left: 2px solid #f59e0b; text-align: center; white-space: nowrap;"
+                >
+                  <i class="pi pi-crosshair"></i> {{ drilldownTargetCriterion.label }}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -810,18 +845,14 @@
                   />
                 </td>
                 <td style="text-align: center; color: #64748b; font-weight: 600;">{{ idx + 1 }}</td>
-                <td>
-                  <span class="code-badge">
-                    {{ (getPersonnelForTrip(t).code || t.personnelCode || t.personnelId || '-') }}
-                  </span>
-                </td>
                 <td style="font-weight: 600; color: #1e293b;">
                   <span style="color: #0284c7; text-decoration: underline;">
                     {{ t.personnelName || getPersonnelForTrip(t).name || '-' }}
                   </span>
                 </td>
                 <td v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">
-                  {{ getDisplayValue(getPersonnelForTrip(t), col.id) }}
+                  <span v-if="col.id === 'code'" class="code-badge">{{ (getPersonnelForTrip(t).code || t.personnelCode || t.personnelId || '-') }}</span>
+                  <span v-else>{{ getDisplayValue(getPersonnelForTrip(t), col.id) }}</span>
                 </td>
                 <td>
                   <span v-if="t.decisionNumber || getTripValue(t, colConfig.decision)" class="code-badge">
@@ -842,6 +873,15 @@
                     {{ formatDate(t.approvedExtensionDate) }}
                   </span>
                   <span v-else style="color: #94a3b8;">-</span>
+                </td>
+                <!-- Giá trị Cột So Chiếu -->
+                <td
+                  v-if="shouldShowDrilldownCriterion"
+                  style="background: #fffbeb; font-weight: 600; color: #b45309; text-align: center; border-left: 2px solid #fde68a;"
+                >
+                  <span class="badge-pill badge-yellow">
+                    {{ getDisplayValue(getPersonnelForTrip(t), drilldownTargetCriterion.columnId) !== '-' ? getDisplayValue(getPersonnelForTrip(t), drilldownTargetCriterion.columnId) : (getTripValue(t, drilldownTargetCriterion.columnId) || '-') }}
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -1237,12 +1277,13 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 const personnelStore = usePersonnelStore();
 
 // =========================================================================
-// DRILLDOWN COLUMN CUSTOMIZATION
+// DRILLDOWN COLUMN CUSTOMIZATION & TARGET CRITERION HIGHLIGHT
 // =========================================================================
 const isDrilldownColDialogOpen = ref(false);
 const tempSelectedDrilldownCols = ref([]);
 const customDrilldownColsPersonnel = ref([]);
 const customDrilldownColsRelatives = ref([]);
+const drilldownTargetCriterion = ref(null);
 
 const loadDrilldownColSettings = () => {
   try {
@@ -1262,9 +1303,28 @@ const isRelativeView = computed(() => {
 
 const currentDrilldownAllAvailableCols = computed(() => {
   if (isRelativeView.value) {
-    return allAvailableRelativeColumns.value;
+    const baseList = [{ id: 'code', label: 'Mã Thân nhân' }, { id: 'cccd_can_bo', label: 'CCCD Cán bộ' }];
+    (allAvailableRelativeColumns.value || []).forEach((c) => {
+      if (!baseList.some((x) => x.id === c.id)) {
+        baseList.push({ id: c.id, label: c.label.replace(/^\[Cột\s*[^\]]+\]\s*/i, '') });
+      }
+    });
+    return baseList;
   }
-  return allAvailablePersonnelColumns.value;
+  const baseList = [{ id: 'code', label: 'Mã Cán bộ (Mã CB)' }];
+  (allAvailablePersonnelColumns.value || []).forEach((c) => {
+    if (!baseList.some((x) => x.id === c.id)) {
+      baseList.push({ id: c.id, label: c.label.replace(/^\[Cột\s*[^\]]+\]\s*/i, '') });
+    }
+  });
+  return baseList;
+});
+
+const shouldShowDrilldownCriterion = computed(() => {
+  if (!drilldownTargetCriterion.value || !drilldownTargetCriterion.value.columnId) return false;
+  const colId = drilldownTargetCriterion.value.columnId;
+  const cols = isRelativeView.value ? drilldownDisplayRelativeColumns.value : drilldownDisplayPersonnelColumns.value;
+  return !cols.some((c) => c.id === colId);
 });
 
 const openDrilldownColDialog = () => {
@@ -1322,6 +1382,7 @@ const drilldownDisplayPersonnelColumns = computed(() => {
     : (personnelStore.visibleColumns || []).filter((id) => id !== 'stt' && id !== 'code' && id !== 'name');
 
   return selectedIds.map((id) => {
+    if (id === 'code') return { id: 'code', label: 'Mã CB' };
     const cfg = map[id];
     if (cfg && cfg.label) return { ...cfg, id: cfg.id, label: cfg.label };
     const found = personnelStore.allAvailableColumns.find((c) => c.id === id);
@@ -1342,6 +1403,8 @@ const drilldownDisplayRelativeColumns = computed(() => {
     : (personnelStore.visibleRelativeColumns || []).filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo');
 
   return selectedIds.map((id) => {
+    if (id === 'code') return { id: 'code', label: 'Mã TN' };
+    if (id === 'cccd_can_bo') return { id: 'cccd_can_bo', label: 'CCCD Cán bộ' };
     const cfg = map[id];
     if (cfg && cfg.label) return { ...cfg, id: cfg.id, label: cfg.label };
     const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
@@ -2590,6 +2653,7 @@ const openDrilldown = (type, title, filterContext = {}) => {
   drilldownHasDualTabs.value = false;
   drilldownTripsList.value = [];
   drilldownRelativesList.value = [];
+  drilldownTargetCriterion.value = null;
 
   if (type === 'all_personnel') {
     drilldownCategory.value = 'personnel';
@@ -2603,19 +2667,25 @@ const openDrilldown = (type, title, filterContext = {}) => {
   } else if (type === 'missing_decision') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.missingDecisionTrips];
+    drilldownTargetCriterion.value = { columnId: colConfig.value.decision || 'decisionNumber', label: 'Số Quyết định' };
   } else if (type === 'schedule_warnings') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.extendedTrips, ...stats.value.overdueTrips];
+    drilldownTargetCriterion.value = { columnId: 'approvedExtensionDate', label: 'Duyệt Gia hạn / Hạn về' };
   } else if (type === 'schedule_extended') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.extendedTrips];
+    drilldownTargetCriterion.value = { columnId: 'approvedExtensionDate', label: 'Duyệt Gia hạn' };
   } else if (type === 'schedule_overdue') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.overdueTrips];
+    drilldownTargetCriterion.value = { columnId: 'approvedArrivalDate', label: 'Hạn về (Quá hạn)' };
   } else if (type === 'schedule_ontime') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.onTimeTrips];
+    drilldownTargetCriterion.value = { columnId: 'approvedArrivalDate', label: 'Ngày về' };
   } else if (type === 'country' && filterContext.countryName) {
+    drilldownTargetCriterion.value = { columnId: colConfig.value.country || 'countryName', label: `Quốc gia: ${filterContext.countryName}` };
     const cTarget = String(filterContext.countryName).toLowerCase().trim();
     drilldownTripsList.value = stats.value.filteredTrips.filter((t) => {
       const c = String(getTripValue(t, colConfig.value.country)).toLowerCase().trim();
@@ -2629,6 +2699,7 @@ const openDrilldown = (type, title, filterContext = {}) => {
     drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
     drilldownCategory.value = drilldownActiveTab.value;
   } else if (type === 'funding' && filterContext.fundingName) {
+    drilldownTargetCriterion.value = { columnId: colConfig.value.funding || 'fundingName', label: `Nguồn Kinh phí: ${filterContext.fundingName}` };
     const fTarget = String(filterContext.fundingName).toLowerCase().trim();
     drilldownTripsList.value = stats.value.filteredTrips.filter((t) => {
       const f = String(
@@ -2707,6 +2778,7 @@ const openCustomWidgetDrilldown = (widget) => {
   drilldownCategory.value = widget.source;
   drilldownSearch.value = '';
   drilldownHasDualTabs.value = false;
+  drilldownTargetCriterion.value = { columnId: widget.columnId, label: widget.columnLabel || widget.title };
 
   const list = getSourceList(widget.source);
   drilldownData.value = list.filter((row) => {
@@ -2728,6 +2800,7 @@ const openCustomChartItemDrilldown = (widget, itemName) => {
   drilldownTitle.value = `${widget.title}: ${itemName}`;
   drilldownCategory.value = widget.source;
   drilldownSearch.value = '';
+  drilldownTargetCriterion.value = { columnId: widget.columnId, label: `${widget.columnLabel || widget.title}: ${itemName}` };
 
   if (widget.source === 'combined_country') {
     const cTarget = String(itemName).toLowerCase().trim();

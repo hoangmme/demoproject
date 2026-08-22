@@ -542,11 +542,12 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       if (allowedGroups && !allowedGroups.includes(gIdx)) return;
       
       const groupLines = [];
+      const showColNumbers = exportOptions?.showColumnNumbers === true;
       (grp.columns || []).forEach((col) => {
         if (!col.id || col.id === 'stt') return;
         if (selFields && Array.isArray(selFields) && !selFields.includes(col.id)) return;
         let label = col.label || col.id;
-        if (!label.includes('(')) label = `${label} (${runningIdx++})`;
+        if (showColNumbers && !label.includes('(')) label = `${label} (${runningIdx++})`;
         const rawVal = cd[col.id] !== undefined ? cd[col.id] : (person[col.id] !== undefined ? person[col.id] : data[col.id]);
         const formattedVal = formatFieldValueForDocx(rawVal, col);
         groupLines.push(`- ${label}: ${formattedVal}`);
@@ -562,6 +563,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
 
   // Thêm thân nhân nếu được tích chọn
   const canIncludeRelatives = exportOptions?.includeRelatives !== false;
+  const showColNumbers = exportOptions?.showColumnNumbers === true;
   if (canIncludeRelatives && processedRelatives.length > 0) {
     formgroupLines.push('');
     formgroupLines.push('* Thông tin thân nhân có yếu tố nước ngoài:');
@@ -582,7 +584,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
             if (selRelFields && Array.isArray(selRelFields) && !selRelFields.includes(col.id)) return;
             
             let label = col.label || col.id;
-            if (!label.includes('(')) label = `${label} (${rColIdx++})`;
+            if (showColNumbers && !label.includes('(')) label = `${label} (${rColIdx++})`;
             
             const rawVal = rcd[col.id] !== undefined ? rcd[col.id] : (rel[col.id] !== undefined ? rel[col.id] : rel[`tn_${col.id}`]);
             const formattedVal = formatFieldValueForDocx(rawVal, col);
@@ -604,7 +606,8 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
           if (!selRelFields || selRelFields.includes(col.id) || selRelFields.includes(`tn_${col.id}`) || selRelFields.includes('name') || selRelFields.includes('ho_ten')) {
             const rawVal = rel[col.id];
             const formattedVal = formatFieldValueForDocx(rawVal, col);
-            formgroupLines.push(`   - ${col.label} (${idx + 1}): ${formattedVal || ''}`);
+            const numSuffix = showColNumbers ? ` (${idx + 1})` : '';
+            formgroupLines.push(`   - ${col.label}${numSuffix}: ${formattedVal || ''}`);
           }
         });
       }
@@ -1003,29 +1006,32 @@ export async function createDynamicDocxTemplateBlob(
     <w:p/>
   `;
 
+  const showColNumbers = options?.showColumnNumbers === true;
+  const pfx = (num) => (showColNumbers ? ` (${num})` : '');
+
   const isFieldIncluded = (id, fallbackIds = []) => {
     if (!selectedFieldIds || !Array.isArray(selectedFieldIds)) return true;
     if (selectedFieldIds.includes(id)) return true;
     return fallbackIds.some((fId) => selectedFieldIds.includes(fId));
   };
 
-  // 1. Nhóm A: Thông tin cá nhân (Mỗi field 1 hàng, Tiêu đề in đậm có số cột, Nội dung không đậm)
+  // 1. Nhóm A: Thông tin cá nhân (Mỗi field 1 hàng, Tiêu đề in đậm, Nội dung không đậm)
   let group0Content = '';
-  if (isFieldIncluded('name', ['ho_ten', 'full_name'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên (1): </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('otherName', ['ten_khac', 'bi_danh'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tên gọi khác (2): </w:t></w:r><w:r><w:t>{otherName}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('birthYear', ['nam_sinh', 'ngay_sinh', 'dob'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Ngày, tháng, năm sinh (3): </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('gender', ['gioi_tinh', 'sex'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Giới tính (4): </w:t></w:r><w:r><w:t>{gender}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('ethnicity', ['dan_toc'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Dân tộc (5): </w:t></w:r><w:r><w:t>{ethnicity}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('religion', ['ton_giao'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tôn giáo (6): </w:t></w:r><w:r><w:t>{religion}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('hometown', ['que_quan', 'native_place'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Quê quán (7): </w:t></w:r><w:r><w:t>{hometown}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('departmentName', ['departmentId', 'don_vi', 'don_vi_cong_tac'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Đơn vị công tác (8): </w:t></w:r><w:r><w:t>{departmentName}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('chuc_vu', ['position', 'chuc_danh'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Chức vụ (9): </w:t></w:r><w:r><w:t>{chuc_vu}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('thuongTru', ['permanentAddress', 'ho_khau', 'thuong_tru'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi đăng ký hộ khẩu thường trú (10): </w:t></w:r><w:r><w:t>{thuongTru}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('tamTru', ['currentAddress', 'noi_o', 'tam_tru'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi ở hiện nay (11): </w:t></w:r><w:r><w:t>{tamTru}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('cccdparent', ['cccd', 'so_cccd', 'so_cmnd'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Căn cước công dân (12): </w:t></w:r><w:r><w:t>{cccdparent}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('passportPersonal', ['hcCaNhan', 'ho_chieu_ca_nhan'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu cá nhân (13): </w:t></w:r><w:r><w:t>{hcCaNhan}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('passportOfficial', ['hcCongVu', 'ho_chieu_cong_vu'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu công vụ (14): </w:t></w:r><w:r><w:t>{hcCongVu}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('politicalVerificationResult', ['tcctResult', 'ket_qua_tham_tra', 'tcct'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Kết quả thẩm tra tiêu chuẩn chính trị (15): </w:t></w:r><w:r><w:t>{tcctResult}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('name', ['ho_ten', 'full_name'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên${pfx(1)}: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('otherName', ['ten_khac', 'bi_danh'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tên gọi khác${pfx(2)}: </w:t></w:r><w:r><w:t>{otherName}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('birthYear', ['nam_sinh', 'ngay_sinh', 'dob'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Ngày, tháng, năm sinh${pfx(3)}: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('gender', ['gioi_tinh', 'sex'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Giới tính${pfx(4)}: </w:t></w:r><w:r><w:t>{gender}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('ethnicity', ['dan_toc'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Dân tộc${pfx(5)}: </w:t></w:r><w:r><w:t>{ethnicity}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('religion', ['ton_giao'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tôn giáo${pfx(6)}: </w:t></w:r><w:r><w:t>{religion}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('hometown', ['que_quan', 'native_place'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Quê quán${pfx(7)}: </w:t></w:r><w:r><w:t>{hometown}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('departmentName', ['departmentId', 'don_vi', 'don_vi_cong_tac'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Đơn vị công tác${pfx(8)}: </w:t></w:r><w:r><w:t>{departmentName}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('chuc_vu', ['position', 'chuc_danh'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Chức vụ${pfx(9)}: </w:t></w:r><w:r><w:t>{chuc_vu}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('thuongTru', ['permanentAddress', 'ho_khau', 'thuong_tru'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi đăng ký hộ khẩu thường trú${pfx(10)}: </w:t></w:r><w:r><w:t>{thuongTru}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('tamTru', ['currentAddress', 'noi_o', 'tam_tru'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi ở hiện nay${pfx(11)}: </w:t></w:r><w:r><w:t>{tamTru}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('cccdparent', ['cccd', 'so_cccd', 'so_cmnd'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Căn cước công dân${pfx(12)}: </w:t></w:r><w:r><w:t>{cccdparent}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('passportPersonal', ['hcCaNhan', 'ho_chieu_ca_nhan'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu cá nhân${pfx(13)}: </w:t></w:r><w:r><w:t>{hcCaNhan}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('passportOfficial', ['hcCongVu', 'ho_chieu_cong_vu'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu công vụ${pfx(14)}: </w:t></w:r><w:r><w:t>{hcCongVu}</w:t></w:r></w:p>`;
+  if (isFieldIncluded('politicalVerificationResult', ['tcctResult', 'ket_qua_tham_tra', 'tcct'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Kết quả thẩm tra tiêu chuẩn chính trị${pfx(15)}: </w:t></w:r><w:r><w:t>{tcctResult}</w:t></w:r></w:p>`;
 
   if (group0Content) {
     bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>1. Thông tin cá nhân</w:t></w:r></w:p>`;
@@ -1044,7 +1050,7 @@ export async function createDynamicDocxTemplateBlob(
         if (!col.id || col.id === 'stt') return;
         if (selectedFieldIds && Array.isArray(selectedFieldIds) && !selectedFieldIds.includes(col.id)) return;
         let colLabel = escapeXml(col.label || col.id);
-        if (!colLabel.includes('(')) {
+        if (showColNumbers && !colLabel.includes('(')) {
           colLabel = `${colLabel} (${runningPersonnelColIndex++})`;
         }
         const colId = escapeXml(col.id);
@@ -1086,21 +1092,22 @@ export async function createDynamicDocxTemplateBlob(
     if (activeRelCols.length > 0) {
       activeRelCols.forEach((col, relColIdx) => {
         let colLabel = escapeXml(col.label || col.id);
-        if (!colLabel.includes('(')) {
+        if (showColNumbers && !colLabel.includes('(')) {
           colLabel = `${colLabel} (${relColIdx + 1})`;
         }
         const colId = escapeXml(col.id);
         bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
       });
     } else {
+      const pTN = (num) => (showColNumbers ? ` (${num})` : '');
       bodyContent += `
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Họ và tên (1): </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quan hệ (2): </w:t></w:r><w:r><w:t>{relationshipName}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Năm sinh (3): </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quê quán (4): </w:t></w:r><w:r><w:t>{hometownTN}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nghề nghiệp (5): </w:t></w:r><w:r><w:t>{occupation}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nơi ở hiện nay (6): </w:t></w:r><w:r><w:t>{currentAddress}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Số Căn cước công dân (7): </w:t></w:r><w:r><w:t>{cccdthannhan}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Họ và tên${pTN(1)}: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quan hệ${pTN(2)}: </w:t></w:r><w:r><w:t>{relationshipName}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Năm sinh${pTN(3)}: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quê quán${pTN(4)}: </w:t></w:r><w:r><w:t>{hometownTN}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nghề nghiệp${pTN(5)}: </w:t></w:r><w:r><w:t>{occupation}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nơi ở hiện nay${pTN(6)}: </w:t></w:r><w:r><w:t>{currentAddress}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Số Căn cước công dân${pTN(7)}: </w:t></w:r><w:r><w:t>{cccdthannhan}</w:t></w:r></w:p>
       `;
     }
 

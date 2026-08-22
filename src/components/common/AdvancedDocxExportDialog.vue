@@ -272,6 +272,14 @@
               />
             </div>
           </div>
+
+          <!-- Option checkbox: Ẩn/Hiện tên cột / số thứ tự cột khi xuất PDF -->
+          <div style="margin-top: 10px; padding: 6px 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9; display: flex; align-items: center;">
+            <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.76rem; cursor: pointer; color: #475569; user-select: none;">
+              <input type="checkbox" v-model="showColumnNumbers" style="accent-color: #0284c7; width: 14px; height: 14px;" />
+              <span>Hiển thị số thứ tự / tên cột trong tệp xuất (Mặc định: <strong>Ẩn</strong>)</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -501,6 +509,7 @@ const customTemplateBuffer = ref(null);
 const customTemplateFileName = ref('');
 
 const exporting = ref(false);
+const showColumnNumbers = ref(false);
 const progressCurrent = ref(0);
 const progressTotal = ref(0);
 
@@ -675,6 +684,7 @@ const handleExport = async () => {
       selectedRelativeGroupIndices: (relativeGroups.value || []).map((_, i) => i),
       selectedFieldIds: selectedFieldIds.value,
       selectedRelativeFieldIds: selectedRelativeFieldIds.value,
+      showColumnNumbers: showColumnNumbers.value,
     };
     const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
     const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
