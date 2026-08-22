@@ -58,6 +58,12 @@ const routes = [
     meta: { title: 'Báo cáo Phụ lục', requiresAuth: true },
   },
   {
+    path: '/dashboard-topic/:id',
+    name: 'DynamicTopicDashboard',
+    component: () => import('@/views/TripsDashboardView.vue'),
+    meta: { title: 'Dashboard Chuyên đề', requiresAuth: true },
+  },
+  {
     path: '/settings-import',
     name: 'SettingsImport',
     component: () => import('@/views/SettingsImportView.vue'),

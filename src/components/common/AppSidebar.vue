@@ -29,9 +29,19 @@
         <span>Quản lý Cán bộ</span>
       </router-link>
 
-      <router-link to="/trips" class="app-nav-item">
-        <i class="pi pi-send"></i>
-        <span>Danh sách Chuyến đi</span>
+      <div class="app-nav-heading">Dashboard Chuyên đề</div>
+
+      <router-link
+        v-for="dash in dynamicDashboards"
+        :key="dash.id"
+        :to="getDashboardRoute(dash)"
+        class="app-nav-item"
+        :title="dash.title"
+      >
+        <i :class="dash.icon ? `pi ${dash.icon}` : 'pi pi-send'"></i>
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          {{ dash.title }}
+        </span>
       </router-link>
 
       <div class="app-nav-heading">Báo cáo Phụ lục</div>
@@ -84,9 +94,20 @@ const DEFAULT_APPENDICES = [
   { id: 'pl3', code: 'PL3', title: 'PL3: Lịch sử & Lưu ý', source: 'personnel' },
 ];
 
-const dynamicAppendices = ref([...DEFAULT_APPENDICES]);
+const DEFAULT_DASHBOARDS = [
+  {
+    id: 'trips',
+    code: 'CD-03',
+    title: 'Danh sách Chuyến đi',
+    icon: 'pi-send',
+    source: 'trips',
+  },
+];
 
-const loadSidebarAppendices = async () => {
+const dynamicAppendices = ref([...DEFAULT_APPENDICES]);
+const dynamicDashboards = ref([...DEFAULT_DASHBOARDS]);
+
+const loadSidebarData = async () => {
   try {
     const saved = await getAppSettings('custom_appendices_config', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
@@ -98,11 +119,28 @@ const loadSidebarAppendices = async () => {
   } catch (e) {
     console.error('Error loading sidebar appendices:', e);
   }
+
+  try {
+    const savedDash = await getAppSettings('custom_dashboards_config', null);
+    if (savedDash && Array.isArray(savedDash) && savedDash.length > 0) {
+      dynamicDashboards.value = savedDash;
+    } else {
+      const local = localStorage.getItem('custom_dashboards_config');
+      if (local) dynamicDashboards.value = JSON.parse(local);
+    }
+  } catch (e) {
+    console.error('Error loading sidebar dashboards:', e);
+  }
 };
 
 onMounted(() => {
-  loadSidebarAppendices();
+  loadSidebarData();
 });
+
+const getDashboardRoute = (dash) => {
+  if (dash.id === 'trips') return '/trips';
+  return `/dashboard-topic/${dash.id}`;
+};
 
 const getAppendixRoute = (pl) => {
   if (pl.id === 'pl1') return '/pl1';

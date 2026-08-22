@@ -4,17 +4,17 @@
     <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
       <span>Tra cứu</span>
       <span>/</span>
-      <span style="color: #0f172a; font-weight: 600;">Danh sách chuyến đi</span>
+      <span style="color: #0f172a; font-weight: 600;">{{ currentDashboardConfig.title || 'Danh sách chuyến đi' }}</span>
     </div>
 
     <!-- Header Section with Actions -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <span class="badge-code-cd">CD-03</span>
+        <span class="badge-code-cd">{{ currentDashboardConfig.code || 'CD-03' }}</span>
         <div>
           <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
-            Danh sách chuyến đi
-            <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredList.length }} chuyến</span>
+            {{ currentDashboardConfig.title || 'Danh sách chuyến đi' }}
+            <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredList.length }} bản ghi</span>
           </h1>
         </div>
       </div>
@@ -42,9 +42,9 @@
           <span>Xuất file</span>
         </button>
 
-        <!-- Add Trip (Quick add) -->
+        <!-- Add Record (Quick add) -->
         <Button
-          label="Thêm chuyến đi"
+          :label="currentDashboardConfig.source === 'relatives' ? 'Thêm Thân nhân' : (currentDashboardConfig.source === 'personnel' ? 'Thêm Cán bộ' : 'Thêm Chuyến đi')"
           icon="pi pi-plus"
           size="small"
           severity="primary"
@@ -56,56 +56,18 @@
 
     <!-- Quick Metric Pill Cards (Top Row) -->
     <div style="display: flex; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap;">
-      <!-- 1. Toàn bộ -->
       <div
+        v-for="card in activeMetricCards"
+        :key="card.id"
         class="quick-stat-card"
-        :class="{ 'stat-active': statusFilter === 'all' }"
-        @click="statusFilter = 'all'"
+        :class="{ 'stat-active': statusFilter === card.condition }"
+        @click="statusFilter = card.condition"
       >
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="dot-indicator dot-blue"></span>
-          <span class="stat-name">Toàn bộ</span>
+          <span :class="['dot-indicator', `dot-${card.color || 'blue'}`]"></span>
+          <span class="stat-name">{{ card.label }}</span>
         </div>
-        <span class="stat-number num-blue">{{ tripStats.total }}</span>
-      </div>
-
-      <!-- 2. Đã về nước -->
-      <div
-        class="quick-stat-card"
-        :class="{ 'stat-active': statusFilter === 'completed' }"
-        @click="statusFilter = 'completed'"
-      >
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="dot-indicator dot-green"></span>
-          <span class="stat-name">Đã về nước</span>
-        </div>
-        <span class="stat-number num-green">{{ tripStats.completed }}</span>
-      </div>
-
-      <!-- 3. Đang ở nước ngoài -->
-      <div
-        class="quick-stat-card"
-        :class="{ 'stat-active': statusFilter === 'abroad' }"
-        @click="statusFilter = 'abroad'"
-      >
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="dot-indicator dot-amber"></span>
-          <span class="stat-name">Đang ở nước ngoài</span>
-        </div>
-        <span class="stat-number num-amber">{{ tripStats.abroad }}</span>
-      </div>
-
-      <!-- 4. Quá hạn chưa về -->
-      <div
-        class="quick-stat-card"
-        :class="{ 'stat-active': statusFilter === 'overdue' }"
-        @click="statusFilter = 'overdue'"
-      >
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="dot-indicator dot-red"></span>
-          <span class="stat-name">Quá hạn chưa về</span>
-        </div>
-        <span class="stat-number num-red">{{ tripStats.overdue }}</span>
+        <span :class="['stat-number', `num-${card.color || 'blue'}`]">{{ getCardMetricValue(card) }}</span>
       </div>
     </div>
 
@@ -400,16 +362,64 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import { usePersonnelStore } from '@/stores/personnel';
+import { getAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import { formatDate, parseDateObj } from '@/utils/formatters';
 import * as XLSX from 'xlsx';
 
+const route = useRoute();
 const personnelStore = usePersonnelStore();
+
+// Dynamic Dashboard Topic State
+const customDashboards = ref([]);
+
+const currentDashboardId = computed(() => {
+  return route.params.id || (route.path === '/trips' ? 'trips' : 'trips');
+});
+
+const currentDashboardConfig = computed(() => {
+  const found = customDashboards.value.find((d) => d.id === currentDashboardId.value);
+  if (found) return found;
+  return {
+    id: 'trips',
+    code: 'CD-03',
+    title: 'Danh sách Chuyến đi',
+    source: 'trips',
+    icon: 'pi-send',
+    metricCards: [
+      { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
+      { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
+      { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
+      { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
+    ],
+  };
+});
+
+const activeMetricCards = computed(() => {
+  if (currentDashboardConfig.value.metricCards && currentDashboardConfig.value.metricCards.length > 0) {
+    return currentDashboardConfig.value.metricCards;
+  }
+  return [
+    { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
+    { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
+    { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
+    { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
+  ];
+});
+
+const getCardMetricValue = (card) => {
+  const cond = card.condition || 'all';
+  if (cond === 'completed') return tripStats.value.completed;
+  if (cond === 'abroad') return tripStats.value.abroad;
+  if (cond === 'overdue') return tripStats.value.overdue;
+  return tripStats.value.total;
+};
 
 // Filters
 const searchQuery = ref('');
@@ -826,12 +836,31 @@ const exportExcel = () => {
   XLSX.writeFile(wb, `Danh_sach_chuyen_di_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
-onMounted(() => {
-  const savedCols = localStorage.getItem('trips_dashboard_columns');
-  if (savedCols) {
-    try {
-      selectedColIds.value = JSON.parse(savedCols);
-    } catch (e) {}
+const loadCustomDashboards = async () => {
+  try {
+    const saved = await getAppSettings('custom_dashboards_config', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      customDashboards.value = saved;
+    } else {
+      const local = localStorage.getItem('custom_dashboards_config');
+      if (local) customDashboards.value = JSON.parse(local);
+    }
+  } catch (e) {
+    console.error('Error loading custom dashboards in TripsDashboardView:', e);
+  }
+};
+
+onMounted(async () => {
+  await loadCustomDashboards();
+  if (currentDashboardConfig.value.columns && currentDashboardConfig.value.columns.length > 0) {
+    selectedColIds.value = [...currentDashboardConfig.value.columns];
+  } else {
+    const savedCols = localStorage.getItem('trips_dashboard_columns');
+    if (savedCols) {
+      try {
+        selectedColIds.value = JSON.parse(savedCols);
+      } catch (e) {}
+    }
   }
 });
 </script>
