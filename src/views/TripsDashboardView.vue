@@ -28,7 +28,7 @@
           title="Tùy chọn ẩn / hiện cột"
         >
           <i class="pi pi-table"></i>
-          <span>Chọn cột hiển thị ({{ selectedColIds.length }}/{{ allColumns.length }})</span>
+          <span>Chọn cột hiển thị ({{ selectedColIds.length }}/{{ allAvailableColumnsList.length }})</span>
         </button>
 
         <!-- Export Excel -->
@@ -39,17 +39,17 @@
           title="Xuất bảng dữ liệu ra tệp Excel"
         >
           <i class="pi pi-file-excel" style="color: #16a34a;"></i>
-          <span>Xuất file</span>
+          <span>Xuất Excel</span>
         </button>
 
-        <!-- Add Record (Quick add) -->
+        <!-- Export PDF / Word (Same module as PersonnelView) -->
         <Button
-          :label="currentDashboardConfig.source === 'relatives' ? 'Thêm Thân nhân' : (currentDashboardConfig.source === 'personnel' ? 'Thêm Cán bộ' : 'Thêm Chuyến đi')"
-          icon="pi pi-plus"
+          label="Xuất Hồ sơ (PDF / Word)"
+          icon="pi pi-file-pdf"
           size="small"
-          severity="primary"
-          @click="openAddTripDialog"
-          style="font-size: 0.85rem; background: #1e3a8a; border-color: #1e3a8a;"
+          severity="danger"
+          @click="openAdvancedDocxExport"
+          style="font-size: 0.85rem;"
         />
       </div>
     </div>
@@ -502,6 +502,13 @@
       :personData="activePersonData"
       @saved="handlePersonnelSaved"
     />
+
+    <!-- Advanced Word / PDF Export Dialog -->
+    <AdvancedDocxExportDialog
+      v-model="isExportDocxDialogOpen"
+      :selectedCount="selectedPersonnelForExport.length"
+      :customPersonnelList="selectedPersonnelForExport"
+    />
   </div>
 </template>
 
@@ -514,11 +521,33 @@ import Dialog from 'primevue/dialog';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
+import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import { formatDate, parseDateObj } from '@/utils/formatters';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
 const personnelStore = usePersonnelStore();
+const isExportDocxDialogOpen = ref(false);
+
+const openAdvancedDocxExport = () => {
+  isExportDocxDialogOpen.value = true;
+};
+
+const selectedPersonnelForExport = computed(() => {
+  if (selectedTripKeys.value.length > 0) {
+    const selectedKeysSet = new Set(selectedTripKeys.value);
+    const matchedPIds = new Set();
+    unifiedTripsList.value.forEach((t) => {
+      if (selectedKeysSet.has(t.uniqueKey) && t.personnelId) {
+        matchedPIds.add(t.personnelId);
+      }
+    });
+    return (personnelStore.personnelList || []).filter((p) => matchedPIds.has(p.id));
+  }
+  // Otherwise export all filtered personnel
+  const currentPIds = new Set(filteredList.value.map((t) => t.personnelId).filter(Boolean));
+  return (personnelStore.personnelList || []).filter((p) => currentPIds.has(p.id));
+});
 
 // Dynamic Dashboard Topic State
 const customDashboards = ref([]);
@@ -653,47 +682,55 @@ const DEFAULT_TRIP_COLUMNS = [
 ];
 
 const allAvailableColumnsList = computed(() => {
-  const base = [...DEFAULT_TRIP_COLUMNS];
-  const seen = new Set(base.map((c) => c.id));
-  const list = [...base];
+  const src = currentDashboardConfig.value?.source || 'trips';
+  let rawList = [];
 
-  // Nạp toàn bộ cột từ Cấu hình Chuyến đi
-  (personnelStore.importMappingTrips || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
-        seen.add(c.id);
-        list.push({ id: c.id, label: c.label || c.id, width: '150px' });
-      }
+  if (src === 'trips') {
+    const base = [...DEFAULT_TRIP_COLUMNS];
+    const seen = new Set(base.map((c) => c.id));
+    rawList = [...base];
+
+    (personnelStore.importMappingTrips || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+          seen.add(c.id);
+          rawList.push({ id: c.id, label: c.label || c.id, width: '150px' });
+        }
+      });
     });
-  });
-
-  // Nạp toàn bộ cột từ Cấu hình Cán bộ
-  (personnelStore.importMappingPersonnel || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
-        seen.add(c.id);
-        list.push({ id: c.id, label: `[CB] ${c.label || c.id}`, width: '150px' });
-      }
+  } else if (src === 'relatives') {
+    const seen = new Set();
+    (personnelStore.importMappingRelative || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+          seen.add(c.id);
+          rawList.push({ id: c.id, label: c.label || c.id, width: '150px' });
+        }
+      });
     });
-  });
-
-  // Nạp toàn bộ cột từ Cấu hình Thân nhân
-  (personnelStore.importMappingRelative || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
-        seen.add(c.id);
-        list.push({ id: c.id, label: `[TN] ${c.label || c.id}`, width: '150px' });
-      }
+  } else {
+    // personnel
+    const seen = new Set();
+    (personnelStore.importMappingPersonnel || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+          seen.add(c.id);
+          rawList.push({ id: c.id, label: c.label || c.id, width: '150px' });
+        }
+      });
     });
-  });
+  }
 
-  return list;
+  return rawList.map((c, idx) => ({
+    ...c,
+    displayLabel: `(Cột ${idx + 1}) - ${c.label || c.id}`,
+  }));
 });
 
 const filteredPickerColumns = computed(() => {
   if (!columnSearchQuery.value.trim()) return allAvailableColumnsList.value;
   const q = columnSearchQuery.value.trim().toLowerCase();
-  return allAvailableColumnsList.value.filter((c) => (c.label || '').toLowerCase().includes(q) || (c.id || '').toLowerCase().includes(q));
+  return allAvailableColumnsList.value.filter((c) => (c.displayLabel || c.label || '').toLowerCase().includes(q) || (c.id || '').toLowerCase().includes(q));
 });
 
 const allColumns = computed(() => allAvailableColumnsList.value);

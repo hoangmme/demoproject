@@ -1030,7 +1030,7 @@
                   <select v-model="card.field" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
                     <option value="">-- Toàn bộ danh sách (Đếm tất cả) --</option>
                     <option v-for="col in availableDashboardCols" :key="col.id" :value="col.id">
-                      {{ col.label }} (mã: {{ col.id }})
+                      {{ col.displayLabel || col.label }}
                     </option>
                   </select>
                 </div>
@@ -1043,9 +1043,6 @@
                       <option value="has_value">Có dữ liệu (khác rỗng)</option>
                       <option value="equals">Khớp chính xác (=)</option>
                       <option value="contains">Chứa từ khóa</option>
-                      <option value="completed" v-if="currentSelectedDashboard.source === 'trips'">Đã về nước</option>
-                      <option value="abroad" v-if="currentSelectedDashboard.source === 'trips'">Đang ở nước ngoài</option>
-                      <option value="overdue" v-if="currentSelectedDashboard.source === 'trips'">Quá hạn chưa về</option>
                     </select>
                   </div>
                   <div v-if="card.operator === 'equals' || card.operator === 'contains'">
@@ -1056,15 +1053,6 @@
                       style="font-size: 0.75rem; border: 1px solid #cbd5e1; background: #fff; padding: 3px 6px; border-radius: 4px; width: 100%;"
                     />
                   </div>
-                </div>
-                <div v-else-if="currentSelectedDashboard.source === 'trips'">
-                  <label style="font-size: 0.68rem; font-weight: 600; color: #475569;">Trạng thái chuyến đi:</label>
-                  <select v-model="card.condition" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px;">
-                    <option value="all">Toàn bộ</option>
-                    <option value="completed">Đã về nước</option>
-                    <option value="abroad">Đang ở nước ngoài</option>
-                    <option value="overdue">Quá hạn chưa về</option>
-                  </select>
                 </div>
               </div>
             </div>
@@ -1977,23 +1965,37 @@ const removeMetricCard = (dash, cIdx) => {
 
 const availableDashboardCols = computed(() => {
   const src = currentSelectedDashboard.value?.source || 'trips';
+  let rawList = [];
   if (src === 'trips') {
-    return [
-      { id: 'personnelName', label: 'Họ và tên' },
+    const defaultCols = [
+      { id: 'personnelName', label: 'Họ và tên người đi' },
       { id: 'position', label: 'Chức vụ' },
       { id: 'departmentName', label: 'Đơn vị công tác' },
-      { id: 'countryName', label: 'Quốc gia' },
+      { id: 'countryName', label: 'Quốc gia / Nơi đến' },
       { id: 'departureDate', label: 'Ngày xuất cảnh' },
-      { id: 'arrivalDate', label: 'Ngày nhập cảnh / Trạng thái' },
-      { id: 'decisionNumber', label: 'Số quyết định' },
+      { id: 'arrivalDate', label: 'Ngày nhập cảnh' },
+      { id: 'decisionNumber', label: 'Số quyết định duyệt' },
       { id: 'fundingName', label: 'Nguồn kinh phí' },
       { id: 'purpose', label: 'Mục đích chuyến đi' },
-      { id: 'status', label: 'Tiến độ Đi - Về' },
-      ...availableTripCols.value,
     ];
+    const seen = new Set(defaultCols.map((c) => c.id));
+    rawList = [...defaultCols];
+    (availableTripCols.value || []).forEach((c) => {
+      if (c.id && !seen.has(c.id)) {
+        seen.add(c.id);
+        rawList.push(c);
+      }
+    });
+  } else if (src === 'relatives') {
+    rawList = availableRelativeCols.value || [];
+  } else {
+    rawList = availablePersonnelCols.value || [];
   }
-  if (src === 'relatives') return availableRelativeCols.value;
-  return availablePersonnelCols.value;
+
+  return rawList.map((c, idx) => ({
+    ...c,
+    displayLabel: `(Cột ${idx + 1}) - ${c.label || c.id}`,
+  }));
 });
 
 const openTopicDashboard = (id) => {
