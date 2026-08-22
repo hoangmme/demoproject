@@ -104,91 +104,6 @@
     </div>
 
     <!-- ========================================================= -->
-    <!-- 1. DEFAULT TOP STAT CARDS                                -->
-    <!-- ========================================================= -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-      <!-- Total Personnel -->
-      <div class="stat-card" style="border-left: 4px solid #2e7d32;" @click="openDrilldown('all_personnel', 'Danh sách Toàn bộ Cán bộ')">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <span class="stat-label">Tổng số Cán bộ</span>
-          <i class="pi pi-users" style="color: #2e7d32; font-size: 1.1rem;"></i>
-        </div>
-        <div class="stat-value" style="color: #1f2937;">{{ stats.totalPersonnel }}</div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-          <span class="stat-sub" style="color: #2e7d32;">Hồ sơ trong hệ thống</span>
-          <span class="view-more-tag">Xem danh sách <i class="pi pi-arrow-right"></i></span>
-        </div>
-      </div>
-
-      <!-- Total Trips -->
-      <div class="stat-card" style="border-left: 4px solid #0284c7;" @click="openDrilldown('all_trips', 'Danh sách Cá nhân đi Nước ngoài')">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <span class="stat-label">Cá nhân đi nước ngoài</span>
-          <i class="pi pi-send" style="color: #0284c7; font-size: 1.1rem;"></i>
-        </div>
-        <div class="stat-value" style="color: #0369a1;">{{ stats.filteredTrips.length }}</div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-          <span class="stat-sub" style="color: #0284c7;">{{ getTimeFilterLabel() }}</span>
-          <span class="view-more-tag">Xem danh sách <i class="pi pi-arrow-right"></i></span>
-        </div>
-      </div>
-
-      <!-- Total Relatives -->
-      <div class="stat-card" style="border-left: 4px solid #7c3aed;" @click="openDrilldown('all_relatives', 'Danh sách Thân nhân ở Nước ngoài')">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <span class="stat-label">Thân nhân ở Nước ngoài</span>
-          <i class="pi pi-globe" style="color: #7c3aed; font-size: 1.1rem;"></i>
-        </div>
-        <div class="stat-value" style="color: #6d28d9;">{{ stats.totalRelatives }}</div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-          <span class="stat-sub" style="color: #7c3aed;">Định cư / Học tập / Làm việc</span>
-          <span class="view-more-tag">Xem danh sách <i class="pi pi-arrow-right"></i></span>
-        </div>
-      </div>
-
-      <!-- Missing Decision Warning Card -->
-      <div class="stat-card stat-card-warning" style="border-left: 4px solid #dc2626;" @click="openDrilldown('missing_decision', 'Danh sách Chuyến đi Chưa có Quyết định')">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <div style="display: flex; align-items: center; gap: 4px;">
-            <span class="stat-label" style="color: #991b1b; font-weight: 700;">Chưa thêm Quyết định</span>
-            <button type="button" class="btn-card-setting" @click.stop="openSingleSetting('decision')" title="Cài đặt cột Số Quyết định">
-              <i class="pi pi-cog"></i>
-            </button>
-          </div>
-          <i class="pi pi-exclamation-triangle" style="color: #dc2626; font-size: 1.1rem;"></i>
-        </div>
-        <div class="stat-value" style="color: #dc2626;">{{ stats.missingDecisionTrips.length }}</div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-          <span class="stat-sub" style="color: #b91c1c;">Cột ID: <b>{{ colConfig.decision }}</b></span>
-          <span class="view-more-tag" style="color: #dc2626;">Kiểm tra <i class="pi pi-arrow-right"></i></span>
-        </div>
-      </div>
-
-      <!-- Departure/Arrival Schedule Warnings Card -->
-      <div class="stat-card" style="border-left: 4px solid #ea580c;" @click="openDrilldown('schedule_warnings', 'Cảnh báo Tiến độ Duyệt Đi / Duyệt Về / Gia Hạn')">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <div style="display: flex; align-items: center; gap: 4px;">
-            <span class="stat-label" style="color: #9a3412; font-weight: 700;">Cảnh báo Duyệt Đi/Về</span>
-            <button type="button" class="btn-card-setting" @click.stop="openSingleSetting('schedule')" title="Cài đặt cột Duyệt Đi/Về/Gia Hạn">
-              <i class="pi pi-cog"></i>
-            </button>
-          </div>
-          <i class="pi pi-clock" style="color: #ea580c; font-size: 1.1rem;"></i>
-        </div>
-        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
-          <div class="stat-value" style="color: #ea580c; font-size: 1.5rem;">
-            {{ stats.extendedTrips.length + stats.overdueTrips.length }}
-          </div>
-          <span style="font-size: 0.72rem; color: #9a3412;">lượt cần chú ý</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.72rem;">
-          <span style="color: #b45309;">{{ stats.extendedTrips.length }} gia hạn | {{ stats.overdueTrips.length }} quá hạn</span>
-          <span class="view-more-tag" style="color: #ea580c;">Chi tiết <i class="pi pi-arrow-right"></i></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- ========================================================= -->
     <!-- 2. DEFAULT BREAKDOWN GRIDS (QUỐC GIA & KINH PHÍ)          -->
     <!-- ========================================================= -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
@@ -375,6 +290,27 @@
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
+          <!-- Move Group Up / Down -->
+          <Button
+            icon="pi pi-arrow-up"
+            size="small"
+            severity="secondary"
+            text
+            rounded
+            :disabled="gIdx === 0"
+            @click="moveCustomGroup(gIdx, -1)"
+            v-tooltip.top="'Dời nhóm lên trên'"
+          />
+          <Button
+            icon="pi pi-arrow-down"
+            size="small"
+            severity="secondary"
+            text
+            rounded
+            :disabled="gIdx === customGroups.length - 1"
+            @click="moveCustomGroup(gIdx, 1)"
+            v-tooltip.top="'Dời nhóm xuống dưới'"
+          />
           <button
             type="button"
             class="btn-add-widget-green"
@@ -423,29 +359,27 @@
           <div
             v-if="widget.displayType === 'count'"
             class="stat-card"
-            :style="{ borderLeft: `4px solid ${widget.color || '#2e7d32'}`, height: '100%' }"
+            :style="{ borderLeft: `4px solid ${widget.color || '#2e7d32'}`, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '1rem 1.15rem' }"
             @click="openCustomWidgetDrilldown(widget)"
           >
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-              <span class="stat-label" :style="{ color: widget.color || '#334155' }">{{ widget.title }}</span>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa khối này">
-                  <i class="pi pi-pencil"></i>
-                </button>
-                <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa khối này" style="color: #ef4444;">
-                  <i class="pi pi-trash"></i>
-                </button>
-                <i :class="['pi', widget.icon || 'pi-chart-line']" :style="{ color: widget.color || '#2e7d32', fontSize: '1.1rem', marginLeft: '4px' }"></i>
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
+                <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px;">
+                  <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa khối này">
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa khối này" style="color: #ef4444;">
+                    <i class="pi pi-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '4px 0 0 0' }">
+                {{ computeWidgetCount(widget) }}
               </div>
             </div>
-            <div class="stat-value" :style="{ color: widget.color || '#1e293b' }">
-              {{ computeWidgetCount(widget) }}
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-              <span class="stat-sub" style="color: #64748b;">
-                {{ getSourceLabel(widget.source) }} | Cột: <b>{{ widget.columnLabel || widget.columnId }}</b>
-              </span>
-              <span class="view-more-tag" :style="{ color: widget.color || '#1e293b' }">Xem <i class="pi pi-arrow-right"></i></span>
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">
+              <span class="view-more-tag" :style="{ color: widget.color || '#1e293b' }">Xem chi tiết <i class="pi pi-arrow-right"></i></span>
             </div>
           </div>
 
@@ -519,81 +453,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- 4. SCHEDULE STATUS SUMMARY SECTION                        -->
-    <!-- ========================================================= -->
-    <div class="app-card" style="margin-bottom: 1.5rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <i class="pi pi-calendar-times" style="color: #ea580c; font-size: 1.1rem;"></i>
-          <div>
-            <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">
-              Theo dõi Tiến độ Đi - Về & Gia Hạn
-            </h3>
-            <span style="font-size: 0.74rem; color: #64748b;">
-              Kiểm tra tình trạng duyệt thời gian xuất nhập cảnh của cán bộ
-            </span>
-          </div>
-        </div>
-        <button type="button" class="btn-card-setting" @click="openSingleSetting('schedule')" title="Cài đặt cột Duyệt Đi/Về/Gia Hạn">
-          <i class="pi pi-cog"></i> Cài đặt cột tiến độ
-        </button>
-      </div>
-
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-        <!-- Card 1: Có duyệt gia hạn -->
-        <div
-          class="schedule-box"
-          style="border-color: #fde047; background: #fefce8;"
-          @click="openDrilldown('schedule_extended', 'Danh sách Chuyến đi Có Duyệt Gia Hạn')"
-        >
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.82rem; font-weight: 700; color: #854d0e;">Được Duyệt Gia Hạn</span>
-            <span class="badge-pill" style="background: #fef08a; color: #713f12; font-size: 0.75rem;">
-              {{ stats.extendedTrips.length }} chuyến
-            </span>
-          </div>
-          <p style="font-size: 0.75rem; color: #a16207; margin: 6px 0 0 0;">
-            Chuyến đi có điền ngày duyệt gia hạn hoặc có ghi nhận thời gian kéo dài.
-          </p>
-        </div>
-
-        <!-- Card 2: Quá hạn duyệt về -->
-        <div
-          class="schedule-box"
-          style="border-color: #fca5a5; background: #fef2f2;"
-          @click="openDrilldown('schedule_overdue', 'Danh sách Chuyến đi Quá Hạn Duyệt Về')"
-        >
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.82rem; font-weight: 700; color: #991b1b;">Quá Hạn Duyệt Về</span>
-            <span class="badge-pill" style="background: #fee2e2; color: #991b1b; font-size: 0.75rem;">
-              {{ stats.overdueTrips.length }} chuyến
-            </span>
-          </div>
-          <p style="font-size: 0.75rem; color: #b91c1c; margin: 6px 0 0 0;">
-            Ngày về thực tế muộn hơn ngày duyệt về mà không có duyệt gia hạn tương ứng.
-          </p>
-        </div>
-
-        <!-- Card 3: Đi về đúng hạn -->
-        <div
-          class="schedule-box"
-          style="border-color: #bbf7d0; background: #f0fdf4;"
-          @click="openDrilldown('schedule_ontime', 'Danh sách Chuyến đi Hoàn thành Đúng Hạn')"
-        >
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.82rem; font-weight: 700; color: #166534;">Hoàn thành Đúng Hạn</span>
-            <span class="badge-pill" style="background: #dcfce7; color: #15803d; font-size: 0.75rem;">
-              {{ stats.onTimeTrips.length }} chuyến
-            </span>
-          </div>
-          <p style="font-size: 0.75rem; color: #15803d; margin: 6px 0 0 0;">
-            Thời gian xuất nhập cảnh khớp hoặc nằm trong khoảng thời gian đã được duyệt.
-          </p>
         </div>
       </div>
     </div>
@@ -1739,21 +1598,41 @@ const openEditGroupDialog = (group) => {
   isGroupDialogOpen.value = true;
 };
 
+const isSavingGroup = ref(false);
+const isSavingWidget = ref(false);
+
+const moveCustomGroup = async (gIdx, direction) => {
+  const targetIdx = gIdx + direction;
+  if (targetIdx < 0 || targetIdx >= customGroups.value.length) return;
+  const temp = customGroups.value[gIdx];
+  customGroups.value[gIdx] = customGroups.value[targetIdx];
+  customGroups.value[targetIdx] = temp;
+  await saveCustomGroupsToDb();
+};
+
 const saveGroup = async () => {
+  if (isSavingGroup.value) return;
   if (!groupForm.value.title.trim()) {
     alert('Vui lòng nhập Tên Nhóm thống kê!');
     return;
   }
-  if (editingGroup.value) {
-    const idx = customGroups.value.findIndex((g) => g.id === editingGroup.value.id);
-    if (idx !== -1) {
-      customGroups.value[idx] = { ...customGroups.value[idx], ...groupForm.value };
-    }
-  } else {
-    customGroups.value.push({ ...groupForm.value });
-  }
-  await saveCustomGroupsToDb();
+  isSavingGroup.value = true;
   isGroupDialogOpen.value = false;
+  try {
+    if (editingGroup.value) {
+      const idx = customGroups.value.findIndex((g) => g.id === editingGroup.value.id);
+      if (idx !== -1) {
+        customGroups.value[idx] = { ...customGroups.value[idx], ...groupForm.value };
+      }
+    } else {
+      customGroups.value.push({ ...groupForm.value, id: 'g_' + Date.now() });
+    }
+    await saveCustomGroupsToDb();
+  } catch (e) {
+    console.error('Error saving group:', e);
+  } finally {
+    isSavingGroup.value = false;
+  }
 };
 
 const deleteGroup = async (group) => {
@@ -1805,6 +1684,7 @@ const onWidgetColumnSelect = () => {
 };
 
 const saveWidget = async () => {
+  if (isSavingWidget.value) return;
   if (!widgetForm.value.title.trim() || !widgetForm.value.columnId) {
     alert('Vui lòng nhập Tiêu đề và chọn Cột dữ liệu cần thống kê!');
     return;
@@ -1813,55 +1693,63 @@ const saveWidget = async () => {
   if (!group) return;
   if (!group.widgets) group.widgets = [];
 
-  const payload = {
-    ...widgetForm.value,
-    widthPercent: Number(widgetForm.value.widthPercent) || 33,
-  };
-
-  if (editingWidget.value) {
-    const idx = group.widgets.findIndex((w) => w.id === editingWidget.value.id);
-    if (idx !== -1) {
-      group.widgets[idx] = payload;
-    }
-  } else {
-    group.widgets.push(payload);
-  }
-
-  await saveCustomGroupsToDb();
+  isSavingWidget.value = true;
   isWidgetDialogOpen.value = false;
+
+  try {
+    const payload = {
+      ...widgetForm.value,
+      widthPercent: Number(widgetForm.value.widthPercent) || 33,
+    };
+
+    if (editingWidget.value) {
+      const idx = group.widgets.findIndex((w) => w.id === editingWidget.value.id);
+      if (idx !== -1) {
+        group.widgets[idx] = payload;
+      }
+    } else {
+      group.widgets.push(payload);
+    }
+
+    await saveCustomGroupsToDb();
+  } catch (e) {
+    console.error('Error saving widget:', e);
+  } finally {
+    isSavingWidget.value = false;
+  }
 };
 
 const getWidgetStyle = (widget) => {
   const wp = Number(widget.widthPercent) || 33;
   if (wp === 100) {
     return {
-      flex: '0 0 100%',
+      flex: '1 1 100%',
       width: '100%',
       maxWidth: '100%',
     };
   }
   if (wp === 50) {
     return {
-      flex: '0 0 calc(50% - 0.5rem)',
+      flex: '1 1 calc(50% - 0.5rem)',
       width: 'calc(50% - 0.5rem)',
       maxWidth: 'calc(50% - 0.5rem)',
-      minWidth: '280px',
+      minWidth: '350px',
     };
   }
   if (wp === 25) {
     return {
-      flex: '0 0 calc(25% - 0.75rem)',
+      flex: '1 1 calc(25% - 0.75rem)',
       width: 'calc(25% - 0.75rem)',
       maxWidth: 'calc(25% - 0.75rem)',
-      minWidth: '200px',
+      minWidth: '250px',
     };
   }
   // Default 33.333%
   return {
-    flex: '0 0 calc(33.333% - 0.67rem)',
+    flex: '1 1 calc(33.333% - 0.67rem)',
     width: 'calc(33.333% - 0.67rem)',
     maxWidth: 'calc(33.333% - 0.67rem)',
-    minWidth: '240px',
+    minWidth: '300px',
   };
 };
 
