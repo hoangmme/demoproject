@@ -550,13 +550,6 @@
                 <th>Họ và tên</th>
                 <th v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">{{ col.label }}</th>
                 <th>Số chuyến đi</th>
-                <!-- Cột So Chiếu / Tiêu chí lọc tự động của ô Dashboard -->
-                <th
-                  v-if="shouldShowDrilldownCriterion"
-                  style="background: #fef3c7; color: #92400e; font-weight: 700; border-left: 2px solid #f59e0b; text-align: center; white-space: nowrap;"
-                >
-                  <i class="pi pi-crosshair"></i> {{ drilldownTargetCriterion.label }}
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -584,13 +577,6 @@
                   <span v-else>{{ getDisplayValue(p, col.id) }}</span>
                 </td>
                 <td><span class="badge-pill badge-green">{{ (p.trips || []).length }} chuyến</span></td>
-                <!-- Giá trị Cột So Chiếu -->
-                <td
-                  v-if="shouldShowDrilldownCriterion"
-                  style="background: #fffbeb; font-weight: 600; color: #b45309; text-align: center; border-left: 2px solid #fde68a;"
-                >
-                  <span class="badge-pill badge-yellow">{{ getDisplayValue(p, drilldownTargetCriterion.columnId) }}</span>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -610,13 +596,6 @@
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Cán bộ liên quan</th>
                 <th v-for="col in drilldownDisplayRelativeColumns" :key="col.id">{{ col.label }}</th>
-                <!-- Cột So Chiếu / Tiêu chí lọc tự động của ô Dashboard -->
-                <th
-                  v-if="shouldShowDrilldownCriterion"
-                  style="background: #fef3c7; color: #92400e; font-weight: 700; border-left: 2px solid #f59e0b; text-align: center; white-space: nowrap;"
-                >
-                  <i class="pi pi-crosshair"></i> {{ drilldownTargetCriterion.label }}
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -646,13 +625,6 @@
                     {{ getDisplayValue(r, col.id) }}
                   </span>
                 </td>
-                <!-- Giá trị Cột So Chiếu -->
-                <td
-                  v-if="shouldShowDrilldownCriterion"
-                  style="background: #fffbeb; font-weight: 600; color: #b45309; text-align: center; border-left: 2px solid #fde68a;"
-                >
-                  <span class="badge-pill badge-yellow">{{ getDisplayValue(r, drilldownTargetCriterion.columnId) }}</span>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -678,13 +650,6 @@
                 <th>Ngày đi</th>
                 <th>Ngày về</th>
                 <th>Duyệt Gia hạn</th>
-                <!-- Cột So Chiếu / Tiêu chí lọc tự động của ô Dashboard -->
-                <th
-                  v-if="shouldShowDrilldownCriterion"
-                  style="background: #fef3c7; color: #92400e; font-weight: 700; border-left: 2px solid #f59e0b; text-align: center; white-space: nowrap;"
-                >
-                  <i class="pi pi-crosshair"></i> {{ drilldownTargetCriterion.label }}
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -732,15 +697,6 @@
                     {{ formatDate(t.approvedExtensionDate) }}
                   </span>
                   <span v-else style="color: #94a3b8;">-</span>
-                </td>
-                <!-- Giá trị Cột So Chiếu -->
-                <td
-                  v-if="shouldShowDrilldownCriterion"
-                  style="background: #fffbeb; font-weight: 600; color: #b45309; text-align: center; border-left: 2px solid #fde68a;"
-                >
-                  <span class="badge-pill badge-yellow">
-                    {{ getDisplayValue(getPersonnelForTrip(t), drilldownTargetCriterion.columnId) !== '-' ? getDisplayValue(getPersonnelForTrip(t), drilldownTargetCriterion.columnId) : (getTripValue(t, drilldownTargetCriterion.columnId) || '-') }}
-                  </span>
                 </td>
               </tr>
             </tbody>
@@ -2097,6 +2053,67 @@ const getTripValue = (trip, colId) => {
   return String(raw).trim();
 };
 
+const isFundingKeyword = (val) => {
+  if (!val) return false;
+  const s = String(val).toLowerCase().trim();
+  return (
+    s === 'tự túc' ||
+    s === 'tu tuc' ||
+    s === 'ngân sách' ||
+    s === 'ngan sach' ||
+    s === 'ngân sách nhà nước' ||
+    s === 'tài trợ' ||
+    s === 'tai tro' ||
+    s === 'học bổng' ||
+    s === 'hoc bong' ||
+    s === 'khác' ||
+    s === 'khac' ||
+    s.includes('ngân sách') ||
+    s.includes('tài trợ') ||
+    s.includes('tự túc') ||
+    s.includes('học bổng')
+  );
+};
+
+const normalizeFundingCategory = (rawVal) => {
+  if (!rawVal) return null;
+  const str = String(rawVal).toLowerCase().trim();
+  if (!str || str === '-' || str === 'chưa rõ' || str === 'null' || str === 'undefined') return null;
+  if (str.includes('ngân sách') || str.includes('ngan sach') || str.includes('budget') || str.includes('nhà nước')) {
+    return 'Ngân sách nhà nước';
+  }
+  if (str.includes('tài trợ') || str.includes('tai tro') || str.includes('học bổng') || str.includes('hoc bong') || str.includes('sponsor') || str.includes('scholarship')) {
+    return 'Tài trợ';
+  }
+  if (str.includes('tự túc') || str.includes('tu tuc') || str.includes('self') || str.includes('cá nhân')) {
+    return 'Tự túc';
+  }
+  if (str.includes('khác') || str.includes('khac') || str.includes('other')) {
+    return 'Khác';
+  }
+  return rawVal.trim();
+};
+
+const extractCountryFromAddress = (address) => {
+  if (!address) return '';
+  const s = String(address).toLowerCase();
+  if (s.includes('đức') || s.includes('germany') || s.includes('deutschland')) return 'Đức';
+  if (s.includes('mỹ') || s.includes('usa') || s.includes('united states') || s.includes('hoa kỳ')) return 'Mỹ';
+  if (s.includes('canada')) return 'Canada';
+  if (s.includes('úc') || s.includes('australia')) return 'Úc';
+  if (s.includes('anh') || s.includes('uk') || s.includes('england') || s.includes('united kingdom')) return 'Anh';
+  if (s.includes('pháp') || s.includes('france')) return 'Pháp';
+  if (s.includes('nhật') || s.includes('japan')) return 'Nhật Bản';
+  if (s.includes('hàn') || s.includes('korea')) return 'Hàn Quốc';
+  if (s.includes('singapore')) return 'Singapore';
+  if (s.includes('new zealand')) return 'New Zealand';
+  if (s.includes('nga') || s.includes('russia')) return 'Nga';
+  if (s.includes('trung quốc') || s.includes('china')) return 'Trung Quốc';
+  if (s.includes('thái lan') || s.includes('thailand')) return 'Thái Lan';
+  if (s.includes('đài loan') || s.includes('taiwan')) return 'Đài Loan';
+  return '';
+};
+
 const stats = computed(() => {
   const pList = personnelStore.personnelList || [];
   const rList = personnelStore.relativesList || [];
@@ -2109,7 +2126,12 @@ const stats = computed(() => {
   const onTimeTrips = [];
 
   const countries = {}; // { [key]: { trips: 0, relatives: 0, total: 0 } }
-  const fundings = {};  // { [key]: { trips: 0, relatives: 0, total: 0 } }
+  const fundings = {
+    'Ngân sách nhà nước': { trips: 0, relatives: 0, total: 0 },
+    'Tài trợ': { trips: 0, relatives: 0, total: 0 },
+    'Tự túc': { trips: 0, relatives: 0, total: 0 },
+    'Khác': { trips: 0, relatives: 0, total: 0 },
+  };
 
   // Build unified list of trips from both personnel.trips and store.tripsList
   const allTripsToProcess = [];
@@ -2150,9 +2172,10 @@ const stats = computed(() => {
       return;
     }
 
-    const cName = getTripValue(t, colConfig.value.country) || 'Chưa rõ';
-    const fName = getTripValue(t, colConfig.value.funding) || 'Chưa rõ';
-    const dNum = getTripValue(t, colConfig.value.decision) || '';
+    const rawCountry = getTripValue(t, colConfig.value.country) || t.countryName || t.country || 'Chưa rõ';
+    const cName = String(rawCountry).trim();
+    const fName = getTripValue(t, colConfig.value.funding) || t.fundingName || t.funding || 'Chưa rõ';
+    const dNum = getTripValue(t, colConfig.value.decision) || t.decisionNumber || '';
     const appDep = getTripValue(t, colConfig.value.approvedDeparture) || t.departureDate || '';
     const appArr = getTripValue(t, colConfig.value.approvedArrival) || t.arrivalDate || '';
     const appExt = getTripValue(t, colConfig.value.approvedExtension) || '';
@@ -2185,19 +2208,28 @@ const stats = computed(() => {
       }
     }
 
+    // Country & Funding Disambiguation for Trips
     if (cName && cName !== 'Chưa rõ' && cName !== '-') {
-      if (!countries[cName]) countries[cName] = { trips: 0, relatives: 0, total: 0 };
-      countries[cName].trips += 1;
-      countries[cName].total += 1;
+      if (isFundingKeyword(cName)) {
+        const normalizedF = normalizeFundingCategory(cName) || 'Tự túc';
+        if (!fundings[normalizedF]) fundings[normalizedF] = { trips: 0, relatives: 0, total: 0 };
+        fundings[normalizedF].trips += 1;
+        fundings[normalizedF].total += 1;
+      } else {
+        if (!countries[cName]) countries[cName] = { trips: 0, relatives: 0, total: 0 };
+        countries[cName].trips += 1;
+        countries[cName].total += 1;
+      }
     }
 
-    // 4. Funding aggregation (Personnel)
+    // 4. Funding aggregation (Personnel & Trips)
     const pObj = t.personnelId ? pList.find((p) => p.id === t.personnelId) : null;
     const fVal = getTripValue(t, colConfig.value.funding) ||
+                 t.fundingName ||
+                 t.funding ||
                  (pObj && getRowFieldValue(pObj, colConfig.value.funding)) ||
-                 (pObj && getTripValue(pObj, colConfig.value.funding)) ||
                  (pObj && (pObj.funding2 || pObj.custom_data?.funding2 || pObj.funding)) ||
-                 t.fundingName || t.funding || '';
+                 '';
 
     const budgetVal = colConfig.value.fundingBudget ? getTripValue(t, colConfig.value.fundingBudget) : '';
     const sponsorVal = colConfig.value.fundingSponsor ? getTripValue(t, colConfig.value.fundingSponsor) : '';
@@ -2212,53 +2244,32 @@ const stats = computed(() => {
     if (fVal && fVal !== 'Chưa rõ' && fVal !== '-') {
       const parts = String(fVal).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
       parts.forEach((rawPart) => {
-        const part = rawPart.toLowerCase();
-        if (part.includes('ngân sách') || part.includes('ngan sach') || part.includes('budget')) {
-          if (!fundings['Ngân sách nhà nước']) fundings['Ngân sách nhà nước'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Ngân sách nhà nước'].trips += 1;
-          fundings['Ngân sách nhà nước'].total += 1;
-          countedBudget = true;
-        } else if (part.includes('tài trợ') || part.includes('tai tro') || part.includes('học bổng') || part.includes('hoc bong') || part.includes('sponsor') || part.includes('scholarship')) {
-          if (!fundings['Tài trợ']) fundings['Tài trợ'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Tài trợ'].trips += 1;
-          fundings['Tài trợ'].total += 1;
-          countedSponsor = true;
-        } else if (part.includes('tự túc') || part.includes('tu tuc') || part.includes('self')) {
-          if (!fundings['Tự túc']) fundings['Tự túc'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Tự túc'].trips += 1;
-          fundings['Tự túc'].total += 1;
-          countedSelf = true;
-        } else if (part.includes('khác') || part.includes('khac') || part.includes('other')) {
-          if (!fundings['Khác']) fundings['Khác'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Khác'].trips += 1;
-          fundings['Khác'].total += 1;
-          countedOther = true;
-        } else if (rawPart) {
-          const origKey = rawPart.charAt(0).toUpperCase() + rawPart.slice(1);
-          if (!fundings[origKey]) fundings[origKey] = { trips: 0, relatives: 0, total: 0 };
-          fundings[origKey].trips += 1;
-          fundings[origKey].total += 1;
+        const norm = normalizeFundingCategory(rawPart);
+        if (norm) {
+          if (!fundings[norm]) fundings[norm] = { trips: 0, relatives: 0, total: 0 };
+          fundings[norm].trips += 1;
+          fundings[norm].total += 1;
+          if (norm === 'Ngân sách nhà nước') countedBudget = true;
+          if (norm === 'Tài trợ') countedSponsor = true;
+          if (norm === 'Tự túc') countedSelf = true;
+          if (norm === 'Khác') countedOther = true;
         }
       });
     }
 
     if (!countedBudget && budgetVal && String(budgetVal).trim() && String(budgetVal).trim() !== '-') {
-      if (!fundings['Ngân sách nhà nước']) fundings['Ngân sách nhà nước'] = { trips: 0, relatives: 0, total: 0 };
       fundings['Ngân sách nhà nước'].trips += 1;
       fundings['Ngân sách nhà nước'].total += 1;
     }
     if (!countedSponsor && sponsorVal && String(sponsorVal).trim() && String(sponsorVal).trim() !== '-') {
-      if (!fundings['Tài trợ']) fundings['Tài trợ'] = { trips: 0, relatives: 0, total: 0 };
       fundings['Tài trợ'].trips += 1;
       fundings['Tài trợ'].total += 1;
     }
     if (!countedSelf && selfVal && String(selfVal).trim() && String(selfVal).trim() !== '-') {
-      if (!fundings['Tự túc']) fundings['Tự túc'] = { trips: 0, relatives: 0, total: 0 };
       fundings['Tự túc'].trips += 1;
       fundings['Tự túc'].total += 1;
     }
     if (!countedOther && otherVal && String(otherVal).trim() && String(otherVal).trim() !== '-') {
-      if (!fundings['Khác']) fundings['Khác'] = { trips: 0, relatives: 0, total: 0 };
       fundings['Khác'].trips += 1;
       fundings['Khác'].total += 1;
     }
@@ -2273,28 +2284,11 @@ const stats = computed(() => {
     if (pfVal && pfVal !== 'Chưa rõ' && pfVal !== '-') {
       const parts = String(pfVal).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
       parts.forEach((rawPart) => {
-        const part = rawPart.toLowerCase();
-        if (part.includes('ngân sách') || part.includes('ngan sach') || part.includes('budget')) {
-          if (!fundings['Ngân sách nhà nước']) fundings['Ngân sách nhà nước'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Ngân sách nhà nước'].trips += 1;
-          fundings['Ngân sách nhà nước'].total += 1;
-        } else if (part.includes('tài trợ') || part.includes('tai tro') || part.includes('học bổng') || part.includes('hoc bong') || part.includes('sponsor') || part.includes('scholarship')) {
-          if (!fundings['Tài trợ']) fundings['Tài trợ'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Tài trợ'].trips += 1;
-          fundings['Tài trợ'].total += 1;
-        } else if (part.includes('tự túc') || part.includes('tu tuc') || part.includes('self')) {
-          if (!fundings['Tự túc']) fundings['Tự túc'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Tự túc'].trips += 1;
-          fundings['Tự túc'].total += 1;
-        } else if (part.includes('khác') || part.includes('khac') || part.includes('other')) {
-          if (!fundings['Khác']) fundings['Khác'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Khác'].trips += 1;
-          fundings['Khác'].total += 1;
-        } else if (rawPart) {
-          const origKey = rawPart.charAt(0).toUpperCase() + rawPart.slice(1);
-          if (!fundings[origKey]) fundings[origKey] = { trips: 0, relatives: 0, total: 0 };
-          fundings[origKey].trips += 1;
-          fundings[origKey].total += 1;
+        const norm = normalizeFundingCategory(rawPart);
+        if (norm) {
+          if (!fundings[norm]) fundings[norm] = { trips: 0, relatives: 0, total: 0 };
+          fundings[norm].trips += 1;
+          fundings[norm].total += 1;
         }
       });
     }
@@ -2328,8 +2322,21 @@ const stats = computed(() => {
   });
 
   allRelativesToProcess.forEach((r) => {
-    const rc = getRowFieldValue(r, colConfig.value.countryRelative) || getTripValue(r, colConfig.value.countryRelative) || r.countryName || r.country;
-    if (rc && String(rc).trim() && String(rc).trim() !== '-' && String(rc).trim() !== 'Chưa rõ') {
+    let rc = getRowFieldValue(r, colConfig.value.countryRelative) || getTripValue(r, colConfig.value.countryRelative) || r.countryName || r.country || '';
+    
+    // If the country field accidentally holds a funding keyword (e.g. "Tự túc")
+    if (rc && isFundingKeyword(rc)) {
+      const normF = normalizeFundingCategory(rc) || 'Tự túc';
+      if (!fundings[normF]) fundings[normF] = { trips: 0, relatives: 0, total: 0 };
+      fundings[normF].relatives += 1;
+      fundings[normF].total += 1;
+      // Try extract real country from address
+      rc = extractCountryFromAddress(r.currentAddress || r.address || '');
+    } else if (!rc || rc === '-' || rc === 'Chưa rõ') {
+      rc = extractCountryFromAddress(r.currentAddress || r.address || '');
+    }
+
+    if (rc && String(rc).trim() && String(rc).trim() !== '-' && String(rc).trim() !== 'Chưa rõ' && !isFundingKeyword(rc)) {
       const cleanRc = String(rc).trim();
       if (!countries[cleanRc]) countries[cleanRc] = { trips: 0, relatives: 0, total: 0 };
       countries[cleanRc].relatives += 1;
@@ -2350,60 +2357,41 @@ const stats = computed(() => {
     let countedROther = false;
 
     if (rfVal && String(rfVal).trim() && String(rfVal).trim() !== '-' && String(rfVal).trim() !== 'Chưa rõ') {
-      const parts = String(rfVal).split(/[,;+]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
-      parts.forEach((part) => {
-        if (part.includes('ngân sách') || part.includes('ngan sach') || part.includes('budget')) {
-          if (!fundings['Ngân sách nhà nước']) fundings['Ngân sách nhà nước'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Ngân sách nhà nước'].relatives += 1;
-          fundings['Ngân sách nhà nước'].total += 1;
-          countedRBudget = true;
-        } else if (part.includes('tài trợ') || part.includes('tai tro') || part.includes('học bổng') || part.includes('hoc bong')) {
-          if (!fundings['Tài trợ']) fundings['Tài trợ'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Tài trợ'].relatives += 1;
-          fundings['Tài trợ'].total += 1;
-          countedRSponsor = true;
-        } else if (part.includes('tự túc') || part.includes('tu tuc')) {
-          if (!fundings['Tự túc']) fundings['Tự túc'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Tự túc'].relatives += 1;
-          fundings['Tự túc'].total += 1;
-          countedRSelf = true;
-        } else if (part.includes('khác') || part.includes('khac')) {
-          if (!fundings['Khác']) fundings['Khác'] = { trips: 0, relatives: 0, total: 0 };
-          fundings['Khác'].relatives += 1;
-          fundings['Khác'].total += 1;
-          countedROther = true;
-        } else if (part && !part.includes('không có thông tin')) {
-          const origKey = String(rfVal).trim();
-          if (!fundings[origKey]) fundings[origKey] = { trips: 0, relatives: 0, total: 0 };
-          fundings[origKey].relatives += 1;
-          fundings[origKey].total += 1;
+      const parts = String(rfVal).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
+      parts.forEach((rawPart) => {
+        const norm = normalizeFundingCategory(rawPart);
+        if (norm) {
+          if (!fundings[norm]) fundings[norm] = { trips: 0, relatives: 0, total: 0 };
+          fundings[norm].relatives += 1;
+          fundings[norm].total += 1;
+          if (norm === 'Ngân sách nhà nước') countedRBudget = true;
+          if (norm === 'Tài trợ') countedRSponsor = true;
+          if (norm === 'Tự túc') countedRSelf = true;
+          if (norm === 'Khác') countedROther = true;
         }
       });
     }
 
     if (!countedRBudget && rBudget && String(rBudget).trim() && String(rBudget).trim() !== '-') {
-      if (!fundings['Ngân sách nhà nước']) fundings['Ngân sách nhà nước'] = { trips: 0, relatives: 0, total: 0 };
       fundings['Ngân sách nhà nước'].relatives += 1;
       fundings['Ngân sách nhà nước'].total += 1;
     }
     if (!countedRSponsor && rSponsor && String(rSponsor).trim() && String(rSponsor).trim() !== '-') {
-      if (!fundings['Tài trợ']) fundings['Tài trợ'] = { trips: 0, relatives: 0, total: 0 };
       fundings['Tài trợ'].relatives += 1;
       fundings['Tài trợ'].total += 1;
     }
     if (!countedRSelf && rSelf && String(rSelf).trim() && String(rSelf).trim() !== '-') {
-      if (!fundings['Tự túc']) fundings['Tự túc'] = { trips: 0, relatives: 0, total: 0 };
       fundings['Tự túc'].relatives += 1;
       fundings['Tự túc'].total += 1;
     }
     if (!countedROther && rOther && String(rOther).trim() && String(rOther).trim() !== '-') {
-      if (!fundings['Khác']) fundings['Khác'] = { trips: 0, relatives: 0, total: 0 };
       fundings['Khác'].relatives += 1;
       fundings['Khác'].total += 1;
     }
   });
 
   const countryList = Object.entries(countries)
+    .filter(([name]) => !isFundingKeyword(name) && name !== 'Chưa rõ' && name !== '-')
     .map(([name, data]) => ({
       name,
       count: data.total,

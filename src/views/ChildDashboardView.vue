@@ -31,17 +31,6 @@
           <span>Chọn cột hiển thị ({{ selectedColIds.length }}/{{ allAvailableColumnsList.length }})</span>
         </button>
 
-        <!-- Export Excel -->
-        <button
-          type="button"
-          class="btn-action-outline"
-          @click="exportExcel"
-          title="Xuất bảng dữ liệu ra tệp Excel"
-        >
-          <i class="pi pi-file-excel" style="color: #16a34a;"></i>
-          <span>Xuất Excel</span>
-        </button>
-
         <!-- Export PDF / Word (Same module as PersonnelView) -->
         <Button
           label="Xuất Hồ sơ (PDF / Word)"
