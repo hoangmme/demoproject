@@ -730,29 +730,29 @@
           <div style="display: flex; gap: 8px;">
             <InputText v-model="tempConfig.decision" placeholder="Ví dụ: decisionNumber" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.decision = $event.target.value">
-              <option value="">-- Chọn cột mẫu Cán bộ --</option>
-              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+              <option value="">-- Chọn cột Chuyến đi --</option>
+              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
 
-        <!-- Setting 2: Country ID (Personnel & Relatives) -->
+        <!-- Setting 2: Country ID (Trip & Relatives) -->
         <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block;">
             2. Cài đặt Cột Quốc gia (Đếm & Biểu đồ Toàn bộ Quốc gia):
           </label>
           <div>
-            <span style="font-size: 0.72rem; color: #64748b;">a) Cột Quốc gia của Cán bộ (Chuyến đi):</span>
+            <span style="font-size: 0.72rem; color: #64748b;">a) Cột Quốc gia đến (Bảng Chuyến đi):</span>
             <div style="display: flex; gap: 8px; margin-top: 2px;">
               <InputText v-model="tempConfig.country" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.78rem;" />
               <select class="settings-select" @change="tempConfig.country = $event.target.value">
-                <option value="">-- Chọn cột Cán bộ --</option>
-                <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                <option value="">-- Chọn cột Chuyến đi --</option>
+                <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
               </select>
             </div>
           </div>
           <div>
-            <span style="font-size: 0.72rem; color: #64748b;">b) Cột Quốc gia của Thân nhân:</span>
+            <span style="font-size: 0.72rem; color: #64748b;">b) Cột Quốc gia định cư / lưu trú (Bảng Thân nhân):</span>
             <div style="display: flex; gap: 8px; margin-top: 2px;">
               <InputText v-model="tempConfig.countryRelative" placeholder="Ví dụ: countryName" style="flex: 1; font-size: 0.78rem;" />
               <select class="settings-select" @change="tempConfig.countryRelative = $event.target.value">
@@ -763,25 +763,25 @@
           </div>
         </div>
 
-        <!-- Setting 3: Funding ID (2 Dropdowns: Cán bộ & Thân nhân) -->
+        <!-- Setting 3: Funding ID (2 Dropdowns: Chuyến đi & Thân nhân) -->
         <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
           <label style="font-size: 0.8rem; font-weight: 700; color: #334155; display: block;">
             3. Cài đặt Cột Nguồn kinh phí (Đếm toàn bộ Kinh phí & Biểu đồ):
           </label>
           <div style="font-size: 0.72rem; color: #0284c7; background: #e0f2fe; padding: 6px 10px; border-radius: 6px;">
-            💡 Bạn chỉ cần chọn đúng 2 cột (1 cột ở Cán bộ và 1 cột ở Thân nhân). Hệ thống sẽ tự động bóc tách và thống kê đầy đủ các nguồn kinh phí (Ngân sách, Tài trợ, Tự túc, Khác...).
+            💡 Hệ thống tự động so khớp CCCD chuyến đi với Cán bộ hoặc Thân nhân và gom vào 4 nhóm: Ngân sách nhà nước, Tài trợ, Tự túc, Khác.
           </div>
 
-          <!-- A. Cán bộ (Chuyến đi) -->
+          <!-- A. Chuyến đi -->
           <div>
             <span style="font-size: 0.74rem; font-weight: 600; color: #0369a1; display: block; margin-bottom: 2px;">
-              a) Cột Nguồn Kinh phí của Cán bộ (Chuyến đi):
+              a) Cột Nguồn Kinh phí (Bảng Chuyến đi):
             </span>
             <div style="display: flex; gap: 8px;">
-              <InputText v-model="tempConfig.funding" placeholder="Ví dụ: funding2 hoặc fundingName" style="flex: 1; font-size: 0.78rem;" />
+              <InputText v-model="tempConfig.funding" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.78rem;" />
               <select class="settings-select" @change="tempConfig.funding = $event.target.value">
-                <option value="">-- Chọn cột Cán bộ --</option>
-                <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+                <option value="">-- Chọn cột Chuyến đi --</option>
+                <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
               </select>
             </div>
           </div>
@@ -789,10 +789,10 @@
           <!-- B. Thân nhân -->
           <div>
             <span style="font-size: 0.74rem; font-weight: 600; color: #6d28d9; display: block; margin-bottom: 2px;">
-              b) Cột Nguồn Kinh phí / Học bổng của Thân nhân:
+              b) Cột Nguồn Kinh phí / Học bổng (Bảng Thân nhân nếu có):
             </span>
             <div style="display: flex; gap: 8px;">
-              <InputText v-model="tempConfig.fundingRelative" placeholder="Ví dụ: funding hoặc fundingName" style="flex: 1; font-size: 0.78rem;" />
+              <InputText v-model="tempConfig.fundingRelative" placeholder="Ví dụ: fundingName" style="flex: 1; font-size: 0.78rem;" />
               <select class="settings-select" @change="tempConfig.fundingRelative = $event.target.value">
                 <option value="">-- Chọn cột Thân nhân --</option>
                 <option v-for="c in allAvailableRelativeColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
@@ -809,8 +809,8 @@
           <div style="display: flex; gap: 8px;">
             <InputText v-model="tempConfig.approvedDeparture" placeholder="Ví dụ: approvedDepartureDate" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.approvedDeparture = $event.target.value">
-              <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+              <option value="">-- Chọn cột Chuyến đi --</option>
+              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
@@ -823,8 +823,8 @@
           <div style="display: flex; gap: 8px;">
             <InputText v-model="tempConfig.approvedArrival" placeholder="Ví dụ: approvedArrivalDate" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.approvedArrival = $event.target.value">
-              <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+              <option value="">-- Chọn cột Chuyến đi --</option>
+              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
@@ -837,8 +837,8 @@
           <div style="display: flex; gap: 8px;">
             <InputText v-model="tempConfig.approvedExtension" placeholder="Ví dụ: approvedExtensionDate" style="flex: 1; font-size: 0.8rem;" />
             <select class="settings-select" @change="tempConfig.approvedExtension = $event.target.value">
-              <option value="">-- Chọn cột mẫu --</option>
-              <option v-for="c in allAvailablePersonnelColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
+              <option value="">-- Chọn cột Chuyến đi --</option>
+              <option v-for="c in allAvailableTripColumns" :key="c.id" :value="c.id">{{ c.label }}</option>
             </select>
           </div>
         </div>
@@ -1885,6 +1885,7 @@ const getFilteredChartList = (widget) => {
 
 const availableColumnsForWidgetSource = computed(() => {
   const source = widgetForm.value.source;
+  if (source === 'trips') return allAvailableTripColumns.value;
   const mapping = source === 'relatives' ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel;
   const colMap = computeColumnIndexMap(mapping);
   const list = [];
@@ -1905,7 +1906,6 @@ const availableColumnsForWidgetSource = computed(() => {
   return list;
 });
 
-// All Available Relative Columns from Settings for Dropdown selection
 const allAvailableRelativeColumns = computed(() => {
   const list = [];
   let currentColIdx = 0;
@@ -1980,6 +1980,60 @@ const allAvailablePersonnelColumns = computed(() => {
   return list;
 });
 
+const allAvailableTripColumns = computed(() => {
+  const list = [];
+  let currentColIdx = 0;
+
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      currentColIdx++;
+      const grp = g.group ? `[${g.group}] ` : '';
+      const subOpts = getSubOptionsList(c);
+
+      if (subOpts.length > 1) {
+        const start = currentColIdx;
+        const end = currentColIdx + subOpts.length - 1;
+        list.push({
+          id: c.id,
+          label: `[Cột ${start} - ${end}] ${grp}${c.label || c.id} (${c.id})`,
+        });
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = start + sIdx;
+          list.push({
+            id: c.id,
+            subOpt: opt,
+            label: `  └─ [Cột ${colNum}] ${grp}${c.label || c.id}: ${opt}`,
+          });
+        });
+        currentColIdx = end;
+      } else {
+        list.push({
+          id: c.id,
+          label: `[Cột ${currentColIdx}] ${grp}${c.label || c.id} (${c.id})`,
+        });
+      }
+    });
+  });
+
+  if (list.length === 0) {
+    return [
+      { id: 'cccdchuyendi', label: 'CCCD / Định danh người đi (cccdchuyendi)' },
+      { id: 'countryName', label: 'Quốc gia / Nơi đến (countryName)' },
+      { id: 'departureDate', label: 'Ngày xuất cảnh (departureDate)' },
+      { id: 'arrivalDate', label: 'Ngày nhập cảnh (arrivalDate)' },
+      { id: 'decisionNumber', label: 'Số quyết định duyệt (decisionNumber)' },
+      { id: 'decisionDate', label: 'Ngày quyết định (decisionDate)' },
+      { id: 'fundingName', label: 'Nguồn kinh phí (fundingName)' },
+      { id: 'purpose', label: 'Mục đích chuyến đi (purpose)' },
+      { id: 'passportNumber', label: 'Số Hộ chiếu (passportNumber)' },
+      { id: 'approvedDepartureDate', label: 'Ngày đi duyệt (approvedDepartureDate)' },
+      { id: 'approvedArrivalDate', label: 'Ngày về duyệt (approvedArrivalDate)' },
+      { id: 'approvedExtensionDate', label: 'Ngày gia hạn duyệt (approvedExtensionDate)' },
+    ];
+  }
+  return list;
+});
+
 // =========================================================================
 // 3. TIME FILTER STATE & STAT COMPUTATION
 // =========================================================================
@@ -2029,32 +2083,22 @@ const isWithinTimeFilter = (dateStr) => {
   if (!d) return false;
 
   const now = new Date();
-
   if (timeFilterMode.value === 'week') {
     const day = now.getDay() || 7;
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - day + 1);
-    startOfWeek.setHours(0, 0, 0, 0);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
-    return d >= startOfWeek && d <= endOfWeek;
+    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
+    return d >= mon;
   }
-
   if (timeFilterMode.value === 'month') {
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   }
-
   if (timeFilterMode.value === 'year') {
     return d.getFullYear() === now.getFullYear();
   }
-
   if (timeFilterMode.value === 'custom') {
     const start = customStartDate.value ? parseDateObj(customStartDate.value) : null;
     const end = customEndDate.value ? parseDateObj(customEndDate.value) : null;
-    if (start && end) return d >= start && d <= end;
-    if (start) return d >= start;
-    if (end) return d <= end;
+    if (start && d < start) return false;
+    if (end && d > end) return false;
     return true;
   }
 
@@ -2185,15 +2229,20 @@ const stats = computed(() => {
   });
 
   (personnelStore.tripsList || []).forEach((t) => {
-    const tid = t.id || `${t.personnelId}_${t.departureDate}_${t.countryName || t.country || ''}`;
+    const tid = t.id || `${t.personnelId || t.cccdchuyendi}_${t.departureDate}_${t.countryName || t.country || ''}`;
     if (!processedTripIds.has(tid)) {
       processedTripIds.add(tid);
-      const matchedP = pList.find((p) => p.id === t.personnelId || p.code === t.personnelId || p.code === t.personnelCode);
+      const tripKey = String(t.cccdchuyendi || t.personnelId || t.code || t.cccd || '').trim();
+      const matchedP = tripKey ? personnelStore.findPersonByCccd(tripKey) : null;
+      const matchedR = (!matchedP && tripKey) ? personnelStore.findRelativeByCccd(tripKey) : null;
+
       allTripsToProcess.push({
         ...t,
         personnelId: matchedP?.id || t.personnelId || '',
         personnelCode: matchedP?.code || t.personnelCode || t.personnelId || '',
-        personnelName: matchedP?.name || t.personnelName || 'Cán bộ',
+        personnelName: matchedP?.name || t.personnelName || (matchedR ? `TN: ${matchedR.relativeName || matchedR.name}` : 'Cán bộ'),
+        matchedPerson: matchedP,
+        matchedRelative: matchedR,
       });
     }
   });
@@ -2206,11 +2255,18 @@ const stats = computed(() => {
 
     const rawCountry = getTripValue(t, colConfig.value.country) || t.countryName || t.country || 'Chưa rõ';
     const cName = String(rawCountry).trim();
-    const fName = getTripValue(t, colConfig.value.funding) || t.fundingName || t.funding || 'Chưa rõ';
+    const rawFunding = getTripValue(t, colConfig.value.funding) || t.fundingName || t.funding || 'Chưa rõ';
+    const fName = String(rawFunding).trim();
     const dNum = getTripValue(t, colConfig.value.decision) || t.decisionNumber || '';
     const appDep = getTripValue(t, colConfig.value.approvedDeparture) || t.departureDate || '';
     const appArr = getTripValue(t, colConfig.value.approvedArrival) || t.arrivalDate || '';
     const appExt = getTripValue(t, colConfig.value.approvedExtension) || '';
+
+    // Check if trip belongs to Cán bộ (CB) or Thân nhân (TN)
+    const tripKey = String(t.cccdchuyendi || t.personnelId || t.code || t.cccd || '').trim();
+    const matchedP = t.matchedPerson || (tripKey ? personnelStore.findPersonByCccd(tripKey) : null);
+    const matchedR = t.matchedRelative || ((!matchedP && tripKey) ? personnelStore.findRelativeByCccd(tripKey) : null);
+    const isRelativeTrip = Boolean(matchedR || t.relativeName || t.cccdthannhan || (t.parentName && !matchedP));
 
     const enrichedTrip = {
       ...t,
@@ -2220,6 +2276,7 @@ const stats = computed(() => {
       approvedDepartureDate: appDep,
       approvedArrivalDate: appArr,
       approvedExtensionDate: appExt,
+      isRelativeTrip,
     };
 
     filteredTrips.push(enrichedTrip);
@@ -2240,70 +2297,43 @@ const stats = computed(() => {
       }
     }
 
-    // Country & Funding Disambiguation for Trips
+    // Country aggregation (Trips)
     if (cName && cName !== 'Chưa rõ' && cName !== '-') {
       if (isFundingKeyword(cName)) {
         const normalizedF = normalizeFundingCategory(cName) || 'Tự túc';
         if (!fundings[normalizedF]) fundings[normalizedF] = { trips: 0, relatives: 0, total: 0 };
-        fundings[normalizedF].trips += 1;
+        if (isRelativeTrip) {
+          fundings[normalizedF].relatives += 1;
+        } else {
+          fundings[normalizedF].trips += 1;
+        }
         fundings[normalizedF].total += 1;
       } else {
         if (!countries[cName]) countries[cName] = { trips: 0, relatives: 0, total: 0 };
-        countries[cName].trips += 1;
+        if (isRelativeTrip) {
+          countries[cName].relatives += 1;
+        } else {
+          countries[cName].trips += 1;
+        }
         countries[cName].total += 1;
       }
     }
 
-    // 4. Funding aggregation (Personnel & Trips)
-    const pObj = t.personnelId ? pList.find((p) => p.id === t.personnelId) : null;
-    const fVal = getTripValue(t, colConfig.value.funding) ||
-                 t.fundingName ||
-                 t.funding ||
-                 (pObj && getRowFieldValue(pObj, colConfig.value.funding)) ||
-                 (pObj && (pObj.funding2 || pObj.custom_data?.funding2 || pObj.funding)) ||
-                 '';
-
-    const budgetVal = colConfig.value.fundingBudget ? getTripValue(t, colConfig.value.fundingBudget) : '';
-    const sponsorVal = colConfig.value.fundingSponsor ? getTripValue(t, colConfig.value.fundingSponsor) : '';
-    const selfVal = colConfig.value.fundingSelf ? getTripValue(t, colConfig.value.fundingSelf) : '';
-    const otherVal = colConfig.value.fundingOther ? getTripValue(t, colConfig.value.fundingOther) : '';
-
-    let countedBudget = false;
-    let countedSponsor = false;
-    let countedSelf = false;
-    let countedOther = false;
-
-    if (fVal && fVal !== 'Chưa rõ' && fVal !== '-') {
-      const parts = String(fVal).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
+    // Funding aggregation (Trips)
+    if (fName && fName !== 'Chưa rõ' && fName !== '-') {
+      const parts = String(fName).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
       parts.forEach((rawPart) => {
         const norm = normalizeFundingCategory(rawPart);
         if (norm) {
           if (!fundings[norm]) fundings[norm] = { trips: 0, relatives: 0, total: 0 };
-          fundings[norm].trips += 1;
+          if (isRelativeTrip) {
+            fundings[norm].relatives += 1;
+          } else {
+            fundings[norm].trips += 1;
+          }
           fundings[norm].total += 1;
-          if (norm === 'Ngân sách nhà nước') countedBudget = true;
-          if (norm === 'Tài trợ') countedSponsor = true;
-          if (norm === 'Tự túc') countedSelf = true;
-          if (norm === 'Khác') countedOther = true;
         }
       });
-    }
-
-    if (!countedBudget && budgetVal && String(budgetVal).trim() && String(budgetVal).trim() !== '-') {
-      fundings['Ngân sách nhà nước'].trips += 1;
-      fundings['Ngân sách nhà nước'].total += 1;
-    }
-    if (!countedSponsor && sponsorVal && String(sponsorVal).trim() && String(sponsorVal).trim() !== '-') {
-      fundings['Tài trợ'].trips += 1;
-      fundings['Tài trợ'].total += 1;
-    }
-    if (!countedSelf && selfVal && String(selfVal).trim() && String(selfVal).trim() !== '-') {
-      fundings['Tự túc'].trips += 1;
-      fundings['Tự túc'].total += 1;
-    }
-    if (!countedOther && otherVal && String(otherVal).trim() && String(otherVal).trim() !== '-') {
-      fundings['Khác'].trips += 1;
-      fundings['Khác'].total += 1;
     }
   });
 
@@ -2378,14 +2408,6 @@ const stats = computed(() => {
     const rfVal = getRowFieldValue(r, colConfig.value.fundingRelative) ||
                   getTripValue(r, colConfig.value.fundingRelative) ||
                   r.fundingName || r.funding || r.kinhphiTN || r.custom_data?.kinhphiTN || r.custom_data?.fundingName || '';
-    const rBudget = colConfig.value.fundingRelativeBudget ? getRowFieldValue(r, colConfig.value.fundingRelativeBudget) : '';
-    const rSponsor = colConfig.value.fundingRelativeSponsor ? getRowFieldValue(r, colConfig.value.fundingRelativeSponsor) : '';
-    const rSelf = colConfig.value.fundingRelativeSelf ? getRowFieldValue(r, colConfig.value.fundingRelativeSelf) : '';
-    const rOther = colConfig.value.fundingRelativeOther ? getRowFieldValue(r, colConfig.value.fundingRelativeOther) : '';
-
-    let countedRBudget = false;
-    let countedRSponsor = false;
-    let countedRSelf = false;
     let countedROther = false;
 
     if (rfVal && String(rfVal).trim() && String(rfVal).trim() !== '-' && String(rfVal).trim() !== 'Chưa rõ') {

@@ -135,6 +135,44 @@ export const usePersonnelStore = defineStore('personnel', {
       }
       return list;
     },
+    allAvailableTripColumns: (state) => {
+      const list = [];
+      const seen = new Set();
+
+      (state.importMappingTrips || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+            seen.add(c.id);
+            list.push({
+              id: c.id,
+              label: c.label || c.id,
+              width: '160px',
+              format: c.format || 'text',
+              options: c.options || '',
+              group: g.group,
+            });
+          }
+        });
+      });
+
+      if (list.length === 0) {
+        return [
+          { id: 'cccdchuyendi', label: 'CCCD / Định danh người đi (cccdchuyendi)' },
+          { id: 'countryName', label: 'Quốc gia / Nơi đến' },
+          { id: 'departureDate', label: 'Ngày xuất cảnh' },
+          { id: 'arrivalDate', label: 'Ngày nhập cảnh' },
+          { id: 'decisionNumber', label: 'Số quyết định duyệt' },
+          { id: 'decisionDate', label: 'Ngày quyết định' },
+          { id: 'fundingName', label: 'Nguồn kinh phí' },
+          { id: 'purpose', label: 'Mục đích chuyến đi' },
+          { id: 'passportNumber', label: 'Số Hộ chiếu' },
+          { id: 'approvedDepartureDate', label: 'Ngày đi duyệt' },
+          { id: 'approvedArrivalDate', label: 'Ngày về duyệt' },
+          { id: 'approvedExtensionDate', label: 'Ngày gia hạn duyệt' },
+        ];
+      }
+      return list;
+    },
   },
   actions: {
     async init() {
