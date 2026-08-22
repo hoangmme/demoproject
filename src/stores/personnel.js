@@ -24,6 +24,7 @@ export const usePersonnelStore = defineStore('personnel', {
     visibleRelativeColumns: ['parentName', 'relationshipName', 'relativeName', 'birthYear', 'currentAddress', 'occupation', 'countryName'],
     importMappingPersonnel: [],
     importMappingRelative: [],
+    importMappingTrips: [],
     systemKeyConfig: {
       personnelKeyField: 'cccdparent',
       relativeParentKeyField: 'cccdparent',
@@ -321,6 +322,10 @@ export const usePersonnelStore = defineStore('personnel', {
       let rMap = await getAppSettings('mapping_config_relative', null);
       if (!rMap || rMap.length === 0) rMap = await getAppSettings('importMappingRelative', []);
       this.importMappingRelative = rMap || [];
+
+      let tMap = await getAppSettings('mapping_config_trips', null);
+      if (!tMap || tMap.length === 0) tMap = await getAppSettings('importMappingTrips', []);
+      this.importMappingTrips = tMap || [];
 
       let keyCfg = await getAppSettings('system_key_config', null);
       if (keyCfg && typeof keyCfg === 'object') {

@@ -24,7 +24,7 @@
     </div>
 
     <!-- Tabs Navigation (Segmented Pill Style) -->
-    <div style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content; margin-bottom: 1.25rem;">
+    <div style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content; margin-bottom: 1.25rem; flex-wrap: wrap;">
       <button
         type="button"
         class="segmented-tab-btn"
@@ -48,11 +48,31 @@
       <button
         type="button"
         class="segmented-tab-btn"
+        :class="{ 'tab-active': activeTab === 'trips' }"
+        @click="activeTab = 'trips'"
+      >
+        <i class="pi pi-send"></i>
+        <span>Cấu hình Cột Chuyến đi</span>
+      </button>
+
+      <button
+        type="button"
+        class="segmented-tab-btn"
+        :class="{ 'tab-active': activeTab === 'dashboard' }"
+        @click="activeTab = 'dashboard'"
+      >
+        <i class="pi pi-chart-pie"></i>
+        <span>Cấu hình Dashboard & Khối Thống kê</span>
+      </button>
+
+      <button
+        type="button"
+        class="segmented-tab-btn"
         :class="{ 'tab-active': activeTab === 'tags' }"
         @click="activeTab = 'tags'"
       >
         <i class="pi pi-tags"></i>
-        <span>Bảng Tra cứu Mã Thẻ Tag (Word / PDF)</span>
+        <span>Bảng Tra cứu Mã Thẻ Tag</span>
       </button>
 
       <button
@@ -68,16 +88,6 @@
       <button
         type="button"
         class="segmented-tab-btn"
-        :class="{ 'tab-active': activeTab === 'tripsDashboard' }"
-        @click="activeTab = 'tripsDashboard'"
-      >
-        <i class="pi pi-send"></i>
-        <span>Cấu hình Dashboard Chuyến đi</span>
-      </button>
-
-      <button
-        type="button"
-        class="segmented-tab-btn"
         :class="{ 'tab-active': activeTab === 'general' }"
         @click="activeTab = 'general'"
       >
@@ -86,8 +96,8 @@
       </button>
     </div>
 
-    <!-- Main Content: Tab 1 & 2 (Cấu hình Cột Cán bộ & Thân nhân) -->
-    <div v-if="activeTab === 'personnel' || activeTab === 'relative'" class="app-card" style="padding: 1.25rem;">
+    <!-- Main Content: Tab 1, 2, 3 (Cấu hình Cột Cán bộ, Thân nhân, Chuyến đi) -->
+    <div v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'" class="app-card" style="padding: 1.25rem;">
       <!-- Khung Cấu hình Khóa Định Danh & Khóa Liên Kết -->
       <div style="margin-bottom: 1.25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;">
         <!-- Khi ở Tab Cán bộ -->
@@ -116,7 +126,7 @@
         </div>
 
         <!-- Khi ở Tab Thân nhân -->
-        <div v-else style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+        <div v-else-if="activeTab === 'relative'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="pi pi-link" style="color: #0284c7; font-size: 0.95rem;"></i>
@@ -143,11 +153,28 @@
             <span style="font-size: 0.7rem; color: #64748b;">(Cột chứa số CCCD / Mã định danh riêng của từng Thân nhân)</span>
           </div>
         </div>
+
+        <!-- Khi ở Tab Chuyến đi -->
+        <div v-else style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #e0f2fe; display: flex; align-items: center; justify-content: center;">
+              <i class="pi pi-send" style="color: #0284c7; font-size: 1.1rem;"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.86rem; font-weight: 700; color: #1e293b;">
+                Cấu hình Trường thông tin Chuyến đi (Dùng chung Cán bộ & Thân nhân):
+              </div>
+              <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">
+                Mỗi chuyến đi có thể gắn với Cán bộ (Cá nhân) hoặc Thân nhân. Bạn có thể thêm, sửa, xóa các cột trường thông tin tùy ý.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <span style="font-size: 0.95rem; font-weight: 700; color: #1f2937;">
-          Danh sách Nhóm & Cột dữ liệu ({{ activeTab === 'personnel' ? 'Hồ sơ Cán bộ' : 'Hồ sơ Thân nhân' }})
+          Danh sách Nhóm & Cột dữ liệu ({{ activeTab === 'personnel' ? 'Hồ sơ Cán bộ' : (activeTab === 'relative' ? 'Hồ sơ Thân nhân' : 'Thông tin Chuyến đi') }})
         </span>
         <Button
           label="Thêm Nhóm mới"
@@ -831,65 +858,195 @@
       </div>
     </div>
 
-    <!-- Tab 5: Cấu hình Dashboard Chuyên đề Chuyến đi -->
-    <div v-else-if="activeTab === 'tripsDashboard'" class="app-card" style="padding: 1.25rem;">
+    <!-- Tab: Cấu hình Dashboard & Khối Thống kê Tùy chỉnh -->
+    <div v-else-if="activeTab === 'dashboard'" class="app-card" style="padding: 1.25rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; flex-wrap: wrap; gap: 12px;">
         <div>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <i class="pi pi-send" style="color: #1e3a8a; font-size: 1.2rem;"></i>
+            <i class="pi pi-chart-pie" style="color: #2563eb; font-size: 1.2rem;"></i>
             <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0;">
-              Cấu hình Dashboard Chuyên đề Chuyến đi (CD-03)
+              Cấu hình Dashboard & Khối Thống kê Tùy chỉnh
             </h3>
           </div>
           <p style="font-size: 0.75rem; color: #64748b; margin: 4px 0 0 0;">
-            Tùy biến các thẻ thống kê nhanh ở đầu trang và cấu hình danh sách các cột hiển thị trên bảng dữ liệu Chuyến đi.
+            Tạo các nhóm thống kê, tự đặt tên và thêm các khối thẻ đếm (KPI) hoặc biểu đồ phân bổ từ nguồn Cán bộ, Thân nhân, Chuyến đi.
           </p>
         </div>
 
         <div style="display: flex; gap: 8px;">
           <Button
-            label="Xem Trang Chuyến đi"
+            label="Thêm Nhóm Thống kê mới"
+            icon="pi pi-plus-circle"
+            severity="success"
+            size="small"
+            @click="openAddDashGroupDialog"
+            style="font-size: 0.78rem;"
+          />
+          <Button
+            label="Lưu Cấu hình Dashboard"
+            icon="pi pi-save"
+            severity="primary"
+            size="small"
+            :loading="savingDash"
+            @click="saveDashboardGroups"
+            style="font-size: 0.78rem;"
+          />
+          <Button
+            label="Xem Dashboard Thống kê"
             icon="pi pi-external-link"
             severity="secondary"
             outlined
             size="small"
-            @click="router.push('/trips')"
+            @click="router.push('/dashboard')"
             style="font-size: 0.78rem;"
           />
         </div>
       </div>
 
-      <!-- Quick Guidance & Instructions -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-          <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-th-large" style="color: #0284c7;"></i>
-            1. Các thẻ chỉ số nhanh ở đầu trang (Metric KPI Cards):
-          </div>
-          <div style="font-size: 0.78rem; color: #475569; line-height: 1.5;">
-            Trang Danh sách Chuyến đi được thiết kế dạng <b>Dashboard Chuyên đề</b> với 4 thẻ chỉ số nhanh tự động đếm thời gian thực:
-            <ul style="margin: 6px 0 0 16px; padding: 0;">
-              <li><b>Toàn bộ:</b> Tổng hợp toàn bộ lượt đi nước ngoài của Cán bộ và Thân nhân.</li>
-              <li><b>Đã về nước:</b> Các chuyến đi đã có ngày nhập cảnh hợp lệ.</li>
-              <li><b>Đang ở nước ngoài:</b> Các chuyến đi chưa có ngày về và trong hạn duyệt.</li>
-              <li><b>Quá hạn chưa về:</b> Các chuyến đi quá hạn ngày về theo quyết định.</li>
-            </ul>
-          </div>
-        </div>
+      <!-- Empty state -->
+      <div v-if="dashboardCustomGroups.length === 0" style="text-align: center; padding: 3rem 1rem; color: #94a3b8; background: #f8fafc; border-radius: 10px; border: 1px dashed #cbd5e1;">
+        <i class="pi pi-th-large" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #cbd5e1;"></i>
+        <div style="font-size: 0.95rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Chưa có Nhóm Thống kê Tùy chỉnh nào</div>
+        <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;">Nhấp vào nút bên dưới để tạo nhóm thống kê đầu tiên cho Dashboard!</div>
+        <Button
+          label="Tạo Nhóm Thống kê ngay"
+          icon="pi pi-plus"
+          severity="success"
+          size="small"
+          @click="openAddDashGroupDialog"
+        />
+      </div>
 
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-          <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-table" style="color: #16a34a;"></i>
-            2. Cấu hình bảng danh sách trực tiếp:
+      <!-- List of Dashboard Groups -->
+      <div v-else style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div
+          v-for="(grp, gIdx) in dashboardCustomGroups"
+          :key="grp.id || gIdx"
+          style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);"
+        >
+          <!-- Group Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 32px; height: 32px; border-radius: 6px; background: #eff6ff; display: flex; align-items: center; justify-content: center;">
+                <i :class="grp.icon ? `pi ${grp.icon}` : 'pi pi-folder'" style="color: #2563eb; font-size: 1rem;"></i>
+              </div>
+              <div>
+                <div style="font-size: 0.92rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+                  <span>{{ grp.title || `Nhóm Thống kê ${gIdx + 1}` }}</span>
+                  <span style="font-size: 0.72rem; font-weight: 500; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
+                    {{ (grp.widgets || []).length }} khối
+                  </span>
+                </div>
+                <div v-if="grp.description" style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">
+                  {{ grp.description }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Group Actions -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <Button
+                icon="pi pi-arrow-up"
+                severity="secondary"
+                text
+                rounded
+                size="small"
+                :disabled="gIdx === 0"
+                @click="moveDashGroupUp(gIdx)"
+                title="Dời nhóm lên trên"
+              />
+              <Button
+                icon="pi pi-arrow-down"
+                severity="secondary"
+                text
+                rounded
+                size="small"
+                :disabled="gIdx === dashboardCustomGroups.length - 1"
+                @click="moveDashGroupDown(gIdx)"
+                title="Dời nhóm xuống dưới"
+              />
+              <Button
+                icon="pi pi-plus"
+                label="Thêm Khối Thống kê"
+                severity="primary"
+                size="small"
+                @click="openAddDashWidgetDialog(grp)"
+                style="font-size: 0.75rem;"
+              />
+              <Button
+                icon="pi pi-pencil"
+                severity="secondary"
+                text
+                rounded
+                size="small"
+                @click="openEditDashGroupDialog(grp)"
+                title="Đổi tên nhóm"
+              />
+              <Button
+                icon="pi pi-trash"
+                severity="danger"
+                text
+                rounded
+                size="small"
+                @click="deleteDashGroup(gIdx)"
+                title="Xóa nhóm này"
+              />
+            </div>
           </div>
-          <div style="font-size: 0.78rem; color: #475569; line-height: 1.5;">
-            Khác với Dashboard chung mở popup drill-down, Dashboard Chuyên đề hiển thị <b>Bảng dữ liệu trực tiếp</b> ngay bên dưới với đầy đủ tính năng:
-            <ul style="margin: 6px 0 0 16px; padding: 0;">
-              <li>Tìm kiếm trực tiếp theo họ tên, đơn vị, số quyết định, quốc gia.</li>
-              <li>Lọc đa chiều theo Năm, Quốc gia, Đơn vị công tác, Nguồn kinh phí.</li>
-              <li>Nút <b>Chọn cột hiển thị</b> cho phép người dùng tùy chọn ẩn / hiện các cột tùy ý.</li>
-              <li>Xuất dữ liệu tức thì ra file Excel chuẩn định dạng.</li>
-            </ul>
+
+          <!-- Group Widgets Grid -->
+          <div v-if="!grp.widgets || grp.widgets.length === 0" style="text-align: center; padding: 1.5rem; color: #94a3b8; font-size: 0.8rem; background: #f8fafc; border-radius: 6px;">
+            Chưa có khối thống kê nào trong nhóm này. Bấm <b>"Thêm Khối Thống kê"</b> ở trên để thêm thẻ đếm hoặc biểu đồ!
+          </div>
+
+          <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">
+            <div
+              v-for="(w, wIdx) in grp.widgets"
+              :key="w.id || wIdx"
+              style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; background: #fafafa; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;"
+            >
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 4px;">
+                  <span style="font-weight: 700; color: #1e293b; font-size: 0.82rem; line-height: 1.3;">
+                    {{ w.title || w.columnLabel || 'Khối thống kê' }}
+                  </span>
+                  <div style="display: flex; gap: 2px;">
+                    <Button
+                      icon="pi pi-pencil"
+                      severity="secondary"
+                      text
+                      size="small"
+                      @click="openEditDashWidgetDialog(grp, w, wIdx)"
+                      style="width: 24px; height: 24px; padding: 0;"
+                    />
+                    <Button
+                      icon="pi pi-times"
+                      severity="danger"
+                      text
+                      size="small"
+                      @click="deleteDashWidget(grp, wIdx)"
+                      style="width: 24px; height: 24px; padding: 0;"
+                    />
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                  <span style="font-size: 0.68rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: #eff6ff; color: #1e40af;">
+                    {{ w.displayType === 'chart' ? '📊 Biểu đồ' : '🔢 Thẻ đếm' }}
+                  </span>
+                  <span style="font-size: 0.68rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: #f1f5f9; color: #475569;">
+                    Nguồn: {{ getSourceLabel(w.source) }}
+                  </span>
+                  <span style="font-size: 0.68rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: #f3e8ff; color: #7e22ce;">
+                    Rộng: {{ w.widthPercent || 33 }}%
+                  </span>
+                </div>
+              </div>
+
+              <div style="font-size: 0.72rem; color: #64748b; border-top: 1px dashed #e2e8f0; padding-top: 6px;">
+                Cột: <b>{{ w.columnLabel || w.columnId }}</b>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -971,6 +1128,157 @@
         </div>
       </div>
     </div>
+
+    <!-- Dialog Thêm / Sửa Nhóm Dashboard -->
+    <Dialog
+      v-model:visible="isDashGroupDialogOpen"
+      modal
+      :header="editingDashGroup ? 'Chỉnh sửa Nhóm Thống kê Dashboard' : 'Thêm Nhóm Thống kê Dashboard Mới'"
+      :style="{ width: '480px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 1rem; padding: 4px 0;">
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Tên nhóm thống kê: <span style="color: red;">*</span>
+          </label>
+          <InputText
+            v-model="dashGroupForm.title"
+            placeholder="VD: Thống kê Đi Nước Ngoài Trọng Điểm, Nhóm Theo Dõi..."
+            style="width: 100%; font-size: 0.85rem;"
+          />
+        </div>
+
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Mô tả phụ (tùy chọn):
+          </label>
+          <InputText
+            v-model="dashGroupForm.description"
+            placeholder="VD: Tổng hợp các chỉ số quan trọng cần lưu ý"
+            style="width: 100%; font-size: 0.85rem;"
+          />
+        </div>
+
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Biểu tượng đại diện:
+          </label>
+          <select v-model="dashGroupForm.icon" class="custom-key-select">
+            <option value="pi-folder">📁 pi-folder (Thư mục)</option>
+            <option value="pi-chart-pie">📊 pi-chart-pie (Biểu đồ tròn)</option>
+            <option value="pi-chart-bar">📈 pi-chart-bar (Biểu đồ cột)</option>
+            <option value="pi-globe">🌐 pi-globe (Quốc tế / Toàn cầu)</option>
+            <option value="pi-send">✈️ pi-send (Chuyến đi)</option>
+            <option value="pi-users">👥 pi-users (Cán bộ)</option>
+            <option value="pi-heart">❤️ pi-heart (Thân nhân)</option>
+            <option value="pi-flag">🚩 pi-flag (Cờ / Trọng tâm)</option>
+            <option value="pi-shield">🛡️ pi-shield (Bảo vệ / An ninh)</option>
+          </select>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Hủy" severity="secondary" text size="small" @click="isDashGroupDialogOpen = false" />
+        <Button label="Lưu Nhóm" severity="success" size="small" @click="saveDashGroup" />
+      </template>
+    </Dialog>
+
+    <!-- Dialog Thêm / Sửa Khối Thống kê (Widget) -->
+    <Dialog
+      v-model:visible="isDashWidgetDialogOpen"
+      modal
+      :header="editingDashWidget ? 'Chỉnh sửa Khối Thống kê' : 'Thêm Khối Thống kê Mới vào Nhóm'"
+      :style="{ width: '560px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 1rem; padding: 4px 0;">
+        <!-- 1. Nguồn dữ liệu -->
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            1. Nguồn dữ liệu lấy số liệu: <span style="color: red;">*</span>
+          </label>
+          <select
+            v-model="dashWidgetForm.source"
+            class="custom-key-select"
+            @change="dashWidgetForm.columnId = ''; dashWidgetForm.columnLabel = ''"
+          >
+            <option value="personnel">👤 Hồ sơ Cán bộ (Cá nhân)</option>
+            <option value="relatives">👥 Hồ sơ Thân nhân</option>
+            <option value="trips">✈️ Danh sách Chuyến đi xuất nhập cảnh</option>
+            <option value="combined_country">🌐 Thống kê Toàn bộ Quốc gia (Cả CB & TN)</option>
+          </select>
+        </div>
+
+        <!-- 2. Chọn Cột dữ liệu -->
+        <div v-if="dashWidgetForm.source !== 'combined_country'">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            2. Cột dữ liệu cần thống kê: <span style="color: red;">*</span>
+          </label>
+          <select
+            v-model="dashWidgetForm.columnId"
+            class="custom-key-select"
+            @change="onWidgetColumnChange"
+          >
+            <option value="" disabled>-- Chọn cột cần tính toán số liệu --</option>
+            <option v-for="col in availableSourceCols" :key="col.id" :value="col.id">
+              {{ col.label }} (mã: {{ col.id }})
+            </option>
+          </select>
+        </div>
+
+        <!-- 3. Tiêu đề hiển thị -->
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            3. Tiêu đề hiển thị trên thẻ / biểu đồ:
+          </label>
+          <InputText
+            v-model="dashWidgetForm.title"
+            placeholder="Tự động theo tên cột hoặc đặt tên tùy thích"
+            style="width: 100%; font-size: 0.85rem;"
+          />
+        </div>
+
+        <!-- 4. Kiểu hiển thị & Độ rộng -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              4. Dạng hiển thị:
+            </label>
+            <select v-model="dashWidgetForm.displayType" class="custom-key-select">
+              <option value="count">🔢 Thẻ đếm số lượng (KPI Metric)</option>
+              <option value="chart">📊 Biểu đồ phân bổ (Pie / Doughnut)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              5. Độ rộng khối trên màn hình:
+            </label>
+            <select v-model="dashWidgetForm.widthPercent" class="custom-key-select">
+              <option :value="25">25% (1/4 hàng - Thẻ nhỏ gọn)</option>
+              <option :value="33">33% (1/3 hàng - Chuẩn)</option>
+              <option :value="50">50% (1/2 hàng - Rộng)</option>
+              <option :value="100">100% (Toàn hàng - Rộng nhất)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 5. Tông màu sắc -->
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            6. Tông màu chủ đạo:
+          </label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="color" v-model="dashWidgetForm.color" style="width: 40px; height: 34px; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;" />
+            <span style="font-size: 0.8rem; color: #64748b;">Mã màu: <b>{{ dashWidgetForm.color }}</b></span>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Hủy" severity="secondary" text size="small" @click="isDashWidgetDialogOpen = false" />
+        <Button label="Lưu Khối Thống kê" severity="success" size="small" @click="saveDashWidget" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -979,6 +1287,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { uploadFile, getFileUrl } from '@/api/files';
@@ -995,6 +1304,7 @@ const saving = ref(false);
 
 const personnelGroups = ref([]);
 const relativeGroups = ref([]);
+const tripsGroups = ref([]);
 
 const personnelKeyField = ref('cccdparent');
 const relativeParentKeyField = ref('cccdparent');
@@ -1360,6 +1670,38 @@ const availableRelativeCols = computed(() => {
   return cols;
 });
 
+const availableTripCols = computed(() => {
+  const cols = [];
+  (tripsGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') {
+        cols.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+  return cols;
+});
+
+const DEFAULT_TRIPS_MAPPING = [
+  {
+    group: 'Thông tin chuyến đi xuất nhập cảnh',
+    isMultiple: false,
+    columns: [
+      { id: 'countryName', label: 'Quốc gia / Nơi đến', width: '33', format: 'text', placeholder: 'Nhập quốc gia' },
+      { id: 'departureDate', label: 'Ngày xuất cảnh', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
+      { id: 'arrivalDate', label: 'Ngày nhập cảnh', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
+      { id: 'decisionNumber', label: 'Số quyết định duyệt', width: '33', format: 'text', placeholder: 'VD: 1234/QĐ-UBND' },
+      { id: 'decisionDate', label: 'Ngày quyết định', width: '25', format: 'date', placeholder: 'DD/MM/YYYY' },
+      { id: 'fundingName', label: 'Nguồn kinh phí', width: '33', format: 'dropdown', options: 'Ngân sách nhà nước, Tài trợ, Tự túc, Khác' },
+      { id: 'purpose', label: 'Mục đích chuyến đi', width: '50', format: 'text', placeholder: 'Công tác, Du lịch, Thăm thân...' },
+      { id: 'passportNumber', label: 'Số Hộ chiếu', width: '25', format: 'text' },
+      { id: 'approvedDepartureDate', label: 'Ngày đi duyệt', width: '25', format: 'date' },
+      { id: 'approvedArrivalDate', label: 'Ngày về duyệt', width: '25', format: 'date' },
+      { id: 'approvedExtensionDate', label: 'Ngày gia hạn duyệt', width: '25', format: 'date' },
+    ],
+  },
+];
+
 const formatOptions = [
   { label: 'Văn bản (Text)', value: 'text' },
   { label: 'Số (Number)', value: 'number' },
@@ -1416,6 +1758,208 @@ const normalizeGroupColumns = (groups) => {
   return groups;
 };
 
+// =========================================================================
+// QUẢN LÝ CẤU HÌNH DASHBOARD & KHỐI THỐNG KÊ (DASHBOARD CUSTOM GROUPS)
+// =========================================================================
+const dashboardCustomGroups = ref([]);
+const savingDash = ref(false);
+const isDashGroupDialogOpen = ref(false);
+const isDashWidgetDialogOpen = ref(false);
+const editingDashGroup = ref(null);
+const editingDashWidget = ref(null);
+const activeDashGroup = ref(null);
+const editingWidgetIndex = ref(-1);
+
+const dashGroupForm = ref({
+  id: '',
+  title: '',
+  description: '',
+  icon: 'pi-folder',
+  widgets: [],
+});
+
+const dashWidgetForm = ref({
+  id: '',
+  title: '',
+  source: 'personnel',
+  columnId: '',
+  columnLabel: '',
+  displayType: 'count',
+  widthPercent: 33,
+  countCondition: 'not_empty',
+  countValue: '',
+  color: '#2e7d32',
+  icon: 'pi-chart-line',
+});
+
+const loadDashboardGroups = async () => {
+  try {
+    const saved = await getAppSettings('dashboard_custom_groups', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      dashboardCustomGroups.value = saved;
+    } else {
+      const local = localStorage.getItem('dashboard_custom_groups');
+      if (local) dashboardCustomGroups.value = JSON.parse(local);
+    }
+  } catch (e) {
+    console.error('Error loading dashboard groups in settings:', e);
+  }
+};
+
+const saveDashboardGroups = async () => {
+  savingDash.value = true;
+  try {
+    localStorage.setItem('dashboard_custom_groups', JSON.stringify(dashboardCustomGroups.value));
+    await saveAppSettings('dashboard_custom_groups', dashboardCustomGroups.value);
+    alert('Đã lưu Cấu hình Dashboard thành công! Dữ liệu đã được đồng bộ với trang Dashboard.');
+  } catch (e) {
+    alert('Lỗi khi lưu cấu hình Dashboard: ' + (e.message || e));
+  } finally {
+    savingDash.value = false;
+  }
+};
+
+const openAddDashGroupDialog = () => {
+  editingDashGroup.value = null;
+  dashGroupForm.value = {
+    id: 'grp_' + Date.now(),
+    title: '',
+    description: '',
+    icon: 'pi-folder',
+    widgets: [],
+  };
+  isDashGroupDialogOpen.value = true;
+};
+
+const openEditDashGroupDialog = (grp) => {
+  editingDashGroup.value = grp;
+  dashGroupForm.value = JSON.parse(JSON.stringify(grp));
+  isDashGroupDialogOpen.value = true;
+};
+
+const saveDashGroup = async () => {
+  if (!dashGroupForm.value.title.trim()) {
+    alert('Vui lòng nhập tên nhóm thống kê!');
+    return;
+  }
+  if (editingDashGroup.value) {
+    Object.assign(editingDashGroup.value, dashGroupForm.value);
+  } else {
+    dashboardCustomGroups.value.push({
+      ...dashGroupForm.value,
+      id: dashGroupForm.value.id || 'grp_' + Date.now(),
+      widgets: dashGroupForm.value.widgets || [],
+    });
+  }
+  isDashGroupDialogOpen.value = false;
+  await saveDashboardGroups();
+};
+
+const deleteDashGroup = async (gIdx) => {
+  const grp = dashboardCustomGroups.value[gIdx];
+  if (!confirm(`Bạn có chắc chắn muốn xóa nhóm thống kê "${grp.title || 'Nhóm này'}" không?`)) return;
+  dashboardCustomGroups.value.splice(gIdx, 1);
+  await saveDashboardGroups();
+};
+
+const moveDashGroupUp = async (gIdx) => {
+  if (gIdx <= 0) return;
+  const temp = dashboardCustomGroups.value[gIdx];
+  dashboardCustomGroups.value[gIdx] = dashboardCustomGroups.value[gIdx - 1];
+  dashboardCustomGroups.value[gIdx - 1] = temp;
+  await saveDashboardGroups();
+};
+
+const moveDashGroupDown = async (gIdx) => {
+  if (gIdx >= dashboardCustomGroups.value.length - 1) return;
+  const temp = dashboardCustomGroups.value[gIdx];
+  dashboardCustomGroups.value[gIdx] = dashboardCustomGroups.value[gIdx + 1];
+  dashboardCustomGroups.value[gIdx + 1] = temp;
+  await saveDashboardGroups();
+};
+
+const openAddDashWidgetDialog = (grp) => {
+  activeDashGroup.value = grp;
+  editingDashWidget.value = null;
+  editingWidgetIndex.value = -1;
+  dashWidgetForm.value = {
+    id: 'w_' + Date.now(),
+    title: '',
+    source: 'personnel',
+    columnId: '',
+    columnLabel: '',
+    displayType: 'count',
+    widthPercent: 33,
+    countCondition: 'not_empty',
+    countValue: '',
+    color: '#2e7d32',
+    icon: 'pi-chart-line',
+  };
+  isDashWidgetDialogOpen.value = true;
+};
+
+const openEditDashWidgetDialog = (grp, widget, wIdx) => {
+  activeDashGroup.value = grp;
+  editingDashWidget.value = widget;
+  editingWidgetIndex.value = wIdx;
+  dashWidgetForm.value = JSON.parse(JSON.stringify(widget));
+  isDashWidgetDialogOpen.value = true;
+};
+
+const saveDashWidget = async () => {
+  if (!dashWidgetForm.value.columnId && dashWidgetForm.value.source !== 'combined_country') {
+    alert('Vui lòng chọn Cột dữ liệu thống kê!');
+    return;
+  }
+  if (!activeDashGroup.value) return;
+  if (!activeDashGroup.value.widgets) activeDashGroup.value.widgets = [];
+
+  const widgetData = { ...dashWidgetForm.value };
+  if (!widgetData.title) {
+    widgetData.title = widgetData.columnLabel || 'Khối thống kê';
+  }
+
+  if (editingWidgetIndex.value >= 0) {
+    activeDashGroup.value.widgets[editingWidgetIndex.value] = widgetData;
+  } else {
+    activeDashGroup.value.widgets.push(widgetData);
+  }
+  isDashWidgetDialogOpen.value = false;
+  await saveDashboardGroups();
+};
+
+const deleteDashWidget = async (grp, wIdx) => {
+  if (!confirm('Bạn có chắc muốn xóa khối thống kê này khỏi nhóm không?')) return;
+  grp.widgets.splice(wIdx, 1);
+  await saveDashboardGroups();
+};
+
+const getSourceLabel = (src) => {
+  if (src === 'personnel') return 'Cán bộ (Cá nhân)';
+  if (src === 'relatives') return 'Thân nhân';
+  if (src === 'trips') return 'Chuyến đi';
+  if (src === 'combined_country') return 'Toàn bộ Quốc gia';
+  return src || 'Cán bộ';
+};
+
+const availableSourceCols = computed(() => {
+  const src = dashWidgetForm.value.source;
+  if (src === 'personnel') return availablePersonnelCols.value;
+  if (src === 'relatives') return availableRelativeCols.value;
+  if (src === 'trips') return availableTripCols.value;
+  return [];
+});
+
+const onWidgetColumnChange = () => {
+  const col = availableSourceCols.value.find((c) => c.id === dashWidgetForm.value.columnId);
+  if (col) {
+    dashWidgetForm.value.columnLabel = col.label;
+    if (!dashWidgetForm.value.title) {
+      dashWidgetForm.value.title = col.label;
+    }
+  }
+};
+
 onMounted(async () => {
   if (route.query.tab) {
     activeTab.value = route.query.tab;
@@ -1423,16 +1967,25 @@ onMounted(async () => {
   await personnelStore.loadSettings();
   personnelGroups.value = normalizeGroupColumns(JSON.parse(JSON.stringify(personnelStore.importMappingPersonnel || [])));
   relativeGroups.value = normalizeGroupColumns(JSON.parse(JSON.stringify(personnelStore.importMappingRelative || [])));
+  tripsGroups.value = normalizeGroupColumns(
+    personnelStore.importMappingTrips && personnelStore.importMappingTrips.length > 0
+      ? JSON.parse(JSON.stringify(personnelStore.importMappingTrips))
+      : JSON.parse(JSON.stringify(DEFAULT_TRIPS_MAPPING))
+  );
   personnelKeyField.value = personnelStore.getPersonnelKeyField();
   relativeParentKeyField.value = personnelStore.getRelativeParentKeyField();
   relativeKeyField.value = personnelStore.getRelativeKeyField();
   await loadDocxTemplates();
   await loadLoginBg();
   await loadCustomAppendices();
+  await loadDashboardGroups();
 });
 
 const currentGroups = computed(() => {
-  return activeTab.value === 'personnel' ? personnelGroups.value : relativeGroups.value;
+  if (activeTab.value === 'personnel') return personnelGroups.value;
+  if (activeTab.value === 'relative') return relativeGroups.value;
+  if (activeTab.value === 'trips') return tripsGroups.value;
+  return [];
 });
 
 // Tra cứu thẻ Tag (Tab 3)
@@ -1442,6 +1995,10 @@ const personnelColMap = computed(() => {
 
 const relativeColMap = computed(() => {
   return computeColumnIndexMap(relativeGroups.value || []);
+});
+
+const tripsColMap = computed(() => {
+  return computeColumnIndexMap(tripsGroups.value || []);
 });
 
 const allAvailableTags = computed(() => {
@@ -1773,6 +2330,18 @@ const validateUniqueIds = () => {
     }
   }
 
+  const tSeen = new Map();
+  for (const g of tripsGroups.value) {
+    for (const c of (g.columns || [])) {
+      if (c.id && c.id !== 'stt') {
+        if (tSeen.has(c.id)) {
+          return `Trong Cấu hình Chuyến đi: Mã ID "${c.id}" (${c.label}) bị trùng với "${tSeen.get(c.id)}". Vui lòng đổi lại mã ID khác.`;
+        }
+        tSeen.set(c.id, c.label || c.id);
+      }
+    }
+  }
+
   // 3. Cảnh báo nếu trùng ID giữa Cán bộ và Thân nhân (trừ trường khóa liên kết cha mẹ)
   for (const [rId, rLabel] of rSeen.entries()) {
     if (pSeen.has(rId) && rId !== 'cccdparent' && rId !== relativeParentKeyField.value) {
@@ -1784,6 +2353,15 @@ const validateUniqueIds = () => {
 };
 
 const saveConfig = async () => {
+  if (activeTab.value === 'dashboard') {
+    await saveDashboardGroups();
+    return;
+  }
+  if (activeTab.value === 'appendices') {
+    await saveAppendicesConfig();
+    return;
+  }
+
   const errorMsg = validateUniqueIds();
   if (errorMsg) {
     alert('⚠️ KHÔNG THỂ LƯU CẤU HÌNH:\n\n' + errorMsg);
@@ -1804,10 +2382,14 @@ const saveConfig = async () => {
       await saveAppSettings('mapping_config_personnel', personnelGroups.value);
       await saveAppSettings('importMappingPersonnel', personnelGroups.value);
       personnelStore.importMappingPersonnel = personnelGroups.value;
-    } else {
+    } else if (activeTab.value === 'relative') {
       await saveAppSettings('mapping_config_relative', relativeGroups.value);
       await saveAppSettings('importMappingRelative', relativeGroups.value);
       personnelStore.importMappingRelative = relativeGroups.value;
+    } else if (activeTab.value === 'trips') {
+      await saveAppSettings('mapping_config_trips', tripsGroups.value);
+      await saveAppSettings('importMappingTrips', tripsGroups.value);
+      personnelStore.importMappingTrips = tripsGroups.value;
     }
     alert('Đã lưu cấu hình cột và khóa liên kết thành công!');
   } catch (err) {
