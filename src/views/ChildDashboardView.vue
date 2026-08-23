@@ -1089,11 +1089,26 @@ const resetFilters = () => {
 
 // Column Picker
 const resetDefaultColumns = () => {
-  selectedColIds.value = DEFAULT_TRIP_COLUMNS.map((c) => c.id);
+  if (currentDashboardConfig.value.columns && currentDashboardConfig.value.columns.length > 0) {
+    selectedColIds.value = [...currentDashboardConfig.value.columns];
+  } else {
+    selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id);
+  }
 };
 
-const saveColumnSelection = () => {
+const saveColumnSelection = async () => {
+  const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
+  localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
   localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
+
+  // Also persist into customDashboards in DB
+  const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
+  if (idx !== -1) {
+    customDashboards.value[idx].columns = [...selectedColIds.value];
+    try {
+      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+    } catch (e) {}
+  }
   isColumnPickerOpen.value = false;
 };
 
@@ -1251,18 +1266,39 @@ const loadCustomDashboards = async () => {
   }
 };
 
-onMounted(async () => {
-  await loadCustomDashboards();
+const initTopicColumns = () => {
+  const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
+  const savedCols = localStorage.getItem(currentKey);
+  if (savedCols) {
+    try {
+      selectedColIds.value = JSON.parse(savedCols);
+      return;
+    } catch (e) {}
+  }
   if (currentDashboardConfig.value.columns && currentDashboardConfig.value.columns.length > 0) {
     selectedColIds.value = [...currentDashboardConfig.value.columns];
   } else {
-    const savedCols = localStorage.getItem('trips_dashboard_columns');
-    if (savedCols) {
+    const defaultSaved = localStorage.getItem('trips_dashboard_columns');
+    if (defaultSaved) {
       try {
-        selectedColIds.value = JSON.parse(savedCols);
+        selectedColIds.value = JSON.parse(defaultSaved);
+        return;
       } catch (e) {}
     }
+    selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id);
   }
+};
+
+watch(
+  () => topicId.value,
+  () => {
+    initTopicColumns();
+  }
+);
+
+onMounted(async () => {
+  await loadCustomDashboards();
+  initTopicColumns();
 });
 </script>
 

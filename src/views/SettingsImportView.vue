@@ -1058,71 +1058,25 @@
             </div>
           </div>
 
-          <!-- 3. Cấu hình Cột hiển thị trên Bảng danh sách trực tiếp -->
-          <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <div>
-                <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                  <i class="pi pi-table" style="color: #16a34a;"></i>
-                  2. Cấu hình Cột hiển thị trên Bảng danh sách trực tiếp ({{ (currentSelectedDashboard.columns || []).length }} / {{ availableDashboardCols.length }} cột):
-                </span>
-                <span style="font-size: 0.72rem; color: #64748b;">
-                  Tích chọn các cột từ toàn bộ {{ availableDashboardCols.length }} cột của nguồn dữ liệu để hiển thị trực tiếp trên bảng dữ liệu.
-                </span>
-              </div>
-              <div style="display: flex; gap: 6px;">
-                <Button
-                  label="Chọn tất cả"
-                  size="small"
-                  text
-                  severity="primary"
-                  @click="currentSelectedDashboard.columns = availableDashboardCols.map(c => c.id)"
-                  style="font-size: 0.75rem; padding: 2px 6px;"
-                />
-                <Button
-                  label="Bỏ chọn"
-                  size="small"
-                  text
-                  severity="secondary"
-                  @click="currentSelectedDashboard.columns = []"
-                  style="font-size: 0.75rem; padding: 2px 6px;"
-                />
-              </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; max-height: 260px; overflow-y: auto; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-              <label
-                v-for="col in availableDashboardCols"
-                :key="col.id"
-                style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; cursor: pointer; padding: 4px 6px; border-radius: 4px; background: #ffffff; border: 1px solid #f1f5f9;"
-              >
-                <input
-                  type="checkbox"
-                  :value="col.id"
-                  v-model="currentSelectedDashboard.columns"
-                  style="accent-color: #1e3a8a;"
-                />
-                <span style="color: #334155; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="col.label">
-                  {{ col.label }}
-                </span>
-              </label>
-            </div>
-          </div>
-
           <!-- Nút Lưu & Mở xem Dashboard -->
-          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-            <Button
-              label="Mở Xem Dashboard này"
-              icon="pi pi-external-link"
-              severity="info"
-              outlined
-              size="small"
-              @click="openTopicDashboard(currentSelectedDashboard.id)"
-              style="font-size: 0.78rem;"
-            />
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <Button
+                label="Mở Xem Dashboard này"
+                icon="pi pi-external-link"
+                severity="info"
+                outlined
+                size="small"
+                @click="openTopicDashboard(currentSelectedDashboard.id)"
+                style="font-size: 0.78rem;"
+              />
+              <span style="font-size: 0.74rem; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                <i class="pi pi-check-circle"></i> Tự động lưu khi chỉnh sửa
+              </span>
+            </div>
             <Button
               label="Lưu Toàn bộ Cấu hình Dashboard"
-              icon="pi pi-check"
+              icon="pi pi-save"
               severity="success"
               size="small"
               @click="saveDashboardsConfig"
@@ -1890,6 +1844,8 @@ const DEFAULT_TOPIC_DASHBOARDS_CONFIG = [
 
 const customDashboards = ref([...DEFAULT_TOPIC_DASHBOARDS_CONFIG]);
 const selectedDashboardIdx = ref(0);
+let isDashboardLoaded = false;
+let autoSaveTimer = null;
 
 const currentSelectedDashboard = computed(() => {
   return customDashboards.value[selectedDashboardIdx.value] || customDashboards.value[0] || null;
@@ -1906,8 +1862,37 @@ const loadCustomDashboards = async () => {
     }
   } catch (e) {
     console.error('Error loading custom dashboards:', e);
+  } finally {
+    setTimeout(() => {
+      isDashboardLoaded = true;
+    }, 150);
   }
 };
+
+const debouncedAutoSaveDashboards = () => {
+  if (!isDashboardLoaded) return;
+  try {
+    localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+  } catch (e) {}
+
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(async () => {
+    try {
+      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      console.log('Auto-saved custom dashboards config to DB.');
+    } catch (e) {
+      console.error('Error auto-saving custom dashboards:', e);
+    }
+  }, 500);
+};
+
+watch(
+  customDashboards,
+  () => {
+    debouncedAutoSaveDashboards();
+  },
+  { deep: true }
+);
 
 const saveDashboardsConfig = async () => {
   try {

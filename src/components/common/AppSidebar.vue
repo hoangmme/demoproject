@@ -82,10 +82,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { getAppSettings } from '@/api/settings';
 
+const route = useRoute();
 const authStore = useAuthStore();
 
 const DEFAULT_APPENDICES = [
@@ -153,6 +155,13 @@ const loadSidebarData = async () => {
     console.error('Error loading sidebar dashboards:', e);
   }
 };
+
+watch(
+  () => route.path,
+  () => {
+    loadSidebarData();
+  }
+);
 
 onMounted(() => {
   loadSidebarData();
