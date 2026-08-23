@@ -654,5 +654,383 @@ export const usePersonnelStore = defineStore('personnel', {
       if (!deptId) return 'Chưa phân bổ';
       return this.departmentMap[deptId] || deptId;
     },
+    async seedSampleTripsData() {
+      this.loading = true;
+      try {
+        // 1. Ensure we have at least 10 Cán bộ & 10 Thân nhân in system
+        const sampleCbList = [
+          { name: 'Nguyễn Văn An', cccd: '001085001234', position: 'Trưởng phòng', departmentName: 'Phòng Kế hoạch', birthYear: 1985 },
+          { name: 'Trần Thị Bích', cccd: '001188002345', position: 'Phó Giám đốc', departmentName: 'Phòng Tổ chức', birthYear: 1988 },
+          { name: 'Lê Hoàng Cường', cccd: '001090003456', position: 'Chuyên viên chính', departmentName: 'Phòng Kế hoạch', birthYear: 1990 },
+          { name: 'Phạm Minh Đức', cccd: '001082004567', position: 'Giám đốc Trung tâm', departmentName: 'Ban Quản lý', birthYear: 1982 },
+          { name: 'Hoàng Thu Hà', cccd: '001192005678', position: 'Phó Trưởng phòng', departmentName: 'Phòng Tài chính', birthYear: 1992 },
+          { name: 'Đặng Quốc Hùng', cccd: '001087006789', position: 'Trưởng phòng', departmentName: 'Phòng Hợp tác Quốc tế', birthYear: 1987 },
+          { name: 'Vũ Thị Lan', cccd: '001195007890', position: 'Chuyên viên', departmentName: 'Văn phòng', birthYear: 1995 },
+          { name: 'Bùi Quang Minh', cccd: '001089008901', position: 'Phó Chánh Văn phòng', departmentName: 'Văn phòng', birthYear: 1989 },
+          { name: 'Ngô Hồng Nhung', cccd: '001193009012', position: 'Kế toán trưởng', departmentName: 'Phòng Tài chính', birthYear: 1993 },
+          { name: 'Đỗ Tuấn Phong', cccd: '001084010123', position: 'Thanh tra viên', departmentName: 'Thanh tra', birthYear: 1984 },
+        ];
+
+        const sampleTnList = [
+          { relativeName: 'Nguyễn Văn Bình', cccdthannhan: '001202001111', relationshipName: 'Con đẻ', parentName: 'Nguyễn Văn An', cccdparent: '001085001234', birthYear: 2002 },
+          { relativeName: 'Trần Đức Anh', cccdthannhan: '001086002222', relationshipName: 'Chồng', parentName: 'Trần Thị Bích', cccdparent: '001188002345', birthYear: 1986 },
+          { relativeName: 'Lê Mai Chi', cccdthannhan: '001192003333', relationshipName: 'Vợ', parentName: 'Lê Hoàng Cường', cccdparent: '001090003456', birthYear: 1992 },
+          { relativeName: 'Phạm Khánh Linh', cccdthannhan: '001205004444', relationshipName: 'Con đẻ', parentName: 'Phạm Minh Đức', cccdparent: '001082004567', birthYear: 2005 },
+          { relativeName: 'Hoàng Hải Đăng', cccdthannhan: '001096005555', relationshipName: 'Em ruột', parentName: 'Hoàng Thu Hà', cccdparent: '001192005678', birthYear: 1996 },
+          { relativeName: 'Đặng Bảo Ngọc', cccdthannhan: '001208006666', relationshipName: 'Con đẻ', parentName: 'Đặng Quốc Hùng', cccdparent: '001087006789', birthYear: 2008 },
+          { relativeName: 'Vũ Quốc Tuấn', cccdthannhan: '001091007777', relationshipName: 'Anh ruột', parentName: 'Vũ Thị Lan', cccdparent: '001195007890', birthYear: 1991 },
+          { relativeName: 'Bùi Gia Hân', cccdthannhan: '001210008888', relationshipName: 'Con đẻ', parentName: 'Bùi Quang Minh', cccdparent: '001089008901', birthYear: 2010 },
+          { relativeName: 'Ngô Minh Trí', cccdthannhan: '001058009999', relationshipName: 'Bố đẻ', parentName: 'Ngô Hồng Nhung', cccdparent: '001193009012', birthYear: 1958 },
+          { relativeName: 'Đỗ Thị Thanh Tâm', cccdthannhan: '001187010000', relationshipName: 'Vợ', parentName: 'Đỗ Tuấn Phong', cccdparent: '001084010123', birthYear: 1987 },
+        ];
+
+        // Ensure Cán bộ exist
+        const pMap = {};
+        for (let i = 0; i < sampleCbList.length; i++) {
+          const item = sampleCbList[i];
+          let found = this.findPersonByCccd(item.cccd);
+          if (!found) {
+            const newCode = 'CB-' + String(i + 1).padStart(5, '0');
+            const created = await createPersonnel({
+              code: newCode,
+              name: item.name,
+              cccd: item.cccd,
+              cccdparent: item.cccd,
+              position: item.position,
+              positionName: item.position,
+              departmentName: item.departmentName,
+              birthYear: item.birthYear,
+            });
+            found = created || { id: 'p_' + Date.now() + '_' + i, ...item, code: newCode };
+          }
+          pMap[item.cccd] = found;
+        }
+
+        // Ensure Thân nhân exist
+        for (let j = 0; j < sampleTnList.length; j++) {
+          const rItem = sampleTnList[j];
+          const found = this.findRelativeByCccd(rItem.cccdthannhan);
+          if (!found) {
+            const parentP = pMap[rItem.cccdparent];
+            const newTnCode = 'TN-' + String(j + 1).padStart(5, '0');
+            try {
+              await apiClient.post('/items/appendix2', {
+                code: newTnCode,
+                personnelId: parentP?.id || '',
+                parentName: rItem.parentName,
+                cccdparent: rItem.cccdparent,
+                relationshipName: rItem.relationshipName,
+                relativeName: rItem.relativeName,
+                cccdthannhan: rItem.cccdthannhan,
+                birthYear: rItem.birthYear,
+                currentAddress: 'Hà Nội, Việt Nam',
+                countryName: '',
+              });
+            } catch (err) {}
+          }
+        }
+
+        // 2. 20 Sample Trips (10 CB + 10 TN)
+        const sampleTrips = [
+          // 10 Chuyến đi của Cán bộ (CB)
+          {
+            cccdchuyendi: '001085001234',
+            countryName: 'Nhật Bản',
+            departureDate: '10/01/2025',
+            arrivalDate: '18/01/2025',
+            decisionNumber: '102/QĐ-UBND',
+            decisionDate: '05/01/2025',
+            fundingName: 'Ngân sách nhà nước',
+            purpose: 'Tham gia hội thảo xúc tiến đầu tư công nghệ cao',
+            passportNumber: 'C8291029',
+            approvedDepartureDate: '10/01/2025',
+            approvedArrivalDate: '18/01/2025',
+          },
+          {
+            cccdchuyendi: '001188002345',
+            countryName: 'Đức',
+            departureDate: '15/03/2025',
+            arrivalDate: '25/03/2025',
+            decisionNumber: '245/QĐ-BCT',
+            decisionDate: '01/03/2025',
+            fundingName: 'Tài trợ',
+            purpose: 'Khảo sát chuyển đổi năng lượng xanh',
+            passportNumber: 'B9102934',
+            approvedDepartureDate: '15/03/2025',
+            approvedArrivalDate: '25/03/2025',
+          },
+          {
+            cccdchuyendi: '001090003456',
+            countryName: 'Hàn Quốc',
+            departureDate: '12/04/2025',
+            arrivalDate: '20/04/2025',
+            decisionNumber: '318/QĐ-BNG',
+            decisionDate: '02/04/2025',
+            fundingName: 'Ngân sách nhà nước',
+            purpose: 'Tập huấn nghiệp vụ quản lý đô thị thông minh',
+            passportNumber: 'C1122334',
+            approvedDepartureDate: '12/04/2025',
+            approvedArrivalDate: '20/04/2025',
+          },
+          {
+            cccdchuyendi: '001082004567',
+            countryName: 'Singapore',
+            departureDate: '05/05/2025',
+            arrivalDate: '10/05/2025',
+            decisionNumber: '412/QĐ-UBND',
+            decisionDate: '28/04/2025',
+            fundingName: 'Tự túc',
+            purpose: 'Nghỉ phép và du lịch cá nhân',
+            passportNumber: 'B7788990',
+            approvedDepartureDate: '05/05/2025',
+            approvedArrivalDate: '10/05/2025',
+          },
+          {
+            cccdchuyendi: '001192005678',
+            countryName: 'Pháp',
+            departureDate: '20/06/2025',
+            arrivalDate: '30/06/2025',
+            decisionNumber: '520/QĐ-BYT',
+            decisionDate: '10/06/2025',
+            fundingName: 'Tài trợ',
+            purpose: 'Tham dự Diễn đàn Y tế & Sức khỏe cộng đồng',
+            passportNumber: 'C3344556',
+            approvedDepartureDate: '20/06/2025',
+            approvedArrivalDate: '30/06/2025',
+          },
+          {
+            cccdchuyendi: '001087006789',
+            countryName: 'Úc',
+            departureDate: '14/07/2025',
+            arrivalDate: '26/07/2025',
+            decisionNumber: '605/QĐ-BGD',
+            decisionDate: '01/07/2025',
+            fundingName: 'Ngân sách nhà nước',
+            purpose: 'Trao đổi hợp tác giáo dục và đào tạo sau đại học',
+            passportNumber: 'C5566778',
+            approvedDepartureDate: '14/07/2025',
+            approvedArrivalDate: '26/07/2025',
+          },
+          {
+            cccdchuyendi: '001195007890',
+            countryName: 'Trung Quốc',
+            departureDate: '08/09/2025',
+            arrivalDate: '16/09/2025',
+            decisionNumber: '719/QĐ-BKH',
+            decisionDate: '25/08/2025',
+            fundingName: 'Ngân sách nhà nước',
+            purpose: 'Tham quan triển lãm thương mại quốc tế Thượng Hải',
+            passportNumber: 'B2233445',
+            approvedDepartureDate: '08/09/2025',
+            approvedArrivalDate: '16/09/2025',
+          },
+          {
+            cccdchuyendi: '001089008901',
+            countryName: 'Mỹ',
+            departureDate: '10/11/2025',
+            arrivalDate: '25/11/2025',
+            decisionNumber: '830/QĐ-UBND',
+            decisionDate: '20/10/2025',
+            fundingName: 'Tài trợ',
+            purpose: 'Tham gia khóa bồi dưỡng lãnh đạo quản lý công',
+            passportNumber: 'C9988776',
+            approvedDepartureDate: '10/11/2025',
+            approvedArrivalDate: '25/11/2025',
+          },
+          {
+            cccdchuyendi: '001193009012',
+            countryName: 'Thái Lan',
+            departureDate: '02/12/2025',
+            arrivalDate: '07/12/2025',
+            decisionNumber: '915/QĐ-BTT',
+            decisionDate: '20/11/2025',
+            fundingName: 'Tự túc',
+            purpose: 'Thăm thân nhân kết hợp du lịch',
+            passportNumber: 'B6677889',
+            approvedDepartureDate: '02/12/2025',
+            approvedArrivalDate: '07/12/2025',
+          },
+          {
+            cccdchuyendi: '001084010123',
+            countryName: 'Canada',
+            departureDate: '15/01/2026',
+            arrivalDate: '30/01/2026',
+            decisionNumber: '045/QĐ-BNV',
+            decisionDate: '05/01/2026',
+            fundingName: 'Khác',
+            purpose: 'Giao lưu trao đổi văn hóa và hành chính công',
+            passportNumber: 'C4455667',
+            approvedDepartureDate: '15/01/2026',
+            approvedArrivalDate: '30/01/2026',
+          },
+
+          // 10 Chuyến đi của Thân nhân (TN)
+          {
+            cccdchuyendi: '001202001111',
+            countryName: 'Mỹ',
+            departureDate: '01/02/2025',
+            arrivalDate: '20/02/2025',
+            decisionNumber: 'QĐ-TN-01',
+            decisionDate: '15/01/2025',
+            fundingName: 'Tự túc',
+            purpose: 'Du học ngắn hạn và tham quan trường đại học',
+            passportNumber: 'B1122331',
+            approvedDepartureDate: '01/02/2025',
+            approvedArrivalDate: '20/02/2025',
+          },
+          {
+            cccdchuyendi: '001086002222',
+            countryName: 'Đức',
+            departureDate: '15/03/2025',
+            arrivalDate: '25/03/2025',
+            decisionNumber: 'QĐ-TN-02',
+            decisionDate: '01/03/2025',
+            fundingName: 'Tự túc',
+            purpose: 'Đi cùng cán bộ công tác kết hợp thăm người thân',
+            passportNumber: 'B2233442',
+            approvedDepartureDate: '15/03/2025',
+            approvedArrivalDate: '25/03/2025',
+          },
+          {
+            cccdchuyendi: '001192003333',
+            countryName: 'Hàn Quốc',
+            departureDate: '12/04/2025',
+            arrivalDate: '20/04/2025',
+            decisionNumber: 'QĐ-TN-03',
+            decisionDate: '02/04/2025',
+            fundingName: 'Tự túc',
+            purpose: 'Du lịch và nghỉ dưỡng gia đình',
+            passportNumber: 'B3344553',
+            approvedDepartureDate: '12/04/2025',
+            approvedArrivalDate: '20/04/2025',
+          },
+          {
+            cccdchuyendi: '001205004444',
+            countryName: 'Singapore',
+            departureDate: '05/05/2025',
+            arrivalDate: '10/05/2025',
+            decisionNumber: 'QĐ-TN-04',
+            decisionDate: '28/04/2025',
+            fundingName: 'Tự túc',
+            purpose: 'Du lịch cùng gia đình',
+            passportNumber: 'B4455664',
+            approvedDepartureDate: '05/05/2025',
+            approvedArrivalDate: '10/05/2025',
+          },
+          {
+            cccdchuyendi: '001096005555',
+            countryName: 'Pháp',
+            departureDate: '01/08/2025',
+            arrivalDate: '30/08/2025',
+            decisionNumber: 'QĐ-TN-05',
+            decisionDate: '15/07/2025',
+            fundingName: 'Tài trợ',
+            purpose: 'Tham gia khóa học trao đổi sinh viên quốc tế',
+            passportNumber: 'B5566775',
+            approvedDepartureDate: '01/08/2025',
+            approvedArrivalDate: '30/08/2025',
+          },
+          {
+            cccdchuyendi: '001208006666',
+            countryName: 'Úc',
+            departureDate: '10/09/2025',
+            arrivalDate: '25/09/2025',
+            decisionNumber: 'QĐ-TN-06',
+            decisionDate: '01/09/2025',
+            fundingName: 'Tự túc',
+            purpose: 'Nhập học chương trình liên kết đào tạo',
+            passportNumber: 'B6677886',
+            approvedDepartureDate: '10/09/2025',
+            approvedArrivalDate: '25/09/2025',
+          },
+          {
+            cccdchuyendi: '001091007777',
+            countryName: 'Trung Quốc',
+            departureDate: '05/10/2025',
+            arrivalDate: '15/10/2025',
+            decisionNumber: 'QĐ-TN-07',
+            decisionDate: '20/09/2025',
+            fundingName: 'Tự túc',
+            purpose: 'Tìm hiểu thị trường và khảo sát nguồn hàng',
+            passportNumber: 'B7788997',
+            approvedDepartureDate: '05/10/2025',
+            approvedArrivalDate: '15/10/2025',
+          },
+          {
+            cccdchuyendi: '001210008888',
+            countryName: 'Anh',
+            departureDate: '01/11/2025',
+            arrivalDate: '15/11/2025',
+            decisionNumber: 'QĐ-TN-08',
+            decisionDate: '15/10/2025',
+            fundingName: 'Tài trợ',
+            purpose: 'Tham dự kỳ thi Olympic học sinh quốc tế',
+            passportNumber: 'B8899008',
+            approvedDepartureDate: '01/11/2025',
+            approvedArrivalDate: '15/11/2025',
+          },
+          {
+            cccdchuyendi: '001058009999',
+            countryName: 'Thái Lan',
+            departureDate: '02/12/2025',
+            arrivalDate: '07/12/2025',
+            decisionNumber: 'QĐ-TN-09',
+            decisionDate: '20/11/2025',
+            fundingName: 'Tự túc',
+            purpose: 'Nghỉ dưỡng và khám sức khỏe định kỳ',
+            passportNumber: 'B9900119',
+            approvedDepartureDate: '02/12/2025',
+            approvedArrivalDate: '07/12/2025',
+          },
+          {
+            cccdchuyendi: '001187010000',
+            countryName: 'Canada',
+            departureDate: '15/01/2026',
+            arrivalDate: '30/01/2026',
+            decisionNumber: 'QĐ-TN-10',
+            decisionDate: '05/01/2026',
+            fundingName: 'Tự túc',
+            purpose: 'Thăm người thân tại Vancouver',
+            passportNumber: 'B0011220',
+            approvedDepartureDate: '15/01/2026',
+            approvedArrivalDate: '30/01/2026',
+          },
+        ];
+
+        // 3. Post each trip into appendix1
+        for (const t of sampleTrips) {
+          const matchedP = this.findPersonByCccd(t.cccdchuyendi);
+          const matchedR = (!matchedP) ? this.findRelativeByCccd(t.cccdchuyendi) : null;
+          const parentP = matchedP || (matchedR?.cccdparent ? this.findPersonByCccd(matchedR.cccdparent) : null);
+
+          const payload = {
+            ...t,
+            quoc_gia_xuat_canh: t.countryName,
+            nguon_kinh_phi: t.fundingName,
+            personnelId: parentP?.id || matchedP?.id || '',
+            personnelCode: parentP?.code || matchedP?.code || '',
+            personnelName: matchedP?.name || (matchedR ? `TN: ${matchedR.relativeName}` : 'Cán bộ'),
+            custom_data: JSON.stringify({
+              ...t,
+              quoc_gia_xuat_canh: t.countryName,
+              nguon_kinh_phi: t.fundingName,
+            }),
+          };
+
+          try {
+            await apiClient.post('/items/appendix1', payload);
+          } catch (err) {}
+        }
+
+        await this.fetchPersonnel();
+        await logActivity('Tạo Dữ liệu Mẫu', 'Đã khởi tạo 20 chuyến đi mẫu (10 Cán bộ & 10 Thân nhân)');
+        return true;
+      } catch (e) {
+        console.error('Error seeding sample trips data:', e);
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
   },
 });

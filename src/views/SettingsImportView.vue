@@ -169,18 +169,30 @@
         </div>
       </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
         <span style="font-size: 0.95rem; font-weight: 700; color: #1f2937;">
           Danh sách Nhóm & Cột dữ liệu ({{ activeTab === 'personnel' ? 'Hồ sơ Cán bộ' : (activeTab === 'relative' ? 'Hồ sơ Thân nhân' : 'Thông tin Chuyến đi') }})
         </span>
-        <Button
-          label="Thêm Nhóm mới"
-          icon="pi pi-plus-circle"
-          size="small"
-          severity="primary"
-          @click="addGroup"
-          style="font-size: 0.8rem;"
-        />
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <Button
+            v-if="activeTab === 'trips'"
+            label="Tạo 20 Chuyến đi mẫu (10 CB & 10 TN)"
+            icon="pi pi-bolt"
+            size="small"
+            severity="warn"
+            :loading="isSeedingData"
+            @click="handleSeedTrips"
+            style="font-size: 0.8rem;"
+          />
+          <Button
+            label="Thêm Nhóm mới"
+            icon="pi pi-plus-circle"
+            size="small"
+            severity="primary"
+            @click="addGroup"
+            style="font-size: 0.8rem;"
+          />
+        </div>
       </div>
 
       <!-- Columns List -->
@@ -2026,6 +2038,20 @@ const currentGroups = computed(() => {
   if (activeTab.value === 'trips') return tripsGroups.value;
   return [];
 });
+
+const isSeedingData = ref(false);
+const handleSeedTrips = async () => {
+  if (!confirm('Hệ thống sẽ tạo 20 bản ghi chuyến đi mẫu (10 cho Cán bộ & 10 cho Thân nhân) với đầy đủ thông tin chuẩn hóa. Tiếp tục?')) return;
+  isSeedingData.value = true;
+  try {
+    await personnelStore.seedSampleTripsData();
+    alert('Đã tạo thành công 20 dữ liệu chuyến đi mẫu cho 10 cán bộ và 10 thân nhân!');
+  } catch (e) {
+    alert('Lỗi tạo dữ liệu mẫu: ' + (e.message || e));
+  } finally {
+    isSeedingData.value = false;
+  }
+};
 
 // Tra cứu thẻ Tag (Tab 3)
 const personnelColMap = computed(() => {

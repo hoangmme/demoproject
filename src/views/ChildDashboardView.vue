@@ -19,7 +19,19 @@
         </div>
       </div>
 
-      <div style="display: flex; gap: 8px; align-items: center;">
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <!-- Seed Sample Trips Button -->
+        <Button
+          label="Tạo 20 Chuyến đi mẫu (10 CB & 10 TN)"
+          icon="pi pi-bolt"
+          size="small"
+          severity="warn"
+          :loading="isSeedingData"
+          @click="handleSeedTrips"
+          style="font-size: 0.82rem;"
+          title="Tạo nhanh 20 dữ liệu chuyến đi mẫu cho 10 cán bộ và 10 thân nhân"
+        />
+
         <!-- Column Picker -->
         <button
           type="button"
@@ -1224,6 +1236,20 @@ const saveTripForm = async () => {
 const handlePersonnelSaved = async () => {
   await personnelStore.fetchPersonnel();
   isPersonnelDialogOpen.value = false;
+};
+
+const isSeedingData = ref(false);
+const handleSeedTrips = async () => {
+  if (!confirm('Hệ thống sẽ tạo 20 bản ghi chuyến đi mẫu (10 cho Cán bộ & 10 cho Thân nhân) với đầy đủ thông tin chuẩn hóa. Tiếp tục?')) return;
+  isSeedingData.value = true;
+  try {
+    await personnelStore.seedSampleTripsData();
+    alert('Đã tạo thành công 20 dữ liệu chuyến đi mẫu cho 10 cán bộ và 10 thân nhân!');
+  } catch (e) {
+    alert('Lỗi tạo dữ liệu mẫu: ' + (e.message || e));
+  } finally {
+    isSeedingData.value = false;
+  }
 };
 
 // Excel Export
