@@ -1350,8 +1350,8 @@ const onPersonSaved = async () => {
 // 1. DEFAULT DASHBOARD COLUMN CONFIGURATION STATE (Persisted in Directus DB)
 // =========================================================================
 const DEFAULT_CONFIG = {
-  country: 'countryName',
-  funding: 'fundingName',
+  country: 'quoc_gia_xuat_canh',
+  funding: 'nguon_kinh_phi',
 };
 
 const colConfig = ref({ ...DEFAULT_CONFIG });
@@ -2267,39 +2267,6 @@ const stats = computed(() => {
           fundings[norm].total += 1;
         }
       });
-    }
-  });
-
-  rList.forEach((r) => {
-    let rcd = r.custom_data;
-    if (typeof rcd === 'string') {
-      try { rcd = JSON.parse(rcd); } catch(e) {}
-    }
-
-    let rawC = r.quoc_gia_xuat_canh || r.countryName || r.country || rcd?.quoc_gia_xuat_canh || rcd?.content || rcd?.countryName || '';
-    let relCountry = '';
-    if (rawC && !isFundingKeyword(rawC) && rawC !== '-' && rawC !== 'Chưa rõ' && rawC !== 'null' && rawC !== 'undefined' && rawC !== 'Không có thông tin') {
-      relCountry = String(rawC).trim();
-    } else {
-      relCountry = extractCountryFromAddress(r.currentAddress || rcd?.currentAddress || r.timeAbroad || rcd?.timeAbroad || rcd?.fileNumber);
-    }
-
-    if (relCountry && relCountry !== '-' && relCountry !== 'Chưa rõ') {
-      if (!countries[relCountry]) countries[relCountry] = { trips: 0, relatives: 0, total: 0 };
-      countries[relCountry].relatives += 1;
-      countries[relCountry].total += 1;
-    }
-
-    let rawF = r.nguon_kinh_phi || r.fundingName || r.funding || rcd?.nguon_kinh_phi || rcd?.fundingName || '';
-    if (!rawF && isFundingKeyword(r.countryName)) {
-      rawF = r.countryName;
-    }
-    if (rawF) {
-      const norm = normalizeFundingCategory(rawF);
-      if (norm && fundings[norm]) {
-        fundings[norm].relatives += 1;
-        fundings[norm].total += 1;
-      }
     }
   });
 
