@@ -156,13 +156,6 @@ const loadSidebarData = async () => {
   }
 };
 
-watch(
-  () => route.path,
-  () => {
-    loadSidebarData();
-  }
-);
-
 onMounted(() => {
   loadSidebarData();
 });

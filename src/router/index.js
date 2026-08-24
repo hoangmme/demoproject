@@ -1,5 +1,15 @@
-import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+
+// Eagerly import all views for 0ms instantaneous route transitions
+import LoginView from '@/views/LoginView.vue';
+import PersonnelView from '@/views/PersonnelView.vue';
+import ChildDashboardView from '@/views/ChildDashboardView.vue';
+import DashboardView from '@/views/DashboardView.vue';
+import AppendixReportView from '@/views/AppendixReportView.vue';
+import SettingsImportView from '@/views/SettingsImportView.vue';
+import UserManagementView from '@/views/UserManagementView.vue';
+import AuditLogView from '@/views/AuditLogView.vue';
 
 const routes = [
   {
@@ -9,76 +19,76 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/LoginView.vue'),
+    component: LoginView,
     meta: { title: 'Đăng nhập' },
   },
   {
     path: '/personnel',
     name: 'Personnel',
-    component: () => import('@/views/PersonnelView.vue'),
+    component: PersonnelView,
     meta: { title: 'Quản lý Cán bộ', requiresAuth: true },
   },
   {
     path: '/trips',
     name: 'Trips',
-    component: () => import('@/views/ChildDashboardView.vue'),
+    component: ChildDashboardView,
     meta: { title: 'Danh sách Chuyến đi', requiresAuth: true },
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: () => import('@/views/DashboardView.vue'),
+    component: DashboardView,
     meta: { title: 'Dashboard Thống kê', requiresAuth: true },
   },
   {
     path: '/pl1',
     name: 'Appendix1',
-    component: () => import('@/views/AppendixReportView.vue'),
+    component: AppendixReportView,
     props: { defaultId: 'pl1' },
     meta: { title: 'Báo cáo Phụ lục 1', requiresAuth: true },
   },
   {
     path: '/pl2',
     name: 'Appendix2',
-    component: () => import('@/views/AppendixReportView.vue'),
+    component: AppendixReportView,
     props: { defaultId: 'pl2' },
     meta: { title: 'Báo cáo Phụ lục 2', requiresAuth: true },
   },
   {
     path: '/pl3',
     name: 'Appendix3',
-    component: () => import('@/views/AppendixReportView.vue'),
+    component: AppendixReportView,
     props: { defaultId: 'pl3' },
     meta: { title: 'Báo cáo Phụ lục 3', requiresAuth: true },
   },
   {
     path: '/appendix/:id',
     name: 'DynamicAppendix',
-    component: () => import('@/views/AppendixReportView.vue'),
+    component: AppendixReportView,
     meta: { title: 'Báo cáo Phụ lục', requiresAuth: true },
   },
   {
     path: '/dashboard-topic/:id',
     name: 'DynamicTopicDashboard',
-    component: () => import('@/views/ChildDashboardView.vue'),
+    component: ChildDashboardView,
     meta: { title: 'Dashboard Chuyên đề', requiresAuth: true },
   },
   {
     path: '/settings-import',
     name: 'SettingsImport',
-    component: () => import('@/views/SettingsImportView.vue'),
+    component: SettingsImportView,
     meta: { title: 'Cấu hình Mẫu Cột Import', requiresAuth: true, adminOnly: true },
   },
   {
     path: '/users',
     name: 'UserManagement',
-    component: () => import('@/views/UserManagementView.vue'),
+    component: UserManagementView,
     meta: { title: 'Quản lý Người dùng', requiresAuth: true, adminOnly: true },
   },
   {
     path: '/audit',
     name: 'AuditLog',
-    component: () => import('@/views/AuditLogView.vue'),
+    component: AuditLogView,
     meta: { title: 'Nhật ký Hệ thống', requiresAuth: true, adminOnly: true },
   },
 ];

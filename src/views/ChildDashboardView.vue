@@ -542,6 +542,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { usePersonnelStore } from '@/stores/personnel';
+import { useAuthStore } from '@/stores/auth';
 import { getAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
@@ -550,6 +551,7 @@ import * as XLSX from 'xlsx';
 
 const route = useRoute();
 const personnelStore = usePersonnelStore();
+const authStore = useAuthStore();
 const isExportDocxDialogOpen = ref(false);
 
 const openAdvancedDocxExport = () => {
