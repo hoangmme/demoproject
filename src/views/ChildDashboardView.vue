@@ -20,6 +20,18 @@
       </div>
 
        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <!-- Bulk Delete Button (Same as PersonnelView) -->
+        <button
+          v-if="authStore.isAdmin && selectedTripKeys.length > 0"
+          type="button"
+          class="btn-action-danger-solid"
+          @click="handleBulkDeleteTrips"
+          title="Xóa tất cả các bản ghi đã chọn"
+        >
+          <i class="pi pi-trash"></i>
+          <span>Xóa đã chọn ({{ selectedTripKeys.length }})</span>
+        </button>
+
         <!-- Column Picker -->
         <button
           type="button"
@@ -1205,11 +1217,22 @@ const sortBy = (key) => {
   }
 };
 
+const isSelected = (trip) => {
+  const k = typeof trip === 'string' ? trip : trip?.uniqueKey;
+  return selectedTripKeys.value.includes(k);
+};
+
 const isAllSelected = computed(() => {
   return (
     paginatedList.value.length > 0 &&
     paginatedList.value.every((t) => selectedTripKeys.value.includes(t.uniqueKey))
   );
+});
+
+const isIndeterminate = computed(() => {
+  const pageKeys = paginatedList.value.map((t) => t.uniqueKey);
+  const selectedOnPage = pageKeys.filter((k) => selectedTripKeys.value.includes(k));
+  return selectedOnPage.length > 0 && selectedOnPage.length < pageKeys.length;
 });
 
 const toggleSelectAll = () => {
@@ -1225,12 +1248,54 @@ const toggleSelectAll = () => {
   }
 };
 
-const toggleSelectTrip = (key) => {
-  const idx = selectedTripKeys.value.indexOf(key);
+const toggleSelectTrip = (trip) => {
+  const k = typeof trip === 'string' ? trip : trip?.uniqueKey;
+  if (!k) return;
+  const idx = selectedTripKeys.value.indexOf(k);
   if (idx !== -1) {
     selectedTripKeys.value.splice(idx, 1);
   } else {
-    selectedTripKeys.value.push(key);
+    selectedTripKeys.value.push(k);
+  }
+};
+
+const handleBulkDeleteTrips = async () => {
+  if (selectedTripKeys.value.length === 0) return;
+  if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedTripKeys.value.length} bản ghi đã chọn?`)) return;
+
+  const selectedKeySet = new Set(selectedTripKeys.value);
+  const selectedItems = filteredList.value.filter((t) => selectedKeySet.has(t.uniqueKey) || selectedKeySet.has(t.id));
+  const affectedPersonnelMap = new Map();
+
+  selectedItems.forEach((trip) => {
+    let person = trip.rawPerson || (trip.personnelId ? personnelStore.personnelList.find((p) => p.id === trip.personnelId) : null);
+    if (person && !affectedPersonnelMap.has(person.id)) {
+      affectedPersonnelMap.set(person.id, JSON.parse(JSON.stringify(person)));
+    }
+  });
+
+  affectedPersonnelMap.forEach((person) => {
+    if (Array.isArray(person.trips)) {
+      person.trips = person.trips.filter((t) => !selectedKeySet.has(t.id) && !selectedKeySet.has(t.uniqueKey));
+    }
+    if (Array.isArray(person.relatives)) {
+      person.relatives.forEach((r) => {
+        if (Array.isArray(r.trips)) {
+          r.trips = r.trips.filter((t) => !selectedKeySet.has(t.id) && !selectedKeySet.has(t.uniqueKey));
+        }
+      });
+    }
+  });
+
+  try {
+    for (const [_, person] of affectedPersonnelMap) {
+      await personnelStore.savePerson(person);
+    }
+    await personnelStore.fetchPersonnel();
+    selectedTripKeys.value = [];
+    alert('Đã xóa thành công các bản ghi đã chọn!');
+  } catch (e) {
+    alert('Lỗi khi xóa hàng loạt: ' + (e.message || e));
   }
 };
 
@@ -1779,6 +1844,25 @@ onMounted(async () => {
   transition: all 0.15s ease;
 }
 .btn-action-primary:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-action-danger-solid {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-action-danger-solid:hover {
   background: #b91c1c;
   border-color: #b91c1c;
 }

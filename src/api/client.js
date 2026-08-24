@@ -13,7 +13,7 @@ export const getBaseUrl = () => {
 };
 
 export const API_URL = getBaseUrl();
-export const STATIC_TOKEN = import.meta.env.VITE_STATIC_TOKEN || 'mvp-static-token-999';
+export const STATIC_TOKEN = import.meta.env.VITE_STATIC_TOKEN || '';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -37,8 +37,8 @@ apiClient.interceptors.request.use(
       }
     } catch (e) {}
 
-    if (token && !config.headers['Authorization']) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    if (token && token.trim() !== '' && !config.headers['Authorization']) {
+      config.headers['Authorization'] = `Bearer ${token.trim()}`;
     }
     return config;
   },
@@ -51,8 +51,18 @@ apiClient.interceptors.response.use(
   (error) => {
     const status = error.response ? error.response.status : null;
     if (status === 401) {
-      console.warn('API Unauthorized 401 - Clearing session');
-      // optional: localStorage.removeItem('mvp_session');
+      console.warn('API Unauthorized 401 - Session expired or unauthenticated');
+      // If token in session was rejected, clean access_token so future requests don't loop 401
+      try {
+        const session = localStorage.getItem('mvp_session');
+        if (session) {
+          const parsed = JSON.parse(session);
+          if (parsed?.access_token) {
+            delete parsed.access_token;
+            localStorage.setItem('mvp_session', JSON.stringify(parsed));
+          }
+        }
+      } catch (e) {}
     }
     return Promise.reject(error);
   }
