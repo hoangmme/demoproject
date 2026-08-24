@@ -113,7 +113,7 @@
             <i class="pi pi-send"></i>
             <span>Chuyến đi nước ngoài của Thân nhân này ({{ (rel.trips || []).length }} chuyến)</span>
           </div>
-          <PersonnelTravelForm :form="rel" />
+          <PersonnelTravelForm :form="rel" :isRelative="true" />
         </div>
       </div>
     </div>

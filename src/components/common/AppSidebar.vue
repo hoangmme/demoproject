@@ -26,7 +26,7 @@
 
       <router-link to="/personnel" class="app-nav-item">
         <i class="pi pi-users"></i>
-        <span>Quản lý Cán bộ</span>
+        <span>Hồ sơ Cán bộ</span>
       </router-link>
 
       <div class="app-nav-heading">Dashboard Chuyên đề</div>
@@ -58,7 +58,7 @@
         class="app-nav-item"
         :title="pl.title"
       >
-        <i :class="getAppendixIcon(pl.source)"></i>
+        <i :class="pl.icon ? `pi ${pl.icon}` : getAppendixIcon(pl.source)"></i>
         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
           {{ getAppendixNavLabel(pl) }}
         </span>

@@ -302,6 +302,22 @@
 
                 <!-- Format & Width Settings using clean native selects -->
                 <div style="display: flex; align-items: center; gap: 8px;">
+                  <!-- Nút tick ẩn khi nhập chuyến đi cho Thân nhân -->
+                  <label
+                    v-if="activeTab === 'trips'"
+                    style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1;"
+                    :title="col.hideForRelative ? 'Đang ẨN trường này khi nhập chuyến đi của Thân nhân' : 'Trường này sẽ hiển thị khi nhập chuyến đi của Thân nhân'"
+                  >
+                    <input
+                      type="checkbox"
+                      v-model="col.hideForRelative"
+                      style="accent-color: #ea580c; width: 14px; height: 14px; cursor: pointer;"
+                    />
+                    <span :style="{ color: col.hideForRelative ? '#c2410c' : '#64748b' }">
+                      {{ col.hideForRelative ? '👁️‍🗨️ Ẩn với Thân nhân' : 'Hiện với Thân nhân' }}
+                    </span>
+                  </label>
+
                   <select
                     v-model="col.format"
                     class="custom-col-select"
@@ -787,7 +803,7 @@
         <!-- Cột Phải: Form Chi tiết Phụ lục đang chọn -->
         <div v-if="currentSelectedAppendix" style="display: flex; flex-direction: column; gap: 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
           <!-- Thông tin cơ bản Phụ lục -->
-          <div style="display: grid; grid-template-columns: 100px 1fr 180px; gap: 10px;">
+          <div style="display: grid; grid-template-columns: 90px 1fr 145px 165px; gap: 10px;">
             <div>
               <label style="font-size: 0.74rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Mã Phụ lục:</label>
               <InputText v-model="currentSelectedAppendix.code" placeholder="PL1" size="small" style="width: 100%; font-size: 0.8rem;" />
@@ -795,6 +811,29 @@
             <div>
               <label style="font-size: 0.74rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Tên / Tiêu đề Phụ lục:</label>
               <InputText v-model="currentSelectedAppendix.title" placeholder="Tiêu đề hiển thị..." size="small" style="width: 100%; font-size: 0.8rem;" />
+            </div>
+            <div>
+              <label style="font-size: 0.74rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Icon Menu Sidebar:</label>
+              <select v-model="currentSelectedAppendix.icon" class="custom-col-select" style="width: 100%; height: 32px; font-size: 0.78rem;">
+                <option value="">-- Mặc định --</option>
+                <option value="pi-file-excel">📊 pi-file-excel</option>
+                <option value="pi-file">📄 pi-file</option>
+                <option value="pi-globe">🌐 pi-globe</option>
+                <option value="pi-send">✈️ pi-send</option>
+                <option value="pi-table">📋 pi-table</option>
+                <option value="pi-chart-bar">📈 pi-chart-bar</option>
+                <option value="pi-chart-pie">🥧 pi-chart-pie</option>
+                <option value="pi-users">👥 pi-users</option>
+                <option value="pi-user">👤 pi-user</option>
+                <option value="pi-id-card">🪪 pi-id-card</option>
+                <option value="pi-heart">❤️ pi-heart</option>
+                <option value="pi-shield">🛡️ pi-shield</option>
+                <option value="pi-book">📖 pi-book</option>
+                <option value="pi-briefcase">💼 pi-briefcase</option>
+                <option value="pi-bookmark">🔖 pi-bookmark</option>
+                <option value="pi-folder">📁 pi-folder</option>
+                <option value="pi-check-square">✅ pi-check-square</option>
+              </select>
             </div>
             <div>
               <label style="font-size: 0.74rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Nguồn Dữ liệu:</label>
@@ -964,11 +1003,20 @@
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Biểu tượng Icon:</label>
               <select v-model="currentSelectedDashboard.icon" class="custom-key-select" style="font-size: 0.78rem; padding: 5px 8px;">
                 <option value="pi-send">✈️ pi-send (Chuyến đi)</option>
-                <option value="pi-users">👥 pi-users (Cán bộ)</option>
                 <option value="pi-globe">🌐 pi-globe (Quốc tế)</option>
+                <option value="pi-users">👥 pi-users (Cán bộ)</option>
+                <option value="pi-user">👤 pi-user (Cá nhân)</option>
                 <option value="pi-heart">❤️ pi-heart (Thân nhân)</option>
-                <option value="pi-shield">🛡️ pi-shield (Bảo vệ)</option>
-                <option value="pi-chart-pie">📊 pi-chart-pie (Biểu đồ)</option>
+                <option value="pi-id-card">🪪 pi-id-card (Định danh)</option>
+                <option value="pi-shield">🛡️ pi-shield (Bảo vệ / An ninh)</option>
+                <option value="pi-chart-pie">📊 pi-chart-pie (Biểu đồ tròn)</option>
+                <option value="pi-chart-bar">📈 pi-chart-bar (Biểu đồ cột)</option>
+                <option value="pi-table">📋 pi-table (Bảng biểu)</option>
+                <option value="pi-book">📖 pi-book (Sổ theo dõi)</option>
+                <option value="pi-briefcase">💼 pi-briefcase (Công tác)</option>
+                <option value="pi-bookmark">🔖 pi-bookmark (Đánh dấu)</option>
+                <option value="pi-folder">📁 pi-folder (Thư mục)</option>
+                <option value="pi-check-square">✅ pi-check-square (Xét duyệt)</option>
               </select>
             </div>
           </div>
