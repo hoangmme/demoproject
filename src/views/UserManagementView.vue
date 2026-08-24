@@ -261,26 +261,86 @@
 
           <!-- Column Permissions Section -->
           <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="font-weight: 700; font-size: 0.84rem; color: #1e293b;">
-                Phân quyền theo từng Cột (Cán bộ & Thân nhân)
-              </span>
-              <div style="display: flex; gap: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <span style="font-weight: 700; font-size: 0.86rem; color: #1e293b;">
+                  Phân quyền theo Cột (Cá nhân, Chuyến đi & Thân nhân)
+                </span>
+                <div style="font-size: 0.72rem; color: #64748b;">
+                  Hiển thị {{ filteredSystemColumnsList.length }} / {{ allSystemColumnsList.length }} cột
+                </div>
+              </div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                 <Button
-                  label="Cho phép Xem tất cả"
+                  label="Cho phép Sửa"
                   size="small"
-                  severity="secondary"
+                  severity="success"
                   text
-                  @click="setAllColumnsForRole('view')"
+                  @click="setFilteredColumnsForRole('edit')"
                   style="font-size: 0.72rem; padding: 2px 6px;"
                 />
                 <Button
-                  label="Cho phép Sửa tất cả"
+                  label="Chỉ Xem"
                   size="small"
                   severity="secondary"
                   text
-                  @click="setAllColumnsForRole('edit')"
+                  @click="setFilteredColumnsForRole('view')"
                   style="font-size: 0.72rem; padding: 2px 6px;"
+                />
+                <Button
+                  label="Ẩn tất cả"
+                  size="small"
+                  severity="danger"
+                  text
+                  @click="setFilteredColumnsForRole('none')"
+                  style="font-size: 0.72rem; padding: 2px 6px;"
+                />
+              </div>
+            </div>
+
+            <!-- Block Selector Tabs & Search Filter -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+              <div style="display: flex; gap: 4px; background: #f1f5f9; padding: 2px; border-radius: 6px;">
+                <button
+                  type="button"
+                  class="col-tab-btn"
+                  :class="{ 'col-tab-btn-active': activeColSourceTab === 'all' }"
+                  @click="activeColSourceTab = 'all'"
+                >
+                  Tất cả ({{ allSystemColumnsList.length }})
+                </button>
+                <button
+                  type="button"
+                  class="col-tab-btn"
+                  :class="{ 'col-tab-btn-active': activeColSourceTab === 'personnel' }"
+                  @click="activeColSourceTab = 'personnel'"
+                >
+                  1. Cá nhân ({{ personnelColumnsCount }})
+                </button>
+                <button
+                  type="button"
+                  class="col-tab-btn"
+                  :class="{ 'col-tab-btn-active': activeColSourceTab === 'trips' }"
+                  @click="activeColSourceTab = 'trips'"
+                >
+                  2. Chuyến đi ({{ tripsColumnsCount }})
+                </button>
+                <button
+                  type="button"
+                  class="col-tab-btn"
+                  :class="{ 'col-tab-btn-active': activeColSourceTab === 'relative' }"
+                  @click="activeColSourceTab = 'relative'"
+                >
+                  3. Thân nhân ({{ relativeColumnsCount }})
+                </button>
+              </div>
+
+              <div style="position: relative; width: 180px;">
+                <InputText
+                  v-model="colSearchQuery"
+                  placeholder="Tìm tên/mã cột..."
+                  size="small"
+                  style="font-size: 0.75rem; width: 100%; height: 28px; padding: 4px 8px;"
                 />
               </div>
             </div>
@@ -296,14 +356,20 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="col in allSystemColumnsList" :key="col.id">
+                <tr v-for="col in filteredSystemColumnsList" :key="col.id + '_' + col.source">
                   <td style="font-weight: 700; color: #0284c7;">{{ col.colNumStr }}</td>
                   <td>
                     <strong>{{ col.label }}</strong>
                     <span style="font-size: 0.7rem; color: #94a3b8; margin-left: 6px; font-family: monospace;">({{ col.id }})</span>
                   </td>
                   <td>
-                    <span class="badge-pill badge-neutral" style="font-size: 0.68rem;">{{ col.groupName }}</span>
+                    <span
+                      class="badge-pill"
+                      :class="col.source === 'personnel' ? 'badge-blue' : col.source === 'trips' ? 'badge-green' : 'badge-purple'"
+                      style="font-size: 0.68rem;"
+                    >
+                      {{ col.sourceLabel }} · {{ col.groupName }}
+                    </span>
                   </td>
                   <td style="text-align: center;">
                     <select
@@ -315,6 +381,11 @@
                       <option value="view">👁️ Chỉ Xem</option>
                       <option value="none">🚫 Ẩn (Không xem)</option>
                     </select>
+                  </td>
+                </tr>
+                <tr v-if="filteredSystemColumnsList.length === 0">
+                  <td colspan="4" style="text-align: center; color: #94a3b8; padding: 18px;">
+                    Không tìm thấy cột nào phù hợp với bộ lọc
                   </td>
                 </tr>
               </tbody>
@@ -407,11 +478,14 @@ const DEFAULT_ROLES = [
 
 const rolesList = ref([...DEFAULT_ROLES]);
 
-// Computed list of ALL columns from Personnel & Relatives
+const colSearchQuery = ref('');
+const activeColSourceTab = ref('all'); // 'all' | 'personnel' | 'trips' | 'relative'
+
+// Computed list of ALL columns from 3 Blocks: Personnel (A), Trips (B), Relatives (C)
 const allSystemColumnsList = computed(() => {
   const list = [];
   
-  // 1. Personnel columns
+  // 1. Khối A: Personnel columns (Cá nhân / Cán bộ)
   const pMap = computeColumnIndexMap(personnelStore.importMappingPersonnel);
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
@@ -422,28 +496,71 @@ const allSystemColumnsList = computed(() => {
           colNumStr: pMap[c.id] || '-',
           groupName: g.group || 'Cán bộ',
           source: 'personnel',
+          sourceLabel: 'Khối A (Cá nhân)',
         });
       }
     });
   });
 
-  // 2. Relative columns
+  // 2. Khối B: Trips columns (Chuyến đi nước ngoài)
+  const tMap = computeColumnIndexMap(personnelStore.importMappingTrips);
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.label) {
+        list.push({
+          id: c.id,
+          label: c.label,
+          colNumStr: tMap[c.id] || '-',
+          groupName: g.group || 'Chuyến đi',
+          source: 'trips',
+          sourceLabel: 'Khối B (Chuyến đi)',
+        });
+      }
+    });
+  });
+
+  // 3. Khối C: Relative columns (Thân nhân & Gia đình)
   const rMap = computeColumnIndexMap(personnelStore.importMappingRelative);
   (personnelStore.importMappingRelative || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
-      if (c.id && c.label && !list.some((item) => item.id === c.id)) {
+      if (c.id && c.label) {
         list.push({
           id: c.id,
           label: c.label,
           colNumStr: rMap[c.id] || '-',
           groupName: g.group || 'Thân nhân',
           source: 'relative',
+          sourceLabel: 'Khối C (Thân nhân)',
         });
       }
     });
   });
 
   return list;
+});
+
+const personnelColumnsCount = computed(() => allSystemColumnsList.value.filter((c) => c.source === 'personnel').length);
+const tripsColumnsCount = computed(() => allSystemColumnsList.value.filter((c) => c.source === 'trips').length);
+const relativeColumnsCount = computed(() => allSystemColumnsList.value.filter((c) => c.source === 'relative').length);
+
+const filteredSystemColumnsList = computed(() => {
+  let list = allSystemColumnsList.value;
+
+  if (activeColSourceTab.value !== 'all') {
+    list = list.filter((c) => c.source === activeColSourceTab.value);
+  }
+
+  const q = colSearchQuery.value.toLowerCase().trim();
+  if (!q) return list;
+
+  return list.filter((c) => {
+    return (
+      (c.label && c.label.toLowerCase().includes(q)) ||
+      (c.id && c.id.toLowerCase().includes(q)) ||
+      (c.groupName && c.groupName.toLowerCase().includes(q)) ||
+      (c.colNumStr && String(c.colNumStr).toLowerCase().includes(q))
+    );
+  });
 });
 
 const loadUsers = async () => {
@@ -527,6 +644,14 @@ const deleteRole = (r) => {
   if (selectedRole.value?.id === r.id) {
     selectedRole.value = rolesList.value[0] || null;
   }
+};
+
+const setFilteredColumnsForRole = (permType) => {
+  if (!selectedRole.value || selectedRole.value.id === 'Admin') return;
+  if (!selectedRole.value.columnPermissions) selectedRole.value.columnPermissions = {};
+  filteredSystemColumnsList.value.forEach((col) => {
+    selectedRole.value.columnPermissions[col.id] = permType;
+  });
 };
 
 const setAllColumnsForRole = (permType) => {
@@ -762,8 +887,36 @@ onMounted(async () => {
   color: #b91c1c;
 }
 
+.badge-purple {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
 .badge-neutral {
   background: #f1f5f9;
   color: #475569;
+}
+
+.col-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.col-tab-btn:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.col-tab-btn-active {
+  background: #ffffff !important;
+  color: #0284c7 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 </style>

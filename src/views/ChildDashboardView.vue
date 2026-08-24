@@ -514,6 +514,8 @@
     <PersonnelDialog
       v-model="isPersonnelDialogOpen"
       :personData="activePersonData"
+      :initialTab="dialogInitialTab"
+      :targetRelativeCode="dialogTargetRelativeCode"
       @saved="handlePersonnelSaved"
     />
 
@@ -783,6 +785,8 @@ const isColumnPickerOpen = ref(false);
 const columnSearchQuery = ref('');
 const isPersonnelDialogOpen = ref(false);
 const activePersonData = ref(null);
+const dialogInitialTab = ref(0);
+const dialogTargetRelativeCode = ref('');
 
 const isTripFormDialogOpen = ref(false);
 const editingTripItem = ref(null);
@@ -1539,7 +1543,14 @@ const saveColumnSelection = async () => {
 const openPersonnelDetail = (trip) => {
   const targetPerson = resolveTargetPersonnel(trip);
   if (targetPerson) {
-    activePersonData.value = JSON.parse(JSON.stringify(targetPerson));
+    activePersonData.value = targetPerson;
+    if (trip.isRelative) {
+      dialogInitialTab.value = 1;
+      dialogTargetRelativeCode.value = trip.relativeCode || trip.code || '';
+    } else {
+      dialogInitialTab.value = 0;
+      dialogTargetRelativeCode.value = '';
+    }
     isPersonnelDialogOpen.value = true;
   } else {
     alert('Không tìm thấy hồ sơ chi tiết của cán bộ tương ứng!');
@@ -1687,7 +1698,6 @@ const saveTripForm = async () => {
 
 const handlePersonnelSaved = async () => {
   await personnelStore.fetchPersonnel();
-  isPersonnelDialogOpen.value = false;
 };
 
 const isSeedingData = ref(false);
