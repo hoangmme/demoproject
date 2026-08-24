@@ -269,16 +269,16 @@
               </td>
 
               <!-- Action button -->
-              <td style="text-align: center;" @click.stop>
-                <Button
-                  icon="pi pi-user-edit"
-                  size="small"
-                  text
-                  rounded
-                  severity="secondary"
+              <td style="text-align: center; white-space: nowrap;" @click.stop>
+                <button
+                  type="button"
+                  class="btn-detail-action"
                   @click="openPersonnelDetail(trip)"
-                  v-tooltip.top="'Xem hồ sơ chi tiết'"
-                />
+                  title="Xem và chỉnh sửa hồ sơ chi tiết"
+                >
+                  <i class="pi pi-user-edit"></i>
+                  <span>Chi tiết</span>
+                </button>
               </td>
             </tr>
           </tbody>
@@ -1164,9 +1164,24 @@ const saveColumnSelection = async () => {
 
 // Actions
 const openPersonnelDetail = (trip) => {
-  if (trip.rawPerson) {
-    activePersonData.value = JSON.parse(JSON.stringify(trip.rawPerson));
+  let targetPerson = null;
+  if (trip.personnelId) {
+    targetPerson = (personnelStore.personnelList || []).find((p) => p.id === trip.personnelId || p.code === trip.personnelCode);
+  }
+  if (!targetPerson && trip.rawPerson?.id) {
+    targetPerson = (personnelStore.personnelList || []).find((p) => p.id === trip.rawPerson.id);
+  }
+  if (!targetPerson && trip.cccdchuyendi) {
+    targetPerson = personnelStore.findPersonByCccd(trip.cccdchuyendi);
+  }
+  if (!targetPerson) {
+    targetPerson = trip.rawPerson;
+  }
+  if (targetPerson) {
+    activePersonData.value = JSON.parse(JSON.stringify(targetPerson));
     isPersonnelDialogOpen.value = true;
+  } else {
+    alert('Không tìm thấy hồ sơ chi tiết của cán bộ tương ứng!');
   }
 };
 
@@ -1393,6 +1408,27 @@ onMounted(async () => {
 .btn-action-outline:hover {
   background: #f8fafc;
   border-color: #94a3b8;
+}
+
+.btn-detail-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e3a8a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-detail-action:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.15);
 }
 
 /* Quick Stat Cards */

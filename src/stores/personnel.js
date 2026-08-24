@@ -997,33 +997,71 @@ export const usePersonnelStore = defineStore('personnel', {
           },
         ];
 
-        // 3. Post each trip into appendix1
-        for (const t of sampleTrips) {
-          const matchedP = this.findPersonByCccd(t.cccdchuyendi);
-          const matchedR = (!matchedP) ? this.findRelativeByCccd(t.cccdchuyendi) : null;
-          const parentP = matchedP || (matchedR?.cccdparent ? this.findPersonByCccd(matchedR.cccdparent) : null);
+        // 3. Attach trips directly into Cán bộ profiles and save to DB
+        // 10 CB trips -> attach to respective CB
+        for (let i = 0; i < 10; i++) {
+          const cbItem = sampleCbList[i];
+          const cbTrip = sampleTrips[i];
+          const tnItem = sampleTnList[i];
+          const tnTrip = sampleTrips[i + 10];
 
-          const payload = {
-            ...t,
-            quoc_gia_xuat_canh: t.countryName,
-            nguon_kinh_phi: t.fundingName,
-            personnelId: parentP?.id || matchedP?.id || '',
-            personnelCode: parentP?.code || matchedP?.code || '',
-            personnelName: matchedP?.name || (matchedR ? `TN: ${matchedR.relativeName}` : 'Cán bộ'),
-            custom_data: JSON.stringify({
-              ...t,
-              quoc_gia_xuat_canh: t.countryName,
-              nguon_kinh_phi: t.fundingName,
-            }),
+          let person = this.findPersonByCccd(cbItem.cccd);
+          if (!person) continue;
+
+          // Prepare trips for this person (1 trip for CB, 1 trip for relative)
+          const tripsForPerson = [
+            {
+              id: 'trip_cb_' + Date.now() + '_' + i,
+              ...cbTrip,
+              quoc_gia_xuat_canh: cbTrip.countryName,
+              nguon_kinh_phi: cbTrip.fundingName,
+            },
+            {
+              id: 'trip_tn_' + Date.now() + '_' + i,
+              ...tnTrip,
+              isRelative: true,
+              relativeName: tnItem.relativeName,
+              cccdthannhan: tnItem.cccdthannhan,
+              relationshipName: tnItem.relationshipName,
+              quoc_gia_xuat_canh: tnTrip.countryName,
+              nguon_kinh_phi: tnTrip.fundingName,
+            },
+          ];
+
+          // Prepare relatives for this person
+          const relativesForPerson = [
+            {
+              id: 'rel_' + Date.now() + '_' + i,
+              parentName: cbItem.name,
+              cccdparent: cbItem.cccd,
+              relationshipName: tnItem.relationshipName,
+              relativeName: tnItem.relativeName,
+              cccdthannhan: tnItem.cccdthannhan,
+              birthYear: tnItem.birthYear,
+              currentAddress: 'Hà Nội, Việt Nam',
+              occupation: 'Lao động tự do',
+              countryName: tnTrip.countryName,
+              trips: [
+                {
+                  id: 'trip_rel_' + Date.now() + '_' + i,
+                  ...tnTrip,
+                },
+              ],
+            },
+          ];
+
+          // Merge into person profile and save
+          const updatedPersonData = {
+            ...person,
+            trips: tripsForPerson,
+            relatives: relativesForPerson,
           };
 
-          try {
-            await apiClient.post('/items/appendix1', payload);
-          } catch (err) {}
+          await this.savePerson(updatedPersonData);
         }
 
         await this.fetchPersonnel();
-        await logActivity('Tạo Dữ liệu Mẫu', 'Đã khởi tạo 20 chuyến đi mẫu (10 Cán bộ & 10 Thân nhân)');
+        await logActivity('Tạo Dữ liệu Mẫu', 'Đã lưu 20 chuyến đi trực tiếp vào hồ sơ Cán bộ & Thân nhân');
         return true;
       } catch (e) {
         console.error('Error seeding sample trips data:', e);
