@@ -226,69 +226,12 @@ export const usePersonnelStore = defineStore('personnel', {
     async fetchPersonnel() {
       this.loading = true;
       try {
-        const [pData, a1Res, a2Res] = await Promise.all([
-          getPersonnelList(),
-          apiClient.get('/items/appendix1', { params: { limit: -1, _t: Date.now() } }).catch(() => ({ data: { data: [] } })),
-          apiClient.get('/items/appendix2', { params: { limit: -1, _t: Date.now() } }).catch(() => ({ data: { data: [] } })),
-        ]);
+        const pData = await getPersonnelList();
 
-        const rawTrips = a1Res.data?.data || [];
-        const rawRelatives = a2Res.data?.data || [];
+        const allTrips = [];
+        const allRelatives = [];
 
-        this.tripsList = rawTrips.filter((x) => x.isDeleted !== 1).map((t) => {
-          let custom = {};
-          if (t.custom_data) {
-            try {
-              custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
-            } catch (e) {
-              custom = {};
-            }
-          }
-          return {
-            ...custom,
-            ...t,
-            custom_data: custom,
-          };
-        });
-
-        this.relativesList = rawRelatives.filter((x) => x.isDeleted !== 1).map((r, idx) => {
-          const assignedCode = r.code && r.code.startsWith('TN-') ? r.code : `TN-${String(idx + 1).padStart(5, '0')}`;
-          let custom = {};
-          if (r.custom_data) {
-            try {
-              custom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
-            } catch (e) {
-              custom = {};
-            }
-          }
-          return {
-            ...custom,
-            ...r,
-            code: assignedCode,
-            custom_data: custom,
-          };
-        });
-
-        // Build quick lookup maps
-        const tripsMap = {};
-        this.tripsList.forEach((t) => {
-          const k = t.personnelId || t.personnelCode;
-          if (k) {
-            if (!tripsMap[k]) tripsMap[k] = [];
-            tripsMap[k].push(t);
-          }
-        });
-
-        const relativesMap = {};
-        this.relativesList.forEach((r) => {
-          const k = String(r.cccdparent || r.personnelId || '').trim();
-          if (k) {
-            if (!relativesMap[k]) relativesMap[k] = [];
-            relativesMap[k].push(r);
-          }
-        });
-
-        this.personnelList = pData.map((p) => {
+        this.personnelList = (pData || []).map((p) => {
           let custom = {};
           if (p.custom_data) {
             try {
@@ -298,11 +241,40 @@ export const usePersonnelStore = defineStore('personnel', {
             }
           }
 
-          const personCccd = String(p.cccdparent || custom.cccdparent || '').trim();
-          const matchedTrips = tripsMap[p.id] || tripsMap[p.code] || custom.trips || custom['Khối B: Chuyến đi nước ngoài'] || [];
-          const matchedRelatives = (personCccd && relativesMap[personCccd]) || relativesMap[p.id] || relativesMap[p.code] || custom.relatives || [];
+          const personCccd = String(p.cccdparent || p.cccd || custom.cccdparent || custom.cccd || '').trim();
+          const matchedTrips = p.trips || custom.trips || custom['Khối B: Chuyến đi nước ngoài'] || [];
+          const matchedRelatives = p.relatives || custom.relatives || [];
           const flags = custom.flags || p.flags || {};
           const files = custom.files || p.files || [];
+
+          // Collect relatives
+          if (Array.isArray(matchedRelatives)) {
+            matchedRelatives.forEach((r, rIdx) => {
+              allRelatives.push({
+                ...r,
+                personnelId: p.id,
+                personnelCode: p.code || '',
+                parentName: p.name,
+                parentPersonnelName: p.name,
+                cccdparent: personCccd,
+                parentPosition: p.positionName || p.position || '',
+                parentDepartment: p.departmentName || (p.departmentId ? this.getDepartmentName(p.departmentId) : '') || '',
+                code: r.code || `TN-${String(allRelatives.length + 1).padStart(5, '0')}`,
+              });
+            });
+          }
+
+          // Collect trips
+          if (Array.isArray(matchedTrips)) {
+            matchedTrips.forEach((t) => {
+              allTrips.push({
+                ...t,
+                personnelId: p.id,
+                personnelCode: p.code || '',
+                personnelName: p.name,
+              });
+            });
+          }
 
           return {
             ...custom,
@@ -322,29 +294,10 @@ export const usePersonnelStore = defineStore('personnel', {
           };
         });
 
-        // Fast parent linking on relativesList strictly by cccdparent
-        const personLookup = {};
-        this.personnelList.forEach((p) => {
-          if (p.cccdparent) personLookup[String(p.cccdparent).trim()] = p;
-          if (p.id) personLookup[p.id] = p;
-          if (p.code) personLookup[p.code] = p;
-        });
-
-        this.relativesList = this.relativesList.map((r) => {
-          const pCccd = r.cccdparent;
-          const parent = (pCccd && personLookup[String(pCccd).trim()]) || (r.personnelId && personLookup[r.personnelId]) || null;
-          const parentCccd = pCccd || (parent ? parent.cccdparent : '');
-          return {
-            ...r,
-            parentName: parent ? parent.name : (r.parentName || r.personnelName || ''),
-            parentPersonnelName: parent ? parent.name : (r.parentPersonnelName || r.parentName || ''),
-            cccdparent: parentCccd,
-            parentPosition: parent ? (parent.positionName || parent.position || '') : (r.parentPosition || ''),
-            parentDepartment: parent ? (parent.departmentName || '') : (r.parentDepartment || ''),
-          };
-        });
+        this.tripsList = allTrips;
+        this.relativesList = allRelatives;
       } catch (e) {
-        console.error('Error fetching personnel and appendices:', e);
+        console.error('Error fetching personnel:', e);
       } finally {
         this.loading = false;
       }
@@ -353,14 +306,19 @@ export const usePersonnelStore = defineStore('personnel', {
       this.departments = await getDepartments();
     },
     async loadSettings() {
-      let pMap = await getAppSettings('mapping_config_personnel', null);
-      if (!pMap || pMap.length === 0) pMap = await getAppSettings('importMappingPersonnel', []);
+      const [pMap, rMap, tMap, keyCfg] = await Promise.all([
+        getAppSettings('mapping_config_personnel', null),
+        getAppSettings('mapping_config_relative', null),
+        getAppSettings('mapping_config_trips', null),
+        getAppSettings('system_key_config', null),
+      ]);
+
       this.importMappingPersonnel = pMap || [];
 
-      let rMap = await getAppSettings('mapping_config_relative', null);
-      if (!rMap || rMap.length === 0) rMap = await getAppSettings('importMappingRelative', []);
-      if (!rMap || rMap.length === 0) {
-        rMap = [
+      if (rMap && rMap.length > 0) {
+        this.importMappingRelative = rMap;
+      } else {
+        this.importMappingRelative = [
           {
             group: 'Thông tin Thân nhân',
             isMultiple: true,
@@ -380,12 +338,11 @@ export const usePersonnelStore = defineStore('personnel', {
           },
         ];
       }
-      this.importMappingRelative = rMap;
 
-      let tMap = await getAppSettings('mapping_config_trips', null);
-      if (!tMap || tMap.length === 0) tMap = await getAppSettings('importMappingTrips', []);
-      if (!tMap || tMap.length === 0) {
-        tMap = [
+      if (tMap && tMap.length > 0) {
+        this.importMappingTrips = tMap;
+      } else {
+        this.importMappingTrips = [
           {
             group: 'Thông tin chuyến đi xuất nhập cảnh',
             isMultiple: false,
@@ -406,9 +363,7 @@ export const usePersonnelStore = defineStore('personnel', {
           },
         ];
       }
-      this.importMappingTrips = tMap;
 
-      let keyCfg = await getAppSettings('system_key_config', null);
       if (keyCfg && typeof keyCfg === 'object') {
         this.systemKeyConfig = {
           personnelKeyField: keyCfg.personnelKeyField || 'cccdparent',
