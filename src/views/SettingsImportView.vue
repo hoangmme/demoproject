@@ -305,7 +305,7 @@
                   <!-- Nút tick ẩn khi nhập chuyến đi cho Thân nhân -->
                   <label
                     v-if="activeTab === 'trips'"
-                    style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1;"
+                    style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; white-space: nowrap;"
                     :title="col.hideForRelative ? 'Đang ẨN trường này khi nhập chuyến đi của Thân nhân' : 'Trường này sẽ hiển thị khi nhập chuyến đi của Thân nhân'"
                   >
                     <input
@@ -313,8 +313,8 @@
                       v-model="col.hideForRelative"
                       style="accent-color: #ea580c; width: 14px; height: 14px; cursor: pointer;"
                     />
-                    <span :style="{ color: col.hideForRelative ? '#c2410c' : '#64748b' }">
-                      {{ col.hideForRelative ? '👁️‍🗨️ Ẩn với Thân nhân' : 'Hiện với Thân nhân' }}
+                    <span :style="{ color: col.hideForRelative ? '#c2410c' : '#475569', fontWeight: col.hideForRelative ? '700' : '600' }">
+                      Ẩn với thân nhân
                     </span>
                   </label>
 
