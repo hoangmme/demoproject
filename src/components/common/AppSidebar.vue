@@ -49,46 +49,23 @@
         <span>Tìm kiếm nâng cao</span>
       </router-link>
 
-      <!-- NÚT NHẬP LIỆU TRÊN MENU SIDEBAR (NẰM TRÊN BÁO CÁO PHỤ LỤC) -->
-      <div class="sidebar-input-action-wrapper" style="position: relative; margin: 10px 10px 6px 10px;">
-        <button
-          type="button"
-          class="sidebar-input-btn"
-          @click="isInputMenuOpen = !isInputMenuOpen"
-          title="Thao tác Nhập liệu nhanh"
-        >
-          <i class="pi pi-plus-circle" style="color: #4ade80; font-size: 1rem;"></i>
-          <span style="font-weight: 700; flex: 1; text-align: left; font-size: 0.82rem;">Nhập liệu</span>
-          <i class="pi pi-chevron-down" style="font-size: 0.65rem; opacity: 0.7;"></i>
-        </button>
+      <!-- KHỐI NHẬP LIỆU (DANH SÁCH MENU TRỰC TIẾP TRÊN SIDEBAR) -->
+      <div class="app-nav-heading">Nhập liệu</div>
 
-        <!-- Dropdown Menu bên dưới nút Nhập liệu -->
-        <div v-if="isInputMenuOpen" class="sidebar-flyout-menu" @click="isInputMenuOpen = false">
-          <div class="flyout-item" @click="handleInputClick('new_personnel')">
-            <i class="pi pi-user-plus" style="color: #2563eb; font-size: 1.05rem;"></i>
-            <div>
-              <div style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">Thêm Cán bộ mới</div>
-              <div style="font-size: 0.68rem; color: #64748b;">Mở form tạo mới hồ sơ Cán bộ</div>
-            </div>
-          </div>
+      <a class="app-nav-item" href="javascript:void(0)" @click="handleInputClick('new_personnel')" title="Thêm Cán bộ mới">
+        <i class="pi pi-user-plus" style="color: #60a5fa;"></i>
+        <span>Thêm Cán bộ</span>
+      </a>
 
-          <div class="flyout-item" @click="openQuickRelativeDialog">
-            <i class="pi pi-users" style="color: #7c3aed; font-size: 1.05rem;"></i>
-            <div>
-              <div style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">Thêm Thân nhân mới</div>
-              <div style="font-size: 0.68rem; color: #64748b;">Chọn Cán bộ để thêm thân nhân</div>
-            </div>
-          </div>
+      <a class="app-nav-item" href="javascript:void(0)" @click="openQuickRelativeDialog" title="Thêm Thân nhân mới">
+        <i class="pi pi-users" style="color: #c084fc;"></i>
+        <span>Thêm Thân nhân</span>
+      </a>
 
-          <div class="flyout-item" @click="openQuickTripDialog">
-            <i class="pi pi-send" style="color: #16a34a; font-size: 1.05rem;"></i>
-            <div>
-              <div style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">Thêm Chuyến đi nước ngoài</div>
-              <div style="font-size: 0.68rem; color: #64748b;">Chọn Cán bộ hoặc Thân nhân</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <a class="app-nav-item" href="javascript:void(0)" @click="openQuickTripDialog" title="Thêm Chuyến đi nước ngoài">
+        <i class="pi pi-send" style="color: #4ade80;"></i>
+        <span>Thêm Chuyến đi</span>
+      </a>
 
       <div class="app-nav-heading">Báo cáo Phụ lục</div>
 
