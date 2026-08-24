@@ -2108,13 +2108,13 @@ const stats = computed(() => {
     'Khác': { trips: 0, relatives: 0, total: 0 },
   };
 
-  // Build unified list of trips from both personnel.trips and store.tripsList
+  // 1. Process all Trips (from Cán bộ & Thân nhân)
   const allTripsToProcess = [];
   const processedTripIds = new Set();
 
   pList.forEach((p) => {
     (p.trips || []).forEach((t) => {
-      const tid = t.id || `${p.id}_${t.departureDate}_${t.countryName || t.country || ''}`;
+      const tid = t.id || `${p.id}_${t.departureDate}_${t.countryName || t.quoc_gia_xuat_canh || ''}`;
       if (!processedTripIds.has(tid)) {
         processedTripIds.add(tid);
         allTripsToProcess.push({
@@ -2122,18 +2122,38 @@ const stats = computed(() => {
           personnelId: p.id,
           personnelCode: p.code || p.id,
           personnelName: p.name,
+          isRelativeTrip: false,
         });
       }
+    });
+
+    // Check trips nested inside relatives
+    (p.relatives || []).forEach((r) => {
+      (r.trips || []).forEach((t) => {
+        const tid = t.id || `${r.id || r.code}_${t.departureDate}_${t.countryName || t.quoc_gia_xuat_canh || ''}`;
+        if (!processedTripIds.has(tid)) {
+          processedTripIds.add(tid);
+          allTripsToProcess.push({
+            ...t,
+            personnelId: p.id,
+            personnelCode: p.code || p.id,
+            personnelName: `TN: ${r.relativeName || r.name}`,
+            isRelativeTrip: true,
+            matchedRelative: r,
+          });
+        }
+      });
     });
   });
 
   (personnelStore.tripsList || []).forEach((t) => {
-    const tid = t.id || `${t.personnelId || t.cccdchuyendi}_${t.departureDate}_${t.countryName || t.country || ''}`;
+    const tid = t.id || `${t.personnelId || t.cccdchuyendi}_${t.departureDate}_${t.countryName || t.quoc_gia_xuat_canh || ''}`;
     if (!processedTripIds.has(tid)) {
       processedTripIds.add(tid);
       const tripKey = String(t.cccdchuyendi || t.personnelId || t.code || t.cccd || '').trim();
       const matchedP = tripKey ? personnelStore.findPersonByCccd(tripKey) : null;
       const matchedR = (!matchedP && tripKey) ? personnelStore.findRelativeByCccd(tripKey) : null;
+      const isRel = Boolean(matchedR || t.relativeName || t.cccdthannhan || (t.parentName && !matchedP));
 
       allTripsToProcess.push({
         ...t,
@@ -2142,36 +2162,47 @@ const stats = computed(() => {
         personnelName: matchedP?.name || t.personnelName || (matchedR ? `TN: ${matchedR.relativeName || matchedR.name}` : 'Cán bộ'),
         matchedPerson: matchedP,
         matchedRelative: matchedR,
+        isRelativeTrip: isRel,
       });
     }
   });
 
   allTripsToProcess.forEach((t) => {
-    const depDate = t.departureDate || t.approvedDepartureDate;
+    const depDate = t.departureDate || t.ngay_xuat_canh || t.approvedDepartureDate;
     if (!isWithinTimeFilter(depDate)) {
       return;
     }
 
-    const rawCountry = getTripValue(t, colConfig.value.country);
+    // Extract Country
+    let rawCountry = getTripValue(t, colConfig.value.country) || t.quoc_gia_xuat_canh || t.countryName || t.country || '';
+    if (rawCountry && t.custom_data) {
+      try {
+        const cd = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+        if (cd?.quoc_gia_xuat_canh) rawCountry = cd.quoc_gia_xuat_canh;
+      } catch(e) {}
+    }
     const cName = (rawCountry && String(rawCountry).trim() !== '-' && String(rawCountry).trim() !== 'Chưa rõ')
       ? String(rawCountry).trim()
       : '';
 
-    const rawFunding = getTripValue(t, colConfig.value.funding);
+    // Extract Funding
+    let rawFunding = getTripValue(t, colConfig.value.funding) || t.nguon_kinh_phi || t.fundingName || t.funding || t.funding2 || '';
+    if (rawFunding && t.custom_data) {
+      try {
+        const cd = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+        if (cd?.nguon_kinh_phi) rawFunding = cd.nguon_kinh_phi;
+      } catch(e) {}
+    }
     const fName = (rawFunding && String(rawFunding).trim() !== '-' && String(rawFunding).trim() !== 'Chưa rõ')
       ? String(rawFunding).trim()
       : '';
 
-    const dNum = getTripValue(t, 'decisionNumber') || t.decisionNumber || '';
-    const appDep = getTripValue(t, 'approvedDepartureDate') || t.departureDate || '';
-    const appArr = getTripValue(t, 'approvedArrivalDate') || t.arrivalDate || '';
-    const appExt = getTripValue(t, 'approvedExtensionDate') || '';
+    const dNum = getTripValue(t, 'so_quyet_dinh') || getTripValue(t, 'decisionNumber') || t.so_quyet_dinh || t.decisionNumber || '';
+    const appDep = getTripValue(t, 'thoi_gian_duyet_di') || getTripValue(t, 'approvedDepartureDate') || t.departureDate || '';
+    const appArr = getTripValue(t, 'thoi_gian_duyet_ve') || getTripValue(t, 'approvedArrivalDate') || t.arrivalDate || '';
+    const appExt = getTripValue(t, 'thoi_gian_duyet_gia_han') || getTripValue(t, 'approvedExtensionDate') || '';
 
-    // Check if trip belongs to Cán bộ (CB) or Thân nhân (TN)
-    const tripKey = String(t.cccdchuyendi || t.personnelId || t.code || t.cccd || '').trim();
-    const matchedP = t.matchedPerson || (tripKey ? personnelStore.findPersonByCccd(tripKey) : null);
-    const matchedR = t.matchedRelative || ((!matchedP && tripKey) ? personnelStore.findRelativeByCccd(tripKey) : null);
-    const isRelativeTrip = Boolean(matchedR || t.relativeName || t.cccdthannhan || (t.parentName && !matchedP));
+    const isRelativeTrip = Boolean(t.isRelativeTrip);
 
     const enrichedTrip = {
       ...t,
@@ -2239,6 +2270,42 @@ const stats = computed(() => {
           fundings[norm].total += 1;
         }
       });
+    }
+  });
+
+  // 2. Process Relatives from Khối C (Thân nhân ở nước ngoài)
+  rList.forEach((r) => {
+    let rcd = r.custom_data;
+    if (typeof rcd === 'string') {
+      try { rcd = JSON.parse(rcd); } catch(e) {}
+    }
+
+    // Extract relative country
+    let rawC = r.quoc_gia_xuat_canh || r.countryName || r.country || rcd?.quoc_gia_xuat_canh || rcd?.content || rcd?.countryName || '';
+    let relCountry = '';
+    if (rawC && !isFundingKeyword(rawC) && rawC !== '-' && rawC !== 'Chưa rõ' && rawC !== 'null' && rawC !== 'undefined' && rawC !== 'Không có thông tin') {
+      relCountry = String(rawC).trim();
+    } else {
+      relCountry = extractCountryFromAddress(r.currentAddress || rcd?.currentAddress || r.timeAbroad || rcd?.timeAbroad || rcd?.fileNumber);
+    }
+
+    if (relCountry && relCountry !== '-' && relCountry !== 'Chưa rõ') {
+      if (!countries[relCountry]) countries[relCountry] = { trips: 0, relatives: 0, total: 0 };
+      countries[relCountry].relatives += 1;
+      countries[relCountry].total += 1;
+    }
+
+    // Extract relative funding
+    let rawF = r.nguon_kinh_phi || r.fundingName || r.funding || rcd?.nguon_kinh_phi || rcd?.fundingName || '';
+    if (!rawF && isFundingKeyword(r.countryName)) {
+      rawF = r.countryName;
+    }
+    if (rawF) {
+      const norm = normalizeFundingCategory(rawF);
+      if (norm && fundings[norm]) {
+        fundings[norm].relatives += 1;
+        fundings[norm].total += 1;
+      }
     }
   });
 

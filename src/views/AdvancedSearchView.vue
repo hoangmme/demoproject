@@ -666,10 +666,10 @@ const buildDataset = () => {
           } catch (e) {}
         }
 
-        const depDate = t.departureDate || custom.departureDate || '';
-        const arrDate = t.arrivalDate || custom.arrivalDate || '';
-        const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || '';
-        const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || '';
+        const depDate = t.departureDate || custom.departureDate || t.ngay_xuat_canh || custom.ngay_xuat_canh || '';
+        const arrDate = t.arrivalDate || custom.arrivalDate || t.ngay_nhap_canh || custom.ngay_nhap_canh || '';
+        const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || t.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || '';
+        const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || t.thoi_gian_duyet_gia_han || custom.thoi_gian_duyet_gia_han || '';
 
         const depObj = parseDateObj(depDate);
         const arrObj = parseDateObj(arrDate);
@@ -693,6 +693,11 @@ const buildDataset = () => {
           }
         }
 
+        const decNum = t.so_quyet_dinh || t.decisionNumber || custom.so_quyet_dinh || custom.decisionNumber || '';
+        const cName = t.quoc_gia_xuat_canh || t.countryName || custom.quoc_gia_xuat_canh || custom.countryName || t.country || '';
+        const fName = t.nguon_kinh_phi || t.fundingName || custom.nguon_kinh_phi || custom.fundingName || t.funding || t.funding2 || '';
+        const purp = t.muc_dich_xuat_canh || t.purpose || custom.muc_dich_xuat_canh || custom.purpose || '';
+
         dataset.push({
           uniqueKey: t.id || `trip_${p.id}_${tIdx}`,
           rawPerson: p,
@@ -702,12 +707,18 @@ const buildDataset = () => {
           personnelName: p.name,
           position: p.positionName || p.position || '',
           departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-          countryName: t.countryName || custom.countryName || t.country || '-',
+          countryName: cName || '-',
+          quoc_gia_xuat_canh: cName || '',
           departureDate: depDate ? formatDate(depDate) : '-',
+          ngay_xuat_canh: depDate ? formatDate(depDate) : '',
           arrivalDate: arrDate ? formatDate(arrDate) : '',
-          decisionNumber: t.decisionNumber || custom.decisionNumber || '-',
-          fundingName: t.fundingName || custom.fundingName || t.funding || '-',
-          purpose: t.purpose || custom.purpose || '-',
+          ngay_nhap_canh: arrDate ? formatDate(arrDate) : '',
+          decisionNumber: decNum || '-',
+          so_quyet_dinh: decNum || '',
+          fundingName: fName || '-',
+          nguon_kinh_phi: fName || '',
+          purpose: purp || '-',
+          muc_dich_xuat_canh: purp || '',
           trang_thai_hien_dien: presenceStatus,
           isOverdue,
           overdueDays,
@@ -729,33 +740,81 @@ const buildDataset = () => {
 };
 
 // Check if a single item matches a single criterion
+const getItemFieldValue = (item, f) => {
+  if (!item || !f) return '';
+
+  if (f === 'isOverdue') return item.isOverdue ? 'true' : 'false';
+  if (f === 'hasRelatives') return item.hasRelatives ? 'true' : 'false';
+  if (f === 'trip_count_year') return item.trip_count_year ?? 0;
+  if (f === 'trang_thai_hien_dien') return item.trang_thai_hien_dien || '';
+
+  // Direct check on item
+  let raw = item[f];
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    raw = item.rawTrip?.[f];
+  }
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    raw = item.rawPerson?.[f];
+  }
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    raw = item.custom_data?.[f];
+  }
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    if (item.rawTrip?.custom_data) {
+      try {
+        const cd = typeof item.rawTrip.custom_data === 'string' ? JSON.parse(item.rawTrip.custom_data) : item.rawTrip.custom_data;
+        raw = cd?.[f];
+      } catch (e) {}
+    }
+  }
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    if (item.rawPerson?.custom_data) {
+      try {
+        const cd = typeof item.rawPerson.custom_data === 'string' ? JSON.parse(item.rawPerson.custom_data) : item.rawPerson.custom_data;
+        raw = cd?.[f];
+      } catch (e) {}
+    }
+  }
+
+  // Fallback aliases for known semantic fields
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    if (f === 'so_quyet_dinh' || f === 'so_qd_di' || f === 'decisionNumber' || f === 'soQuyetDinh') {
+      raw = item.decisionNumber || item.rawTrip?.decisionNumber || item.so_quyet_dinh || item.rawTrip?.so_quyet_dinh;
+    } else if (f === 'quoc_gia_xuat_canh' || f === 'countryName' || f === 'country') {
+      raw = item.countryName || item.rawTrip?.countryName || item.rawTrip?.quoc_gia_xuat_canh || item.country;
+    } else if (f === 'nguon_kinh_phi' || f === 'fundingName' || f === 'funding' || f === 'funding2') {
+      raw = item.fundingName || item.rawTrip?.fundingName || item.rawTrip?.nguon_kinh_phi || item.funding || item.funding2;
+    } else if (f === 'muc_dich_xuat_canh' || f === 'purpose') {
+      raw = item.purpose || item.rawTrip?.purpose || item.rawTrip?.muc_dich_xuat_canh;
+    } else if (f === 'ngay_xuat_canh' || f === 'departureDate') {
+      raw = item.departureDate || item.rawTrip?.departureDate || item.rawTrip?.ngay_xuat_canh;
+    } else if (f === 'ngay_nhap_canh' || f === 'arrivalDate') {
+      raw = item.arrivalDate || item.rawTrip?.arrivalDate || item.rawTrip?.ngay_nhap_canh;
+    } else if (f === 'ngay_ban_hanh' || f === 'decisionDate') {
+      raw = item.decisionDate || item.rawTrip?.decisionDate || item.rawTrip?.ngay_ban_hanh;
+    } else if (f === 'co_quan_ban_hanh' || f === 'decisionIssuer') {
+      raw = item.decisionIssuer || item.rawTrip?.decisionIssuer || item.rawTrip?.co_quan_ban_hanh;
+    } else if (f === 'cccd' || f === 'cccdparent') {
+      raw = item.cccd || item.cccdparent || item.rawPerson?.cccd || item.rawPerson?.cccdparent;
+    } else if (f === 'name' || f === 'personnelName') {
+      raw = item.personnelName || item.name || item.rawPerson?.name;
+    }
+  }
+
+  if (raw === undefined || raw === null || raw === '-') return '';
+  if (typeof raw === 'object') {
+    if (Array.isArray(raw)) return raw.map((x) => (typeof x === 'object' ? JSON.stringify(x) : x)).join(', ');
+    return JSON.stringify(raw);
+  }
+  return String(raw).trim();
+};
+
 const testCondition = (item, crit) => {
   const f = crit.field;
   const op = crit.operator;
   const val = String(crit.value || '').trim().toLowerCase();
 
-  let itemVal = '';
-  if (f === 'isOverdue') {
-    itemVal = item.isOverdue ? 'true' : 'false';
-  } else if (f === 'hasRelatives') {
-    itemVal = item.hasRelatives ? 'true' : 'false';
-  } else if (f === 'trip_count_year') {
-    itemVal = Number(item.trip_count_year || 0);
-  } else if (f === 'quoc_gia_xuat_canh' || f === 'countryName') {
-    itemVal = item.countryName || item.country || '';
-  } else if (f === 'ngay_xuat_canh' || f === 'departureDate') {
-    itemVal = item.departureDate || '';
-  } else if (f === 'ngay_nhap_canh' || f === 'arrivalDate') {
-    itemVal = item.arrivalDate || '';
-  } else if (f === 'so_qd_di' || f === 'decisionNumber') {
-    itemVal = item.decisionNumber || '';
-  } else if (f === 'nguon_kinh_phi' || f === 'fundingName') {
-    itemVal = item.fundingName || '';
-  } else if (f === 'muc_dich_xuat_canh' || f === 'purpose') {
-    itemVal = item.purpose || '';
-  } else {
-    itemVal = String(item[f] || item.rawTrip?.[f] || item.rawPerson?.[f] || item.custom_data?.[f] || '').trim();
-  }
+  const itemVal = getItemFieldValue(item, f);
 
   // Get field label for clear reason badge
   let fieldLabel = f;
