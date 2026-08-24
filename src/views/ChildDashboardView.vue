@@ -19,19 +19,7 @@
         </div>
       </div>
 
-      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <!-- Seed Sample Trips Button -->
-        <Button
-          label="Tạo 20 Chuyến đi mẫu (10 CB & 10 TN)"
-          icon="pi pi-bolt"
-          size="small"
-          severity="warn"
-          :loading="isSeedingData"
-          @click="handleSeedTrips"
-          style="font-size: 0.82rem;"
-          title="Tạo nhanh 20 dữ liệu chuyến đi mẫu cho 10 cán bộ và 10 thân nhân"
-        />
-
+       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
         <!-- Column Picker -->
         <button
           type="button"
@@ -43,15 +31,16 @@
           <span>Chọn cột hiển thị ({{ selectedColIds.length }}/{{ allAvailableColumnsList.length }})</span>
         </button>
 
-        <!-- Export PDF / Word (Same module as PersonnelView) -->
-        <Button
-          label="Xuất Hồ sơ (PDF / Word)"
-          icon="pi pi-file-pdf"
-          size="small"
-          severity="danger"
+        <!-- Export PDF / Word -->
+        <button
+          type="button"
+          class="btn-action-primary"
           @click="openAdvancedDocxExport"
-          style="font-size: 0.85rem;"
-        />
+          title="Xuất Hồ sơ (PDF / Word)"
+        >
+          <i class="pi pi-file-pdf"></i>
+          <span>Xuất Hồ sơ (PDF / Word)</span>
+        </button>
       </div>
     </div>
 
@@ -110,7 +99,7 @@
           </select>
         </div>
 
-        <!-- Funding Source Filter -->
+        <!-- Funding Filter -->
         <div style="min-width: 140px;">
           <select v-model="selectedFunding" class="filter-select">
             <option value="">Kinh phí: Tất cả</option>
@@ -118,23 +107,23 @@
           </select>
         </div>
 
-        <!-- Reset button -->
+        <!-- Reset Filter Button -->
         <Button
           v-if="hasActiveFilters"
-          label="Xóa bộ lọc"
-          icon="pi pi-filter-slash"
-          severity="secondary"
-          text
+          label="Xóa lọc"
+          icon="pi pi-times"
           size="small"
-          @click="resetFilters"
-          style="font-size: 0.78rem; height: 34px; padding: 0 10px;"
+          text
+          severity="secondary"
+          @click="resetAllFilters"
+          style="font-size: 0.8rem;"
         />
       </div>
     </div>
 
-    <!-- Main Data Table Area -->
+    <!-- Data Table Container -->
     <div class="app-card" style="padding: 0; overflow: hidden;">
-      <div style="overflow-x: auto; max-height: calc(100vh - 360px); min-height: 380px;">
+      <div style="overflow-x: auto; max-height: calc(100vh - 280px);">
         <table class="trips-table">
           <thead>
             <tr>
@@ -142,75 +131,85 @@
                 <input
                   type="checkbox"
                   :checked="isAllSelected"
+                  :indeterminate="isIndeterminate"
                   @change="toggleSelectAll"
-                  style="accent-color: #1e3a8a;"
+                  style="cursor: pointer;"
                 />
               </th>
-              <th style="width: 45px; text-align: center;">STT</th>
+              <th style="width: 50px; text-align: center;">STT</th>
 
+              <!-- Dynamic Visible Headers -->
               <th
                 v-for="col in visibleColumns"
                 :key="col.id"
-                :style="getColumnHeaderStyle(col)"
+                :style="{ width: col.width || '150px', minWidth: col.width || '150px' }"
                 @click="sortBy(col.id)"
                 class="sortable-header"
               >
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-                  <span>{{ col.label }}</span>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span>{{ col.label || col.id }}</span>
                   <i
                     v-if="sortKey === col.id"
-                    :class="sortOrder === 1 ? 'pi pi-sort-amount-up' : 'pi pi-sort-amount-down'"
-                    style="font-size: 0.75rem; color: #1e3a8a;"
+                    :class="sortOrder === 1 ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down'"
+                    style="font-size: 0.75rem; color: #2563eb;"
                   ></i>
                 </div>
               </th>
 
-              <th style="width: 80px; text-align: center;">Thao tác</th>
+              <!-- Action Column (THAO TÁC) -->
+              <th style="width: 140px; text-align: center; white-space: nowrap;">
+                THAO TÁC
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="paginatedList.length === 0">
-              <td :colspan="visibleColumns.length + 3" style="text-align: center; padding: 3rem; color: #94a3b8;">
-                <i class="pi pi-inbox" style="font-size: 2rem; margin-bottom: 8px; display: block;"></i>
-                Không tìm thấy chuyến đi nào phù hợp với bộ lọc.
+              <td :colspan="visibleColumns.length + 3" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                <i class="pi pi-inbox" style="font-size: 1.8rem; display: block; margin-bottom: 6px;"></i>
+                Không tìm thấy bản ghi nào phù hợp với bộ lọc.
               </td>
             </tr>
 
             <tr
               v-for="(trip, idx) in paginatedList"
               :key="trip.uniqueKey || idx"
-              :class="{ 'row-selected': selectedTripKeys.includes(trip.uniqueKey) }"
-              @click="toggleSelectTrip(trip.uniqueKey)"
+              :class="{ 'row-selected': isSelected(trip) }"
             >
               <!-- Checkbox -->
-              <td style="text-align: center;" @click.stop>
+              <td style="text-align: center;">
                 <input
                   type="checkbox"
-                  :value="trip.uniqueKey"
-                  v-model="selectedTripKeys"
-                  style="accent-color: #1e3a8a;"
+                  :checked="isSelected(trip)"
+                  @change="toggleSelectTrip(trip)"
+                  style="cursor: pointer;"
                 />
               </td>
 
               <!-- STT -->
-              <td style="text-align: center; color: #64748b; font-weight: 600;">
+              <td style="text-align: center; color: #64748b; font-weight: 500;">
                 {{ (currentPage - 1) * pageSize + idx + 1 }}
               </td>
 
-              <!-- Dynamic Visible Columns -->
+              <!-- Dynamic Visible Cells -->
               <td
                 v-for="col in visibleColumns"
                 :key="col.id"
-                :style="{ textAlign: col.align || 'left' }"
+                :style="{ width: col.width || '150px', minWidth: col.width || '150px' }"
               >
-                <!-- 1. Họ và tên (Cán bộ / Thân nhân) -->
+                <!-- 1. Họ và tên người đi -->
                 <template v-if="col.id === 'personnelName' || col.id === 'name'">
-                  <div style="font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-                    <span>{{ trip.personnelName || trip.name || 'Chưa rõ' }}</span>
-                    <span v-if="trip.isRelative" class="badge-role-tn">Thân nhân</span>
-                  </div>
-                  <div v-if="trip.personnelCode" style="font-size: 0.72rem; color: #64748b;">
-                    {{ trip.personnelCode }}
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <div>
+                      <strong style="color: #0f172a; font-weight: 600; display: block;">
+                        {{ trip.personnelName || trip.name }}
+                      </strong>
+                      <span v-if="trip.personnelCode" style="font-size: 0.7rem; color: #64748b;">
+                        {{ trip.personnelCode }}
+                      </span>
+                    </div>
+                    <span v-if="trip.isRelative" class="badge-role-tn">
+                      Thân nhân
+                    </span>
                   </div>
                 </template>
 
@@ -222,7 +221,7 @@
                   </span>
                 </template>
 
-                <!-- 3. Ngày nhập cảnh (Hiển thị ngày hoặc Badge Đang ở nước ngoài) -->
+                <!-- 3. Ngày nhập cảnh (Hiển thị ngày hoặc Badge Đang ở nước ngoài nếu đang đi) -->
                 <template v-else-if="col.id === 'arrivalDate'">
                   <span v-if="trip.arrivalDate" style="color: #0f172a; font-weight: 600;">
                     {{ formatDisplayDate(trip.arrivalDate) }}
@@ -230,9 +229,10 @@
                   <span v-else-if="trip.isOverdue" class="status-pill status-overdue">
                     Quá hạn {{ trip.overdueDays }} ngày
                   </span>
-                  <span v-else class="status-pill status-abroad">
+                  <span v-else-if="trip.isAbroad" class="status-pill status-abroad">
                     Đang ở nước ngoài
                   </span>
+                  <span v-else style="color: #94a3b8;">-</span>
                 </template>
 
                 <!-- 4. Ngày xuất cảnh -->
@@ -268,17 +268,29 @@
                 </template>
               </td>
 
-              <!-- Action button -->
+              <!-- Action buttons (Chi tiết & Xóa) -->
               <td style="text-align: center; white-space: nowrap;" @click.stop>
-                <button
-                  type="button"
-                  class="btn-detail-action"
-                  @click="openPersonnelDetail(trip)"
-                  title="Xem và chỉnh sửa hồ sơ chi tiết"
-                >
-                  <i class="pi pi-user-edit"></i>
-                  <span>Chi tiết</span>
-                </button>
+                <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                  <button
+                    type="button"
+                    class="btn-table-action btn-table-info"
+                    @click="openPersonnelDetail(trip)"
+                    title="Xem và chỉnh sửa hồ sơ chi tiết"
+                  >
+                    <i class="pi pi-user-edit"></i>
+                    <span>Chi tiết</span>
+                  </button>
+                  <button
+                    v-if="authStore.isAdmin"
+                    type="button"
+                    class="btn-table-action btn-table-danger"
+                    @click="handleDeleteTrip(trip)"
+                    title="Xóa chuyến đi này"
+                  >
+                    <i class="pi pi-trash"></i>
+                    <span>Xóa</span>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -288,9 +300,9 @@
       <!-- Pagination Footer -->
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-top: 1px solid #e2e8f0; background: #fafafa; font-size: 0.8rem; color: #64748b;">
         <div>
-          Hiển thị <b>{{ paginatedList.length }}</b> / <b>{{ filteredList.length }}</b> chuyến đi
+          Hiển thị <b>{{ paginatedList.length }}</b> / <b>{{ filteredList.length }}</b> bản ghi
           <span v-if="selectedTripKeys.length > 0" style="margin-left: 12px; color: #1e3a8a; font-weight: 600;">
-            (Đã chọn {{ selectedTripKeys.length }} chuyến)
+            (Đã chọn {{ selectedTripKeys.length }} bản ghi)
           </span>
         </div>
 
@@ -302,18 +314,19 @@
             <option :value="100">100 dòng / trang</option>
           </select>
 
-          <Button
-            icon="pi pi-angle-left"
-            size="small"
-            text
+          <button
+            type="button"
+            class="btn-pagination-nav"
             :disabled="currentPage === 1"
             @click="currentPage--"
-          />
+            title="Trang trước"
+          >
+            <i class="pi pi-chevron-left"></i>
+          </button>
           <span>Trang <b>{{ currentPage }}</b> / {{ totalPages || 1 }}</span>
-          <Button
-            icon="pi pi-angle-right"
-            size="small"
-            text
+          <button
+            type="button"
+            class="btn-pagination-nav"
             :disabled="currentPage >= totalPages"
             @click="currentPage++"
           />
@@ -770,12 +783,21 @@ const unifiedTripsList = computed(() => {
         } catch (e) {}
       }
 
-      const isRel = Boolean(t.isRelative || t.relativeName || t.cccdthannhan);
+      const cName = t.countryName || custom.countryName || t.country || custom.quoc_gia_xuat_canh || '';
       const depDate = t.departureDate || custom.departureDate || t.approvedDepartureDate || '';
       const arrDate = t.arrivalDate || custom.arrivalDate || '';
       const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || '';
       const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || '';
+      const dNum = t.decisionNumber || custom.decisionNumber || t.decision || '';
+      const fName = t.fundingName || custom.fundingName || t.funding || custom.nguon_kinh_phi || '';
+      const purpose = t.purpose || custom.purpose || '';
 
+      // Skip empty/dummy placeholder trip objects that have no real data
+      if (!cName && !depDate && !arrDate && !dNum && !purpose) {
+        return;
+      }
+
+      const isRel = Boolean(t.isRelative || t.relativeName || t.cccdthannhan);
       const depObj = parseDateObj(depDate);
       const arrObj = parseDateObj(arrDate);
       const appArrObj = parseDateObj(extDate || appArrDate);
@@ -784,9 +806,19 @@ const unifiedTripsList = computed(() => {
       let isOverdue = false;
       let overdueDays = 0;
 
-      if (!arrDate || !arrObj) {
-        if (depObj && depObj > now) {
+      if (!depDate && !arrDate) {
+        isAbroad = false;
+        isOverdue = false;
+      } else if (arrDate && arrObj) {
+        isAbroad = false;
+        if (appArrObj && arrObj > appArrObj) {
+          isOverdue = true;
+          overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
+        }
+      } else if (depDate && depObj) {
+        if (depObj > now) {
           isAbroad = false;
+          isOverdue = false;
         } else {
           isAbroad = true;
           if (appArrObj && now > appArrObj) {
@@ -794,14 +826,7 @@ const unifiedTripsList = computed(() => {
             overdueDays = Math.max(1, Math.floor((now - appArrObj) / (1000 * 60 * 60 * 24)));
           }
         }
-      } else if (appArrObj && arrObj > appArrObj) {
-        isOverdue = true;
-        overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
       }
-
-      const cName = t.countryName || custom.countryName || t.country || custom.quoc_gia_xuat_canh || '';
-      const fName = t.fundingName || custom.fundingName || t.funding || custom.nguon_kinh_phi || '';
-      const dNum = t.decisionNumber || custom.decisionNumber || t.decision || '';
 
       const uniqueKey = t.id || `trip_${p.id}_${tIdx}`;
       if (processedTripKeys.has(uniqueKey)) return;
@@ -825,7 +850,7 @@ const unifiedTripsList = computed(() => {
         approvedExtensionDate: extDate,
         decisionNumber: dNum,
         fundingName: fName,
-        purpose: t.purpose || custom.purpose || '',
+        purpose,
         passportNumber: t.passportNumber || custom.passportNumber || '',
         isAbroad,
         isOverdue,
@@ -846,10 +871,19 @@ const unifiedTripsList = computed(() => {
           } catch (e) {}
         }
 
+        const cName = rt.countryName || custom.countryName || rt.country || r.countryName || '';
         const depDate = rt.departureDate || custom.departureDate || '';
         const arrDate = rt.arrivalDate || custom.arrivalDate || '';
         const appArrDate = rt.approvedArrivalDate || custom.approvedArrivalDate || '';
         const extDate = rt.approvedExtensionDate || custom.approvedExtensionDate || '';
+        const dNum = rt.decisionNumber || custom.decisionNumber || '';
+        const fName = rt.fundingName || custom.fundingName || rt.funding || '';
+        const purpose = rt.purpose || custom.purpose || '';
+
+        // Skip empty/dummy placeholder trip objects
+        if (!cName && !depDate && !arrDate && !dNum && !purpose) {
+          return;
+        }
 
         const depObj = parseDateObj(depDate);
         const arrObj = parseDateObj(arrDate);
@@ -859,9 +893,19 @@ const unifiedTripsList = computed(() => {
         let isOverdue = false;
         let overdueDays = 0;
 
-        if (!arrDate || !arrObj) {
-          if (depObj && depObj > now) {
+        if (!depDate && !arrDate) {
+          isAbroad = false;
+          isOverdue = false;
+        } else if (arrDate && arrObj) {
+          isAbroad = false;
+          if (appArrObj && arrObj > appArrObj) {
+            isOverdue = true;
+            overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
+          }
+        } else if (depDate && depObj) {
+          if (depObj > now) {
             isAbroad = false;
+            isOverdue = false;
           } else {
             isAbroad = true;
             if (appArrObj && now > appArrObj) {
@@ -869,14 +913,7 @@ const unifiedTripsList = computed(() => {
               overdueDays = Math.max(1, Math.floor((now - appArrObj) / (1000 * 60 * 60 * 24)));
             }
           }
-        } else if (appArrObj && arrObj > appArrObj) {
-          isOverdue = true;
-          overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
         }
-
-        const cName = rt.countryName || custom.countryName || rt.country || r.countryName || '';
-        const fName = rt.fundingName || custom.fundingName || rt.funding || '';
-        const dNum = rt.decisionNumber || custom.decisionNumber || '';
 
         const uniqueKey = rt.id || `rel_trip_${p.id}_${rIdx}_${rtIdx}`;
         if (processedTripKeys.has(uniqueKey)) return;
@@ -1263,6 +1300,57 @@ const openPersonnelDetail = (trip) => {
     isPersonnelDialogOpen.value = true;
   } else {
     alert('Không tìm thấy hồ sơ chi tiết của cán bộ tương ứng!');
+  }
+};
+
+const handleDeleteTrip = async (trip) => {
+  const name = trip.personnelName || trip.name || 'Cán bộ';
+  const cName = trip.countryName || trip.country || 'chuyến đi';
+  if (!confirm(`Bạn có chắc chắn muốn xóa chuyến đi "${cName}" của ${name}?`)) return;
+
+  let targetPerson = null;
+  if (trip.personnelId) {
+    targetPerson = (personnelStore.personnelList || []).find((p) => p.id === trip.personnelId || p.code === trip.personnelCode);
+  }
+  if (!targetPerson && trip.rawPerson?.id) {
+    targetPerson = (personnelStore.personnelList || []).find((p) => p.id === trip.rawPerson.id);
+  }
+  if (!targetPerson && trip.cccdchuyendi) {
+    targetPerson = personnelStore.findPersonByCccd(trip.cccdchuyendi);
+  }
+  if (!targetPerson) {
+    targetPerson = trip.rawPerson;
+  }
+
+  if (!targetPerson) {
+    alert('Không tìm thấy hồ sơ cán bộ tương ứng để xóa chuyến đi!');
+    return;
+  }
+
+  // Remove from targetPerson.trips
+  if (Array.isArray(targetPerson.trips)) {
+    targetPerson.trips = targetPerson.trips.filter(
+      (t) => (t.id && t.id !== trip.id) || (t.departureDate !== trip.departureDate || t.countryName !== trip.countryName)
+    );
+  }
+
+  // Remove from targetPerson.relatives[].trips
+  if (Array.isArray(targetPerson.relatives)) {
+    targetPerson.relatives.forEach((r) => {
+      if (Array.isArray(r.trips)) {
+        r.trips = r.trips.filter(
+          (t) => (t.id && t.id !== trip.id) || (t.departureDate !== trip.departureDate || t.countryName !== trip.countryName)
+        );
+      }
+    });
+  }
+
+  try {
+    await personnelStore.savePerson(targetPerson);
+    await personnelStore.fetchPersonnel();
+    alert('Đã xóa chuyến đi thành công!');
+  } catch (e) {
+    alert('Lỗi xóa chuyến đi: ' + (e.message || e));
   }
 };
 
@@ -1674,5 +1762,97 @@ onMounted(async () => {
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.btn-action-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-action-primary:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-action-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-action-outline:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.btn-table-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-table-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+.btn-table-info:hover {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+.btn-table-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+.btn-table-danger:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+}
+
+.btn-pagination-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-pagination-nav:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+.btn-pagination-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 </style>
