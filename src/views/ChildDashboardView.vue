@@ -710,29 +710,8 @@ const getFundingValue = (item) => {
 const matchCardCondition = (item, card) => {
   if (!card) return true;
 
-  const cond = card.condition || card.operator || card.id || 'all';
-  const labelLower = String(card.label || '').toLowerCase();
-
-  // 1. Total (Toàn bộ / Tất cả)
-  if (cond === 'all' || labelLower.includes('toàn bộ') || labelLower.includes('tất cả')) {
-    return true;
-  }
-
-  // 2. Status conditions using unified getTripPresence
-  const presence = getTripPresence(item);
-
-  if (cond === 'completed' || labelLower.includes('về nước') || labelLower.includes('hoàn thành')) {
-    return presence.status === 'completed';
-  }
-  if (cond === 'abroad' || labelLower.includes('nước ngoài') || labelLower.includes('đang đi')) {
-    return presence.status === 'abroad';
-  }
-  if (cond === 'overdue' || labelLower.includes('quá hạn')) {
-    return presence.status === 'overdue';
-  }
-
-  // 3. Dynamic Field Condition
-  if (card.field) {
+  // 1. Dynamic Field Condition (Top priority - if field is configured)
+  if (card.field && String(card.field).trim() !== '') {
     const rawVal = getCellValue(item, card.field);
     const fieldVal = (rawVal !== undefined && rawVal !== null && rawVal !== '-')
       ? String(rawVal).trim()
@@ -742,12 +721,33 @@ const matchCardCondition = (item, card) => {
     if (op === 'has_value') {
       return !!fieldVal && fieldVal !== 'Chưa rõ';
     }
+    if (op === 'empty') {
+      return !fieldVal || fieldVal === 'Chưa rõ';
+    }
     if (op === 'equals') {
       return fieldVal.toLowerCase() === String(card.value || '').trim().toLowerCase();
     }
     if (op === 'contains') {
       return fieldVal.toLowerCase().includes(String(card.value || '').trim().toLowerCase());
     }
+    return true;
+  }
+
+  // 2. Preset Condition (when no field is selected)
+  const cond = card.condition || card.id || 'all';
+  if (cond === 'all') {
+    return true;
+  }
+
+  const presence = getTripPresence(item);
+  if (cond === 'completed') {
+    return presence.status === 'completed';
+  }
+  if (cond === 'abroad') {
+    return presence.status === 'abroad';
+  }
+  if (cond === 'overdue') {
+    return presence.status === 'overdue';
   }
 
   return true;
@@ -807,7 +807,6 @@ const tripFormData = ref({
 });
 
 // Default columns definition
-// Default columns definition
 const DEFAULT_TRIP_COLUMNS = [
   { id: 'personnelName', label: 'Họ và tên', width: '180px' },
   { id: 'position', label: 'Chức vụ', width: '150px' },
@@ -818,7 +817,6 @@ const DEFAULT_TRIP_COLUMNS = [
   { id: 'decisionNumber', label: 'Số quyết định', width: '130px' },
   { id: 'fundingName', label: 'Nguồn kinh phí', width: '140px' },
   { id: 'purpose', label: 'Mục đích chuyến đi', width: '160px' },
-  { id: 'status', label: 'Tiến độ Đi - Về', width: '140px' },
 ];
 
 const allAvailableColumnsList = computed(() => {
