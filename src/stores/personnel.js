@@ -427,61 +427,44 @@ export const usePersonnelStore = defineStore('personnel', {
           }
         });
 
+        if (Array.isArray(formData.trips)) customData.trips = formData.trips;
+        if (Array.isArray(formData.relatives)) customData.relatives = formData.relatives;
+        if (formData.flags) customData.flags = formData.flags;
+        if (formData.files) customData.files = formData.files;
+
         payload.custom_data = JSON.stringify(customData);
 
         let saved = null;
         if (payload.id) {
           saved = await updatePersonnel(payload.id, payload);
-          await logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name} (${formData.code || formData.id})`);
+          logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name} (${formData.code || formData.id})`).catch(() => {});
         } else {
           payload.id = 'CB-' + Date.now();
           if (!payload.code) payload.code = payload.id;
           saved = await createPersonnel(payload);
-          await logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name}`);
+          logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name}`).catch(() => {});
         }
 
-        // Sync relatives to appendix2
-        const pId = payload.id;
-        if (Array.isArray(formData.relatives)) {
-          for (const rel of formData.relatives) {
-            try {
-              if (rel.id && !String(rel.id).startsWith('temp_')) {
-                await apiClient.patch(`/items/appendix2/${rel.id}`, {
-                  ...rel,
-                  personnelId: pId,
-                });
-              } else {
-                await apiClient.post('/items/appendix2', {
-                  ...rel,
-                  id: 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-                  personnelId: pId,
-                });
-              }
-            } catch (err) {}
-          }
-        }
+        // Fast optimistic in-memory update
+        const fullSavedObj = {
+          ...payload,
+          ...customData,
+          custom_data: JSON.stringify(customData),
+          trips: formData.trips || customData.trips || [],
+          relatives: formData.relatives || customData.relatives || [],
+          flags: formData.flags || customData.flags || {},
+        };
 
-        // Sync trips to appendix1
-        if (Array.isArray(formData.trips)) {
-          for (const trip of formData.trips) {
-            try {
-              if (trip.id && !String(trip.id).startsWith('temp_')) {
-                await apiClient.patch(`/items/appendix1/${trip.id}`, {
-                  ...trip,
-                  personnelId: pId,
-                });
-              } else {
-                await apiClient.post('/items/appendix1', {
-                  ...trip,
-                  id: 'app1_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-                  personnelId: pId,
-                });
-              }
-            } catch (err) {}
-          }
+        const existingIdx = this.personnelList.findIndex((p) => String(p.id) === String(payload.id));
+        if (existingIdx !== -1) {
+          this.personnelList[existingIdx] = { ...this.personnelList[existingIdx], ...fullSavedObj };
+        } else {
+          this.personnelList.unshift(fullSavedObj);
         }
+        this.saveToStorage();
 
-        await this.fetchPersonnel();
+        // Refresh in background
+        this.fetchPersonnel().catch(() => {});
         this.isDialogOpen = false;
         return saved;
       } catch (e) {

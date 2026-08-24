@@ -95,7 +95,7 @@
           />
           <Button label="Hủy" severity="secondary" text size="small" @click="visible = false" />
           <Button
-            label="Lưu toàn bộ Hồ sơ"
+            label="Lưu hồ sơ"
             icon="pi pi-check"
             severity="success"
             size="small"
