@@ -32,16 +32,12 @@
           <span>Xóa đã chọn ({{ selectedTripKeys.length }})</span>
         </button>
 
-        <!-- Column Picker -->
-        <button
-          type="button"
-          class="btn-action-outline"
-          @click="isColumnPickerOpen = true"
-          title="Tùy chọn ẩn / hiện cột"
-        >
-          <i class="pi pi-table"></i>
-          <span>Chọn cột hiển thị ({{ selectedColIds.length }}/{{ allAvailableColumnsList.length }})</span>
-        </button>
+        <!-- Column Selector (Shared reusable component) -->
+        <ColumnSelector
+          v-model="selectedColIds"
+          :options="allAvailableColumnsList"
+          @change="onColumnsChange"
+        />
 
         <!-- Export PDF / Word -->
         <button
@@ -546,6 +542,7 @@ import { useAuthStore } from '@/stores/auth';
 import { getAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
+import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import { formatDate, parseDateObj, computePresenceStatus } from '@/utils/formatters';
 import * as XLSX from 'xlsx';
 
@@ -810,6 +807,7 @@ const tripFormData = ref({
 });
 
 // Default columns definition
+// Default columns definition
 const DEFAULT_TRIP_COLUMNS = [
   { id: 'personnelName', label: 'Họ và tên', width: '180px' },
   { id: 'position', label: 'Chức vụ', width: '150px' },
@@ -829,6 +827,14 @@ const allAvailableColumnsList = computed(() => {
 
   if (src === 'trips') {
     const seen = new Set();
+
+    // 1. Put standard trip columns first
+    DEFAULT_TRIP_COLUMNS.forEach((c) => {
+      seen.add(c.id);
+      rawList.push(c);
+    });
+
+    // 2. Add extra custom columns mapped in importMappingTrips
     (personnelStore.importMappingTrips || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
@@ -836,13 +842,6 @@ const allAvailableColumnsList = computed(() => {
           rawList.push({ id: c.id, label: c.label || c.id, width: '150px', format: c.format });
         }
       });
-    });
-
-    DEFAULT_TRIP_COLUMNS.forEach((c) => {
-      if (!seen.has(c.id)) {
-        seen.add(c.id);
-        rawList.push(c);
-      }
     });
   } else if (src === 'relatives') {
     const seen = new Set();
@@ -867,23 +866,31 @@ const allAvailableColumnsList = computed(() => {
     });
   }
 
-  return rawList.map((c, idx) => ({
-    ...c,
-    displayLabel: `(Cột ${idx + 1}) - ${c.label || c.id}`,
-  }));
-});
-
-const filteredPickerColumns = computed(() => {
-  if (!columnSearchQuery.value.trim()) return allAvailableColumnsList.value;
-  const q = columnSearchQuery.value.trim().toLowerCase();
-  return allAvailableColumnsList.value.filter((c) => (c.displayLabel || c.label || '').toLowerCase().includes(q) || (c.id || '').toLowerCase().includes(q));
+  return rawList;
 });
 
 const allColumns = computed(() => allAvailableColumnsList.value);
 const selectedColIds = ref(DEFAULT_TRIP_COLUMNS.map((c) => c.id));
 
+const onColumnsChange = async (newCols) => {
+  selectedColIds.value = [...newCols];
+  const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
+  localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
+  localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
+
+  const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
+  if (idx !== -1) {
+    customDashboards.value[idx].columns = [...selectedColIds.value];
+    try {
+      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+    } catch (e) {}
+  }
+};
+
 const visibleColumns = computed(() => {
-  return allAvailableColumnsList.value.filter((c) => selectedColIds.value.includes(c.id));
+  const colMap = new Map();
+  allAvailableColumnsList.value.forEach((c) => colMap.set(c.id, c));
+  return selectedColIds.value.map((id) => colMap.get(id) || { id, label: id, width: '150px' });
 });
 
 // Build unified list of trips from both Cán bộ and Thân nhân profiles
@@ -1221,11 +1228,66 @@ const formatDisplayDate = (dStr) => {
 const getCellValue = (trip, colId) => {
   if (!trip || !colId) return '-';
 
-  if (colId === 'fundingName' || colId === 'funding' || colId === 'nguon_kinh_phi' || colId === 'kinh_phi') {
+  // 1. Status Computed
+  if (colId === 'status' || colId === 'tripStatus' || colId === 'presenceStatus') {
+    return getStatusLabel(trip);
+  }
+
+  // 2. Personnel Info Aliases
+  if (colId === 'personnelName' || colId === 'name' || colId === 'ho_va_ten' || colId === 'hoTen') {
+    return trip.personnelName || trip.name || trip.rawPerson?.name || '-';
+  }
+  if (colId === 'personnelCode' || colId === 'code' || colId === 'ma_can_bo' || colId === 'maCb') {
+    return trip.personnelCode || trip.code || trip.rawPerson?.code || '-';
+  }
+  if (colId === 'position' || colId === 'positionName' || colId === 'chuc_vu' || colId === 'chucVu') {
+    return trip.position || trip.positionName || trip.rawPerson?.positionName || trip.rawPerson?.position || '-';
+  }
+  if (colId === 'departmentName' || colId === 'don_vi_cong_tac' || colId === 'donVi') {
+    return trip.departmentName || trip.rawPerson?.departmentName || (trip.rawPerson?.departmentId ? personnelStore.getDepartmentName(trip.rawPerson.departmentId) : '') || '-';
+  }
+
+  // 3. Country Aliases
+  if (colId === 'countryName' || colId === 'country' || colId === 'quoc_gia_xuat_canh' || colId === 'quocGia') {
+    return trip.countryName || trip.country || trip.quoc_gia_xuat_canh || trip.custom_data?.countryName || trip.custom_data?.quoc_gia_xuat_canh || trip.rawTrip?.countryName || '-';
+  }
+
+  // 4. Departure Date Aliases
+  if (colId === 'departureDate' || colId === 'ngay_xuat_canh' || colId === 'ngayDi' || colId === 'approvedDepartureDate') {
+    const val = trip.departureDate || trip.ngay_xuat_canh || trip.approvedDepartureDate || trip.custom_data?.departureDate || trip.rawTrip?.departureDate;
+    return formatDisplayDate(val);
+  }
+
+  // 5. Arrival Date Aliases
+  if (colId === 'arrivalDate' || colId === 'ngay_nhap_canh' || colId === 'ngayVe' || colId === 'approvedArrivalDate') {
+    const val = trip.arrivalDate || trip.ngay_nhap_canh || trip.custom_data?.arrivalDate || trip.rawTrip?.arrivalDate;
+    if (val && String(val).trim() !== '' && String(val).trim() !== '-') {
+      return formatDisplayDate(val);
+    }
+    return getStatusLabel(trip);
+  }
+
+  // 6. Decision Number Aliases
+  if (colId === 'decisionNumber' || colId === 'decision' || colId === 'so_quyet_dinh' || colId === 'so_qd_di' || colId === 'soQd') {
+    return trip.decisionNumber || trip.decision || trip.so_quyet_dinh || trip.so_qd_di || trip.custom_data?.decisionNumber || trip.rawTrip?.decisionNumber || '-';
+  }
+
+  // 7. Funding Aliases
+  if (colId === 'fundingName' || colId === 'funding' || colId === 'nguon_kinh_phi' || colId === 'kinh_phi' || colId === 'nguonKinhPhi' || colId === 'kinhPhi') {
     return getFundingValue(trip);
   }
 
-  // Check if col is Formula column in Trips mapping
+  // 8. Purpose Aliases
+  if (colId === 'purpose' || colId === 'muc_dich' || colId === 'muc_dich_xuat_canh' || colId === 'mucDich') {
+    return trip.purpose || trip.muc_dich || trip.muc_dich_xuat_canh || trip.custom_data?.purpose || trip.rawTrip?.purpose || '-';
+  }
+
+  // 9. Passport Aliases
+  if (colId === 'passportNumber' || colId === 'so_ho_chieu' || colId === 'hoChieu' || colId === 'hcCaNhan') {
+    return trip.passportNumber || trip.so_ho_chieu || trip.hcCaNhan || trip.custom_data?.passportNumber || trip.rawTrip?.passportNumber || '-';
+  }
+
+  // 10. Check if col is Formula column in Trips mapping
   const allMap = {};
   (personnelStore.importMappingTrips || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
@@ -1246,21 +1308,28 @@ const getCellValue = (trip, colId) => {
     return status.label;
   }
 
-  if (trip[colId] !== undefined && trip[colId] !== null && String(trip[colId]).trim() !== '' && String(trip[colId]).trim() !== '-') {
-    return trip[colId];
+  // 11. Format dates if colDef.format === 'date'
+  if (colDef?.format === 'date') {
+    const raw = trip[colId] || trip.rawTrip?.[colId] || trip.rawPerson?.[colId] || trip.custom_data?.[colId] || trip.rawTrip?.custom_data?.[colId];
+    return formatDisplayDate(raw);
   }
-  if (trip.rawTrip && trip.rawTrip[colId] !== undefined && trip.rawTrip[colId] !== null && String(trip.rawTrip[colId]).trim() !== '') {
-    return trip.rawTrip[colId];
+
+  // 12. Direct lookups across all objects
+  const lookups = [
+    trip[colId],
+    trip.rawTrip?.[colId],
+    trip.rawPerson?.[colId],
+    trip.custom_data?.[colId],
+    trip.rawTrip?.custom_data?.[colId],
+    trip.rawPerson?.custom_data?.[colId],
+  ];
+
+  for (const v of lookups) {
+    if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
+      return v;
+    }
   }
-  if (trip.rawPerson && trip.rawPerson[colId] !== undefined && trip.rawPerson[colId] !== null && String(trip.rawPerson[colId]).trim() !== '') {
-    return trip.rawPerson[colId];
-  }
-  if (trip.rawPerson?.custom_data && trip.rawPerson.custom_data[colId] !== undefined && trip.rawPerson.custom_data[colId] !== null) {
-    return trip.rawPerson.custom_data[colId];
-  }
-  if (trip.custom_data && trip.custom_data[colId] !== undefined && trip.custom_data[colId] !== null) {
-    return trip.custom_data[colId];
-  }
+
   return '-';
 };
 
