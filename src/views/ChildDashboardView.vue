@@ -584,33 +584,41 @@ const activeMetricCards = computed(() => {
   ];
 });
 
-const activeMetricCardId = ref('all');
-
 const matchCardCondition = (item, card) => {
   if (!card) return true;
+
   // 1. If card has a specific field configured
   if (card.field) {
-    const fieldVal = item[card.field] !== undefined && item[card.field] !== null
-      ? String(item[card.field]).trim()
-      : (item.rawTrip?.[card.field] || item.rawPerson?.[card.field] || item.custom_data?.[card.field] || item.rawPerson?.custom_data?.[card.field] || '');
-    
+    const rawVal = getCellValue(item, card.field);
+    const fieldVal = (rawVal !== undefined && rawVal !== null && rawVal !== '-')
+      ? String(rawVal).trim()
+      : '';
+
     const op = card.operator || 'has_value';
     if (op === 'has_value') {
-      return !!fieldVal;
+      return !!fieldVal && fieldVal !== 'Chưa rõ';
     }
     if (op === 'equals') {
-      return String(fieldVal).toLowerCase() === String(card.value || '').trim().toLowerCase();
+      return fieldVal.toLowerCase() === String(card.value || '').trim().toLowerCase();
     }
     if (op === 'contains') {
-      return String(fieldVal).toLowerCase().includes(String(card.value || '').trim().toLowerCase());
+      return fieldVal.toLowerCase().includes(String(card.value || '').trim().toLowerCase());
     }
   }
 
   // 2. Fallback to status / trip condition
-  const cond = card.condition || card.operator || 'all';
-  if (cond === 'completed') return !item.isAbroad && !item.isOverdue;
-  if (cond === 'abroad') return item.isAbroad && !item.isOverdue;
-  if (cond === 'overdue') return item.isOverdue;
+  const cond = card.condition || card.operator || card.id || 'all';
+  const labelLower = String(card.label || '').toLowerCase();
+
+  if (cond === 'completed' || labelLower.includes('về nước') || labelLower.includes('hoàn thành')) {
+    return !item.isAbroad && !item.isOverdue;
+  }
+  if (cond === 'abroad' || labelLower.includes('nước ngoài') || labelLower.includes('đang đi')) {
+    return item.isAbroad && !item.isOverdue;
+  }
+  if (cond === 'overdue' || labelLower.includes('quá hạn')) {
+    return item.isOverdue;
+  }
   return true;
 };
 
@@ -619,6 +627,8 @@ const getCardMetricValue = (card) => {
   return unifiedTripsList.value.filter((item) => matchCardCondition(item, card)).length;
 };
 
+const activeMetricCardId = ref('all');
+
 const toggleMetricCardFilter = (card, cIdx) => {
   const cardKey = card.id || card.label || cIdx;
   if (activeMetricCardId.value === cardKey) {
@@ -626,7 +636,7 @@ const toggleMetricCardFilter = (card, cIdx) => {
     statusFilter.value = 'all';
   } else {
     activeMetricCardId.value = cardKey;
-    if (card.condition) statusFilter.value = card.condition;
+    statusFilter.value = 'all';
   }
 };
 
@@ -684,17 +694,21 @@ const allAvailableColumnsList = computed(() => {
   let rawList = [];
 
   if (src === 'trips') {
-    const base = [...DEFAULT_TRIP_COLUMNS];
-    const seen = new Set(base.map((c) => c.id));
-    rawList = [...base];
-
+    const seen = new Set();
     (personnelStore.importMappingTrips || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
-          rawList.push({ id: c.id, label: c.label || c.id, width: '150px' });
+          rawList.push({ id: c.id, label: c.label || c.id, width: '150px', format: c.format });
         }
       });
+    });
+
+    DEFAULT_TRIP_COLUMNS.forEach((c) => {
+      if (!seen.has(c.id)) {
+        seen.add(c.id);
+        rawList.push(c);
+      }
     });
   } else if (src === 'relatives') {
     const seen = new Set();
@@ -738,98 +752,122 @@ const visibleColumns = computed(() => {
   return allAvailableColumnsList.value.filter((c) => selectedColIds.value.includes(c.id));
 });
 
-// Build unified list of trips from both Personnel.trips and Relatives
+// Build unified list of trips from both database table appendix1 and personnel profiles
 const unifiedTripsList = computed(() => {
   const list = [];
   const pList = personnelStore.personnelList || [];
-  const rList = personnelStore.relativesList || [];
+  const storeTrips = personnelStore.tripsList || [];
   const now = new Date();
+  const processedTripKeys = new Set();
 
-  // 1. Cán bộ trips
-  pList.forEach((p) => {
-    (p.trips || []).forEach((t, tIdx) => {
-      const depDate = t.departureDate || t.approvedDepartureDate || '';
-      const arrDate = t.arrivalDate || '';
-      const appArrDate = t.approvedArrivalDate || '';
-      const extDate = t.approvedExtensionDate || '';
+  const processTripItem = (t, defaultParent = null, isRel = false) => {
+    let custom = {};
+    if (t.custom_data) {
+      try {
+        custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+      } catch (e) {}
+    }
 
-      const depObj = parseDateObj(depDate);
-      const arrObj = parseDateObj(arrDate);
-      const appArrObj = parseDateObj(extDate || appArrDate);
+    const tripKey = String(t.cccdchuyendi || custom.cccdchuyendi || t.personnelId || t.code || t.cccd || '').trim();
+    const matchedP = defaultParent || (tripKey ? personnelStore.findPersonByCccd(tripKey) : null);
+    const matchedR = (!matchedP && tripKey) ? personnelStore.findRelativeByCccd(tripKey) : null;
+    const parentP = matchedP || (matchedR?.cccdparent ? personnelStore.findPersonByCccd(matchedR.cccdparent) : null);
 
-      let isAbroad = false;
-      let isOverdue = false;
-      let overdueDays = 0;
+    const isRelative = isRel || Boolean(matchedR || t.relativeName || t.cccdthannhan || custom.cccdthannhan || (t.parentName && !matchedP));
 
-      if (!arrDate || !arrObj) {
+    const depDate = t.departureDate || custom.departureDate || t.approvedDepartureDate || '';
+    const arrDate = t.arrivalDate || custom.arrivalDate || '';
+    const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || '';
+    const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || '';
+
+    const depObj = parseDateObj(depDate);
+    const arrObj = parseDateObj(arrDate);
+    const appArrObj = parseDateObj(extDate || appArrDate);
+
+    let isAbroad = false;
+    let isOverdue = false;
+    let overdueDays = 0;
+
+    if (!arrDate || !arrObj) {
+      if (depObj && depObj > now) {
+        isAbroad = false;
+      } else {
         isAbroad = true;
         if (appArrObj && now > appArrObj) {
           isOverdue = true;
           overdueDays = Math.max(1, Math.floor((now - appArrObj) / (1000 * 60 * 60 * 24)));
         }
-      } else if (appArrObj && arrObj > appArrObj) {
-        isOverdue = true;
-        overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
       }
+    } else if (appArrObj && arrObj > appArrObj) {
+      isOverdue = true;
+      overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
+    }
 
-      list.push({
-        uniqueKey: `cb_${p.id}_${t.id || tIdx}`,
-        isRelative: false,
-        personnelId: p.id,
-        personnelCode: p.code || `CB-${String(p.id).slice(-5)}`,
-        personnelName: p.name,
-        position: p.position || '',
-        departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-        countryName: t.countryName || t.country || '',
-        departureDate: depDate,
-        arrivalDate: arrDate,
-        approvedDepartureDate: t.approvedDepartureDate || depDate,
-        approvedArrivalDate: appArrDate,
-        approvedExtensionDate: extDate,
-        decisionNumber: t.decisionNumber || t.decision || '',
-        fundingName: t.fundingName || t.funding || p.funding2 || p.funding || '',
-        purpose: t.purpose || t.tripPurpose || t.content || '',
-        isAbroad,
-        isOverdue,
-        overdueDays,
-        rawTrip: t,
-        rawPerson: p,
-      });
+    const cName = t.countryName || custom.countryName || t.country || custom.quoc_gia_xuat_canh || '';
+    const fName = t.fundingName || custom.fundingName || t.funding || custom.nguon_kinh_phi || '';
+    const dNum = t.decisionNumber || custom.decisionNumber || t.decision || '';
+
+    let pName = 'Chưa rõ';
+    let pos = '';
+    let dept = '';
+    let pCode = '';
+
+    if (matchedP) {
+      pName = matchedP.name;
+      pos = matchedP.positionName || matchedP.position || '';
+      dept = personnelStore.getDepartmentName(matchedP.departmentId) || matchedP.departmentName || '';
+      pCode = matchedP.code || '';
+    } else if (matchedR) {
+      pName = matchedR.relativeName || matchedR.name;
+      pos = `TN (${matchedR.relationshipName || 'Thân nhân'}) của: ${parentP?.name || matchedR.parentName || 'Cán bộ'}`;
+      dept = parentP ? (personnelStore.getDepartmentName(parentP.departmentId) || parentP.departmentName || '') : '';
+      pCode = matchedR.code || '';
+    } else {
+      pName = t.personnelName || custom.personnelName || (isRelative ? 'Thân nhân' : 'Cán bộ');
+      pos = t.position || custom.position || '';
+      dept = t.departmentName || custom.departmentName || '';
+      pCode = t.personnelCode || custom.personnelCode || '';
+    }
+
+    const uniqueKey = t.id || `${tripKey}_${depDate}_${cName}`;
+    if (processedTripKeys.has(uniqueKey)) return;
+    processedTripKeys.add(uniqueKey);
+
+    list.push({
+      ...custom,
+      ...t,
+      uniqueKey,
+      isRelative,
+      personnelId: parentP?.id || matchedP?.id || t.personnelId || '',
+      personnelCode: pCode,
+      personnelName: pName,
+      position: pos,
+      departmentName: dept,
+      countryName: cName,
+      departureDate: depDate,
+      arrivalDate: arrDate,
+      approvedDepartureDate: t.approvedDepartureDate || custom.approvedDepartureDate || depDate,
+      approvedArrivalDate: appArrDate,
+      approvedExtensionDate: extDate,
+      decisionNumber: dNum,
+      fundingName: fName,
+      purpose: t.purpose || custom.purpose || '',
+      passportNumber: t.passportNumber || custom.passportNumber || '',
+      isAbroad,
+      isOverdue,
+      overdueDays,
+      rawTrip: t,
+      rawPerson: matchedP || parentP || matchedR,
+      custom_data: custom,
     });
-  });
+  };
 
-  // 2. Thân nhân records with abroad info
-  const processedRelatives = new Set();
+  // 1. Process all trips from store.tripsList (which comes from table appendix1 in DB)
+  storeTrips.forEach((t) => processTripItem(t));
+
+  // 2. Process all trips embedded inside personnel records
   pList.forEach((p) => {
-    (p.relatives || []).forEach((r, rIdx) => {
-      const rKey = r.id || `${p.id}_${r.name || r.relativeName}`;
-      if (!processedRelatives.has(rKey)) {
-        processedRelatives.add(rKey);
-        const cName = r.countryName || r.country || '';
-        if (cName && cName !== '-' && cName !== 'Chưa rõ') {
-          list.push({
-            uniqueKey: `tn_${p.id}_${r.id || rIdx}`,
-            isRelative: true,
-            personnelId: p.id,
-            personnelCode: p.code || '',
-            personnelName: r.relativeName || r.name || 'Thân nhân',
-            position: `TN của: ${p.name}`,
-            departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-            countryName: cName,
-            departureDate: r.departureDate || r.startDate || '',
-            arrivalDate: r.arrivalDate || r.endDate || '',
-            decisionNumber: r.decisionNumber || '-',
-            fundingName: r.kinhphiTN || r.fundingName || r.funding || '',
-            purpose: r.relationship ? `Quan hệ: ${r.relationship}` : 'Thân nhân ở nước ngoài',
-            isAbroad: !r.arrivalDate,
-            isOverdue: false,
-            overdueDays: 0,
-            rawRelative: r,
-            rawPerson: p,
-          });
-        }
-      }
-    });
+    (p.trips || []).forEach((t) => processTripItem(t, p, false));
   });
 
   return list;
