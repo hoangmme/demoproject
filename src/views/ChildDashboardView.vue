@@ -268,9 +268,9 @@
                 </template>
 
                 <!-- 7. Nguồn kinh phí -->
-                <template v-else-if="col.id === 'fundingName' || col.id === 'funding'">
+                <template v-else-if="col.id === 'fundingName' || col.id === 'funding' || col.id === 'nguon_kinh_phi' || col.id === 'kinh_phi'">
                   <span class="badge-funding">
-                    {{ trip.fundingName || trip.funding || '-' }}
+                    {{ getFundingValue(trip) }}
                   </span>
                 </template>
 
@@ -612,10 +612,129 @@ const activeMetricCards = computed(() => {
   ];
 });
 
+// Single Unified Presence Status Calculator
+const getTripPresence = (t) => {
+  if (!t) return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const depRaw = t.departureDate || t.approvedDepartureDate || t.custom_data?.departureDate;
+  const arrRaw = t.arrivalDate || t.custom_data?.arrivalDate;
+  const appArrRaw = t.approvedExtensionDate || t.approvedArrivalDate || t.custom_data?.approvedArrivalDate;
+
+  const depDate = parseDateObj(depRaw);
+  const arrDate = parseDateObj(arrRaw);
+  const appArrDate = parseDateObj(appArrRaw);
+
+  // No trip dates at all
+  if (!depDate && !arrDate) {
+    return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
+  }
+
+  // If departure is in the future
+  if (depDate) {
+    const depNorm = new Date(depDate);
+    depNorm.setHours(0, 0, 0, 0);
+    if (today < depNorm) {
+      return { status: 'upcoming', isAbroad: false, isOverdue: false, label: 'Chưa khởi hành', overdueDays: 0 };
+    }
+  }
+
+  // If arrival date exists and has already passed (today > arrivalDate)
+  if (arrDate) {
+    const arrNorm = new Date(arrDate);
+    arrNorm.setHours(23, 59, 59, 999);
+    if (today > arrNorm) {
+      let isOverdue = false;
+      let overdueDays = 0;
+      if (appArrDate) {
+        const appArrNorm = new Date(appArrDate);
+        appArrNorm.setHours(23, 59, 59, 999);
+        if (arrNorm > appArrNorm) {
+          isOverdue = true;
+          overdueDays = Math.max(1, Math.floor((arrNorm - appArrNorm) / (1000 * 60 * 60 * 24)));
+        }
+      }
+      return {
+        status: isOverdue ? 'overdue' : 'completed',
+        isAbroad: false,
+        isOverdue,
+        label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đã về nước',
+        overdueDays,
+      };
+    }
+  }
+
+  // Departure is in the past/today, and either no arrival date OR arrival date is in the future: Currently abroad!
+  let isOverdue = false;
+  let overdueDays = 0;
+  if (appArrDate) {
+    const appArrNorm = new Date(appArrDate);
+    appArrNorm.setHours(23, 59, 59, 999);
+    if (today > appArrNorm) {
+      isOverdue = true;
+      overdueDays = Math.max(1, Math.floor((today - appArrNorm) / (1000 * 60 * 60 * 24)));
+    }
+  }
+
+  return {
+    status: isOverdue ? 'overdue' : 'abroad',
+    isAbroad: true,
+    isOverdue,
+    label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đang ở nước ngoài',
+    overdueDays,
+  };
+};
+
+// Robust funding extractor across all database keys/aliases
+const getFundingValue = (item) => {
+  if (!item) return '-';
+  const val = (
+    item.fundingName ||
+    item.funding ||
+    item.nguon_kinh_phi ||
+    item.kinh_phi ||
+    item.nguonKinhPhi ||
+    item.kinhPhi ||
+    item.rawTrip?.fundingName ||
+    item.rawTrip?.funding ||
+    item.rawTrip?.nguon_kinh_phi ||
+    item.rawTrip?.kinh_phi ||
+    item.custom_data?.fundingName ||
+    item.custom_data?.funding ||
+    item.custom_data?.nguon_kinh_phi ||
+    item.custom_data?.kinh_phi ||
+    ''
+  );
+  return (val && String(val).trim() !== '' && String(val).trim() !== '-') ? String(val).trim() : '-';
+};
+
 const matchCardCondition = (item, card) => {
   if (!card) return true;
 
-  // 1. If card has a specific field configured
+  const cond = card.condition || card.operator || card.id || 'all';
+  const labelLower = String(card.label || '').toLowerCase();
+
+  // 1. Total (Toàn bộ / Tất cả)
+  if (cond === 'all' || labelLower.includes('toàn bộ') || labelLower.includes('tất cả')) {
+    return true;
+  }
+
+  // 2. Status conditions using unified getTripPresence
+  const presence = getTripPresence(item);
+
+  if (cond === 'completed' || labelLower.includes('về nước') || labelLower.includes('hoàn thành')) {
+    return presence.status === 'completed';
+  }
+  if (cond === 'abroad' || labelLower.includes('nước ngoài') || labelLower.includes('đang đi')) {
+    return presence.status === 'abroad';
+  }
+  if (cond === 'overdue' || labelLower.includes('quá hạn')) {
+    return presence.status === 'overdue';
+  }
+
+  // 3. Dynamic Field Condition
   if (card.field) {
     const rawVal = getCellValue(item, card.field);
     const fieldVal = (rawVal !== undefined && rawVal !== null && rawVal !== '-')
@@ -634,25 +753,12 @@ const matchCardCondition = (item, card) => {
     }
   }
 
-  // 2. Fallback to status / trip condition
-  const cond = card.condition || card.operator || card.id || 'all';
-  const labelLower = String(card.label || '').toLowerCase();
-
-  if (cond === 'completed' || labelLower.includes('về nước') || labelLower.includes('hoàn thành')) {
-    return !item.isAbroad && !item.isOverdue;
-  }
-  if (cond === 'abroad' || labelLower.includes('nước ngoài') || labelLower.includes('đang đi')) {
-    return item.isAbroad && !item.isOverdue;
-  }
-  if (cond === 'overdue' || labelLower.includes('quá hạn')) {
-    return item.isOverdue;
-  }
   return true;
 };
 
 const getCardMetricValue = (card) => {
   if (!card) return 0;
-  return unifiedTripsList.value.filter((item) => matchCardCondition(item, card)).length;
+  return currentSourceList.value.filter((item) => matchCardCondition(item, card)).length;
 };
 
 const activeMetricCardId = ref('all');
@@ -803,7 +909,7 @@ const unifiedTripsList = computed(() => {
       const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || '';
       const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || '';
       const dNum = t.decisionNumber || custom.decisionNumber || t.decision || '';
-      const fName = t.fundingName || custom.fundingName || t.funding || custom.nguon_kinh_phi || '';
+      const fName = t.fundingName || t.funding || t.nguon_kinh_phi || t.kinh_phi || t.nguonKinhPhi || t.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
       const purpose = t.purpose || custom.purpose || '';
 
       // Skip empty/dummy placeholder trip objects that have no real data
@@ -812,35 +918,13 @@ const unifiedTripsList = computed(() => {
       }
 
       const isRel = Boolean(t.isRelative || t.relativeName || t.cccdthannhan);
-      const depObj = parseDateObj(depDate);
-      const arrObj = parseDateObj(arrDate);
-      const appArrObj = parseDateObj(extDate || appArrDate);
-
-      let isAbroad = false;
-      let isOverdue = false;
-      let overdueDays = 0;
-
-      if (!depDate && !arrDate) {
-        isAbroad = false;
-        isOverdue = false;
-      } else if (arrDate && arrObj) {
-        isAbroad = false;
-        if (appArrObj && arrObj > appArrObj) {
-          isOverdue = true;
-          overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
-        }
-      } else if (depDate && depObj) {
-        if (depObj > now) {
-          isAbroad = false;
-          isOverdue = false;
-        } else {
-          isAbroad = true;
-          if (appArrObj && now > appArrObj) {
-            isOverdue = true;
-            overdueDays = Math.max(1, Math.floor((now - appArrObj) / (1000 * 60 * 60 * 24)));
-          }
-        }
-      }
+      const presence = getTripPresence({
+        departureDate: depDate,
+        arrivalDate: arrDate,
+        approvedArrivalDate: appArrDate,
+        approvedExtensionDate: extDate,
+        custom_data: custom,
+      });
 
       const uniqueKey = t.id || `trip_${p.id}_${tIdx}`;
       if (processedTripKeys.has(uniqueKey)) return;
@@ -866,9 +950,11 @@ const unifiedTripsList = computed(() => {
         fundingName: fName,
         purpose,
         passportNumber: t.passportNumber || custom.passportNumber || '',
-        isAbroad,
-        isOverdue,
-        overdueDays,
+        isAbroad: presence.isAbroad,
+        isOverdue: presence.isOverdue,
+        overdueDays: presence.overdueDays,
+        presenceStatus: presence.status,
+        presenceLabel: presence.label,
         rawTrip: t,
         rawPerson: p,
         custom_data: custom,
@@ -891,7 +977,7 @@ const unifiedTripsList = computed(() => {
         const appArrDate = rt.approvedArrivalDate || custom.approvedArrivalDate || '';
         const extDate = rt.approvedExtensionDate || custom.approvedExtensionDate || '';
         const dNum = rt.decisionNumber || custom.decisionNumber || '';
-        const fName = rt.fundingName || custom.fundingName || rt.funding || '';
+        const fName = rt.fundingName || rt.funding || rt.nguon_kinh_phi || rt.kinh_phi || rt.nguonKinhPhi || rt.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
         const purpose = rt.purpose || custom.purpose || '';
 
         // Skip empty/dummy placeholder trip objects
@@ -899,35 +985,13 @@ const unifiedTripsList = computed(() => {
           return;
         }
 
-        const depObj = parseDateObj(depDate);
-        const arrObj = parseDateObj(arrDate);
-        const appArrObj = parseDateObj(extDate || appArrDate);
-
-        let isAbroad = false;
-        let isOverdue = false;
-        let overdueDays = 0;
-
-        if (!depDate && !arrDate) {
-          isAbroad = false;
-          isOverdue = false;
-        } else if (arrDate && arrObj) {
-          isAbroad = false;
-          if (appArrObj && arrObj > appArrObj) {
-            isOverdue = true;
-            overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
-          }
-        } else if (depDate && depObj) {
-          if (depObj > now) {
-            isAbroad = false;
-            isOverdue = false;
-          } else {
-            isAbroad = true;
-            if (appArrObj && now > appArrObj) {
-              isOverdue = true;
-              overdueDays = Math.max(1, Math.floor((now - appArrObj) / (1000 * 60 * 60 * 24)));
-            }
-          }
-        }
+        const presence = getTripPresence({
+          departureDate: depDate,
+          arrivalDate: arrDate,
+          approvedArrivalDate: appArrDate,
+          approvedExtensionDate: extDate,
+          custom_data: custom,
+        });
 
         const uniqueKey = rt.id || `rel_trip_${p.id}_${rIdx}_${rtIdx}`;
         if (processedTripKeys.has(uniqueKey)) return;
@@ -953,9 +1017,11 @@ const unifiedTripsList = computed(() => {
           fundingName: fName,
           purpose: rt.purpose || custom.purpose || '',
           passportNumber: rt.passportNumber || custom.passportNumber || '',
-          isAbroad,
-          isOverdue,
-          overdueDays,
+          isAbroad: presence.isAbroad,
+          isOverdue: presence.isOverdue,
+          overdueDays: presence.overdueDays,
+          presenceStatus: presence.status,
+          presenceLabel: presence.label,
           rawTrip: rt,
           rawRelative: r,
           rawPerson: p,
@@ -1155,6 +1221,10 @@ const formatDisplayDate = (dStr) => {
 const getCellValue = (trip, colId) => {
   if (!trip || !colId) return '-';
 
+  if (colId === 'fundingName' || colId === 'funding' || colId === 'nguon_kinh_phi' || colId === 'kinh_phi') {
+    return getFundingValue(trip);
+  }
+
   // Check if col is Formula column in Trips mapping
   const allMap = {};
   (personnelStore.importMappingTrips || []).forEach((g) => {
@@ -1176,28 +1246,34 @@ const getCellValue = (trip, colId) => {
     return status.label;
   }
 
-  if (trip[colId] !== undefined && trip[colId] !== null && trip[colId] !== '') {
+  if (trip[colId] !== undefined && trip[colId] !== null && String(trip[colId]).trim() !== '' && String(trip[colId]).trim() !== '-') {
     return trip[colId];
   }
-  if (trip.rawTrip && trip.rawTrip[colId] !== undefined && trip.rawTrip[colId] !== null && trip.rawTrip[colId] !== '') {
+  if (trip.rawTrip && trip.rawTrip[colId] !== undefined && trip.rawTrip[colId] !== null && String(trip.rawTrip[colId]).trim() !== '') {
     return trip.rawTrip[colId];
   }
-  if (trip.rawPerson && trip.rawPerson[colId] !== undefined && trip.rawPerson[colId] !== null && trip.rawPerson[colId] !== '') {
+  if (trip.rawPerson && trip.rawPerson[colId] !== undefined && trip.rawPerson[colId] !== null && String(trip.rawPerson[colId]).trim() !== '') {
     return trip.rawPerson[colId];
   }
   if (trip.rawPerson?.custom_data && trip.rawPerson.custom_data[colId] !== undefined && trip.rawPerson.custom_data[colId] !== null) {
     return trip.rawPerson.custom_data[colId];
   }
+  if (trip.custom_data && trip.custom_data[colId] !== undefined && trip.custom_data[colId] !== null) {
+    return trip.custom_data[colId];
+  }
   return '-';
 };
 
 const getStatusBadgeClass = (trip) => {
+  if (!trip) return 'status-pill status-completed';
   if (trip.isOverdue) return 'status-pill status-overdue';
   if (trip.isAbroad) return 'status-pill status-abroad';
   return 'status-pill status-completed';
 };
 
 const getStatusLabel = (trip) => {
+  if (!trip) return 'Đã về nước';
+  if (trip.presenceLabel) return trip.presenceLabel;
   if (trip.isOverdue) return `Quá hạn (${trip.overdueDays} ngày)`;
   if (trip.isAbroad) return 'Đang ở nước ngoài';
   return 'Đã về nước';
