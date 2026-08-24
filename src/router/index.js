@@ -10,11 +10,18 @@ import AppendixReportView from '@/views/AppendixReportView.vue';
 import SettingsImportView from '@/views/SettingsImportView.vue';
 import UserManagementView from '@/views/UserManagementView.vue';
 import AuditLogView from '@/views/AuditLogView.vue';
+import AdvancedSearchView from '@/views/AdvancedSearchView.vue';
 
 const routes = [
   {
     path: '/',
     redirect: '/dashboard',
+  },
+  {
+    path: '/advanced-search',
+    name: 'AdvancedSearch',
+    component: AdvancedSearchView,
+    meta: { title: 'Tìm kiếm nâng cao', requiresAuth: true },
   },
   {
     path: '/login',

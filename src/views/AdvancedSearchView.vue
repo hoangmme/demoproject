@@ -1,0 +1,1181 @@
+<template>
+  <div class="app-content advanced-search-layout">
+    <!-- CỘT TRÁI: BỘ LỌC ĐÃ LƯU -->
+    <aside class="saved-presets-sidebar">
+      <div class="presets-header">
+        <h3 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <i class="pi pi-bookmark" style="color: #2563eb;"></i>
+          Bộ lọc đã lưu
+        </h3>
+        <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+          {{ savedPresets.length }} bộ lọc
+        </span>
+      </div>
+
+      <div class="presets-list">
+        <div
+          v-for="(preset, pIdx) in savedPresets"
+          :key="preset.id || pIdx"
+          class="preset-item"
+          :class="{ 'preset-active': activePresetId === preset.id }"
+          @click="applyPreset(preset)"
+        >
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: #1e293b; line-height: 1.35;">
+              {{ preset.name }}
+            </div>
+            <button
+              type="button"
+              class="preset-delete-btn"
+              @click.stop="deletePreset(preset, pIdx)"
+              title="Xóa bộ lọc này"
+            >
+              <i class="pi pi-trash"></i>
+            </button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 0.72rem; color: #64748b; flex-wrap: wrap;">
+            <span class="badge-scope" :class="preset.isShared ? 'scope-shared' : 'scope-private'">
+              {{ preset.isShared ? 'Dùng chung' : 'Riêng của tôi' }}
+            </span>
+            <span>· {{ (preset.criteria || []).length }} điều kiện</span>
+            <span v-if="preset.updatedAt">· {{ preset.updatedAt }}</span>
+          </div>
+        </div>
+
+        <div v-if="savedPresets.length === 0" style="text-align: center; padding: 2rem 1rem; color: #94a3b8; font-size: 0.8rem;">
+          Chưa có bộ lọc nào được lưu. Hãy tạo điều kiện và bấm <b>"Lưu bộ lọc này"</b>.
+        </div>
+      </div>
+
+      <div class="presets-footer-note">
+        <i class="pi pi-info-circle"></i>
+        <span>Bộ lọc có ghi <b>Dùng chung</b> thì cả phòng đều thấy. Bộ lọc <b>Riêng của tôi</b> chỉ bạn thấy.</span>
+      </div>
+    </aside>
+
+    <!-- KHU VỰC CHÍNH: QUERY BUILDER & KẾT QUẢ -->
+    <main class="search-main-content">
+      <!-- Breadcrumb & Title -->
+      <div class="app-card" style="margin-bottom: 1rem; padding: 1.25rem;">
+        <div style="font-size: 0.74rem; color: #64748b; margin-bottom: 4px; font-weight: 500;">
+          Tra cứu / Tìm kiếm nâng cao
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem;">
+          <span class="badge-code">TK-06</span>
+          <h1 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin: 0;">
+            Tìm kiếm nâng cao
+          </h1>
+        </div>
+
+        <!-- Logic Connector Switch (VÀ / HOẶC) -->
+        <div class="logic-connector-bar">
+          <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">Nối các điều kiện bằng:</span>
+          <div class="logic-toggle-group">
+            <button
+              type="button"
+              class="logic-btn"
+              :class="{ 'logic-active': logicOperator === 'AND' }"
+              @click="logicOperator = 'AND'"
+            >
+              VÀ
+            </button>
+            <button
+              type="button"
+              class="logic-btn"
+              :class="{ 'logic-active': logicOperator === 'OR' }"
+              @click="logicOperator = 'OR'"
+            >
+              HOẶC
+            </button>
+          </div>
+          <span style="font-size: 0.78rem; color: #64748b; font-style: italic;">
+            {{ logicOperator === 'AND' ? 'Bản ghi phải khớp tất cả điều kiện' : 'Bản ghi khớp ít nhất một điều kiện' }}
+          </span>
+        </div>
+
+        <!-- Criteria List (Rows) -->
+        <div class="criteria-list">
+          <div
+            v-for="(row, rIdx) in criteria"
+            :key="rIdx"
+            class="criteria-row"
+          >
+            <!-- Prefix: Khi / VÀ / HOẶC -->
+            <div class="row-prefix">
+              {{ rIdx === 0 ? 'Khi' : (logicOperator === 'AND' ? 'VÀ' : 'HOẶC') }}
+            </div>
+
+            <!-- Field Selector -->
+            <div style="flex: 1; min-width: 180px;">
+              <select v-model="row.field" class="builder-select" @change="onFieldChange(row)">
+                <optgroup label="── 1. Thông tin Chuyến đi ──">
+                  <option value="quoc_gia_xuat_canh">Quốc gia / Nơi đến</option>
+                  <option value="ngay_xuat_canh">Ngày xuất cảnh</option>
+                  <option value="ngay_nhap_canh">Ngày nhập cảnh</option>
+                  <option value="so_qd_di">Số quyết định duyệt</option>
+                  <option value="nguon_kinh_phi">Nguồn kinh phí</option>
+                  <option value="muc_dich_xuat_canh">Mục đích chuyến đi</option>
+                  <option value="trang_thai_hien_dien">Trạng thái hiện diện (Trong nước / Nước ngoài)</option>
+                  <option value="isOverdue">Trạng thái Quá hạn chưa về</option>
+                  <option value="trip_count_year">Số lần đi trong năm</option>
+                </optgroup>
+                <optgroup label="── 2. Thông tin Cán bộ ──">
+                  <option value="name">Họ và tên Cán bộ</option>
+                  <option value="code">Mã Cán bộ</option>
+                  <option value="cccd">Số CCCD Cán bộ</option>
+                  <option value="departmentName">Đơn vị công tác</option>
+                  <option value="position">Chức vụ</option>
+                  <option value="birthYear">Năm sinh</option>
+                  <option value="hcCaNhan">Hộ chiếu cá nhân</option>
+                  <option value="hcCongVu">Hộ chiếu công vụ</option>
+                  <option value="kqThamTra">Kết quả thẩm tra TCCT</option>
+                  <option value="hasRelatives">Có thân nhân ở nước ngoài</option>
+                </optgroup>
+                <optgroup label="── 3. Thông tin Thân nhân ──">
+                  <option value="relativeName">Họ tên Thân nhân</option>
+                  <option value="relationshipName">Mối quan hệ thân nhân</option>
+                  <option value="relCountryName">Quốc gia thân nhân cư trú</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Operator Selector -->
+            <div style="width: 170px; flex-shrink: 0;">
+              <select v-model="row.operator" class="builder-select">
+                <option value="equals">là (khớp chính xác)</option>
+                <option value="contains">chứa từ khóa</option>
+                <option value="not_contains">không chứa</option>
+                <option value="has_value">có dữ liệu (khác rỗng)</option>
+                <option value="empty">để trống (chưa có)</option>
+                <option value="before_date">trước ngày</option>
+                <option value="after_date">sau ngày</option>
+                <option value="gte">lớn hơn hoặc bằng (&ge;)</option>
+                <option value="lte">nhỏ hơn hoặc bằng (&le;)</option>
+              </select>
+            </div>
+
+            <!-- Value Input (Hidden if operator is empty / has_value) -->
+            <div style="flex: 1; min-width: 180px;" v-if="row.operator !== 'empty' && row.operator !== 'has_value'">
+              <!-- Dropdown for funding -->
+              <select
+                v-if="row.field === 'nguon_kinh_phi'"
+                v-model="row.value"
+                class="builder-select"
+              >
+                <option value="">-- Chọn kinh phí --</option>
+                <option value="Ngân sách nhà nước">Ngân sách nhà nước</option>
+                <option value="Tự túc">Tự túc</option>
+                <option value="Tài trợ">Tài trợ</option>
+                <option value="Khác">Khác</option>
+              </select>
+
+              <!-- Dropdown for presence status -->
+              <select
+                v-else-if="row.field === 'trang_thai_hien_dien'"
+                v-model="row.value"
+                class="builder-select"
+              >
+                <option value="Đang ở nước ngoài">Đang ở nước ngoài</option>
+                <option value="Đã về nước">Đã về nước</option>
+                <option value="Chưa khởi hành">Chưa khởi hành</option>
+              </select>
+
+              <!-- Date Picker / Text -->
+              <input
+                v-else-if="row.operator === 'before_date' || row.operator === 'after_date'"
+                v-model="row.value"
+                type="text"
+                placeholder="DD/MM/YYYY"
+                class="builder-input"
+              />
+
+              <!-- Number input -->
+              <input
+                v-else-if="row.field === 'trip_count_year' || row.operator === 'gte' || row.operator === 'lte'"
+                v-model="row.value"
+                type="number"
+                placeholder="Nhập số..."
+                class="builder-input"
+              />
+
+              <!-- General text input -->
+              <input
+                v-else
+                v-model="row.value"
+                type="text"
+                placeholder="Nhập giá trị tìm kiếm..."
+                class="builder-input"
+              />
+            </div>
+
+            <!-- Remove Row Button -->
+            <button
+              type="button"
+              class="btn-remove-row"
+              @click="removeCriteriaRow(rIdx)"
+              :disabled="criteria.length <= 1"
+              title="Xóa điều kiện này"
+            >
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Action Bottom Bar -->
+        <div class="builder-actions-bar">
+          <button
+            type="button"
+            class="btn-builder-secondary"
+            @click="addCriteriaRow"
+          >
+            <i class="pi pi-plus"></i>
+            <span>Thêm điều kiện</span>
+          </button>
+
+          <div style="display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; flex-wrap: wrap;">
+            <input
+              v-model="presetSaveName"
+              placeholder="Tên bộ lọc, vd: Quá hạn về nước quý III"
+              class="builder-input"
+              style="width: 260px; font-size: 0.78rem;"
+            />
+
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: #334155; cursor: pointer;">
+              <input
+                type="checkbox"
+                v-model="presetIsShared"
+                style="accent-color: #2563eb; width: 15px; height: 15px;"
+              />
+              Dùng chung cho cả phòng
+            </label>
+
+            <button
+              type="button"
+              class="btn-builder-secondary"
+              @click="saveCurrentPreset"
+            >
+              <i class="pi pi-save"></i>
+              <span>Lưu bộ lọc này</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-builder-primary"
+              @click="executeSearch"
+            >
+              <i class="pi pi-search"></i>
+              <span>Tìm kiếm</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KẾT QUẢ TÌM KIẾM -->
+      <div class="app-card" style="padding: 1.25rem;">
+        <!-- Header summary & Export button -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+          <div style="font-size: 0.88rem; color: #0f172a;">
+            Tìm được <b style="color: #2563eb; font-size: 1rem;">{{ searchResults.length }}</b> bản ghi
+            <span style="color: #64748b; font-size: 0.8rem; margin-left: 6px;">
+              · khớp {{ criteria.length }} điều kiện, nối bằng {{ logicOperator === 'AND' ? 'VÀ' : 'HOẶC' }}
+            </span>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button
+              type="button"
+              class="btn-action-primary"
+              @click="exportResultsExcel"
+              :disabled="searchResults.length === 0"
+              title="Xuất kết quả ra file Excel"
+            >
+              <i class="pi pi-file-excel"></i>
+              <span>Xuất file kết quả (Excel)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="table-container" style="overflow-x: auto;">
+          <table class="advanced-table">
+            <thead>
+              <tr>
+                <th style="width: 50px; text-align: center;">STT</th>
+                <th style="min-width: 170px;">HỌ VÀ TÊN</th>
+                <th style="min-width: 140px;">CHỨC VỤ</th>
+                <th style="min-width: 150px;">ĐƠN VỊ</th>
+                <th style="min-width: 130px;">QUỐC GIA</th>
+                <th style="min-width: 110px;">XUẤT CẢNH</th>
+                <th style="min-width: 220px; color: #b91c1c;">LÝ DO KHỚP ĐIỀU KIỆN</th>
+                <th style="width: 100px; text-align: center;">THAO TÁC</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, idx) in searchResults" :key="item.uniqueKey || idx">
+                <td style="text-align: center; color: #64748b; font-weight: 500;">
+                  {{ idx + 1 }}
+                </td>
+                <td>
+                  <strong style="color: #0f172a; font-weight: 600; display: block;">
+                    {{ item.personnelName }}
+                  </strong>
+                  <span v-if="item.personnelCode" style="font-size: 0.7rem; color: #64748b;">
+                    {{ item.personnelCode }}
+                  </span>
+                </td>
+                <td style="color: #334155;">{{ item.position || '-' }}</td>
+                <td style="color: #334155;">{{ item.departmentName || '-' }}</td>
+                <td style="font-weight: 600; color: #1e293b;">{{ item.countryName || '-' }}</td>
+                <td style="color: #334155;">{{ item.departureDate || '-' }}</td>
+                <td>
+                  <div class="match-reasons-wrapper">
+                    <span
+                      v-for="(reason, rk) in item.matchReasons"
+                      :key="rk"
+                      class="match-reason-pill"
+                    >
+                      <i class="pi pi-info-circle"></i>
+                      {{ reason }}
+                    </span>
+                  </div>
+                </td>
+                <td style="text-align: center; white-space: nowrap;">
+                  <button
+                    type="button"
+                    class="btn-table-action btn-table-info"
+                    @click="openDetail(item)"
+                    title="Xem chi tiết hồ sơ cán bộ"
+                  >
+                    <i class="pi pi-user-edit"></i>
+                    <span>Chi tiết</span>
+                  </button>
+                </td>
+              </tr>
+
+              <tr v-if="searchResults.length === 0">
+                <td colspan="8" style="text-align: center; padding: 2.5rem; color: #94a3b8; font-size: 0.85rem;">
+                  <i class="pi pi-search" style="font-size: 1.5rem; display: block; margin-bottom: 8px; opacity: 0.5;"></i>
+                  Không tìm thấy bản ghi nào khớp với điều kiện tìm kiếm. Hãy thử điều chỉnh lại bộ lọc!
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- Personnel Dialog -->
+    <PersonnelDialog
+      v-model="isPersonnelDialogOpen"
+      :personData="activePersonData"
+      @saved="handlePersonnelSaved"
+    />
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { usePersonnelStore } from '@/stores/personnel';
+import { getAppSettings, saveAppSettings } from '@/api/settings';
+import { parseDateObj, formatDate } from '@/utils/formatters';
+import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
+import * as XLSX from 'xlsx';
+
+const personnelStore = usePersonnelStore();
+
+// Logic Operator (AND / OR)
+const logicOperator = ref('AND');
+
+// Criteria Rows
+const criteria = ref([
+  { field: 'ngay_nhap_canh', operator: 'empty', value: '' },
+  { field: 'ngay_xuat_canh', operator: 'before_date', value: '24/08/2026' },
+  { field: 'muc_dich_xuat_canh', operator: 'contains', value: 'Công tác' },
+]);
+
+// Presets
+const DEFAULT_PRESETS = [
+  {
+    id: 'preset_overdue',
+    name: 'Quá hạn về nước',
+    isShared: true,
+    logic: 'AND',
+    updatedAt: '20/8/2026',
+    criteria: [
+      { field: 'isOverdue', operator: 'equals', value: 'true' },
+    ],
+  },
+  {
+    id: 'preset_no_official_passport',
+    name: 'Chưa nộp hộ chiếu công vụ',
+    isShared: true,
+    logic: 'AND',
+    updatedAt: '18/8/2026',
+    criteria: [
+      { field: 'hcCongVu', operator: 'empty', value: '' },
+      { field: 'muc_dich_xuat_canh', operator: 'contains', value: 'Công tác' },
+    ],
+  },
+  {
+    id: 'preset_china_2026',
+    name: 'Đi Trung Quốc năm 2026',
+    isShared: true,
+    logic: 'AND',
+    updatedAt: '15/8/2026',
+    criteria: [
+      { field: 'quoc_gia_xuat_canh', operator: 'contains', value: 'Trung Quốc' },
+      { field: 'ngay_xuat_canh', operator: 'contains', value: '2026' },
+    ],
+  },
+  {
+    id: 'preset_has_relatives',
+    name: 'Có thân nhân ở nước ngoài',
+    isShared: true,
+    logic: 'AND',
+    updatedAt: '10/8/2026',
+    criteria: [
+      { field: 'hasRelatives', operator: 'equals', value: 'true' },
+    ],
+  },
+  {
+    id: 'preset_private_self_funded',
+    name: 'Việc riêng, kinh phí tự túc',
+    isShared: false,
+    logic: 'AND',
+    updatedAt: '05/8/2026',
+    criteria: [
+      { field: 'muc_dich_xuat_canh', operator: 'contains', value: 'Việc riêng' },
+      { field: 'nguon_kinh_phi', operator: 'contains', value: 'Tự túc' },
+    ],
+  },
+  {
+    id: 'preset_frequent_flyer',
+    name: 'Đi từ 3 lần trở lên trong năm',
+    isShared: false,
+    logic: 'AND',
+    updatedAt: '01/8/2026',
+    criteria: [
+      { field: 'trip_count_year', operator: 'gte', value: '3' },
+    ],
+  },
+];
+
+const savedPresets = ref([...DEFAULT_PRESETS]);
+const activePresetId = ref('preset_overdue');
+const presetSaveName = ref('');
+const presetIsShared = ref(true);
+
+const isPersonnelDialogOpen = ref(false);
+const activePersonData = ref(null);
+const searchResults = ref([]);
+
+const addCriteriaRow = () => {
+  criteria.value.push({
+    field: 'quoc_gia_xuat_canh',
+    operator: 'contains',
+    value: '',
+  });
+};
+
+const removeCriteriaRow = (idx) => {
+  if (criteria.value.length > 1) {
+    criteria.value.splice(idx, 1);
+  }
+};
+
+const onFieldChange = (row) => {
+  if (row.field === 'ngay_nhap_canh' || row.field === 'hcCongVu') {
+    row.operator = 'empty';
+    row.value = '';
+  } else if (row.field === 'isOverdue' || row.field === 'hasRelatives') {
+    row.operator = 'equals';
+    row.value = 'true';
+  } else if (row.field === 'trip_count_year') {
+    row.operator = 'gte';
+    row.value = '3';
+  } else {
+    row.operator = 'contains';
+    row.value = '';
+  }
+};
+
+// Build flat list of all records (personnel trips & profile)
+const buildDataset = () => {
+  const dataset = [];
+  const pList = personnelStore.personnelList || [];
+  const now = new Date();
+
+  pList.forEach((p) => {
+    const pTrips = p.trips || [];
+    const pRelatives = p.relatives || [];
+
+    // Calculate trip count in year 2026
+    const tripCount2026 = pTrips.filter((t) => {
+      const d = parseDateObj(t.departureDate || t.custom_data?.departureDate);
+      return d && d.getFullYear() === now.getFullYear();
+    }).length;
+
+    if (pTrips.length === 0) {
+      // Personnel without trips
+      dataset.push({
+        uniqueKey: `person_${p.id}`,
+        rawPerson: p,
+        personnelId: p.id,
+        personnelCode: p.code || '',
+        personnelName: p.name || 'Cán bộ',
+        position: p.positionName || p.position || '',
+        departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
+        countryName: '-',
+        departureDate: '-',
+        arrivalDate: '-',
+        decisionNumber: '-',
+        fundingName: '-',
+        purpose: '-',
+        status: 'Trong nước',
+        isOverdue: false,
+        hasRelatives: pRelatives.length > 0,
+        trip_count_year: tripCount2026,
+        hcCaNhan: p.hcCaNhan || p.custom_data?.hcCaNhan || '',
+        hcCongVu: p.hcCongVu || p.custom_data?.hcCongVu || '',
+        kqThamTra: p.kqThamTra || p.custom_data?.kqThamTra || '',
+        cccd: p.cccd || p.cccdparent || '',
+      });
+    } else {
+      pTrips.forEach((t, tIdx) => {
+        let custom = {};
+        if (t.custom_data) {
+          try {
+            custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+          } catch (e) {}
+        }
+
+        const depDate = t.departureDate || custom.departureDate || '';
+        const arrDate = t.arrivalDate || custom.arrivalDate || '';
+        const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || '';
+        const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || '';
+
+        const depObj = parseDateObj(depDate);
+        const arrObj = parseDateObj(arrDate);
+        const appArrObj = parseDateObj(extDate || appArrDate);
+
+        let isOverdue = false;
+        let overdueDays = 0;
+        let presenceStatus = 'Đã về nước';
+
+        if (arrObj && appArrObj && arrObj > appArrObj) {
+          isOverdue = true;
+          overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
+          presenceStatus = `Quá hạn (${overdueDays} ngày)`;
+        } else if (depObj && depObj <= now && (!arrDate || (arrObj && arrObj >= now))) {
+          if (appArrObj && now > appArrObj) {
+            isOverdue = true;
+            overdueDays = Math.max(1, Math.floor((now - appArrObj) / (1000 * 60 * 60 * 24)));
+            presenceStatus = `Quá hạn (${overdueDays} ngày)`;
+          } else {
+            presenceStatus = 'Đang ở nước ngoài';
+          }
+        }
+
+        dataset.push({
+          uniqueKey: t.id || `trip_${p.id}_${tIdx}`,
+          rawPerson: p,
+          rawTrip: t,
+          personnelId: p.id,
+          personnelCode: p.code || '',
+          personnelName: p.name,
+          position: p.positionName || p.position || '',
+          departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
+          countryName: t.countryName || custom.countryName || t.country || '-',
+          departureDate: depDate ? formatDate(depDate) : '-',
+          arrivalDate: arrDate ? formatDate(arrDate) : '',
+          decisionNumber: t.decisionNumber || custom.decisionNumber || '-',
+          fundingName: t.fundingName || custom.fundingName || t.funding || '-',
+          purpose: t.purpose || custom.purpose || '-',
+          trang_thai_hien_dien: presenceStatus,
+          isOverdue,
+          overdueDays,
+          hasRelatives: pRelatives.length > 0,
+          trip_count_year: tripCount2026,
+          hcCaNhan: p.hcCaNhan || p.custom_data?.hcCaNhan || '',
+          hcCongVu: p.hcCongVu || p.custom_data?.hcCongVu || '',
+          kqThamTra: p.kqThamTra || p.custom_data?.kqThamTra || '',
+          cccd: p.cccd || p.cccdparent || '',
+        });
+      });
+    }
+  });
+
+  return dataset;
+};
+
+// Check if a single item matches a single criterion
+const testCondition = (item, crit) => {
+  const f = crit.field;
+  const op = crit.operator;
+  const val = String(crit.value || '').trim().toLowerCase();
+
+  let itemVal = '';
+  if (f === 'isOverdue') {
+    itemVal = item.isOverdue ? 'true' : 'false';
+  } else if (f === 'hasRelatives') {
+    itemVal = item.hasRelatives ? 'true' : 'false';
+  } else if (f === 'trip_count_year') {
+    itemVal = Number(item.trip_count_year || 0);
+  } else if (f === 'quoc_gia_xuat_canh') {
+    itemVal = item.countryName || '';
+  } else if (f === 'ngay_xuat_canh') {
+    itemVal = item.departureDate || '';
+  } else if (f === 'ngay_nhap_canh') {
+    itemVal = item.arrivalDate || '';
+  } else if (f === 'so_qd_di') {
+    itemVal = item.decisionNumber || '';
+  } else if (f === 'nguon_kinh_phi') {
+    itemVal = item.fundingName || '';
+  } else if (f === 'muc_dich_xuat_canh') {
+    itemVal = item.purpose || '';
+  } else {
+    itemVal = String(item[f] || '').trim();
+  }
+
+  // Evaluate Operator
+  if (op === 'empty') {
+    const isEmp = !itemVal || itemVal === '-' || itemVal === 'Chưa rõ';
+    return { matches: isEmp, reason: `${f}: để trống` };
+  }
+  if (op === 'has_value') {
+    const hasV = !!itemVal && itemVal !== '-' && itemVal !== 'Chưa rõ';
+    return { matches: hasV, reason: `${f}: ${itemVal}` };
+  }
+  if (op === 'equals') {
+    const eq = String(itemVal).toLowerCase() === val;
+    return { matches: eq, reason: `${itemVal}` };
+  }
+  if (op === 'contains') {
+    const cnt = String(itemVal).toLowerCase().includes(val);
+    return { matches: cnt, reason: `${itemVal}` };
+  }
+  if (op === 'not_contains') {
+    const ncnt = !String(itemVal).toLowerCase().includes(val);
+    return { matches: ncnt, reason: `Không chứa "${val}"` };
+  }
+  if (op === 'before_date') {
+    const dItem = parseDateObj(itemVal);
+    const dTarget = parseDateObj(val);
+    const bef = dItem && dTarget ? dItem < dTarget : false;
+    return { matches: bef, reason: `${itemVal} trước ${val}` };
+  }
+  if (op === 'after_date') {
+    const dItem = parseDateObj(itemVal);
+    const dTarget = parseDateObj(val);
+    const aft = dItem && dTarget ? dItem > dTarget : false;
+    return { matches: aft, reason: `${itemVal} sau ${val}` };
+  }
+  if (op === 'gte') {
+    const g = Number(itemVal) >= Number(val);
+    return { matches: g, reason: `Số lượng: ${itemVal} (>= ${val})` };
+  }
+  if (op === 'lte') {
+    const l = Number(itemVal) <= Number(val);
+    return { matches: l, reason: `Số lượng: ${itemVal} (<= ${val})` };
+  }
+
+  return { matches: true, reason: '' };
+};
+
+const executeSearch = () => {
+  const dataset = buildDataset();
+  const matched = [];
+
+  dataset.forEach((item) => {
+    const reasons = [];
+    let isOverallMatch = logicOperator.value === 'AND';
+
+    for (const crit of criteria.value) {
+      const res = testCondition(item, crit);
+      if (logicOperator.value === 'AND') {
+        if (!res.matches) {
+          isOverallMatch = false;
+          break;
+        } else if (res.reason) {
+          reasons.push(res.reason);
+        }
+      } else {
+        // OR
+        if (res.matches) {
+          isOverallMatch = true;
+          if (res.reason) reasons.push(res.reason);
+        }
+      }
+    }
+
+    if (isOverallMatch) {
+      matched.push({
+        ...item,
+        matchReasons: reasons.length > 0 ? reasons : ['Khớp điều kiện'],
+      });
+    }
+  });
+
+  searchResults.value = matched;
+};
+
+const applyPreset = (preset) => {
+  activePresetId.value = preset.id;
+  logicOperator.value = preset.logic || 'AND';
+  criteria.value = JSON.parse(JSON.stringify(preset.criteria || []));
+  presetSaveName.value = preset.name;
+  presetIsShared.value = Boolean(preset.isShared);
+  executeSearch();
+};
+
+const saveCurrentPreset = async () => {
+  if (!presetSaveName.value.trim()) {
+    alert('Vui lòng nhập tên cho bộ lọc cần lưu!');
+    return;
+  }
+
+  const newPreset = {
+    id: 'preset_' + Date.now(),
+    name: presetSaveName.value.trim(),
+    isShared: presetIsShared.value,
+    logic: logicOperator.value,
+    updatedAt: new Date().toLocaleDateString('vi-VN'),
+    criteria: JSON.parse(JSON.stringify(criteria.value)),
+  };
+
+  const existingIdx = savedPresets.value.findIndex((p) => p.name === newPreset.name);
+  if (existingIdx !== -1) {
+    savedPresets.value[existingIdx] = newPreset;
+  } else {
+    savedPresets.value.unshift(newPreset);
+  }
+
+  activePresetId.value = newPreset.id;
+
+  // Persist
+  localStorage.setItem('advanced_search_presets', JSON.stringify(savedPresets.value));
+  if (presetIsShared.value) {
+    try {
+      await saveAppSettings('advanced_search_shared_presets', savedPresets.value.filter((p) => p.isShared));
+    } catch (e) {}
+  }
+
+  alert(`Đã lưu bộ lọc "${newPreset.name}" thành công!`);
+};
+
+const deletePreset = async (preset, idx) => {
+  if (!confirm(`Bạn có chắc muốn xóa bộ lọc "${preset.name}"?`)) return;
+  savedPresets.value.splice(idx, 1);
+  localStorage.setItem('advanced_search_presets', JSON.stringify(savedPresets.value));
+  try {
+    await saveAppSettings('advanced_search_shared_presets', savedPresets.value.filter((p) => p.isShared));
+  } catch (e) {}
+};
+
+const loadPresets = async () => {
+  try {
+    const shared = await getAppSettings('advanced_search_shared_presets', null);
+    if (shared && Array.isArray(shared) && shared.length > 0) {
+      savedPresets.value = shared;
+    } else {
+      const local = localStorage.getItem('advanced_search_presets');
+      if (local) savedPresets.value = JSON.parse(local);
+    }
+  } catch (e) {}
+};
+
+const openDetail = (item) => {
+  if (item.rawPerson) {
+    activePersonData.value = JSON.parse(JSON.stringify(item.rawPerson));
+    isPersonnelDialogOpen.value = true;
+  }
+};
+
+const handlePersonnelSaved = async () => {
+  await personnelStore.fetchPersonnel();
+  executeSearch();
+};
+
+const exportResultsExcel = () => {
+  if (searchResults.value.length === 0) return;
+  const rows = searchResults.value.map((item, idx) => ({
+    'STT': idx + 1,
+    'Mã Cán bộ': item.personnelCode || '',
+    'Họ và tên': item.personnelName,
+    'Chức vụ': item.position || '',
+    'Đơn vị công tác': item.departmentName || '',
+    'Quốc gia': item.countryName || '',
+    'Ngày xuất cảnh': item.departureDate || '',
+    'Ngày nhập cảnh': item.arrivalDate || '',
+    'Số quyết định': item.decisionNumber || '',
+    'Nguồn kinh phí': item.fundingName || '',
+    'Mục đích': item.purpose || '',
+    'Lý do khớp điều kiện': (item.matchReasons || []).join('; '),
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ket_qua_tra_cuu');
+  XLSX.writeFile(wb, `Ket_qua_tim_kiem_nang_cao_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+onMounted(async () => {
+  await loadPresets();
+  if (savedPresets.value.length > 0) {
+    applyPreset(savedPresets.value[0]);
+  } else {
+    executeSearch();
+  }
+});
+</script>
+
+<style scoped>
+.advanced-search-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  min-height: calc(100vh - 100px);
+}
+
+.saved-presets-sidebar {
+  width: 270px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+  position: sticky;
+  top: 80px;
+}
+
+.presets-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.presets-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preset-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.preset-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.preset-item.preset-active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.preset-delete-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+.preset-delete-btn:hover {
+  color: #ef4444;
+}
+
+.badge-scope {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.scope-shared {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.scope-private {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.presets-footer-note {
+  padding: 10px 12px;
+  border-top: 1px solid #f1f5f9;
+  background: #fafafa;
+  font-size: 0.72rem;
+  color: #64748b;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  line-height: 1.35;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.search-main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.badge-code {
+  background: #1e40af;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.logic-connector-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.logic-toggle-group {
+  display: inline-flex;
+  background: #e2e8f0;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.logic-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.logic-btn.logic-active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.criteria-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.criteria-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.row-prefix {
+  width: 45px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.builder-select,
+.builder-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.builder-select:focus,
+.builder-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.btn-remove-row {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.btn-remove-row:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+.btn-remove-row:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.builder-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-builder-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-builder-secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.btn-builder-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1d4ed8;
+  color: #ffffff;
+  border: 1px solid #1d4ed8;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-builder-primary:hover {
+  background: #1e40af;
+  border-color: #1e40af;
+}
+
+.advanced-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.advanced-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+}
+.advanced-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.advanced-table tr:hover td {
+  background: #f8fafc;
+}
+
+.match-reasons-wrapper {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.match-reason-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.btn-action-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1d4ed8;
+  color: #ffffff;
+  border: 1px solid #1d4ed8;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-action-primary:hover:not(:disabled) {
+  background: #1e40af;
+}
+.btn-action-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-table-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-table-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+.btn-table-info:hover {
+  background: #dbeafe;
+}
+</style>

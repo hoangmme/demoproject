@@ -44,6 +44,11 @@
         </span>
       </router-link>
 
+      <router-link to="/advanced-search" class="app-nav-item" title="Tra cứu & Tìm kiếm nâng cao">
+        <i class="pi pi-search-plus"></i>
+        <span>Tìm kiếm nâng cao</span>
+      </router-link>
+
       <div class="app-nav-heading">Báo cáo Phụ lục</div>
 
       <router-link
