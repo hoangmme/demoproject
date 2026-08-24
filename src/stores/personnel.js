@@ -998,21 +998,27 @@ export const usePersonnelStore = defineStore('personnel', {
         ];
 
         // 3. Attach trips directly into Cán bộ profiles and save to DB
-        // 10 CB trips -> attach to respective CB
         for (let i = 0; i < 10; i++) {
-          const cbItem = sampleCbList[i];
+          const cbFallback = sampleCbList[i];
+          const person = this.personnelList[i] || this.findPersonByCccd(cbFallback.cccd) || pMap[cbFallback.cccd];
+          if (!person) continue;
+
           const cbTrip = sampleTrips[i];
           const tnItem = sampleTnList[i];
           const tnTrip = sampleTrips[i + 10];
 
-          let person = this.findPersonByCccd(cbItem.cccd);
-          if (!person) continue;
+          const personCccd = person.cccd || person.cccdparent || cbFallback.cccd;
+          const personName = person.name || cbFallback.name;
 
           // Prepare trips for this person (1 trip for CB, 1 trip for relative)
           const tripsForPerson = [
             {
               id: 'trip_cb_' + Date.now() + '_' + i,
               ...cbTrip,
+              cccdchuyendi: personCccd,
+              personnelId: person.id,
+              personnelCode: person.code,
+              personnelName: personName,
               quoc_gia_xuat_canh: cbTrip.countryName,
               nguon_kinh_phi: cbTrip.fundingName,
             },
@@ -1020,6 +1026,11 @@ export const usePersonnelStore = defineStore('personnel', {
               id: 'trip_tn_' + Date.now() + '_' + i,
               ...tnTrip,
               isRelative: true,
+              cccdchuyendi: tnItem.cccdthannhan,
+              personnelId: person.id,
+              personnelCode: person.code,
+              parentName: personName,
+              cccdparent: personCccd,
               relativeName: tnItem.relativeName,
               cccdthannhan: tnItem.cccdthannhan,
               relationshipName: tnItem.relationshipName,
@@ -1032,8 +1043,8 @@ export const usePersonnelStore = defineStore('personnel', {
           const relativesForPerson = [
             {
               id: 'rel_' + Date.now() + '_' + i,
-              parentName: cbItem.name,
-              cccdparent: cbItem.cccd,
+              parentName: personName,
+              cccdparent: personCccd,
               relationshipName: tnItem.relationshipName,
               relativeName: tnItem.relativeName,
               cccdthannhan: tnItem.cccdthannhan,
@@ -1045,12 +1056,14 @@ export const usePersonnelStore = defineStore('personnel', {
                 {
                   id: 'trip_rel_' + Date.now() + '_' + i,
                   ...tnTrip,
+                  cccdchuyendi: tnItem.cccdthannhan,
+                  personnelId: person.id,
                 },
               ],
             },
           ];
 
-          // Merge into person profile and save
+          // Merge into person profile and save directly to DB
           const updatedPersonData = {
             ...person,
             trips: tripsForPerson,
