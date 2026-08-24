@@ -83,7 +83,14 @@
             @click="handleDelete"
           />
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span v-if="autoSaveStatus === 'saving'" style="font-size: 0.75rem; color: #0284c7; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
+            <i class="pi pi-spin pi-spinner"></i> Đang tự động lưu...
+          </span>
+          <span v-else-if="autoSaveStatus === 'saved'" style="font-size: 0.75rem; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
+            <i class="pi pi-check-circle"></i> Đã tự động lưu
+          </span>
+
           <Button
             v-if="isEdit"
             label="Xuất Hồ sơ PDF"
@@ -93,7 +100,7 @@
             size="small"
             @click="isDocxExportOpen = true"
           />
-          <Button label="Hủy" severity="secondary" text size="small" @click="visible = false" />
+          <Button label="Đóng" severity="secondary" text size="small" @click="visible = false" />
           <Button
             label="Lưu hồ sơ"
             icon="pi pi-check"
@@ -268,6 +275,42 @@ watch(
     }
   },
   { immediate: true, deep: true }
+);
+
+const autoSaveStatus = ref('');
+let autoSaveTimer = null;
+
+const triggerAutoSave = () => {
+  if (!isEdit.value || !form.value.id || !form.value.name?.trim()) return;
+  const cccdVal = form.value.cccdparent || form.value.cccd || form.value.so_cccd;
+  if (!cccdVal || !String(cccdVal).trim()) return;
+
+  autoSaveStatus.value = 'saving';
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+
+  autoSaveTimer = setTimeout(async () => {
+    try {
+      form.value.cccdparent = String(cccdVal).trim();
+      const saved = await personnelStore.savePerson(form.value);
+      autoSaveStatus.value = 'saved';
+      emit('saved', saved);
+      setTimeout(() => {
+        if (autoSaveStatus.value === 'saved') autoSaveStatus.value = '';
+      }, 2500);
+    } catch (e) {
+      autoSaveStatus.value = '';
+    }
+  }, 1000);
+};
+
+watch(
+  () => form.value,
+  () => {
+    if (visible.value && isEdit.value) {
+      triggerAutoSave();
+    }
+  },
+  { deep: true }
 );
 
 const handleSave = async () => {

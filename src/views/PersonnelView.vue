@@ -769,7 +769,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -796,6 +797,7 @@ import { logActivity } from '@/api/audit';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 
+const route = useRoute();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 
@@ -925,11 +927,65 @@ const customSort = (event) => {
   });
 };
 
+const handleRouteAction = () => {
+  const action = route.query.action;
+  const targetCccd = route.query.targetCccd;
+  const targetRelativeCode = route.query.targetRelativeCode;
+
+  if (action === 'new_personnel') {
+    selectedPerson.value = null;
+    dialogInitialTab.value = 0;
+    dialogTargetRelativeCode.value = '';
+    isDialogOpen.value = true;
+  } else if (action === 'new_relative') {
+    mainTab.value = 'thannhan';
+    if (personnelStore.personnelList.length > 0) {
+      selectedPerson.value = personnelStore.personnelList[0];
+      dialogInitialTab.value = 1;
+      dialogTargetRelativeCode.value = '';
+      isDialogOpen.value = true;
+    } else {
+      selectedPerson.value = null;
+      dialogInitialTab.value = 0;
+      dialogTargetRelativeCode.value = '';
+      isDialogOpen.value = true;
+    }
+  } else if (action === 'new_trip') {
+    if (targetCccd) {
+      const person = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(targetCccd) : personnelStore.personnelList.find((p) => (p.cccd || p.cccdparent) === targetCccd);
+      if (person) {
+        selectedPerson.value = person;
+        if (targetRelativeCode) {
+          dialogInitialTab.value = 1;
+          dialogTargetRelativeCode.value = targetRelativeCode;
+        } else {
+          dialogInitialTab.value = 0;
+          dialogTargetRelativeCode.value = '';
+        }
+        isDialogOpen.value = true;
+      }
+    } else if (personnelStore.personnelList.length > 0) {
+      selectedPerson.value = personnelStore.personnelList[0];
+      dialogInitialTab.value = 0;
+      dialogTargetRelativeCode.value = '';
+      isDialogOpen.value = true;
+    }
+  }
+};
+
 onMounted(async () => {
   if (personnelStore.personnelList.length === 0) {
     await personnelStore.init();
   }
+  handleRouteAction();
 });
+
+watch(
+  () => route.query,
+  () => {
+    handleRouteAction();
+  }
+);
 
 const activeColumns = computed(() => {
   const map = {};
