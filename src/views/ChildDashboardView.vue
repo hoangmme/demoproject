@@ -1337,6 +1337,53 @@ const toggleSelectTrip = (trip) => {
   }
 };
 
+// Resolve exact target Personnel record safely without false code-matching
+const resolveTargetPersonnel = (trip) => {
+  if (!trip) return null;
+  const pList = personnelStore.personnelList || [];
+
+  // 1. By direct personnelId (matching as string to handle number/string differences)
+  if (trip.personnelId !== undefined && trip.personnelId !== null) {
+    const found = pList.find((p) => String(p.id) === String(trip.personnelId));
+    if (found) return found;
+  }
+
+  // 2. By non-empty personnelCode
+  if (trip.personnelCode && String(trip.personnelCode).trim() !== '') {
+    const targetCode = String(trip.personnelCode).trim();
+    const found = pList.find((p) => p.code && String(p.code).trim() === targetCode);
+    if (found) return found;
+  }
+
+  // 3. By rawPerson.id
+  if (trip.rawPerson?.id !== undefined && trip.rawPerson?.id !== null) {
+    const found = pList.find((p) => String(p.id) === String(trip.rawPerson.id));
+    if (found) return found;
+  }
+
+  // 4. By CCCD
+  const cccd = trip.cccdchuyendi || trip.cccd || trip.cccdparent || trip.custom_data?.cccd;
+  if (cccd && String(cccd).trim() !== '') {
+    const found = personnelStore.findPersonByCccd(String(cccd).trim());
+    if (found) return found;
+  }
+
+  // 5. By personnelName (for cán bộ)
+  const pName = trip.personnelName || trip.name;
+  if (pName && String(pName).trim() !== '' && !trip.isRelative) {
+    const targetName = String(pName).trim().toLowerCase();
+    const found = pList.find((p) => p.name && String(p.name).trim().toLowerCase() === targetName);
+    if (found) return found;
+  }
+
+  // 6. If trip.rawPerson exists
+  if (trip.rawPerson) {
+    return trip.rawPerson;
+  }
+
+  return null;
+};
+
 const handleBulkDeleteTrips = async () => {
   if (selectedTripKeys.value.length === 0) return;
   if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedTripKeys.value.length} bản ghi đã chọn?`)) return;
@@ -1346,7 +1393,7 @@ const handleBulkDeleteTrips = async () => {
   const affectedPersonnelMap = new Map();
 
   selectedItems.forEach((trip) => {
-    let person = trip.rawPerson || (trip.personnelId ? personnelStore.personnelList.find((p) => p.id === trip.personnelId) : null);
+    const person = resolveTargetPersonnel(trip);
     if (person && !affectedPersonnelMap.has(person.id)) {
       affectedPersonnelMap.set(person.id, JSON.parse(JSON.stringify(person)));
     }
@@ -1425,19 +1472,7 @@ const saveColumnSelection = async () => {
 
 // Actions
 const openPersonnelDetail = (trip) => {
-  let targetPerson = null;
-  if (trip.personnelId) {
-    targetPerson = (personnelStore.personnelList || []).find((p) => p.id === trip.personnelId || p.code === trip.personnelCode);
-  }
-  if (!targetPerson && trip.rawPerson?.id) {
-    targetPerson = (personnelStore.personnelList || []).find((p) => p.id === trip.rawPerson.id);
-  }
-  if (!targetPerson && trip.cccdchuyendi) {
-    targetPerson = personnelStore.findPersonByCccd(trip.cccdchuyendi);
-  }
-  if (!targetPerson) {
-    targetPerson = trip.rawPerson;
-  }
+  const targetPerson = resolveTargetPersonnel(trip);
   if (targetPerson) {
     activePersonData.value = JSON.parse(JSON.stringify(targetPerson));
     isPersonnelDialogOpen.value = true;
@@ -1451,20 +1486,7 @@ const handleDeleteTrip = async (trip) => {
   const cName = trip.countryName || trip.country || 'chuyến đi';
   if (!confirm(`Bạn có chắc chắn muốn xóa chuyến đi "${cName}" của ${name}?`)) return;
 
-  let targetPerson = null;
-  if (trip.personnelId) {
-    targetPerson = (personnelStore.personnelList || []).find((p) => p.id === trip.personnelId || p.code === trip.personnelCode);
-  }
-  if (!targetPerson && trip.rawPerson?.id) {
-    targetPerson = (personnelStore.personnelList || []).find((p) => p.id === trip.rawPerson.id);
-  }
-  if (!targetPerson && trip.cccdchuyendi) {
-    targetPerson = personnelStore.findPersonByCccd(trip.cccdchuyendi);
-  }
-  if (!targetPerson) {
-    targetPerson = trip.rawPerson;
-  }
-
+  const targetPerson = resolveTargetPersonnel(trip);
   if (!targetPerson) {
     alert('Không tìm thấy hồ sơ cán bộ tương ứng để xóa chuyến đi!');
     return;
