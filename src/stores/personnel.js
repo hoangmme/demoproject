@@ -461,7 +461,6 @@ export const usePersonnelStore = defineStore('personnel', {
         } else {
           this.personnelList.unshift(fullSavedObj);
         }
-        this.saveToStorage();
 
         // Refresh in background
         this.fetchPersonnel().catch(() => {});
