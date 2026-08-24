@@ -550,9 +550,10 @@ const selectedPersonnelForExport = computed(() => {
 // Dynamic Dashboard Topic State
 const customDashboards = ref([]);
 
-const currentDashboardId = computed(() => {
+const topicId = computed(() => {
   return route.params.id || (route.path === '/trips' ? 'trips' : 'trips');
 });
+const currentDashboardId = computed(() => topicId.value);
 
 const currentDashboardConfig = computed(() => {
   const found = customDashboards.value.find((d) => d.id === currentDashboardId.value);
