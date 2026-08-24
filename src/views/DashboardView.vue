@@ -1117,8 +1117,8 @@ const drilldownDisplayPersonnelColumns = computed(() => {
     return found ? { ...found } : { id, label: id };
   });
 
-  // Tự động đính kèm cột dữ liệu được bấm vào ở cuối bảng nếu chưa có
-  if (drilldownTargetCriterion.value && drilldownTargetCriterion.value.columnId) {
+  // Tự động đính kèm cột dữ liệu được bấm vào ở cuối bảng nếu chưa có (chỉ cho view Cán bộ không phải Trips)
+  if (drilldownCategory.value === 'personnel' && drilldownTargetCriterion.value && drilldownTargetCriterion.value.columnId) {
     const targetId = drilldownTargetCriterion.value.columnId;
     const exists = baseCols.some((c) => c.id === targetId);
     if (!exists) {
@@ -2185,7 +2185,6 @@ const stats = computed(() => {
       ? String(rawCountry).trim()
       : '';
 
-    // Extract Funding
     let rawFunding = getTripValue(t, colConfig.value.funding) || t.nguon_kinh_phi || t.fundingName || t.funding || t.funding2 || '';
     if (rawFunding && t.custom_data) {
       try {
@@ -2233,7 +2232,6 @@ const stats = computed(() => {
       }
     }
 
-    // Country aggregation (Trips)
     if (cName) {
       if (isFundingKeyword(cName)) {
         const normalizedF = normalizeFundingCategory(cName) || 'Tự túc';
@@ -2255,7 +2253,6 @@ const stats = computed(() => {
       }
     }
 
-    // Funding aggregation (Trips)
     if (fName) {
       const parts = String(fName).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
       parts.forEach((rawPart) => {
@@ -2273,14 +2270,12 @@ const stats = computed(() => {
     }
   });
 
-  // 2. Process Relatives from Khối C (Thân nhân ở nước ngoài)
   rList.forEach((r) => {
     let rcd = r.custom_data;
     if (typeof rcd === 'string') {
       try { rcd = JSON.parse(rcd); } catch(e) {}
     }
 
-    // Extract relative country
     let rawC = r.quoc_gia_xuat_canh || r.countryName || r.country || rcd?.quoc_gia_xuat_canh || rcd?.content || rcd?.countryName || '';
     let relCountry = '';
     if (rawC && !isFundingKeyword(rawC) && rawC !== '-' && rawC !== 'Chưa rõ' && rawC !== 'null' && rawC !== 'undefined' && rawC !== 'Không có thông tin') {
@@ -2295,7 +2290,6 @@ const stats = computed(() => {
       countries[relCountry].total += 1;
     }
 
-    // Extract relative funding
     let rawF = r.nguon_kinh_phi || r.fundingName || r.funding || rcd?.nguon_kinh_phi || rcd?.fundingName || '';
     if (!rawF && isFundingKeyword(r.countryName)) {
       rawF = r.countryName;
@@ -2337,7 +2331,6 @@ const stats = computed(() => {
       return b.count - a.count;
     });
 
-  // 5. Count unique personnel who have traveled abroad
   const abroadPersonnelSet = new Set();
   const abroadPersonnelList = [];
 
@@ -2409,118 +2402,63 @@ const filteredFundingList = computed(() => {
 });
 
 // =========================================================================
-// 4. DRILL-DOWN POPUP MODAL LOGIC
+// 4. DRILLDOWN MODAL LOGIC & SEARCH
 // =========================================================================
-const isDrilldownOpen = ref(false);
-const drilldownTitle = ref('');
 const drilldownType = ref('');
-const drilldownCategory = ref('trips'); // 'personnel' | 'relatives' | 'trips'
+const drilldownTitle = ref('');
+const drilldownCategory = ref('personnel');
 const drilldownData = ref([]);
 const drilldownSearch = ref('');
+const isDrilldownOpen = ref(false);
+const selectedDrilldownKeys = ref([]);
+const isDocxExportOpen = ref(false);
+
 const drilldownHasDualTabs = ref(false);
-const drilldownActiveTab = ref('trips'); // 'trips' | 'relatives'
+const drilldownActiveTab = ref('trips');
 const drilldownTripsList = ref([]);
 const drilldownRelativesList = ref([]);
 
-// Drilldown selection & DOCX export state
-const isDocxExportOpen = ref(false);
-const selectedDrilldownKeys = ref([]);
+const filteredDrilldownData = computed(() => {
+  let list = [];
+  if (drilldownHasDualTabs.value) {
+    list = drilldownActiveTab.value === 'trips' ? drilldownTripsList.value : drilldownRelativesList.value;
+  } else {
+    list = drilldownData.value;
+  }
+
+  const q = drilldownSearch.value.toLowerCase().trim();
+  if (!q) return list;
+
+  return list.filter((item) => {
+    if (item.name && item.name.toLowerCase().includes(q)) return true;
+    if (item.relativeName && item.relativeName.toLowerCase().includes(q)) return true;
+    if (item.personnelName && item.personnelName.toLowerCase().includes(q)) return true;
+    if (item.code && String(item.code).toLowerCase().includes(q)) return true;
+    if (item.decisionNumber && String(item.decisionNumber).toLowerCase().includes(q)) return true;
+    if (item.countryName && item.countryName.toLowerCase().includes(q)) return true;
+    if (item.fundingName && item.fundingName.toLowerCase().includes(q)) return true;
+    if (item.departmentName && item.departmentName.toLowerCase().includes(q)) return true;
+    if (item.positionName && item.positionName.toLowerCase().includes(q)) return true;
+    return false;
+  });
+});
 
 const isAllDrilldownSelected = computed(() => {
-  if (!filteredDrilldownData.value || filteredDrilldownData.value.length === 0) return false;
-  return selectedDrilldownKeys.value.length === filteredDrilldownData.value.length;
+  const data = filteredDrilldownData.value || [];
+  if (data.length === 0) return false;
+  return selectedDrilldownKeys.value.length === data.length;
 });
 
-const toggleSelectAllDrilldown = (e) => {
-  if (e.target.checked) {
-    const cat = drilldownCategory.value;
-    const prefix = cat === 'personnel' ? 'p_' : cat === 'relatives' ? 'r_' : 't_';
-    selectedDrilldownKeys.value = (filteredDrilldownData.value || []).map((item, idx) => item.id || `${prefix}${idx}`);
-  } else {
+const toggleSelectAllDrilldown = () => {
+  const data = filteredDrilldownData.value || [];
+  if (selectedDrilldownKeys.value.length === data.length) {
     selectedDrilldownKeys.value = [];
+  } else {
+    const cat = drilldownCategory.value;
+    const currentTab = drilldownActiveTab.value;
+    const prefix = cat === 'personnel' ? 'p_' : cat === 'relatives' ? 'r_' : 't_';
+    selectedDrilldownKeys.value = data.map((item, idx) => item.id || `${prefix}${idx}`);
   }
-};
-
-const getPersonnelForRelative = (r) => {
-  if (!r) return null;
-  return personnelStore.personnelList.find(
-    (p) => p.id === r.personnelId || (r.parentPersonnelCode && p.code === r.parentPersonnelCode) || (r.parentCode && p.code === r.parentCode) || (r.parentCccd && p.cccd === r.parentCccd)
-  ) || null;
-};
-
-const drilldownAllPersonnel = computed(() => {
-  const cat = drilldownCategory.value;
-  const currentTab = drilldownActiveTab.value;
-  const data = filteredDrilldownData.value || [];
-
-  if (cat === 'personnel' || (drilldownHasDualTabs.value && currentTab === 'personnel')) {
-    return data;
-  }
-
-  if (cat === 'relatives' || (drilldownHasDualTabs.value && currentTab === 'relatives')) {
-    const map = new Map();
-    data.forEach((r) => {
-      const p = getPersonnelForRelative(r);
-      if (p && p.id && !map.has(p.id)) {
-        map.set(p.id, p);
-      }
-    });
-    return Array.from(map.values());
-  }
-
-  if (cat === 'trips') {
-    const map = new Map();
-    data.forEach((t) => {
-      const p = getPersonnelForTrip(t);
-      if (p && p.id && !map.has(p.id)) {
-        map.set(p.id, p);
-      }
-    });
-    return Array.from(map.values());
-  }
-
-  return personnelStore.personnelList;
-});
-
-const drilldownSelectedPersonnel = computed(() => {
-  if (selectedDrilldownKeys.value.length === 0) return [];
-  const keySet = new Set(selectedDrilldownKeys.value);
-  const cat = drilldownCategory.value;
-  const currentTab = drilldownActiveTab.value;
-  const data = filteredDrilldownData.value || [];
-  const prefix = cat === 'personnel' ? 'p_' : cat === 'relatives' ? 'r_' : 't_';
-
-  if (cat === 'personnel' || (drilldownHasDualTabs.value && currentTab === 'personnel')) {
-    return data.filter((item, idx) => keySet.has(item.id || `${prefix}${idx}`));
-  }
-
-  if (cat === 'relatives' || (drilldownHasDualTabs.value && currentTab === 'relatives')) {
-    const map = new Map();
-    data.filter((item, idx) => keySet.has(item.id || `${prefix}${idx}`)).forEach((r) => {
-      const p = getPersonnelForRelative(r);
-      if (p && p.id && !map.has(p.id)) {
-        map.set(p.id, p);
-      }
-    });
-    return Array.from(map.values());
-  }
-
-  if (cat === 'trips') {
-    const map = new Map();
-    data.filter((item, idx) => keySet.has(item.id || `${prefix}${idx}`)).forEach((t) => {
-      const p = getPersonnelForTrip(t);
-      if (p && p.id && !map.has(p.id)) {
-        map.set(p.id, p);
-      }
-    });
-    return Array.from(map.values());
-  }
-
-  return [];
-});
-
-const openDrilldownDocxExport = () => {
-  isDocxExportOpen.value = true;
 };
 
 const openDrilldown = (type, title, filterContext = {}) => {
@@ -2531,7 +2469,6 @@ const openDrilldown = (type, title, filterContext = {}) => {
   drilldownHasDualTabs.value = false;
   drilldownTripsList.value = [];
   drilldownRelativesList.value = [];
-  drilldownTargetCriterion.value = null;
 
   if (type === 'all_personnel') {
     drilldownCategory.value = 'personnel';
@@ -2545,147 +2482,43 @@ const openDrilldown = (type, title, filterContext = {}) => {
   } else if (type === 'missing_decision') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.missingDecisionTrips];
-    drilldownTargetCriterion.value = { columnId: colConfig.value.decision || 'decisionNumber', label: 'Số Quyết định' };
   } else if (type === 'schedule_warnings') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.extendedTrips, ...stats.value.overdueTrips];
-    drilldownTargetCriterion.value = { columnId: 'approvedExtensionDate', label: 'Duyệt Gia hạn / Hạn về' };
   } else if (type === 'schedule_extended') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.extendedTrips];
-    drilldownTargetCriterion.value = { columnId: 'approvedExtensionDate', label: 'Duyệt Gia hạn' };
   } else if (type === 'schedule_overdue') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.overdueTrips];
-    drilldownTargetCriterion.value = { columnId: 'approvedArrivalDate', label: 'Hạn về (Quá hạn)' };
   } else if (type === 'schedule_ontime') {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.onTimeTrips];
-    drilldownTargetCriterion.value = { columnId: 'approvedArrivalDate', label: 'Ngày về' };
   } else if (type === 'country' && filterContext.countryName) {
-    drilldownTargetCriterion.value = { columnId: colConfig.value.country || 'countryName', label: `Quốc gia: ${filterContext.countryName}` };
     const cTarget = String(filterContext.countryName).toLowerCase().trim();
-    drilldownTripsList.value = stats.value.filteredTrips.filter((t) => {
-      const c = String(getTripValue(t, colConfig.value.country)).toLowerCase().trim();
-      return c === cTarget;
-    });
-    const allRelativesForDrilldown = [];
-    const seenRelKeys = new Set();
-    (personnelStore.personnelList || []).forEach((p) => {
-      (p.relatives || []).forEach((r) => {
-        const rid = r.id || `${p.id}_${r.relativeName || r.name || ''}`;
-        if (!seenRelKeys.has(rid)) {
-          seenRelKeys.add(rid);
-          allRelativesForDrilldown.push({
-            ...r,
-            parentName: p.name,
-            parentDepartment: personnelStore.getDepartmentName(p.departmentId),
-          });
-        }
-      });
-    });
-    (personnelStore.relativesList || []).forEach((r) => {
-      const rid = r.id || `${r.personnelId || r.cccdparent || ''}_${r.relativeName || r.name || ''}`;
-      if (!seenRelKeys.has(rid)) {
-        seenRelKeys.add(rid);
-        allRelativesForDrilldown.push(r);
-      }
+    const matchingTrips = stats.value.filteredTrips.filter((t) => {
+      const c = String(t.countryName || getTripValue(t, colConfig.value.country) || t.quoc_gia_xuat_canh || '').toLowerCase().trim();
+      return c === cTarget || (cTarget === 'mỹ-canada' && (c.includes('mỹ') || c.includes('canada')));
     });
 
-    drilldownRelativesList.value = allRelativesForDrilldown.filter((r) => {
-      const rc = String(getRowFieldValue(r, colConfig.value.countryRelative) || r.countryName || r.country || '').toLowerCase().trim();
-      return rc === cTarget;
-    });
+    drilldownTripsList.value = matchingTrips.filter((t) => !t.isRelativeTrip);
+    drilldownRelativesList.value = matchingTrips.filter((t) => t.isRelativeTrip);
     drilldownHasDualTabs.value = true;
     drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
     drilldownCategory.value = drilldownActiveTab.value;
   } else if (type === 'funding' && filterContext.fundingName) {
-    drilldownTargetCriterion.value = { columnId: colConfig.value.funding || 'fundingName', label: `Nguồn Kinh phí: ${filterContext.fundingName}` };
     const fTarget = String(filterContext.fundingName).toLowerCase().trim();
-    drilldownTripsList.value = stats.value.filteredTrips.filter((t) => {
-      const f = String(
-        getTripValue(t, colConfig.value.funding) ||
-        (t.personnelId && personnelStore.personnelList.find((p) => p.id === t.personnelId)?.funding2) ||
-        (t.personnelId && personnelStore.personnelList.find((p) => p.id === t.personnelId)?.custom_data?.funding2) ||
-        t.fundingName ||
-        t.funding ||
-        ''
-      ).toLowerCase().trim();
-
-      const bVal = colConfig.value.fundingBudget ? String(getTripValue(t, colConfig.value.fundingBudget)).toLowerCase().trim() : '';
-      const spVal = colConfig.value.fundingSponsor ? String(getTripValue(t, colConfig.value.fundingSponsor)).toLowerCase().trim() : '';
-      const slfVal = colConfig.value.fundingSelf ? String(getTripValue(t, colConfig.value.fundingSelf)).toLowerCase().trim() : '';
-      const othVal = colConfig.value.fundingOther ? String(getTripValue(t, colConfig.value.fundingOther)).toLowerCase().trim() : '';
-
-      if (fTarget.includes('ngân sách') || fTarget.includes('ngan sach')) {
-        return f.includes('ngân sách') || f.includes('ngan sach') || (bVal && bVal !== '-');
+    const matchingTrips = stats.value.filteredTrips.filter((t) => {
+      const f = String(t.fundingName || getTripValue(t, colConfig.value.funding) || t.nguon_kinh_phi || '').toLowerCase().trim();
+      const norm = normalizeFundingCategory(f);
+      if (norm) {
+        return norm.toLowerCase() === fTarget;
       }
-      if (fTarget.includes('tài trợ') || fTarget.includes('tai tro') || fTarget.includes('học bổng') || fTarget.includes('hoc bong')) {
-        return f.includes('tài trợ') || f.includes('tai tro') || f.includes('học bổng') || f.includes('hoc bong') || (spVal && spVal !== '-');
-      }
-      if (fTarget.includes('tự túc') || fTarget.includes('tu tuc')) {
-        return f.includes('tự túc') || f.includes('tu tuc') || (slfVal && slfVal !== '-');
-      }
-      if (fTarget.includes('khác') || fTarget.includes('khac')) {
-        return f.includes('khác') || f.includes('khac') || (othVal && othVal !== '-');
-      }
-      return f === fTarget || f.includes(fTarget);
+      return f.includes(fTarget) || fTarget.includes(f);
     });
 
-    const allRelativesForDrilldown = [];
-    const seenRelKeys = new Set();
-    (personnelStore.personnelList || []).forEach((p) => {
-      (p.relatives || []).forEach((r) => {
-        const rid = r.id || `${p.id}_${r.relativeName || r.name || ''}`;
-        if (!seenRelKeys.has(rid)) {
-          seenRelKeys.add(rid);
-          allRelativesForDrilldown.push({
-            ...r,
-            parentName: p.name,
-            parentDepartment: personnelStore.getDepartmentName(p.departmentId),
-          });
-        }
-      });
-    });
-    (personnelStore.relativesList || []).forEach((r) => {
-      const rid = r.id || `${r.personnelId || r.cccdparent || ''}_${r.relativeName || r.name || ''}`;
-      if (!seenRelKeys.has(rid)) {
-        seenRelKeys.add(rid);
-        allRelativesForDrilldown.push(r);
-      }
-    });
-
-    drilldownRelativesList.value = allRelativesForDrilldown.filter((r) => {
-      const rf = String(
-        getRowFieldValue(r, colConfig.value.fundingRelative) ||
-        r.fundingName ||
-        r.funding ||
-        r.kinhphiTN ||
-        r.custom_data?.kinhphiTN ||
-        r.custom_data?.fundingName ||
-        ''
-      ).toLowerCase().trim();
-
-      const rBudget = colConfig.value.fundingRelativeBudget ? String(getRowFieldValue(r, colConfig.value.fundingRelativeBudget)).toLowerCase().trim() : '';
-      const rSponsor = colConfig.value.fundingRelativeSponsor ? String(getRowFieldValue(r, colConfig.value.fundingRelativeSponsor)).toLowerCase().trim() : '';
-      const rSelf = colConfig.value.fundingRelativeSelf ? String(getRowFieldValue(r, colConfig.value.fundingRelativeSelf)).toLowerCase().trim() : '';
-      const rOther = colConfig.value.fundingRelativeOther ? String(getRowFieldValue(r, colConfig.value.fundingRelativeOther)).toLowerCase().trim() : '';
-
-      if (fTarget.includes('ngân sách') || fTarget.includes('ngan sach')) {
-        return rf.includes('ngân sách') || rf.includes('ngan sach') || (rBudget && rBudget !== '-');
-      }
-      if (fTarget.includes('tài trợ') || fTarget.includes('tai tro') || fTarget.includes('học bổng') || fTarget.includes('hoc bong')) {
-        return rf.includes('tài trợ') || rf.includes('tai tro') || rf.includes('học bổng') || rf.includes('hoc bong') || (rSponsor && rSponsor !== '-');
-      }
-      if (fTarget.includes('tự túc') || fTarget.includes('tu tuc')) {
-        return rf.includes('tự túc') || rf.includes('tu tuc') || (rSelf && rSelf !== '-');
-      }
-      if (fTarget.includes('khác') || fTarget.includes('khac')) {
-        return rf.includes('khác') || rf.includes('khac') || (rOther && rOther !== '-');
-      }
-      return rf === fTarget || rf.includes(fTarget);
-    });
-
+    drilldownTripsList.value = matchingTrips.filter((t) => !t.isRelativeTrip);
+    drilldownRelativesList.value = matchingTrips.filter((t) => t.isRelativeTrip);
     drilldownHasDualTabs.value = true;
     drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
     drilldownCategory.value = drilldownActiveTab.value;
@@ -2750,27 +2583,6 @@ const openCustomChartItemDrilldown = (widget, itemName) => {
 
   isDrilldownOpen.value = true;
 };
-
-const currentDrilldownList = computed(() => {
-  if (drilldownHasDualTabs.value) {
-    return drilldownActiveTab.value === 'trips' ? drilldownTripsList.value : drilldownRelativesList.value;
-  }
-  return drilldownData.value;
-});
-
-const filteredDrilldownData = computed(() => {
-  const q = (drilldownSearch.value || '').toLowerCase().trim();
-  const raw = currentDrilldownList.value;
-  if (!q) return raw;
-  return raw.filter((row) => {
-    return Object.values(row).some((val) => {
-      if (typeof val === 'string' || typeof val === 'number') {
-        return String(val).toLowerCase().includes(q);
-      }
-      return false;
-    });
-  });
-});
 
 const exportDrilldownExcel = () => {
   const currentList = filteredDrilldownData.value;
