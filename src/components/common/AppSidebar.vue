@@ -49,6 +49,47 @@
         <span>Tìm kiếm nâng cao</span>
       </router-link>
 
+      <!-- NÚT NHẬP LIỆU TRÊN MENU SIDEBAR (NẰM TRÊN BÁO CÁO PHỤ LỤC) -->
+      <div class="sidebar-input-action-wrapper" style="position: relative; margin: 10px 10px 6px 10px;">
+        <button
+          type="button"
+          class="sidebar-input-btn"
+          @click="isInputMenuOpen = !isInputMenuOpen"
+          title="Thao tác Nhập liệu nhanh"
+        >
+          <i class="pi pi-plus-circle" style="color: #4ade80; font-size: 1rem;"></i>
+          <span style="font-weight: 700; flex: 1; text-align: left; font-size: 0.82rem;">Nhập liệu</span>
+          <i class="pi pi-chevron-down" style="font-size: 0.65rem; opacity: 0.7;"></i>
+        </button>
+
+        <!-- Dropdown Menu bên dưới nút Nhập liệu -->
+        <div v-if="isInputMenuOpen" class="sidebar-flyout-menu" @click="isInputMenuOpen = false">
+          <div class="flyout-item" @click="handleInputClick('new_personnel')">
+            <i class="pi pi-user-plus" style="color: #2563eb; font-size: 1.05rem;"></i>
+            <div>
+              <div style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">Thêm Cán bộ mới</div>
+              <div style="font-size: 0.68rem; color: #64748b;">Mở form tạo mới hồ sơ Cán bộ</div>
+            </div>
+          </div>
+
+          <div class="flyout-item" @click="openQuickRelativeDialog">
+            <i class="pi pi-users" style="color: #7c3aed; font-size: 1.05rem;"></i>
+            <div>
+              <div style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">Thêm Thân nhân mới</div>
+              <div style="font-size: 0.68rem; color: #64748b;">Chọn Cán bộ để thêm thân nhân</div>
+            </div>
+          </div>
+
+          <div class="flyout-item" @click="openQuickTripDialog">
+            <i class="pi pi-send" style="color: #16a34a; font-size: 1.05rem;"></i>
+            <div>
+              <div style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">Thêm Chuyến đi nước ngoài</div>
+              <div style="font-size: 0.68rem; color: #64748b;">Chọn Cán bộ hoặc Thân nhân</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="app-nav-heading">Báo cáo Phụ lục</div>
 
       <router-link
@@ -83,17 +124,133 @@
         </router-link>
       </template>
     </nav>
+
+    <!-- Dialog 1: Chọn Cán bộ để Thêm Thân nhân mới -->
+    <Dialog
+      v-model:visible="isRelativeSelectOpen"
+      modal
+      header="Thêm Thân nhân mới"
+      :style="{ width: '500px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
+        <p style="font-size: 0.82rem; color: #475569; margin: 0;">
+          Vui lòng chọn Cán bộ để thêm thân nhân mới vào hồ sơ:
+        </p>
+
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
+            Chọn Cán bộ liên quan: <span style="color: red;">*</span>
+          </label>
+          <select
+            v-model="selectedParentCccdForRelative"
+            style="width: 100%; font-size: 0.82rem; padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none;"
+          >
+            <option value="">-- Chọn Cán bộ từ danh sách --</option>
+            <option
+              v-for="p in personnelStore.personnelList"
+              :key="p.id"
+              :value="p.cccd || p.cccdparent || p.id"
+            >
+              {{ p.name }} - {{ p.positionName || p.position || 'Cán bộ' }} (CCCD: {{ p.cccd || p.cccdparent || '-' }})
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Hủy" severity="secondary" text size="small" @click="isRelativeSelectOpen = false" />
+        <Button
+          label="Tiến hành Nhập thân nhân"
+          icon="pi pi-arrow-right"
+          severity="primary"
+          size="small"
+          :disabled="!selectedParentCccdForRelative"
+          @click="confirmRelativeNavigate"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Dialog 2: Chọn đối tượng để Thêm Chuyến đi Nước ngoài -->
+    <Dialog
+      v-model:visible="isQuickTripSelectOpen"
+      modal
+      header="Thêm Chuyến đi Nước ngoài"
+      :style="{ width: '520px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 4px 0;">
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">
+            1. ĐỐI TƯỢNG ĐI NƯỚC NGOÀI:
+          </label>
+          <div style="display: flex; gap: 18px; align-items: center; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer; font-weight: 600; color: #1e293b;">
+              <input type="radio" value="personnel" v-model="quickTripType" style="accent-color: #2563eb;" />
+              <span>👤 Cán bộ (Cá nhân)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer; font-weight: 600; color: #7c3aed;">
+              <input type="radio" value="relative" v-model="quickTripType" style="accent-color: #7c3aed;" />
+              <span>👥 Thân nhân của Cán bộ</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+            2. CHỌN {{ quickTripType === 'personnel' ? 'CÁN BỘ' : 'THÂN NHÂN' }} LIÊN QUAN: <span style="color: red;">*</span>
+          </label>
+          
+          <select v-if="quickTripType === 'personnel'" v-model="selectedQuickTripTargetKey" style="width: 100%; font-size: 0.82rem; padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none;">
+            <option value="">-- Chọn Cán bộ từ danh sách --</option>
+            <option v-for="p in personnelStore.personnelList" :key="p.id" :value="p.cccd || p.cccdparent || p.id">
+              {{ p.name }} - {{ p.positionName || p.position || 'Cán bộ' }} (CCCD: {{ p.cccd || p.cccdparent || '-' }})
+            </option>
+          </select>
+
+          <select v-else v-model="selectedQuickTripTargetKey" style="width: 100%; font-size: 0.82rem; padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none;">
+            <option value="">-- Chọn Thân nhân từ danh sách --</option>
+            <option v-for="r in personnelStore.relativesList" :key="r.id || r.code" :value="r.code || r.id">
+              {{ r.relativeName || r.name }} ({{ r.relationshipName }} của {{ r.parentName || r.parentPersonnelName }}) - CCCD: {{ r.cccd || r.cccdthannhan || '-' }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Hủy" severity="secondary" text size="small" @click="isQuickTripSelectOpen = false" />
+        <Button
+          label="Tiến hành Nhập chuyến đi"
+          icon="pi pi-arrow-right"
+          severity="primary"
+          size="small"
+          :disabled="!selectedQuickTripTargetKey"
+          @click="confirmQuickTripNavigate"
+        />
+      </template>
+    </Dialog>
   </aside>
 </template>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
 import { useAuthStore } from '@/stores/auth';
+import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings } from '@/api/settings';
 
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
+const personnelStore = usePersonnelStore();
+
+const isInputMenuOpen = ref(false);
+const isRelativeSelectOpen = ref(false);
+const selectedParentCccdForRelative = ref('');
+
+const isQuickTripSelectOpen = ref(false);
+const quickTripType = ref('personnel');
+const selectedQuickTripTargetKey = ref('');
 
 const DEFAULT_APPENDICES = [
   {
@@ -186,4 +343,108 @@ const getAppendixIcon = (source) => {
 const getAppendixNavLabel = (pl) => {
   return pl.title || (pl.code ? `[${pl.code}] Phụ lục` : 'Phụ lục');
 };
+
+const handleInputClick = (action) => {
+  isInputMenuOpen.value = false;
+  router.push({ path: '/personnel', query: { action } });
+};
+
+const openQuickRelativeDialog = () => {
+  isInputMenuOpen.value = false;
+  selectedParentCccdForRelative.value = personnelStore.personnelList.length > 0 ? (personnelStore.personnelList[0].cccd || personnelStore.personnelList[0].id) : '';
+  isRelativeSelectOpen.value = true;
+};
+
+const confirmRelativeNavigate = () => {
+  if (!selectedParentCccdForRelative.value) return;
+  isRelativeSelectOpen.value = false;
+  router.push({
+    path: '/personnel',
+    query: {
+      action: 'new_relative',
+      targetCccd: selectedParentCccdForRelative.value,
+    },
+  });
+};
+
+const openQuickTripDialog = () => {
+  isInputMenuOpen.value = false;
+  quickTripType.value = 'personnel';
+  selectedQuickTripTargetKey.value = personnelStore.personnelList.length > 0 ? (personnelStore.personnelList[0].cccd || personnelStore.personnelList[0].id) : '';
+  isQuickTripSelectOpen.value = true;
+};
+
+const confirmQuickTripNavigate = () => {
+  if (!selectedQuickTripTargetKey.value) return;
+  isQuickTripSelectOpen.value = false;
+
+  if (quickTripType.value === 'personnel') {
+    router.push({
+      path: '/personnel',
+      query: { action: 'new_trip', targetCccd: selectedQuickTripTargetKey.value },
+    });
+  } else {
+    const foundRel = personnelStore.relativesList.find((r) => r.code === selectedQuickTripTargetKey.value || r.id === selectedQuickTripTargetKey.value);
+    const parentCccd = foundRel?.parentPersonnelCccd || foundRel?.cccdparent || (foundRel?.parentPersonnelId ? personnelStore.personnelList.find(p => p.id === foundRel.parentPersonnelId)?.cccd : '') || '';
+    router.push({
+      path: '/personnel',
+      query: {
+        action: 'new_trip',
+        targetCccd: parentCccd || selectedQuickTripTargetKey.value,
+        targetRelativeCode: foundRel?.code || selectedQuickTripTargetKey.value,
+      },
+    });
+  }
+};
 </script>
+
+<style scoped>
+.sidebar-input-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(34, 197, 94, 0.18);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-input-btn:hover {
+  background: rgba(34, 197, 94, 0.3);
+  border-color: rgba(74, 222, 128, 0.6);
+}
+
+.sidebar-flyout-menu {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  width: 250px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e2e8f0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1050;
+}
+
+.flyout-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.flyout-item:hover {
+  background: #f1f5f9;
+}
+</style>

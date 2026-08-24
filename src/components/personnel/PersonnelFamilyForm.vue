@@ -295,6 +295,10 @@ const removeRelative = (index) => {
 watch(
   () => props.targetRelativeCode,
   (code) => {
+    if (code === 'NEW_RELATIVE') {
+      addRelative();
+      return;
+    }
     if (code) {
       nextTick(() => {
         setTimeout(() => {

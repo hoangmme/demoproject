@@ -28,44 +28,6 @@
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <!-- Nút Nhập liệu Dropdown -->
-          <div class="input-dropdown-wrapper" style="position: relative;">
-            <Button
-              label="Nhập liệu"
-              icon="pi pi-plus-circle"
-              severity="primary"
-              size="small"
-              @click="isInputMenuOpen = !isInputMenuOpen"
-              style="font-size: 0.8rem; font-weight: 700;"
-            />
-
-            <div v-if="isInputMenuOpen" class="input-dropdown-menu" @click="isInputMenuOpen = false">
-              <div class="input-menu-item" @click="handleInputNavigate('new_personnel')">
-                <i class="pi pi-user-plus" style="color: #2563eb; font-size: 1.1rem;"></i>
-                <div>
-                  <div style="font-weight: 700; color: #1e293b; font-size: 0.82rem;">Thêm Cán bộ mới</div>
-                  <div style="font-size: 0.7rem; color: #64748b;">Mở form tạo mới hồ sơ Cán bộ</div>
-                </div>
-              </div>
-
-              <div class="input-menu-item" @click="handleInputNavigate('new_relative')">
-                <i class="pi pi-users" style="color: #7c3aed; font-size: 1.1rem;"></i>
-                <div>
-                  <div style="font-weight: 700; color: #1e293b; font-size: 0.82rem;">Thêm Thân nhân mới</div>
-                  <div style="font-size: 0.7rem; color: #64748b;">Kê khai thêm thân nhân ở nước ngoài</div>
-                </div>
-              </div>
-
-              <div class="input-menu-item" @click="openQuickTripDialog">
-                <i class="pi pi-send" style="color: #16a34a; font-size: 1.1rem;"></i>
-                <div>
-                  <div style="font-weight: 700; color: #1e293b; font-size: 0.82rem;">Thêm Chuyến đi nước ngoài</div>
-                  <div style="font-size: 0.7rem; color: #64748b;">Chọn Cán bộ hoặc Thân nhân để nhập chuyến</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <span class="p-input-icon-left" style="position: relative;">
             <i class="pi pi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem;"></i>
             <InputText
@@ -168,64 +130,6 @@
         </Column>
       </DataTable>
     </div>
-
-    <!-- Dialog chọn đối tượng để Thêm Chuyến đi Nước ngoài -->
-    <Dialog
-      v-model:visible="isQuickTripSelectOpen"
-      modal
-      header="Thêm Chuyến đi Nước ngoài"
-      :style="{ width: '540px' }"
-    >
-      <div style="display: flex; flex-direction: column; gap: 14px; padding: 4px 0;">
-        <div>
-          <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 6px;">
-            1. ĐỐI TƯỢNG ĐI NƯỚC NGOÀI:
-          </label>
-          <div style="display: flex; gap: 18px; align-items: center; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer; font-weight: 600; color: #1e293b;">
-              <input type="radio" value="personnel" v-model="quickTripType" style="accent-color: #2563eb;" />
-              <span>👤 Cán bộ (Cá nhân)</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer; font-weight: 600; color: #7c3aed;">
-              <input type="radio" value="relative" v-model="quickTripType" style="accent-color: #7c3aed;" />
-              <span>👥 Thân nhân của Cán bộ</span>
-            </label>
-          </div>
-        </div>
-
-        <div>
-          <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
-            2. CHỌN {{ quickTripType === 'personnel' ? 'CÁN BỘ' : 'THÂN NHÂN' }} LIÊN QUAN: <span style="color: red;">*</span>
-          </label>
-          
-          <select v-if="quickTripType === 'personnel'" v-model="selectedQuickTargetKey" class="filter-select" style="width: 100%; font-size: 0.82rem; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-            <option value="">-- Chọn Cán bộ từ danh sách --</option>
-            <option v-for="p in personnelStore.personnelList" :key="p.id" :value="p.cccd || p.cccdparent || p.id">
-              {{ p.name }} - {{ p.positionName || p.position || 'Cán bộ' }} (CCCD: {{ p.cccd || p.cccdparent || '-' }})
-            </option>
-          </select>
-
-          <select v-else v-model="selectedQuickTargetKey" class="filter-select" style="width: 100%; font-size: 0.82rem; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-            <option value="">-- Chọn Thân nhân từ danh sách --</option>
-            <option v-for="r in personnelStore.relativesList" :key="r.id || r.code" :value="r.code || r.id">
-              {{ r.relativeName || r.name }} ({{ r.relationshipName }} của {{ r.parentName || r.parentPersonnelName }}) - CCCD: {{ r.cccd || r.cccdthannhan || '-' }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <template #footer>
-        <Button label="Hủy" severity="secondary" text size="small" @click="isQuickTripSelectOpen = false" />
-        <Button
-          label="Tiến hành Nhập chuyến đi"
-          icon="pi pi-arrow-right"
-          severity="primary"
-          size="small"
-          :disabled="!selectedQuickTargetKey"
-          @click="confirmQuickTripNavigate"
-        />
-      </template>
-    </Dialog>
   </div>
 </template>
 
@@ -563,47 +467,6 @@ const handleExport = () => {
   const cleanFileName = rawTitle.replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_');
   exportToExcel(dataToExport, cleanFileName, currentAppendix.value.code || 'Phụ lục');
 };
-
-const isInputMenuOpen = ref(false);
-const isQuickTripSelectOpen = ref(false);
-const quickTripType = ref('personnel');
-const selectedQuickTargetKey = ref('');
-
-const handleInputNavigate = (action) => {
-  isInputMenuOpen.value = false;
-  router.push({ path: '/personnel', query: { action } });
-};
-
-const openQuickTripDialog = () => {
-  isInputMenuOpen.value = false;
-  quickTripType.value = 'personnel';
-  selectedQuickTargetKey.value = personnelStore.personnelList.length > 0 ? (personnelStore.personnelList[0].cccd || personnelStore.personnelList[0].id) : '';
-  isQuickTripSelectOpen.value = true;
-};
-
-const confirmQuickTripNavigate = () => {
-  if (!selectedQuickTargetKey.value) return;
-  isQuickTripSelectOpen.value = false;
-  
-  if (quickTripType.value === 'personnel') {
-    router.push({
-      path: '/personnel',
-      query: { action: 'new_trip', targetCccd: selectedQuickTargetKey.value },
-    });
-  } else {
-    // Relative
-    const foundRel = personnelStore.relativesList.find((r) => r.code === selectedQuickTargetKey.value || r.id === selectedQuickTargetKey.value);
-    const parentCccd = foundRel?.parentPersonnelCccd || foundRel?.cccdparent || (foundRel?.parentPersonnelId ? personnelStore.personnelList.find(p => p.id === foundRel.parentPersonnelId)?.cccd : '') || '';
-    router.push({
-      path: '/personnel',
-      query: {
-        action: 'new_trip',
-        targetCccd: parentCccd || selectedQuickTargetKey.value,
-        targetRelativeCode: foundRel?.code || selectedQuickTargetKey.value,
-      },
-    });
-  }
-};
 </script>
 
 <style scoped>
@@ -632,38 +495,5 @@ const confirmQuickTripNavigate = () => {
   color: #ffffff !important;
   border-color: #0284c7 !important;
   box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
-}
-
-.input-dropdown-wrapper {
-  position: relative;
-}
-
-.input-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 1000;
-  width: 250px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.input-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.input-menu-item:hover {
-  background: #f8fafc;
 }
 </style>
