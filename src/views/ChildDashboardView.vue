@@ -221,15 +221,7 @@
                   </div>
                 </template>
 
-                <!-- 2. Trạng thái Đi / Về (Status Badge) -->
-                <template v-else-if="col.id === 'status' || col.id === 'tripStatus'">
-                  <span :class="getStatusBadgeClass(trip)">
-                    <span class="status-dot"></span>
-                    {{ getStatusLabel(trip) }}
-                  </span>
-                </template>
-
-                <!-- 3. Ngày nhập cảnh (Hiển thị ngày hoặc Badge Đang ở nước ngoài nếu đang đi) -->
+                <!-- 2. Ngày nhập cảnh (Hiển thị ngày hoặc Badge Đang ở nước ngoài nếu đang đi) -->
                 <template v-else-if="col.id === 'arrivalDate'">
                   <span v-if="trip.arrivalDate" style="color: #0f172a; font-weight: 600;">
                     {{ formatDisplayDate(trip.arrivalDate) }}
@@ -887,8 +879,14 @@ const onColumnsChange = async (newCols) => {
 
 const visibleColumns = computed(() => {
   const colMap = new Map();
-  allAvailableColumnsList.value.forEach((c) => colMap.set(c.id, c));
-  return selectedColIds.value.map((id) => colMap.get(id) || { id, label: id, width: '150px' });
+  allAvailableColumnsList.value.forEach((c) => {
+    if (c.id !== 'status' && c.id !== 'tripStatus') {
+      colMap.set(c.id, c);
+    }
+  });
+  return selectedColIds.value
+    .filter((id) => id !== 'status' && id !== 'tripStatus')
+    .map((id) => colMap.get(id) || { id, label: id, width: '150px' });
 });
 
 // Build unified list of trips from both Cán bộ and Thân nhân profiles
@@ -1751,21 +1749,21 @@ const initTopicColumns = () => {
   const savedCols = localStorage.getItem(currentKey);
   if (savedCols) {
     try {
-      selectedColIds.value = JSON.parse(savedCols);
+      selectedColIds.value = JSON.parse(savedCols).filter((id) => id !== 'status' && id !== 'tripStatus');
       return;
     } catch (e) {}
   }
   if (currentDashboardConfig.value.columns && currentDashboardConfig.value.columns.length > 0) {
-    selectedColIds.value = [...currentDashboardConfig.value.columns];
+    selectedColIds.value = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
   } else {
     const defaultSaved = localStorage.getItem('trips_dashboard_columns');
     if (defaultSaved) {
       try {
-        selectedColIds.value = JSON.parse(defaultSaved);
+        selectedColIds.value = JSON.parse(defaultSaved).filter((id) => id !== 'status' && id !== 'tripStatus');
         return;
       } catch (e) {}
     }
-    selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id);
+    selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
   }
 };
 

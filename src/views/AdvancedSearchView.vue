@@ -3,13 +3,24 @@
     <!-- CỘT TRÁI: BỘ LỌC ĐÃ LƯU -->
     <aside class="saved-presets-sidebar">
       <div class="presets-header">
-        <h3 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
-          <i class="pi pi-bookmark" style="color: #2563eb;"></i>
-          Bộ lọc đã lưu
-        </h3>
-        <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
-          {{ savedPresets.length }} bộ lọc
-        </span>
+        <div>
+          <h3 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="pi pi-bookmark" style="color: #2563eb;"></i>
+            Bộ lọc đã lưu
+          </h3>
+          <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+            {{ savedPresets.length }} bộ lọc
+          </span>
+        </div>
+        <button
+          type="button"
+          class="btn-new-preset"
+          @click="createNewPreset"
+          title="Tạo mới bộ lọc"
+        >
+          <i class="pi pi-plus"></i>
+          <span>Mới</span>
+        </button>
       </div>
 
       <div class="presets-list">
@@ -21,7 +32,7 @@
           @click="applyPreset(preset)"
         >
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
-            <div style="font-size: 0.85rem; font-weight: 700; color: #1e293b; line-height: 1.35;">
+            <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b; line-height: 1.35;">
               {{ preset.name }}
             </div>
             <button
@@ -44,13 +55,13 @@
         </div>
 
         <div v-if="savedPresets.length === 0" style="text-align: center; padding: 2rem 1rem; color: #94a3b8; font-size: 0.8rem;">
-          Chưa có bộ lọc nào được lưu. Hãy tạo điều kiện và bấm <b>"Lưu bộ lọc này"</b>.
+          Chưa có bộ lọc nào. Hãy nhập điều kiện và bấm <b>"Lưu bộ lọc"</b>.
         </div>
       </div>
 
       <div class="presets-footer-note">
-        <i class="pi pi-info-circle"></i>
-        <span>Bộ lọc có ghi <b>Dùng chung</b> thì cả phòng đều thấy. Bộ lọc <b>Riêng của tôi</b> chỉ bạn thấy.</span>
+        <i class="pi pi-info-circle" style="color: #0284c7; font-size: 0.9rem; flex-shrink: 0; margin-top: 2px;"></i>
+        <span>Bộ lọc <b>Dùng chung</b> cho cả phòng thấy. Bộ lọc <b>Riêng của tôi</b> chỉ bạn thấy.</span>
       </div>
     </aside>
 
@@ -106,42 +117,27 @@
               {{ rIdx === 0 ? 'Khi' : (logicOperator === 'AND' ? 'VÀ' : 'HOẶC') }}
             </div>
 
-            <!-- Field Selector -->
-            <div style="flex: 1; min-width: 180px;">
+            <!-- Field Selector: FULL DYNAMIC COLUMNS FROM CONFIGURATION -->
+            <div style="flex: 1; min-width: 200px;">
               <select v-model="row.field" class="builder-select" @change="onFieldChange(row)">
-                <optgroup label="── 1. Thông tin Chuyến đi ──">
-                  <option value="quoc_gia_xuat_canh">Quốc gia / Nơi đến</option>
-                  <option value="ngay_xuat_canh">Ngày xuất cảnh</option>
-                  <option value="ngay_nhap_canh">Ngày nhập cảnh</option>
-                  <option value="so_qd_di">Số quyết định duyệt</option>
-                  <option value="nguon_kinh_phi">Nguồn kinh phí</option>
-                  <option value="muc_dich_xuat_canh">Mục đích chuyến đi</option>
-                  <option value="trang_thai_hien_dien">Trạng thái hiện diện (Trong nước / Nước ngoài)</option>
-                  <option value="isOverdue">Trạng thái Quá hạn chưa về</option>
-                  <option value="trip_count_year">Số lần đi trong năm</option>
-                </optgroup>
-                <optgroup label="── 2. Thông tin Cán bộ ──">
-                  <option value="name">Họ và tên Cán bộ</option>
-                  <option value="code">Mã Cán bộ</option>
-                  <option value="cccd">Số CCCD Cán bộ</option>
-                  <option value="departmentName">Đơn vị công tác</option>
-                  <option value="position">Chức vụ</option>
-                  <option value="birthYear">Năm sinh</option>
-                  <option value="hcCaNhan">Hộ chiếu cá nhân</option>
-                  <option value="hcCongVu">Hộ chiếu công vụ</option>
-                  <option value="kqThamTra">Kết quả thẩm tra TCCT</option>
-                  <option value="hasRelatives">Có thân nhân ở nước ngoài</option>
-                </optgroup>
-                <optgroup label="── 3. Thông tin Thân nhân ──">
-                  <option value="relativeName">Họ tên Thân nhân</option>
-                  <option value="relationshipName">Mối quan hệ thân nhân</option>
-                  <option value="relCountryName">Quốc gia thân nhân cư trú</option>
+                <optgroup
+                  v-for="group in allSearchableGroups"
+                  :key="group.name"
+                  :label="`── ${group.name} ──`"
+                >
+                  <option
+                    v-for="col in group.columns"
+                    :key="col.id"
+                    :value="col.id"
+                  >
+                    {{ col.label }}
+                  </option>
                 </optgroup>
               </select>
             </div>
 
             <!-- Operator Selector -->
-            <div style="width: 170px; flex-shrink: 0;">
+            <div style="width: 175px; flex-shrink: 0;">
               <select v-model="row.operator" class="builder-select">
                 <option value="equals">là (khớp chính xác)</option>
                 <option value="contains">chứa từ khóa</option>
@@ -159,7 +155,7 @@
             <div style="flex: 1; min-width: 180px;" v-if="row.operator !== 'empty' && row.operator !== 'has_value'">
               <!-- Dropdown for funding -->
               <select
-                v-if="row.field === 'nguon_kinh_phi'"
+                v-if="row.field === 'nguon_kinh_phi' || row.field === 'fundingName' || row.field === 'funding'"
                 v-model="row.value"
                 class="builder-select"
               >
@@ -172,7 +168,7 @@
 
               <!-- Dropdown for presence status -->
               <select
-                v-else-if="row.field === 'trang_thai_hien_dien'"
+                v-else-if="row.field === 'trang_thai_hien_dien' || row.field === 'presenceStatus'"
                 v-model="row.value"
                 class="builder-select"
               >
@@ -181,7 +177,7 @@
                 <option value="Chưa khởi hành">Chưa khởi hành</option>
               </select>
 
-              <!-- Date Picker / Text -->
+              <!-- Date Input -->
               <input
                 v-else-if="row.operator === 'before_date' || row.operator === 'after_date'"
                 v-model="row.value"
@@ -234,12 +230,18 @@
           </button>
 
           <div style="display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; flex-wrap: wrap;">
-            <input
-              v-model="presetSaveName"
-              placeholder="Tên bộ lọc, vd: Quá hạn về nước quý III"
-              class="builder-input"
-              style="width: 260px; font-size: 0.78rem;"
-            />
+            <!-- Ô đặt tên cho bộ lọc -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 0.76rem; font-weight: 700; color: #475569; white-space: nowrap;">
+                🏷️ Tên bộ lọc:
+              </span>
+              <input
+                v-model="presetSaveName"
+                placeholder="Nhập tên bộ lọc (VD: Quá hạn quý III...)"
+                class="builder-input"
+                style="width: 230px; font-size: 0.78rem;"
+              />
+            </div>
 
             <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: #334155; cursor: pointer;">
               <input
@@ -247,13 +249,14 @@
                 v-model="presetIsShared"
                 style="accent-color: #2563eb; width: 15px; height: 15px;"
               />
-              Dùng chung cho cả phòng
+              Dùng chung
             </label>
 
             <button
               type="button"
               class="btn-builder-secondary"
               @click="saveCurrentPreset"
+              title="Lưu các điều kiện thành bộ lọc để tái sử dụng"
             >
               <i class="pi pi-save"></i>
               <span>Lưu bộ lọc này</span>
@@ -273,7 +276,7 @@
 
       <!-- KẾT QUẢ TÌM KIẾM -->
       <div class="app-card" style="padding: 1.25rem;">
-        <!-- Header summary & Export button -->
+        <!-- Header summary & Export button (Unified PDF/Word Export) -->
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
           <div style="font-size: 0.88rem; color: #0f172a;">
             Tìm được <b style="color: #2563eb; font-size: 1rem;">{{ searchResults.length }}</b> bản ghi
@@ -283,15 +286,16 @@
           </div>
 
           <div style="display: flex; gap: 8px;">
+            <!-- Xuất PDF / Word chung của hệ thống -->
             <button
               type="button"
               class="btn-action-primary"
-              @click="exportResultsExcel"
+              @click="isExportDocxDialogOpen = true"
               :disabled="searchResults.length === 0"
-              title="Xuất kết quả ra file Excel"
+              title="Xuất Hồ sơ (PDF / Word)"
             >
-              <i class="pi pi-file-excel"></i>
-              <span>Xuất file kết quả (Excel)</span>
+              <i class="pi pi-file-pdf"></i>
+              <span>Xuất Hồ sơ (PDF / Word)</span>
             </button>
           </div>
         </div>
@@ -371,6 +375,12 @@
       :personData="activePersonData"
       @saved="handlePersonnelSaved"
     />
+
+    <!-- Advanced PDF / Word Export Dialog (Unified Across System) -->
+    <AdvancedDocxExportDialog
+      v-model="isExportDocxDialogOpen"
+      :selectedPersonnel="selectedPersonnelForExport"
+    />
   </div>
 </template>
 
@@ -378,9 +388,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
-import { parseDateObj, formatDate } from '@/utils/formatters';
+import { parseDateObj, formatDate, computePresenceStatus } from '@/utils/formatters';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
-import * as XLSX from 'xlsx';
+import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 
 const personnelStore = usePersonnelStore();
 
@@ -467,8 +477,113 @@ const presetSaveName = ref('');
 const presetIsShared = ref(true);
 
 const isPersonnelDialogOpen = ref(false);
+const isExportDocxDialogOpen = ref(false);
 const activePersonData = ref(null);
 const searchResults = ref([]);
+
+// BUILD FULL DYNAMIC SEARCHABLE COLUMNS BASED ON COLUMN CONFIGURATION
+const allSearchableGroups = computed(() => {
+  const groups = [];
+
+  // Group 1: Khối B - Chuyến đi (From importMappingTrips)
+  const tripCols = [];
+  const seenTrip = new Set();
+
+  tripCols.push({ id: 'trang_thai_hien_dien', label: 'Trạng thái hiện diện (Trong nước / Nước ngoài)' });
+  tripCols.push({ id: 'isOverdue', label: 'Trạng thái Quá hạn chưa về' });
+  tripCols.push({ id: 'trip_count_year', label: 'Số lần xuất cảnh trong năm' });
+  seenTrip.add('trang_thai_hien_dien');
+  seenTrip.add('isOverdue');
+  seenTrip.add('trip_count_year');
+
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !seenTrip.has(c.id)) {
+        seenTrip.add(c.id);
+        tripCols.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+
+  groups.push({
+    name: '1. Thông tin Chuyến đi (Khối B)',
+    columns: tripCols,
+  });
+
+  // Group 2: Khối A - Cán bộ (From importMappingPersonnel)
+  const pCols = [];
+  const seenP = new Set();
+  pCols.push({ id: 'name', label: 'Họ và tên Cán bộ' });
+  pCols.push({ id: 'code', label: 'Mã Cán bộ' });
+  pCols.push({ id: 'cccd', label: 'Số CCCD Cán bộ' });
+  pCols.push({ id: 'departmentName', label: 'Đơn vị công tác' });
+  pCols.push({ id: 'position', label: 'Chức vụ' });
+  pCols.push({ id: 'hasRelatives', label: 'Có thân nhân ở nước ngoài' });
+  seenP.add('name');
+  seenP.add('code');
+  seenP.add('cccd');
+  seenP.add('departmentName');
+  seenP.add('position');
+  seenP.add('hasRelatives');
+
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !seenP.has(c.id)) {
+        seenP.add(c.id);
+        pCols.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+
+  groups.push({
+    name: '2. Thông tin Cán bộ (Khối A)',
+    columns: pCols,
+  });
+
+  // Group 3: Khối C - Thân nhân (From importMappingRelative)
+  const relCols = [];
+  const seenRel = new Set();
+  relCols.push({ id: 'relativeName', label: 'Họ tên Thân nhân' });
+  relCols.push({ id: 'relationshipName', label: 'Mối quan hệ thân nhân' });
+  relCols.push({ id: 'relCountryName', label: 'Quốc gia thân nhân cư trú' });
+  seenRel.add('relativeName');
+  seenRel.add('relationshipName');
+  seenRel.add('relCountryName');
+
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !seenRel.has(c.id)) {
+        seenRel.add(c.id);
+        relCols.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+
+  groups.push({
+    name: '3. Thông tin Thân nhân (Khối C)',
+    columns: relCols,
+  });
+
+  return groups;
+});
+
+const selectedPersonnelForExport = computed(() => {
+  const pIds = new Set();
+  searchResults.value.forEach((item) => {
+    if (item.personnelId) pIds.add(item.personnelId);
+    else if (item.rawPerson?.id) pIds.add(item.rawPerson.id);
+  });
+  return (personnelStore.personnelList || []).filter((p) => pIds.has(p.id));
+});
+
+const createNewPreset = () => {
+  activePresetId.value = '';
+  presetSaveName.value = 'Bộ lọc mới ' + (savedPresets.value.length + 1);
+  presetIsShared.value = true;
+  criteria.value = [
+    { field: 'quoc_gia_xuat_canh', operator: 'contains', value: '' },
+  ];
+};
 
 const addCriteriaRow = () => {
   criteria.value.push({
@@ -510,7 +625,6 @@ const buildDataset = () => {
     const pTrips = p.trips || [];
     const pRelatives = p.relatives || [];
 
-    // Calculate trip count in year 2026
     const tripCount2026 = pTrips.filter((t) => {
       const d = parseDateObj(t.departureDate || t.custom_data?.departureDate);
       return d && d.getFullYear() === now.getFullYear();
@@ -532,7 +646,7 @@ const buildDataset = () => {
         decisionNumber: '-',
         fundingName: '-',
         purpose: '-',
-        status: 'Trong nước',
+        trang_thai_hien_dien: 'Trong nước',
         isOverdue: false,
         hasRelatives: pRelatives.length > 0,
         trip_count_year: tripCount2026,
@@ -540,6 +654,8 @@ const buildDataset = () => {
         hcCongVu: p.hcCongVu || p.custom_data?.hcCongVu || '',
         kqThamTra: p.kqThamTra || p.custom_data?.kqThamTra || '',
         cccd: p.cccd || p.cccdparent || '',
+        ...p.custom_data,
+        ...p,
       });
     } else {
       pTrips.forEach((t, tIdx) => {
@@ -601,6 +717,9 @@ const buildDataset = () => {
           hcCongVu: p.hcCongVu || p.custom_data?.hcCongVu || '',
           kqThamTra: p.kqThamTra || p.custom_data?.kqThamTra || '',
           cccd: p.cccd || p.cccdparent || '',
+          ...p.custom_data,
+          ...custom,
+          ...t,
         });
       });
     }
@@ -622,42 +741,55 @@ const testCondition = (item, crit) => {
     itemVal = item.hasRelatives ? 'true' : 'false';
   } else if (f === 'trip_count_year') {
     itemVal = Number(item.trip_count_year || 0);
-  } else if (f === 'quoc_gia_xuat_canh') {
-    itemVal = item.countryName || '';
-  } else if (f === 'ngay_xuat_canh') {
+  } else if (f === 'quoc_gia_xuat_canh' || f === 'countryName') {
+    itemVal = item.countryName || item.country || '';
+  } else if (f === 'ngay_xuat_canh' || f === 'departureDate') {
     itemVal = item.departureDate || '';
-  } else if (f === 'ngay_nhap_canh') {
+  } else if (f === 'ngay_nhap_canh' || f === 'arrivalDate') {
     itemVal = item.arrivalDate || '';
-  } else if (f === 'so_qd_di') {
+  } else if (f === 'so_qd_di' || f === 'decisionNumber') {
     itemVal = item.decisionNumber || '';
-  } else if (f === 'nguon_kinh_phi') {
+  } else if (f === 'nguon_kinh_phi' || f === 'fundingName') {
     itemVal = item.fundingName || '';
-  } else if (f === 'muc_dich_xuat_canh') {
+  } else if (f === 'muc_dich_xuat_canh' || f === 'purpose') {
     itemVal = item.purpose || '';
   } else {
-    itemVal = String(item[f] || '').trim();
+    itemVal = String(item[f] || item.rawTrip?.[f] || item.rawPerson?.[f] || item.custom_data?.[f] || '').trim();
+  }
+
+  // Get field label for clear reason badge
+  let fieldLabel = f;
+  for (const g of allSearchableGroups.value) {
+    const found = g.columns.find((c) => c.id === f);
+    if (found) {
+      fieldLabel = found.label;
+      break;
+    }
   }
 
   // Evaluate Operator
   if (op === 'empty') {
     const isEmp = !itemVal || itemVal === '-' || itemVal === 'Chưa rõ';
-    return { matches: isEmp, reason: `${f}: để trống` };
+    return { matches: isEmp, reason: `${fieldLabel}: để trống` };
   }
   if (op === 'has_value') {
     const hasV = !!itemVal && itemVal !== '-' && itemVal !== 'Chưa rõ';
-    return { matches: hasV, reason: `${f}: ${itemVal}` };
+    return { matches: hasV, reason: `${fieldLabel}: ${itemVal}` };
   }
   if (op === 'equals') {
     const eq = String(itemVal).toLowerCase() === val;
-    return { matches: eq, reason: `${itemVal}` };
+    let reasonText = `${fieldLabel}: ${itemVal}`;
+    if (f === 'hasRelatives') reasonText = 'Có thân nhân ở nước ngoài';
+    if (f === 'isOverdue') reasonText = 'Quá hạn chưa về';
+    return { matches: eq, reason: reasonText };
   }
   if (op === 'contains') {
     const cnt = String(itemVal).toLowerCase().includes(val);
-    return { matches: cnt, reason: `${itemVal}` };
+    return { matches: cnt, reason: `${fieldLabel}: ${itemVal}` };
   }
   if (op === 'not_contains') {
     const ncnt = !String(itemVal).toLowerCase().includes(val);
-    return { matches: ncnt, reason: `Không chứa "${val}"` };
+    return { matches: ncnt, reason: `${fieldLabel} không chứa "${val}"` };
   }
   if (op === 'before_date') {
     const dItem = parseDateObj(itemVal);
@@ -673,11 +805,11 @@ const testCondition = (item, crit) => {
   }
   if (op === 'gte') {
     const g = Number(itemVal) >= Number(val);
-    return { matches: g, reason: `Số lượng: ${itemVal} (>= ${val})` };
+    return { matches: g, reason: `${fieldLabel}: ${itemVal} (>= ${val})` };
   }
   if (op === 'lte') {
     const l = Number(itemVal) <= Number(val);
-    return { matches: l, reason: `Số lượng: ${itemVal} (<= ${val})` };
+    return { matches: l, reason: `${fieldLabel}: ${itemVal} (<= ${val})` };
   }
 
   return { matches: true, reason: '' };
@@ -735,16 +867,17 @@ const saveCurrentPreset = async () => {
     return;
   }
 
+  const nameToSave = presetSaveName.value.trim();
   const newPreset = {
-    id: 'preset_' + Date.now(),
-    name: presetSaveName.value.trim(),
+    id: activePresetId.value || ('preset_' + Date.now()),
+    name: nameToSave,
     isShared: presetIsShared.value,
     logic: logicOperator.value,
     updatedAt: new Date().toLocaleDateString('vi-VN'),
     criteria: JSON.parse(JSON.stringify(criteria.value)),
   };
 
-  const existingIdx = savedPresets.value.findIndex((p) => p.name === newPreset.name);
+  const existingIdx = savedPresets.value.findIndex((p) => p.id === newPreset.id || p.name.toLowerCase() === nameToSave.toLowerCase());
   if (existingIdx !== -1) {
     savedPresets.value[existingIdx] = newPreset;
   } else {
@@ -755,11 +888,9 @@ const saveCurrentPreset = async () => {
 
   // Persist
   localStorage.setItem('advanced_search_presets', JSON.stringify(savedPresets.value));
-  if (presetIsShared.value) {
-    try {
-      await saveAppSettings('advanced_search_shared_presets', savedPresets.value.filter((p) => p.isShared));
-    } catch (e) {}
-  }
+  try {
+    await saveAppSettings('advanced_search_shared_presets', savedPresets.value.filter((p) => p.isShared));
+  } catch (e) {}
 
   alert(`Đã lưu bộ lọc "${newPreset.name}" thành công!`);
 };
@@ -797,29 +928,6 @@ const handlePersonnelSaved = async () => {
   executeSearch();
 };
 
-const exportResultsExcel = () => {
-  if (searchResults.value.length === 0) return;
-  const rows = searchResults.value.map((item, idx) => ({
-    'STT': idx + 1,
-    'Mã Cán bộ': item.personnelCode || '',
-    'Họ và tên': item.personnelName,
-    'Chức vụ': item.position || '',
-    'Đơn vị công tác': item.departmentName || '',
-    'Quốc gia': item.countryName || '',
-    'Ngày xuất cảnh': item.departureDate || '',
-    'Ngày nhập cảnh': item.arrivalDate || '',
-    'Số quyết định': item.decisionNumber || '',
-    'Nguồn kinh phí': item.fundingName || '',
-    'Mục đích': item.purpose || '',
-    'Lý do khớp điều kiện': (item.matchReasons || []).join('; '),
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Ket_qua_tra_cuu');
-  XLSX.writeFile(wb, `Ket_qua_tim_kiem_nang_cao_${new Date().toISOString().slice(0, 10)}.xlsx`);
-};
-
 onMounted(async () => {
   await loadPresets();
   if (savedPresets.value.length > 0) {
@@ -835,7 +943,7 @@ onMounted(async () => {
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  min-height: calc(100vh - 100px);
+  min-height: calc(100vh - 90px);
 }
 
 .saved-presets-sidebar {
@@ -847,9 +955,9 @@ onMounted(async () => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 120px);
+  height: calc(100vh - 100px);
   position: sticky;
-  top: 80px;
+  top: 1rem;
 }
 
 .presets-header {
@@ -861,6 +969,24 @@ onMounted(async () => {
   background: #f8fafc;
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
+}
+
+.btn-new-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 5px;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-new-preset:hover {
+  background: #dbeafe;
 }
 
 .presets-list {
