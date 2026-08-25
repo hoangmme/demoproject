@@ -193,217 +193,147 @@
       </div>
     </div>
 
-    <!-- Main Data Table Card -->
+    <!-- Main Data Table Card (Matching PersonnelView exactly) -->
     <div class="app-card" style="padding: 0; overflow: hidden;">
-      <div style="overflow-x: auto; max-height: calc(100vh - 360px);">
-        <table class="table-dashboard">
-          <thead>
-            <tr>
-              <!-- Checkbox All -->
-              <th style="width: 44px; text-align: center;">
-                <input
-                  type="checkbox"
-                  :checked="isAllSelected"
-                  :indeterminate="isIndeterminate"
-                  @change="toggleSelectAll"
-                  style="cursor: pointer;"
-                />
-              </th>
+      <DataTable
+        v-model:selection="selectedTrips"
+        :value="filteredList"
+        dataKey="uniqueKey"
+        paginator
+        :rows="15"
+        :rowsPerPageOptions="[15, 30, 50, 100]"
+        :selectionPageOnly="true"
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} bản ghi"
+        :loading="personnelStore.loading"
+        responsiveLayout="scroll"
+        stripedRows
+        removableSort
+        class="p-datatable-sm"
+        tableStyle="min-width: 60rem; table-layout: fixed;"
+        @row-click="onRowClick"
+      >
+        <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
+        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
+          <template #body="{ index }">
+            <span style="font-weight: 600; color: #4b5563;">{{ index + 1 }}</span>
+          </template>
+        </Column>
 
-              <!-- STT -->
-              <th style="width: 50px; text-align: center;">STT</th>
-
-              <!-- Dynamic Visible Columns -->
-              <th
-                v-for="col in visibleColumns"
-                :key="col.id"
-                :style="getColumnHeaderStyle(col)"
-                style="cursor: pointer; user-select: none;"
-                @click="sortBy(col.id)"
-              >
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-                  <span>{{ col.label }}</span>
-                  <i
-                    v-if="sortKey === col.id"
-                    :class="['pi', sortOrder === 1 ? 'pi-sort-amount-up-alt' : 'pi-sort-amount-down']"
-                    style="font-size: 0.7rem; color: #1e3a8a;"
-                  ></i>
-                  <i v-else class="pi pi-sort-alt" style="font-size: 0.65rem; color: #cbd5e1;"></i>
+        <!-- Dynamic Visible Columns -->
+        <Column
+          v-for="col in visibleColumns"
+          :key="col.id"
+          :field="col.id"
+          :header="col.label"
+          sortable
+          :headerClass="'col-left'"
+          :bodyClass="'col-left'"
+          :headerStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
+          :bodyStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
+        >
+          <template #body="{ data }">
+            <!-- 1. Họ và tên người đi -->
+            <template v-if="col.id === 'personnelName' || col.id === 'name'">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <div>
+                  <strong style="color: #1f2937; cursor: pointer; display: block;">
+                    {{ data.personnelName || data.name }}
+                  </strong>
+                  <span v-if="data.personnelCode || data.code" class="badge-code" style="font-size: 0.7rem;">
+                    {{ data.personnelCode || data.code }}
+                  </span>
                 </div>
-              </th>
+                <span v-if="data.isRelative" class="badge-role-tn">
+                  Thân nhân
+                </span>
+              </div>
+            </template>
 
-              <!-- Action Column -->
-              <th style="width: 130px; text-align: center;">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="paginatedList.length === 0">
-              <td :colspan="visibleColumns.length + 3" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
-                <i class="pi pi-inbox" style="font-size: 2rem; margin-bottom: 8px; display: block;"></i>
-                Không tìm thấy dữ liệu chuyến đi phù hợp
-              </td>
-            </tr>
+            <!-- 2. Ngày nhập cảnh / Trạng thái -->
+            <template v-else-if="col.id === 'arrivalDate'">
+              <span v-if="data.arrivalDate" style="color: #0f172a; font-weight: 600;">
+                {{ formatDisplayDate(data.arrivalDate) }}
+              </span>
+              <span v-else-if="data.isOverdue" class="status-pill status-overdue">
+                Quá hạn {{ data.overdueDays }} ngày
+              </span>
+              <span v-else-if="data.isAbroad" class="status-pill status-abroad">
+                Đang ở nước ngoài
+              </span>
+              <span v-else style="color: #94a3b8;">-</span>
+            </template>
 
-            <tr
-              v-for="(trip, idx) in paginatedList"
-              :key="trip.uniqueKey || idx"
-              class="clickable-row"
-              :class="{ 'row-selected': isSelected(trip) }"
-              @click="openPersonnelDetail(trip)"
-              title="Nhấp vào hàng để xem/sửa chi tiết hồ sơ"
-            >
-              <!-- Checkbox -->
-              <td style="text-align: center;" @click.stop>
-                <input
-                  type="checkbox"
-                  :checked="isSelected(trip)"
-                  @change="toggleSelectTrip(trip)"
-                  style="cursor: pointer;"
-                />
-              </td>
+            <!-- 3. Ngày xuất cảnh -->
+            <template v-else-if="col.id === 'departureDate' || col.id === 'approvedDepartureDate'">
+              <span>{{ formatDisplayDate(data[col.id] || data.departureDate) }}</span>
+            </template>
 
-              <!-- STT -->
-              <td style="text-align: center; color: #64748b; font-weight: 500;">
-                {{ (currentPage - 1) * pageSize + idx + 1 }}
-              </td>
+            <!-- 4. Số quyết định -->
+            <template v-else-if="col.id === 'decisionNumber' || col.id === 'decision'">
+              <span v-if="data.decisionNumber" class="code-badge-decision">
+                {{ data.decisionNumber }}
+              </span>
+              <span v-else style="color: #94a3b8;">-</span>
+            </template>
 
-              <!-- Dynamic Visible Cells -->
-              <td
-                v-for="col in visibleColumns"
-                :key="col.id"
-                :style="{ width: col.width || '150px', minWidth: col.width || '150px' }"
-              >
-                <!-- 1. Họ và tên người đi -->
-                <template v-if="col.id === 'personnelName' || col.id === 'name'">
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <div>
-                      <strong style="color: #0f172a; font-weight: 600; display: block;">
-                        {{ trip.personnelName || trip.name }}
-                      </strong>
-                      <span v-if="trip.personnelCode" style="font-size: 0.7rem; color: #64748b;">
-                        {{ trip.personnelCode }}
-                      </span>
-                    </div>
-                    <span v-if="trip.isRelative" class="badge-role-tn">
-                      Thân nhân
-                    </span>
-                  </div>
-                </template>
+            <!-- 5. Quốc gia -->
+            <template v-else-if="col.id === 'countryName' || col.id === 'country'">
+              <span style="font-weight: 600; color: #1e293b;">
+                {{ data.countryName || data.country || '-' }}
+              </span>
+            </template>
 
-                <!-- 2. Ngày nhập cảnh (Hiển thị ngày hoặc Badge Đang ở nước ngoài nếu đang đi) -->
-                <template v-else-if="col.id === 'arrivalDate'">
-                  <span v-if="trip.arrivalDate" style="color: #0f172a; font-weight: 600;">
-                    {{ formatDisplayDate(trip.arrivalDate) }}
-                  </span>
-                  <span v-else-if="trip.isOverdue" class="status-pill status-overdue">
-                    Quá hạn {{ trip.overdueDays }} ngày
-                  </span>
-                  <span v-else-if="trip.isAbroad" class="status-pill status-abroad">
-                    Đang ở nước ngoài
-                  </span>
-                  <span v-else style="color: #94a3b8;">-</span>
-                </template>
+            <!-- 6. Nguồn kinh phí -->
+            <template v-else-if="col.id === 'fundingName' || col.id === 'funding' || col.id === 'nguon_kinh_phi' || col.id === 'kinh_phi'">
+              <span class="badge-funding">
+                {{ getFundingValue(data) }}
+              </span>
+            </template>
 
-                <!-- 4. Ngày xuất cảnh -->
-                <template v-else-if="col.id === 'departureDate' || col.id === 'approvedDepartureDate'">
-                  <span>{{ formatDisplayDate(trip[col.id] || trip.departureDate) }}</span>
-                </template>
+            <!-- 7. Đơn vị công tác -->
+            <template v-else-if="col.id === 'departmentName' || col.id === 'departmentId'">
+              <span v-if="data.departmentName" style="font-weight: 500; color: #374151;">
+                {{ data.departmentName }}
+              </span>
+              <span v-else class="badge-pill badge-green">
+                Chưa phân bổ
+              </span>
+            </template>
 
-                <!-- 5. Số quyết định -->
-                <template v-else-if="col.id === 'decisionNumber' || col.id === 'decision'">
-                  <span v-if="trip.decisionNumber" class="code-badge-decision">
-                    {{ trip.decisionNumber }}
-                  </span>
-                  <span v-else style="color: #94a3b8;">-</span>
-                </template>
+            <!-- Default value -->
+            <template v-else>
+              <span>{{ getCellValue(data, col.id) }}</span>
+            </template>
+          </template>
+        </Column>
 
-                <!-- 6. Quốc gia -->
-                <template v-else-if="col.id === 'countryName' || col.id === 'country'">
-                  <span style="font-weight: 600; color: #1e293b;">
-                    {{ trip.countryName || trip.country || '-' }}
-                  </span>
-                </template>
-
-                <!-- 7. Nguồn kinh phí -->
-                <template v-else-if="col.id === 'fundingName' || col.id === 'funding' || col.id === 'nguon_kinh_phi' || col.id === 'kinh_phi'">
-                  <span class="badge-funding">
-                    {{ getFundingValue(trip) }}
-                  </span>
-                </template>
-
-                <!-- Default text -->
-                <template v-else>
-                  <span>{{ getCellValue(trip, col.id) }}</span>
-                </template>
-              </td>
-
-              <!-- Action buttons (Chi tiết & Xóa) -->
-              <td style="text-align: center; white-space: nowrap;" @click.stop>
-                <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
-                  <button
-                    type="button"
-                    class="btn-table-action btn-table-info"
-                    @click="openPersonnelDetail(trip)"
-                    title="Xem và chỉnh sửa hồ sơ chi tiết"
-                  >
-                    <i class="pi pi-user-edit"></i>
-                    <span>Chi tiết</span>
-                  </button>
-                  <button
-                    v-if="authStore.isAdmin"
-                    type="button"
-                    class="btn-table-action btn-table-danger"
-                    @click="handleDeleteTrip(trip)"
-                    title="Xóa chuyến đi này"
-                  >
-                    <i class="pi pi-trash"></i>
-                    <span>Xóa</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination Footer -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-top: 1px solid #e2e8f0; background: #fafafa; font-size: 0.8rem; color: #64748b;">
-        <div>
-          Hiển thị <b>{{ paginatedList.length }}</b> / <b>{{ filteredList.length }}</b> bản ghi
-          <span v-if="selectedTripKeys.length > 0" style="margin-left: 12px; color: #1e3a8a; font-weight: 600;">
-            (Đã chọn {{ selectedTripKeys.length }} bản ghi)
-          </span>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <select v-model="pageSize" style="font-size: 0.78rem; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
-            <option :value="15">15 dòng / trang</option>
-            <option :value="30">30 dòng / trang</option>
-            <option :value="50">50 dòng / trang</option>
-            <option :value="100">100 dòng / trang</option>
-          </select>
-
-          <button
-            type="button"
-            class="btn-pagination-nav"
-            :disabled="currentPage === 1"
-            @click="currentPage--"
-            title="Trang trước"
-          >
-            <i class="pi pi-chevron-left"></i>
-          </button>
-          <span>Trang <b>{{ currentPage }}</b> / {{ totalPages || 1 }}</span>
-          <button
-            type="button"
-            class="btn-pagination-nav"
-            :disabled="currentPage >= totalPages"
-            @click="currentPage++"
-            title="Trang sau"
-          >
-            <i class="pi pi-chevron-right"></i>
-          </button>
-        </div>
-      </div>
+        <!-- Actions Column (Centered) -->
+        <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
+          <template #header>
+            <div style="text-align: center; width: 100%; font-weight: 700;">THAO TÁC</div>
+          </template>
+          <template #body="{ data }">
+            <div class="table-actions">
+              <Button
+                label="Chi tiết"
+                size="small"
+                outlined
+                severity="info"
+                @click.stop="openPersonnelDetail(data)"
+              />
+              <Button
+                v-if="authStore.isAdmin"
+                label="Xóa"
+                size="small"
+                outlined
+                severity="danger"
+                @click.stop="handleDeleteTrip(data)"
+              />
+            </div>
+          </template>
+        </Column>
+      </DataTable>
     </div>
 
     <!-- Modal Chọn cột hiển thị -->
@@ -606,6 +536,8 @@ import { useRoute } from 'vue-router';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
@@ -873,11 +805,18 @@ const selectedDepartment = ref('');
 const selectedFunding = ref('');
 
 // Selection & Sorting & Pagination
-const selectedTripKeys = ref([]);
+const selectedTrips = ref([]);
+const selectedTripKeys = computed(() => (selectedTrips.value || []).map((t) => t.uniqueKey || t.id));
 const sortKey = ref('departureDate');
 const sortOrder = ref(-1); // -1: desc, 1: asc
 const currentPage = ref(1);
 const pageSize = ref(30);
+
+const onRowClick = (event) => {
+  if (event?.data) {
+    openPersonnelDetail(event.data);
+  }
+};
 
 // Dialogs & Menus
 const isFilterMenuOpen = ref(false);
@@ -2479,5 +2418,52 @@ onMounted(async () => {
   color: #2563eb !important;
   border-color: #3b82f6 !important;
   font-weight: 700 !important;
+}
+
+/* DataTable Global Class Alignment (Matching PersonnelView) */
+.table-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+
+:deep(.col-center) {
+  text-align: center !important;
+  justify-content: center !important;
+}
+
+:deep(.col-left) {
+  text-align: left !important;
+}
+
+.badge-code {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  font-family: monospace;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge-red {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 </style>
