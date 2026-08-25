@@ -2359,6 +2359,13 @@ const stats = computed(() => {
       : '';
 
     const dNum = getTripValue(t, 'so_quyet_dinh') || getTripValue(t, 'decisionNumber') || t.so_quyet_dinh || t.decisionNumber || '';
+    const purp = t.purpose || t.muc_dich_xuat_canh || '';
+
+    // Skip blank/dummy trip records that have no valid content
+    if (!cName && !depDate && !t.arrivalDate && !dNum && !purp) {
+      return;
+    }
+
     const appDep = getTripValue(t, 'thoi_gian_duyet_di') || getTripValue(t, 'approvedDepartureDate') || t.departureDate || '';
     const appArr = getTripValue(t, 'thoi_gian_duyet_ve') || getTripValue(t, 'approvedArrivalDate') || t.arrivalDate || '';
     const appExt = getTripValue(t, 'thoi_gian_duyet_gia_han') || getTripValue(t, 'approvedExtensionDate') || '';
@@ -2370,6 +2377,7 @@ const stats = computed(() => {
       countryName: cName || 'Chưa rõ',
       fundingName: fName || 'Chưa rõ',
       decisionNumber: dNum,
+      purpose: purp,
       approvedDepartureDate: appDep,
       approvedArrivalDate: appArr,
       approvedExtensionDate: appExt,

@@ -829,10 +829,17 @@ const getCardMetricValue = (card) => {
 
 const activeMetricCardId = ref('all');
 
+const isCardAllType = (card) => {
+  if (!card) return false;
+  if (card.field && card.field !== 'personnelName' && String(card.field).trim() !== '') return false;
+  if (card.id === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả') return true;
+  return false;
+};
+
 const isCardActive = (card, cIdx) => {
   if (!card) return false;
   const cardKey = card.id || card.label || `card_${cIdx}`;
-  const isAll = card.condition === 'all' || card.id === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả';
+  const isAll = isCardAllType(card);
   if (activeMetricCardId.value === 'all') {
     return isAll;
   }
@@ -841,7 +848,7 @@ const isCardActive = (card, cIdx) => {
 
 const toggleMetricCardFilter = (card, cIdx) => {
   const cardKey = card.id || card.label || `card_${cIdx}`;
-  const isAll = card.condition === 'all' || card.id === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả';
+  const isAll = isCardAllType(card);
 
   if (isAll) {
     activeMetricCardId.value = 'all';
@@ -1332,8 +1339,8 @@ const filteredList = computed(() => {
 
   // 0. Active Metric Card Filter (Top KPI Pill)
   if (activeMetricCardId.value && activeMetricCardId.value !== 'all') {
-    const targetCard = activeMetricCards.value.find((c, idx) => (c.id || c.label || idx) === activeMetricCardId.value);
-    if (targetCard) {
+    const targetCard = activeMetricCards.value.find((c, idx) => (c.id || c.label || `card_${idx}`) === activeMetricCardId.value);
+    if (targetCard && !isCardAllType(targetCard)) {
       list = list.filter((t) => matchCardCondition(t, targetCard));
     }
   }
