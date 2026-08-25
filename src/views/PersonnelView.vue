@@ -272,29 +272,22 @@
           <template #body="{ data }">
             <!-- Name column -->
             <template v-if="col.id === 'name'">
-              <strong style="color: #1f2937; cursor: pointer;">{{ data.name }}</strong>
+              <strong style="color: #1f2937; cursor: pointer;">{{ getDisplayValue(data, col.id) !== '-' ? getDisplayValue(data, col.id) : (data.name || '-') }}</strong>
             </template>
 
-            <!-- Department column -->
-            <template v-else-if="col.id === 'departmentId' || col.id === 'departmentName' || isDepartmentCol(col)">
-              <span v-if="getPersonnelDepartmentValue(data) !== 'Chưa phân bổ'" style="font-weight: 500; color: #374151;">
-                {{ getPersonnelDepartmentValue(data) }}
-              </span>
-              <span v-else class="badge-pill badge-green">
-                Chưa phân bổ
-              </span>
-            </template>
-
-            <!-- Default value or Badge for formula column -->
-            <template v-else>
+            <!-- Formula column -->
+            <template v-else-if="isFormulaCol(col.id)">
               <span
-                v-if="isFormulaCol(col.id)"
                 :class="getFormulaStatus(data, col.id).isAbroad ? 'badge-pill badge-red' : 'badge-pill badge-green'"
                 style="font-size: 0.76rem;"
               >
                 {{ getFormulaStatus(data, col.id).label }}
               </span>
-              <span v-else>{{ getDisplayValue(data, col.id) }}</span>
+            </template>
+
+            <!-- General columns (Direct value matching Chi tiết 100%) -->
+            <template v-else>
+              <span>{{ getDisplayValue(data, col.id) }}</span>
             </template>
           </template>
         </Column>
@@ -1166,20 +1159,28 @@ const getFormulaStatus = (record, colId) => {
   });
 };
 
-const getPersonnelDepartmentValue = (person) => {
-  if (!person) return 'Chưa phân bổ';
+const getPersonnelDepartmentValue = (person, colId = '') => {
+  if (!person) return '-';
 
-  // 1. Direct fields
+  // 1. Direct field by colId if provided
+  let cd = person.custom_data;
+  if (typeof cd === 'string') {
+    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+  }
+  if (colId) {
+    const directByCol = person[colId] ?? cd?.[colId];
+    if (directByCol !== undefined && directByCol !== null && String(directByCol).trim() !== '' && String(directByCol).trim() !== '-') {
+      return String(directByCol).trim();
+    }
+  }
+
+  // 2. Direct standard fields
   const direct = person.departmentName || (person.departmentId ? personnelStore.getDepartmentName(person.departmentId) : '') || person.department;
   if (direct && String(direct).trim() !== '' && String(direct).trim() !== '-' && String(direct).trim() !== 'Chưa rõ' && String(direct).trim() !== 'Chưa phân bổ') {
     return String(direct).trim();
   }
 
-  // 2. Search in custom_data
-  let cd = person.custom_data;
-  if (typeof cd === 'string') {
-    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
-  }
+  // 3. Search in custom_data
   if (cd && typeof cd === 'object') {
     for (const [k, v] of Object.entries(cd)) {
       const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1192,12 +1193,12 @@ const getPersonnelDepartmentValue = (person) => {
     }
   }
 
-  // 3. Check import mapping columns
+  // 4. Check import mapping columns
   for (const group of (personnelStore.importMappingPersonnel || [])) {
     for (const col of (group.columns || [])) {
       const labelClean = String(col.label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
       if (labelClean.includes('donvi') || labelClean.includes('phongban') || labelClean.includes('department') || labelClean.includes('coquan')) {
-        const v = person[col.id] || cd?.[col.id];
+        const v = person[col.id] ?? cd?.[col.id];
         if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-' && String(v).trim() !== 'Chưa phân bổ') {
           return String(v).trim();
         }
@@ -1205,7 +1206,7 @@ const getPersonnelDepartmentValue = (person) => {
     }
   }
 
-  // 4. Check all top-level person keys
+  // 5. Check all top-level person keys
   for (const [k, v] of Object.entries(person)) {
     const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
     if (
@@ -1216,7 +1217,7 @@ const getPersonnelDepartmentValue = (person) => {
     }
   }
 
-  return 'Chưa phân bổ';
+  return '-';
 };
 
 const isDepartmentCol = (col) => {
@@ -1230,21 +1231,65 @@ const isDepartmentCol = (col) => {
 const getDisplayValue = (person, colId) => {
   if (!person) return '-';
 
-  if (isDepartmentCol(colId)) {
-    return getPersonnelDepartmentValue(person);
-  }
-
   if (isFormulaCol(colId)) {
     return getFormulaStatus(person, colId).label;
   }
 
-  let val = person[colId];
-  if (val === undefined || val === null || val === '') {
-    if (person.custom_data && typeof person.custom_data === 'object') {
-      val = person.custom_data[colId];
+  let cd = person.custom_data;
+  if (typeof cd === 'string') {
+    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+  }
+
+  // 1. Direct property or custom_data match (EXACT match with Chi tiết popup)
+  let val = person[colId] ?? cd?.[colId];
+
+  // 2. Department fallback if empty
+  if ((val === undefined || val === null || val === '' || val === '-') && (colId === 'departmentId' || colId === 'departmentName' || isDepartmentCol(colId))) {
+    val = getPersonnelDepartmentValue(person, colId);
+  }
+
+  // 3. Position fallback if empty
+  if ((val === undefined || val === null || val === '' || val === '-') && (colId === 'position' || colId === 'positionName')) {
+    val = person.positionName || person.position || cd?.positionName || cd?.position || cd?.chuc_vu;
+  }
+
+  // 4. Case-insensitive key match in person or custom_data
+  if (val === undefined || val === null || val === '' || val === '-') {
+    const targetKeyClean = String(colId).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const searchInObj = (obj) => {
+      if (!obj || typeof obj !== 'object') return null;
+      for (const [k, v] of Object.entries(obj)) {
+        const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanK === targetKeyClean && v !== undefined && v !== null && String(v).trim() !== '') {
+          return v;
+        }
+      }
+      return null;
+    };
+    val = searchInObj(person) ?? searchInObj(cd);
+  }
+
+  // 5. Look for matching column in importMappingPersonnel by label
+  if (val === undefined || val === null || val === '' || val === '-') {
+    const cleanColId = String(colId).toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (const group of (personnelStore.importMappingPersonnel || [])) {
+      for (const c of (group.columns || [])) {
+        const cCleanId = String(c.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cCleanLabel = String(c.label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cCleanId === cleanColId || cCleanLabel === cleanColId) {
+          const found = person[c.id] ?? cd?.[c.id];
+          if (found !== undefined && found !== null && String(found).trim() !== '') {
+            val = found;
+            break;
+          }
+        }
+      }
+      if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') break;
     }
   }
-  if (val === undefined || val === null || val === '') return '-';
+
+  if (val === undefined || val === null || val === '' || val === '-') return '-';
+
   if (typeof val === 'object') {
     if (val instanceof Date) {
       return formatDate(val);
@@ -1256,7 +1301,7 @@ const getDisplayValue = (person, colId) => {
             if (x.col1 !== undefined || x.col2 !== undefined) {
               return `${x.col1 || ''}: ${x.col2 || ''}`.trim().replace(/^:\s*/, '');
             }
-            return x.name || JSON.stringify(x);
+            return x.name || x.label || x.value || JSON.stringify(x);
           }
           return x;
         })
