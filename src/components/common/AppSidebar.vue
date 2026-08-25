@@ -9,12 +9,12 @@
       <div style="font-size: 0.8rem; font-weight: 800; color: #ffffff; text-transform: uppercase; line-height: 1.3; white-space: nowrap;">
         CÔNG AN THÀNH PHỐ HỒ CHÍ MINH
       </div>
-      <div style="font-size: 0.72rem; font-weight: 700; color: #fde047; margin-top: 4px; line-height: 1.3; white-space: nowrap;">
+      <div style="font-size: 0.74rem; font-weight: 700; color: #ffffff; margin-top: 4px; line-height: 1.3; white-space: nowrap;">
         PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
       </div>
-      <div style="font-size: 0.68rem; font-weight: 600; color: #dcfce7; margin: 8px 0 0 0; line-height: 1.35; opacity: 0.95; padding: 0 4px;">
-        <div>Dữ liệu quản lý cán bộ, đảng viên</div>
-        <div style="margin-top: 2px;">và thân nhân có yếu tố nước ngoài</div>
+      <div style="font-size: 0.82rem; font-weight: 800; color: #fde047; margin: 10px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 0 2px; letter-spacing: 0.2px;">
+        <div>DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
+        <div style="margin-top: 2px;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
       </div>
     </div>
 
