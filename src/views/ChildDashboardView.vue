@@ -308,6 +308,22 @@
           </template>
         </Column>
 
+        <!-- Match Reason Column (Right before Actions) -->
+        <Column
+          header="LÝ DO KHỚP ĐIỀU KIỆN"
+          :headerStyle="{ width: '220px', minWidth: '200px', color: '#b91c1c', fontWeight: '700' }"
+          :bodyStyle="{ width: '220px', minWidth: '200px' }"
+        >
+          <template #body="{ data }">
+            <div class="match-reasons-wrapper">
+              <span class="match-reason-pill">
+                <i class="pi pi-info-circle"></i>
+                {{ getChildMatchReason(data) }}
+              </span>
+            </div>
+          </template>
+        </Column>
+
         <!-- Actions Column (Centered) -->
         <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
           <template #header>
@@ -844,7 +860,69 @@ const toggleMetricCardFilter = (card, cIdx) => {
   } else {
     activeMetricCardId.value = cardKey;
   }
-  statusFilter.value = 'all';
+};
+
+const getChildMatchReason = (item) => {
+  if (!item) return 'Khớp điều kiện';
+
+  // 1. If filtering by a specific Metric Card
+  if (activeMetricCardId.value && activeMetricCardId.value !== 'all') {
+    const targetCard = activeMetricCards.value.find((c, idx) => (c.id || c.label || `card_${idx}`) === activeMetricCardId.value);
+    if (targetCard && !isCardAllType(targetCard)) {
+      if (targetCard.field && String(targetCard.field).trim() !== '') {
+        const val = getCellValue(item, targetCard.field);
+        if (val && val !== '-') {
+          return `${targetCard.label}: ${val}`;
+        }
+        return `Khớp: ${targetCard.label}`;
+      }
+      if (targetCard.condition === 'overdue' || targetCard.label === 'Quá hạn chưa về') {
+        return item.isOverdue ? `Quá hạn ${item.overdueDays || ''} ngày` : 'Quá hạn chưa về';
+      }
+      if (targetCard.condition === 'abroad' || targetCard.label === 'Đang ở nước ngoài') {
+        return 'Đang ở nước ngoài';
+      }
+      if (targetCard.condition === 'completed' || targetCard.label === 'Đã về nước') {
+        return 'Đã về nước đúng hạn';
+      }
+      return targetCard.label;
+    }
+  }
+
+  // 2. If status filter is active
+  if (statusFilter.value === 'overdue' || item.isOverdue) {
+    return `Quá hạn ${item.overdueDays || ''} ngày`;
+  }
+  if (statusFilter.value === 'abroad' || item.isAbroad) {
+    return 'Đang ở nước ngoài';
+  }
+  if (statusFilter.value === 'completed') {
+    return 'Đã về nước đúng hạn';
+  }
+
+  // 3. If other quick filters are active
+  if (selectedCountry.value && item.countryName) {
+    return `Quốc gia: ${item.countryName}`;
+  }
+  if (selectedDepartment.value && (item.departmentName || getDepartmentValue(item) !== '-')) {
+    return `Đơn vị: ${item.departmentName || getDepartmentValue(item)}`;
+  }
+  if (selectedFunding.value && item.fundingName) {
+    return `Kinh phí: ${item.fundingName}`;
+  }
+  if (searchQuery.value && String(searchQuery.value).trim() !== '') {
+    return `Khớp tìm kiếm: "${searchQuery.value.trim()}"`;
+  }
+
+  // 4. Default presence or record state
+  if (item.presenceLabel) {
+    return item.presenceLabel;
+  }
+  if (getStatusLabel(item)) {
+    return getStatusLabel(item);
+  }
+
+  return 'Hồ sơ chuyên đề';
 };
 
 // Filters
@@ -2580,5 +2658,23 @@ onMounted(async () => {
 .badge-red {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+.match-reasons-wrapper {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.match-reason-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 </style>
