@@ -252,12 +252,7 @@
 
             <!-- 2. Đơn vị công tác -->
             <template v-else-if="col.id === 'departmentName' || col.id === 'departmentId' || col.id === 'don_vi_cong_tac' || col.id === 'don_vi'">
-              <span v-if="getDepartmentValue(data) !== 'Chưa phân bổ'" style="font-weight: 500; color: #374151;">
-                {{ getDepartmentValue(data) }}
-              </span>
-              <span v-else class="badge-pill badge-green">
-                Chưa phân bổ
-              </span>
+              <span>{{ getDepartmentValue(data) !== '-' ? getDepartmentValue(data) : (getCellValue(data, col.id) !== '-' ? getCellValue(data, col.id) : '-') }}</span>
             </template>
 
             <!-- 3. Ngày nhập cảnh / Trạng thái -->
@@ -1524,29 +1519,60 @@ const getCellValue = (trip, colId) => {
 };
 
 const getDepartmentValue = (trip) => {
-  if (!trip) return 'Chưa phân bổ';
-  const val = (
-    trip.departmentName ||
-    trip.department ||
-    trip.rawPerson?.departmentName ||
-    trip.rawPerson?.department ||
-    trip.custom_data?.departmentName ||
-    trip.custom_data?.don_vi_cong_tac ||
-    trip.custom_data?.don_vi ||
-    trip.custom_data?.phong_ban ||
-    trip.rawPerson?.custom_data?.don_vi_cong_tac ||
-    trip.rawPerson?.custom_data?.don_vi ||
-    trip.rawPerson?.custom_data?.phong_ban ||
-    (trip.departmentId ? personnelStore.getDepartmentName(trip.departmentId) : '') ||
-    (trip.rawPerson?.departmentId ? personnelStore.getDepartmentName(trip.rawPerson.departmentId) : '') ||
-    getCellValue(trip, 'departmentName') ||
-    getCellValue(trip, 'don_vi_cong_tac') ||
-    getCellValue(trip, 'don_vi')
-  );
-  if (val && String(val).trim() !== '' && String(val).trim() !== '-' && String(val).trim() !== 'Chưa rõ') {
-    return String(val).trim();
+  if (!trip) return '-';
+  const candidates = [
+    trip.departmentName,
+    trip.department,
+    trip.rawPerson?.departmentName,
+    trip.rawPerson?.department,
+    trip.custom_data?.departmentName,
+    trip.custom_data?.don_vi_cong_tac,
+    trip.custom_data?.don_vi,
+    trip.custom_data?.phong_ban,
+    trip.rawPerson?.custom_data?.departmentName,
+    trip.rawPerson?.custom_data?.don_vi_cong_tac,
+    trip.rawPerson?.custom_data?.don_vi,
+    trip.rawPerson?.custom_data?.phong_ban,
+    trip.departmentId ? personnelStore.getDepartmentName(trip.departmentId) : '',
+    trip.rawPerson?.departmentId ? personnelStore.getDepartmentName(trip.rawPerson.departmentId) : '',
+  ];
+
+  for (const c of candidates) {
+    if (c !== undefined && c !== null && String(c).trim() !== '' && String(c).trim() !== '-' && String(c).trim() !== 'Chưa rõ' && String(c).trim() !== 'Chưa phân bổ') {
+      return String(c).trim();
+    }
   }
-  return 'Chưa phân bổ';
+
+  // Scan custom_data object
+  const searchInObj = (obj) => {
+    if (!obj || typeof obj !== 'object') return null;
+    let target = obj;
+    if (typeof obj === 'string') {
+      try { target = JSON.parse(obj); } catch (e) { return null; }
+    }
+    if (!target || typeof target !== 'object') return null;
+    for (const [k, v] of Object.entries(target)) {
+      const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (
+        (cleanK.includes('donvi') || cleanK.includes('phongban') || cleanK.includes('coquan') || cleanK.includes('department')) &&
+        v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-' && String(v).trim() !== 'Chưa phân bổ'
+      ) {
+        return String(v).trim();
+      }
+    }
+    return null;
+  };
+
+  const found = (
+    searchInObj(trip) ??
+    searchInObj(trip.custom_data) ??
+    searchInObj(trip.rawPerson?.custom_data) ??
+    searchInObj(trip.rawTrip?.custom_data)
+  );
+
+  if (found) return String(found).trim();
+
+  return '-';
 };
 
 const getStatusBadgeClass = (trip) => {

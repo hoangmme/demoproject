@@ -288,7 +288,7 @@ export const usePersonnelStore = defineStore('personnel', {
             });
           }
 
-          const extractedDept = (
+          let extractedDept = (
             p.departmentName ||
             (p.departmentId ? this.getDepartmentName(p.departmentId) : '') ||
             custom.departmentName ||
@@ -299,6 +299,19 @@ export const usePersonnelStore = defineStore('personnel', {
             custom.donVi ||
             ''
           );
+
+          if (!extractedDept) {
+            for (const [k, v] of Object.entries(custom)) {
+              const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (
+                (cleanK.includes('donvi') || cleanK.includes('phongban') || cleanK.includes('coquan') || cleanK.includes('department')) &&
+                v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-' && String(v).trim() !== 'Chưa phân bổ'
+              ) {
+                extractedDept = String(v).trim();
+                break;
+              }
+            }
+          }
           const extractedPosition = (
             p.positionName ||
             p.position ||
@@ -621,7 +634,7 @@ export const usePersonnelStore = defineStore('personnel', {
       }
     },
     getDepartmentName(deptId) {
-      if (!deptId) return 'Chưa phân bổ';
+      if (!deptId) return '';
       return this.departmentMap[deptId] || deptId;
     },
     async seedSampleTripsData() {
