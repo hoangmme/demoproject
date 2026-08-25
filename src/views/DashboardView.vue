@@ -566,6 +566,7 @@
                 <th>Họ và tên</th>
                 <th v-for="col in drilldownDisplayPersonnelColumns" :key="col.id">{{ col.label }}</th>
                 <th>Số chuyến đi</th>
+                <th style="min-width: 180px; color: #b91c1c;">LÝ DO KHỚP ĐIỀU KIỆN</th>
               </tr>
             </thead>
             <tbody>
@@ -593,6 +594,14 @@
                   <span v-else>{{ getDisplayValue(p, col.id) }}</span>
                 </td>
                 <td><span class="badge-pill badge-green">{{ (p.trips || []).length }} chuyến</span></td>
+                <td>
+                  <div class="match-reasons-wrapper">
+                    <span class="match-reason-pill">
+                      <i class="pi pi-info-circle"></i>
+                      {{ getDrilldownMatchReason(p) }}
+                    </span>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -612,6 +621,7 @@
                 <th style="width: 40px; text-align: center;">STT</th>
                 <th>Cán bộ liên quan</th>
                 <th v-for="col in drilldownDisplayRelativeColumns" :key="col.id">{{ col.label }}</th>
+                <th style="min-width: 180px; color: #b91c1c;">LÝ DO KHỚP ĐIỀU KIỆN</th>
               </tr>
             </thead>
             <tbody>
@@ -641,6 +651,14 @@
                     {{ getDisplayValue(r, col.id) }}
                   </span>
                 </td>
+                <td>
+                  <div class="match-reasons-wrapper">
+                    <span class="match-reason-pill">
+                      <i class="pi pi-info-circle"></i>
+                      {{ getDrilldownMatchReason(r) }}
+                    </span>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -666,6 +684,7 @@
                 <th>Ngày đi</th>
                 <th>Ngày về</th>
                 <th>Duyệt Gia hạn</th>
+                <th style="min-width: 180px; color: #b91c1c;">LÝ DO KHỚP ĐIỀU KIỆN</th>
               </tr>
             </thead>
             <tbody>
@@ -713,6 +732,14 @@
                     {{ formatDate(t.approvedExtensionDate) }}
                   </span>
                   <span v-else style="color: #94a3b8;">-</span>
+                </td>
+                <td>
+                  <div class="match-reasons-wrapper">
+                    <span class="match-reason-pill">
+                      <i class="pi pi-info-circle"></i>
+                      {{ getDrilldownMatchReason(t) }}
+                    </span>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -2627,6 +2654,37 @@ const isAllDrilldownSelected = computed(() => {
   return selectedDrilldownKeys.value.length === data.length;
 });
 
+const getDrilldownMatchReason = (item) => {
+  if (!item) return 'Khớp điều kiện';
+  if (item.matchReason) return item.matchReason;
+  if (Array.isArray(item.matchReasons) && item.matchReasons.length > 0) {
+    return item.matchReasons.join(', ');
+  }
+
+  const t = drilldownType.value;
+  if (t === 'missing_decision') return 'Chưa có Số Quyết định';
+  if (t === 'schedule_extended' || (t === 'schedule_warnings' && item.approvedExtensionDate)) {
+    return `Đã gia hạn: ${formatDate(item.approvedExtensionDate)}`;
+  }
+  if (t === 'schedule_overdue' || (t === 'schedule_warnings' && item.isOverdue)) {
+    return `Quá hạn ${item.overdueDays || ''} ngày`;
+  }
+  if (t === 'schedule_ontime' || t === 'schedule_abroad') return 'Đang ở nước ngoài đúng hạn';
+  if (t === 'country' || t === 'country_trips') return `Quốc gia: ${item.countryName || '-'}`;
+  if (t === 'funding' || t === 'funding_trips') return `Nguồn kinh phí: ${item.fundingName || '-'}`;
+  if (t === 'all_personnel') return 'Cán bộ trong danh sách';
+  if (t === 'all_relatives') return 'Thân nhân ở nước ngoài';
+  if (t === 'all_trips') return 'Chuyến đi xuất cảnh';
+
+  if (drilldownTargetCriterion.value?.label) {
+    return drilldownTargetCriterion.value.label;
+  }
+  if (drilldownTitle.value) {
+    return drilldownTitle.value.replace(/^(Danh sách|Chi tiết|Thống kê)\s*/i, '');
+  }
+  return 'Khớp tiêu chí thống kê';
+};
+
 const toggleSelectAllDrilldown = () => {
   const data = filteredDrilldownData.value || [];
   if (selectedDrilldownKeys.value.length === data.length) {
@@ -3150,5 +3208,23 @@ onMounted(async () => {
 
 .clickable-row:hover td {
   color: #0f172a;
+}
+
+.match-reasons-wrapper {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.match-reason-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 </style>

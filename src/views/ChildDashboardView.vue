@@ -123,6 +123,11 @@
         :key="card.id || cIdx"
         class="quick-stat-card"
         :class="{ 'stat-active': isCardActive(card, cIdx) }"
+        :style="{
+          width: getCardWidthStyle(card),
+          flex: getCardFlexStyle(card),
+          minWidth: getCardMinWidthStyle(card)
+        }"
         @click="toggleMetricCardFilter(card, cIdx)"
         style="cursor: pointer;"
       >
@@ -703,6 +708,41 @@ const getFundingValue = (item) => {
   return (val && String(val).trim() !== '' && String(val).trim() !== '-') ? String(val).trim() : '-';
 };
 
+const getCardWidthStyle = (card) => {
+  const wp = Number(card.widthPercent);
+  if (!wp || isNaN(wp)) return 'auto';
+  if (wp === 100) return '100%';
+  if (wp === 50) return 'calc(50% - 6px)';
+  if (wp === 33) return 'calc(33.333% - 8px)';
+  if (wp === 25) return 'calc(25% - 9px)';
+  if (wp === 20) return 'calc(20% - 10px)';
+  if (wp === 16.66 || wp === 16 || Math.abs(wp - 16.66) < 1) return 'calc(16.666% - 10px)';
+  return 'auto';
+};
+
+const getCardFlexStyle = (card) => {
+  const wp = Number(card.widthPercent);
+  if (!wp || isNaN(wp)) return '1 1 auto';
+  if (wp === 100) return '1 1 100%';
+  if (wp === 50) return '1 1 calc(50% - 6px)';
+  if (wp === 33) return '1 1 calc(33.333% - 8px)';
+  if (wp === 25) return '1 1 calc(25% - 9px)';
+  if (wp === 20) return '1 1 calc(20% - 10px)';
+  if (wp === 16.66 || wp === 16 || Math.abs(wp - 16.66) < 1) return '1 1 calc(16.666% - 10px)';
+  return '1 1 auto';
+};
+
+const getCardMinWidthStyle = (card) => {
+  const wp = Number(card.widthPercent);
+  if (wp === 100) return '100%';
+  if (wp === 50) return '280px';
+  if (wp === 33) return '220px';
+  if (wp === 25) return '180px';
+  if (wp === 20) return '150px';
+  if (wp === 16.66 || wp === 16 || Math.abs(wp - 16.66) < 1) return '130px';
+  return '160px';
+};
+
 const matchCardCondition = (item, card) => {
   if (!card) return true;
 
@@ -720,12 +760,28 @@ const matchCardCondition = (item, card) => {
     if (op === 'empty') {
       return !fieldVal || fieldVal === 'Chưa rõ' || fieldVal === '-';
     }
-    if (op === 'equals') {
-      return fieldVal.toLowerCase() === String(card.value || '').trim().toLowerCase();
+
+    const strVal = fieldVal.toLowerCase();
+    const strTarget = String(card.value || '').trim().toLowerCase();
+
+    if (op === 'equals') return strVal === strTarget;
+    if (op === 'contains') return strVal.includes(strTarget);
+    if (op === 'not_contains') return !strVal.includes(strTarget);
+
+    if (op === 'before' || op === 'after') {
+      const dVal = new Date(rawVal).getTime();
+      const dTarget = new Date(card.value).getTime();
+      if (isNaN(dVal) || isNaN(dTarget)) return false;
+      return op === 'before' ? dVal < dTarget : dVal > dTarget;
     }
-    if (op === 'contains') {
-      return fieldVal.toLowerCase().includes(String(card.value || '').trim().toLowerCase());
+
+    if (op === 'gte' || op === 'lte') {
+      const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
+      const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
+      if (isNaN(numVal) || isNaN(numTarget)) return false;
+      return op === 'gte' ? numVal >= numTarget : numVal <= numTarget;
     }
+
     return true;
   }
 

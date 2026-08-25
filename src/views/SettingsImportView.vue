@@ -1095,17 +1095,37 @@
                   </select>
                 </div>
 
+                <!-- Độ rộng khối (% Width) -->
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Độ rộng khối:</label>
+                  <select v-model="card.widthPercent" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
+                    <option value="">Tự động co giãn (Mặc định)</option>
+                    <option :value="16.66">16.66% (1/6 hàng - 6 khối/dòng)</option>
+                    <option :value="20">20% (1/5 hàng - 5 khối/dòng)</option>
+                    <option :value="25">25% (1/4 hàng - 4 khối/dòng)</option>
+                    <option :value="33">33% (1/3 hàng - 3 khối/dòng)</option>
+                    <option :value="50">50% (1/2 hàng - 2 khối/dòng)</option>
+                    <option :value="100">100% (Toàn hàng - 1 khối/dòng)</option>
+                  </select>
+                </div>
+
                 <!-- Điều kiện đếm / lọc -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;" v-if="card.field">
                   <div>
                     <label style="font-size: 0.68rem; font-weight: 600; color: #475569;">Cách đếm:</label>
                     <select v-model="card.operator" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px;">
                       <option value="has_value">Có dữ liệu (khác rỗng)</option>
-                      <option value="equals">Khớp chính xác (=)</option>
+                      <option value="empty">Để trống (chưa có)</option>
+                      <option value="equals">Là (khớp chính xác)</option>
                       <option value="contains">Chứa từ khóa</option>
+                      <option value="not_contains">Không chứa từ khóa</option>
+                      <option value="before">Trước ngày</option>
+                      <option value="after">Sau ngày</option>
+                      <option value="gte">Lớn hơn hoặc bằng (&gt;=)</option>
+                      <option value="lte">Nhỏ hơn hoặc bằng (&lt;=)</option>
                     </select>
                   </div>
-                  <div v-if="card.operator === 'equals' || card.operator === 'contains'">
+                  <div v-if="card.operator !== 'has_value' && card.operator !== 'empty'">
                     <label style="font-size: 0.68rem; font-weight: 600; color: #475569;">Giá trị so sánh:</label>
                     <input
                       v-model="card.value"
