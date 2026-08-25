@@ -12,9 +12,9 @@
       <div style="font-size: 0.74rem; font-weight: 700; color: #ffffff; margin-top: 4px; line-height: 1.3; white-space: nowrap;">
         PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
       </div>
-      <div style="font-size: 0.82rem; font-weight: 800; color: #fde047; margin: 10px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 0 2px; letter-spacing: 0.2px;">
-        <div>DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
-        <div style="margin-top: 2px;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
+      <div style="font-size: 0.71rem; font-weight: 800; color: #fde047; margin: 8px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 0;">
+        <div style="white-space: nowrap;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
+        <div style="margin-top: 2px; white-space: nowrap;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
       </div>
     </div>
 
