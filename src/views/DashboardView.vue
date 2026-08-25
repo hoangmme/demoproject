@@ -868,6 +868,7 @@
           <div class="field-item">
             <label class="field-label" style="font-weight: 700; color: #1e293b;">Độ rộng của Khối</label>
             <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option :value="16.66">16.66% (1/6 hàng - 6 khối/dòng)</option>
               <option :value="20">20% (1/5 hàng - 5 khối/dòng)</option>
               <option :value="25">25% (1/4 hàng - 4 khối/dòng)</option>
               <option :value="33">33% (1/3 hàng - 3 khối/dòng)</option>
@@ -1784,6 +1785,14 @@ const getWidgetStyle = (widget) => {
       minWidth: '180px',
     };
   }
+  if (wp === 16.66 || wp === 16 || wp === 17 || Math.abs(wp - 16.66) < 1) {
+    return {
+      flex: '1 1 calc(16.666% - 0.85rem)',
+      width: 'calc(16.666% - 0.85rem)',
+      maxWidth: 'calc(16.666% - 0.85rem)',
+      minWidth: '150px',
+    };
+  }
   // Default 33.333%
   return {
     flex: '1 1 calc(33.333% - 0.67rem)',
@@ -2319,8 +2328,8 @@ const stats = computed(() => {
   const processedTripIds = new Set();
 
   pList.forEach((p) => {
-    (p.trips || []).forEach((t) => {
-      const tid = t.id || `${p.id}_${t.departureDate}_${t.countryName || t.quoc_gia_xuat_canh || ''}`;
+    (p.trips || []).forEach((t, tIdx) => {
+      const tid = t.id || `trip_${p.id}_${tIdx}`;
       if (!processedTripIds.has(tid)) {
         processedTripIds.add(tid);
         allTripsToProcess.push({
@@ -2328,49 +2337,37 @@ const stats = computed(() => {
           personnelId: p.id,
           personnelCode: p.code || p.id,
           personnelName: p.name,
+          departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
+          position: p.positionName || p.position || '',
           isRelativeTrip: false,
+          rawPerson: p,
+          rawTrip: t,
         });
       }
     });
 
     // Check trips nested inside relatives
-    (p.relatives || []).forEach((r) => {
-      (r.trips || []).forEach((t) => {
-        const tid = t.id || `${r.id || r.code}_${t.departureDate}_${t.countryName || t.quoc_gia_xuat_canh || ''}`;
+    (p.relatives || []).forEach((r, rIdx) => {
+      (r.trips || []).forEach((t, tIdx) => {
+        const tid = t.id || `rel_trip_${p.id}_${rIdx}_${tIdx}`;
         if (!processedTripIds.has(tid)) {
           processedTripIds.add(tid);
           allTripsToProcess.push({
             ...t,
             personnelId: p.id,
             personnelCode: p.code || p.id,
-            personnelName: `TN: ${r.relativeName || r.name}`,
+            personnelName: r.relativeName || r.name || 'Thân nhân',
+            departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
+            position: `TN (${r.relationshipName || 'Thân nhân'}) của: ${p.name}`,
             isRelativeTrip: true,
             matchedRelative: r,
+            rawPerson: p,
+            rawRelative: r,
+            rawTrip: t,
           });
         }
       });
     });
-  });
-
-  (personnelStore.tripsList || []).forEach((t) => {
-    const tid = t.id || `${t.personnelId || t.cccdchuyendi}_${t.departureDate}_${t.countryName || t.quoc_gia_xuat_canh || ''}`;
-    if (!processedTripIds.has(tid)) {
-      processedTripIds.add(tid);
-      const tripKey = String(t.cccdchuyendi || t.personnelId || t.code || t.cccd || '').trim();
-      const matchedP = tripKey ? personnelStore.findPersonByCccd(tripKey) : null;
-      const matchedR = (!matchedP && tripKey) ? personnelStore.findRelativeByCccd(tripKey) : null;
-      const isRel = Boolean(matchedR || t.relativeName || t.cccdthannhan || (t.parentName && !matchedP));
-
-      allTripsToProcess.push({
-        ...t,
-        personnelId: matchedP?.id || t.personnelId || '',
-        personnelCode: matchedP?.code || t.personnelCode || t.personnelId || '',
-        personnelName: matchedP?.name || t.personnelName || (matchedR ? `TN: ${matchedR.relativeName || matchedR.name}` : 'Cán bộ'),
-        matchedPerson: matchedP,
-        matchedRelative: matchedR,
-        isRelativeTrip: isRel,
-      });
-    }
   });
 
   allTripsToProcess.forEach((t) => {
