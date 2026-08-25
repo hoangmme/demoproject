@@ -182,41 +182,53 @@ export const usePersonnelStore = defineStore('personnel', {
       ]);
 
       const validIds = new Set(this.allAvailableColumns.map((c) => c.id));
-      const saved = localStorage.getItem('vue_visible_columns');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const filtered = parsed.filter((id) => validIds.has(id));
-            if (filtered.length >= 3) {
-              this.visibleColumns = filtered;
-            } else {
-              this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
-            }
-          }
-        } catch (e) {
+      let dbCols = null;
+      try {
+        dbCols = await getAppSettings('vue_visible_columns', null);
+      } catch (e) {}
+
+      let saved = dbCols && Array.isArray(dbCols) && dbCols.length > 0 ? dbCols : null;
+      if (!saved) {
+        const local = localStorage.getItem('vue_visible_columns');
+        if (local) {
+          try { saved = JSON.parse(local); } catch (e) {}
+        }
+      }
+
+      if (saved && Array.isArray(saved) && saved.length > 0) {
+        const filtered = saved.filter((id) => validIds.has(id));
+        if (filtered.length >= 3) {
+          this.visibleColumns = filtered;
+        } else {
           this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
         }
+        localStorage.setItem('vue_visible_columns', JSON.stringify(this.visibleColumns));
       } else {
         this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
       }
 
       const validRelativeIds = new Set(this.allAvailableRelativeColumns.map((c) => c.id));
-      const savedRel = localStorage.getItem('vue_visible_relative_columns');
-      if (savedRel) {
-        try {
-          const parsed = JSON.parse(savedRel);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const filtered = parsed.filter((id) => validRelativeIds.has(id));
-            if (filtered.length >= 3) {
-              this.visibleRelativeColumns = filtered;
-            } else {
-              this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
-            }
-          }
-        } catch (e) {
+      let dbRelCols = null;
+      try {
+        dbRelCols = await getAppSettings('vue_visible_relative_columns', null);
+      } catch (e) {}
+
+      let savedRel = dbRelCols && Array.isArray(dbRelCols) && dbRelCols.length > 0 ? dbRelCols : null;
+      if (!savedRel) {
+        const localRel = localStorage.getItem('vue_visible_relative_columns');
+        if (localRel) {
+          try { savedRel = JSON.parse(localRel); } catch (e) {}
+        }
+      }
+
+      if (savedRel && Array.isArray(savedRel) && savedRel.length > 0) {
+        const filtered = savedRel.filter((id) => validRelativeIds.has(id));
+        if (filtered.length >= 3) {
+          this.visibleRelativeColumns = filtered;
+        } else {
           this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
         }
+        localStorage.setItem('vue_visible_relative_columns', JSON.stringify(this.visibleRelativeColumns));
       } else {
         this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
       }

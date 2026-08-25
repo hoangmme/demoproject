@@ -398,7 +398,10 @@
             class="btn-pagination-nav"
             :disabled="currentPage >= totalPages"
             @click="currentPage++"
-          />
+            title="Trang sau"
+          >
+            <i class="pi pi-chevron-right"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -600,9 +603,12 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import Dialog from 'primevue/dialog';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { getAppSettings } from '@/api/settings';
+import { getAppSettings, saveAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
@@ -971,6 +977,11 @@ const onColumnsChange = async (newCols) => {
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
   localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
   localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
+
+  try {
+    await saveAppSettings(currentKey, selectedColIds.value);
+    await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
+  } catch (e) {}
 
   const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
   if (idx !== -1) {
@@ -1855,14 +1866,24 @@ const loadCustomDashboards = async () => {
   }
 };
 
-const initTopicColumns = () => {
-  // 1. Prioritize columns configured in DB for this dashboard
+const initTopicColumns = async () => {
+  // 1. Try loading specific column setup from DB
+  const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
+  try {
+    const dbCols = await getAppSettings(currentKey, null);
+    if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
+      selectedColIds.value = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus');
+      localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
+      return;
+    }
+  } catch (e) {}
+
+  // 2. Prioritize columns configured in DB for this dashboard
   if (currentDashboardConfig.value?.columns && currentDashboardConfig.value.columns.length > 0) {
     selectedColIds.value = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
     return;
   }
-  // 2. Fallback to localStorage
-  const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
+  // 3. Fallback to localStorage
   const savedCols = localStorage.getItem(currentKey);
   if (savedCols) {
     try {
