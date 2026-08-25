@@ -186,7 +186,15 @@
           <div
             v-if="widget.displayType === 'count'"
             class="stat-card"
-            :style="{ borderLeft: `4px solid ${widget.color || '#2e7d32'}`, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '1rem 1.15rem' }"
+            :style="{
+              borderLeft: `4px solid ${widget.color || '#2e7d32'}`,
+              backgroundColor: widget.bgColor || '#ffffff',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '1rem 1.15rem'
+            }"
             @click="handleWidgetClick(widget)"
             style="cursor: pointer;"
           >
@@ -855,27 +863,45 @@
           <InputText v-model="widgetForm.title" placeholder="Tiêu đề khối" style="width: 100%;" />
         </div>
 
-        <!-- 4. ĐỘ RỘNG & MÀU SẮC -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <!-- 4. ĐỘ RỘNG, MÀU VIỀN & MÀU NỀN PASTEL -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
           <div class="field-item">
             <label class="field-label" style="font-weight: 700; color: #1e293b;">Độ rộng của Khối</label>
             <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
-              <option :value="25">25% (1/4 hàng)</option>
-              <option :value="33">33% (1/3 hàng)</option>
-              <option :value="50">50% (1/2 hàng)</option>
-              <option :value="100">100% (Toàn hàng)</option>
+              <option :value="20">20% (1/5 hàng - 5 khối/dòng)</option>
+              <option :value="25">25% (1/4 hàng - 4 khối/dòng)</option>
+              <option :value="33">33% (1/3 hàng - 3 khối/dòng)</option>
+              <option :value="50">50% (1/2 hàng - 2 khối/dòng)</option>
+              <option :value="100">100% (Toàn hàng - 1 khối/dòng)</option>
             </select>
           </div>
           <div class="field-item">
-            <label class="field-label" style="font-weight: 700; color: #1e293b;">Màu sắc chủ đạo</label>
+            <label class="field-label" style="font-weight: 700; color: #1e293b;">Màu viền & Điểm nhấn</label>
             <select v-model="widgetForm.color" class="settings-select" style="width: 100%; max-width: 100%;">
-              <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
               <option value="#0284c7">Xanh dương (Blue - #0284c7)</option>
+              <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
               <option value="#7c3aed">Tím (Purple - #7c3aed)</option>
               <option value="#ea580c">Cam (Orange - #ea580c)</option>
               <option value="#dc2626">Đỏ (Red - #dc2626)</option>
-              <option value="#0d9488">Xanh mòng két (Teal - #0d9488)</option>
-              <option value="#475569">Xám đậm (Slate - #475569)</option>
+              <option value="#0d9488">Xanh Teal (#0d9488)</option>
+              <option value="#e11d48">Hồng Đỏ (#e11d48)</option>
+              <option value="#d97706">Vàng Hổ Phách (#d97706)</option>
+              <option value="#475569">Xám Slate (#475569)</option>
+            </select>
+          </div>
+          <div class="field-item">
+            <label class="field-label" style="font-weight: 700; color: #1e293b;">Màu nền Pastel</label>
+            <select v-model="widgetForm.bgColor" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option value="#ffffff">Trắng tiêu chuẩn (Mặc định)</option>
+              <option value="#f0f9ff">Pastel Xanh Dương nhạt</option>
+              <option value="#f0fdf4">Pastel Xanh Lá nhạt</option>
+              <option value="#faf5ff">Pastel Tím nhạt</option>
+              <option value="#fff7ed">Pastel Cam nhạt</option>
+              <option value="#fef2f2">Pastel Đỏ nhạt</option>
+              <option value="#f0fdfa">Pastel Teal nhạt</option>
+              <option value="#fffbeb">Pastel Vàng nhạt</option>
+              <option value="#fdf2f8">Pastel Hồng nhạt</option>
+              <option value="#f8fafc">Pastel Xám nhạt</option>
             </select>
           </div>
         </div>
@@ -1552,27 +1578,37 @@ const availableCardsForSelectedTopic = computed(() => {
 
 const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
-  const src = topic?.source || card.source || 'trips';
+  // Resolve actual card definition from topic if card is a widget reference
+  const topicCards = topic?.metricCards || [];
+  const actualCard = topicCards.find((c, idx) =>
+    (c.id && (c.id === card.cardId || c.id === card.id)) ||
+    (c.label && (c.label === card.cardLabel || c.label === card.label || c.label === card.title)) ||
+    `card_${idx}` === (card.cardId || card.id)
+  ) || card;
+
+  const src = topic?.source || actualCard.source || card.source || 'trips';
   const list = getSourceList(src);
 
-  // 1. Dynamic Field Condition (Top priority if card.field is configured)
-  if (card.field && String(card.field).trim() !== '') {
-    const op = card.operator || 'has_value';
+  // 1. Dynamic Field Condition (Top priority)
+  const f = actualCard.field || card.field;
+  if (f && String(f).trim() !== '') {
+    const op = actualCard.operator || card.operator || 'has_value';
+    const val = actualCard.value ?? card.value;
     return list.filter((row) => {
-      const val = getRowFieldValue(row, card.field);
-      if (op === 'has_value') return val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-' && String(val).trim() !== 'Chưa rõ';
-      if (op === 'empty') return val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-' || String(val).trim() === 'Chưa rõ';
-      if (op === 'equals') return String(val || '').trim().toLowerCase() === String(card.value || '').trim().toLowerCase();
-      if (op === 'contains') return String(val || '').trim().toLowerCase().includes(String(card.value || '').trim().toLowerCase());
+      const cellVal = getRowFieldValue(row, f);
+      if (op === 'has_value') return cellVal !== undefined && cellVal !== null && String(cellVal).trim() !== '' && String(cellVal).trim() !== '-' && String(cellVal).trim() !== 'Chưa rõ';
+      if (op === 'empty') return cellVal === undefined || cellVal === null || String(cellVal).trim() === '' || String(cellVal).trim() === '-' || String(cellVal).trim() === 'Chưa rõ';
+      if (op === 'equals') return String(cellVal || '').trim().toLowerCase() === String(val || '').trim().toLowerCase();
+      if (op === 'contains') return String(cellVal || '').trim().toLowerCase().includes(String(val || '').trim().toLowerCase());
       return true;
     }).length;
   }
 
   // 2. Preset Conditions
-  const cond = card.cardCondition || card.condition || card.id || 'all';
-  if (cond === 'completed' || card.label === 'Đã về nước') return list.filter((t) => !t.isAbroad && !t.isOverdue).length;
-  if (cond === 'abroad' || card.label === 'Đang ở nước ngoài') return list.filter((t) => t.isAbroad && !t.isOverdue).length;
-  if (cond === 'overdue' || card.label === 'Quá hạn chưa về') return list.filter((t) => t.isOverdue).length;
+  const cond = actualCard.cardCondition || actualCard.condition || card.cardCondition || card.condition || card.id || 'all';
+  if (cond === 'completed' || actualCard.label === 'Đã về nước' || card.label === 'Đã về nước') return list.filter((t) => !t.isAbroad && !t.isOverdue).length;
+  if (cond === 'abroad' || actualCard.label === 'Đang ở nước ngoài' || card.label === 'Đang ở nước ngoài') return list.filter((t) => t.isAbroad && !t.isOverdue).length;
+  if (cond === 'overdue' || actualCard.label === 'Quá hạn chưa về' || card.label === 'Quá hạn chưa về') return list.filter((t) => t.isOverdue).length;
 
   return list.length;
 };
@@ -1729,7 +1765,7 @@ const getWidgetStyle = (widget) => {
       flex: '1 1 calc(50% - 0.5rem)',
       width: 'calc(50% - 0.5rem)',
       maxWidth: 'calc(50% - 0.5rem)',
-      minWidth: '350px',
+      minWidth: '320px',
     };
   }
   if (wp === 25) {
@@ -1737,7 +1773,15 @@ const getWidgetStyle = (widget) => {
       flex: '1 1 calc(25% - 0.75rem)',
       width: 'calc(25% - 0.75rem)',
       maxWidth: 'calc(25% - 0.75rem)',
-      minWidth: '250px',
+      minWidth: '220px',
+    };
+  }
+  if (wp === 20) {
+    return {
+      flex: '1 1 calc(20% - 0.8rem)',
+      width: 'calc(20% - 0.8rem)',
+      maxWidth: 'calc(20% - 0.8rem)',
+      minWidth: '180px',
     };
   }
   // Default 33.333%
@@ -1745,7 +1789,7 @@ const getWidgetStyle = (widget) => {
     flex: '1 1 calc(33.333% - 0.67rem)',
     width: 'calc(33.333% - 0.67rem)',
     maxWidth: 'calc(33.333% - 0.67rem)',
-    minWidth: '300px',
+    minWidth: '260px',
   };
 };
 

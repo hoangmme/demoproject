@@ -250,7 +250,17 @@
               </div>
             </template>
 
-            <!-- 2. Ngày nhập cảnh / Trạng thái -->
+            <!-- 2. Đơn vị công tác -->
+            <template v-else-if="col.id === 'departmentName' || col.id === 'departmentId' || col.id === 'don_vi_cong_tac' || col.id === 'don_vi'">
+              <span v-if="getDepartmentValue(data) !== 'Chưa phân bổ'" style="font-weight: 500; color: #374151;">
+                {{ getDepartmentValue(data) }}
+              </span>
+              <span v-else class="badge-pill badge-green">
+                Chưa phân bổ
+              </span>
+            </template>
+
+            <!-- 3. Ngày nhập cảnh / Trạng thái -->
             <template v-else-if="col.id === 'arrivalDate'">
               <span v-if="data.arrivalDate" style="color: #0f172a; font-weight: 600;">
                 {{ formatDisplayDate(data.arrivalDate) }}
@@ -264,12 +274,12 @@
               <span v-else style="color: #94a3b8;">-</span>
             </template>
 
-            <!-- 3. Ngày xuất cảnh -->
+            <!-- 4. Ngày xuất cảnh -->
             <template v-else-if="col.id === 'departureDate' || col.id === 'approvedDepartureDate'">
               <span>{{ formatDisplayDate(data[col.id] || data.departureDate) }}</span>
             </template>
 
-            <!-- 4. Số quyết định -->
+            <!-- 5. Số quyết định -->
             <template v-else-if="col.id === 'decisionNumber' || col.id === 'decision'">
               <span v-if="data.decisionNumber" class="code-badge-decision">
                 {{ data.decisionNumber }}
@@ -277,27 +287,17 @@
               <span v-else style="color: #94a3b8;">-</span>
             </template>
 
-            <!-- 5. Quốc gia -->
+            <!-- 6. Quốc gia -->
             <template v-else-if="col.id === 'countryName' || col.id === 'country'">
               <span style="font-weight: 600; color: #1e293b;">
                 {{ data.countryName || data.country || '-' }}
               </span>
             </template>
 
-            <!-- 6. Nguồn kinh phí -->
+            <!-- 7. Nguồn kinh phí -->
             <template v-else-if="col.id === 'fundingName' || col.id === 'funding' || col.id === 'nguon_kinh_phi' || col.id === 'kinh_phi'">
               <span class="badge-funding">
                 {{ getFundingValue(data) }}
-              </span>
-            </template>
-
-            <!-- 7. Đơn vị công tác -->
-            <template v-else-if="col.id === 'departmentName' || col.id === 'departmentId'">
-              <span v-if="data.departmentName" style="font-weight: 500; color: #374151;">
-                {{ data.departmentName }}
-              </span>
-              <span v-else class="badge-pill badge-green">
-                Chưa phân bổ
               </span>
             </template>
 
@@ -1038,8 +1038,8 @@ const visibleColumns = computed(() => {
     }
   });
   return selectedColIds.value
-    .filter((id) => id !== 'status' && id !== 'tripStatus')
-    .map((id) => colMap.get(id) || { id, label: getColumnLabel(id), width: '150px' });
+    .filter((id) => id !== 'status' && id !== 'tripStatus' && colMap.has(id))
+    .map((id) => colMap.get(id));
 });
 
 // Build unified list of trips from both Cán bộ and Thân nhân profiles
@@ -1523,6 +1523,32 @@ const getCellValue = (trip, colId) => {
   return '-';
 };
 
+const getDepartmentValue = (trip) => {
+  if (!trip) return 'Chưa phân bổ';
+  const val = (
+    trip.departmentName ||
+    trip.department ||
+    trip.rawPerson?.departmentName ||
+    trip.rawPerson?.department ||
+    trip.custom_data?.departmentName ||
+    trip.custom_data?.don_vi_cong_tac ||
+    trip.custom_data?.don_vi ||
+    trip.custom_data?.phong_ban ||
+    trip.rawPerson?.custom_data?.don_vi_cong_tac ||
+    trip.rawPerson?.custom_data?.don_vi ||
+    trip.rawPerson?.custom_data?.phong_ban ||
+    (trip.departmentId ? personnelStore.getDepartmentName(trip.departmentId) : '') ||
+    (trip.rawPerson?.departmentId ? personnelStore.getDepartmentName(trip.rawPerson.departmentId) : '') ||
+    getCellValue(trip, 'departmentName') ||
+    getCellValue(trip, 'don_vi_cong_tac') ||
+    getCellValue(trip, 'don_vi')
+  );
+  if (val && String(val).trim() !== '' && String(val).trim() !== '-' && String(val).trim() !== 'Chưa rõ') {
+    return String(val).trim();
+  }
+  return 'Chưa phân bổ';
+};
+
 const getStatusBadgeClass = (trip) => {
   if (!trip) return 'status-pill status-completed';
   if (trip.isOverdue) return 'status-pill status-overdue';
@@ -1946,37 +1972,44 @@ const loadCustomDashboards = async () => {
 };
 
 const initTopicColumns = async () => {
-  // 1. Try loading specific column setup from DB
+  const validIds = new Set(allAvailableColumnsList.value.map((c) => c.id));
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
+
+  // 1. Try loading specific column setup from DB
   try {
     const dbCols = await getAppSettings(currentKey, null);
     if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
-      selectedColIds.value = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus');
-      localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
-      return;
+      const validDb = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
+      if (validDb.length > 0) {
+        selectedColIds.value = validDb;
+        localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
+        return;
+      }
     }
   } catch (e) {}
 
   // 2. Prioritize columns configured in DB for this dashboard
   if (currentDashboardConfig.value?.columns && currentDashboardConfig.value.columns.length > 0) {
-    selectedColIds.value = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
-    return;
+    const validCfg = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
+    if (validCfg.length > 0) {
+      selectedColIds.value = validCfg;
+      return;
+    }
   }
-  // 3. Fallback to localStorage
+
+  // 3. Fallback to localStorage for this specific topic
   const savedCols = localStorage.getItem(currentKey);
   if (savedCols) {
     try {
-      selectedColIds.value = JSON.parse(savedCols).filter((id) => id !== 'status' && id !== 'tripStatus');
-      return;
+      const parsed = JSON.parse(savedCols).filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
+      if (parsed.length > 0) {
+        selectedColIds.value = parsed;
+        return;
+      }
     } catch (e) {}
   }
-  const defaultSaved = localStorage.getItem('trips_dashboard_columns');
-  if (defaultSaved) {
-    try {
-      selectedColIds.value = JSON.parse(defaultSaved).filter((id) => id !== 'status' && id !== 'tripStatus');
-      return;
-    } catch (e) {}
-  }
+
+  // 4. Default: all available columns for this topic
   selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
 };
 

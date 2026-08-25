@@ -288,13 +288,34 @@ export const usePersonnelStore = defineStore('personnel', {
             });
           }
 
+          const extractedDept = (
+            p.departmentName ||
+            (p.departmentId ? this.getDepartmentName(p.departmentId) : '') ||
+            custom.departmentName ||
+            custom.don_vi_cong_tac ||
+            custom.don_vi ||
+            custom.phong_ban ||
+            custom.donViCongTac ||
+            custom.donVi ||
+            ''
+          );
+          const extractedPosition = (
+            p.positionName ||
+            p.position ||
+            custom.positionName ||
+            custom.position ||
+            custom.chuc_vu ||
+            custom.chucVu ||
+            ''
+          );
+
           return {
             ...custom,
             ...p,
             cccdparent: personCccd,
-            position: p.position || p.positionName || custom.positionName || custom.position || '',
-            positionName: p.positionName || p.position || custom.position || custom.positionName || '',
-            departmentName: p.departmentName || (p.departmentId ? this.getDepartmentName(p.departmentId) : '') || custom.departmentName || '',
+            position: extractedPosition,
+            positionName: extractedPosition,
+            departmentName: extractedDept,
             hcCaNhan: p.hcCaNhan || p.passportPersonal || custom.hcCaNhan || custom.passportPersonal || '',
             hcCongVu: p.hcCongVu || p.passportOfficial || custom.hcCongVu || custom.passportOfficial || '',
             kqThamTra: p.kqThamTra || p.tcctResult || custom.kqThamTra || custom.tcctResult || '',
