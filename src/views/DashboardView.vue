@@ -819,190 +819,70 @@
     <!-- ========================================================= -->
     <!-- 8. CUSTOM WIDGET MODAL (ADD / EDIT WIDGET)               -->
     <!-- ========================================================= -->
+    <!-- ========================================================= -->
+    <!-- 8. CUSTOM WIDGET MODAL (ADD / EDIT WIDGET)               -->
+    <!-- ========================================================= -->
     <Dialog
       v-model:visible="isWidgetDialogOpen"
       modal
       :header="editingWidget ? 'Chỉnh sửa Khối Thống kê' : 'Thêm Khối Thống kê Mới'"
-      :style="{ width: '600px', maxWidth: '96vw' }"
+      :style="{ width: '560px', maxWidth: '96vw' }"
     >
       <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 6px;">
-        <!-- Mode Switcher Tabs -->
-        <div style="display: flex; gap: 8px; background: #f1f5f9; padding: 4px; border-radius: 8px;">
-          <button
-            type="button"
-            class="col-tab-btn"
-            :class="{ 'col-tab-btn-active': widgetCreateMode === 'topic' }"
-            @click="widgetCreateMode = 'topic'"
-            style="flex: 1; padding: 6px 12px; font-size: 0.8rem;"
-          >
-            <i class="pi pi-send" style="margin-right: 4px;"></i> 1. Chọn từ Khối Thống kê ở Chuyên đề
-          </button>
-          <button
-            type="button"
-            class="col-tab-btn"
-            :class="{ 'col-tab-btn-active': widgetCreateMode === 'custom' }"
-            @click="widgetCreateMode = 'custom'"
-            style="flex: 1; padding: 6px 12px; font-size: 0.8rem;"
-          >
-            <i class="pi pi-sliders-h" style="margin-right: 4px;"></i> 2. Tự cấu hình cột tùy biến
-          </button>
+        <!-- 1. CHỌN CHUYÊN ĐỀ -->
+        <div class="field-item">
+          <label class="field-label" style="font-weight: 700; color: #1e293b;">1. Chọn Chuyên đề nguồn <span style="color: #ef4444;">*</span></label>
+          <select v-model="selectedWidgetTopicId" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onTopicSelectChange">
+            <option v-for="t in availableTopicDashboards" :key="t.id" :value="t.id">
+              📁 {{ t.title }} (Mã: {{ t.code || t.id }})
+            </option>
+          </select>
         </div>
 
-        <!-- MODE 1: CHỌN TỪ KHỐI THỐNG KÊ Ở CHUYÊN ĐỀ -->
-        <div v-if="widgetCreateMode === 'topic'" style="display: flex; flex-direction: column; gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+        <!-- 2. CHỌN THẺ CHỈ SỐ -->
+        <div class="field-item">
+          <label class="field-label" style="font-weight: 700; color: #1e293b;">2. Chọn Khối Thống kê (Metric Card) cần đưa ra Dashboard <span style="color: #ef4444;">*</span></label>
+          <select v-model="selectedWidgetCardKey" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onTopicCardSelectChange">
+            <option v-for="(card, cIdx) in availableCardsForSelectedTopic" :key="card.id || cIdx" :value="card.id || card.label || `card_${cIdx}`">
+              🎯 {{ card.label }} (Đang có: {{ getCardMetricValueForTopic(card, selectedTopicObject) }} bản ghi)
+            </option>
+          </select>
+        </div>
+
+        <!-- 3. TIÊU ĐỀ -->
+        <div class="field-item">
+          <label class="field-label" style="font-weight: 700; color: #1e293b;">3. Tiêu đề hiển thị trên Dashboard <span style="color: #ef4444;">*</span></label>
+          <InputText v-model="widgetForm.title" placeholder="Tiêu đề khối" style="width: 100%;" />
+        </div>
+
+        <!-- 4. ĐỘ RỘNG & MÀU SẮC -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div class="field-item">
-            <label class="field-label" style="font-weight: 700; color: #1e293b;">1. Chọn Chuyên đề nguồn:</label>
-            <select v-model="selectedWidgetTopicId" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onTopicSelectChange">
-              <option v-for="t in availableTopicDashboards" :key="t.id" :value="t.id">
-                📁 {{ t.title }} (Mã: {{ t.code || t.id }})
-              </option>
+            <label class="field-label" style="font-weight: 700; color: #1e293b;">Độ rộng của Khối</label>
+            <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option :value="25">25% (1/4 hàng)</option>
+              <option :value="33">33% (1/3 hàng)</option>
+              <option :value="50">50% (1/2 hàng)</option>
+              <option :value="100">100% (Toàn hàng)</option>
             </select>
           </div>
-
           <div class="field-item">
-            <label class="field-label" style="font-weight: 700; color: #1e293b;">2. Chọn Khối Thống kê (Metric Card) cần đưa ra Dashboard:</label>
-            <select v-model="selectedWidgetCardKey" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onTopicCardSelectChange">
-              <option v-for="(card, cIdx) in availableCardsForSelectedTopic" :key="card.id || cIdx" :value="card.id || card.label || `card_${cIdx}`">
-                🎯 {{ card.label }} (Đang có: {{ getCardMetricValueForTopic(card, selectedTopicObject) }} bản ghi)
-              </option>
+            <label class="field-label" style="font-weight: 700; color: #1e293b;">Màu sắc chủ đạo</label>
+            <select v-model="widgetForm.color" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
+              <option value="#0284c7">Xanh dương (Blue - #0284c7)</option>
+              <option value="#7c3aed">Tím (Purple - #7c3aed)</option>
+              <option value="#ea580c">Cam (Orange - #ea580c)</option>
+              <option value="#dc2626">Đỏ (Red - #dc2626)</option>
+              <option value="#0d9488">Xanh mòng két (Teal - #0d9488)</option>
+              <option value="#475569">Xám đậm (Slate - #475569)</option>
             </select>
-          </div>
-
-          <div class="field-item">
-            <label class="field-label">Tiêu đề hiển thị trên Dashboard:</label>
-            <InputText v-model="widgetForm.title" placeholder="Tiêu đề khối" style="width: 100%;" />
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="field-item">
-              <label class="field-label">Độ rộng của Khối</label>
-              <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
-                <option :value="25">25% (1/4 hàng)</option>
-                <option :value="33">33% (1/3 hàng)</option>
-                <option :value="50">50% (1/2 hàng)</option>
-                <option :value="100">100% (Toàn hàng)</option>
-              </select>
-            </div>
-            <div class="field-item">
-              <label class="field-label">Màu sắc chủ đạo</label>
-              <select v-model="widgetForm.color" class="settings-select" style="width: 100%; max-width: 100%;">
-                <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
-                <option value="#0284c7">Xanh dương (Blue - #0284c7)</option>
-                <option value="#7c3aed">Tím (Purple - #7c3aed)</option>
-                <option value="#ea580c">Cam (Orange - #ea580c)</option>
-                <option value="#dc2626">Đỏ (Red - #dc2626)</option>
-                <option value="#0d9488">Xanh mòng két (Teal - #0d9488)</option>
-                <option value="#475569">Xám đậm (Slate - #475569)</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="font-size: 0.74rem; color: #0369a1; background: #e0f2fe; padding: 8px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-info-circle"></i>
-            <span>Khi người dùng bấm vào thẻ này trên Dashboard Thống kê, hệ thống sẽ tự động chuyển sang trang <b>{{ selectedTopicObject?.title }}</b> và kích hoạt bộ lọc tương ứng!</span>
           </div>
         </div>
 
-        <!-- MODE 2: TỰ CẤU HÌNH CỘT TÙY BIẾN -->
-        <div v-else style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="field-item">
-            <label class="field-label">Tiêu đề Khối Thống kê <span style="color: #ef4444;">*</span></label>
-            <InputText v-model="widgetForm.title" placeholder="Ví dụ: Phân bổ theo Dân tộc, hoặc Tổng số Đảng viên" style="width: 100%;" />
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="field-item">
-              <label class="field-label">Nguồn dữ liệu</label>
-              <select v-model="widgetForm.source" class="settings-select" style="width: 100%; max-width: 100%;">
-                <option value="personnel">Hồ sơ Cán bộ (Cá nhân)</option>
-                <option value="relatives">Danh sách Thân nhân</option>
-                <option value="trips">Cá nhân đi Nước ngoài (Phụ lục 1)</option>
-                <option value="combined_country">🌐 Tổng hợp Quốc gia (Cả Cán bộ & Thân nhân)</option>
-                <option value="combined_funding">💰 Tổng hợp Kinh phí (4 Cột & Chung)</option>
-              </select>
-            </div>
-
-            <div class="field-item">
-              <label class="field-label">Kiểu hiển thị <span style="color: #ef4444;">*</span></label>
-              <select v-model="widgetForm.displayType" class="settings-select" style="width: 100%; max-width: 100%;">
-                <option value="count">🔢 Đếm số lượng (Thẻ chỉ số)</option>
-                <option value="chart">📊 Biểu đồ phân bổ & Bảng xếp hạng</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
-            <div class="field-item">
-              <label class="field-label">Cột dữ liệu cần Thống kê / Đếm <span style="color: #ef4444;">*</span></label>
-              <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; max-width: 100%;" @change="onWidgetColumnSelect">
-                <option value="">-- Nhấp để chọn Cột trong hệ thống --</option>
-                <option v-for="c in availableColumnsForWidgetSource" :key="c.id" :value="c.id">
-                  {{ c.label }}
-                </option>
-              </select>
-            </div>
-
-            <div class="field-item">
-              <label class="field-label">Độ rộng của Khối</label>
-              <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
-                <option :value="25">25% (1/4 hàng)</option>
-                <option :value="33">33% (1/3 hàng)</option>
-                <option :value="50">50% (1/2 hàng)</option>
-                <option :value="100">100% (Toàn hàng)</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Extra settings for COUNT type -->
-          <div v-if="widgetForm.displayType === 'count'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
-            <label class="field-label" style="font-size: 0.78rem; font-weight: 700; color: #1e293b;">Điều kiện đếm:</label>
-            <div style="display: flex; gap: 12px; font-size: 0.8rem;">
-              <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                <input type="radio" v-model="widgetForm.countCondition" value="not_empty" />
-                Có dữ liệu (Không để trống)
-              </label>
-              <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                <input type="radio" v-model="widgetForm.countCondition" value="equals" />
-                Khớp giá trị cụ thể
-              </label>
-            </div>
-            <div v-if="widgetForm.countCondition === 'equals'">
-              <InputText v-model="widgetForm.countValue" placeholder="Ví dụ: Có, Đảng viên, Hoàn thành, v.v." style="width: 100%; font-size: 0.8rem;" />
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="field-item">
-              <label class="field-label">Màu sắc chủ đạo</label>
-              <select v-model="widgetForm.color" class="settings-select" style="width: 100%; max-width: 100%;">
-                <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
-                <option value="#0284c7">Xanh dương (Blue - #0284c7)</option>
-                <option value="#7c3aed">Tím (Purple - #7c3aed)</option>
-                <option value="#ea580c">Cam (Orange - #ea580c)</option>
-                <option value="#dc2626">Đỏ (Red - #dc2626)</option>
-                <option value="#0d9488">Xanh mòng két (Teal - #0d9488)</option>
-                <option value="#475569">Xám đậm (Slate - #475569)</option>
-              </select>
-            </div>
-
-            <div class="field-item">
-              <label class="field-label">Biểu tượng (Icon)</label>
-              <select v-model="widgetForm.icon" class="settings-select" style="width: 100%; max-width: 100%;">
-                <option value="pi-chart-line">📈 Biểu đồ đường (pi-chart-line)</option>
-                <option value="pi-chart-pie">🥧 Biểu đồ tròn (pi-chart-pie)</option>
-                <option value="pi-chart-bar">📊 Biểu đồ cột (pi-chart-bar)</option>
-                <option value="pi-user">👤 Cán bộ (pi-user)</option>
-                <option value="pi-users">👥 Nhóm người (pi-users)</option>
-                <option value="pi-building">🏢 Đơn vị / Phòng ban (pi-building)</option>
-                <option value="pi-flag">🚩 Cờ / Danh hiệu (pi-flag)</option>
-                <option value="pi-id-card">🪪 Thẻ CCCD / Hồ sơ (pi-id-card)</option>
-                <option value="pi-globe">🌐 Quốc gia / Nước ngoài (pi-globe)</option>
-                <option value="pi-shield">🛡️ Thẩm tra / Bảo vệ (pi-shield)</option>
-                <option value="pi-check-circle">✅ Hoàn thành / Tích chọn (pi-check-circle)</option>
-                <option value="pi-wallet">💰 Kinh phí (pi-wallet)</option>
-              </select>
-            </div>
-          </div>
+        <div style="font-size: 0.76rem; color: #0369a1; background: #e0f2fe; border: 1px solid #bae6fd; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; line-height: 1.4;">
+          <i class="pi pi-info-circle" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+          <span>Khi người dùng bấm vào thẻ này trên Dashboard Thống kê, hệ thống sẽ tự động chuyển sang trang <b>{{ selectedTopicObject?.title }}</b> và kích hoạt bộ lọc tương ứng!</span>
         </div>
       </div>
       <template #footer>
