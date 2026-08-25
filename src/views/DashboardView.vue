@@ -1019,7 +1019,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap, formatDate, computePresenceStatus } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, computePresenceStatus, computeOverdueStatus } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const router = useRouter();
@@ -1247,6 +1247,14 @@ const getDisplayValue = (row, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
+    if (colDef.formulaType === 'overdue_status') {
+      const overdue = computeOverdueStatus(row, {
+        arrivalCol: colDef.formulaArrivalCol,
+        labelOverdue: colDef.formulaLabelOverdue,
+        labelOntime: colDef.formulaLabelOntime,
+      });
+      return overdue.label;
+    }
     const status = computePresenceStatus(row, {
       departureCol: colDef.formulaDepartureCol,
       arrivalCol: colDef.formulaArrivalCol,

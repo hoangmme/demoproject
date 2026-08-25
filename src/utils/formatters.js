@@ -301,3 +301,71 @@ export const computePresenceStatus = (record, formulaConfig = {}) => {
     shortLabel: labelDomestic,
   };
 };
+
+/**
+ * Tính toán Trạng thái Quá hạn Chưa về theo thời gian thực
+ * Tự động đối chiếu Cột Ngày Nhập cảnh (Về) của chuyến đi với Ngày hiện tại (Today).
+ */
+export const computeOverdueStatus = (record, formulaConfig = {}) => {
+  if (!record) return { status: 'ontime', isOverdue: false, overdueDays: 0, label: 'Đúng hạn', shortLabel: 'Đúng hạn' };
+
+  const arrCol = formulaConfig.formulaArrivalCol || formulaConfig.arrivalCol || 'arrivalDate';
+  const labelOverdue = formulaConfig.formulaLabelOverdue || formulaConfig.labelOverdue || 'Quá hạn chưa về';
+  const labelOntime = formulaConfig.formulaLabelOntime || formulaConfig.labelOntime || 'Đúng hạn';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Nếu là Hồ sơ Cán bộ / Thân nhân chứa danh sách nhiều chuyến đi
+  let trips = [];
+  if (Array.isArray(record.trips) && record.trips.length > 0) {
+    trips = record.trips;
+  } else if (Array.isArray(record.tripList) && record.tripList.length > 0) {
+    trips = record.tripList;
+  } else {
+    trips = [record];
+  }
+
+  let maxOverdueDays = 0;
+  let hasOverdue = false;
+  let overdueTrip = null;
+
+  for (const t of trips) {
+    const arrRaw = t[arrCol] || t.arrivalDate || t.approvedArrivalDate || t.approvedExtensionDate || t.custom_data?.[arrCol];
+    const arrDate = parseDateValue(arrRaw);
+
+    if (arrDate) {
+      const arrNormalized = new Date(arrDate);
+      arrNormalized.setHours(23, 59, 59, 999);
+
+      // Nếu ngày hiện tại đã vượt quá ngày về dự kiến
+      if (today > arrNormalized) {
+        const days = Math.max(1, Math.floor((today - arrNormalized) / (1000 * 60 * 60 * 24)));
+        hasOverdue = true;
+        if (days > maxOverdueDays) {
+          maxOverdueDays = days;
+          overdueTrip = t;
+        }
+      }
+    }
+  }
+
+  if (hasOverdue) {
+    return {
+      status: 'overdue',
+      isOverdue: true,
+      overdueDays: maxOverdueDays,
+      label: `${labelOverdue} (${maxOverdueDays} ngày)`,
+      shortLabel: labelOverdue,
+      trip: overdueTrip,
+    };
+  }
+
+  return {
+    status: 'ontime',
+    isOverdue: false,
+    overdueDays: 0,
+    label: labelOntime,
+    shortLabel: labelOntime,
+  };
+};

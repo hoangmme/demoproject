@@ -560,7 +560,7 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
-import { formatDate, parseDateObj, computePresenceStatus } from '@/utils/formatters';
+import { formatDate, parseDateObj, computePresenceStatus, computeOverdueStatus } from '@/utils/formatters';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
@@ -1576,6 +1576,14 @@ const getCellValue = (trip, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
+    if (colDef.formulaType === 'overdue_status') {
+      const overdue = computeOverdueStatus(trip, {
+        arrivalCol: colDef.formulaArrivalCol,
+        labelOverdue: colDef.formulaLabelOverdue,
+        labelOntime: colDef.formulaLabelOntime,
+      });
+      return overdue.label;
+    }
     const status = computePresenceStatus(trip, {
       departureCol: colDef.formulaDepartureCol,
       arrivalCol: colDef.formulaArrivalCol,

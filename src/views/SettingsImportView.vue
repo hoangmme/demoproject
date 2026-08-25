@@ -390,11 +390,13 @@
                     <i class="pi pi-calculator" style="color: #16a34a; font-size: 0.85rem;"></i>
                     <span style="font-size: 0.78rem; font-weight: 700; color: #166534;">Cấu hình Công thức Tự động:</span>
                   </div>
-                  <select v-model="col.formulaType" class="custom-col-select" style="width: auto; min-width: 260px; height: 28px; font-size: 0.75rem;">
+                  <select v-model="col.formulaType" class="custom-col-select" style="width: auto; min-width: 260px; height: 28px; font-size: 0.75rem; font-weight: 600;">
                     <option value="presence_status">Trạng thái Hiện diện (Trong nước / Nước ngoài)</option>
+                    <option value="overdue_status">Quá hạn chưa về</option>
                   </select>
                 </div>
 
+                <!-- 1. Trạng thái Hiện diện -->
                 <div v-if="!col.formulaType || col.formulaType === 'presence_status'" style="display: flex; flex-direction: column; gap: 6px;">
                   <div style="font-size: 0.72rem; color: #15803d; line-height: 1.4;">
                     💡 <strong>Nguyên lý:</strong> Tự động duyệt qua toàn bộ các chuyến đi của người này. Nếu có bất kỳ chuyến đi nào đang diễn ra tại thời điểm <strong>Ngày hiện tại (Today)</strong>, hệ thống tự động gán trạng thái <strong>"Đang ở nước ngoài"</strong>. Ngược lại gán <strong>"Trong nước"</strong>.
@@ -426,6 +428,40 @@
                           {{ c.label }} ({{ c.id }})
                         </option>
                       </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2. Quá hạn chưa về -->
+                <div v-else-if="col.formulaType === 'overdue_status'" style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="font-size: 0.72rem; color: #b91c1c; line-height: 1.4;">
+                    💡 <strong>Nguyên lý:</strong> Tự động đối chiếu <strong>Cột Ngày Nhập cảnh (Về)</strong> của chuyến đi với <strong>Ngày hiện tại (Today)</strong>. Nếu Ngày hiện tại đã vượt quá Ngày về, hệ thống tự động gán trạng thái <strong>"Quá hạn chưa về (kèm số ngày quá hạn)"</strong>. Ngược lại gán <strong>"Đúng hạn"</strong>.
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Nhập cảnh (Về) / Ngày về dự kiến:</span>
+                      <select v-model="col.formulaArrivalCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định hệ thống (arrivalDate) --</option>
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
+                          {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Quá hạn (Tùy chọn):</span>
+                      <input
+                        v-model="col.formulaLabelOverdue"
+                        placeholder="Mặc định: Quá hạn chưa về"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đúng hạn (Tùy chọn):</span>
+                      <input
+                        v-model="col.formulaLabelOntime"
+                        placeholder="Mặc định: Đúng hạn"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
                     </div>
                   </div>
                 </div>

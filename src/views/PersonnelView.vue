@@ -773,7 +773,7 @@ import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus } from '@/utils/formatters';
+import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
@@ -1150,6 +1150,13 @@ const isFormulaCol = (colId) => {
 
 const getFormulaStatus = (record, colId) => {
   const colDef = allColumnDefsMap.value[colId] || {};
+  if (colDef.formulaType === 'overdue_status') {
+    return computeOverdueStatus(record, {
+      arrivalCol: colDef.formulaArrivalCol,
+      labelOverdue: colDef.formulaLabelOverdue,
+      labelOntime: colDef.formulaLabelOntime,
+    });
+  }
   return computePresenceStatus(record, {
     departureCol: colDef.formulaDepartureCol,
     arrivalCol: colDef.formulaArrivalCol,
