@@ -1845,6 +1845,74 @@ const unifiedTripsList = computed(() => {
   return list;
 });
 
+const getRowFieldValue = (row, colId) => {
+  if (!row || !colId) return '';
+
+  // 1. Direct property
+  let raw = row[colId];
+
+  // 2. In rawPerson / rawTrip
+  if (raw === undefined || raw === null || raw === '') {
+    raw = row.rawPerson?.[colId] ?? row.rawTrip?.[colId];
+  }
+
+  // 3. In custom_data
+  if (raw === undefined || raw === null || raw === '') {
+    let cd = row.custom_data;
+    if (typeof cd === 'string') {
+      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+    }
+    if (cd && typeof cd === 'object') {
+      raw = cd[colId];
+    }
+  }
+
+  // 4. In rawPerson.custom_data or rawTrip.custom_data
+  if (raw === undefined || raw === null || raw === '') {
+    let pcd = row.rawPerson?.custom_data;
+    if (typeof pcd === 'string') {
+      try { pcd = JSON.parse(pcd); } catch (e) { pcd = {}; }
+    }
+    if (pcd && typeof pcd === 'object') {
+      raw = pcd[colId];
+    }
+  }
+
+  // 5. Case-insensitive key match in custom_data
+  if (raw === undefined || raw === null || raw === '') {
+    const targetKeyClean = String(colId).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const searchInObj = (obj) => {
+      if (!obj || typeof obj !== 'object') return null;
+      for (const [k, v] of Object.entries(obj)) {
+        const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanK === targetKeyClean && v !== undefined && v !== null && String(v).trim() !== '') {
+          return v;
+        }
+      }
+      return null;
+    };
+    raw = searchInObj(row) ?? searchInObj(row.custom_data) ?? searchInObj(row.rawPerson?.custom_data) ?? searchInObj(row.rawTrip?.custom_data);
+  }
+
+  if (raw === undefined || raw === null || raw === '' || raw === '-') return '';
+  if (typeof raw === 'object') {
+    if (Array.isArray(raw)) {
+      return raw
+        .map((x) => (typeof x === 'object' && x !== null ? (x.name || x.label || x.col1 || x.value || JSON.stringify(x)) : x))
+        .filter(Boolean)
+        .join(', ');
+    }
+    return raw.name || raw.label || raw.col1 || raw.value || JSON.stringify(raw);
+  }
+  return String(raw).trim();
+};
+
+const getSourceList = (source) => {
+  if (source === 'relatives') return personnelStore.relativesList || [];
+  if (source === 'trips') return unifiedTripsList.value || [];
+  return personnelStore.personnelList || [];
+};
+
 const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
   // Resolve actual card definition from topic if card is a widget reference
@@ -1873,27 +1941,26 @@ const getCardMetricValueForTopic = (card, topic) => {
     }).length;
   }
 
-  // 2. Preset Conditions
+  // 2. Preset Conditions (Synchronized 100% with ChildDashboardView)
   const cond = actualCard.cardCondition || actualCard.condition || card.cardCondition || card.condition || card.id || 'all';
   if (cond === 'all' || actualCard.label === 'Toàn bộ' || card.label === 'Toàn bộ' || actualCard.label === 'Tất cả' || card.label === 'Tất cả') {
     return list.length;
   }
   if (cond === 'completed' || actualCard.label === 'Đã về nước' || card.label === 'Đã về nước') {
     return list.filter((t) => {
-      const p = getTripPresence(t);
-      return p.status === 'completed';
+      if (t.isOverdue) return false;
+      if (t.isAbroad) return false;
+      return true;
     }).length;
   }
   if (cond === 'abroad' || actualCard.label === 'Đang ở nước ngoài' || card.label === 'Đang ở nước ngoài') {
     return list.filter((t) => {
-      const p = getTripPresence(t);
-      return p.status === 'abroad';
+      return !!t.isAbroad && !t.isOverdue;
     }).length;
   }
   if (cond === 'overdue' || actualCard.label === 'Quá hạn chưa về' || card.label === 'Quá hạn chưa về') {
     return list.filter((t) => {
-      const p = getTripPresence(t);
-      return p.status === 'overdue';
+      return !!t.isOverdue;
     }).length;
   }
 
@@ -2117,74 +2184,6 @@ const getLightColor = (hex = '#2e7d32') => {
   if (hex === '#dc2626') return '#fee2e2';
   if (hex === '#0d9488') return '#ccfbf1';
   return '#f1f5f9';
-};
-
-const getRowFieldValue = (row, colId) => {
-  if (!row || !colId) return '';
-
-  // 1. Direct property
-  let raw = row[colId];
-
-  // 2. In rawPerson / rawTrip
-  if (raw === undefined || raw === null || raw === '') {
-    raw = row.rawPerson?.[colId] ?? row.rawTrip?.[colId];
-  }
-
-  // 3. In custom_data
-  if (raw === undefined || raw === null || raw === '') {
-    let cd = row.custom_data;
-    if (typeof cd === 'string') {
-      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
-    }
-    if (cd && typeof cd === 'object') {
-      raw = cd[colId];
-    }
-  }
-
-  // 4. In rawPerson.custom_data or rawTrip.custom_data
-  if (raw === undefined || raw === null || raw === '') {
-    let pcd = row.rawPerson?.custom_data;
-    if (typeof pcd === 'string') {
-      try { pcd = JSON.parse(pcd); } catch (e) { pcd = {}; }
-    }
-    if (pcd && typeof pcd === 'object') {
-      raw = pcd[colId];
-    }
-  }
-
-  // 5. Case-insensitive key match in custom_data
-  if (raw === undefined || raw === null || raw === '') {
-    const targetKeyClean = String(colId).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const searchInObj = (obj) => {
-      if (!obj || typeof obj !== 'object') return null;
-      for (const [k, v] of Object.entries(obj)) {
-        const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (cleanK === targetKeyClean && v !== undefined && v !== null && String(v).trim() !== '') {
-          return v;
-        }
-      }
-      return null;
-    };
-    raw = searchInObj(row) ?? searchInObj(row.custom_data) ?? searchInObj(row.rawPerson?.custom_data) ?? searchInObj(row.rawTrip?.custom_data);
-  }
-
-  if (raw === undefined || raw === null || raw === '' || raw === '-') return '';
-  if (typeof raw === 'object') {
-    if (Array.isArray(raw)) {
-      return raw
-        .map((x) => (typeof x === 'object' && x !== null ? (x.name || x.label || x.col1 || x.value || JSON.stringify(x)) : x))
-        .filter(Boolean)
-        .join(', ');
-    }
-    return raw.name || raw.label || raw.col1 || raw.value || JSON.stringify(raw);
-  }
-  return String(raw).trim();
-};
-
-const getSourceList = (source) => {
-  if (source === 'relatives') return personnelStore.relativesList || [];
-  if (source === 'trips') return unifiedTripsList.value || [];
-  return personnelStore.personnelList || [];
 };
 
 const computeWidgetCount = (widget) => {
