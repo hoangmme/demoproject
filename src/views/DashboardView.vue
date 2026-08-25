@@ -1601,6 +1601,219 @@ const availableCardsForSelectedTopic = computed(() => {
   return DEFAULT_TOPIC_DASHBOARDS[0].metricCards;
 });
 
+// Single Unified Presence Status Calculator (Identical to ChildDashboardView)
+const getTripPresence = (t) => {
+  if (!t) return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const depRaw = t.departureDate || t.approvedDepartureDate || t.custom_data?.departureDate;
+  const arrRaw = t.arrivalDate || t.custom_data?.arrivalDate;
+  const appArrRaw = t.approvedExtensionDate || t.approvedArrivalDate || t.custom_data?.approvedArrivalDate;
+
+  const depDate = parseDateObj(depRaw);
+  const arrDate = parseDateObj(arrRaw);
+  const appArrDate = parseDateObj(appArrRaw);
+
+  if (!depDate && !arrDate) {
+    return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
+  }
+
+  if (depDate) {
+    const depNorm = new Date(depDate);
+    depNorm.setHours(0, 0, 0, 0);
+    if (today < depNorm) {
+      return { status: 'upcoming', isAbroad: false, isOverdue: false, label: 'Chưa khởi hành', overdueDays: 0 };
+    }
+  }
+
+  if (arrDate) {
+    const arrNorm = new Date(arrDate);
+    arrNorm.setHours(23, 59, 59, 999);
+    if (today > arrNorm) {
+      let isOverdue = false;
+      let overdueDays = 0;
+      if (appArrDate) {
+        const appArrNorm = new Date(appArrDate);
+        appArrNorm.setHours(23, 59, 59, 999);
+        if (arrNorm > appArrNorm) {
+          isOverdue = true;
+          overdueDays = Math.max(1, Math.floor((arrNorm - appArrNorm) / (1000 * 60 * 60 * 24)));
+        }
+      }
+      return {
+        status: isOverdue ? 'overdue' : 'completed',
+        isAbroad: false,
+        isOverdue,
+        label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đã về nước',
+        overdueDays,
+      };
+    }
+  }
+
+  let isOverdue = false;
+  let overdueDays = 0;
+  if (appArrDate) {
+    const appArrNorm = new Date(appArrDate);
+    appArrNorm.setHours(23, 59, 59, 999);
+    if (today > appArrNorm) {
+      isOverdue = true;
+      overdueDays = Math.max(1, Math.floor((today - appArrNorm) / (1000 * 60 * 60 * 24)));
+    }
+  }
+
+  return {
+    status: isOverdue ? 'overdue' : 'abroad',
+    isAbroad: true,
+    isOverdue,
+    label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đang ở nước ngoài',
+    overdueDays,
+  };
+};
+
+const unifiedTripsList = computed(() => {
+  const list = [];
+  const pList = personnelStore.personnelList || [];
+  const processedTripKeys = new Set();
+
+  pList.forEach((p) => {
+    (p.trips || []).forEach((t, tIdx) => {
+      let custom = {};
+      if (t.custom_data) {
+        try {
+          custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+        } catch (e) {}
+      }
+
+      const cName = t.countryName || custom.countryName || t.country || custom.quoc_gia_xuat_canh || '';
+      const depDate = t.departureDate || custom.departureDate || t.approvedDepartureDate || '';
+      const arrDate = t.arrivalDate || custom.arrivalDate || '';
+      const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || '';
+      const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || '';
+      const dNum = t.decisionNumber || custom.decisionNumber || t.decision || '';
+      const fName = t.fundingName || t.funding || t.nguon_kinh_phi || t.kinh_phi || t.nguonKinhPhi || t.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
+      const purpose = t.purpose || custom.purpose || '';
+
+      if (!cName && !depDate && !arrDate && !dNum && !purpose) {
+        return;
+      }
+
+      const isRel = Boolean(t.isRelative || t.relativeName || t.cccdthannhan);
+      const presence = getTripPresence({
+        departureDate: depDate,
+        arrivalDate: arrDate,
+        approvedArrivalDate: appArrDate,
+        approvedExtensionDate: extDate,
+        custom_data: custom,
+      });
+
+      const uniqueKey = t.id || `trip_${p.id}_${tIdx}`;
+      if (processedTripKeys.has(uniqueKey)) return;
+      processedTripKeys.add(uniqueKey);
+
+      list.push({
+        ...custom,
+        ...t,
+        uniqueKey,
+        isRelative: isRel,
+        personnelId: p.id,
+        personnelCode: p.code || '',
+        personnelName: isRel ? (t.relativeName || 'Thân nhân') : p.name,
+        position: isRel ? `TN (${t.relationshipName || 'Thân nhân'}) của: ${p.name}` : (p.positionName || p.position || ''),
+        departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
+        countryName: cName,
+        departureDate: depDate,
+        arrivalDate: arrDate,
+        approvedDepartureDate: t.approvedDepartureDate || custom.approvedDepartureDate || depDate,
+        approvedArrivalDate: appArrDate,
+        approvedExtensionDate: extDate,
+        decisionNumber: dNum,
+        fundingName: fName,
+        purpose,
+        passportNumber: t.passportNumber || custom.passportNumber || '',
+        isAbroad: presence.isAbroad,
+        isOverdue: presence.isOverdue,
+        overdueDays: presence.overdueDays,
+        presenceStatus: presence.status,
+        presenceLabel: presence.label,
+        rawTrip: t,
+        rawPerson: p,
+        custom_data: custom,
+      });
+    });
+
+    (p.relatives || []).forEach((r, rIdx) => {
+      (r.trips || []).forEach((rt, rtIdx) => {
+        let custom = {};
+        if (rt.custom_data) {
+          try {
+            custom = typeof rt.custom_data === 'string' ? JSON.parse(rt.custom_data) : rt.custom_data;
+          } catch (e) {}
+        }
+
+        const cName = rt.countryName || custom.countryName || rt.country || r.countryName || '';
+        const depDate = rt.departureDate || custom.departureDate || '';
+        const arrDate = rt.arrivalDate || custom.arrivalDate || '';
+        const appArrDate = rt.approvedArrivalDate || custom.approvedArrivalDate || '';
+        const extDate = rt.approvedExtensionDate || custom.approvedExtensionDate || '';
+        const dNum = rt.decisionNumber || custom.decisionNumber || '';
+        const fName = rt.fundingName || rt.funding || rt.nguon_kinh_phi || rt.kinh_phi || rt.nguonKinhPhi || rt.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
+        const purpose = rt.purpose || custom.purpose || '';
+
+        if (!cName && !depDate && !arrDate && !dNum && !purpose) {
+          return;
+        }
+
+        const presence = getTripPresence({
+          departureDate: depDate,
+          arrivalDate: arrDate,
+          approvedArrivalDate: appArrDate,
+          approvedExtensionDate: extDate,
+          custom_data: custom,
+        });
+
+        const uniqueKey = rt.id || `rel_trip_${p.id}_${rIdx}_${rtIdx}`;
+        if (processedTripKeys.has(uniqueKey)) return;
+        processedTripKeys.add(uniqueKey);
+
+        list.push({
+          ...custom,
+          ...rt,
+          uniqueKey,
+          isRelative: true,
+          personnelId: p.id,
+          personnelCode: p.code || '',
+          personnelName: r.relativeName || r.name || 'Thân nhân',
+          position: `TN (${r.relationshipName || 'Thân nhân'}) của: ${p.name}`,
+          departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
+          countryName: cName,
+          departureDate: depDate,
+          arrivalDate: arrDate,
+          approvedDepartureDate: rt.approvedDepartureDate || depDate,
+          approvedArrivalDate: appArrDate,
+          approvedExtensionDate: extDate,
+          decisionNumber: dNum,
+          fundingName: fName,
+          purpose: rt.purpose || custom.purpose || '',
+          passportNumber: rt.passportNumber || custom.passportNumber || '',
+          isAbroad: presence.isAbroad,
+          isOverdue: presence.isOverdue,
+          overdueDays: presence.overdueDays,
+          presenceStatus: presence.status,
+          presenceLabel: presence.label,
+          rawTrip: rt,
+          rawRelative: r,
+          rawPerson: p,
+          custom_data: custom,
+        });
+      });
+    });
+  });
+
+  return list;
+});
+
 const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
   // Resolve actual card definition from topic if card is a widget reference
@@ -1631,9 +1844,27 @@ const getCardMetricValueForTopic = (card, topic) => {
 
   // 2. Preset Conditions
   const cond = actualCard.cardCondition || actualCard.condition || card.cardCondition || card.condition || card.id || 'all';
-  if (cond === 'completed' || actualCard.label === 'Đã về nước' || card.label === 'Đã về nước') return list.filter((t) => !t.isAbroad && !t.isOverdue).length;
-  if (cond === 'abroad' || actualCard.label === 'Đang ở nước ngoài' || card.label === 'Đang ở nước ngoài') return list.filter((t) => t.isAbroad && !t.isOverdue).length;
-  if (cond === 'overdue' || actualCard.label === 'Quá hạn chưa về' || card.label === 'Quá hạn chưa về') return list.filter((t) => t.isOverdue).length;
+  if (cond === 'all' || actualCard.label === 'Toàn bộ' || card.label === 'Toàn bộ' || actualCard.label === 'Tất cả' || card.label === 'Tất cả') {
+    return list.length;
+  }
+  if (cond === 'completed' || actualCard.label === 'Đã về nước' || card.label === 'Đã về nước') {
+    return list.filter((t) => {
+      const p = getTripPresence(t);
+      return p.status === 'completed';
+    }).length;
+  }
+  if (cond === 'abroad' || actualCard.label === 'Đang ở nước ngoài' || card.label === 'Đang ở nước ngoài') {
+    return list.filter((t) => {
+      const p = getTripPresence(t);
+      return p.status === 'abroad';
+    }).length;
+  }
+  if (cond === 'overdue' || actualCard.label === 'Quá hạn chưa về' || card.label === 'Quá hạn chưa về') {
+    return list.filter((t) => {
+      const p = getTripPresence(t);
+      return p.status === 'overdue';
+    }).length;
+  }
 
   return list.length;
 };
@@ -1921,7 +2152,7 @@ const getRowFieldValue = (row, colId) => {
 
 const getSourceList = (source) => {
   if (source === 'relatives') return personnelStore.relativesList || [];
-  if (source === 'trips') return stats.value.filteredTrips || [];
+  if (source === 'trips') return unifiedTripsList.value || [];
   return personnelStore.personnelList || [];
 };
 
