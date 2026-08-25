@@ -1032,9 +1032,8 @@ const STANDARD_LABELS = {
 
 const getColumnLabel = (colId) => {
   if (!colId) return '';
-  if (STANDARD_LABELS[colId]) return STANDARD_LABELS[colId];
 
-  // Search in all import mappings
+  // 1. Search in configured import mappings (User customizations from Cài đặt Cột - TOP PRIORITY)
   const allMaps = [
     ...(personnelStore.importMappingTrips || []),
     ...(personnelStore.importMappingPersonnel || []),
@@ -1042,12 +1041,17 @@ const getColumnLabel = (colId) => {
   ];
   for (const g of allMaps) {
     for (const c of (g.columns || [])) {
-      if (c.id === colId && c.label && c.label !== colId) {
+      if (c.id === colId && c.label && String(c.label).trim() !== '' && c.label !== colId) {
         return c.label;
       }
     }
   }
 
+  // 2. Search in all available store columns
+  const foundInT = (personnelStore.allAvailableTripColumns || []).find((c) => c.id === colId);
+  if (foundInT && foundInT.label && foundInT.label !== colId) {
+    return foundInT.label;
+  }
   const foundInP = (personnelStore.allAvailableColumns || []).find((c) => c.id === colId);
   if (foundInP && foundInP.label && foundInP.label !== colId) {
     return foundInP.label;
@@ -1057,6 +1061,10 @@ const getColumnLabel = (colId) => {
     return foundInR.label;
   }
 
+  // 3. Fallback to standard hardcoded labels
+  if (STANDARD_LABELS[colId]) return STANDARD_LABELS[colId];
+
+  // 4. Default formatting
   return colId.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 };
 
@@ -1079,19 +1087,41 @@ const allAvailableColumnsList = computed(() => {
   const rawList = [];
 
   if (src === 'trips') {
-    DEFAULT_TRIP_COLUMNS.forEach((c) => {
-      seen.add(c.id);
-      rawList.push({ ...c, label: getColumnLabel(c.id) || c.label });
-    });
     (personnelStore.importMappingTrips || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
-          rawList.push({ id: c.id, label: getColumnLabel(c.id) || c.label || c.id, width: '150px', format: c.format });
+          rawList.push({
+            id: c.id,
+            label: getColumnLabel(c.id) || c.label || c.id,
+            width: c.width || '150px',
+            format: c.format,
+          });
         }
       });
     });
+
+    DEFAULT_TRIP_COLUMNS.forEach((c) => {
+      if (!seen.has(c.id)) {
+        seen.add(c.id);
+        rawList.push({ ...c, label: getColumnLabel(c.id) || c.label });
+      }
+    });
   } else if (src === 'relatives') {
+    (personnelStore.importMappingRelative || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+          seen.add(c.id);
+          rawList.push({
+            id: c.id,
+            label: getColumnLabel(c.id) || c.label || c.id,
+            width: c.width || '150px',
+            format: c.format,
+          });
+        }
+      });
+    });
+
     [
       { id: 'parentName', label: 'Cán bộ liên quan' },
       { id: 'relationshipName', label: 'Mối quan hệ' },
@@ -1099,19 +1129,27 @@ const allAvailableColumnsList = computed(() => {
       { id: 'birthYear', label: 'Năm sinh' },
       { id: 'countryName', label: 'Quốc gia cư trú' },
     ].forEach((c) => {
-      seen.add(c.id);
-      rawList.push({ ...c, label: getColumnLabel(c.id) || c.label, width: '150px' });
-    });
-    (personnelStore.importMappingRelative || []).forEach((g) => {
-      (g.columns || []).forEach((c) => {
-        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
-          seen.add(c.id);
-          rawList.push({ id: c.id, label: getColumnLabel(c.id) || c.label || c.id, width: '150px' });
-        }
-      });
+      if (!seen.has(c.id)) {
+        seen.add(c.id);
+        rawList.push({ ...c, label: getColumnLabel(c.id) || c.label, width: '150px' });
+      }
     });
   } else {
     // personnel
+    (personnelStore.importMappingPersonnel || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+          seen.add(c.id);
+          rawList.push({
+            id: c.id,
+            label: getColumnLabel(c.id) || c.label || c.id,
+            width: c.width || '150px',
+            format: c.format,
+          });
+        }
+      });
+    });
+
     [
       { id: 'code', label: 'Mã cán bộ' },
       { id: 'name', label: 'Họ và tên' },
@@ -1120,16 +1158,10 @@ const allAvailableColumnsList = computed(() => {
       { id: 'departmentName', label: 'Đơn vị công tác' },
       { id: 'cccd', label: 'Số CCCD / Định danh' },
     ].forEach((c) => {
-      seen.add(c.id);
-      rawList.push({ ...c, label: getColumnLabel(c.id) || c.label, width: '150px' });
-    });
-    (personnelStore.importMappingPersonnel || []).forEach((g) => {
-      (g.columns || []).forEach((c) => {
-        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
-          seen.add(c.id);
-          rawList.push({ id: c.id, label: getColumnLabel(c.id) || c.label || c.id, width: '150px' });
-        }
-      });
+      if (!seen.has(c.id)) {
+        seen.add(c.id);
+        rawList.push({ ...c, label: getColumnLabel(c.id) || c.label, width: '150px' });
+      }
     });
   }
 
@@ -1163,7 +1195,10 @@ const visibleColumns = computed(() => {
   const colMap = new Map();
   allAvailableColumnsList.value.forEach((c) => {
     if (c.id !== 'status' && c.id !== 'tripStatus') {
-      colMap.set(c.id, c);
+      colMap.set(c.id, {
+        ...c,
+        label: getColumnLabel(c.id) || c.label,
+      });
     }
   });
   return selectedColIds.value
