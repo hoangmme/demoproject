@@ -1601,6 +1601,29 @@ const availableCardsForSelectedTopic = computed(() => {
   return DEFAULT_TOPIC_DASHBOARDS[0].metricCards;
 });
 
+const parseDateObj = (str) => {
+  if (!str) return null;
+  if (str instanceof Date) return isNaN(str.getTime()) ? null : str;
+  const s = String(str).trim();
+  if (!s || s === '-' || s === 'Chưa rõ') return null;
+
+  if (s.includes('/') || (s.includes('-') && s.split('-')[0].length <= 2)) {
+    const sep = s.includes('/') ? '/' : '-';
+    const parts = s.split(sep);
+    if (parts.length === 3) {
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const y = parseInt(parts[2], 10);
+      if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+        return new Date(y, m, d);
+      }
+    }
+  }
+
+  const parsed = new Date(s);
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
+
 // Single Unified Presence Status Calculator (Identical to ChildDashboardView)
 const getTripPresence = (t) => {
   if (!t) return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
@@ -2426,23 +2449,6 @@ const getTimeFilterLabel = () => {
     return `Từ ${customStartDate.value || '...'} đến ${customEndDate.value || '...'}`;
   }
   return 'Tất cả';
-};
-
-const parseDateObj = (str) => {
-  if (!str) return null;
-  if (str instanceof Date) return str;
-  const s = String(str).trim();
-  if (s.includes('/')) {
-    const parts = s.split('/');
-    if (parts.length === 3) {
-      const d = parseInt(parts[0], 10);
-      const m = parseInt(parts[1], 10) - 1;
-      const y = parseInt(parts[2], 10);
-      return new Date(y, m, d);
-    }
-  }
-  const parsed = new Date(s);
-  return isNaN(parsed.getTime()) ? null : parsed;
 };
 
 const isWithinTimeFilter = (dateStr) => {
