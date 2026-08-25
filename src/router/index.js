@@ -39,13 +39,13 @@ const routes = [
     path: '/trips',
     name: 'Trips',
     component: ChildDashboardView,
-    meta: { title: 'Danh sách Chuyến đi', requiresAuth: true },
+    meta: { title: 'Chuyên đề', requiresAuth: true },
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
     component: DashboardView,
-    meta: { title: 'Dashboard Thống kê', requiresAuth: true },
+    meta: { title: 'Thống kê', requiresAuth: true },
   },
   {
     path: '/pl1',

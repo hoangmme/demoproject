@@ -21,7 +21,7 @@
     <nav class="app-sidebar-nav">
       <router-link to="/dashboard" class="app-nav-item">
         <i class="pi pi-chart-pie"></i>
-        <span>Dashboard Thống kê</span>
+        <span>Thống kê</span>
       </router-link>
 
       <router-link to="/personnel" class="app-nav-item">
@@ -29,7 +29,7 @@
         <span>Hồ sơ Cán bộ</span>
       </router-link>
 
-      <div class="app-nav-heading">Dashboard Chuyên đề</div>
+      <div class="app-nav-heading">Chuyên đề</div>
 
       <router-link
         v-for="dash in dynamicDashboards"
@@ -286,6 +286,7 @@ const loadSidebarData = async () => {
     const savedDash = await getAppSettings('custom_dashboards_config', null);
     if (savedDash && Array.isArray(savedDash) && savedDash.length > 0) {
       dynamicDashboards.value = savedDash;
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(savedDash));
     } else {
       const local = localStorage.getItem('custom_dashboards_config');
       if (local) dynamicDashboards.value = JSON.parse(local);

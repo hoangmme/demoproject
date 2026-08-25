@@ -58,7 +58,7 @@
         v-for="(card, cIdx) in activeMetricCards"
         :key="card.id || cIdx"
         class="quick-stat-card"
-        :class="{ 'stat-active': activeMetricCardId === (card.id || card.label || cIdx) }"
+        :class="{ 'stat-active': isCardActive(card, cIdx) }"
         @click="toggleMetricCardFilter(card, cIdx)"
         style="cursor: pointer;"
       >
@@ -110,32 +110,33 @@
         <!-- Funding Filter -->
         <div style="min-width: 140px;">
           <select v-model="selectedFunding" class="filter-select">
-            <option value="">Kinh phí: Tất cả</option>
+            <option value="">Nguồn kinh phí: Tất cả</option>
             <option v-for="f in availableFundings" :key="f" :value="f">{{ f }}</option>
           </select>
         </div>
 
-        <!-- Reset Filter Button -->
+        <!-- Reset Button -->
         <Button
           v-if="hasActiveFilters"
-          label="Xóa lọc"
-          icon="pi pi-times"
-          size="small"
-          text
+          label="Xóa bộ lọc"
+          icon="pi pi-filter-slash"
           severity="secondary"
+          text
+          size="small"
           @click="resetAllFilters"
-          style="font-size: 0.8rem;"
+          style="font-size: 0.78rem; padding: 4px 8px;"
         />
       </div>
     </div>
 
-    <!-- Data Table Container -->
+    <!-- Main Data Table Card -->
     <div class="app-card" style="padding: 0; overflow: hidden;">
-      <div style="overflow-x: auto; max-height: calc(100vh - 280px);">
-        <table class="trips-table">
+      <div style="overflow-x: auto; max-height: calc(100vh - 360px);">
+        <table class="table-dashboard">
           <thead>
             <tr>
-              <th style="width: 40px; text-align: center;">
+              <!-- Checkbox All -->
+              <th style="width: 44px; text-align: center;">
                 <input
                   type="checkbox"
                   :checked="isAllSelected"
@@ -144,47 +145,51 @@
                   style="cursor: pointer;"
                 />
               </th>
+
+              <!-- STT -->
               <th style="width: 50px; text-align: center;">STT</th>
 
-              <!-- Dynamic Visible Headers -->
+              <!-- Dynamic Visible Columns -->
               <th
                 v-for="col in visibleColumns"
                 :key="col.id"
-                :style="{ width: col.width || '150px', minWidth: col.width || '150px' }"
+                :style="getColumnHeaderStyle(col)"
+                style="cursor: pointer; user-select: none;"
                 @click="sortBy(col.id)"
-                class="sortable-header"
               >
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <span>{{ col.label || col.id }}</span>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                  <span>{{ col.label }}</span>
                   <i
                     v-if="sortKey === col.id"
-                    :class="sortOrder === 1 ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down'"
-                    style="font-size: 0.75rem; color: #2563eb;"
+                    :class="['pi', sortOrder === 1 ? 'pi-sort-amount-up-alt' : 'pi-sort-amount-down']"
+                    style="font-size: 0.7rem; color: #1e3a8a;"
                   ></i>
+                  <i v-else class="pi pi-sort-alt" style="font-size: 0.65rem; color: #cbd5e1;"></i>
                 </div>
               </th>
 
-              <!-- Action Column (THAO TÁC) -->
-              <th style="width: 140px; text-align: center; white-space: nowrap;">
-                THAO TÁC
-              </th>
+              <!-- Action Column -->
+              <th style="width: 130px; text-align: center;">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="paginatedList.length === 0">
-              <td :colspan="visibleColumns.length + 3" style="text-align: center; padding: 2rem; color: #94a3b8;">
-                <i class="pi pi-inbox" style="font-size: 1.8rem; display: block; margin-bottom: 6px;"></i>
-                Không tìm thấy bản ghi nào phù hợp với bộ lọc.
+              <td :colspan="visibleColumns.length + 3" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
+                <i class="pi pi-inbox" style="font-size: 2rem; margin-bottom: 8px; display: block;"></i>
+                Không tìm thấy dữ liệu chuyến đi phù hợp
               </td>
             </tr>
 
             <tr
               v-for="(trip, idx) in paginatedList"
               :key="trip.uniqueKey || idx"
+              class="clickable-row"
               :class="{ 'row-selected': isSelected(trip) }"
+              @click="openPersonnelDetail(trip)"
+              title="Nhấp vào hàng để xem/sửa chi tiết hồ sơ"
             >
               <!-- Checkbox -->
-              <td style="text-align: center;">
+              <td style="text-align: center;" @click.stop>
                 <input
                   type="checkbox"
                   :checked="isSelected(trip)"
@@ -754,15 +759,32 @@ const getCardMetricValue = (card) => {
 
 const activeMetricCardId = ref('all');
 
+const isCardActive = (card, cIdx) => {
+  if (!card) return false;
+  const cardKey = card.id || card.label || `card_${cIdx}`;
+  const isAll = card.condition === 'all' || card.id === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả';
+  if (activeMetricCardId.value === 'all') {
+    return isAll;
+  }
+  return activeMetricCardId.value === cardKey;
+};
+
 const toggleMetricCardFilter = (card, cIdx) => {
-  const cardKey = card.id || card.label || cIdx;
-  if (activeMetricCardId.value === cardKey) {
+  const cardKey = card.id || card.label || `card_${cIdx}`;
+  const isAll = card.condition === 'all' || card.id === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả';
+
+  if (isAll) {
     activeMetricCardId.value = 'all';
     statusFilter.value = 'all';
+    return;
+  }
+
+  if (activeMetricCardId.value === cardKey) {
+    activeMetricCardId.value = 'all';
   } else {
     activeMetricCardId.value = cardKey;
-    statusFilter.value = 'all';
   }
+  statusFilter.value = 'all';
 };
 
 // Filters
@@ -1745,6 +1767,7 @@ const loadCustomDashboards = async () => {
     const saved = await getAppSettings('custom_dashboards_config', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
       customDashboards.value = saved;
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(saved));
     } else {
       const local = localStorage.getItem('custom_dashboards_config');
       if (local) customDashboards.value = JSON.parse(local);
@@ -1755,6 +1778,12 @@ const loadCustomDashboards = async () => {
 };
 
 const initTopicColumns = () => {
+  // 1. Prioritize columns configured in DB for this dashboard
+  if (currentDashboardConfig.value?.columns && currentDashboardConfig.value.columns.length > 0) {
+    selectedColIds.value = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
+    return;
+  }
+  // 2. Fallback to localStorage
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
   const savedCols = localStorage.getItem(currentKey);
   if (savedCols) {
@@ -1763,17 +1792,19 @@ const initTopicColumns = () => {
       return;
     } catch (e) {}
   }
-  if (currentDashboardConfig.value.columns && currentDashboardConfig.value.columns.length > 0) {
-    selectedColIds.value = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
-  } else {
-    const defaultSaved = localStorage.getItem('trips_dashboard_columns');
-    if (defaultSaved) {
-      try {
-        selectedColIds.value = JSON.parse(defaultSaved).filter((id) => id !== 'status' && id !== 'tripStatus');
-        return;
-      } catch (e) {}
-    }
-    selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
+  const defaultSaved = localStorage.getItem('trips_dashboard_columns');
+  if (defaultSaved) {
+    try {
+      selectedColIds.value = JSON.parse(defaultSaved).filter((id) => id !== 'status' && id !== 'tripStatus');
+      return;
+    } catch (e) {}
+  }
+  selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
+};
+
+const handleRouteQueryChange = () => {
+  if (route.query?.card) {
+    activeMetricCardId.value = String(route.query.card);
   }
 };
 
@@ -1781,12 +1812,30 @@ watch(
   () => topicId.value,
   () => {
     initTopicColumns();
+    activeMetricCardId.value = 'all';
+    statusFilter.value = 'all';
+    searchQuery.value = '';
+    timeFilterYear.value = 'all';
+    selectedCountry.value = '';
+    selectedDepartment.value = '';
+    selectedFunding.value = '';
+    currentPage.value = 1;
+    handleRouteQueryChange();
   }
+);
+
+watch(
+  () => route.query,
+  () => {
+    handleRouteQueryChange();
+  },
+  { deep: true }
 );
 
 onMounted(async () => {
   await loadCustomDashboards();
   initTopicColumns();
+  handleRouteQueryChange();
 });
 </script>
 

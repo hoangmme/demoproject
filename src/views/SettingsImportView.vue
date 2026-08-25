@@ -1916,6 +1916,7 @@ const loadCustomDashboards = async () => {
     const saved = await getAppSettings('custom_dashboards_config', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
       customDashboards.value = saved;
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(saved));
     } else {
       const local = localStorage.getItem('custom_dashboards_config');
       if (local) customDashboards.value = JSON.parse(local);

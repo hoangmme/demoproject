@@ -7,8 +7,8 @@
           <i class="pi pi-chart-bar" style="font-size: 1.2rem;"></i>
         </div>
         <div>
-          <h2 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0;">Bảng Thống kê & Giám sát</h2>
-          <span style="font-size: 0.76rem; color: #64748b;">Tổng quan tình hình cán bộ, xuất nhập cảnh, thân nhân & các chỉ số tùy chỉnh</span>
+          <h2 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0;">Thống kê</h2>
+          <span style="font-size: 0.76rem; color: #64748b;">Tổng quan tình hình cán bộ, xuất nhập cảnh, thân nhân & các chỉ số chuyên đề</span>
         </div>
       </div>
 
@@ -187,11 +187,17 @@
             v-if="widget.displayType === 'count'"
             class="stat-card"
             :style="{ borderLeft: `4px solid ${widget.color || '#2e7d32'}`, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '1rem 1.15rem' }"
-            @click="openCustomWidgetDrilldown(widget)"
+            @click="handleWidgetClick(widget)"
+            style="cursor: pointer;"
           >
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
+                <div>
+                  <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
+                  <div v-if="widget.topicTitle" style="font-size: 0.7rem; color: #64748b; font-weight: 500; margin-top: 2px;">
+                    Chuyên đề: {{ widget.topicTitle }}
+                  </div>
+                </div>
                 <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px;">
                   <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa khối này">
                     <i class="pi pi-pencil"></i>
@@ -206,7 +212,9 @@
               </div>
             </div>
             <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">
-              <span class="view-more-tag" :style="{ color: widget.color || '#1e293b' }">Xem chi tiết <i class="pi pi-arrow-right"></i></span>
+              <span class="view-more-tag" :style="{ color: widget.color || '#1e293b' }">
+                {{ widget.topicId ? 'Mở Chuyên đề' : 'Xem chi tiết' }} <i class="pi pi-arrow-right"></i>
+              </span>
             </div>
           </div>
 
@@ -815,105 +823,185 @@
       v-model:visible="isWidgetDialogOpen"
       modal
       :header="editingWidget ? 'Chỉnh sửa Khối Thống kê' : 'Thêm Khối Thống kê Mới'"
-      :style="{ width: '560px', maxWidth: '96vw' }"
+      :style="{ width: '600px', maxWidth: '96vw' }"
     >
-      <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 8px;">
-        <div class="field-item">
-          <label class="field-label">Tiêu đề Khối Thống kê <span style="color: #ef4444;">*</span></label>
-          <InputText v-model="widgetForm.title" placeholder="Ví dụ: Phân bổ theo Dân tộc, hoặc Tổng số Đảng viên" style="width: 100%;" />
+      <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 6px;">
+        <!-- Mode Switcher Tabs -->
+        <div style="display: flex; gap: 8px; background: #f1f5f9; padding: 4px; border-radius: 8px;">
+          <button
+            type="button"
+            class="col-tab-btn"
+            :class="{ 'col-tab-btn-active': widgetCreateMode === 'topic' }"
+            @click="widgetCreateMode = 'topic'"
+            style="flex: 1; padding: 6px 12px; font-size: 0.8rem;"
+          >
+            <i class="pi pi-send" style="margin-right: 4px;"></i> 1. Chọn từ Khối Thống kê ở Chuyên đề
+          </button>
+          <button
+            type="button"
+            class="col-tab-btn"
+            :class="{ 'col-tab-btn-active': widgetCreateMode === 'custom' }"
+            @click="widgetCreateMode = 'custom'"
+            style="flex: 1; padding: 6px 12px; font-size: 0.8rem;"
+          >
+            <i class="pi pi-sliders-h" style="margin-right: 4px;"></i> 2. Tự cấu hình cột tùy biến
+          </button>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <!-- MODE 1: CHỌN TỪ KHỐI THỐNG KÊ Ở CHUYÊN ĐỀ -->
+        <div v-if="widgetCreateMode === 'topic'" style="display: flex; flex-direction: column; gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
           <div class="field-item">
-            <label class="field-label">Nguồn dữ liệu</label>
-            <select v-model="widgetForm.source" class="settings-select" style="width: 100%; max-width: 100%;">
-              <option value="personnel">Hồ sơ Cán bộ (Cá nhân)</option>
-              <option value="relatives">Danh sách Thân nhân</option>
-              <option value="trips">Cá nhân đi Nước ngoài (Phụ lục 1)</option>
-              <option value="combined_country">🌐 Tổng hợp Quốc gia (Cả Cán bộ & Thân nhân)</option>
-              <option value="combined_funding">💰 Tổng hợp Kinh phí (4 Cột & Chung)</option>
-            </select>
-          </div>
-
-          <div class="field-item">
-            <label class="field-label">Kiểu hiển thị <span style="color: #ef4444;">*</span></label>
-            <select v-model="widgetForm.displayType" class="settings-select" style="width: 100%; max-width: 100%;">
-              <option value="count">🔢 Đếm số lượng (Thẻ chỉ số)</option>
-              <option value="chart">📊 Biểu đồ phân bổ & Bảng xếp hạng</option>
-            </select>
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
-          <div class="field-item">
-            <label class="field-label">Cột dữ liệu cần Thống kê / Đếm <span style="color: #ef4444;">*</span></label>
-            <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; max-width: 100%;" @change="onWidgetColumnSelect">
-              <option value="">-- Nhấp để chọn Cột trong hệ thống --</option>
-              <option v-for="c in availableColumnsForWidgetSource" :key="c.id" :value="c.id">
-                {{ c.label }}
+            <label class="field-label" style="font-weight: 700; color: #1e293b;">1. Chọn Chuyên đề nguồn:</label>
+            <select v-model="selectedWidgetTopicId" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onTopicSelectChange">
+              <option v-for="t in availableTopicDashboards" :key="t.id" :value="t.id">
+                📁 {{ t.title }} (Mã: {{ t.code || t.id }})
               </option>
             </select>
           </div>
 
           <div class="field-item">
-            <label class="field-label">Độ rộng của Khối</label>
-            <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
-              <option :value="25">25% (1/4 hàng)</option>
-              <option :value="33">33% (1/3 hàng)</option>
-              <option :value="50">50% (1/2 hàng)</option>
-              <option :value="100">100% (Toàn hàng)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Extra settings for COUNT type -->
-        <div v-if="widgetForm.displayType === 'count'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
-          <label class="field-label" style="font-size: 0.78rem; font-weight: 700; color: #1e293b;">Điều kiện đếm:</label>
-          <div style="display: flex; gap: 12px; font-size: 0.8rem;">
-            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-              <input type="radio" v-model="widgetForm.countCondition" value="not_empty" />
-              Có dữ liệu (Không để trống)
-            </label>
-            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-              <input type="radio" v-model="widgetForm.countCondition" value="equals" />
-              Khớp giá trị cụ thể
-            </label>
-          </div>
-          <div v-if="widgetForm.countCondition === 'equals'">
-            <InputText v-model="widgetForm.countValue" placeholder="Ví dụ: Có, Đảng viên, Hoàn thành, v.v." style="width: 100%; font-size: 0.8rem;" />
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div class="field-item">
-            <label class="field-label">Màu sắc chủ đạo</label>
-            <select v-model="widgetForm.color" class="settings-select" style="width: 100%; max-width: 100%;">
-              <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
-              <option value="#0284c7">Xanh dương (Blue - #0284c7)</option>
-              <option value="#7c3aed">Tím (Purple - #7c3aed)</option>
-              <option value="#ea580c">Cam (Orange - #ea580c)</option>
-              <option value="#dc2626">Đỏ (Red - #dc2626)</option>
-              <option value="#0d9488">Xanh mòng két (Teal - #0d9488)</option>
-              <option value="#475569">Xám đậm (Slate - #475569)</option>
+            <label class="field-label" style="font-weight: 700; color: #1e293b;">2. Chọn Khối Thống kê (Metric Card) cần đưa ra Dashboard:</label>
+            <select v-model="selectedWidgetCardKey" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onTopicCardSelectChange">
+              <option v-for="(card, cIdx) in availableCardsForSelectedTopic" :key="card.id || cIdx" :value="card.id || card.label || `card_${cIdx}`">
+                🎯 {{ card.label }} (Đang có: {{ getCardMetricValueForTopic(card, selectedTopicObject) }} bản ghi)
+              </option>
             </select>
           </div>
 
           <div class="field-item">
-            <label class="field-label">Biểu tượng (Icon)</label>
-            <select v-model="widgetForm.icon" class="settings-select" style="width: 100%; max-width: 100%;">
-              <option value="pi-chart-line">📈 Biểu đồ đường (pi-chart-line)</option>
-              <option value="pi-chart-pie">🥧 Biểu đồ tròn (pi-chart-pie)</option>
-              <option value="pi-chart-bar">📊 Biểu đồ cột (pi-chart-bar)</option>
-              <option value="pi-user">👤 Cán bộ (pi-user)</option>
-              <option value="pi-users">👥 Nhóm người (pi-users)</option>
-              <option value="pi-building">🏢 Đơn vị / Phòng ban (pi-building)</option>
-              <option value="pi-flag">🚩 Cờ / Danh hiệu (pi-flag)</option>
-              <option value="pi-id-card">🪪 Thẻ CCCD / Hồ sơ (pi-id-card)</option>
-              <option value="pi-globe">🌐 Quốc gia / Nước ngoài (pi-globe)</option>
-              <option value="pi-shield">🛡️ Thẩm tra / Bảo vệ (pi-shield)</option>
-              <option value="pi-check-circle">✅ Hoàn thành / Tích chọn (pi-check-circle)</option>
-              <option value="pi-wallet">💰 Kinh phí (pi-wallet)</option>
-            </select>
+            <label class="field-label">Tiêu đề hiển thị trên Dashboard:</label>
+            <InputText v-model="widgetForm.title" placeholder="Tiêu đề khối" style="width: 100%;" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="field-item">
+              <label class="field-label">Độ rộng của Khối</label>
+              <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
+                <option :value="25">25% (1/4 hàng)</option>
+                <option :value="33">33% (1/3 hàng)</option>
+                <option :value="50">50% (1/2 hàng)</option>
+                <option :value="100">100% (Toàn hàng)</option>
+              </select>
+            </div>
+            <div class="field-item">
+              <label class="field-label">Màu sắc chủ đạo</label>
+              <select v-model="widgetForm.color" class="settings-select" style="width: 100%; max-width: 100%;">
+                <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
+                <option value="#0284c7">Xanh dương (Blue - #0284c7)</option>
+                <option value="#7c3aed">Tím (Purple - #7c3aed)</option>
+                <option value="#ea580c">Cam (Orange - #ea580c)</option>
+                <option value="#dc2626">Đỏ (Red - #dc2626)</option>
+                <option value="#0d9488">Xanh mòng két (Teal - #0d9488)</option>
+                <option value="#475569">Xám đậm (Slate - #475569)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="font-size: 0.74rem; color: #0369a1; background: #e0f2fe; padding: 8px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-info-circle"></i>
+            <span>Khi người dùng bấm vào thẻ này trên Dashboard Thống kê, hệ thống sẽ tự động chuyển sang trang <b>{{ selectedTopicObject?.title }}</b> và kích hoạt bộ lọc tương ứng!</span>
+          </div>
+        </div>
+
+        <!-- MODE 2: TỰ CẤU HÌNH CỘT TÙY BIẾN -->
+        <div v-else style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="field-item">
+            <label class="field-label">Tiêu đề Khối Thống kê <span style="color: #ef4444;">*</span></label>
+            <InputText v-model="widgetForm.title" placeholder="Ví dụ: Phân bổ theo Dân tộc, hoặc Tổng số Đảng viên" style="width: 100%;" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="field-item">
+              <label class="field-label">Nguồn dữ liệu</label>
+              <select v-model="widgetForm.source" class="settings-select" style="width: 100%; max-width: 100%;">
+                <option value="personnel">Hồ sơ Cán bộ (Cá nhân)</option>
+                <option value="relatives">Danh sách Thân nhân</option>
+                <option value="trips">Cá nhân đi Nước ngoài (Phụ lục 1)</option>
+                <option value="combined_country">🌐 Tổng hợp Quốc gia (Cả Cán bộ & Thân nhân)</option>
+                <option value="combined_funding">💰 Tổng hợp Kinh phí (4 Cột & Chung)</option>
+              </select>
+            </div>
+
+            <div class="field-item">
+              <label class="field-label">Kiểu hiển thị <span style="color: #ef4444;">*</span></label>
+              <select v-model="widgetForm.displayType" class="settings-select" style="width: 100%; max-width: 100%;">
+                <option value="count">🔢 Đếm số lượng (Thẻ chỉ số)</option>
+                <option value="chart">📊 Biểu đồ phân bổ & Bảng xếp hạng</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+            <div class="field-item">
+              <label class="field-label">Cột dữ liệu cần Thống kê / Đếm <span style="color: #ef4444;">*</span></label>
+              <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; max-width: 100%;" @change="onWidgetColumnSelect">
+                <option value="">-- Nhấp để chọn Cột trong hệ thống --</option>
+                <option v-for="c in availableColumnsForWidgetSource" :key="c.id" :value="c.id">
+                  {{ c.label }}
+                </option>
+              </select>
+            </div>
+
+            <div class="field-item">
+              <label class="field-label">Độ rộng của Khối</label>
+              <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
+                <option :value="25">25% (1/4 hàng)</option>
+                <option :value="33">33% (1/3 hàng)</option>
+                <option :value="50">50% (1/2 hàng)</option>
+                <option :value="100">100% (Toàn hàng)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Extra settings for COUNT type -->
+          <div v-if="widgetForm.displayType === 'count'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+            <label class="field-label" style="font-size: 0.78rem; font-weight: 700; color: #1e293b;">Điều kiện đếm:</label>
+            <div style="display: flex; gap: 12px; font-size: 0.8rem;">
+              <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                <input type="radio" v-model="widgetForm.countCondition" value="not_empty" />
+                Có dữ liệu (Không để trống)
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                <input type="radio" v-model="widgetForm.countCondition" value="equals" />
+                Khớp giá trị cụ thể
+              </label>
+            </div>
+            <div v-if="widgetForm.countCondition === 'equals'">
+              <InputText v-model="widgetForm.countValue" placeholder="Ví dụ: Có, Đảng viên, Hoàn thành, v.v." style="width: 100%; font-size: 0.8rem;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="field-item">
+              <label class="field-label">Màu sắc chủ đạo</label>
+              <select v-model="widgetForm.color" class="settings-select" style="width: 100%; max-width: 100%;">
+                <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
+                <option value="#0284c7">Xanh dương (Blue - #0284c7)</option>
+                <option value="#7c3aed">Tím (Purple - #7c3aed)</option>
+                <option value="#ea580c">Cam (Orange - #ea580c)</option>
+                <option value="#dc2626">Đỏ (Red - #dc2626)</option>
+                <option value="#0d9488">Xanh mòng két (Teal - #0d9488)</option>
+                <option value="#475569">Xám đậm (Slate - #475569)</option>
+              </select>
+            </div>
+
+            <div class="field-item">
+              <label class="field-label">Biểu tượng (Icon)</label>
+              <select v-model="widgetForm.icon" class="settings-select" style="width: 100%; max-width: 100%;">
+                <option value="pi-chart-line">📈 Biểu đồ đường (pi-chart-line)</option>
+                <option value="pi-chart-pie">🥧 Biểu đồ tròn (pi-chart-pie)</option>
+                <option value="pi-chart-bar">📊 Biểu đồ cột (pi-chart-bar)</option>
+                <option value="pi-user">👤 Cán bộ (pi-user)</option>
+                <option value="pi-users">👥 Nhóm người (pi-users)</option>
+                <option value="pi-building">🏢 Đơn vị / Phòng ban (pi-building)</option>
+                <option value="pi-flag">🚩 Cờ / Danh hiệu (pi-flag)</option>
+                <option value="pi-id-card">🪪 Thẻ CCCD / Hồ sơ (pi-id-card)</option>
+                <option value="pi-globe">🌐 Quốc gia / Nước ngoài (pi-globe)</option>
+                <option value="pi-shield">🛡️ Thẩm tra / Bảo vệ (pi-shield)</option>
+                <option value="pi-check-circle">✅ Hoàn thành / Tích chọn (pi-check-circle)</option>
+                <option value="pi-wallet">💰 Kinh phí (pi-wallet)</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -991,6 +1079,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
@@ -1002,6 +1091,7 @@ import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getS
 import { computeColumnIndexMap, formatDate, computePresenceStatus } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
+const router = useRouter();
 const personnelStore = usePersonnelStore();
 
 // =========================================================================
@@ -1528,14 +1618,135 @@ const deleteGroup = async (group) => {
   await saveCustomGroupsToDb();
 };
 
+// Topic Dashboards Integration for Custom Widgets
+const widgetCreateMode = ref('topic'); // 'topic' | 'custom'
+const selectedWidgetTopicId = ref('trips');
+const selectedWidgetCardKey = ref('all');
+const availableTopicDashboards = ref([]);
+
+const DEFAULT_TOPIC_DASHBOARDS = [
+  {
+    id: 'trips',
+    code: 'CD-03',
+    title: 'Danh sách Chuyến đi',
+    source: 'trips',
+    icon: 'pi-send',
+    metricCards: [
+      { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
+      { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
+      { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
+      { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
+    ],
+  },
+];
+
+const loadTopicDashboards = async () => {
+  try {
+    const saved = await getAppSettings('custom_dashboards_config', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      availableTopicDashboards.value = saved;
+    } else {
+      const local = localStorage.getItem('custom_dashboards_config');
+      if (local) {
+        availableTopicDashboards.value = JSON.parse(local);
+      } else {
+        availableTopicDashboards.value = DEFAULT_TOPIC_DASHBOARDS;
+      }
+    }
+  } catch (e) {
+    availableTopicDashboards.value = DEFAULT_TOPIC_DASHBOARDS;
+  }
+};
+
+const selectedTopicObject = computed(() => {
+  return availableTopicDashboards.value.find((t) => t.id === selectedWidgetTopicId.value) || availableTopicDashboards.value[0] || DEFAULT_TOPIC_DASHBOARDS[0];
+});
+
+const availableCardsForSelectedTopic = computed(() => {
+  const t = selectedTopicObject.value;
+  if (t && t.metricCards && t.metricCards.length > 0) {
+    return t.metricCards;
+  }
+  return DEFAULT_TOPIC_DASHBOARDS[0].metricCards;
+});
+
+const getCardMetricValueForTopic = (card, topic) => {
+  if (!card) return 0;
+  const src = topic?.source || card.source || 'trips';
+  const list = getSourceList(src);
+  const cond = card.cardCondition || card.condition || card.id || 'all';
+  if (cond === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả') return list.length;
+  if (cond === 'completed') return list.filter((t) => !t.isAbroad && !t.isOverdue).length;
+  if (cond === 'abroad') return list.filter((t) => t.isAbroad && !t.isOverdue).length;
+  if (cond === 'overdue') return list.filter((t) => t.isOverdue).length;
+  if (card.field) {
+    const op = card.operator || 'has_value';
+    return list.filter((row) => {
+      const val = getRowFieldValue(row, card.field);
+      if (op === 'has_value') return val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-';
+      if (op === 'empty') return val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-';
+      if (op === 'equals') return String(val || '').trim().toLowerCase() === String(card.value || '').trim().toLowerCase();
+      if (op === 'contains') return String(val || '').trim().toLowerCase().includes(String(card.value || '').trim().toLowerCase());
+      return true;
+    }).length;
+  }
+  return list.length;
+};
+
+const onTopicCardSelectChange = () => {
+  const topic = selectedTopicObject.value;
+  const cards = availableCardsForSelectedTopic.value;
+  const card = cards.find((c, idx) => (c.id || c.label || `card_${idx}`) === selectedWidgetCardKey.value) || cards[0];
+  if (!card || !topic) return;
+
+  const colorMap = {
+    blue: '#0284c7',
+    green: '#2e7d32',
+    amber: '#ea580c',
+    red: '#dc2626',
+    purple: '#7c3aed',
+    teal: '#0d9488',
+  };
+
+  widgetForm.value = {
+    ...widgetForm.value,
+    title: card.label === 'Toàn bộ' ? `Tổng số ${topic.title}` : `${topic.title} - ${card.label}`,
+    topicId: topic.id,
+    topicTitle: topic.title,
+    cardId: card.id || card.label,
+    cardCondition: card.condition || card.id,
+    field: card.field || '',
+    operator: card.operator || 'has_value',
+    value: card.value || '',
+    source: topic.source || 'trips',
+    displayType: 'count',
+    color: colorMap[card.color] || card.color || '#2e7d32',
+    icon: topic.icon ? `pi ${topic.icon}` : 'pi-send',
+  };
+};
+
+const onTopicSelectChange = () => {
+  const cards = availableCardsForSelectedTopic.value;
+  if (cards.length > 0) {
+    selectedWidgetCardKey.value = cards[0].id || cards[0].label || 'card_0';
+    onTopicCardSelectChange();
+  }
+};
+
 // Widget CRUD
 const openAddWidgetDialog = (group) => {
   activeGroupForWidget.value = group;
   editingWidget.value = null;
+  widgetCreateMode.value = 'topic';
+  if (availableTopicDashboards.value.length > 0) {
+    selectedWidgetTopicId.value = availableTopicDashboards.value[0].id;
+  } else {
+    selectedWidgetTopicId.value = 'trips';
+  }
   widgetForm.value = {
     id: 'w_' + Date.now(),
     title: '',
-    source: 'personnel',
+    source: 'trips',
     columnId: '',
     columnLabel: '',
     displayType: 'count',
@@ -1544,13 +1755,23 @@ const openAddWidgetDialog = (group) => {
     countValue: '',
     color: '#2e7d32',
     icon: 'pi-chart-line',
+    topicId: selectedWidgetTopicId.value,
+    topicTitle: '',
+    cardId: '',
+    cardCondition: '',
   };
+  onTopicSelectChange();
   isWidgetDialogOpen.value = true;
 };
 
 const openEditWidgetDialog = (group, widget) => {
   activeGroupForWidget.value = group;
   editingWidget.value = widget;
+  widgetCreateMode.value = widget.topicId ? 'topic' : 'custom';
+  if (widget.topicId) {
+    selectedWidgetTopicId.value = widget.topicId;
+    selectedWidgetCardKey.value = widget.cardId || widget.cardCondition || 'all';
+  }
   widgetForm.value = {
     widthPercent: 33,
     ...JSON.parse(JSON.stringify(widget)),
@@ -1572,8 +1793,12 @@ const onWidgetColumnSelect = () => {
 
 const saveWidget = async () => {
   if (isSavingWidget.value) return;
-  if (!widgetForm.value.title.trim() || !widgetForm.value.columnId) {
-    alert('Vui lòng nhập Tiêu đề và chọn Cột dữ liệu cần thống kê!');
+  if (!widgetForm.value.title.trim()) {
+    alert('Vui lòng nhập Tiêu đề cho Khối thống kê!');
+    return;
+  }
+  if (widgetCreateMode.value === 'custom' && !widgetForm.value.columnId) {
+    alert('Vui lòng chọn Cột dữ liệu cần thống kê!');
     return;
   }
   const group = activeGroupForWidget.value;
@@ -1702,6 +1927,11 @@ const getSourceList = (source) => {
 };
 
 const computeWidgetCount = (widget) => {
+  if (widget.topicId) {
+    const topic = availableTopicDashboards.value.find((t) => t.id === widget.topicId);
+    return getCardMetricValueForTopic(widget, topic);
+  }
+
   const list = getSourceList(widget.source);
   if (!widget.columnId) return 0;
 
@@ -1716,6 +1946,16 @@ const computeWidgetCount = (widget) => {
     }
     return true;
   }).length;
+};
+
+const handleWidgetClick = (widget) => {
+  if (widget.topicId) {
+    const targetPath = widget.topicId === 'trips' ? '/trips' : `/dashboard-topic/${widget.topicId}`;
+    const cardParam = widget.cardId || widget.cardCondition || widget.id;
+    router.push({ path: targetPath, query: { card: cardParam } });
+    return;
+  }
+  openCustomWidgetDrilldown(widget);
 };
 
 const computeWidgetChartData = (widget) => {
@@ -2593,6 +2833,7 @@ const refreshData = async () => {
 onMounted(async () => {
   await loadDashboardSettings();
   await loadCustomGroups();
+  await loadTopicDashboards();
   await personnelStore.loadSettings();
   if (personnelStore.personnelList.length === 0) {
     await personnelStore.init();
