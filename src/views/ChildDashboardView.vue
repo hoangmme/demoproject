@@ -788,10 +788,10 @@ const matchCardCondition = (item, card) => {
 
     const op = card.operator || 'has_value';
     if (op === 'has_value') {
-      return !!fieldVal && fieldVal !== 'Chưa rõ';
+      return !!fieldVal && fieldVal !== 'Chưa rõ' && fieldVal !== '-';
     }
     if (op === 'empty') {
-      return !fieldVal || fieldVal === 'Chưa rõ';
+      return !fieldVal || fieldVal === 'Chưa rõ' || fieldVal === '-';
     }
     if (op === 'equals') {
       return fieldVal.toLowerCase() === String(card.value || '').trim().toLowerCase();
@@ -804,18 +804,18 @@ const matchCardCondition = (item, card) => {
 
   // 2. Preset Condition (when no field is selected)
   const cond = card.condition || card.id || 'all';
-  if (cond === 'all') {
+  if (cond === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả') {
     return true;
   }
 
   const presence = getTripPresence(item);
-  if (cond === 'completed') {
+  if (cond === 'completed' || card.label === 'Đã về nước') {
     return presence.status === 'completed';
   }
-  if (cond === 'abroad') {
+  if (cond === 'abroad' || card.label === 'Đang ở nước ngoài') {
     return presence.status === 'abroad';
   }
-  if (cond === 'overdue') {
+  if (cond === 'overdue' || card.label === 'Quá hạn chưa về') {
     return presence.status === 'overdue';
   }
 
@@ -908,6 +908,83 @@ const tripFormData = ref({
   passportNumber: '',
 });
 
+// Standard label mappings
+const STANDARD_LABELS = {
+  personnelName: 'Họ và tên',
+  name: 'Họ và tên',
+  ho_va_ten: 'Họ và tên',
+  hoTen: 'Họ và tên',
+  code: 'Mã số',
+  personnelCode: 'Mã cán bộ',
+  ma_can_bo: 'Mã cán bộ',
+  position: 'Chức vụ',
+  positionName: 'Chức vụ',
+  chuc_vu: 'Chức vụ',
+  chucVu: 'Chức vụ',
+  departmentName: 'Đơn vị công tác',
+  departmentId: 'Đơn vị công tác',
+  don_vi_cong_tac: 'Đơn vị công tác',
+  birthYear: 'Năm sinh',
+  nam_sinh: 'Năm sinh',
+  cccd: 'Số CCCD / Định danh',
+  cccdparent: 'Số CCCD Cán bộ',
+  countryName: 'Quốc gia / Nơi đến',
+  quoc_gia_xuat_canh: 'Quốc gia / Nơi đến',
+  country: 'Quốc gia',
+  departureDate: 'Ngày xuất cảnh',
+  ngay_xuat_canh: 'Ngày xuất cảnh',
+  arrivalDate: 'Ngày nhập cảnh / Trạng thái',
+  ngay_nhap_canh: 'Ngày nhập cảnh',
+  decisionNumber: 'Số quyết định',
+  so_quyet_dinh: 'Số quyết định',
+  decisionDate: 'Ngày quyết định',
+  ngay_quyet_dinh: 'Ngày quyết định',
+  fundingName: 'Nguồn kinh phí',
+  nguon_kinh_phi: 'Nguồn kinh phí',
+  purpose: 'Mục đích chuyến đi',
+  muc_dich_xuat_canh: 'Mục đích chuyến đi',
+  passportNumber: 'Số Hộ chiếu',
+  so_ho_chieu: 'Số Hộ chiếu',
+  trang_thai_hien_dien: 'Trạng thái hiện diện',
+  isOverdue: 'Quá hạn chưa về',
+  relativeName: 'Họ tên Thân nhân',
+  ho_ten_than_nhan: 'Họ tên Thân nhân',
+  relationshipName: 'Quan hệ thân nhân',
+  quan_he: 'Quan hệ thân nhân',
+  parentName: 'Cán bộ liên quan',
+  ho_ten_can_bo: 'Cán bộ liên quan',
+};
+
+const getColumnLabel = (colId) => {
+  if (!colId) return '';
+  if (STANDARD_LABELS[colId]) return STANDARD_LABELS[colId];
+
+  // Search in all import mappings
+  const allMaps = [
+    ...(personnelStore.importMappingTrips || []),
+    ...(personnelStore.importMappingPersonnel || []),
+    ...(personnelStore.importMappingRelative || []),
+  ];
+  for (const g of allMaps) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId && c.label && c.label !== colId) {
+        return c.label;
+      }
+    }
+  }
+
+  const foundInP = (personnelStore.allAvailableColumns || []).find((c) => c.id === colId);
+  if (foundInP && foundInP.label && foundInP.label !== colId) {
+    return foundInP.label;
+  }
+  const foundInR = (personnelStore.allAvailableRelativeColumns || []).find((c) => c.id === colId);
+  if (foundInR && foundInR.label && foundInR.label !== colId) {
+    return foundInR.label;
+  }
+
+  return colId.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
 // Default columns definition
 const DEFAULT_TRIP_COLUMNS = [
   { id: 'personnelName', label: 'Họ và tên', width: '180px' },
@@ -923,44 +1000,59 @@ const DEFAULT_TRIP_COLUMNS = [
 
 const allAvailableColumnsList = computed(() => {
   const src = currentDashboardConfig.value?.source || 'trips';
-  let rawList = [];
+  const seen = new Set();
+  const rawList = [];
 
   if (src === 'trips') {
-    const seen = new Set();
-
-    // 1. Put standard trip columns first
     DEFAULT_TRIP_COLUMNS.forEach((c) => {
       seen.add(c.id);
-      rawList.push(c);
+      rawList.push({ ...c, label: getColumnLabel(c.id) || c.label });
     });
-
-    // 2. Add extra custom columns mapped in importMappingTrips
     (personnelStore.importMappingTrips || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
-          rawList.push({ id: c.id, label: c.label || c.id, width: '150px', format: c.format });
+          rawList.push({ id: c.id, label: getColumnLabel(c.id) || c.label || c.id, width: '150px', format: c.format });
         }
       });
     });
   } else if (src === 'relatives') {
-    const seen = new Set();
+    [
+      { id: 'parentName', label: 'Cán bộ liên quan' },
+      { id: 'relationshipName', label: 'Mối quan hệ' },
+      { id: 'relativeName', label: 'Họ tên Thân nhân' },
+      { id: 'birthYear', label: 'Năm sinh' },
+      { id: 'countryName', label: 'Quốc gia cư trú' },
+    ].forEach((c) => {
+      seen.add(c.id);
+      rawList.push({ ...c, label: getColumnLabel(c.id) || c.label, width: '150px' });
+    });
     (personnelStore.importMappingRelative || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
-          rawList.push({ id: c.id, label: c.label || c.id, width: '150px' });
+          rawList.push({ id: c.id, label: getColumnLabel(c.id) || c.label || c.id, width: '150px' });
         }
       });
     });
   } else {
     // personnel
-    const seen = new Set();
+    [
+      { id: 'code', label: 'Mã cán bộ' },
+      { id: 'name', label: 'Họ và tên' },
+      { id: 'birthYear', label: 'Năm sinh' },
+      { id: 'position', label: 'Chức vụ' },
+      { id: 'departmentName', label: 'Đơn vị công tác' },
+      { id: 'cccd', label: 'Số CCCD / Định danh' },
+    ].forEach((c) => {
+      seen.add(c.id);
+      rawList.push({ ...c, label: getColumnLabel(c.id) || c.label, width: '150px' });
+    });
     (personnelStore.importMappingPersonnel || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
-          rawList.push({ id: c.id, label: c.label || c.id, width: '150px' });
+          rawList.push({ id: c.id, label: getColumnLabel(c.id) || c.label || c.id, width: '150px' });
         }
       });
     });
@@ -1001,7 +1093,7 @@ const visibleColumns = computed(() => {
   });
   return selectedColIds.value
     .filter((id) => id !== 'status' && id !== 'tripStatus')
-    .map((id) => colMap.get(id) || { id, label: id, width: '150px' });
+    .map((id) => colMap.get(id) || { id, label: getColumnLabel(id), width: '150px' });
 });
 
 // Build unified list of trips from both Cán bộ and Thân nhân profiles
@@ -1437,8 +1529,49 @@ const getCellValue = (trip, colId) => {
 
   for (const v of lookups) {
     if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
-      return v;
+      if (typeof v === 'object') {
+        if (Array.isArray(v)) {
+          return v.map((x) => (typeof x === 'object' && x !== null ? (x.name || x.label || x.col1 || x.value || JSON.stringify(x)) : x)).filter(Boolean).join(', ');
+        }
+        return v.name || v.label || v.col1 || v.value || JSON.stringify(v);
+      }
+      return String(v).trim();
     }
+  }
+
+  // 13. Case-insensitive key match across custom_data objects
+  const targetKeyClean = String(colId).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const searchInObj = (obj) => {
+    if (!obj || typeof obj !== 'object') return null;
+    let targetObj = obj;
+    if (typeof obj === 'string') {
+      try { targetObj = JSON.parse(obj); } catch (e) { return null; }
+    }
+    if (!targetObj || typeof targetObj !== 'object') return null;
+    for (const [k, v] of Object.entries(targetObj)) {
+      const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (cleanK === targetKeyClean && v !== undefined && v !== null && String(v).trim() !== '') {
+        return v;
+      }
+    }
+    return null;
+  };
+
+  const found = (
+    searchInObj(trip) ??
+    searchInObj(trip.custom_data) ??
+    searchInObj(trip.rawPerson?.custom_data) ??
+    searchInObj(trip.rawTrip?.custom_data)
+  );
+
+  if (found !== null && found !== undefined && String(found).trim() !== '') {
+    if (typeof found === 'object') {
+      if (Array.isArray(found)) {
+        return found.map((x) => (typeof x === 'object' && x !== null ? (x.name || x.label || x.col1 || x.value || JSON.stringify(x)) : x)).filter(Boolean).join(', ');
+      }
+      return found.name || found.label || found.col1 || found.value || JSON.stringify(found);
+    }
+    return String(found).trim();
   }
 
   return '-';

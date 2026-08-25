@@ -1554,22 +1554,26 @@ const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
   const src = topic?.source || card.source || 'trips';
   const list = getSourceList(src);
-  const cond = card.cardCondition || card.condition || card.id || 'all';
-  if (cond === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả') return list.length;
-  if (cond === 'completed') return list.filter((t) => !t.isAbroad && !t.isOverdue).length;
-  if (cond === 'abroad') return list.filter((t) => t.isAbroad && !t.isOverdue).length;
-  if (cond === 'overdue') return list.filter((t) => t.isOverdue).length;
-  if (card.field) {
+
+  // 1. Dynamic Field Condition (Top priority if card.field is configured)
+  if (card.field && String(card.field).trim() !== '') {
     const op = card.operator || 'has_value';
     return list.filter((row) => {
       const val = getRowFieldValue(row, card.field);
-      if (op === 'has_value') return val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-';
-      if (op === 'empty') return val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-';
+      if (op === 'has_value') return val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-' && String(val).trim() !== 'Chưa rõ';
+      if (op === 'empty') return val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-' || String(val).trim() === 'Chưa rõ';
       if (op === 'equals') return String(val || '').trim().toLowerCase() === String(card.value || '').trim().toLowerCase();
       if (op === 'contains') return String(val || '').trim().toLowerCase().includes(String(card.value || '').trim().toLowerCase());
       return true;
     }).length;
   }
+
+  // 2. Preset Conditions
+  const cond = card.cardCondition || card.condition || card.id || 'all';
+  if (cond === 'completed' || card.label === 'Đã về nước') return list.filter((t) => !t.isAbroad && !t.isOverdue).length;
+  if (cond === 'abroad' || card.label === 'Đang ở nước ngoài') return list.filter((t) => t.isAbroad && !t.isOverdue).length;
+  if (cond === 'overdue' || card.label === 'Quá hạn chưa về') return list.filter((t) => t.isOverdue).length;
+
   return list.length;
 };
 
@@ -1778,16 +1782,54 @@ const getLightColor = (hex = '#2e7d32') => {
 
 const getRowFieldValue = (row, colId) => {
   if (!row || !colId) return '';
+
+  // 1. Direct property
   let raw = row[colId];
+
+  // 2. In rawPerson / rawTrip
   if (raw === undefined || raw === null || raw === '') {
-    if (row.custom_data) {
-      try {
-        const cd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data) : row.custom_data;
-        if (cd) raw = cd[colId];
-      } catch (e) {}
+    raw = row.rawPerson?.[colId] ?? row.rawTrip?.[colId];
+  }
+
+  // 3. In custom_data
+  if (raw === undefined || raw === null || raw === '') {
+    let cd = row.custom_data;
+    if (typeof cd === 'string') {
+      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+    }
+    if (cd && typeof cd === 'object') {
+      raw = cd[colId];
     }
   }
-  if (raw === undefined || raw === null || raw === '') return '';
+
+  // 4. In rawPerson.custom_data or rawTrip.custom_data
+  if (raw === undefined || raw === null || raw === '') {
+    let pcd = row.rawPerson?.custom_data;
+    if (typeof pcd === 'string') {
+      try { pcd = JSON.parse(pcd); } catch (e) { pcd = {}; }
+    }
+    if (pcd && typeof pcd === 'object') {
+      raw = pcd[colId];
+    }
+  }
+
+  // 5. Case-insensitive key match in custom_data
+  if (raw === undefined || raw === null || raw === '') {
+    const targetKeyClean = String(colId).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const searchInObj = (obj) => {
+      if (!obj || typeof obj !== 'object') return null;
+      for (const [k, v] of Object.entries(obj)) {
+        const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanK === targetKeyClean && v !== undefined && v !== null && String(v).trim() !== '') {
+          return v;
+        }
+      }
+      return null;
+    };
+    raw = searchInObj(row) ?? searchInObj(row.custom_data) ?? searchInObj(row.rawPerson?.custom_data) ?? searchInObj(row.rawTrip?.custom_data);
+  }
+
+  if (raw === undefined || raw === null || raw === '' || raw === '-') return '';
   if (typeof raw === 'object') {
     if (Array.isArray(raw)) {
       return raw
