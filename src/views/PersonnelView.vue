@@ -276,9 +276,9 @@
             </template>
 
             <!-- Department column -->
-            <template v-else-if="col.id === 'departmentId' || col.id === 'departmentName'">
-              <span v-if="data.departmentName || (data.departmentId && personnelStore.departmentMap[data.departmentId])" style="font-weight: 500; color: #374151;">
-                {{ data.departmentName || personnelStore.getDepartmentName(data.departmentId) }}
+            <template v-else-if="col.id === 'departmentId' || col.id === 'departmentName' || isDepartmentCol(col)">
+              <span v-if="getPersonnelDepartmentValue(data) !== 'Chưa phân bổ'" style="font-weight: 500; color: #374151;">
+                {{ getPersonnelDepartmentValue(data) }}
               </span>
               <span v-else class="badge-pill badge-green">
                 Chưa phân bổ
@@ -1166,8 +1166,73 @@ const getFormulaStatus = (record, colId) => {
   });
 };
 
+const getPersonnelDepartmentValue = (person) => {
+  if (!person) return 'Chưa phân bổ';
+
+  // 1. Direct fields
+  const direct = person.departmentName || (person.departmentId ? personnelStore.getDepartmentName(person.departmentId) : '') || person.department;
+  if (direct && String(direct).trim() !== '' && String(direct).trim() !== '-' && String(direct).trim() !== 'Chưa rõ' && String(direct).trim() !== 'Chưa phân bổ') {
+    return String(direct).trim();
+  }
+
+  // 2. Search in custom_data
+  let cd = person.custom_data;
+  if (typeof cd === 'string') {
+    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+  }
+  if (cd && typeof cd === 'object') {
+    for (const [k, v] of Object.entries(cd)) {
+      const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (
+        (cleanK.includes('donvi') || cleanK.includes('phongban') || cleanK.includes('department') || cleanK.includes('coquan')) &&
+        v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-' && String(v).trim() !== 'Chưa phân bổ'
+      ) {
+        return String(v).trim();
+      }
+    }
+  }
+
+  // 3. Check import mapping columns
+  for (const group of (personnelStore.importMappingPersonnel || [])) {
+    for (const col of (group.columns || [])) {
+      const labelClean = String(col.label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (labelClean.includes('donvi') || labelClean.includes('phongban') || labelClean.includes('department') || labelClean.includes('coquan')) {
+        const v = person[col.id] || cd?.[col.id];
+        if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-' && String(v).trim() !== 'Chưa phân bổ') {
+          return String(v).trim();
+        }
+      }
+    }
+  }
+
+  // 4. Check all top-level person keys
+  for (const [k, v] of Object.entries(person)) {
+    const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (
+      (cleanK.includes('donvi') || cleanK.includes('phongban') || cleanK.includes('department') || cleanK.includes('coquan')) &&
+      v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-' && String(v).trim() !== 'Chưa phân bổ' && typeof v !== 'object'
+    ) {
+      return String(v).trim();
+    }
+  }
+
+  return 'Chưa phân bổ';
+};
+
+const isDepartmentCol = (col) => {
+  if (!col) return false;
+  const colId = typeof col === 'string' ? col : (col.id || '');
+  const colLabel = typeof col === 'object' ? (col.label || '') : '';
+  const clean = `${colId}_${colLabel}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return clean.includes('donvi') || clean.includes('phongban') || clean.includes('department') || clean.includes('coquan');
+};
+
 const getDisplayValue = (person, colId) => {
   if (!person) return '-';
+
+  if (isDepartmentCol(colId)) {
+    return getPersonnelDepartmentValue(person);
+  }
 
   if (isFormulaCol(colId)) {
     return getFormulaStatus(person, colId).label;
