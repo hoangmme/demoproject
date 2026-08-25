@@ -202,9 +202,6 @@
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                 <div>
                   <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
-                  <div v-if="widget.topicTitle" style="font-size: 0.7rem; color: #64748b; font-weight: 500; margin-top: 2px;">
-                    Chuyên đề: {{ widget.topicTitle }}
-                  </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px;">
                   <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa khối này">
