@@ -263,7 +263,6 @@
           v-for="col in activeColumns"
           :key="col.id"
           :field="col.id"
-          :header="col.label"
           :sortable="col.id !== 'stt' && col.id !== 'name'"
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
@@ -487,7 +486,6 @@
           v-for="col in activeRelativeColumns"
           :key="col.id"
           :field="col.id"
-          :header="col.label"
           sortable
           :headerClass="'col-left'"
           :bodyClass="'col-left'"

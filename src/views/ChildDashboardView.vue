@@ -236,7 +236,6 @@
           v-for="col in visibleColumns"
           :key="col.id"
           :field="col.id"
-          :header="col.label"
           sortable
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
