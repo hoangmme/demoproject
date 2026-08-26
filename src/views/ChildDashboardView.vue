@@ -958,7 +958,7 @@ const allAvailableColumnsList = computed(() => {
 });
 
 const allColumns = computed(() => allAvailableColumnsList.value);
-const selectedColIds = ref(DEFAULT_TRIP_COLUMNS.map((c) => c.id));
+const selectedColIds = ref([]);
 
 const onColumnsChange = async (newCols) => {
   selectedColIds.value = [...newCols];
