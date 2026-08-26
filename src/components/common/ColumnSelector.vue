@@ -47,6 +47,9 @@
               style="accent-color: #2e7d32; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;"
             />
             <span class="item-text" :title="col.label || col.id">
+              <span v-if="getColIndex(col)" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.75rem;">
+                Cột {{ getColIndex(col) }}:
+              </span>
               {{ col.label || col.id }}
             </span>
           </label>
@@ -106,6 +109,12 @@ const selectedLabel = computed(() => {
   const count = props.modelValue ? props.modelValue.length : 0;
   return `${count} cột được chọn`;
 });
+
+const getColIndex = (col) => {
+  if (col.colIndex !== undefined && col.colIndex !== null) return col.colIndex;
+  const originalIdx = props.options.findIndex((o) => o.id === col.id);
+  return originalIdx !== -1 ? originalIdx + 1 : '';
+};
 
 const displayOptions = computed(() => {
   const opts = [...props.options];

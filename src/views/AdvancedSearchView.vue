@@ -126,11 +126,11 @@
                   :label="`── ${group.name} ──`"
                 >
                   <option
-                    v-for="col in group.columns"
+                    v-for="(col, cIdx) in group.columns"
                     :key="col.id"
                     :value="col.id"
                   >
-                    {{ col.label }}
+                    Cột {{ col.colIndex || (cIdx + 1) }}: {{ col.label }}
                   </option>
                 </optgroup>
               </select>
