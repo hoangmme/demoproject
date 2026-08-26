@@ -648,9 +648,9 @@ export const computeTripPresence = (t) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const depRaw = t.departureDate || t.approvedDepartureDate || t.custom_data?.departureDate;
-  const arrRaw = t.arrivalDate || t.custom_data?.arrivalDate;
-  const appArrRaw = t.approvedExtensionDate || t.approvedArrivalDate || t.custom_data?.approvedArrivalDate;
+  const depRaw = t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngayDi || t.custom_data?.departureDate || t.custom_data?.ngay_xuat_canh;
+  const arrRaw = t.arrivalDate || t.ngay_nhap_canh || t.ngayVe || t.custom_data?.arrivalDate || t.custom_data?.ngay_nhap_canh;
+  const appArrRaw = t.approvedExtensionDate || t.approvedArrivalDate || t.thoi_gian_duyet_ve || t.thoiGianDuyetVe || t.gia_han_den_ngay || t.custom_data?.approvedArrivalDate || t.custom_data?.thoi_gian_duyet_ve;
 
   const depDate = parseDateValue(depRaw);
   const arrDate = parseDateValue(arrRaw);

@@ -1637,10 +1637,10 @@ const unifiedTripsList = computed(() => {
       }
 
       const cName = t.countryName || custom.countryName || t.country || custom.quoc_gia_xuat_canh || '';
-      const depDate = t.departureDate || custom.departureDate || t.approvedDepartureDate || '';
-      const arrDate = t.arrivalDate || custom.arrivalDate || '';
-      const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || '';
-      const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || '';
+      const depDate = t.departureDate || custom.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || custom.ngay_xuat_canh || t.ngayDi || custom.ngayDi || '';
+      const arrDate = t.arrivalDate || custom.arrivalDate || t.ngay_nhap_canh || custom.ngay_nhap_canh || t.ngayVe || custom.ngayVe || '';
+      const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || t.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || t.thoiGianDuyetVe || '';
+      const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || t.gia_han_den_ngay || custom.gia_han_den_ngay || '';
       const dNum = t.decisionNumber || custom.decisionNumber || t.decision || '';
       const fName = t.fundingName || t.funding || t.nguon_kinh_phi || t.kinh_phi || t.nguonKinhPhi || t.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
       const purpose = t.purpose || custom.purpose || '';
@@ -1703,10 +1703,10 @@ const unifiedTripsList = computed(() => {
         }
 
         const cName = rt.countryName || custom.countryName || rt.country || r.countryName || '';
-        const depDate = rt.departureDate || custom.departureDate || '';
-        const arrDate = rt.arrivalDate || custom.arrivalDate || '';
-        const appArrDate = rt.approvedArrivalDate || custom.approvedArrivalDate || '';
-        const extDate = rt.approvedExtensionDate || custom.approvedExtensionDate || '';
+        const depDate = rt.departureDate || custom.departureDate || rt.ngay_xuat_canh || custom.ngay_xuat_canh || rt.ngayDi || custom.ngayDi || '';
+        const arrDate = rt.arrivalDate || custom.arrivalDate || rt.ngay_nhap_canh || custom.ngay_nhap_canh || rt.ngayVe || custom.ngayVe || '';
+        const appArrDate = rt.approvedArrivalDate || custom.approvedArrivalDate || rt.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || rt.thoiGianDuyetVe || '';
+        const extDate = rt.approvedExtensionDate || custom.approvedExtensionDate || rt.gia_han_den_ngay || custom.gia_han_den_ngay || '';
         const dNum = rt.decisionNumber || custom.decisionNumber || '';
         const fName = rt.fundingName || rt.funding || rt.nguon_kinh_phi || rt.kinh_phi || rt.nguonKinhPhi || rt.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
         const purpose = rt.purpose || custom.purpose || '';
@@ -1772,7 +1772,17 @@ const getRowFieldValue = (row, colId) => {
     return row.presenceLabel || (row.isAbroad ? 'Đang ở nước ngoài' : (row.isOverdue ? 'Quá hạn chưa về' : 'Đã về nước'));
   }
   if (colId === 'qua_han_chua_ve' || colId === 'overdueStatus' || colId === 'isOverdue') {
-    return row.isOverdue ? `Quá hạn chưa về (${row.overdueDays || 0} ngày)` : 'Đúng hạn';
+    const allMap = {};
+    (personnelStore.importMappingTrips || []).forEach((g) => {
+      (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+    });
+    const colDef = allMap[colId];
+    if (colDef && colDef.format === 'formula') {
+      const res = evaluateFormula(row, colDef);
+      return res?.label || res?.shortLabel || '-';
+    }
+    const overdueRes = computeOverdueStatus(row);
+    return overdueRes?.label || '-';
   }
 
   // Check formula columns from mapping
