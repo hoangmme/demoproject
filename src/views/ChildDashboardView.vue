@@ -1441,79 +1441,7 @@ const getCellValue = (trip, colId) => {
     return '-';
   }
 
-  // 1. Status & Overdue Computed Aliases
-  if (colId === 'status' || colId === 'tripStatus' || colId === 'presenceStatus' || colId === 'trang_thai_hien_dien' || colId === 'presenceLabel') {
-    return getStatusLabel(trip);
-  }
-  if (colId === 'qua_han_chua_ve' || colId === 'overdueStatus' || colId === 'isOverdue') {
-    const allMap = {};
-    (personnelStore.importMappingTrips || []).forEach((g) => {
-      (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
-    });
-    const colDef = allMap[colId];
-    if (colDef && colDef.format === 'formula') {
-      const res = evaluateFormula(trip, colDef);
-      return res?.label || res?.shortLabel || '-';
-    }
-    const overdueRes = computeOverdueStatus(trip);
-    return overdueRes?.label || '-';
-  }
-
-  // 2. Personnel Info Aliases
-  if (colId === 'personnelName' || colId === 'name' || colId === 'ho_va_ten' || colId === 'hoTen') {
-    return trip.personnelName || trip.name || trip.rawPerson?.name || '-';
-  }
-  if (colId === 'personnelCode' || colId === 'code' || colId === 'ma_can_bo' || colId === 'maCb') {
-    return trip.personnelCode || trip.code || trip.rawPerson?.code || '-';
-  }
-  if (colId === 'position' || colId === 'positionName' || colId === 'chuc_vu' || colId === 'chucVu') {
-    return trip.position || trip.positionName || trip.rawPerson?.positionName || trip.rawPerson?.position || '-';
-  }
-  if (colId === 'departmentName' || colId === 'don_vi_cong_tac' || colId === 'donVi') {
-    return trip.departmentName || trip.rawPerson?.departmentName || (trip.rawPerson?.departmentId ? personnelStore.getDepartmentName(trip.rawPerson.departmentId) : '') || '-';
-  }
-
-  // 3. Country Aliases
-  if (colId === 'countryName' || colId === 'country' || colId === 'quoc_gia_xuat_canh' || colId === 'quocGia') {
-    return trip.countryName || trip.country || trip.quoc_gia_xuat_canh || trip.custom_data?.countryName || trip.custom_data?.quoc_gia_xuat_canh || trip.rawTrip?.countryName || '-';
-  }
-
-  // 4. Departure Date Aliases
-  if (colId === 'departureDate' || colId === 'ngay_xuat_canh' || colId === 'ngayDi' || colId === 'approvedDepartureDate') {
-    const val = trip.departureDate || trip.ngay_xuat_canh || trip.approvedDepartureDate || trip.custom_data?.departureDate || trip.rawTrip?.departureDate;
-    return formatDisplayDate(val);
-  }
-
-  // 5. Arrival Date Aliases
-  if (colId === 'arrivalDate' || colId === 'ngay_nhap_canh' || colId === 'ngayVe' || colId === 'approvedArrivalDate') {
-    const val = trip.arrivalDate || trip.ngay_nhap_canh || trip.custom_data?.arrivalDate || trip.rawTrip?.arrivalDate;
-    if (val && String(val).trim() !== '' && String(val).trim() !== '-') {
-      return formatDisplayDate(val);
-    }
-    return getStatusLabel(trip);
-  }
-
-  // 6. Decision Number Aliases
-  if (colId === 'decisionNumber' || colId === 'decision' || colId === 'so_quyet_dinh' || colId === 'so_qd_di' || colId === 'soQd') {
-    return trip.decisionNumber || trip.decision || trip.so_quyet_dinh || trip.so_qd_di || trip.custom_data?.decisionNumber || trip.rawTrip?.decisionNumber || '-';
-  }
-
-  // 7. Funding Aliases
-  if (colId === 'fundingName' || colId === 'funding' || colId === 'nguon_kinh_phi' || colId === 'kinh_phi' || colId === 'nguonKinhPhi' || colId === 'kinhPhi') {
-    return getFundingValue(trip);
-  }
-
-  // 8. Purpose Aliases
-  if (colId === 'purpose' || colId === 'muc_dich' || colId === 'muc_dich_xuat_canh' || colId === 'mucDich') {
-    return trip.purpose || trip.muc_dich || trip.muc_dich_xuat_canh || trip.custom_data?.purpose || trip.rawTrip?.purpose || '-';
-  }
-
-  // 9. Passport Aliases
-  if (colId === 'passportNumber' || colId === 'so_ho_chieu' || colId === 'hoChieu' || colId === 'hcCaNhan') {
-    return trip.passportNumber || trip.so_ho_chieu || trip.hcCaNhan || trip.custom_data?.passportNumber || trip.rawTrip?.passportNumber || '-';
-  }
-
-  // 10. Check if col is Formula column in Trips mapping
+  // 1. Check if col is Formula column in Trips/Personnel mapping
   const allMap = {};
   (personnelStore.importMappingTrips || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
@@ -1528,70 +1456,35 @@ const getCellValue = (trip, colId) => {
     return result?.label || result?.shortLabel || '-';
   }
 
-  // 11. Format dates if colDef.format === 'date'
-  if (colDef?.format === 'date') {
-    const raw = trip[colId] || trip.rawTrip?.[colId] || trip.rawPerson?.[colId] || trip.custom_data?.[colId] || trip.rawTrip?.custom_data?.[colId];
-    return formatDisplayDate(raw);
+  // 2. Direct lookup by exact column ID
+  let rawVal = trip[colId];
+  if (rawVal === undefined || rawVal === null || rawVal === '') {
+    rawVal = trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawPerson?.[colId] ?? trip.rawTrip?.custom_data?.[colId];
   }
 
-  // 12. Direct lookups across all objects
-  const lookups = [
-    trip[colId],
-    trip.rawTrip?.[colId],
-    trip.rawPerson?.[colId],
-    trip.custom_data?.[colId],
-    trip.rawTrip?.custom_data?.[colId],
-    trip.rawPerson?.custom_data?.[colId],
-  ];
-
-  for (const v of lookups) {
-    if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
-      if (typeof v === 'object') {
-        if (Array.isArray(v)) {
-          return v.map((x) => (typeof x === 'object' && x !== null ? (x.name || x.label || x.col1 || x.value || JSON.stringify(x)) : x)).filter(Boolean).join(', ');
-        }
-        return v.name || v.label || v.col1 || v.value || JSON.stringify(v);
-      }
-      return String(v).trim();
-    }
+  // Fallback for core personnel fields if not found on trip
+  if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'personnelName' || colId === 'name')) {
+    rawVal = trip.personnelName || trip.name || trip.rawPerson?.name;
+  }
+  if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'personnelCode' || colId === 'code')) {
+    rawVal = trip.personnelCode || trip.code || trip.rawPerson?.code;
   }
 
-  // 13. Case-insensitive key match across custom_data objects
-  const targetKeyClean = String(colId).toLowerCase().replace(/[^a-z0-9]/g, '');
-  const searchInObj = (obj) => {
-    if (!obj || typeof obj !== 'object') return null;
-    let targetObj = obj;
-    if (typeof obj === 'string') {
-      try { targetObj = JSON.parse(obj); } catch (e) { return null; }
-    }
-    if (!targetObj || typeof targetObj !== 'object') return null;
-    for (const [k, v] of Object.entries(targetObj)) {
-      const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (cleanK === targetKeyClean && v !== undefined && v !== null && String(v).trim() !== '') {
-        return v;
-      }
-    }
-    return null;
-  };
-
-  const found = (
-    searchInObj(trip) ??
-    searchInObj(trip.custom_data) ??
-    searchInObj(trip.rawPerson?.custom_data) ??
-    searchInObj(trip.rawTrip?.custom_data)
-  );
-
-  if (found !== null && found !== undefined && String(found).trim() !== '') {
-    if (typeof found === 'object') {
-      if (Array.isArray(found)) {
-        return found.map((x) => (typeof x === 'object' && x !== null ? (x.name || x.label || x.col1 || x.value || JSON.stringify(x)) : x)).filter(Boolean).join(', ');
-      }
-      return found.name || found.label || found.col1 || found.value || JSON.stringify(found);
-    }
-    return String(found).trim();
+  if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '' || String(rawVal).trim() === '-') {
+    return '-';
   }
 
-  return '-';
+  // Format date if configured as date format
+  if (colDef?.format === 'date' || colId.toLowerCase().includes('date') || colId.toLowerCase().includes('ngay')) {
+    return formatDisplayDate(rawVal);
+  }
+
+  if (typeof rawVal === 'object') {
+    if (Array.isArray(rawVal)) return rawVal.join(', ');
+    return JSON.stringify(rawVal);
+  }
+
+  return String(rawVal);
 };
 
 const getDepartmentValue = (trip) => {
