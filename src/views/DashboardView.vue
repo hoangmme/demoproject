@@ -1867,19 +1867,20 @@ const getCardMetricValueForTopic = (card, topic) => {
   }
   if (cond === 'completed' || actualCard.label === 'Đã về nước' || card.label === 'Đã về nước') {
     return list.filter((t) => {
-      if (t.isOverdue) return false;
-      if (t.isAbroad) return false;
-      return true;
+      const presence = getTripPresence(t);
+      return presence.status === 'completed';
     }).length;
   }
   if (cond === 'abroad' || actualCard.label === 'Đang ở nước ngoài' || card.label === 'Đang ở nước ngoài') {
     return list.filter((t) => {
-      return !!t.isAbroad && !t.isOverdue;
+      const presence = getTripPresence(t);
+      return presence.status === 'abroad';
     }).length;
   }
   if (cond === 'overdue' || actualCard.label === 'Quá hạn chưa về' || card.label === 'Quá hạn chưa về') {
     return list.filter((t) => {
-      return !!t.isOverdue;
+      const presence = getTripPresence(t);
+      return presence.status === 'overdue';
     }).length;
   }
 

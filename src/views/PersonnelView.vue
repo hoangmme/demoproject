@@ -267,8 +267,8 @@
           :sortable="col.id !== 'stt' && col.id !== 'name'"
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
-          :headerStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
-          :bodyStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
+          :headerStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
+          :bodyStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
         >
           <template #body="{ data }">
             <!-- Name column -->
@@ -488,8 +488,8 @@
           sortable
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
-          :headerStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '150px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '150px' }"
-          :bodyStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '150px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '150px' }"
+          :headerStyle="{ width: col.tableWidth || col.width || '150px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '150px') }"
+          :bodyStyle="{ width: col.tableWidth || col.width || '150px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '150px') }"
         >
           <template #body="{ data }">
             <span :class="col.id === 'countryName' || col.id === 'country' || col.id === 'content' ? 'badge-pill badge-blue' : ''">
@@ -1021,7 +1021,7 @@ const activeColumns = computed(() => {
       return {
         id: cfg.id,
         label: cfg.label || cfg.id,
-        width: cfg.tableWidth ? cfg.tableWidth + 'px' : getColWidth(cfg.id),
+        width: cfg.tableWidth || getColWidth(cfg.id),
         tableWidth: cfg.tableWidth || null,
         format: cfg.format || 'text',
       };
@@ -1044,7 +1044,7 @@ const activeRelativeColumns = computed(() => {
         return {
           id: cfg.id,
           label: cfg.label,
-          width: cfg.tableWidth ? cfg.tableWidth + 'px' : '160px',
+          width: cfg.tableWidth || '160px',
           tableWidth: cfg.tableWidth || null,
         };
       }

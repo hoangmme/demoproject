@@ -235,8 +235,8 @@
           sortable
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
-          :headerStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
-          :bodyStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
+          :headerStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
+          :bodyStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
         >
           <template #body="{ data }">
             <!-- 1. Họ và tên người đi -->

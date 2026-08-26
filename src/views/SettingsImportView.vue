@@ -340,17 +340,21 @@
                     </option>
                   </select>
 
-                  <input
+                  <select
                     v-model="col.tableWidth"
-                    type="number"
-                    placeholder="Auto"
-                    min="80"
-                    max="500"
-                    step="10"
-                    title="Độ rộng cột trong bảng (px). Để trống = tự động."
-                    style="width: 75px; height: 28px; font-size: 0.72rem; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center;"
-                  />
-                  <span style="font-size: 0.65rem; color: #94a3b8;">px</span>
+                    class="custom-col-select"
+                    style="width: 90px; height: 28px; font-size: 0.72rem;"
+                    title="Độ rộng cột trong bảng. Để trống = mặc định."
+                  >
+                    <option value="">Mặc định</option>
+                    <option value="auto">Auto</option>
+                    <option value="5%">5%</option>
+                    <option value="10%">10%</option>
+                    <option value="15%">15%</option>
+                    <option value="20%">20%</option>
+                    <option value="25%">25%</option>
+                    <option value="30%">30%</option>
+                  </select>
 
                   <Button
                     icon="pi pi-trash"
