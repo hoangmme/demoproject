@@ -1662,6 +1662,8 @@ const unifiedTripsList = computed(() => {
       if (processedTripKeys.has(uniqueKey)) return;
       processedTripKeys.add(uniqueKey);
 
+      const pCccd = p.cccd || p.cccdparent || p.code || '';
+
       list.push({
         ...custom,
         ...t,
@@ -1672,6 +1674,9 @@ const unifiedTripsList = computed(() => {
         personnelName: isRel ? (t.relativeName || 'Thân nhân') : p.name,
         position: isRel ? `TN (${t.relationshipName || 'Thân nhân'}) của: ${p.name}` : (p.positionName || p.position || ''),
         departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
+        cccd: t.cccd || t.cccdchuyendi || pCccd,
+        cccdchuyendi: t.cccdchuyendi || t.cccd || pCccd,
+        cccdparent: pCccd,
         countryName: cName,
         departureDate: depDate,
         arrivalDate: arrDate,
@@ -1727,6 +1732,9 @@ const unifiedTripsList = computed(() => {
         if (processedTripKeys.has(uniqueKey)) return;
         processedTripKeys.add(uniqueKey);
 
+        const rCccd = r.cccd || r.cccdthannhan || r.code || '';
+        const pCccd = p.cccd || p.cccdparent || '';
+
         list.push({
           ...custom,
           ...rt,
@@ -1737,6 +1745,10 @@ const unifiedTripsList = computed(() => {
           personnelName: r.relativeName || r.name || 'Thân nhân',
           position: `TN (${r.relationshipName || 'Thân nhân'}) của: ${p.name}`,
           departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
+          cccd: rt.cccd || rt.cccdthannhan || rt.cccdchuyendi || rCccd,
+          cccdchuyendi: rt.cccdchuyendi || rCccd,
+          cccdthannhan: rCccd,
+          cccdparent: pCccd,
           countryName: cName,
           departureDate: depDate,
           arrivalDate: arrDate,
