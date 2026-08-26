@@ -111,9 +111,9 @@ const selectedLabel = computed(() => {
 });
 
 const getColIndex = (col) => {
+  if (col.isVirtual) return null;
   if (col.colIndex !== undefined && col.colIndex !== null) return col.colIndex;
-  const originalIdx = props.options.findIndex((o) => o.id === col.id);
-  return originalIdx !== -1 ? originalIdx + 1 : '';
+  return null;
 };
 
 const displayOptions = computed(() => {

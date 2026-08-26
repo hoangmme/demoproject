@@ -917,6 +917,28 @@ const allAvailableColumnsList = computed(() => {
         }
       });
     });
+
+    // Các cột ánh xạ thông tin Cán bộ / Thân nhân liên quan
+    const virtualTripCols = [
+      { id: '_parentPersonnelName', label: '🔗 [Ánh xạ] CB: Họ và tên', width: '180px' },
+      { id: '_parentPersonnelCode', label: '🔗 [Ánh xạ] CB: Mã cán bộ', width: '130px' },
+      { id: '_parentPosition', label: '🔗 [Ánh xạ] CB: Chức vụ', width: '150px' },
+      { id: '_parentDepartment', label: '🔗 [Ánh xạ] CB: Đơn vị công tác', width: '180px' },
+      { id: '_relativeName', label: '🔗 [Ánh xạ] TN: Họ tên thân nhân', width: '180px' },
+      { id: '_relationshipName', label: '🔗 [Ánh xạ] TN: Quan hệ thân nhân', width: '140px' },
+    ];
+
+    virtualTripCols.forEach((vc) => {
+      if (!seen.has(vc.id)) {
+        seen.add(vc.id);
+        rawList.push({
+          ...vc,
+          colIndex: null,
+          isVirtual: true,
+          tableWidth: null,
+        });
+      }
+    });
   } else if (src === 'relatives') {
     (personnelStore.importMappingRelative || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
@@ -1330,24 +1352,24 @@ const formatDisplayDate = (dStr) => {
 const getCellValue = (trip, colId) => {
   if (!trip || !colId) return '-';
 
-  // Cột ảo: Thông tin CB liên quan
+  // Cột ảo: Ánh xạ thông tin Cán bộ / Thân nhân
   if (colId === '_parentPersonnelName') {
-    if (trip.isRelative && trip.rawPerson) {
-      return trip.rawPerson.name || trip.rawPerson.fullName || '-';
-    }
-    return '-';
+    return trip.rawPerson?.name || trip.personnelName || '-';
+  }
+  if (colId === '_parentPersonnelCode') {
+    return trip.rawPerson?.code || trip.personnelCode || '-';
   }
   if (colId === '_parentPosition') {
-    if (trip.isRelative && trip.rawPerson) {
-      return trip.rawPerson.position || trip.rawPerson.positionName || '-';
-    }
-    return '-';
+    return trip.rawPerson?.positionName || trip.rawPerson?.position || trip.position || '-';
   }
   if (colId === '_parentDepartment') {
-    if (trip.isRelative && trip.rawPerson) {
-      return trip.rawPerson.departmentName || trip.rawPerson.departmentId || '-';
-    }
-    return '-';
+    return trip.rawPerson?.departmentName || (trip.rawPerson?.departmentId ? personnelStore.getDepartmentName(trip.rawPerson.departmentId) : '') || trip.departmentName || '-';
+  }
+  if (colId === '_relativeName') {
+    return trip.isRelative ? (trip.relativeName || trip.name || '-') : '-';
+  }
+  if (colId === '_relationshipName') {
+    return trip.isRelative ? (trip.relationshipName || '-') : '-';
   }
 
   // 1. Check if col is Formula column in Trips/Personnel mapping
