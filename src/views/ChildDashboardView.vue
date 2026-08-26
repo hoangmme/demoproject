@@ -868,6 +868,12 @@ const STANDARD_LABELS = {
   quan_he: 'Quan hệ thân nhân',
   parentName: 'Cán bộ liên quan',
   ho_ten_can_bo: 'Cán bộ liên quan',
+  _parentPersonnelName: 'Họ và tên',
+  _parentPersonnelCode: 'Mã cán bộ',
+  _parentPosition: 'Chức vụ',
+  _parentDepartment: 'Đơn vị công tác',
+  _relativeName: 'Họ tên thân nhân',
+  _relationshipName: 'Mối quan hệ',
 };
 
 const getColumnLabel = (colId) => {
@@ -918,14 +924,14 @@ const allAvailableColumnsList = computed(() => {
       });
     });
 
-    // Các cột ánh xạ thông tin Cán bộ / Thân nhân liên quan
+    // Các cột ánh xạ thông tin Cán bộ / Thân nhân
     const virtualTripCols = [
-      { id: '_parentPersonnelName', label: '🔗 [Ánh xạ] CB: Họ và tên', width: '180px' },
-      { id: '_parentPersonnelCode', label: '🔗 [Ánh xạ] CB: Mã cán bộ', width: '130px' },
-      { id: '_parentPosition', label: '🔗 [Ánh xạ] CB: Chức vụ', width: '150px' },
-      { id: '_parentDepartment', label: '🔗 [Ánh xạ] CB: Đơn vị công tác', width: '180px' },
-      { id: '_relativeName', label: '🔗 [Ánh xạ] TN: Họ tên thân nhân', width: '180px' },
-      { id: '_relationshipName', label: '🔗 [Ánh xạ] TN: Quan hệ thân nhân', width: '140px' },
+      { id: '_parentPersonnelName', label: 'Họ và tên', width: '180px' },
+      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
+      { id: '_parentPosition', label: 'Chức vụ', width: '150px' },
+      { id: '_parentDepartment', label: 'Đơn vị công tác', width: '180px' },
+      { id: '_relativeName', label: 'Họ tên thân nhân', width: '180px' },
+      { id: '_relationshipName', label: 'Mối quan hệ', width: '140px' },
     ];
 
     virtualTripCols.forEach((vc) => {
@@ -1008,7 +1014,7 @@ const visibleColumns = computed(() => {
     if (c.id !== 'status' && c.id !== 'tripStatus') {
       colMap.set(c.id, {
         ...c,
-        label: getColumnLabel(c.id) || c.label,
+        label: c.label || getColumnLabel(c.id) || c.id,
       });
     }
   });
