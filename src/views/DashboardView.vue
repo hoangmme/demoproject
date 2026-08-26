@@ -1662,7 +1662,9 @@ const unifiedTripsList = computed(() => {
       if (processedTripKeys.has(uniqueKey)) return;
       processedTripKeys.add(uniqueKey);
 
-      const pCccd = p.cccd || p.cccdparent || p.code || '';
+      const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_');
+      const pCccd = p.cccd || p.cccdparent || '';
+      const tripCccd = !isInternalId(t.cccdchuyendi) ? t.cccdchuyendi : (!isInternalId(t.cccd) ? t.cccd : pCccd);
 
       list.push({
         ...custom,
@@ -1674,8 +1676,8 @@ const unifiedTripsList = computed(() => {
         personnelName: isRel ? (t.relativeName || 'Thân nhân') : p.name,
         position: isRel ? `TN (${t.relationshipName || 'Thân nhân'}) của: ${p.name}` : (p.positionName || p.position || ''),
         departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
-        cccd: t.cccd || t.cccdchuyendi || pCccd,
-        cccdchuyendi: t.cccdchuyendi || t.cccd || pCccd,
+        cccd: tripCccd || pCccd,
+        cccdchuyendi: tripCccd || pCccd,
         cccdparent: pCccd,
         countryName: cName,
         departureDate: depDate,
@@ -1732,8 +1734,10 @@ const unifiedTripsList = computed(() => {
         if (processedTripKeys.has(uniqueKey)) return;
         processedTripKeys.add(uniqueKey);
 
-        const rCccd = r.cccd || r.cccdthannhan || r.code || '';
+        const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_');
+        const rCccd = !isInternalId(r.cccdthannhan) ? r.cccdthannhan : (!isInternalId(r.cccd) ? r.cccd : '');
         const pCccd = p.cccd || p.cccdparent || '';
+        const tripCccd = !isInternalId(rt.cccdchuyendi) ? rt.cccdchuyendi : (!isInternalId(rt.cccdthannhan) ? rt.cccdthannhan : (!isInternalId(rt.cccd) ? rt.cccd : rCccd));
 
         list.push({
           ...custom,
@@ -1745,8 +1749,8 @@ const unifiedTripsList = computed(() => {
           personnelName: r.relativeName || r.name || 'Thân nhân',
           position: `TN (${r.relationshipName || 'Thân nhân'}) của: ${p.name}`,
           departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
-          cccd: rt.cccd || rt.cccdthannhan || rt.cccdchuyendi || rCccd,
-          cccdchuyendi: rt.cccdchuyendi || rCccd,
+          cccd: tripCccd || rCccd || pCccd,
+          cccdchuyendi: tripCccd || rCccd || pCccd,
           cccdthannhan: rCccd,
           cccdparent: pCccd,
           countryName: cName,

@@ -240,14 +240,14 @@
         >
           <template #body="{ data }">
             <!-- 1. Họ và tên người đi -->
-            <template v-if="col.id === 'personnelName' || col.id === 'name'">
+            <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === '_parentPersonnelName' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
               <div style="display: flex; align-items: center; gap: 6px;">
                 <div>
                   <strong style="color: #1f2937; cursor: pointer; display: block;">
-                    {{ data.personnelName || data.name }}
+                    {{ data.personnelName || data.name || data.rawPerson?.name }}
                   </strong>
-                  <span v-if="data.personnelCode || data.code" class="badge-code" style="font-size: 0.7rem;">
-                    {{ data.personnelCode || data.code }}
+                  <span v-if="data.personnelCode || data.code || data.rawPerson?.code" class="badge-code" style="font-size: 0.7rem;">
+                    {{ data.personnelCode || data.code || data.rawPerson?.code }}
                   </span>
                 </div>
                 <span v-if="data.isRelative" class="badge-role-tn">
@@ -1067,7 +1067,9 @@ const unifiedTripsList = computed(() => {
       if (processedTripKeys.has(uniqueKey)) return;
       processedTripKeys.add(uniqueKey);
 
-      const pCccd = p.cccd || p.cccdparent || p.code || '';
+      const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_');
+      const pCccd = p.cccd || p.cccdparent || '';
+      const tripCccd = !isInternalId(t.cccdchuyendi) ? t.cccdchuyendi : (!isInternalId(t.cccd) ? t.cccd : pCccd);
 
       list.push({
         ...custom,
@@ -1079,8 +1081,8 @@ const unifiedTripsList = computed(() => {
         personnelName: isRel ? (t.relativeName || 'Thân nhân') : p.name,
         position: isRel ? `TN (${t.relationshipName || 'Thân nhân'}) của: ${p.name}` : (p.positionName || p.position || ''),
         departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-        cccd: t.cccd || t.cccdchuyendi || pCccd,
-        cccdchuyendi: t.cccdchuyendi || t.cccd || pCccd,
+        cccd: tripCccd || pCccd,
+        cccdchuyendi: tripCccd || pCccd,
         cccdparent: pCccd,
         countryName: cName,
         departureDate: depDate,
@@ -1139,8 +1141,10 @@ const unifiedTripsList = computed(() => {
         if (processedTripKeys.has(uniqueKey)) return;
         processedTripKeys.add(uniqueKey);
 
-        const rCccd = r.cccd || r.cccdthannhan || r.code || '';
+        const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_');
+        const rCccd = !isInternalId(r.cccdthannhan) ? r.cccdthannhan : (!isInternalId(r.cccd) ? r.cccd : '');
         const pCccd = p.cccd || p.cccdparent || '';
+        const tripCccd = !isInternalId(rt.cccdchuyendi) ? rt.cccdchuyendi : (!isInternalId(rt.cccdthannhan) ? rt.cccdthannhan : (!isInternalId(rt.cccd) ? rt.cccd : rCccd));
 
         list.push({
           ...custom,
