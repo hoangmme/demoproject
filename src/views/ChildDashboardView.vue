@@ -239,22 +239,32 @@
           :bodyStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
         >
           <template #body="{ data }">
-            <!-- 1. Họ và tên người đi -->
+            <!-- 1. Họ và tên người đi (Mỗi cái 1 hàng: Tên, CCCD, Chức vụ, Đơn vị) -->
             <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === '_parentPersonnelName' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
-              <div style="display: flex; flex-direction: column; gap: 2px;">
+              <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
+                <!-- Hàng 1: Họ tên (Bôi đậm) -->
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <strong style="color: #1f2937; cursor: pointer;">
-                    {{ data.personnelName || data.name || data.rawPerson?.name }}
+                  <strong style="color: #0f172a; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+                    {{ getPersonInfo(data).name }}
                   </strong>
-                  <span v-if="data.personnelCode || data.code || data.rawPerson?.code" class="badge-code" style="font-size: 0.7rem;">
-                    {{ data.personnelCode || data.code || data.rawPerson?.code }}
-                  </span>
                   <span v-if="data.isRelative" class="badge-role-tn">
                     Thân nhân
                   </span>
                 </div>
-                <div v-if="getPersonSubline(data)" style="font-size: 0.72rem; color: #64748b; line-height: 1.25;">
-                  {{ getPersonSubline(data) }}
+
+                <!-- Hàng 2: CCCD (Primary Unique Key) -->
+                <div v-if="getPersonInfo(data).cccd" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
+                  {{ getPersonInfo(data).cccd }}
+                </div>
+
+                <!-- Hàng 3: Chức vụ -->
+                <div v-if="getPersonInfo(data).position" style="font-size: 0.72rem; color: #334155;">
+                  {{ getPersonInfo(data).position }}
+                </div>
+
+                <!-- Hàng 4: Đơn vị -->
+                <div v-if="getPersonInfo(data).department" style="font-size: 0.72rem; color: #64748b;">
+                  {{ getPersonInfo(data).department }}
                 </div>
               </div>
             </template>
@@ -822,32 +832,39 @@ const getActiveCardCellValue = (row) => {
   return '-';
 };
 
-const getPersonSubline = (data) => {
-  if (!data) return '';
-  if (data.isRelative) {
-    const parentName = data.rawPerson?.name || data.parentName || data.parentPersonnelName || '';
-    const relName = data.relationshipName || 'Thân nhân';
-    const dept = data.rawPerson?.departmentName || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || '';
-    if (parentName && dept) return `${relName} của: ${parentName} • ${dept}`;
-    if (parentName) return `${relName} của: ${parentName}`;
-    return relName;
-  }
+const getPersonInfo = (data) => {
+  if (!data) return { name: '-', cccd: '', position: '', department: '' };
 
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
   const posField = personnelStore.getPersonnelPositionField ? personnelStore.getPersonnelPositionField() : 'position';
   const deptField = personnelStore.getPersonnelDepartmentField ? personnelStore.getPersonnelDepartmentField() : 'departmentName';
 
+  if (data.isRelative) {
+    const parentName = data.rawPerson?.name || data.parentName || data.parentPersonnelName || '';
+    const relName = data.relativeName || data.name || 'Thân nhân';
+    const relCccd = data.cccd || data.cccdthannhan || data.rawRelative?.cccd || '';
+    const parentDept = data.rawPerson?.departmentName || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || '';
+    const relationship = data.relationshipName || 'Thân nhân';
+
+    return {
+      name: relName,
+      cccd: relCccd && String(relCccd).trim() !== '-' ? `CCCD: ${String(relCccd).trim()}` : '',
+      position: parentName ? `${relationship} của: ${parentName}` : relationship,
+      department: parentDept,
+    };
+  }
+
+  const name = data.personnelName || data.name || data.rawPerson?.name || '-';
+  const cccd = data[pKeyField] || data.rawPerson?.[pKeyField] || data.cccd || data.cccdparent || data.rawPerson?.cccd || data.rawPerson?.cccdparent || '';
   const pos = data[posField] || data.rawPerson?.[posField] || data.positionName || data.position || data.rawPerson?.positionName || data.rawPerson?.position || '';
   const dept = data[deptField] || data.rawPerson?.[deptField] || data.departmentName || (data.departmentId ? personnelStore.getDepartmentName(data.departmentId) : '') || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || '';
 
-  const cleanPos = String(pos || '').trim();
-  const cleanDept = String(dept || '').trim();
-
-  if (cleanPos && cleanDept && cleanPos !== '-' && cleanDept !== '-') {
-    return `${cleanPos} • ${cleanDept}`;
-  }
-  if (cleanPos && cleanPos !== '-') return cleanPos;
-  if (cleanDept && cleanDept !== '-') return cleanDept;
-  return '';
+  return {
+    name,
+    cccd: cccd && String(cccd).trim() !== '-' ? `CCCD: ${String(cccd).trim()}` : '',
+    position: pos && String(pos).trim() !== '-' ? String(pos).trim() : '',
+    department: dept && String(dept).trim() !== '-' ? String(dept).trim() : '',
+  };
 };
 
 
