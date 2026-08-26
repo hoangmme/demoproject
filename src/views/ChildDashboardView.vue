@@ -261,21 +261,7 @@
               <span>{{ getDepartmentValue(data) !== '-' ? getDepartmentValue(data) : (getCellValue(data, col.id) !== '-' ? getCellValue(data, col.id) : '-') }}</span>
             </template>
 
-            <!-- 3. Ngày nhập cảnh / Trạng thái -->
-            <template v-else-if="col.id === 'arrivalDate'">
-              <span v-if="data.arrivalDate" style="color: #0f172a; font-weight: 600;">
-                {{ formatDisplayDate(data.arrivalDate) }}
-              </span>
-              <span v-else-if="data.isOverdue" class="status-pill status-overdue">
-                Quá hạn {{ data.overdueDays }} ngày
-              </span>
-              <span v-else-if="data.isAbroad" class="status-pill status-abroad">
-                Đang ở nước ngoài
-              </span>
-              <span v-else style="color: #94a3b8;">-</span>
-            </template>
-
-            <!-- 4. Ngày xuất cảnh -->
+            <!-- 3. Ngày xuất cảnh -->
             <template v-else-if="col.id === 'departureDate' || col.id === 'approvedDepartureDate'">
               <span>{{ formatDisplayDate(data[col.id] || data.departureDate) }}</span>
             </template>
@@ -862,7 +848,7 @@ const STANDARD_LABELS = {
   country: 'Quốc gia',
   departureDate: 'Ngày xuất cảnh',
   ngay_xuat_canh: 'Ngày xuất cảnh',
-  arrivalDate: 'Ngày nhập cảnh / Trạng thái',
+  arrivalDate: 'Ngày nhập cảnh',
   ngay_nhap_canh: 'Ngày nhập cảnh',
   decisionNumber: 'Số quyết định',
   so_quyet_dinh: 'Số quyết định',
@@ -901,94 +887,52 @@ const getColumnLabel = (colId) => {
     }
   }
 
-  // 2. Search in all available store columns
-  const foundInT = (personnelStore.allAvailableTripColumns || []).find((c) => c.id === colId);
-  if (foundInT && foundInT.label && foundInT.label !== colId) {
-    return foundInT.label;
-  }
-  const foundInP = (personnelStore.allAvailableColumns || []).find((c) => c.id === colId);
-  if (foundInP && foundInP.label && foundInP.label !== colId) {
-    return foundInP.label;
-  }
-  const foundInR = (personnelStore.allAvailableRelativeColumns || []).find((c) => c.id === colId);
-  if (foundInR && foundInR.label && foundInR.label !== colId) {
-    return foundInR.label;
-  }
-
-  // 3. Fallback to standard hardcoded labels
+  // 2. Fallback to standard hardcoded labels
   if (STANDARD_LABELS[colId]) return STANDARD_LABELS[colId];
 
-  // 4. Default formatting
+  // 3. Default formatting
   return colId.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 };
-
-// Default columns definition
-const DEFAULT_TRIP_COLUMNS = [
-  { id: 'personnelName', label: 'Họ và tên', width: '180px' },
-  { id: 'position', label: 'Chức vụ', width: '150px' },
-  { id: 'departmentName', label: 'Đơn vị công tác', width: '180px' },
-  { id: 'countryName', label: 'Quốc gia', width: '140px' },
-  { id: 'departureDate', label: 'Ngày xuất cảnh', width: '120px' },
-  { id: 'arrivalDate', label: 'Ngày nhập cảnh / Trạng thái', width: '160px' },
-  { id: 'decisionNumber', label: 'Số quyết định', width: '130px' },
-  { id: 'fundingName', label: 'Nguồn kinh phí', width: '140px' },
-  { id: 'purpose', label: 'Mục đích chuyến đi', width: '160px' },
-];
 
 const allAvailableColumnsList = computed(() => {
   const src = currentDashboardConfig.value?.source || 'trips';
   const seen = new Set();
   const rawList = [];
+  let colIdx = 0;
 
   if (src === 'trips') {
     (personnelStore.importMappingTrips || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
+          colIdx++;
           rawList.push({
             id: c.id,
-            label: getColumnLabel(c.id) || c.label || c.id,
+            label: c.label || c.id,
+            colIndex: colIdx,
             width: c.width || '150px',
             tableWidth: c.tableWidth || null,
             format: c.format,
           });
         }
       });
-    });
-
-    DEFAULT_TRIP_COLUMNS.forEach((c) => {
-      if (!seen.has(c.id)) {
-        seen.add(c.id);
-        rawList.push({ ...c, label: getColumnLabel(c.id) || c.label });
-      }
     });
   } else if (src === 'relatives') {
     (personnelStore.importMappingRelative || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
+          colIdx++;
           rawList.push({
             id: c.id,
-            label: getColumnLabel(c.id) || c.label || c.id,
+            label: c.label || c.id,
+            colIndex: colIdx,
             width: c.width || '150px',
             tableWidth: c.tableWidth || null,
             format: c.format,
           });
         }
       });
-    });
-
-    [
-      { id: 'parentName', label: 'Cán bộ liên quan' },
-      { id: 'relationshipName', label: 'Mối quan hệ' },
-      { id: 'relativeName', label: 'Họ tên Thân nhân' },
-      { id: 'birthYear', label: 'Năm sinh' },
-      { id: 'countryName', label: 'Quốc gia cư trú' },
-    ].forEach((c) => {
-      if (!seen.has(c.id)) {
-        seen.add(c.id);
-        rawList.push({ ...c, label: getColumnLabel(c.id) || c.label, width: '150px' });
-      }
     });
   } else {
     // personnel
@@ -996,9 +940,11 @@ const allAvailableColumnsList = computed(() => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
+          colIdx++;
           rawList.push({
             id: c.id,
-            label: getColumnLabel(c.id) || c.label || c.id,
+            label: c.label || c.id,
+            colIndex: colIdx,
             width: c.width || '150px',
             tableWidth: c.tableWidth || null,
             format: c.format,
@@ -1006,44 +952,7 @@ const allAvailableColumnsList = computed(() => {
         }
       });
     });
-
-    [
-      { id: 'code', label: 'Mã cán bộ' },
-      { id: 'name', label: 'Họ và tên' },
-      { id: 'birthYear', label: 'Năm sinh' },
-      { id: 'position', label: 'Chức vụ' },
-      { id: 'departmentName', label: 'Đơn vị công tác' },
-      { id: 'cccd', label: 'Số CCCD / Định danh' },
-    ].forEach((c) => {
-      if (!seen.has(c.id)) {
-        seen.add(c.id);
-        rawList.push({ ...c, label: getColumnLabel(c.id) || c.label, width: '150px' });
-      }
-    });
   }
-
-  // Cột ảo: Thông tin Cán bộ liên quan (cho chuyến đi thân nhân)
-  rawList.push({
-    id: '_parentPersonnelName',
-    label: 'CB liên quan (Tên)',
-    width: '180px',
-    tableWidth: null,
-    isVirtual: true,
-  });
-  rawList.push({
-    id: '_parentPosition',
-    label: 'CB liên quan (Chức vụ)',
-    width: '160px',
-    tableWidth: null,
-    isVirtual: true,
-  });
-  rawList.push({
-    id: '_parentDepartment',
-    label: 'CB liên quan (Đơn vị)',
-    width: '180px',
-    tableWidth: null,
-    isVirtual: true,
-  });
 
   return rawList;
 });
