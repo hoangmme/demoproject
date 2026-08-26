@@ -1836,10 +1836,12 @@ const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
   // Resolve actual card definition from topic if card is a widget reference
   const topicCards = topic?.metricCards || [];
+  const cardIdToMatch = card.cardId || card.id || card.cardCondition || card.condition;
+  const cardLabelToMatch = card.cardLabel || card.label || card.title;
   const actualCard = topicCards.find((c, idx) =>
-    (c.id && (c.id === card.cardId || c.id === card.id)) ||
-    (c.label && (c.label === card.cardLabel || c.label === card.label || c.label === card.title)) ||
-    `card_${idx}` === (card.cardId || card.id)
+    (c.id && (c.id === cardIdToMatch || c.condition === cardIdToMatch)) ||
+    (c.label && (c.label === cardLabelToMatch)) ||
+    `card_${idx}` === cardIdToMatch
   ) || card;
 
   const src = topic?.source || actualCard.source || card.source || 'trips';
