@@ -303,6 +303,31 @@ export const computePresenceStatus = (record, formulaConfig = {}) => {
 };
 
 /**
+ * Helper trích xuất giá trị trường từ bản ghi theo đúng ID cột người dùng cấu hình
+ */
+export const getRecordFieldValue = (row, colId) => {
+  if (!row || !colId) return null;
+  // 1. Direct property
+  if (row[colId] !== undefined && row[colId] !== null && row[colId] !== '') return row[colId];
+  // 2. In custom_data
+  let cd = row.custom_data;
+  if (typeof cd === 'string') {
+    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+  }
+  if (cd && typeof cd === 'object' && cd[colId] !== undefined && cd[colId] !== null && cd[colId] !== '') return cd[colId];
+  // 3. In rawTrip / rawPerson
+  if (row.rawTrip && row.rawTrip[colId] !== undefined && row.rawTrip[colId] !== null && row.rawTrip[colId] !== '') return row.rawTrip[colId];
+  if (row.rawPerson && row.rawPerson[colId] !== undefined && row.rawPerson[colId] !== null && row.rawPerson[colId] !== '') return row.rawPerson[colId];
+  // 4. In rawTrip.custom_data / rawPerson.custom_data
+  let rtcd = row.rawTrip?.custom_data;
+  if (typeof rtcd === 'string') {
+    try { rtcd = JSON.parse(rtcd); } catch (e) { rtcd = {}; }
+  }
+  if (rtcd && typeof rtcd === 'object' && rtcd[colId] !== undefined && rtcd[colId] !== null && rtcd[colId] !== '') return rtcd[colId];
+  return null;
+};
+
+/**
  * Tính toán Trạng thái Quá hạn Chưa về theo thời gian thực
  * Logic theo công thức Excel:
  *   B1 = Today, B2 = Ngày nhập cảnh thực tế (arrivalDate), B3 = Thời gian duyệt về (approvedArrivalDate)
@@ -312,10 +337,11 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
   const defaultResult = { status: 'unknown', isOverdue: false, overdueDays: 0, label: '-', shortLabel: '-', cssClass: '' };
   if (!record) return defaultResult;
 
-  // Cột ngày nhập cảnh thực tế (B2)
-  const arrCol = formulaConfig.formulaArrivalCol || formulaConfig.arrivalCol || 'arrivalDate';
-  // Cột thời gian duyệt về / deadline (B3)
-  const approvedCol = formulaConfig.formulaApprovedArrivalCol || formulaConfig.approvedArrivalCol || 'approvedArrivalDate';
+  // Cột ngày nhập cảnh thực tế (B2) — lấy đúng ID cột người dùng chọn trong Cài đặt
+  const arrCol = formulaConfig.formulaArrivalCol || formulaConfig.arrivalCol;
+  // Cột thời gian duyệt về / deadline (B3) — lấy đúng ID cột người dùng chọn trong Cài đặt
+  const approvedCol = formulaConfig.formulaApprovedArrivalCol || formulaConfig.approvedArrivalCol;
+
   // Nhãn tùy chỉnh
   const labelOverdue = formulaConfig.formulaLabelOverdue || formulaConfig.labelOverdue || 'Quá hạn';
   const labelOntime = formulaConfig.formulaLabelOntime || formulaConfig.labelOntime || 'Đã nhập cảnh đúng hạn';
@@ -342,15 +368,18 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
   let overdueTrip = null;
 
   for (const t of trips) {
-    // B3: Thời gian duyệt về (bắt buộc)
-    const approvedRaw = t[approvedCol] ||
-      t.approvedArrivalDate ||
-      t.thoi_gian_duyet_ve ||
-      t.thoiGianDuyetVe ||
-      t.approvedExtensionDate ||
-      t.custom_data?.[approvedCol] ||
-      t.custom_data?.thoi_gian_duyet_ve ||
-      t.custom_data?.approvedArrivalDate;
+    // B3: Lấy giá trị từ cột người dùng đã chọn trong Dropdown Cài đặt
+    let approvedRaw = null;
+    if (approvedCol) {
+      approvedRaw = getRecordFieldValue(t, approvedCol);
+    }
+    if (!approvedRaw) {
+      approvedRaw = getRecordFieldValue(t, 'thoi_gian_duyet_ve') ||
+        getRecordFieldValue(t, 'approvedArrivalDate') ||
+        getRecordFieldValue(t, 'thoiGianDuyetVe') ||
+        getRecordFieldValue(t, 'approvedExtensionDate') ||
+        getRecordFieldValue(t, 'gia_han_den_ngay');
+    }
 
     const approvedDate = parseDateValue(approvedRaw);
 
@@ -361,15 +390,17 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
     const approvedNorm = new Date(approvedDate);
     approvedNorm.setHours(23, 59, 59, 999);
 
-    // B2: Ngày nhập cảnh thực tế
-    const arrRaw = t[arrCol] ||
-      t.arrivalDate ||
-      t.ngay_nhap_canh ||
-      t.ngayNhapCanh ||
-      t.ngayVe ||
-      t.custom_data?.[arrCol] ||
-      t.custom_data?.ngay_nhap_canh ||
-      t.custom_data?.arrivalDate;
+    // B2: Lấy giá trị từ cột ngày nhập cảnh người dùng đã chọn trong Dropdown Cài đặt
+    let arrRaw = null;
+    if (arrCol) {
+      arrRaw = getRecordFieldValue(t, arrCol);
+    }
+    if (!arrRaw) {
+      arrRaw = getRecordFieldValue(t, 'ngay_nhap_canh') ||
+        getRecordFieldValue(t, 'arrivalDate') ||
+        getRecordFieldValue(t, 'ngayNhapCanh') ||
+        getRecordFieldValue(t, 'ngayVe');
+    }
 
     const arrDate = parseDateValue(arrRaw);
 
