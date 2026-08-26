@@ -101,27 +101,65 @@
       <!-- Khung Cấu hình Khóa Định Danh & Khóa Liên Kết -->
       <div style="margin-bottom: 1.25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;">
         <!-- Khi ở Tab Cán bộ -->
-        <div v-if="activeTab === 'personnel'" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
-              <i class="pi pi-key" style="color: #dc2626; font-size: 1.1rem;"></i>
+        <div v-if="activeTab === 'personnel'" style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
+                <i class="pi pi-key" style="color: #dc2626; font-size: 1.1rem;"></i>
+              </div>
+              <div>
+                <div style="font-size: 0.86rem; font-weight: 700; color: #1e293b;">
+                  Cột Khóa Định danh Duy nhất (Primary Unique Key) của Cán bộ:
+                </div>
+                <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">
+                  Dùng để định danh chống trùng lặp cán bộ và làm khóa móc nối liên kết với thân nhân.
+                </div>
+              </div>
             </div>
-            <div>
-              <div style="font-size: 0.86rem; font-weight: 700; color: #1e293b;">
-                Cột Khóa Định danh Duy nhất (Primary Unique Key) của Cán bộ:
-              </div>
-              <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">
-                Dùng để định danh chống trùng lặp cán bộ và làm khóa móc nối liên kết với thân nhân.
-              </div>
+
+            <div style="min-width: 280px;">
+              <select v-model="personnelKeyField" class="custom-key-select">
+                <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
+                  {{ col.label }} (mã: {{ col.id }})
+                </option>
+              </select>
             </div>
           </div>
 
-          <div style="min-width: 280px;">
-            <select v-model="personnelKeyField" class="custom-key-select">
-              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                {{ col.label }} (mã: {{ col.id }})
-              </option>
-            </select>
+          <!-- Vai trò cốt lõi: Họ tên, Chức vụ, Đơn vị -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
+            <div>
+              <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
+                <i class="pi pi-user" style="color: #2563eb;"></i> Cột Họ và tên chính:
+              </span>
+              <select v-model="personnelNameField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
+                <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
+                  {{ col.label }} (mã: {{ col.id }})
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
+                <i class="pi pi-briefcase" style="color: #059669;"></i> Cột Chức vụ (hiển thị kèm):
+              </span>
+              <select v-model="personnelPositionField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
+                <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
+                  {{ col.label }} (mã: {{ col.id }})
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
+                <i class="pi pi-building" style="color: #7c3aed;"></i> Cột Đơn vị công tác (hiển thị kèm):
+              </span>
+              <select v-model="personnelDepartmentField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
+                <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
+                  {{ col.label }} (mã: {{ col.id }})
+                </option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1571,6 +1609,9 @@ const relativeGroups = ref([]);
 const tripsGroups = ref([]);
 
 const personnelKeyField = ref('cccdparent');
+const personnelNameField = ref('name');
+const personnelPositionField = ref('position');
+const personnelDepartmentField = ref('departmentName');
 const relativeParentKeyField = ref('cccdparent');
 const relativeKeyField = ref('cccdthannhan');
 const tripKeyField = ref('cccdchuyendi');
@@ -2247,6 +2288,9 @@ onMounted(async () => {
       : JSON.parse(JSON.stringify(DEFAULT_TRIPS_MAPPING))
   );
   personnelKeyField.value = personnelStore.getPersonnelKeyField();
+  personnelNameField.value = personnelStore.getPersonnelNameField();
+  personnelPositionField.value = personnelStore.getPersonnelPositionField();
+  personnelDepartmentField.value = personnelStore.getPersonnelDepartmentField();
   relativeParentKeyField.value = personnelStore.getRelativeParentKeyField();
   relativeKeyField.value = personnelStore.getRelativeKeyField();
   tripKeyField.value = personnelStore.getTripKeyField();
@@ -2661,6 +2705,9 @@ const saveConfig = async () => {
   try {
     const keyConfig = {
       personnelKeyField: personnelKeyField.value || 'cccdparent',
+      personnelNameField: personnelNameField.value || 'name',
+      personnelPositionField: personnelPositionField.value || 'position',
+      personnelDepartmentField: personnelDepartmentField.value || 'departmentName',
       relativeParentKeyField: relativeParentKeyField.value || 'cccdparent',
       relativeKeyField: relativeKeyField.value || 'cccdthannhan',
       tripKeyField: tripKeyField.value || 'cccdchuyendi',

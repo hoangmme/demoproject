@@ -413,6 +413,9 @@ export const usePersonnelStore = defineStore('personnel', {
       if (keyCfg && typeof keyCfg === 'object') {
         this.systemKeyConfig = {
           personnelKeyField: keyCfg.personnelKeyField || 'cccdparent',
+          personnelNameField: keyCfg.personnelNameField || 'name',
+          personnelPositionField: keyCfg.personnelPositionField || 'position',
+          personnelDepartmentField: keyCfg.personnelDepartmentField || 'departmentName',
           relativeParentKeyField: keyCfg.relativeParentKeyField || 'cccdparent',
           relativeKeyField: keyCfg.relativeKeyField || 'cccdthannhan',
           tripKeyField: keyCfg.tripKeyField || 'cccdchuyendi',
@@ -421,6 +424,15 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     getPersonnelKeyField() {
       return this.systemKeyConfig?.personnelKeyField || 'cccdparent';
+    },
+    getPersonnelNameField() {
+      return this.systemKeyConfig?.personnelNameField || 'name';
+    },
+    getPersonnelPositionField() {
+      return this.systemKeyConfig?.personnelPositionField || 'position';
+    },
+    getPersonnelDepartmentField() {
+      return this.systemKeyConfig?.personnelDepartmentField || 'departmentName';
     },
     getRelativeParentKeyField() {
       return this.systemKeyConfig?.relativeParentKeyField || 'cccdparent';

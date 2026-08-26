@@ -241,18 +241,21 @@
           <template #body="{ data }">
             <!-- 1. Họ và tên người đi -->
             <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === '_parentPersonnelName' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <div>
-                  <strong style="color: #1f2937; cursor: pointer; display: block;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <strong style="color: #1f2937; cursor: pointer;">
                     {{ data.personnelName || data.name || data.rawPerson?.name }}
                   </strong>
                   <span v-if="data.personnelCode || data.code || data.rawPerson?.code" class="badge-code" style="font-size: 0.7rem;">
                     {{ data.personnelCode || data.code || data.rawPerson?.code }}
                   </span>
+                  <span v-if="data.isRelative" class="badge-role-tn">
+                    Thân nhân
+                  </span>
                 </div>
-                <span v-if="data.isRelative" class="badge-role-tn">
-                  Thân nhân
-                </span>
+                <div v-if="getPersonSubline(data)" style="font-size: 0.72rem; color: #64748b; line-height: 1.25;">
+                  {{ getPersonSubline(data) }}
+                </div>
               </div>
             </template>
 
@@ -295,6 +298,21 @@
           </template>
         </Column>
 
+        <!-- Dynamic Filtered Column according to active Metric Card -->
+        <Column
+          v-if="activeMetricCard"
+          :header="`🎯 ${activeCardColLabel}`"
+          headerClass="col-active-filter-header"
+          bodyClass="col-active-filter-body"
+          :headerStyle="{ minWidth: '190px', color: '#b91c1c', fontWeight: '700', background: '#fef2f2' }"
+          :bodyStyle="{ minWidth: '190px', background: '#fffaf0' }"
+        >
+          <template #body="{ data }">
+            <span style="font-weight: 700; color: #b91c1c; font-size: 0.8rem;">
+              {{ getActiveCardCellValue(data) }}
+            </span>
+          </template>
+        </Column>
 
         <!-- Actions Column (Centered) -->
         <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
@@ -760,6 +778,76 @@ const toggleMetricCardFilter = (card, cIdx) => {
   } else {
     activeMetricCardId.value = cardKey;
   }
+};
+
+const activeMetricCard = computed(() => {
+  if (!activeMetricCardId.value || activeMetricCardId.value === 'all') return null;
+  const cards = activeMetricCards.value || [];
+  return cards.find((c, idx) => {
+    const cardKey = c.id || c.label || `card_${idx}`;
+    return cardKey === activeMetricCardId.value;
+  }) || null;
+});
+
+const activeCardColLabel = computed(() => {
+  if (!activeMetricCard.value) return '';
+  const card = activeMetricCard.value;
+  if (card.field) {
+    return getColumnLabel(card.field) || card.field;
+  }
+  if (card.condition === 'overdue' || card.condition === 'isOverdue') {
+    return 'Trạng thái Quá hạn';
+  }
+  if (card.condition === 'abroad' || card.condition === 'completed') {
+    return 'Trạng thái Hiện diện';
+  }
+  return card.label || 'Giá trị lọc';
+});
+
+const getActiveCardCellValue = (row) => {
+  if (!row || !activeMetricCard.value) return '-';
+  const card = activeMetricCard.value;
+  if (card.field) {
+    return getCellValue(row, card.field);
+  }
+  if (card.condition === 'overdue') {
+    return row.isOverdue ? `Quá hạn (${row.overdueDays} ngày)` : (row.overdueStatus || '-');
+  }
+  if (card.condition === 'abroad') {
+    return row.isAbroad ? (row.presenceLabel || 'Đang ở nước ngoài') : '-';
+  }
+  if (card.condition === 'completed') {
+    return row.presenceLabel || 'Đã về nước';
+  }
+  return '-';
+};
+
+const getPersonSubline = (data) => {
+  if (!data) return '';
+  if (data.isRelative) {
+    const parentName = data.rawPerson?.name || data.parentName || data.parentPersonnelName || '';
+    const relName = data.relationshipName || 'Thân nhân';
+    const dept = data.rawPerson?.departmentName || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || '';
+    if (parentName && dept) return `${relName} của: ${parentName} • ${dept}`;
+    if (parentName) return `${relName} của: ${parentName}`;
+    return relName;
+  }
+
+  const posField = personnelStore.getPersonnelPositionField ? personnelStore.getPersonnelPositionField() : 'position';
+  const deptField = personnelStore.getPersonnelDepartmentField ? personnelStore.getPersonnelDepartmentField() : 'departmentName';
+
+  const pos = data[posField] || data.rawPerson?.[posField] || data.positionName || data.position || data.rawPerson?.positionName || data.rawPerson?.position || '';
+  const dept = data[deptField] || data.rawPerson?.[deptField] || data.departmentName || (data.departmentId ? personnelStore.getDepartmentName(data.departmentId) : '') || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || '';
+
+  const cleanPos = String(pos || '').trim();
+  const cleanDept = String(dept || '').trim();
+
+  if (cleanPos && cleanDept && cleanPos !== '-' && cleanDept !== '-') {
+    return `${cleanPos} • ${cleanDept}`;
+  }
+  if (cleanPos && cleanPos !== '-') return cleanPos;
+  if (cleanDept && cleanDept !== '-') return cleanDept;
+  return '';
 };
 
 
