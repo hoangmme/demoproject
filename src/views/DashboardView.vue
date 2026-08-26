@@ -1832,6 +1832,68 @@ const getSourceList = (source) => {
   return personnelStore.personnelList || [];
 };
 
+const matchCardCondition = (item, card) => {
+  if (!card) return true;
+
+  // 1. Dynamic Field Condition (Top priority - if field is configured)
+  if (card.field && String(card.field).trim() !== '') {
+    const rawVal = getRowFieldValue(item, card.field);
+    const fieldVal = (rawVal !== undefined && rawVal !== null && rawVal !== '-')
+      ? String(rawVal).trim()
+      : '';
+
+    const op = card.operator || 'has_value';
+    if (op === 'has_value') {
+      return !!fieldVal && fieldVal !== 'Chưa rõ' && fieldVal !== '-';
+    }
+    if (op === 'empty') {
+      return !fieldVal || fieldVal === 'Chưa rõ' || fieldVal === '-';
+    }
+
+    const strVal = fieldVal.toLowerCase();
+    const strTarget = String(card.value || '').trim().toLowerCase();
+
+    if (op === 'equals') return strVal === strTarget;
+    if (op === 'contains') return strVal.includes(strTarget);
+    if (op === 'not_contains') return !strVal.includes(strTarget);
+
+    if (op === 'before' || op === 'after') {
+      const dVal = new Date(rawVal).getTime();
+      const dTarget = new Date(card.value).getTime();
+      if (isNaN(dVal) || isNaN(dTarget)) return false;
+      return op === 'before' ? dVal < dTarget : dVal > dTarget;
+    }
+
+    if (op === 'gte' || op === 'lte') {
+      const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
+      const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
+      if (isNaN(numVal) || isNaN(numTarget)) return false;
+      return op === 'gte' ? numVal >= numTarget : numVal <= numTarget;
+    }
+
+    return true;
+  }
+
+  // 2. Preset Condition (when no field is selected) — Khớp 100% ChildDashboardView
+  const cond = card.condition || card.id || card.cardCondition || card.cardId || 'all';
+  if (cond === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả' || card.cardLabel === 'Toàn bộ' || card.cardLabel === 'Tất cả') {
+    return true;
+  }
+
+  const presence = getTripPresence(item);
+  if (cond === 'completed' || card.label === 'Đã về nước' || card.cardLabel === 'Đã về nước') {
+    return presence.status === 'completed';
+  }
+  if (cond === 'abroad' || card.label === 'Đang ở nước ngoài' || card.cardLabel === 'Đang ở nước ngoài') {
+    return presence.status === 'abroad';
+  }
+  if (cond === 'overdue' || card.label === 'Quá hạn chưa về' || card.cardLabel === 'Quá hạn chưa về') {
+    return presence.status === 'overdue';
+  }
+
+  return true;
+};
+
 const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
   // Resolve actual card definition from topic if card is a widget reference
@@ -1847,39 +1909,7 @@ const getCardMetricValueForTopic = (card, topic) => {
   const src = topic?.source || actualCard.source || card.source || 'trips';
   const list = getSourceList(src);
 
-  // 1. Dynamic Field Condition (Top priority)
-  const f = actualCard.field || card.field;
-  if (f && String(f).trim() !== '') {
-    const op = actualCard.operator || card.operator || 'has_value';
-    const val = actualCard.value ?? card.value;
-    return list.filter((row) => {
-      const cellVal = getRowFieldValue(row, f);
-      if (op === 'has_value') return cellVal !== undefined && cellVal !== null && String(cellVal).trim() !== '' && String(cellVal).trim() !== '-' && String(cellVal).trim() !== 'Chưa rõ';
-      if (op === 'empty') return cellVal === undefined || cellVal === null || String(cellVal).trim() === '' || String(cellVal).trim() === '-' || String(cellVal).trim() === 'Chưa rõ';
-      if (op === 'equals') return String(cellVal || '').trim().toLowerCase() === String(val || '').trim().toLowerCase();
-      if (op === 'contains') return String(cellVal || '').trim().toLowerCase().includes(String(val || '').trim().toLowerCase());
-      return true;
-    }).length;
-  }
-
-  // 2. Preset Conditions — Đồng bộ 100% với ChildDashboardView.matchCardCondition
-  const cond = actualCard.cardCondition || actualCard.condition || card.cardCondition || card.condition || card.id || 'all';
-  const label = actualCard.label || card.label || '';
-
-  if (cond === 'all' || label === 'Toàn bộ' || label === 'Tất cả') {
-    return list.length;
-  }
-  if (cond === 'completed' || label === 'Đã về nước') {
-    return list.filter((t) => (t.presenceStatus ? t.presenceStatus === 'completed' : getTripPresence(t).status === 'completed')).length;
-  }
-  if (cond === 'abroad' || label === 'Đang ở nước ngoài') {
-    return list.filter((t) => (t.presenceStatus ? t.presenceStatus === 'abroad' : getTripPresence(t).status === 'abroad')).length;
-  }
-  if (cond === 'overdue' || label === 'Quá hạn chưa về') {
-    return list.filter((t) => (t.presenceStatus ? t.presenceStatus === 'overdue' : getTripPresence(t).status === 'overdue')).length;
-  }
-
-  return list.length;
+  return list.filter((item) => matchCardCondition(item, actualCard)).length;
 };
 
 const onTopicCardSelectChange = () => {
