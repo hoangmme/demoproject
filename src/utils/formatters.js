@@ -309,7 +309,7 @@ export const computePresenceStatus = (record, formulaConfig = {}) => {
  *   =IF(OR(B1="";B3="");"";IF(AND(B2<>"";B2<=B3);"Đã nhập cảnh đúng hạn";IF(B1>B3;"Quá hạn";"Chưa quá hạn")))
  */
 export const computeOverdueStatus = (record, formulaConfig = {}) => {
-  const defaultResult = { status: 'unknown', isOverdue: false, overdueDays: 0, label: '', shortLabel: '', cssClass: '' };
+  const defaultResult = { status: 'unknown', isOverdue: false, overdueDays: 0, label: '-', shortLabel: '-', cssClass: '' };
   if (!record) return defaultResult;
 
   // Cột ngày nhập cảnh thực tế (B2)
@@ -334,46 +334,78 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
     trips = [record];
   }
 
+  let hasValidDeadline = false;
   let maxOverdueDays = 0;
   let hasOverdue = false;
   let hasOntime = false;
+  let hasNotYet = false;
   let overdueTrip = null;
 
   for (const t of trips) {
     // B3: Thời gian duyệt về (bắt buộc)
-    const approvedRaw = t[approvedCol] || t.approvedArrivalDate || t.approvedExtensionDate || t.custom_data?.[approvedCol];
+    const approvedRaw = t[approvedCol] ||
+      t.approvedArrivalDate ||
+      t.thoi_gian_duyet_ve ||
+      t.thoiGianDuyetVe ||
+      t.approvedExtensionDate ||
+      t.custom_data?.[approvedCol] ||
+      t.custom_data?.thoi_gian_duyet_ve ||
+      t.custom_data?.approvedArrivalDate;
+
     const approvedDate = parseDateValue(approvedRaw);
 
-    // Nếu B3 rỗng → bỏ qua chuyến đi này (không xác định được)
+    // Nếu B3 rỗng → bỏ qua chuyến đi này (IF(OR(B1="";B3="");"";...))
     if (!approvedDate) continue;
 
+    hasValidDeadline = true;
     const approvedNorm = new Date(approvedDate);
     approvedNorm.setHours(23, 59, 59, 999);
 
     // B2: Ngày nhập cảnh thực tế
-    const arrRaw = t[arrCol] || t.arrivalDate || t.custom_data?.[arrCol];
+    const arrRaw = t[arrCol] ||
+      t.arrivalDate ||
+      t.ngay_nhap_canh ||
+      t.ngayNhapCanh ||
+      t.ngayVe ||
+      t.custom_data?.[arrCol] ||
+      t.custom_data?.ngay_nhap_canh ||
+      t.custom_data?.arrivalDate;
+
     const arrDate = parseDateValue(arrRaw);
 
-    // Nhánh 1: Nếu B2 có giá trị VÀ B2 <= B3 → "Đã nhập cảnh đúng hạn"
+    // Nhánh 1: Nếu B2 có giá trị
     if (arrDate) {
       const arrNorm = new Date(arrDate);
       arrNorm.setHours(0, 0, 0, 0);
       if (arrNorm <= approvedNorm) {
         hasOntime = true;
-        continue;
+      } else {
+        // Nhập cảnh muộn hơn thời gian duyệt về
+        const days = Math.max(1, Math.floor((arrNorm - approvedNorm) / (1000 * 60 * 60 * 24)));
+        hasOverdue = true;
+        if (days > maxOverdueDays) {
+          maxOverdueDays = days;
+          overdueTrip = t;
+        }
+      }
+    } else {
+      // Nhánh 2: Chưa có ngày nhập cảnh (chưa về) → so sánh Today vs B3
+      if (today > approvedNorm) {
+        const days = Math.max(1, Math.floor((today - approvedNorm) / (1000 * 60 * 60 * 24)));
+        hasOverdue = true;
+        if (days > maxOverdueDays) {
+          maxOverdueDays = days;
+          overdueTrip = t;
+        }
+      } else {
+        hasNotYet = true;
       }
     }
+  }
 
-    // Nhánh 2: Nếu Today > B3 → "Quá hạn"
-    if (today > approvedNorm) {
-      const days = Math.max(1, Math.floor((today - approvedNorm) / (1000 * 60 * 60 * 24)));
-      hasOverdue = true;
-      if (days > maxOverdueDays) {
-        maxOverdueDays = days;
-        overdueTrip = t;
-      }
-    }
-    // Nhánh 3: Ngược lại → "Chưa quá hạn" (deadline chưa tới, chưa về)
+  // Nếu không có chuyến nào có Thời gian duyệt về (B3="") → Trả về rỗng / '-'
+  if (!hasValidDeadline) {
+    return { status: 'empty', isOverdue: false, overdueDays: 0, label: '-', shortLabel: '-', cssClass: '' };
   }
 
   if (hasOverdue) {
@@ -399,15 +431,18 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
     };
   }
 
-  // Chưa quá hạn (có approvedDate nhưng deadline chưa tới và chưa về)
-  return {
-    status: 'not_yet',
-    isOverdue: false,
-    overdueDays: 0,
-    label: labelNotYet,
-    shortLabel: labelNotYet,
-    cssClass: 'formula-not-yet',
-  };
+  if (hasNotYet) {
+    return {
+      status: 'not_yet',
+      isOverdue: false,
+      overdueDays: 0,
+      label: labelNotYet,
+      shortLabel: labelNotYet,
+      cssClass: 'formula-not-yet',
+    };
+  }
+
+  return defaultResult;
 };
 
 /**
