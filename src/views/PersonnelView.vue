@@ -246,11 +246,12 @@
         class="p-datatable-sm"
         tableStyle="min-width: 60rem; table-layout: fixed;"
         @row-click="onRowClick"
+        @page="e => dtFirst = e.first"
       >
         <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
         <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
           <template #body="{ index }">
-            <span style="font-weight: 600; color: #4b5563;">{{ index + 1 }}</span>
+            <span style="font-weight: 600; color: #4b5563;">{{ dtFirst + index + 1 }}</span>
           </template>
         </Column>
         <Column field="code" header="Mã CB" sortable :headerStyle="{ width: '115px', minWidth: '115px' }" :bodyStyle="{ width: '115px', minWidth: '115px' }">
@@ -263,11 +264,11 @@
           :key="col.id"
           :field="col.id"
           :header="col.label"
-          sortable
+          :sortable="col.id !== 'stt' && col.id !== 'name'"
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
-          :headerStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
-          :bodyStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
+          :headerStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
+          :bodyStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
         >
           <template #body="{ data }">
             <!-- Name column -->
@@ -278,10 +279,10 @@
             <!-- Formula column -->
             <template v-else-if="isFormulaCol(col.id)">
               <span
-                :class="getFormulaStatus(data, col.id).isAbroad ? 'badge-pill badge-red' : 'badge-pill badge-green'"
+                class="badge-pill badge-green"
                 style="font-size: 0.76rem;"
               >
-                {{ getFormulaStatus(data, col.id).label }}
+                {{ getFormulaStatus(data, allColumnDefsMap[col.id] || {}) }}
               </span>
             </template>
 
@@ -445,9 +446,21 @@
         :customSort="customSort"
         class="p-datatable-sm"
         tableStyle="min-width: 60rem; table-layout: fixed;"
+        @page="e => dtFirstRel = e.first"
       >
         <Column selectionMode="multiple" :headerStyle="{ width: '45px', minWidth: '45px' }" :bodyStyle="{ width: '45px', minWidth: '45px' }" />
-        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }" />
+        <Column 
+          field="stt" 
+          header="STT" 
+          headerClass="col-center" 
+          bodyClass="col-center" 
+          :headerStyle="{ width: '55px', minWidth: '55px' }" 
+          :bodyStyle="{ width: '55px', minWidth: '55px' }"
+        >
+          <template #body="{ index }">
+            <span style="font-weight: 600; color: #4b5563;">{{ dtFirstRel + index + 1 }}</span>
+          </template>
+        </Column>
         <Column field="code" header="Mã TN" sortable :headerStyle="{ width: '110px', minWidth: '110px' }">
           <template #body="{ data, index }">
             <span class="badge-code">{{ data.code || ('TN-' + String(data.id || (index + 1)).slice(-5).padStart(5, '0')) }}</span>
@@ -475,8 +488,8 @@
           sortable
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
-          :headerStyle="{ width: col.width || '150px', minWidth: col.width || '150px' }"
-          :bodyStyle="{ width: col.width || '150px', minWidth: col.width || '150px' }"
+          :headerStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '150px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '150px' }"
+          :bodyStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '150px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '150px' }"
         >
           <template #body="{ data }">
             <span :class="col.id === 'countryName' || col.id === 'country' || col.id === 'content' ? 'badge-pill badge-blue' : ''">
@@ -773,7 +786,7 @@ import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus } from '@/utils/formatters';
+import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
@@ -877,6 +890,8 @@ const exportSections = ref({
 });
 
 // Import Modal State
+const dtFirst = ref(0);
+const dtFirstRel = ref(0);
 const isImportOpen = ref(false);
 const currentImportType = ref('personnel'); // 'personnel' or 'relative'
 const importing = ref(false);
@@ -1006,7 +1021,8 @@ const activeColumns = computed(() => {
       return {
         id: cfg.id,
         label: cfg.label || cfg.id,
-        width: getColWidth(cfg.id),
+        width: cfg.tableWidth ? cfg.tableWidth + 'px' : getColWidth(cfg.id),
+        tableWidth: cfg.tableWidth || null,
         format: cfg.format || 'text',
       };
     });
@@ -1028,7 +1044,8 @@ const activeRelativeColumns = computed(() => {
         return {
           id: cfg.id,
           label: cfg.label,
-          width: '160px',
+          width: cfg.tableWidth ? cfg.tableWidth + 'px' : '160px',
+          tableWidth: cfg.tableWidth || null,
         };
       }
       const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
@@ -1148,22 +1165,9 @@ const isFormulaCol = (colId) => {
   return colDef && colDef.format === 'formula';
 };
 
-const getFormulaStatus = (record, colId) => {
-  const colDef = allColumnDefsMap.value[colId] || {};
-  if (colDef.formulaType === 'overdue_status') {
-    return computeOverdueStatus(record, {
-      arrivalCol: colDef.formulaArrivalCol,
-      labelOverdue: colDef.formulaLabelOverdue,
-      labelOntime: colDef.formulaLabelOntime,
-    });
-  }
-  return computePresenceStatus(record, {
-    departureCol: colDef.formulaDepartureCol,
-    arrivalCol: colDef.formulaArrivalCol,
-    countryCol: colDef.formulaCountryCol,
-    labelDomestic: colDef.formulaLabelDomestic,
-    labelAbroad: colDef.formulaLabelAbroad,
-  });
+const getFormulaStatus = (person, col) => {
+  const result = evaluateFormula(person, col);
+  return result?.label || result?.shortLabel || '-';
 };
 
 const getPersonnelDepartmentValue = (person, colId = '') => {
@@ -1239,7 +1243,7 @@ const getDisplayValue = (person, colId) => {
   if (!person) return '-';
 
   if (isFormulaCol(colId)) {
-    return getFormulaStatus(person, colId).label;
+    return getFormulaStatus(person, allColumnDefsMap.value[colId] || {});
   }
 
   let cd = person.custom_data;

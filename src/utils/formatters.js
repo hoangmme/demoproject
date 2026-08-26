@@ -304,19 +304,27 @@ export const computePresenceStatus = (record, formulaConfig = {}) => {
 
 /**
  * Tính toán Trạng thái Quá hạn Chưa về theo thời gian thực
- * Tự động đối chiếu Cột Ngày Nhập cảnh (Về) của chuyến đi với Ngày hiện tại (Today).
+ * Logic theo công thức Excel:
+ *   B1 = Today, B2 = Ngày nhập cảnh thực tế (arrivalDate), B3 = Thời gian duyệt về (approvedArrivalDate)
+ *   =IF(OR(B1="";B3="");"";IF(AND(B2<>"";B2<=B3);"Đã nhập cảnh đúng hạn";IF(B1>B3;"Quá hạn";"Chưa quá hạn")))
  */
 export const computeOverdueStatus = (record, formulaConfig = {}) => {
-  if (!record) return { status: 'ontime', isOverdue: false, overdueDays: 0, label: 'Đúng hạn', shortLabel: 'Đúng hạn' };
+  const defaultResult = { status: 'unknown', isOverdue: false, overdueDays: 0, label: '', shortLabel: '', cssClass: '' };
+  if (!record) return defaultResult;
 
+  // Cột ngày nhập cảnh thực tế (B2)
   const arrCol = formulaConfig.formulaArrivalCol || formulaConfig.arrivalCol || 'arrivalDate';
-  const labelOverdue = formulaConfig.formulaLabelOverdue || formulaConfig.labelOverdue || 'Quá hạn chưa về';
-  const labelOntime = formulaConfig.formulaLabelOntime || formulaConfig.labelOntime || 'Đúng hạn';
+  // Cột thời gian duyệt về / deadline (B3)
+  const approvedCol = formulaConfig.formulaApprovedArrivalCol || formulaConfig.approvedArrivalCol || 'approvedArrivalDate';
+  // Nhãn tùy chỉnh
+  const labelOverdue = formulaConfig.formulaLabelOverdue || formulaConfig.labelOverdue || 'Quá hạn';
+  const labelOntime = formulaConfig.formulaLabelOntime || formulaConfig.labelOntime || 'Đã nhập cảnh đúng hạn';
+  const labelNotYet = formulaConfig.formulaLabelNotYet || formulaConfig.labelNotYet || 'Chưa quá hạn';
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Nếu là Hồ sơ Cán bộ / Thân nhân chứa danh sách nhiều chuyến đi
+  // Hỗ trợ cả bản ghi đơn và bản ghi có mảng trips
   let trips = [];
   if (Array.isArray(record.trips) && record.trips.length > 0) {
     trips = record.trips;
@@ -328,26 +336,44 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
 
   let maxOverdueDays = 0;
   let hasOverdue = false;
+  let hasOntime = false;
   let overdueTrip = null;
 
   for (const t of trips) {
-    const arrRaw = t[arrCol] || t.arrivalDate || t.approvedArrivalDate || t.approvedExtensionDate || t.custom_data?.[arrCol];
+    // B3: Thời gian duyệt về (bắt buộc)
+    const approvedRaw = t[approvedCol] || t.approvedArrivalDate || t.approvedExtensionDate || t.custom_data?.[approvedCol];
+    const approvedDate = parseDateValue(approvedRaw);
+
+    // Nếu B3 rỗng → bỏ qua chuyến đi này (không xác định được)
+    if (!approvedDate) continue;
+
+    const approvedNorm = new Date(approvedDate);
+    approvedNorm.setHours(23, 59, 59, 999);
+
+    // B2: Ngày nhập cảnh thực tế
+    const arrRaw = t[arrCol] || t.arrivalDate || t.custom_data?.[arrCol];
     const arrDate = parseDateValue(arrRaw);
 
+    // Nhánh 1: Nếu B2 có giá trị VÀ B2 <= B3 → "Đã nhập cảnh đúng hạn"
     if (arrDate) {
-      const arrNormalized = new Date(arrDate);
-      arrNormalized.setHours(23, 59, 59, 999);
-
-      // Nếu ngày hiện tại đã vượt quá ngày về dự kiến
-      if (today > arrNormalized) {
-        const days = Math.max(1, Math.floor((today - arrNormalized) / (1000 * 60 * 60 * 24)));
-        hasOverdue = true;
-        if (days > maxOverdueDays) {
-          maxOverdueDays = days;
-          overdueTrip = t;
-        }
+      const arrNorm = new Date(arrDate);
+      arrNorm.setHours(0, 0, 0, 0);
+      if (arrNorm <= approvedNorm) {
+        hasOntime = true;
+        continue;
       }
     }
+
+    // Nhánh 2: Nếu Today > B3 → "Quá hạn"
+    if (today > approvedNorm) {
+      const days = Math.max(1, Math.floor((today - approvedNorm) / (1000 * 60 * 60 * 24)));
+      hasOverdue = true;
+      if (days > maxOverdueDays) {
+        maxOverdueDays = days;
+        overdueTrip = t;
+      }
+    }
+    // Nhánh 3: Ngược lại → "Chưa quá hạn" (deadline chưa tới, chưa về)
   }
 
   if (hasOverdue) {
@@ -357,15 +383,300 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
       overdueDays: maxOverdueDays,
       label: `${labelOverdue} (${maxOverdueDays} ngày)`,
       shortLabel: labelOverdue,
+      cssClass: 'formula-overdue',
       trip: overdueTrip,
     };
   }
 
+  if (hasOntime) {
+    return {
+      status: 'ontime',
+      isOverdue: false,
+      overdueDays: 0,
+      label: labelOntime,
+      shortLabel: labelOntime,
+      cssClass: 'formula-ontime',
+    };
+  }
+
+  // Chưa quá hạn (có approvedDate nhưng deadline chưa tới và chưa về)
   return {
-    status: 'ontime',
+    status: 'not_yet',
     isOverdue: false,
     overdueDays: 0,
-    label: labelOntime,
-    shortLabel: labelOntime,
+    label: labelNotYet,
+    shortLabel: labelNotYet,
+    cssClass: 'formula-not-yet',
+  };
+};
+
+/**
+ * So sánh 2 cột ngày → Tính chênh lệch ngày + nhãn trạng thái
+ * Dùng cho: Về muộn/sớm, Đi muộn/sớm, Xuất cảnh sớm/muộn so với QĐ
+ *
+ * formulaConfig:
+ *   - formulaColA: Cột ngày thực tế (vd: arrivalDate, departureDate)
+ *   - formulaColB: Cột ngày theo QĐ (vd: approvedArrivalDate, approvedDepartureDate)
+ *   - formulaLabelEarly: Nhãn khi A < B (vd: "Về sớm", "Đi sớm")
+ *   - formulaLabelLate: Nhãn khi A > B (vd: "Về muộn", "Đi muộn")
+ *   - formulaLabelOnTime: Nhãn khi A = B (vd: "Đúng lịch")
+ *   - formulaShowDays: true/false hiển thị số ngày
+ */
+export const computeDateDelta = (record, formulaConfig = {}) => {
+  const defaultResult = { status: 'unknown', label: '', shortLabel: '', value: 0, cssClass: '' };
+  if (!record) return defaultResult;
+
+  const colA = formulaConfig.formulaColA || 'arrivalDate';
+  const colB = formulaConfig.formulaColB || 'approvedArrivalDate';
+  const labelEarly = formulaConfig.formulaLabelEarly || 'Sớm';
+  const labelLate = formulaConfig.formulaLabelLate || 'Muộn';
+  const labelOnTime = formulaConfig.formulaLabelOnTime || 'Đúng lịch';
+  const showDays = formulaConfig.formulaShowDays !== false;
+
+  // Hỗ trợ cả bản ghi đơn và bản ghi có mảng trips
+  let trips = [];
+  if (Array.isArray(record.trips) && record.trips.length > 0) {
+    trips = record.trips;
+  } else if (Array.isArray(record.tripList) && record.tripList.length > 0) {
+    trips = record.tripList;
+  } else {
+    trips = [record];
+  }
+
+  // Tìm chuyến đi có chênh lệch lớn nhất
+  let maxDelta = 0;
+  let resultTrip = null;
+  let hasResult = false;
+
+  for (const t of trips) {
+    const rawA = t[colA] || t.custom_data?.[colA];
+    const rawB = t[colB] || t.custom_data?.[colB];
+
+    const dateA = parseDateValue(rawA);
+    const dateB = parseDateValue(rawB);
+
+    if (!dateA || !dateB) continue;
+
+    const normA = new Date(dateA);
+    normA.setHours(0, 0, 0, 0);
+    const normB = new Date(dateB);
+    normB.setHours(0, 0, 0, 0);
+
+    const diffMs = normA.getTime() - normB.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    hasResult = true;
+    if (Math.abs(diffDays) > Math.abs(maxDelta) || !resultTrip) {
+      maxDelta = diffDays;
+      resultTrip = t;
+    }
+  }
+
+  if (!hasResult) return defaultResult;
+
+  if (maxDelta === 0) {
+    return {
+      status: 'on_time',
+      label: labelOnTime,
+      shortLabel: labelOnTime,
+      value: 0,
+      cssClass: 'formula-ontime',
+      trip: resultTrip,
+    };
+  }
+
+  if (maxDelta < 0) {
+    // A < B → Sớm
+    const days = Math.abs(maxDelta);
+    const label = showDays ? `${labelEarly} ${days} ngày` : labelEarly;
+    return {
+      status: 'early',
+      label,
+      shortLabel: labelEarly,
+      value: -days,
+      cssClass: 'formula-early',
+      trip: resultTrip,
+    };
+  }
+
+  // A > B → Muộn
+  const days = maxDelta;
+  const label = showDays ? `${labelLate} ${days} ngày` : labelLate;
+  return {
+    status: 'late',
+    label,
+    shortLabel: labelLate,
+    value: days,
+    cssClass: 'formula-late',
+    trip: resultTrip,
+  };
+};
+
+/**
+ * Kiểm tra điều kiện: Nếu Cột A có giá trị nhưng Cột B rỗng → Cảnh báo
+ * Dùng cho: "Xuất cảnh khi chưa có QĐ" (departureDate có, decisionNumber rỗng)
+ *
+ * formulaConfig:
+ *   - formulaColCondition: Cột điều kiện (phải có giá trị) vd: departureDate
+ *   - formulaColCheck: Cột kiểm tra (phải rỗng) vd: decisionNumber
+ *   - formulaLabelWarning: Nhãn cảnh báo vd: "Chưa có Quyết định"
+ *   - formulaLabelOk: Nhãn OK vd: "Hợp lệ"
+ */
+export const computeConditionalCheck = (record, formulaConfig = {}) => {
+  const defaultResult = { status: 'ok', label: '', shortLabel: '', cssClass: '' };
+  if (!record) return defaultResult;
+
+  const colCondition = formulaConfig.formulaColCondition || 'departureDate';
+  const colCheck = formulaConfig.formulaColCheck || 'decisionNumber';
+  const labelWarning = formulaConfig.formulaLabelWarning || '⚠️ Cảnh báo';
+  const labelOk = formulaConfig.formulaLabelOk || '';
+
+  // Hỗ trợ cả bản ghi đơn và bản ghi có mảng trips
+  let trips = [];
+  if (Array.isArray(record.trips) && record.trips.length > 0) {
+    trips = record.trips;
+  } else if (Array.isArray(record.tripList) && record.tripList.length > 0) {
+    trips = record.tripList;
+  } else {
+    trips = [record];
+  }
+
+  for (const t of trips) {
+    const condVal = t[colCondition] || t.custom_data?.[colCondition];
+    const checkVal = t[colCheck] || t.custom_data?.[colCheck];
+
+    const hasCond = condVal !== undefined && condVal !== null && String(condVal).trim() !== '' && String(condVal).trim() !== '-';
+    const hasCheck = checkVal !== undefined && checkVal !== null && String(checkVal).trim() !== '' && String(checkVal).trim() !== '-';
+
+    // Nếu cột điều kiện CÓ giá trị nhưng cột kiểm tra RỖNG → cảnh báo
+    if (hasCond && !hasCheck) {
+      return {
+        status: 'warning',
+        label: labelWarning,
+        shortLabel: labelWarning,
+        cssClass: 'formula-warning',
+        trip: t,
+      };
+    }
+  }
+
+  return {
+    status: 'ok',
+    label: labelOk,
+    shortLabel: labelOk,
+    cssClass: 'formula-ok',
+  };
+};
+
+/**
+ * Dispatcher: Đánh giá công thức theo formulaType
+ * Gọi hàm tương ứng và trả về kết quả chuẩn { status, label, shortLabel, value, cssClass }
+ */
+export const evaluateFormula = (record, formulaConfig = {}) => {
+  if (!record || !formulaConfig) return { status: 'unknown', label: '', shortLabel: '' };
+
+  const fType = formulaConfig.formulaType || 'presence_status';
+
+  switch (fType) {
+    case 'presence_status':
+      return computePresenceStatus(record, {
+        departureCol: formulaConfig.formulaDepartureCol || formulaConfig.departureCol,
+        arrivalCol: formulaConfig.formulaArrivalCol || formulaConfig.arrivalCol,
+        countryCol: formulaConfig.formulaCountryCol || formulaConfig.countryCol,
+      });
+    case 'overdue_status':
+      return computeOverdueStatus(record, formulaConfig);
+    case 'date_delta':
+      return computeDateDelta(record, formulaConfig);
+    case 'conditional_check':
+      return computeConditionalCheck(record, formulaConfig);
+    default:
+      return { status: 'unknown', label: '', shortLabel: '' };
+  }
+};
+
+/**
+ * Tính toán Trạng thái Hiện diện của 1 Chuyến đi (DUY NHẤT — dùng chung cho tất cả views)
+ * Trả về { status, isAbroad, isOverdue, overdueDays, label }
+ *
+ * Logic:
+ *   1. Nếu chưa có ngày đi và ngày về → 'domestic'
+ *   2. Nếu chưa đến ngày đi → 'upcoming'
+ *   3. Nếu đã có ngày về thực tế và today > ngày về:
+ *      - Kiểm tra ngày về vs deadline (approvedArrivalDate) → 'completed' hoặc 'overdue'
+ *   4. Nếu đang ở nước ngoài (ngày đi <= today, chưa về hoặc chưa tới ngày về):
+ *      - Kiểm tra today vs deadline → 'abroad' hoặc 'overdue'
+ */
+export const computeTripPresence = (t) => {
+  if (!t) return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const depRaw = t.departureDate || t.approvedDepartureDate || t.custom_data?.departureDate;
+  const arrRaw = t.arrivalDate || t.custom_data?.arrivalDate;
+  const appArrRaw = t.approvedExtensionDate || t.approvedArrivalDate || t.custom_data?.approvedArrivalDate;
+
+  const depDate = parseDateValue(depRaw);
+  const arrDate = parseDateValue(arrRaw);
+  const appArrDate = parseDateValue(appArrRaw);
+
+  if (!depDate && !arrDate) {
+    return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
+  }
+
+  // Chưa đến ngày đi
+  if (depDate) {
+    const depNorm = new Date(depDate);
+    depNorm.setHours(0, 0, 0, 0);
+    if (today < depNorm) {
+      return { status: 'upcoming', isAbroad: false, isOverdue: false, label: 'Chưa khởi hành', overdueDays: 0 };
+    }
+  }
+
+  // Đã có ngày nhập cảnh thực tế và today đã qua ngày đó → Đã về nước
+  if (arrDate) {
+    const arrNorm = new Date(arrDate);
+    arrNorm.setHours(23, 59, 59, 999);
+    if (today > arrNorm) {
+      // Kiểm tra có về muộn so với deadline không
+      let isOverdue = false;
+      let overdueDays = 0;
+      if (appArrDate) {
+        const appArrNorm = new Date(appArrDate);
+        appArrNorm.setHours(23, 59, 59, 999);
+        if (arrNorm > appArrNorm) {
+          isOverdue = true;
+          overdueDays = Math.max(1, Math.floor((arrNorm - appArrNorm) / (1000 * 60 * 60 * 24)));
+        }
+      }
+      return {
+        status: isOverdue ? 'overdue' : 'completed',
+        isAbroad: false,
+        isOverdue,
+        label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đã về nước',
+        overdueDays,
+      };
+    }
+  }
+
+  // Đang ở nước ngoài: ngày đi <= today, chưa về hoặc ngày về chưa tới
+  let isOverdue = false;
+  let overdueDays = 0;
+  if (appArrDate) {
+    const appArrNorm = new Date(appArrDate);
+    appArrNorm.setHours(23, 59, 59, 999);
+    if (today > appArrNorm) {
+      isOverdue = true;
+      overdueDays = Math.max(1, Math.floor((today - appArrNorm) / (1000 * 60 * 60 * 24)));
+    }
+  }
+
+  return {
+    status: isOverdue ? 'overdue' : 'abroad',
+    isAbroad: true,
+    isOverdue,
+    label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đang ở nước ngoài',
+    overdueDays,
   };
 };

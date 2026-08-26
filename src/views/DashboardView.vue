@@ -1019,7 +1019,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap, formatDate, computePresenceStatus, computeOverdueStatus } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const router = useRouter();
@@ -1247,22 +1247,8 @@ const getDisplayValue = (row, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
-    if (colDef.formulaType === 'overdue_status') {
-      const overdue = computeOverdueStatus(row, {
-        arrivalCol: colDef.formulaArrivalCol,
-        labelOverdue: colDef.formulaLabelOverdue,
-        labelOntime: colDef.formulaLabelOntime,
-      });
-      return overdue.label;
-    }
-    const status = computePresenceStatus(row, {
-      departureCol: colDef.formulaDepartureCol,
-      arrivalCol: colDef.formulaArrivalCol,
-      countryCol: colDef.formulaCountryCol,
-      labelDomestic: colDef.formulaLabelDomestic,
-      labelAbroad: colDef.formulaLabelAbroad,
-    });
-    return status.label;
+    const result = evaluateFormula(row, colDef);
+    return result?.label || result?.shortLabel || '-';
   }
 
   const val = getRowFieldValue(row, colId);
@@ -1633,75 +1619,8 @@ const parseDateObj = (str) => {
 };
 
 // Single Unified Presence Status Calculator (Identical to ChildDashboardView)
-const getTripPresence = (t) => {
-  if (!t) return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const depRaw = t.departureDate || t.approvedDepartureDate || t.custom_data?.departureDate;
-  const arrRaw = t.arrivalDate || t.custom_data?.arrivalDate;
-  const appArrRaw = t.approvedExtensionDate || t.approvedArrivalDate || t.custom_data?.approvedArrivalDate;
-
-  const depDate = parseDateObj(depRaw);
-  const arrDate = parseDateObj(arrRaw);
-  const appArrDate = parseDateObj(appArrRaw);
-
-  if (!depDate && !arrDate) {
-    return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
-  }
-
-  if (depDate) {
-    const depNorm = new Date(depDate);
-    depNorm.setHours(0, 0, 0, 0);
-    if (today < depNorm) {
-      return { status: 'upcoming', isAbroad: false, isOverdue: false, label: 'Chưa khởi hành', overdueDays: 0 };
-    }
-  }
-
-  if (arrDate) {
-    const arrNorm = new Date(arrDate);
-    arrNorm.setHours(23, 59, 59, 999);
-    if (today > arrNorm) {
-      let isOverdue = false;
-      let overdueDays = 0;
-      if (appArrDate) {
-        const appArrNorm = new Date(appArrDate);
-        appArrNorm.setHours(23, 59, 59, 999);
-        if (arrNorm > appArrNorm) {
-          isOverdue = true;
-          overdueDays = Math.max(1, Math.floor((arrNorm - appArrNorm) / (1000 * 60 * 60 * 24)));
-        }
-      }
-      return {
-        status: isOverdue ? 'overdue' : 'completed',
-        isAbroad: false,
-        isOverdue,
-        label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đã về nước',
-        overdueDays,
-      };
-    }
-  }
-
-  let isOverdue = false;
-  let overdueDays = 0;
-  if (appArrDate) {
-    const appArrNorm = new Date(appArrDate);
-    appArrNorm.setHours(23, 59, 59, 999);
-    if (today > appArrNorm) {
-      isOverdue = true;
-      overdueDays = Math.max(1, Math.floor((today - appArrNorm) / (1000 * 60 * 60 * 24)));
-    }
-  }
-
-  return {
-    status: isOverdue ? 'overdue' : 'abroad',
-    isAbroad: true,
-    isOverdue,
-    label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đang ở nước ngoài',
-    overdueDays,
-  };
-};
+// Sử dụng computeTripPresence từ formatters.js (module dùng chung)
+const getTripPresence = (t) => computeTripPresence(t);
 
 const unifiedTripsList = computed(() => {
   const list = [];

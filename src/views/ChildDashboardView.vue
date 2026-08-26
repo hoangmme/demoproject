@@ -217,11 +217,12 @@
         class="p-datatable-sm"
         tableStyle="min-width: 60rem; table-layout: fixed;"
         @row-click="onRowClick"
+        @page="e => dtFirst = e.first"
       >
         <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
         <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
           <template #body="{ index }">
-            <span style="font-weight: 600; color: #4b5563;">{{ index + 1 }}</span>
+            <span style="font-weight: 600; color: #4b5563;">{{ dtFirst + index + 1 }}</span>
           </template>
         </Column>
 
@@ -234,8 +235,8 @@
           sortable
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
-          :headerStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
-          :bodyStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
+          :headerStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
+          :bodyStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
         >
           <template #body="{ data }">
             <!-- 1. Họ và tên người đi -->
@@ -308,21 +309,6 @@
           </template>
         </Column>
 
-        <!-- Match Reason Column (Right before Actions) -->
-        <Column
-          header="LÝ DO KHỚP ĐIỀU KIỆN"
-          :headerStyle="{ width: '220px', minWidth: '200px', color: '#b91c1c', fontWeight: '700' }"
-          :bodyStyle="{ width: '220px', minWidth: '200px' }"
-        >
-          <template #body="{ data }">
-            <div class="match-reasons-wrapper">
-              <span class="match-reason-pill">
-                <i class="pi pi-info-circle"></i>
-                {{ getChildMatchReason(data) }}
-              </span>
-            </div>
-          </template>
-        </Column>
 
         <!-- Actions Column (Centered) -->
         <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
@@ -560,7 +546,7 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
-import { formatDate, parseDateObj, computePresenceStatus, computeOverdueStatus } from '@/utils/formatters';
+import { formatDate, parseDateObj, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula } from '@/utils/formatters';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
@@ -626,80 +612,8 @@ const activeMetricCards = computed(() => {
   ];
 });
 
-// Single Unified Presence Status Calculator
-const getTripPresence = (t) => {
-  if (!t) return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const depRaw = t.departureDate || t.approvedDepartureDate || t.custom_data?.departureDate;
-  const arrRaw = t.arrivalDate || t.custom_data?.arrivalDate;
-  const appArrRaw = t.approvedExtensionDate || t.approvedArrivalDate || t.custom_data?.approvedArrivalDate;
-
-  const depDate = parseDateObj(depRaw);
-  const arrDate = parseDateObj(arrRaw);
-  const appArrDate = parseDateObj(appArrRaw);
-
-  // No trip dates at all
-  if (!depDate && !arrDate) {
-    return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
-  }
-
-  // If departure is in the future
-  if (depDate) {
-    const depNorm = new Date(depDate);
-    depNorm.setHours(0, 0, 0, 0);
-    if (today < depNorm) {
-      return { status: 'upcoming', isAbroad: false, isOverdue: false, label: 'Chưa khởi hành', overdueDays: 0 };
-    }
-  }
-
-  // If arrival date exists and has already passed (today > arrivalDate)
-  if (arrDate) {
-    const arrNorm = new Date(arrDate);
-    arrNorm.setHours(23, 59, 59, 999);
-    if (today > arrNorm) {
-      let isOverdue = false;
-      let overdueDays = 0;
-      if (appArrDate) {
-        const appArrNorm = new Date(appArrDate);
-        appArrNorm.setHours(23, 59, 59, 999);
-        if (arrNorm > appArrNorm) {
-          isOverdue = true;
-          overdueDays = Math.max(1, Math.floor((arrNorm - appArrNorm) / (1000 * 60 * 60 * 24)));
-        }
-      }
-      return {
-        status: isOverdue ? 'overdue' : 'completed',
-        isAbroad: false,
-        isOverdue,
-        label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đã về nước',
-        overdueDays,
-      };
-    }
-  }
-
-  // Departure is in the past/today, and either no arrival date OR arrival date is in the future: Currently abroad!
-  let isOverdue = false;
-  let overdueDays = 0;
-  if (appArrDate) {
-    const appArrNorm = new Date(appArrDate);
-    appArrNorm.setHours(23, 59, 59, 999);
-    if (today > appArrNorm) {
-      isOverdue = true;
-      overdueDays = Math.max(1, Math.floor((today - appArrNorm) / (1000 * 60 * 60 * 24)));
-    }
-  }
-
-  return {
-    status: isOverdue ? 'overdue' : 'abroad',
-    isAbroad: true,
-    isOverdue,
-    label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đang ở nước ngoài',
-    overdueDays,
-  };
-};
+// Sử dụng computeTripPresence từ formatters.js (module dùng chung)
+const getTripPresence = (t) => computeTripPresence(t);
 
 // Robust funding extractor across all database keys/aliases
 const getFundingValue = (item) => {
@@ -862,68 +776,7 @@ const toggleMetricCardFilter = (card, cIdx) => {
   }
 };
 
-const getChildMatchReason = (item) => {
-  if (!item) return 'Khớp điều kiện';
 
-  // 1. If filtering by a specific Metric Card
-  if (activeMetricCardId.value && activeMetricCardId.value !== 'all') {
-    const targetCard = activeMetricCards.value.find((c, idx) => (c.id || c.label || `card_${idx}`) === activeMetricCardId.value);
-    if (targetCard && !isCardAllType(targetCard)) {
-      if (targetCard.field && String(targetCard.field).trim() !== '') {
-        const val = getCellValue(item, targetCard.field);
-        if (val && val !== '-') {
-          return `${targetCard.label}: ${val}`;
-        }
-        return `Khớp: ${targetCard.label}`;
-      }
-      if (targetCard.condition === 'overdue' || targetCard.label === 'Quá hạn chưa về') {
-        return item.isOverdue ? `Quá hạn ${item.overdueDays || ''} ngày` : 'Quá hạn chưa về';
-      }
-      if (targetCard.condition === 'abroad' || targetCard.label === 'Đang ở nước ngoài') {
-        return 'Đang ở nước ngoài';
-      }
-      if (targetCard.condition === 'completed' || targetCard.label === 'Đã về nước') {
-        return 'Đã về nước đúng hạn';
-      }
-      return targetCard.label;
-    }
-  }
-
-  // 2. If status filter is active
-  if (statusFilter.value === 'overdue' || item.isOverdue) {
-    return `Quá hạn ${item.overdueDays || ''} ngày`;
-  }
-  if (statusFilter.value === 'abroad' || item.isAbroad) {
-    return 'Đang ở nước ngoài';
-  }
-  if (statusFilter.value === 'completed') {
-    return 'Đã về nước đúng hạn';
-  }
-
-  // 3. If other quick filters are active
-  if (selectedCountry.value && item.countryName) {
-    return `Quốc gia: ${item.countryName}`;
-  }
-  if (selectedDepartment.value && (item.departmentName || getDepartmentValue(item) !== '-')) {
-    return `Đơn vị: ${item.departmentName || getDepartmentValue(item)}`;
-  }
-  if (selectedFunding.value && item.fundingName) {
-    return `Kinh phí: ${item.fundingName}`;
-  }
-  if (searchQuery.value && String(searchQuery.value).trim() !== '') {
-    return `Khớp tìm kiếm: "${searchQuery.value.trim()}"`;
-  }
-
-  // 4. Default presence or record state
-  if (item.presenceLabel) {
-    return item.presenceLabel;
-  }
-  if (getStatusLabel(item)) {
-    return getStatusLabel(item);
-  }
-
-  return 'Hồ sơ chuyên đề';
-};
 
 // Filters
 const searchQuery = ref('');
@@ -938,6 +791,7 @@ const selectedTrips = ref([]);
 const selectedTripKeys = computed(() => (selectedTrips.value || []).map((t) => t.uniqueKey || t.id));
 const sortKey = ref('departureDate');
 const sortOrder = ref(-1); // -1: desc, 1: asc
+const dtFirst = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(30);
 
@@ -1095,6 +949,7 @@ const allAvailableColumnsList = computed(() => {
             id: c.id,
             label: getColumnLabel(c.id) || c.label || c.id,
             width: c.width || '150px',
+            tableWidth: c.tableWidth || null,
             format: c.format,
           });
         }
@@ -1116,6 +971,7 @@ const allAvailableColumnsList = computed(() => {
             id: c.id,
             label: getColumnLabel(c.id) || c.label || c.id,
             width: c.width || '150px',
+            tableWidth: c.tableWidth || null,
             format: c.format,
           });
         }
@@ -1144,6 +1000,7 @@ const allAvailableColumnsList = computed(() => {
             id: c.id,
             label: getColumnLabel(c.id) || c.label || c.id,
             width: c.width || '150px',
+            tableWidth: c.tableWidth || null,
             format: c.format,
           });
         }
@@ -1164,6 +1021,29 @@ const allAvailableColumnsList = computed(() => {
       }
     });
   }
+
+  // Cột ảo: Thông tin Cán bộ liên quan (cho chuyến đi thân nhân)
+  rawList.push({
+    id: '_parentPersonnelName',
+    label: 'CB liên quan (Tên)',
+    width: '180px',
+    tableWidth: null,
+    isVirtual: true,
+  });
+  rawList.push({
+    id: '_parentPosition',
+    label: 'CB liên quan (Chức vụ)',
+    width: '160px',
+    tableWidth: null,
+    isVirtual: true,
+  });
+  rawList.push({
+    id: '_parentDepartment',
+    label: 'CB liên quan (Đơn vị)',
+    width: '180px',
+    tableWidth: null,
+    isVirtual: true,
+  });
 
   return rawList;
 });
@@ -1541,6 +1421,26 @@ const formatDisplayDate = (dStr) => {
 const getCellValue = (trip, colId) => {
   if (!trip || !colId) return '-';
 
+  // Cột ảo: Thông tin CB liên quan
+  if (colId === '_parentPersonnelName') {
+    if (trip.isRelative && trip.rawPerson) {
+      return trip.rawPerson.name || trip.rawPerson.fullName || '-';
+    }
+    return '-';
+  }
+  if (colId === '_parentPosition') {
+    if (trip.isRelative && trip.rawPerson) {
+      return trip.rawPerson.position || trip.rawPerson.positionName || '-';
+    }
+    return '-';
+  }
+  if (colId === '_parentDepartment') {
+    if (trip.isRelative && trip.rawPerson) {
+      return trip.rawPerson.departmentName || trip.rawPerson.departmentId || '-';
+    }
+    return '-';
+  }
+
   // 1. Status Computed
   if (colId === 'status' || colId === 'tripStatus' || colId === 'presenceStatus') {
     return getStatusLabel(trip);
@@ -1611,22 +1511,8 @@ const getCellValue = (trip, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
-    if (colDef.formulaType === 'overdue_status') {
-      const overdue = computeOverdueStatus(trip, {
-        arrivalCol: colDef.formulaArrivalCol,
-        labelOverdue: colDef.formulaLabelOverdue,
-        labelOntime: colDef.formulaLabelOntime,
-      });
-      return overdue.label;
-    }
-    const status = computePresenceStatus(trip, {
-      departureCol: colDef.formulaDepartureCol,
-      arrivalCol: colDef.formulaArrivalCol,
-      countryCol: colDef.formulaCountryCol,
-      labelDomestic: colDef.formulaLabelDomestic,
-      labelAbroad: colDef.formulaLabelAbroad,
-    });
-    return status.label;
+    const result = evaluateFormula(trip, colDef);
+    return result?.label || result?.shortLabel || '-';
   }
 
   // 11. Format dates if colDef.format === 'date'
