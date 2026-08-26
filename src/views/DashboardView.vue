@@ -1767,6 +1767,28 @@ const unifiedTripsList = computed(() => {
 const getRowFieldValue = (row, colId) => {
   if (!row || !colId) return '';
 
+  // 0. Special Presence & Overdue Aliases (Khớp với cấu hình thẻ Metric Cards của chuyên đề)
+  if (colId === 'trang_thai_hien_dien' || colId === 'presenceStatus' || colId === 'presenceLabel' || colId === 'status' || colId === 'tripStatus') {
+    return row.presenceLabel || (row.isAbroad ? 'Đang ở nước ngoài' : (row.isOverdue ? 'Quá hạn chưa về' : 'Đã về nước'));
+  }
+  if (colId === 'qua_han_chua_ve' || colId === 'overdueStatus' || colId === 'isOverdue') {
+    return row.isOverdue ? `Quá hạn chưa về (${row.overdueDays || 0} ngày)` : 'Đúng hạn';
+  }
+
+  // Check formula columns from mapping
+  const allMap = {};
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  const colDef = allMap[colId];
+  if (colDef && colDef.format === 'formula') {
+    const res = evaluateFormula(row, colDef);
+    return res?.label || res?.shortLabel || '';
+  }
+
   // 1. Direct property
   let raw = row[colId];
 

@@ -1441,9 +1441,12 @@ const getCellValue = (trip, colId) => {
     return '-';
   }
 
-  // 1. Status Computed
-  if (colId === 'status' || colId === 'tripStatus' || colId === 'presenceStatus') {
+  // 1. Status & Overdue Computed Aliases
+  if (colId === 'status' || colId === 'tripStatus' || colId === 'presenceStatus' || colId === 'trang_thai_hien_dien' || colId === 'presenceLabel') {
     return getStatusLabel(trip);
+  }
+  if (colId === 'qua_han_chua_ve' || colId === 'overdueStatus' || colId === 'isOverdue') {
+    return trip.isOverdue ? `Quá hạn chưa về (${trip.overdueDays || 0} ngày)` : 'Đúng hạn';
   }
 
   // 2. Personnel Info Aliases
