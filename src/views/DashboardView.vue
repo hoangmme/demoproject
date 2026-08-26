@@ -1845,7 +1845,21 @@ const getCardMetricValueForTopic = (card, topic) => {
   const src = topic?.source || actualCard.source || card.source || 'trips';
   const list = getSourceList(src);
 
-  // 1. Dynamic Field Condition (Top priority)
+  // === DEBUG LOG (TẠM) ===
+  if (typeof window !== 'undefined' && !window.__dashDebugLogged) {
+    window.__dashDebugLogged = true;
+    console.log('[DASH-DEBUG] list.length:', list.length);
+    console.log('[DASH-DEBUG] Sample items (first 3):');
+    list.slice(0, 3).forEach((t, i) => {
+      console.log(`  [${i}] name=${t.personnelName}, dep=${t.departureDate}, arr=${t.arrivalDate}, isAbroad=${t.isAbroad}, isOverdue=${t.isOverdue}, presenceStatus=${t.presenceStatus}`);
+    });
+    const abroad = list.filter(t => t.isAbroad && !t.isOverdue);
+    const completed = list.filter(t => !t.isAbroad && !t.isOverdue);
+    const overdue = list.filter(t => t.isOverdue);
+    console.log(`[DASH-DEBUG] abroad=${abroad.length}, completed=${completed.length}, overdue=${overdue.length}`);
+    console.log('[DASH-DEBUG] cond=', cond, 'actualCard=', JSON.stringify({id: actualCard.id, label: actualCard.label, condition: actualCard.condition, field: actualCard.field}));
+  }
+  // === END DEBUG ===
   const f = actualCard.field || card.field;
   if (f && String(f).trim() !== '') {
     const op = actualCard.operator || card.operator || 'has_value';
@@ -1860,28 +1874,22 @@ const getCardMetricValueForTopic = (card, topic) => {
     }).length;
   }
 
-  // 2. Preset Conditions (Synchronized 100% with ChildDashboardView)
+  // 2. Preset Conditions — khớp 100% logic ChildDashboardView.tripStats:
+  //    overdue  = t.isOverdue
+  //    abroad   = t.isAbroad && !t.isOverdue
+  //    completed = else (bao gồm domestic, upcoming, completed)
   const cond = actualCard.cardCondition || actualCard.condition || card.cardCondition || card.condition || card.id || 'all';
   if (cond === 'all' || actualCard.label === 'Toàn bộ' || card.label === 'Toàn bộ' || actualCard.label === 'Tất cả' || card.label === 'Tất cả') {
     return list.length;
   }
   if (cond === 'completed' || actualCard.label === 'Đã về nước' || card.label === 'Đã về nước') {
-    return list.filter((t) => {
-      const presence = getTripPresence(t);
-      return presence.status === 'completed';
-    }).length;
+    return list.filter((t) => !t.isOverdue && !t.isAbroad).length;
   }
   if (cond === 'abroad' || actualCard.label === 'Đang ở nước ngoài' || card.label === 'Đang ở nước ngoài') {
-    return list.filter((t) => {
-      const presence = getTripPresence(t);
-      return presence.status === 'abroad';
-    }).length;
+    return list.filter((t) => t.isAbroad && !t.isOverdue).length;
   }
   if (cond === 'overdue' || actualCard.label === 'Quá hạn chưa về' || card.label === 'Quá hạn chưa về') {
-    return list.filter((t) => {
-      const presence = getTripPresence(t);
-      return presence.status === 'overdue';
-    }).length;
+    return list.filter((t) => !!t.isOverdue).length;
   }
 
   return list.length;
