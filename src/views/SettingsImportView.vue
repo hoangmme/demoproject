@@ -449,6 +449,7 @@
                     <option value="overdue_status">Quá hạn chưa về</option>
                     <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
                     <option value="conditional_check">Kiểm tra điều kiện (Cảnh báo khi thiếu dữ liệu)</option>
+                    <option value="depart_before_decision">Đi trước khi có quyết định</option>
                   </select>
                 </div>
 
@@ -613,6 +614,41 @@
                     <div>
                       <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi OK (Tùy chọn):</span>
                       <input v-model="col.formulaLabelOk" placeholder="Để trống nếu không cần" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 5. Đi trước khi có quyết định -->
+                <div v-else-if="col.formulaType === 'depart_before_decision'" style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="font-size: 0.72rem; color: #b45309; line-height: 1.4;">
+                    💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày Đi (Xuất cảnh)</strong> với <strong>Ngày Ban Hành (Quyết định)</strong>. Nếu Ngày Đi &lt; Ngày Ban Hành → hiển thị <strong>"Đi trước khi có quyết định"</strong>. Ngược lại hoặc thiếu ngày → để trống.
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Đi (Xuất cảnh):</span>
+                      <select v-model="col.formulaColDep" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định (departureDate) --</option>
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
+                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Ban Hành (Quyết định):</span>
+                      <select v-model="col.formulaColDecDate" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định (decisionDate) --</option>
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
+                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn hiển thị (Tùy chọn):</span>
+                      <input
+                        v-model="col.formulaLabelWarning"
+                        placeholder="Mặc định: Đi trước khi có quyết định"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
                     </div>
                   </div>
                 </div>

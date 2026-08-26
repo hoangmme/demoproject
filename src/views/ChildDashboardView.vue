@@ -133,7 +133,7 @@
       >
         <div style="display: flex; align-items: center; gap: 8px;">
           <span :class="['dot-indicator', `dot-${card.color || 'blue'}`]"></span>
-          <span class="stat-name">{{ card.label }}</span>
+          <span class="stat-name">{{ getCardDisplayLabel(card) }}</span>
         </div>
         <span :class="['stat-number', `num-${card.color || 'blue'}`]">{{ getCardMetricValue(card) }}</span>
       </div>
@@ -179,7 +179,7 @@
         <!-- Funding Filter -->
         <div style="min-width: 140px;">
           <select v-model="selectedFunding" class="filter-select">
-            <option value="">Nguồn kinh phí: Tất cả</option>
+            <option value="">Kinh phí: Tất cả</option>
             <option v-for="f in availableFundings" :key="f" :value="f">{{ f }}</option>
           </select>
         </div>
@@ -199,13 +199,18 @@
     </div>
 
     <!-- Main Data Table Card (Matching PersonnelView exactly) -->
-    <div class="app-card" style="padding: 0; overflow: hidden;">
+    <div class="app-card" style="padding: 0; overflow: hidden; position: relative;">
+      <!-- Loading Overlay -->
+      <div v-if="personnelStore.loading" class="table-loading-overlay">
+        <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: #2563eb;"></i>
+      </div>
+
       <DataTable
         v-model:selection="selectedTrips"
         :value="filteredList"
         dataKey="uniqueKey"
         paginator
-        :rows="15"
+        :rows="30"
         :rowsPerPageOptions="[15, 30, 50, 100]"
         :selectionPageOnly="true"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
@@ -214,7 +219,7 @@
         responsiveLayout="scroll"
         stripedRows
         removableSort
-        class="p-datatable-sm"
+        class="p-datatable-sm custom-datatable"
         tableStyle="min-width: 60rem; table-layout: fixed;"
         @row-click="onRowClick"
         @page="e => dtFirst = e.first"
@@ -238,6 +243,9 @@
           :headerStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
           :bodyStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
         >
+          <template #header>
+            <span class="table-col-header-ellipsis" :title="col.label">{{ col.label }}</span>
+          </template>
           <template #body="{ data }">
             <!-- 1. Họ và tên người đi (Mỗi cái 1 hàng: Tên, CCCD, Chức vụ, Đơn vị) -->
             <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === '_parentPersonnelName' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
@@ -865,6 +873,22 @@ const getPersonInfo = (data) => {
     position: pos && String(pos).trim() !== '-' ? String(pos).trim() : '',
     department: dept && String(dept).trim() !== '-' ? String(dept).trim() : '',
   };
+};
+
+const getCardDisplayLabel = (card) => {
+  if (!card) return '';
+  if (card.label && String(card.label).trim() !== '') {
+    return String(card.label).trim();
+  }
+  // Nếu không điền gì / xóa tiêu đề -> lấy theo tên cột so sánh
+  if (card.field) {
+    return getColumnLabel(card.field) || card.field;
+  }
+  if (card.condition === 'overdue' || card.condition === 'isOverdue') return 'Quá hạn chưa về';
+  if (card.condition === 'abroad') return 'Đang ở nước ngoài';
+  if (card.condition === 'completed') return 'Đã về nước';
+  if (card.condition === 'all') return 'Toàn bộ';
+  return 'Chưa đặt tên';
 };
 
 
@@ -2565,5 +2589,21 @@ onMounted(async () => {
   border-radius: 6px;
   font-size: 0.72rem;
   font-weight: 600;
+}
+
+.table-col-header-ellipsis {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+:deep(.p-datatable .p-datatable-thead > tr > th .p-column-title),
+:deep(.p-datatable .p-datatable-thead > tr > th .p-column-header-content) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 </style>

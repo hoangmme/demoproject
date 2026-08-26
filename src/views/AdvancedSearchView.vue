@@ -305,14 +305,14 @@
           <table class="advanced-table">
             <thead>
               <tr>
-                <th style="width: 50px; text-align: center;">STT</th>
-                <th style="min-width: 170px;">HỌ VÀ TÊN</th>
-                <th style="min-width: 140px;">CHỨC VỤ</th>
-                <th style="min-width: 150px;">ĐƠN VỊ</th>
-                <th style="min-width: 130px;">QUỐC GIA</th>
-                <th style="min-width: 110px;">XUẤT CẢNH</th>
-                <th style="min-width: 220px; color: #b91c1c;">LÝ DO KHỚP ĐIỀU KIỆN</th>
-                <th style="width: 100px; text-align: center;">THAO TÁC</th>
+                <th style="width: 50px; text-align: center;" title="Số thứ tự">STT</th>
+                <th style="min-width: 170px;" title="Họ và tên">HỌ VÀ TÊN</th>
+                <th style="min-width: 140px;" title="Chức vụ">CHỨC VỤ</th>
+                <th style="min-width: 150px;" title="Đơn vị công tác">ĐƠN VỊ</th>
+                <th style="min-width: 130px;" title="Quốc gia">QUỐC GIA</th>
+                <th style="min-width: 110px;" title="Ngày xuất cảnh">XUẤT CẢNH</th>
+                <th style="min-width: 220px; color: #b91c1c;" title="Lý do khớp điều kiện tìm kiếm">LÝ DO KHỚP ĐIỀU KIỆN</th>
+                <th style="width: 100px; text-align: center;" title="Thao tác">THAO TÁC</th>
               </tr>
             </thead>
             <tbody>
@@ -1296,6 +1296,10 @@ onMounted(async () => {
   padding: 8px 10px;
   text-align: left;
   border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
 }
 .advanced-table td {
   padding: 8px 10px;

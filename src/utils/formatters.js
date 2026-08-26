@@ -650,9 +650,70 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
       return computeDateDelta(record, formulaConfig);
     case 'conditional_check':
       return computeConditionalCheck(record, formulaConfig);
+    case 'depart_before_decision':
+      return computeDepartBeforeDecision(record, formulaConfig);
     default:
       return { status: 'unknown', label: '', shortLabel: '' };
   }
+};
+
+/**
+ * Công thức: Đi trước khi có quyết định
+ * formulaConfig:
+ *   - formulaColDep: Cột Ngày đi / xuất cảnh (mặc định: 'departureDate')
+ *   - formulaColDecDate: Cột Ngày ban hành QĐ (mặc định: 'decisionDate')
+ *   - formulaLabelWarning: Nhãn cảnh báo (mặc định: 'Đi trước khi có quyết định')
+ *
+ * Logic: Nếu Ngày Đi < Ngày Ban Hành Quyết Định -> hiển thị nhãn cảnh báo.
+ *        Ngược lại hoặc thiếu ngày -> trả về '-' / không hiển thị.
+ */
+export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
+  const defaultResult = { status: 'none', label: '-', shortLabel: '-', isWarning: false, cssClass: '' };
+  if (!record) return defaultResult;
+
+  const colDep = formulaConfig.formulaColDep || formulaConfig.formulaColA || 'departureDate';
+  const colDecDate = formulaConfig.formulaColDecDate || formulaConfig.formulaColB || 'decisionDate';
+  const labelWarning = formulaConfig.formulaLabelWarning || 'Đi trước khi có quyết định';
+
+  let trips = [];
+  if (Array.isArray(record.trips) && record.trips.length > 0) {
+    trips = record.trips;
+  } else if (Array.isArray(record.tripList) && record.tripList.length > 0) {
+    trips = record.tripList;
+  } else {
+    trips = [record];
+  }
+
+  for (const t of trips) {
+    const rawDep = getRecordFieldValue(t, colDep);
+    const rawDec = getRecordFieldValue(t, colDecDate);
+
+    const dateDep = parseDateValue(rawDep);
+    const dateDec = parseDateValue(rawDec);
+
+    if (!dateDep || !dateDec) continue;
+
+    const normDep = new Date(dateDep);
+    normDep.setHours(0, 0, 0, 0);
+    const normDec = new Date(dateDec);
+    normDec.setHours(0, 0, 0, 0);
+
+    // Đi trước ngày ban hành quyết định (normDep < normDec)
+    if (normDep < normDec) {
+      const days = Math.round((normDec.getTime() - normDep.getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        status: 'warning',
+        isWarning: true,
+        label: labelWarning,
+        shortLabel: labelWarning,
+        daysEarly: days,
+        cssClass: 'formula-warning',
+        trip: t,
+      };
+    }
+  }
+
+  return defaultResult;
 };
 
 /**
