@@ -372,13 +372,10 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
     let approvedRaw = null;
     if (approvedCol) {
       approvedRaw = getRecordFieldValue(t, approvedCol);
-    }
-    if (!approvedRaw) {
+    } else {
       approvedRaw = getRecordFieldValue(t, 'thoi_gian_duyet_ve') ||
         getRecordFieldValue(t, 'approvedArrivalDate') ||
-        getRecordFieldValue(t, 'thoiGianDuyetVe') ||
-        getRecordFieldValue(t, 'approvedExtensionDate') ||
-        getRecordFieldValue(t, 'gia_han_den_ngay');
+        getRecordFieldValue(t, 'thoiGianDuyetVe');
     }
 
     const approvedDate = parseDateValue(approvedRaw);
@@ -394,12 +391,9 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
     let arrRaw = null;
     if (arrCol) {
       arrRaw = getRecordFieldValue(t, arrCol);
-    }
-    if (!arrRaw) {
+    } else {
       arrRaw = getRecordFieldValue(t, 'ngay_nhap_canh') ||
-        getRecordFieldValue(t, 'arrivalDate') ||
-        getRecordFieldValue(t, 'ngayNhapCanh') ||
-        getRecordFieldValue(t, 'ngayVe');
+        getRecordFieldValue(t, 'arrivalDate');
     }
 
     const arrDate = parseDateValue(arrRaw);
