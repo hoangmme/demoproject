@@ -1695,20 +1695,12 @@ const onWizardImported = async () => {
 const handleExportCurrentTabExcel = (tab) => {
   if (tab === 'personnel') {
     const list = personnelStore.personnelList || [];
-    if (list.length > 0) {
-      exportFullPersonnelExcel(list, personnelGroups.value, personnelStore.getDepartmentName);
-    } else {
-      downloadPersonnelTemplate(personnelGroups.value);
-    }
+    exportFullPersonnelExcel(list, personnelGroups.value, personnelStore.getDepartmentName);
   } else if (tab === 'relative') {
-    const list = personnelStore.flattenedRelatives || [];
-    if (list.length > 0) {
-      exportFullRelativesExcel(list, relativeGroups.value);
-    } else {
-      downloadRelativeTemplate(relativeGroups.value);
-    }
+    const list = personnelStore.relativesList || personnelStore.flattenedRelatives || [];
+    exportFullRelativesExcel(list, relativeGroups.value);
   } else if (tab === 'trips') {
-    const list = personnelStore.allTrips || [];
+    const list = personnelStore.tripsList || personnelStore.allTrips || [];
     exportFullTripsExcel(list, tripsGroups.value, personnelStore.getDepartmentName);
   }
 };

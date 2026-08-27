@@ -634,17 +634,56 @@ const buildParsedRows = () => {
 
   const headerRow = rawRows[0] || [];
   const colMap = {};
+  const entityCols = targetColumns.value || [];
 
-  // Map header columns to target entity fields
+  // Index map of target columns
   let currentColIdx = 0;
-  const entityCols = targetColumns.value;
-
   entityCols.forEach((c) => {
     currentColIdx++;
     colMap[normalizeKey(c.label)] = c;
     colMap[normalizeKey(c.id)] = c;
     colMap[normalizeKey(`[Cột ${currentColIdx}] ${c.label}`)] = c;
     colMap[normalizeKey(`cột ${currentColIdx}`)] = c;
+  });
+
+  // Pre-determine column mapping for each Excel column index
+  const mappedCols = [];
+  let sequentialTargetIdx = 0;
+  const isFirstColStt = headerRow.length > 0 && (
+    normalizeKey(headerRow[0]) === 'stt' ||
+    normalizeKey(headerRow[0]).includes('stt') ||
+    normalizeKey(headerRow[0]) === 'c1' ||
+    normalizeKey(headerRow[0]) === 'cot1'
+  );
+
+  headerRow.forEach((rawH, cIdx) => {
+    const normH = normalizeKey(rawH);
+    if (cIdx === 0 && isFirstColStt) {
+      mappedCols.push(null); // skip STT column
+      return;
+    }
+
+    let matched = colMap[normH];
+    if (!matched) {
+      const colNumMatch = String(rawH || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
+      if (colNumMatch) {
+        const num = Number(colNumMatch[1]);
+        if (entityCols[num - 1]) matched = entityCols[num - 1];
+      }
+    }
+
+    // Fallback: Positional mapping if not matched by label
+    if (!matched && sequentialTargetIdx < entityCols.length) {
+      matched = entityCols[sequentialTargetIdx];
+      sequentialTargetIdx++;
+    } else if (matched) {
+      const foundIdx = entityCols.findIndex((c) => c.id === matched.id);
+      if (foundIdx >= 0) {
+        sequentialTargetIdx = foundIdx + 1;
+      }
+    }
+
+    mappedCols.push(matched || null);
   });
 
   const parsed = [];
@@ -656,6 +695,10 @@ const buildParsedRows = () => {
     }
 
     const rowObj = {};
+    // Initialize all columns with empty string
+    entityCols.forEach((c) => {
+      rowObj[c.id] = '';
+    });
 
     headerRow.forEach((rawH, cIdx) => {
       const cellVal = rawRow[cIdx];
@@ -663,20 +706,15 @@ const buildParsedRows = () => {
       const valStr = typeof cellVal === 'number' ? String(cellVal) : String(cellVal).trim();
       if (valStr === '') return;
 
-      const normH = normalizeKey(rawH);
-      let matchedCol = colMap[normH];
-
-      if (!matchedCol) {
-        const colNumMatch = String(rawH || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
-        if (colNumMatch) {
-          const num = Number(colNumMatch[1]);
-          if (entityCols[num - 1]) matchedCol = entityCols[num - 1];
-        }
-      }
-
+      const matchedCol = mappedCols[cIdx];
       if (matchedCol) {
         let finalVal = valStr;
-        if (matchedCol.format === 'date' || matchedCol.id.toLowerCase().includes('date') || matchedCol.id.toLowerCase().includes('year') || matchedCol.id.toLowerCase().includes('sinh')) {
+        if (
+          matchedCol.format === 'date' ||
+          matchedCol.id.toLowerCase().includes('date') ||
+          matchedCol.id.toLowerCase().includes('year') ||
+          matchedCol.id.toLowerCase().includes('sinh')
+        ) {
           finalVal = formatExcelDate(cellVal);
         }
         rowObj[matchedCol.id] = finalVal;

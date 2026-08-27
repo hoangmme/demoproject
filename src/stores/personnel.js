@@ -32,6 +32,8 @@ export const usePersonnelStore = defineStore('personnel', {
     },
   }),
   getters: {
+    allTrips: (state) => state.tripsList || [],
+    flattenedRelatives: (state) => state.relativesList || [],
     departmentMap: (state) => {
       const map = {};
       state.departments.forEach((d) => {
