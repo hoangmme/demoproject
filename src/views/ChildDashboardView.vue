@@ -542,7 +542,7 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
-import { formatDate, parseDateObj, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula } from '@/utils/formatters';
+import { formatDate, parseDateObj, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision } from '@/utils/formatters';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
