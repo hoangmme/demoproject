@@ -322,17 +322,11 @@
           </div>
         </div>
 
-        <!-- Legend for 2 colors -->
+        <!-- Legend / Info -->
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
-          <div style="display: flex; gap: 12px;">
-            <span style="display: flex; align-items: center; gap: 4px;">
-              <span style="width: 10px; height: 10px; border-radius: 2px; background: #16a34a; display: inline-block;"></span>
-              <strong style="color: #166534;">Cán bộ (CB)</strong>
-            </span>
-            <span style="display: flex; align-items: center; gap: 4px;">
-              <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
-              <strong style="color: #6d28d9;">Thân nhân (TN)</strong>
-            </span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="width: 10px; height: 10px; border-radius: 2px; background: #16a34a; display: inline-block;"></span>
+            <strong style="color: #166534;">Số lượt Cán bộ đi nước ngoài</strong>
           </div>
           <span style="font-size: 0.68rem; color: #94a3b8; font-style: italic;">(Nhấp vào cột để xem chi tiết)</span>
         </div>
@@ -350,29 +344,20 @@
               v-for="(item, idx) in filteredCountryList"
               :key="item.name"
               class="country-column-item"
-              @click="openDrilldown('country', `Danh sách đi / ở: ${item.name}`, { countryName: item.name })"
-              :title="`${item.name}\n- Cán bộ: ${item.tripsCount} lượt\n- Thân nhân: ${item.relativesCount} người\n- Tổng: ${item.count} lượt`"
+              @click="openDrilldown('country', `Danh sách Cán bộ đi: ${item.name}`, { countryName: item.name })"
+              :title="`${item.name}\n- Cán bộ: ${item.count} lượt`"
             >
               <!-- Total Number Badge on Top -->
               <span class="column-top-total">{{ item.count }}</span>
 
-              <!-- Stacked Bar Track -->
+              <!-- Bar Track (Cán bộ) -->
               <div class="column-bar-track">
-                <!-- Top: Thân nhân (Purple) -->
                 <div
-                  v-if="item.relativesCount > 0"
-                  class="column-segment-tn"
-                  :style="{ height: `${(item.relativesCount / (stats.maxCountry || 1)) * 100}%` }"
-                >
-                  <span v-if="item.relativesCount >= 2" class="segment-label">{{ item.relativesCount }}</span>
-                </div>
-                <!-- Bottom: Cán bộ (Green) -->
-                <div
-                  v-if="item.tripsCount > 0"
+                  v-if="item.count > 0"
                   class="column-segment-cb"
-                  :style="{ height: `${(item.tripsCount / (stats.maxCountry || 1)) * 100}%` }"
+                  :style="{ height: `${(item.count / (stats.maxCountry || 1)) * 100}%` }"
                 >
-                  <span v-if="item.tripsCount >= 2" class="segment-label">{{ item.tripsCount }}</span>
+                  <span v-if="item.count >= 2" class="segment-label">{{ item.count }}</span>
                 </div>
               </div>
 
@@ -381,9 +366,7 @@
                 {{ item.name }}
               </div>
               <div class="column-sub-badges">
-                <span v-if="item.tripsCount > 0" style="color: #16a34a; font-weight: 700;">{{ item.tripsCount }}CB</span>
-                <span v-if="item.tripsCount > 0 && item.relativesCount > 0" style="color: #cbd5e1;">·</span>
-                <span v-if="item.relativesCount > 0" style="color: #7c3aed; font-weight: 700;">{{ item.relativesCount }}TN</span>
+                <span style="color: #16a34a; font-weight: 700;">{{ item.count }} lượt</span>
               </div>
             </div>
           </div>
@@ -411,15 +394,11 @@
           </div>
         </div>
 
-        <!-- Legend for 2 colors -->
+        <!-- Legend / Info -->
         <div style="display: flex; gap: 12px; font-size: 0.72rem; margin-bottom: 8px; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 6px;">
           <span style="display: flex; align-items: center; gap: 4px;">
             <span style="width: 10px; height: 10px; border-radius: 2px; background: #0284c7; display: inline-block;"></span>
-            <strong style="color: #0369a1;">Cán bộ</strong>
-          </span>
-          <span style="display: flex; align-items: center; gap: 4px;">
-            <span style="width: 10px; height: 10px; border-radius: 2px; background: #7c3aed; display: inline-block;"></span>
-            <strong style="color: #6d28d9;">Thân nhân</strong>
+            <strong style="color: #0369a1;">Số lượt Cán bộ đi theo Nguồn kinh phí</strong>
           </span>
         </div>
 
@@ -431,7 +410,7 @@
             v-for="(item, idx) in filteredFundingList"
             :key="item.name"
             class="breakdown-row"
-            @click="openDrilldown('funding', `Danh sách theo Kinh phí: ${item.name}`, { fundingName: item.name })"
+            @click="openDrilldown('funding', `Danh sách Cán bộ theo Kinh phí: ${item.name}`, { fundingName: item.name })"
           >
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -439,30 +418,16 @@
                 <span style="font-size: 0.82rem; font-weight: 600; color: #334155;">{{ item.name }}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span v-if="item.tripsCount > 0" class="badge-pill badge-blue" style="font-size: 0.68rem; padding: 1px 6px;">
-                  {{ item.tripsCount }} CB
-                </span>
-                <span v-if="item.relativesCount > 0" class="badge-pill" style="font-size: 0.68rem; padding: 1px 6px; background: #f3e8ff; color: #6d28d9; border: 1px solid #e9d5ff;">
-                  {{ item.relativesCount }} TN
-                </span>
-                <span style="font-size: 0.8rem; font-weight: 700; color: #1e293b;">
-                  Tổng: {{ item.count }}
+                <span class="badge-pill badge-blue" style="font-size: 0.68rem; padding: 1px 6px;">
+                  {{ item.count }} lượt
                 </span>
               </div>
             </div>
-            <!-- 2-Color Stacked Progress Bar -->
-            <div style="height: 7px; background: #f1f5f9; border-radius: 4px; overflow: hidden; display: flex;">
+            <!-- Progress Bar -->
+            <div style="height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
               <div
-                v-if="item.tripsCount > 0"
-                style="height: 100%; background: #0284c7; transition: width 0.4s ease;"
-                :style="{ width: `${(item.tripsCount / stats.maxFunding) * 100}%` }"
-                :title="`Cán bộ: ${item.tripsCount} lượt`"
-              ></div>
-              <div
-                v-if="item.relativesCount > 0"
-                style="height: 100%; background: #7c3aed; transition: width 0.4s ease;"
-                :style="{ width: `${(item.relativesCount / stats.maxFunding) * 100}%` }"
-                :title="`Thân nhân: ${item.relativesCount} người`"
+                style="height: 100%; background: linear-gradient(90deg, #38bdf8, #0284c7); border-radius: 3px; transition: width 0.4s ease;"
+                :style="{ width: `${(item.count / (stats.maxFunding || 1)) * 100}%` }"
               ></div>
             </div>
           </div>
@@ -2562,8 +2527,8 @@ const stats = computed(() => {
   const countryColId = colConfig.value.country || 'quoc_gia_xuat_canh';
   const fundingColId = colConfig.value.funding || 'nguon_kinh_phi';
 
-  // Lấy trực tiếp từ danh sách chuyến đi đã gom của Cán bộ và Thân nhân
-  const allTrips = unifiedTripsList.value || [];
+  // Lấy danh sách chuyến đi của Cán bộ (không lấy thân nhân) theo cột đã chọn trong Setting
+  const allTrips = (unifiedTripsList.value || []).filter((t) => !t.isRelative && !t.isRelativeTrip);
 
   allTrips.forEach((t) => {
     const depDate = t.ngay_xuat_canh || t.departureDate || t.approvedDepartureDate || '';
@@ -2573,13 +2538,12 @@ const stats = computed(() => {
 
     const cName = String(getTripValue(t, countryColId) || t[countryColId] || t.countryName || '').trim();
     const fName = String(getTripValue(t, fundingColId) || t[fundingColId] || t.fundingName || '').trim();
-    const isRelativeTrip = Boolean(t.isRelative || t.isRelativeTrip);
 
     const enrichedTrip = {
       ...t,
       countryName: cName || '-',
       fundingName: fName || '-',
-      isRelativeTrip,
+      isRelativeTrip: false,
     };
 
     filteredTrips.push(enrichedTrip);
@@ -2600,44 +2564,36 @@ const stats = computed(() => {
       }
     }
 
-    // 1. Đếm trực tiếp theo cột Quốc gia đã cài đặt trong Setting
+    // 1. Đếm trực tiếp theo cột Quốc gia đã cài đặt trong Setting (Chỉ Cán bộ)
     if (cName && cName !== '-' && cName !== 'Chưa rõ') {
-      if (!countries[cName]) countries[cName] = { trips: 0, relatives: 0, total: 0 };
-      if (isRelativeTrip) {
-        countries[cName].relatives += 1;
-      } else {
-        countries[cName].trips += 1;
-      }
-      countries[cName].total += 1;
+      if (!countries[cName]) countries[cName] = { trips: 0, count: 0 };
+      countries[cName].trips += 1;
+      countries[cName].count += 1;
     }
 
-    // 2. Đếm trực tiếp theo cột Nguồn kinh phí đã cài đặt trong Setting
+    // 2. Đếm trực tiếp theo cột Nguồn kinh phí đã cài đặt trong Setting (Chỉ Cán bộ)
     if (fName && fName !== '-' && fName !== 'Chưa rõ') {
-      if (!fundings[fName]) fundings[fName] = { trips: 0, relatives: 0, total: 0 };
-      if (isRelativeTrip) {
-        fundings[fName].relatives += 1;
-      } else {
-        fundings[fName].trips += 1;
-      }
-      fundings[fName].total += 1;
+      if (!fundings[fName]) fundings[fName] = { trips: 0, count: 0 };
+      fundings[fName].trips += 1;
+      fundings[fName].count += 1;
     }
   });
 
   const countryList = Object.entries(countries)
     .map(([name, data]) => ({
       name,
-      count: data.total,
-      tripsCount: data.trips,
-      relativesCount: data.relatives,
+      count: data.count || data.trips,
+      tripsCount: data.trips || data.count,
+      relativesCount: 0,
     }))
     .sort((a, b) => b.count - a.count);
 
   const fundingList = Object.entries(fundings)
     .map(([name, data]) => ({
       name,
-      count: data.total,
-      tripsCount: data.trips,
-      relativesCount: data.relatives,
+      count: data.count || data.trips,
+      tripsCount: data.trips || data.count,
+      relativesCount: 0,
     }))
     .sort((a, b) => b.count - a.count);
 
@@ -2843,11 +2799,9 @@ const openDrilldown = (type, title, filterContext = {}) => {
       return c === cTarget;
     });
 
-    drilldownTripsList.value = matchingTrips.filter((t) => !t.isRelativeTrip);
-    drilldownRelativesList.value = matchingTrips.filter((t) => t.isRelativeTrip);
-    drilldownHasDualTabs.value = true;
-    drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
-    drilldownCategory.value = drilldownActiveTab.value;
+    drilldownCategory.value = 'trips';
+    drilldownData.value = matchingTrips;
+    drilldownHasDualTabs.value = false;
   } else if (type === 'funding' && filterContext.fundingName) {
     const fundingColId = colConfig.value.funding || 'nguon_kinh_phi';
     const fTarget = String(filterContext.fundingName).toLowerCase().trim();
@@ -2856,11 +2810,9 @@ const openDrilldown = (type, title, filterContext = {}) => {
       return f === fTarget;
     });
 
-    drilldownTripsList.value = matchingTrips.filter((t) => !t.isRelativeTrip);
-    drilldownRelativesList.value = matchingTrips.filter((t) => t.isRelativeTrip);
-    drilldownHasDualTabs.value = true;
-    drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
-    drilldownCategory.value = drilldownActiveTab.value;
+    drilldownCategory.value = 'trips';
+    drilldownData.value = matchingTrips;
+    drilldownHasDualTabs.value = false;
   } else {
     drilldownCategory.value = 'trips';
     drilldownData.value = [];
