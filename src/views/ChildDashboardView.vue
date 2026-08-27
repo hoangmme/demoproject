@@ -211,7 +211,7 @@
             <span class="table-col-header-ellipsis" :title="col.label">{{ col.label }}</span>
           </template>
           <template #body="{ data }">
-            <!-- 1. Họ và tên người đi (Mỗi cái 1 hàng: Tên, CCCD, Chức vụ, Đơn vị) -->
+            <!-- 1. Họ và tên người đi (Mỗi cái 1 hàng: Tên, CCCD-TN, CCCD-CB, Chức vụ/Quan hệ, Đơn vị) -->
             <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === '_parentPersonnelName' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
                 <!-- Hàng 1: Họ tên (Bôi đậm) -->
@@ -224,17 +224,22 @@
                   </span>
                 </div>
 
-                <!-- Hàng 2: CCCD (Primary Unique Key) -->
-                <div v-if="getPersonInfo(data).cccd" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
-                  {{ getPersonInfo(data).cccd }}
+                <!-- Hàng 2: CCCD Thân nhân (nếu có) -->
+                <div v-if="getPersonInfo(data).cccdTN" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
+                  {{ getPersonInfo(data).cccdTN }}
                 </div>
 
-                <!-- Hàng 3: Chức vụ -->
+                <!-- Hàng 3: CCCD Cán bộ (ghi rõ CCCD-CB) -->
+                <div v-if="getPersonInfo(data).cccdCB" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
+                  {{ getPersonInfo(data).cccdCB }}
+                </div>
+
+                <!-- Hàng 4: Chức vụ / Quan hệ -->
                 <div v-if="getPersonInfo(data).position" style="font-size: 0.72rem; color: #334155;">
                   {{ getPersonInfo(data).position }}
                 </div>
 
-                <!-- Hàng 4: Đơn vị -->
+                <!-- Hàng 5: Đơn vị -->
                 <div v-if="getPersonInfo(data).department" style="font-size: 0.72rem; color: #64748b;">
                   {{ getPersonInfo(data).department }}
                 </div>
@@ -809,7 +814,7 @@ const getActiveCardCellValue = (row) => {
 };
 
 const getPersonInfo = (data) => {
-  if (!data) return { name: '-', cccd: '', position: '', department: '' };
+  if (!data) return { name: '-', cccdTN: '', cccdCB: '', position: '', department: '' };
 
   const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
   const posField = personnelStore.getPersonnelPositionField ? personnelStore.getPersonnelPositionField() : 'position';
@@ -817,16 +822,21 @@ const getPersonInfo = (data) => {
 
   if (data.isRelative) {
     const parentName = data.rawPerson?.name || data.parentName || data.parentPersonnelName || '';
-    const relName = data.relativeName || data.name || 'Thân nhân';
-    const relCccd = data.cccd || data.cccdthannhan || data.rawRelative?.cccd || '';
-    const parentDept = data.rawPerson?.departmentName || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || '';
-    const relationship = data.relationshipName || 'Thân nhân';
+    const relName = data.relativeName || data.name || data.rawRelative?.relativeName || data.rawRelative?.name || data.personnelName || 'Thân nhân';
+    const relCccd = data.cccdthannhan || data.rawRelative?.cccdthannhan || data.rawRelative?.cccd || (!String(data.cccd).startsWith('p_') && !String(data.cccd).startsWith('cd_') && data.cccd !== data.cccdparent ? data.cccd : '');
+    const parentCccd = data.cccdparent || data.parentCccd || data.rawPerson?.cccdparent || data.rawPerson?.cccd || data.rawPerson?.[pKeyField] || '';
+    const parentDept = data.rawPerson?.departmentName || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || data.departmentName || '';
+    const relationship = data.relationshipName || data.rawRelative?.relationshipName || 'Thân nhân';
+
+    const isValidId = (val) => val && String(val).trim() !== '' && String(val).trim() !== '-' && !String(val).startsWith('p_') && !String(val).startsWith('cd_') && !String(val).startsWith('rel_') && !String(val).startsWith('trip_');
 
     return {
       name: relName,
-      cccd: relCccd && String(relCccd).trim() !== '-' ? `CCCD: ${String(relCccd).trim()}` : '',
+      isRelative: true,
+      cccdTN: isValidId(relCccd) ? `CCCD-TN: ${String(relCccd).trim()}` : '',
+      cccdCB: isValidId(parentCccd) ? `CCCD-CB: ${String(parentCccd).trim()}` : '',
       position: parentName ? `${relationship} của: ${parentName}` : relationship,
-      department: parentDept,
+      department: parentDept ? `Đơn vị CB: ${parentDept}` : '',
     };
   }
 
@@ -835,9 +845,13 @@ const getPersonInfo = (data) => {
   const pos = data[posField] || data.rawPerson?.[posField] || data.positionName || data.position || data.rawPerson?.positionName || data.rawPerson?.position || '';
   const dept = data[deptField] || data.rawPerson?.[deptField] || data.departmentName || (data.departmentId ? personnelStore.getDepartmentName(data.departmentId) : '') || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || '';
 
+  const isValidId = (val) => val && String(val).trim() !== '' && String(val).trim() !== '-' && !String(val).startsWith('p_') && !String(val).startsWith('cd_') && !String(val).startsWith('rel_') && !String(val).startsWith('trip_');
+
   return {
     name,
-    cccd: cccd && String(cccd).trim() !== '-' ? `CCCD: ${String(cccd).trim()}` : '',
+    isRelative: false,
+    cccdTN: '',
+    cccdCB: isValidId(cccd) ? `CCCD-CB: ${String(cccd).trim()}` : '',
     position: pos && String(pos).trim() !== '-' ? String(pos).trim() : '',
     department: dept && String(dept).trim() !== '-' ? String(dept).trim() : '',
   };
@@ -1162,9 +1176,11 @@ const unifiedTripsList = computed(() => {
       if (processedTripKeys.has(uniqueKey)) return;
       processedTripKeys.add(uniqueKey);
 
-      const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_');
+      const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
       const pCccd = p.cccd || p.cccdparent || '';
-      const tripCccd = !isInternalId(t.cccdchuyendi) ? t.cccdchuyendi : (!isInternalId(t.cccd) ? t.cccd : pCccd);
+      const relCccd = t.cccdthannhan || (!isInternalId(t.cccd) && isRel ? t.cccd : '');
+      const relName = t.relativeName || (isRel ? 'Thân nhân' : p.name);
+      const relShip = t.relationshipName || (isRel ? 'Thân nhân' : '');
 
       list.push({
         ...custom,
@@ -1173,12 +1189,18 @@ const unifiedTripsList = computed(() => {
         isRelative: isRel,
         personnelId: p.id,
         personnelCode: p.code || '',
-        personnelName: isRel ? (t.relativeName || 'Thân nhân') : p.name,
-        position: isRel ? `TN (${t.relationshipName || 'Thân nhân'}) của: ${p.name}` : (p.positionName || p.position || ''),
-        departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-        cccd: tripCccd || pCccd,
-        cccdchuyendi: tripCccd || pCccd,
+        personnelName: isRel ? relName : p.name,
+        name: isRel ? relName : p.name,
+        relativeName: isRel ? relName : '',
+        relationshipName: relShip,
+        parentName: p.name,
+        parentPersonnelName: p.name,
+        parentCccd: pCccd,
+        cccdthannhan: relCccd,
         cccdparent: pCccd,
+        position: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.positionName || p.position || ''),
+        departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
+        cccd: isRel ? (relCccd || pCccd) : pCccd,
         countryName: cName,
         departureDate: depDate,
         arrivalDate: arrDate,
@@ -1236,10 +1258,12 @@ const unifiedTripsList = computed(() => {
         if (processedTripKeys.has(uniqueKey)) return;
         processedTripKeys.add(uniqueKey);
 
-        const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_');
+        const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
         const rCccd = !isInternalId(r.cccdthannhan) ? r.cccdthannhan : (!isInternalId(r.cccd) ? r.cccd : '');
         const pCccd = p.cccd || p.cccdparent || '';
         const tripCccd = !isInternalId(rt.cccdchuyendi) ? rt.cccdchuyendi : (!isInternalId(rt.cccdthannhan) ? rt.cccdthannhan : (!isInternalId(rt.cccd) ? rt.cccd : rCccd));
+        const relName = r.relativeName || r.name || custom.relativeName || 'Thân nhân';
+        const relShip = r.relationshipName || r.relationship || custom.relationshipName || 'Thân nhân';
 
         list.push({
           ...custom,
@@ -1248,8 +1272,16 @@ const unifiedTripsList = computed(() => {
           isRelative: true,
           personnelId: p.id,
           personnelCode: p.code || '',
-          personnelName: r.relativeName || r.name || 'Thân nhân',
-          position: `TN (${r.relationshipName || 'Thân nhân'}) của: ${p.name}`,
+          personnelName: relName,
+          name: relName,
+          relativeName: relName,
+          relationshipName: relShip,
+          parentName: p.name,
+          parentPersonnelName: p.name,
+          parentCccd: pCccd,
+          cccdthannhan: tripCccd || rCccd,
+          cccdparent: pCccd,
+          position: `${relShip} của: ${p.name}`,
           departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
           countryName: cName,
           departureDate: depDate,
