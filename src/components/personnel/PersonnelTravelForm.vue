@@ -99,16 +99,12 @@ const colIndexMap = computed(() => {
 
 const tripColumns = computed(() => {
   const ignore = new Set(['stt', 'cccdchuyendi', 'cccdparent', 'cccdthannhan']);
-  const isRel = props.isRelative || !!props.form.relationshipName || !!props.form.relativeName;
 
   if (personnelStore.importMappingTrips && personnelStore.importMappingTrips.length > 0) {
     const cols = [];
     personnelStore.importMappingTrips.forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && !ignore.has(c.id) && !cols.some((x) => x.id === c.id)) {
-          if (isRel && c.hideForRelative) {
-            return;
-          }
           cols.push(c);
         }
       });
@@ -117,7 +113,7 @@ const tripColumns = computed(() => {
   }
   const targetGroup = props.group || (personnelStore.importMappingPersonnel || [])[1];
   if (targetGroup && Array.isArray(targetGroup.columns)) {
-    return targetGroup.columns.filter((c) => !ignore.has(c.id) && (!isRel || !c.hideForRelative));
+    return targetGroup.columns.filter((c) => !ignore.has(c.id));
   }
   return [];
 });

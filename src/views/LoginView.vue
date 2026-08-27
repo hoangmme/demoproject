@@ -1,7 +1,7 @@
 <template>
   <div
     class="login-wrapper"
-    :style="{ backgroundImage: customLoginBg ? `url(${customLoginBg})` : 'url(/login-bg.jpg)' }"
+    :style="{ backgroundImage: customLoginBg ? `url(${customLoginBg})` : 'none' }"
   >
     <div class="app-card login-card-grid">
       <!-- CỘT TRÁI: LOGO & ĐƠN VỊ CHỦ QUẢN -->
@@ -75,17 +75,12 @@ const loading = ref(false);
 const customLoginBg = ref('');
 
 onMounted(async () => {
-  const cached = localStorage.getItem('custom_login_bg');
-  if (cached) customLoginBg.value = cached;
   try {
     const bgData = await getAppSettings('custom_login_bg', null);
     if (bgData) {
       customLoginBg.value = bgData;
-      localStorage.setItem('custom_login_bg', bgData);
     }
-  } catch (e) {
-    // fallback to /login-bg.jpg
-  }
+  } catch (e) {}
 });
 
 const handleLogin = async () => {
