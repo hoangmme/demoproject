@@ -699,17 +699,16 @@ export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
   const defaultResult = { status: 'none', label: '-', shortLabel: '-', isWarning: false, cssClass: '' };
   if (!record) return defaultResult;
 
-  const colDep = formulaConfig.formulaColDep || formulaConfig.formulaColA || 'departureDate';
-  const colDecDate = formulaConfig.formulaColDecDate || formulaConfig.formulaColB || 'decisionDate';
+  const colDep = formulaConfig.formulaColDep || formulaConfig.formulaColA || 'ngay_xuat_canh';
+  const colDecDate = formulaConfig.formulaColDecDate || formulaConfig.formulaColB || 'ngay_ban_hanh';
   const labelWarning = formulaConfig.formulaLabelWarning || 'Đi trước khi có quyết định';
 
+  // If single trip item, evaluate ONLY this trip!
   let trips = [];
-  if (Array.isArray(record.trips) && record.trips.length > 0) {
-    trips = record.trips;
-  } else if (Array.isArray(record.tripList) && record.tripList.length > 0) {
-    trips = record.tripList;
-  } else {
+  if (record.departureDate || record.ngay_xuat_canh || record.rawTrip || !Array.isArray(record.trips)) {
     trips = [record];
+  } else {
+    trips = record.trips || [];
   }
 
   for (const t of trips) {
