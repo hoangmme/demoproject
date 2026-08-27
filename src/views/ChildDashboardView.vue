@@ -512,8 +512,8 @@
     <!-- Advanced Word / PDF Export Dialog -->
     <AdvancedDocxExportDialog
       v-model="isExportDocxDialogOpen"
-      :selectedCount="selectedPersonnelForExport.length"
-      :customPersonnelList="selectedPersonnelForExport"
+      :selectedPersonnel="selectedPersonnelForExport"
+      :allPersonnel="allPersonnelForExport"
     />
   </div>
 </template>
@@ -545,19 +545,23 @@ const openAdvancedDocxExport = () => {
 };
 
 const selectedPersonnelForExport = computed(() => {
-  if (selectedTripKeys.value.length > 0) {
-    const selectedKeysSet = new Set(selectedTripKeys.value);
+  if (selectedTrips.value && selectedTrips.value.length > 0) {
     const matchedPIds = new Set();
-    unifiedTripsList.value.forEach((t) => {
-      if (selectedKeysSet.has(t.uniqueKey) && t.personnelId) {
-        matchedPIds.add(t.personnelId);
-      }
+    selectedTrips.value.forEach((t) => {
+      if (t.personnelId) matchedPIds.add(t.personnelId);
+      else if (t.rawPerson?.id) matchedPIds.add(t.rawPerson.id);
     });
     return (personnelStore.personnelList || []).filter((p) => matchedPIds.has(p.id));
   }
-  // Otherwise export all filtered personnel
-  const currentPIds = new Set(filteredList.value.map((t) => t.personnelId).filter(Boolean));
-  return (personnelStore.personnelList || []).filter((p) => currentPIds.has(p.id));
+  return [];
+});
+
+const allPersonnelForExport = computed(() => {
+  const currentPIds = new Set((filteredList.value || []).map((t) => t.personnelId || t.rawPerson?.id).filter(Boolean));
+  if (currentPIds.size > 0) {
+    return (personnelStore.personnelList || []).filter((p) => currentPIds.has(p.id));
+  }
+  return personnelStore.personnelList || [];
 });
 
 // Dynamic Dashboard Topic State

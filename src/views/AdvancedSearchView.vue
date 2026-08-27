@@ -380,6 +380,7 @@
     <AdvancedDocxExportDialog
       v-model="isExportDocxDialogOpen"
       :selectedPersonnel="selectedPersonnelForExport"
+      :allPersonnel="selectedPersonnelForExport"
     />
   </div>
 </template>
