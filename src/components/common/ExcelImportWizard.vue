@@ -267,7 +267,7 @@
                   <!-- Row Number with Warning Indicator -->
                   <td class="col-row-idx">
                     <span :class="['row-num-badge', { 'is-issue': row.issues && row.issues.length > 0 }]">
-                      {{ row.excelRowIndex }}{{ row.issues && row.issues.length > 0 ? ' !' : '' }}
+                      {{ rIdx + 1 }}{{ row.issues && row.issues.length > 0 ? ' !' : '' }}
                     </span>
                   </td>
 
@@ -766,14 +766,9 @@ const validateRowItem = (rowItem) => {
       issues.push(`Thiếu CCCD Cán bộ liên quan (${relParentKeyField})`);
     }
   } else if (targetEntity.value === 'trips') {
-    // Tên người đi
-    const name = data.personnelName || data.name || data.fullName;
-    if (!name || String(name).trim() === '') {
-      issues.push('Thiếu Họ và tên người đi');
-    }
-    // CCCD người đi
+    // CCCD người đi là khóa duy nhất để định danh
     const tripCccd = data[tripKeyField] || data.cccd || data.cccdchuyendi || data.cccdparent;
-    if (!tripCccd || String(tripCccd).trim() === '') {
+    if (!tripCccd || String(tripCccd).trim() === '' || String(tripCccd).trim() === '-') {
       issues.push(`Thiếu CCCD người đi (${tripKeyField})`);
     }
   }
@@ -808,8 +803,7 @@ const isCellInvalid = (row, colId) => {
     if ((colId === 'relativeName' || colId === 'name') && (!val || String(val).trim() === '')) return true;
     if ((colId === relParentKeyField || colId === 'parentCccd' || colId === 'cccdparent') && (!val || String(val).trim() === '')) return true;
   } else if (targetEntity.value === 'trips') {
-    if ((colId === 'personnelName' || colId === 'name') && (!val || String(val).trim() === '')) return true;
-    if ((colId === tripKeyField || colId === 'cccd' || colId === 'cccdchuyendi') && (!val || String(val).trim() === '')) return true;
+    if ((colId === tripKeyField || colId === 'cccd' || colId === 'cccdchuyendi' || colId === 'cccdparent') && (!val || String(val).trim() === '' || String(val).trim() === '-')) return true;
   }
 
   // Check date cell
@@ -990,37 +984,62 @@ const executeImport = async () => {
         }
       }
     } else if (targetEntity.value === 'trips') {
-      // Import chuyến đi gắn vào cán bộ
+      // Import chuyến đi gắn vào cán bộ hoặc thân nhân
       for (const rowItem of rowsToImport) {
         const rowData = { ...rowItem.data };
         const tripCccd = String(rowData[tripKeyField] || rowData.cccd || rowData.cccdchuyendi || rowData.cccdparent || '').trim();
-        const parentPerson = personnelStore.personnelList.find(p => {
+        
+        let resolvedPerson = personnelStore.personnelList.find(p => {
           const pCccd = p[pKeyField] || p.cccd || p.cccdparent || p.custom_data?.[pKeyField];
           return pCccd && String(pCccd).trim() === tripCccd;
         });
+        let resolvedName = rowData.personnelName || rowData.name || '';
+        let isRelativeTrip = false;
+
+        if (!resolvedPerson) {
+          // Kiểm tra xem có phải CCCD của thân nhân không
+          for (const p of (personnelStore.personnelList || [])) {
+            const rels = Array.isArray(p.relatives) ? p.relatives : [];
+            const matchedRel = rels.find(r => {
+              const rCccd = r.cccdthannhan || r.cccd || r.custom_data?.cccdthannhan;
+              return rCccd && String(rCccd).trim() === tripCccd;
+            });
+            if (matchedRel) {
+              resolvedPerson = p;
+              if (!resolvedName) resolvedName = matchedRel.relativeName || matchedRel.name || '';
+              isRelativeTrip = true;
+              break;
+            }
+          }
+        }
+
+        if (resolvedPerson && !resolvedName) {
+          resolvedName = resolvedPerson.name;
+        }
 
         const newTripId = 'trip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
         const tripPayload = {
           id: newTripId,
-          personnelId: parentPerson ? parentPerson.id : '',
-          personnelName: parentPerson ? parentPerson.name : (rowData.personnelName || rowData.name || ''),
+          personnelId: resolvedPerson ? resolvedPerson.id : '',
+          personnelName: resolvedName,
           cccd: tripCccd,
+          isRelative: isRelativeTrip,
           ...rowData,
           custom_data: { ...rowData },
         };
 
-        if (parentPerson) {
-          const currentTrips = Array.isArray(parentPerson.trips) ? [...parentPerson.trips] : [];
+        if (resolvedPerson) {
+          const currentTrips = Array.isArray(resolvedPerson.trips) ? [...resolvedPerson.trips] : [];
           currentTrips.push(tripPayload);
           const updatedParent = {
-            ...parentPerson,
+            ...resolvedPerson,
             trips: currentTrips,
             custom_data: {
-              ...(parentPerson.custom_data || {}),
+              ...(resolvedPerson.custom_data || {}),
               trips: currentTrips,
             },
           };
-          await updatePersonnel(parentPerson.id, updatedParent);
+          await updatePersonnel(resolvedPerson.id, updatedParent);
           createdCount++;
         }
       }
