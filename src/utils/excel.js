@@ -26,31 +26,35 @@ export const getSubOptionsList = (col) => {
   return [];
 };
 
-// Export Full Columns for Personnel with clean column headers
+// Export Full Columns for Personnel with [Cột N] prefix
 export const exportFullPersonnelExcel = (personnelList, mappingConfig, getDepartmentName) => {
+  let currentColIdx = 0;
   const columnHeaders = [];
 
   (mappingConfig || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      currentColIdx++;
       if (c.id === 'stt') {
-        columnHeaders.push({ id: 'stt', header: c.label || 'STT', col: c });
+        columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
         return;
       }
 
       const subOpts = getSubOptionsList(c);
       if (subOpts.length > 1) {
-        subOpts.forEach((opt) => {
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = currentColIdx + sIdx;
           columnHeaders.push({
             id: c.id,
             subOpt: opt,
-            header: `${c.label || c.id}: ${opt}`,
+            header: `[Cột ${colNum}] ${c.label || c.id}: ${opt}`,
             col: c,
           });
         });
+        currentColIdx += (subOpts.length - 1);
       } else {
         columnHeaders.push({
           id: c.id,
-          header: c.label || c.id,
+          header: `[Cột ${currentColIdx}] ${c.label || c.id}`,
           col: c,
         });
       }
@@ -86,31 +90,35 @@ export const exportFullPersonnelExcel = (personnelList, mappingConfig, getDepart
   exportToExcel(rows, 'Danh_sach_Can_bo', 'Hồ sơ Cán bộ');
 };
 
-// Export Full Columns for Relatives with clean column headers
+// Export Full Columns for Relatives with [Cột N] prefix
 export const exportFullRelativesExcel = (relativesList, mappingConfig) => {
+  let currentColIdx = 0;
   const columnHeaders = [];
 
   (mappingConfig || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      currentColIdx++;
       if (c.id === 'stt') {
-        columnHeaders.push({ id: 'stt', header: c.label || 'STT', col: c });
+        columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
         return;
       }
 
       const subOpts = getSubOptionsList(c);
       if (subOpts.length > 1) {
-        subOpts.forEach((opt) => {
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = currentColIdx + sIdx;
           columnHeaders.push({
             id: c.id,
             subOpt: opt,
-            header: `${c.label || c.id}: ${opt}`,
+            header: `[Cột ${colNum}] ${c.label || c.id}: ${opt}`,
             col: c,
           });
         });
+        currentColIdx += (subOpts.length - 1);
       } else {
         columnHeaders.push({
           id: c.id,
-          header: c.label || c.id,
+          header: `[Cột ${currentColIdx}] ${c.label || c.id}`,
           col: c,
         });
       }
@@ -146,31 +154,35 @@ export const exportFullRelativesExcel = (relativesList, mappingConfig) => {
   exportToExcel(rows, 'Danh_sach_Than_nhan', 'Hồ sơ Thân nhân');
 };
 
-// Export Full Columns for Trips with clean column headers
+// Export Full Columns for Trips with [Cột N] prefix
 export const exportFullTripsExcel = (tripsList, mappingConfig, getDepartmentName) => {
+  let currentColIdx = 0;
   const columnHeaders = [];
 
   (mappingConfig || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      currentColIdx++;
       if (c.id === 'stt') {
-        columnHeaders.push({ id: 'stt', header: c.label || 'STT', col: c });
+        columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
         return;
       }
 
       const subOpts = getSubOptionsList(c);
       if (subOpts.length > 1) {
-        subOpts.forEach((opt) => {
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = currentColIdx + sIdx;
           columnHeaders.push({
             id: c.id,
             subOpt: opt,
-            header: `${c.label || c.id}: ${opt}`,
+            header: `[Cột ${colNum}] ${c.label || c.id}: ${opt}`,
             col: c,
           });
         });
+        currentColIdx += (subOpts.length - 1);
       } else {
         columnHeaders.push({
           id: c.id,
-          header: c.label || c.id,
+          header: `[Cột ${currentColIdx}] ${c.label || c.id}`,
           col: c,
         });
       }
