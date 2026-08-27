@@ -1334,10 +1334,11 @@ const openTripDetail = (t) => {
 
 const openRelativeDetail = (r) => {
   if (!r) return;
-  let parent = null;
-  if (r.cccd_can_bo) {
+  let parent = r.rawPerson || null;
+  if (!parent && (r.cccd_can_bo || r.cccdparent || r.parentCccd)) {
+    const targetCccd = String(r.cccd_can_bo || r.cccdparent || r.parentCccd).trim();
     parent = (personnelStore.personnelList || []).find(
-      (p) => String(p.cccdparent || p.cccd || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim() === String(r.cccd_can_bo).trim()
+      (p) => String(p.cccdparent || p.cccd || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim() === targetCccd
     );
   }
   if (!parent && r.personnelId) {
@@ -1787,10 +1788,25 @@ const getRowFieldValue = (row, colId) => {
   // 2. Direct property lookup
   let raw = row[colId];
   if (raw === undefined || raw === null || raw === '') {
-    raw = row.custom_data?.[colId] ?? row.rawTrip?.[colId] ?? row.rawPerson?.[colId] ?? row.rawTrip?.custom_data?.[colId] ?? row.rawPerson?.custom_data?.[colId];
+    raw = row.custom_data?.[colId] ?? row.rawTrip?.[colId] ?? row.rawPerson?.[colId] ?? row.rawRelative?.[colId] ?? row.rawTrip?.custom_data?.[colId] ?? row.rawPerson?.custom_data?.[colId] ?? row.rawRelative?.custom_data?.[colId];
   }
-  if ((raw === undefined || raw === null || raw === '') && (colId === 'personnelName' || colId === 'name')) {
-    raw = row.personnelName || row.name || row.rawPerson?.name;
+  if ((raw === undefined || raw === null || raw === '') && (colId === 'personnelName' || colId === 'name' || colId === 'relativeName')) {
+    raw = row.relativeName || row.personnelName || row.name || row.rawRelative?.relativeName || row.rawRelative?.name || row.rawPerson?.name;
+  }
+  if ((raw === undefined || raw === null || raw === '') && (colId === 'relationshipName' || colId === 'relationship')) {
+    raw = row.relationshipName || row.relationship || row.rawRelative?.relationshipName;
+  }
+  if ((raw === undefined || raw === null || raw === '') && (colId === 'cccdparent' || colId === 'cccd_can_bo')) {
+    raw = row.cccdparent || row.cccd_can_bo || row.rawPerson?.cccdparent || row.rawPerson?.cccd;
+  }
+  if ((raw === undefined || raw === null || raw === '') && (colId === 'cccdthannhan' || colId === 'cccd')) {
+    raw = row.cccdthannhan || row.rawRelative?.cccdthannhan || (row.isRelativeTrip ? row.cccd : '');
+  }
+  if ((raw === undefined || raw === null || raw === '') && (colId === 'birthYear' || colId === 'birthYearTN' || colId === 'nam_sinh')) {
+    raw = row.birthYear || row.birthYearTN || row.rawRelative?.birthYear || row.rawRelative?.birthYearTN || row.custom_data?.birthYearTN || row.custom_data?.birthYear;
+  }
+  if ((raw === undefined || raw === null || raw === '') && (colId === 'currentAddress' || colId === 'noi_o_hien_nay')) {
+    raw = row.currentAddress || row.rawRelative?.currentAddress || row.custom_data?.currentAddress;
   }
   if ((raw === undefined || raw === null || raw === '') && (colId === 'personnelCode' || colId === 'code')) {
     raw = row.personnelCode || row.code || row.rawPerson?.code;
@@ -2524,18 +2540,43 @@ const stats = computed(() => {
   const processedTripIds = new Set();
 
   pList.forEach((p) => {
+    let pCustom = {};
+    if (p.custom_data) {
+      try {
+        pCustom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+      } catch (e) {}
+    }
+    const pCccd = p.cccd || p.cccdparent || pCustom.cccdparent || pCustom.cccd || '';
+
     (p.trips || []).forEach((t, tIdx) => {
+      let tCustom = {};
+      if (t.custom_data) {
+        try {
+          tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+        } catch (e) {}
+      }
       const tid = t.id || `trip_${p.id}_${tIdx}`;
       if (!processedTripIds.has(tid)) {
         processedTripIds.add(tid);
+        const isRel = Boolean(t.isRelative || t.relativeName || t.cccdthannhan);
         allTripsToProcess.push({
+          ...pCustom,
+          ...p,
+          ...tCustom,
           ...t,
           personnelId: p.id,
           personnelCode: p.code || p.id,
-          personnelName: p.name,
+          personnelName: isRel ? (t.relativeName || 'Thân nhân') : p.name,
+          name: isRel ? (t.relativeName || 'Thân nhân') : p.name,
           departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
-          position: p.positionName || p.position || '',
-          isRelativeTrip: false,
+          position: isRel ? `TN (${t.relationshipName || 'Thân nhân'}) của: ${p.name}` : (p.positionName || p.position || ''),
+          parentName: p.name,
+          parentPersonnelName: p.name,
+          parentPosition: p.positionName || p.position || '',
+          parentDepartment: p.departmentName || '',
+          cccdparent: pCccd,
+          cccdthannhan: t.cccdthannhan || '',
+          isRelativeTrip: isRel,
           rawPerson: p,
           rawTrip: t,
         });
@@ -2544,17 +2585,50 @@ const stats = computed(() => {
 
     // Check trips nested inside relatives
     (p.relatives || []).forEach((r, rIdx) => {
+      let rCustom = {};
+      if (r.custom_data) {
+        try {
+          rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
+        } catch (e) {}
+      }
+      const relName = r.relativeName || r.name || rCustom.relativeName || 'Thân nhân';
+      const relShip = r.relationshipName || r.relationship || rCustom.relationshipName || 'Thân nhân';
+      const rCccd = r.cccdthannhan || r.cccd || rCustom.cccdthannhan || rCustom.cccd || '';
+
       (r.trips || []).forEach((t, tIdx) => {
+        let tCustom = {};
+        if (t.custom_data) {
+          try {
+            tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+          } catch (e) {}
+        }
         const tid = t.id || `rel_trip_${p.id}_${rIdx}_${tIdx}`;
         if (!processedTripIds.has(tid)) {
           processedTripIds.add(tid);
           allTripsToProcess.push({
+            ...pCustom,
+            ...rCustom,
+            ...r,
+            ...tCustom,
             ...t,
             personnelId: p.id,
             personnelCode: p.code || p.id,
-            personnelName: r.relativeName || r.name || 'Thân nhân',
+            personnelName: relName,
+            name: relName,
+            relativeName: relName,
+            relationshipName: relShip,
+            parentName: p.name,
+            parentPersonnelName: p.name,
+            parentPosition: p.positionName || p.position || '',
+            parentDepartment: p.departmentName || '',
+            cccdparent: pCccd,
+            cccdthannhan: rCccd || t.cccdthannhan || '',
+            birthYear: r.birthYear || r.birthYearTN || rCustom.birthYearTN || rCustom.birthYear || '',
+            currentAddress: r.currentAddress || rCustom.currentAddress || '',
+            occupation: r.occupation || rCustom.occupation || '',
+            countryName: t.quoc_gia_xuat_canh || tCustom.quoc_gia_xuat_canh || t.countryName || r.countryName || rCustom.countryNameTN || '',
             departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
-            position: `TN (${r.relationshipName || 'Thân nhân'}) của: ${p.name}`,
+            position: `TN (${relShip}) của: ${p.name}`,
             isRelativeTrip: true,
             matchedRelative: r,
             rawPerson: p,
@@ -2906,8 +2980,29 @@ const openDrilldown = (type, title, filterContext = {}) => {
       return c === cTarget || (cTarget === 'mỹ-canada' && (c.includes('mỹ') || c.includes('canada')));
     });
 
+    const relTripMatches = matchingTrips.filter((t) => t.isRelativeTrip);
+    const relListMatches = (personnelStore.relativesList || []).filter((r) => {
+      const c = String(r.countryName || r.country || r.countryNameTN || r.custom_data?.countryNameTN || r.custom_data?.countryName || '').toLowerCase().trim();
+      return c === cTarget || (cTarget === 'mỹ-canada' && (c.includes('mỹ') || c.includes('canada')));
+    });
+
+    const seenRelKeys = new Set();
+    const mergedRelatives = [];
+    relTripMatches.forEach((r) => {
+      const key = r.cccdthannhan || r.id || `${r.personnelId}_${r.relativeName}`;
+      seenRelKeys.add(key);
+      mergedRelatives.push(r);
+    });
+    relListMatches.forEach((r) => {
+      const key = r.cccdthannhan || r.cccd || r.id || `${r.personnelId}_${r.relativeName || r.name}`;
+      if (!seenRelKeys.has(key)) {
+        seenRelKeys.add(key);
+        mergedRelatives.push(r);
+      }
+    });
+
     drilldownTripsList.value = matchingTrips.filter((t) => !t.isRelativeTrip);
-    drilldownRelativesList.value = matchingTrips.filter((t) => t.isRelativeTrip);
+    drilldownRelativesList.value = mergedRelatives;
     drilldownHasDualTabs.value = true;
     drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
     drilldownCategory.value = drilldownActiveTab.value;
