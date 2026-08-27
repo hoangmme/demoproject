@@ -1574,20 +1574,12 @@ const getTripPresence = (t) => computeTripPresence(t);
 const unifiedTripsList = computed(() => {
   const list = [];
   const pList = personnelStore.personnelList || [];
+  const now = new Date();
   const processedTripKeys = new Set();
 
   pList.forEach((p) => {
-    let pCustom = {};
-    if (p.custom_data) {
-      try {
-        pCustom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
-      } catch (e) {}
-    }
-    const pCccd = p.cccd || p.cccdparent || pCustom.cccdparent || pCustom.cccd || '';
-
-    // 1. Chuyến đi của Cán bộ (p.trips hoặc custom_data.trips)
-    const pTrips = p.trips || pCustom.trips || [];
-    (pTrips || []).forEach((t, tIdx) => {
+    // 1. Chuyến đi của Cán bộ (p.trips)
+    (p.trips || []).forEach((t, tIdx) => {
       let custom = {};
       if (t.custom_data) {
         try {
@@ -1595,15 +1587,16 @@ const unifiedTripsList = computed(() => {
         } catch (e) {}
       }
 
-      const cName = t.quoc_gia_xuat_canh || custom.quoc_gia_xuat_canh || t.countryName || custom.countryName || t.country || custom.quocGia || custom.nuocDen || '';
-      const depDate = t.ngay_xuat_canh || custom.ngay_xuat_canh || t.departureDate || custom.departureDate || t.ngayDi || custom.ngayDi || t.approvedDepartureDate || '';
-      const arrDate = t.ngay_nhap_canh || custom.ngay_nhap_canh || t.arrivalDate || custom.arrivalDate || t.ngayVe || custom.ngayVe || '';
-      const appArrDate = t.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || t.approvedArrivalDate || custom.approvedArrivalDate || t.thoiGianDuyetVe || '';
-      const extDate = t.gia_han_den_ngay || custom.gia_han_den_ngay || t.approvedExtensionDate || custom.approvedExtensionDate || t.thoi_gian_duyet_gia_han || '';
-      const dNum = t.so_quyet_dinh || custom.so_quyet_dinh || t.decisionNumber || custom.decisionNumber || t.decision || '';
-      const fName = t.nguon_kinh_phi || custom.nguon_kinh_phi || t.fundingName || custom.fundingName || t.funding || t.kinh_phi || t.nguonKinhPhi || custom.kinh_phi || '';
-      const purpose = t.muc_dich_xuat_canh || custom.muc_dich_xuat_canh || t.purpose || custom.purpose || '';
+      const cName = t.countryName || custom.countryName || t.country || custom.quoc_gia_xuat_canh || '';
+      const depDate = t.departureDate || custom.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || custom.ngay_xuat_canh || t.ngayDi || custom.ngayDi || '';
+      const arrDate = t.arrivalDate || custom.arrivalDate || t.ngay_nhap_canh || custom.ngay_nhap_canh || t.ngayVe || custom.ngayVe || '';
+      const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || t.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || t.thoiGianDuyetVe || '';
+      const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || t.gia_han_den_ngay || custom.gia_han_den_ngay || '';
+      const dNum = t.decisionNumber || custom.decisionNumber || t.decision || '';
+      const fName = t.fundingName || t.funding || t.nguon_kinh_phi || t.kinh_phi || t.nguonKinhPhi || t.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
+      const purpose = t.purpose || custom.purpose || '';
 
+      // Skip empty/dummy placeholder trip objects that have no real data
       if (!cName && !depDate && !arrDate && !dNum && !purpose) {
         return;
       }
@@ -1622,18 +1615,16 @@ const unifiedTripsList = computed(() => {
       processedTripKeys.add(uniqueKey);
 
       const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-      const tripCccd = !isInternalId(t.cccdchuyendi) ? t.cccdchuyendi : (!isInternalId(t.cccd) ? t.cccd : pCccd);
+      const pCccd = p.cccd || p.cccdparent || '';
       const relCccd = t.cccdthannhan || (!isInternalId(t.cccd) && isRel ? t.cccd : '');
       const relName = t.relativeName || (isRel ? 'Thân nhân' : p.name);
       const relShip = t.relationshipName || (isRel ? 'Thân nhân' : '');
 
       list.push({
-        ...pCustom,
         ...custom,
         ...t,
         uniqueKey,
         isRelative: isRel,
-        isRelativeTrip: isRel,
         personnelId: p.id,
         personnelCode: p.code || '',
         personnelName: isRel ? relName : p.name,
@@ -1642,15 +1633,12 @@ const unifiedTripsList = computed(() => {
         relationshipName: relShip,
         parentName: p.name,
         parentPersonnelName: p.name,
-        parentPosition: p.positionName || p.position || '',
-        parentDepartment: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
         parentCccd: pCccd,
         cccdthannhan: relCccd,
         cccdparent: pCccd,
-        position: isRel ? `TN (${relShip || 'Thân nhân'}) của: ${p.name}` : (p.positionName || p.position || ''),
-        departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
-        cccd: isRel ? (relCccd || pCccd) : (tripCccd || pCccd),
-        cccdchuyendi: tripCccd || pCccd,
+        position: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.positionName || p.position || ''),
+        departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
+        cccd: isRel ? (relCccd || pCccd) : pCccd,
         countryName: cName,
         departureDate: depDate,
         arrivalDate: arrDate,
@@ -1672,21 +1660,9 @@ const unifiedTripsList = computed(() => {
       });
     });
 
-    // 2. Chuyến đi của Thân nhân (p.relatives[].trips hoặc custom_data.relatives)
-    const pRelatives = p.relatives || pCustom.relatives || [];
-    (pRelatives || []).forEach((r, rIdx) => {
-      let rCustom = {};
-      if (r.custom_data) {
-        try {
-          rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
-        } catch (e) {}
-      }
-      const relName = r.relativeName || r.name || rCustom.relativeName || 'Thân nhân';
-      const relShip = r.relationshipName || r.relationship || rCustom.relationshipName || 'Thân nhân';
-      const rCccd = r.cccdthannhan || r.cccd || rCustom.cccdthannhan || rCustom.cccd || '';
-
-      const rTrips = r.trips || rCustom.trips || [];
-      (rTrips || []).forEach((rt, rtIdx) => {
+    // 2. Chuyến đi của Thân nhân (p.relatives[].trips)
+    (p.relatives || []).forEach((r, rIdx) => {
+      (r.trips || []).forEach((rt, rtIdx) => {
         let custom = {};
         if (rt.custom_data) {
           try {
@@ -1694,15 +1670,16 @@ const unifiedTripsList = computed(() => {
           } catch (e) {}
         }
 
-        const cName = rt.quoc_gia_xuat_canh || custom.quoc_gia_xuat_canh || rt.countryName || custom.countryName || rt.country || r.countryName || rCustom.countryNameTN || '';
-        const depDate = rt.ngay_xuat_canh || custom.ngay_xuat_canh || rt.departureDate || custom.departureDate || rt.ngayDi || custom.ngayDi || rt.approvedDepartureDate || '';
-        const arrDate = rt.ngay_nhap_canh || custom.ngay_nhap_canh || rt.arrivalDate || custom.arrivalDate || rt.ngayVe || custom.ngayVe || '';
-        const appArrDate = rt.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || rt.approvedArrivalDate || custom.approvedArrivalDate || rt.thoiGianDuyetVe || '';
-        const extDate = rt.gia_han_den_ngay || custom.gia_han_den_ngay || rt.approvedExtensionDate || custom.approvedExtensionDate || '';
-        const dNum = rt.so_quyet_dinh || custom.so_quyet_dinh || rt.decisionNumber || custom.decisionNumber || '';
-        const fName = rt.nguon_kinh_phi || custom.nguon_kinh_phi || rt.fundingName || custom.fundingName || rt.funding || rt.kinh_phi || rt.nguonKinhPhi || custom.kinh_phi || '';
-        const purpose = rt.muc_dich_xuat_canh || custom.muc_dich_xuat_canh || rt.purpose || custom.purpose || '';
+        const cName = rt.countryName || custom.countryName || rt.country || r.countryName || '';
+        const depDate = rt.departureDate || custom.departureDate || rt.ngay_xuat_canh || custom.ngay_xuat_canh || rt.ngayDi || custom.ngayDi || '';
+        const arrDate = rt.arrivalDate || custom.arrivalDate || rt.ngay_nhap_canh || custom.ngay_nhap_canh || rt.ngayVe || custom.ngayVe || '';
+        const appArrDate = rt.approvedArrivalDate || custom.approvedArrivalDate || rt.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || rt.thoiGianDuyetVe || '';
+        const extDate = rt.approvedExtensionDate || custom.approvedExtensionDate || rt.gia_han_den_ngay || custom.gia_han_den_ngay || '';
+        const dNum = rt.decisionNumber || custom.decisionNumber || '';
+        const fName = rt.fundingName || rt.funding || rt.nguon_kinh_phi || rt.kinh_phi || rt.nguonKinhPhi || rt.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
+        const purpose = rt.purpose || custom.purpose || '';
 
+        // Skip empty/dummy placeholder trip objects
         if (!cName && !depDate && !arrDate && !dNum && !purpose) {
           return;
         }
@@ -1720,17 +1697,17 @@ const unifiedTripsList = computed(() => {
         processedTripKeys.add(uniqueKey);
 
         const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
+        const rCccd = !isInternalId(r.cccdthannhan) ? r.cccdthannhan : (!isInternalId(r.cccd) ? r.cccd : '');
+        const pCccd = p.cccd || p.cccdparent || '';
         const tripCccd = !isInternalId(rt.cccdchuyendi) ? rt.cccdchuyendi : (!isInternalId(rt.cccdthannhan) ? rt.cccdthannhan : (!isInternalId(rt.cccd) ? rt.cccd : rCccd));
+        const relName = r.relativeName || r.name || custom.relativeName || 'Thân nhân';
+        const relShip = r.relationshipName || r.relationship || custom.relationshipName || 'Thân nhân';
 
         list.push({
-          ...pCustom,
-          ...rCustom,
-          ...r,
           ...custom,
           ...rt,
           uniqueKey,
           isRelative: true,
-          isRelativeTrip: true,
           personnelId: p.id,
           personnelCode: p.code || '',
           personnelName: relName,
@@ -1739,18 +1716,11 @@ const unifiedTripsList = computed(() => {
           relationshipName: relShip,
           parentName: p.name,
           parentPersonnelName: p.name,
-          parentPosition: p.positionName || p.position || '',
-          parentDepartment: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
           parentCccd: pCccd,
-          cccdparent: pCccd,
           cccdthannhan: tripCccd || rCccd,
-          birthYear: r.birthYear || r.birthYearTN || rCustom.birthYearTN || rCustom.birthYear || '',
-          currentAddress: r.currentAddress || rCustom.currentAddress || '',
-          occupation: r.occupation || rCustom.occupation || '',
-          position: `TN (${relShip}) của: ${p.name}`,
-          departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
-          cccd: tripCccd || rCccd || pCccd,
-          cccdchuyendi: tripCccd || rCccd || pCccd,
+          cccdparent: pCccd,
+          position: `${relShip} của: ${p.name}`,
+          departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
           countryName: cName,
           departureDate: depDate,
           arrivalDate: arrDate,
@@ -1759,7 +1729,7 @@ const unifiedTripsList = computed(() => {
           approvedExtensionDate: extDate,
           decisionNumber: dNum,
           fundingName: fName,
-          purpose,
+          purpose: rt.purpose || custom.purpose || '',
           passportNumber: rt.passportNumber || custom.passportNumber || '',
           isAbroad: presence.isAbroad,
           isOverdue: presence.isOverdue,
@@ -1777,6 +1747,7 @@ const unifiedTripsList = computed(() => {
 
   return list;
 });
+
 
 const getRowFieldValue = (row, colId) => {
   if (!row || !colId) return '';
