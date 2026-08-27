@@ -47,14 +47,6 @@ export const getUsers = async () => {
     }
   } catch (e) {}
 
-  const local = localStorage.getItem('custom_system_users');
-  if (local) {
-    try {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    } catch (e) {}
-  }
-
   return DEFAULT_USERS_DATA;
 };
 
@@ -85,7 +77,6 @@ export const createUser = async (userData) => {
     status: userData.status || 'active',
   };
   const updated = [newUser, ...currentUsers.filter((u) => u.id !== newUser.id)];
-  localStorage.setItem('custom_system_users', JSON.stringify(updated));
   try {
     await saveAppSettings('custom_system_users', updated);
   } catch (e) {}
@@ -102,7 +93,6 @@ export const updateUser = async (id, userData) => {
   const idx = currentUsers.findIndex((u) => u.id === id);
   if (idx !== -1) {
     currentUsers[idx] = { ...currentUsers[idx], ...userData };
-    localStorage.setItem('custom_system_users', JSON.stringify(currentUsers));
     try {
       await saveAppSettings('custom_system_users', currentUsers);
     } catch (e) {}
@@ -118,7 +108,6 @@ export const deleteUser = async (id) => {
 
   const currentUsers = await getUsers();
   const updated = currentUsers.filter((u) => u.id !== id);
-  localStorage.setItem('custom_system_users', JSON.stringify(updated));
   try {
     await saveAppSettings('custom_system_users', updated);
   } catch (e) {}

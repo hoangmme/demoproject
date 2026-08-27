@@ -1088,8 +1088,6 @@ const selectedColIds = ref([]);
 const onColumnsChange = async (newCols) => {
   selectedColIds.value = [...newCols];
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
-  localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
-  localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
 
   try {
     await saveAppSettings(currentKey, selectedColIds.value);
@@ -1782,8 +1780,6 @@ const resetDefaultColumns = () => {
 
 const saveColumnSelection = async () => {
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
-  localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
-  localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
 
   // Also persist into customDashboards in DB
   const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
@@ -1793,6 +1789,11 @@ const saveColumnSelection = async () => {
       await saveAppSettings('custom_dashboards_config', customDashboards.value);
     } catch (e) {}
   }
+
+  try {
+    await saveAppSettings(currentKey, selectedColIds.value);
+    await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
+  } catch (e) {}
   isColumnPickerOpen.value = false;
 };
 
@@ -2002,10 +2003,6 @@ const loadCustomDashboards = async () => {
     const saved = await getAppSettings('custom_dashboards_config', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
       customDashboards.value = saved;
-      localStorage.setItem('custom_dashboards_config', JSON.stringify(saved));
-    } else {
-      const local = localStorage.getItem('custom_dashboards_config');
-      if (local) customDashboards.value = JSON.parse(local);
     }
   } catch (e) {
     console.error('Error loading custom dashboards in ChildDashboardView:', e);
@@ -2023,7 +2020,6 @@ const initTopicColumns = async () => {
       const validDb = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
       if (validDb.length > 0) {
         selectedColIds.value = validDb;
-        localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
         return;
       }
     }
@@ -2038,19 +2034,7 @@ const initTopicColumns = async () => {
     }
   }
 
-  // 3. Fallback to localStorage for this specific topic
-  const savedCols = localStorage.getItem(currentKey);
-  if (savedCols) {
-    try {
-      const parsed = JSON.parse(savedCols).filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
-      if (parsed.length > 0) {
-        selectedColIds.value = parsed;
-        return;
-      }
-    } catch (e) {}
-  }
-
-  // 4. Default: all available columns for this topic
+  // 3. Default: all available columns for this topic
   selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
 };
 

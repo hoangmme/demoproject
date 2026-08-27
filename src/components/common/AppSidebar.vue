@@ -274,9 +274,6 @@ const loadSidebarData = async () => {
     const saved = await getAppSettings('custom_appendices_config', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
       dynamicAppendices.value = saved;
-    } else {
-      const local = localStorage.getItem('custom_appendices_config');
-      if (local) dynamicAppendices.value = JSON.parse(local);
     }
   } catch (e) {
     console.error('Error loading sidebar appendices:', e);
@@ -286,10 +283,6 @@ const loadSidebarData = async () => {
     const savedDash = await getAppSettings('custom_dashboards_config', null);
     if (savedDash && Array.isArray(savedDash) && savedDash.length > 0) {
       dynamicDashboards.value = savedDash;
-      localStorage.setItem('custom_dashboards_config', JSON.stringify(savedDash));
-    } else {
-      const local = localStorage.getItem('custom_dashboards_config');
-      if (local) dynamicDashboards.value = JSON.parse(local);
     }
   } catch (e) {
     console.error('Error loading sidebar dashboards:', e);

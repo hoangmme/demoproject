@@ -1,41 +1,31 @@
 import apiClient from './client';
 
-// High-speed In-Memory Settings Cache
-const settingsCache = new Map();
-
-export const getAppSettings = async (key, defaultValue = null, forceRefresh = false) => {
-  // 1. Check memory cache (0ms)
-  if (!forceRefresh && settingsCache.has(key)) {
-    return settingsCache.get(key);
-  }
-
-  // 2. Check localStorage cache (0ms)
-  if (!forceRefresh && typeof window !== 'undefined') {
-    const local = localStorage.getItem(`app_setting_${key}`);
-    if (local !== null && local !== undefined) {
-      try {
-        const parsed = JSON.parse(local);
-        settingsCache.set(key, parsed);
-        return parsed;
-      } catch {
-        settingsCache.set(key, local);
-        return local;
+// Tự động dọn dẹp các key app_setting_* cũ trong localStorage khi tải web
+if (typeof window !== 'undefined') {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('app_setting_') || k.startsWith('custom_dashboards_') || k.startsWith('dashboard_'))) {
+        keysToRemove.push(k);
       }
     }
-  }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch (e) {}
+}
 
-  // 3. Fetch from Directus API if cache misses
+export const getAppSettings = async (key, defaultValue = null) => {
+  // Luôn truy vấn trực tiếp từ Directus Database (100% thời gian thực)
   try {
     const res = await apiClient.get('/items/app_settings', {
       params: {
         filter: { key: { _eq: key } },
-        _t: forceRefresh ? Date.now() : undefined,
+        _t: Date.now(),
       },
     });
     if (res.data?.data && res.data.data.length > 0) {
       const val = res.data.data[0].value;
       if (val === null || val === undefined || val === '') {
-        settingsCache.set(key, defaultValue);
         return defaultValue;
       }
       let finalVal = val;
@@ -46,34 +36,24 @@ export const getAppSettings = async (key, defaultValue = null, forceRefresh = fa
           finalVal = val;
         }
       }
-      // Update memory & localStorage cache
-      settingsCache.set(key, finalVal);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`app_setting_${key}`, typeof finalVal === 'object' ? JSON.stringify(finalVal) : String(finalVal));
-      }
       return finalVal;
     }
   } catch (e) {
     console.warn('Error fetching app settings for key:', key, e);
   }
 
-  settingsCache.set(key, defaultValue);
   return defaultValue;
 };
 
 export const saveAppSettings = async (key, value) => {
-  // 1. Immediately update in-memory and localStorage cache for 0ms reads
-  settingsCache.set(key, value);
   const serialized = (typeof value === 'object' && value !== null) ? JSON.stringify(value) : (value === null ? '' : String(value));
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(`app_setting_${key}`, serialized);
-  }
 
-  // 2. Persist to Directus DB
+  // Ghi trực tiếp lên Directus Database
   try {
     const res = await apiClient.get('/items/app_settings', {
       params: {
         filter: { key: { _eq: key } },
+        _t: Date.now(),
       },
     });
     if (res.data?.data && res.data.data.length > 0) {

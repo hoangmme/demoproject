@@ -1034,12 +1034,12 @@ const customDrilldownColsPersonnel = ref([]);
 const customDrilldownColsRelatives = ref([]);
 const drilldownTargetCriterion = ref(null);
 
-const loadDrilldownColSettings = () => {
+const loadDrilldownColSettings = async () => {
   try {
-    const pCols = localStorage.getItem('dashboard_drilldown_cols_personnel');
-    if (pCols) customDrilldownColsPersonnel.value = JSON.parse(pCols);
-    const rCols = localStorage.getItem('dashboard_drilldown_cols_relatives');
-    if (rCols) customDrilldownColsRelatives.value = JSON.parse(rCols);
+    const pCols = await getAppSettings('dashboard_drilldown_cols_personnel');
+    if (pCols && Array.isArray(pCols)) customDrilldownColsPersonnel.value = pCols;
+    const rCols = await getAppSettings('dashboard_drilldown_cols_relatives');
+    if (rCols && Array.isArray(rCols)) customDrilldownColsRelatives.value = rCols;
   } catch (e) {
     console.error('Error loading drilldown col settings:', e);
   }
@@ -1060,8 +1060,8 @@ const currentDrilldownAllAvailableCols = computed(() => {
     });
     return baseList;
   }
-  const baseList = [{ id: 'code', label: 'Mã Cán bộ (Mã CB)' }];
-  (allAvailablePersonnelColumns.value || []).forEach((c) => {
+  const baseList = [{ id: 'code', label: 'Mã Cán bộ' }, { id: 'name', label: 'Họ và tên' }];
+  (allAvailableColumns.value || []).forEach((c) => {
     if (!baseList.some((x) => x.id === c.id)) {
       baseList.push({ id: c.id, label: c.label.replace(/^\[Cột\s*[^\]]+\]\s*/i, '') });
     }
@@ -1107,13 +1107,17 @@ const resetDefaultDrilldownCols = () => {
   }
 };
 
-const saveDrilldownCols = () => {
+const saveDrilldownCols = async () => {
   if (isRelativeView.value) {
     customDrilldownColsRelatives.value = [...tempSelectedDrilldownCols.value];
-    localStorage.setItem('dashboard_drilldown_cols_relatives', JSON.stringify(customDrilldownColsRelatives.value));
+    try {
+      await saveAppSettings('dashboard_drilldown_cols_relatives', customDrilldownColsRelatives.value);
+    } catch (e) {}
   } else {
     customDrilldownColsPersonnel.value = [...tempSelectedDrilldownCols.value];
-    localStorage.setItem('dashboard_drilldown_cols_personnel', JSON.stringify(customDrilldownColsPersonnel.value));
+    try {
+      await saveAppSettings('dashboard_drilldown_cols_personnel', customDrilldownColsPersonnel.value);
+    } catch (e) {}
   }
   isDrilldownColDialogOpen.value = false;
 };
@@ -1379,14 +1383,6 @@ const loadDashboardSettings = async () => {
     const dbConfig = await getAppSettings('dashboard_col_config');
     if (dbConfig && typeof dbConfig === 'object') {
       colConfig.value = { ...DEFAULT_CONFIG, ...dbConfig };
-      localStorage.setItem('dashboard_col_config', JSON.stringify(colConfig.value));
-    } else {
-      const saved = localStorage.getItem('dashboard_col_config');
-      if (saved) {
-        try {
-          colConfig.value = { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
-        } catch (e) {}
-      }
     }
   } catch (e) {
     console.error('Error loading dashboard column settings:', e);
@@ -1398,7 +1394,6 @@ const saveDashboardSettings = async () => {
   savingConfig.value = true;
   try {
     colConfig.value = { ...tempConfig.value };
-    localStorage.setItem('dashboard_col_config', JSON.stringify(colConfig.value));
     await saveAppSettings('dashboard_col_config', colConfig.value);
     isSettingsOpen.value = false;
   } catch (e) {
@@ -1460,12 +1455,6 @@ const loadCustomGroups = async () => {
     const dbGroups = await getAppSettings('dashboard_custom_groups');
     if (dbGroups && Array.isArray(dbGroups)) {
       customGroups.value = dbGroups;
-      localStorage.setItem('dashboard_custom_groups', JSON.stringify(dbGroups));
-    } else {
-      const local = localStorage.getItem('dashboard_custom_groups');
-      if (local) {
-        customGroups.value = JSON.parse(local);
-      }
     }
   } catch (e) {
     console.error('Error loading custom groups:', e);
@@ -1473,7 +1462,6 @@ const loadCustomGroups = async () => {
 };
 
 const saveCustomGroupsToDb = async () => {
-  localStorage.setItem('dashboard_custom_groups', JSON.stringify(customGroups.value));
   try {
     await saveAppSettings('dashboard_custom_groups', customGroups.value);
   } catch (e) {
@@ -1571,12 +1559,7 @@ const loadTopicDashboards = async () => {
     if (saved && Array.isArray(saved) && saved.length > 0) {
       availableTopicDashboards.value = saved;
     } else {
-      const local = localStorage.getItem('custom_dashboards_config');
-      if (local) {
-        availableTopicDashboards.value = JSON.parse(local);
-      } else {
-        availableTopicDashboards.value = DEFAULT_TOPIC_DASHBOARDS;
-      }
+      availableTopicDashboards.value = DEFAULT_TOPIC_DASHBOARDS;
     }
   } catch (e) {
     availableTopicDashboards.value = DEFAULT_TOPIC_DASHBOARDS;

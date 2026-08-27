@@ -190,13 +190,6 @@ export const usePersonnelStore = defineStore('personnel', {
       } catch (e) {}
 
       let saved = dbCols && Array.isArray(dbCols) && dbCols.length > 0 ? dbCols : null;
-      if (!saved) {
-        const local = localStorage.getItem('vue_visible_columns');
-        if (local) {
-          try { saved = JSON.parse(local); } catch (e) {}
-        }
-      }
-
       if (saved && Array.isArray(saved) && saved.length > 0) {
         const filtered = saved.filter((id) => validIds.has(id));
         if (filtered.length >= 3) {
@@ -204,7 +197,6 @@ export const usePersonnelStore = defineStore('personnel', {
         } else {
           this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
         }
-        localStorage.setItem('vue_visible_columns', JSON.stringify(this.visibleColumns));
       } else {
         this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
       }
@@ -216,13 +208,6 @@ export const usePersonnelStore = defineStore('personnel', {
       } catch (e) {}
 
       let savedRel = dbRelCols && Array.isArray(dbRelCols) && dbRelCols.length > 0 ? dbRelCols : null;
-      if (!savedRel) {
-        const localRel = localStorage.getItem('vue_visible_relative_columns');
-        if (localRel) {
-          try { savedRel = JSON.parse(localRel); } catch (e) {}
-        }
-      }
-
       if (savedRel && Array.isArray(savedRel) && savedRel.length > 0) {
         const filtered = savedRel.filter((id) => validRelativeIds.has(id));
         if (filtered.length >= 3) {
@@ -230,7 +215,6 @@ export const usePersonnelStore = defineStore('personnel', {
         } else {
           this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
         }
-        localStorage.setItem('vue_visible_relative_columns', JSON.stringify(this.visibleRelativeColumns));
       } else {
         this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
       }
@@ -600,11 +584,11 @@ export const usePersonnelStore = defineStore('personnel', {
       } else {
         this.visibleColumns.push(colId);
       }
-      localStorage.setItem('vue_visible_columns', JSON.stringify(this.visibleColumns));
+      saveAppSettings('vue_visible_columns', this.visibleColumns).catch(() => {});
     },
     setColumns(cols) {
       this.visibleColumns = cols;
-      localStorage.setItem('vue_visible_columns', JSON.stringify(this.visibleColumns));
+      saveAppSettings('vue_visible_columns', this.visibleColumns).catch(() => {});
     },
     async renumberPersonnelCodes() {
       if (this.personnelList.length === 0 && (this.relativesList || []).length === 0) {

@@ -195,11 +195,6 @@ const loadAppendicesConfig = async () => {
     const saved = await getAppSettings('custom_appendices_config', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
       allAppendices.value = saved;
-    } else {
-      const local = localStorage.getItem('custom_appendices_config');
-      if (local) {
-        allAppendices.value = JSON.parse(local);
-      }
     }
   } catch (e) {
     console.error('Error loading appendices config:', e);
