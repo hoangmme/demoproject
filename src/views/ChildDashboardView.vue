@@ -326,7 +326,7 @@
                 size="small"
                 outlined
                 severity="danger"
-                @click.stop="handleDeleteTrip(data)"
+                @click.stop="handleDeleteItem(data)"
               />
             </div>
           </template>
@@ -1876,6 +1876,35 @@ const isSameTripItem = (t, trip) => {
     return true;
   }
   return false;
+};
+
+const handleDeleteItem = async (item) => {
+  const src = currentDashboardConfig.value?.source || 'trips';
+
+  if (src === 'relative') {
+    const relName = item.relativeName || item.name || 'Thân nhân';
+    const parentName = item.parentName || item.parentPersonnelName || 'Cán bộ';
+    if (!confirm(`Bạn có chắc chắn muốn xóa thân nhân "${relName}" (thuộc cán bộ ${parentName})?`)) return;
+
+    try {
+      await personnelStore.deleteRelative(item);
+      alert('Đã xóa thân nhân thành công!');
+    } catch (e) {
+      alert('Lỗi xóa thân nhân: ' + (e.message || e));
+    }
+  } else if (src === 'personnel') {
+    const pName = item.name || 'Cán bộ';
+    if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ cán bộ "${pName}"?`)) return;
+
+    try {
+      await personnelStore.deletePerson(item);
+      alert('Đã xóa hồ sơ cán bộ thành công!');
+    } catch (e) {
+      alert('Lỗi xóa cán bộ: ' + (e.message || e));
+    }
+  } else {
+    await handleDeleteTrip(item);
+  }
 };
 
 const handleDeleteTrip = async (trip) => {

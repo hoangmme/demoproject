@@ -560,11 +560,46 @@ export const usePersonnelStore = defineStore('personnel', {
       }
     },
     async deleteRelative(rel) {
-      if (!rel?.id) return;
+      if (!rel) return;
       this.loading = true;
       try {
-        await apiClient.delete(`/items/appendix2/${rel.id}`);
-        await logActivity('Xóa Thân nhân', `Xóa thân nhân: ${rel.relativeName || rel.name}`);
+        const isSameRel = (r) => {
+          if (!r || !rel) return false;
+          if (r === rel || r === rel.rawRelative) return true;
+          if (r.id && rel.id && String(r.id) === String(rel.id)) return true;
+          if (r.code && rel.code && String(r.code) === String(rel.code)) return true;
+          const c1 = String(r.cccdthannhan || r.cccd || '').trim();
+          const c2 = String(rel.cccdthannhan || rel.cccd || '').trim();
+          if (c1 && c2 && c1 === c2) return true;
+          const n1 = String(r.relativeName || r.name || '').trim().toLowerCase();
+          const n2 = String(rel.relativeName || rel.name || '').trim().toLowerCase();
+          const s1 = String(r.relationshipName || r.relationship || '').trim().toLowerCase();
+          const s2 = String(rel.relationshipName || rel.relationship || '').trim().toLowerCase();
+          if (n1 && n2 && n1 === n2 && s1 && s2 && s1 === s2) return true;
+          return false;
+        };
+
+        const parent = (this.personnelList || []).find((p) => {
+          if (rel.personnelId && String(p.id) === String(rel.personnelId)) return true;
+          if (rel.cccdparent && (p.cccd === rel.cccdparent || p.cccdparent === rel.cccdparent)) return true;
+          if (rel.parentPersonnelName && p.name && p.name.trim().toLowerCase() === rel.parentPersonnelName.trim().toLowerCase()) return true;
+          if (Array.isArray(p.relatives) && p.relatives.some(isSameRel)) return true;
+          return false;
+        });
+
+        if (parent) {
+          const updatedParent = JSON.parse(JSON.stringify(parent));
+          if (Array.isArray(updatedParent.relatives)) {
+            updatedParent.relatives = updatedParent.relatives.filter((r) => !isSameRel(r));
+          }
+          await this.savePerson(updatedParent);
+        }
+
+        if (rel.id) {
+          await apiClient.delete(`/items/appendix2/${rel.id}`).catch(() => {});
+        }
+
+        await logActivity('Xóa Thân nhân', `Xóa thân nhân: ${rel.relativeName || rel.name || rel.id}`).catch(() => {});
         await this.fetchPersonnel();
       } catch (e) {
         console.error('Error deleting relative:', e);
@@ -577,12 +612,24 @@ export const usePersonnelStore = defineStore('personnel', {
       if (!ids || ids.length === 0) return;
       this.loading = true;
       try {
+        const idSet = new Set(ids.map((x) => String(x)));
+        for (const p of this.personnelList) {
+          if (Array.isArray(p.relatives)) {
+            const hasMatch = p.relatives.some((r) => idSet.has(String(r.id)) || idSet.has(String(r.code)) || idSet.has(String(r.cccdthannhan)) || idSet.has(String(r.cccd)));
+            if (hasMatch) {
+              const updatedP = JSON.parse(JSON.stringify(p));
+              updatedP.relatives = updatedP.relatives.filter((r) => !idSet.has(String(r.id)) && !idSet.has(String(r.code)) && !idSet.has(String(r.cccdthannhan)) && !idSet.has(String(r.cccd)));
+              await this.savePerson(updatedP);
+            }
+          }
+        }
+
         try {
           await apiClient.delete('/items/appendix2', { data: ids });
         } catch (e) {
           await Promise.allSettled(ids.map((id) => apiClient.delete(`/items/appendix2/${id}`)));
         }
-        await logActivity('Xóa nhiều Thân nhân', `Xóa hàng loạt ${ids.length} thân nhân`);
+        await logActivity('Xóa nhiều Thân nhân', `Xóa hàng loạt ${ids.length} thân nhân`).catch(() => {});
         await this.fetchPersonnel();
       } catch (e) {
         console.error('Error deleting multiple relatives:', e);
