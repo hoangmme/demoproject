@@ -211,7 +211,7 @@
             <span class="table-col-header-ellipsis" :title="col.label">{{ col.label }}</span>
           </template>
           <template #body="{ data }">
-            <!-- 1. Họ và tên người đi (Mỗi cái 1 hàng: Tên, CCCD-TN, CCCD-CB, Chức vụ/Quan hệ, Đơn vị) -->
+            <!-- 1. Họ và tên người đi (Mỗi cái 1 hàng: Tên, CCCD-TN, CCCD-CB, Chức vụ/Quan hệ, Chức vụ CB, Đơn vị) -->
             <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === '_parentPersonnelName' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
                 <!-- Hàng 1: Họ tên (Bôi đậm) -->
@@ -239,7 +239,12 @@
                   {{ getPersonInfo(data).position }}
                 </div>
 
-                <!-- Hàng 5: Đơn vị -->
+                <!-- Hàng 5: Chức vụ Cán bộ (khi là Thân nhân) -->
+                <div v-if="getPersonInfo(data).parentPosition" style="font-size: 0.72rem; color: #334155;">
+                  {{ getPersonInfo(data).parentPosition }}
+                </div>
+
+                <!-- Hàng 6: Đơn vị -->
                 <div v-if="getPersonInfo(data).department" style="font-size: 0.72rem; color: #64748b;">
                   {{ getPersonInfo(data).department }}
                 </div>
@@ -814,7 +819,7 @@ const getActiveCardCellValue = (row) => {
 };
 
 const getPersonInfo = (data) => {
-  if (!data) return { name: '-', cccdTN: '', cccdCB: '', position: '', department: '' };
+  if (!data) return { name: '-', cccdTN: '', cccdCB: '', position: '', parentPosition: '', department: '' };
 
   const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
   const posField = personnelStore.getPersonnelPositionField ? personnelStore.getPersonnelPositionField() : 'position';
@@ -822,6 +827,7 @@ const getPersonInfo = (data) => {
 
   if (data.isRelative) {
     const parentName = data.rawPerson?.name || data.parentName || data.parentPersonnelName || '';
+    const parentPos = data.rawPerson?.positionName || data.rawPerson?.position || (posField && data.rawPerson?.[posField]) || data.parentPosition || '';
     const relName = data.relativeName || data.name || data.rawRelative?.relativeName || data.rawRelative?.name || data.personnelName || 'Thân nhân';
     const relCccd = data.cccdthannhan || data.rawRelative?.cccdthannhan || data.rawRelative?.cccd || (!String(data.cccd).startsWith('p_') && !String(data.cccd).startsWith('cd_') && data.cccd !== data.cccdparent ? data.cccd : '');
     const parentCccd = data.cccdparent || data.parentCccd || data.rawPerson?.cccdparent || data.rawPerson?.cccd || data.rawPerson?.[pKeyField] || '';
@@ -835,7 +841,8 @@ const getPersonInfo = (data) => {
       isRelative: true,
       cccdTN: isValidId(relCccd) ? `CCCD-TN: ${String(relCccd).trim()}` : '',
       cccdCB: isValidId(parentCccd) ? `CCCD-CB: ${String(parentCccd).trim()}` : '',
-      position: parentName ? `${relationship} của: ${parentName}` : relationship,
+      position: parentName ? `${relationship} của CB: ${parentName}` : relationship,
+      parentPosition: parentPos && String(parentPos).trim() !== '-' && String(parentPos).trim() !== 'Chưa phân bổ' ? `Chức vụ CB: ${String(parentPos).trim()}` : '',
       department: parentDept ? `Đơn vị CB: ${parentDept}` : '',
     };
   }
@@ -853,6 +860,7 @@ const getPersonInfo = (data) => {
     cccdTN: '',
     cccdCB: isValidId(cccd) ? `CCCD-CB: ${String(cccd).trim()}` : '',
     position: pos && String(pos).trim() !== '-' ? String(pos).trim() : '',
+    parentPosition: '',
     department: dept && String(dept).trim() !== '-' ? String(dept).trim() : '',
   };
 };
