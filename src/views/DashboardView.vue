@@ -1783,25 +1783,7 @@ const unifiedTripsList = computed(() => {
 const getRowFieldValue = (row, colId) => {
   if (!row || !colId) return '';
 
-  // 0. Special Presence & Overdue Aliases (Khớp với cấu hình thẻ Metric Cards của chuyên đề)
-  if (colId === 'trang_thai_hien_dien' || colId === 'presenceStatus' || colId === 'presenceLabel' || colId === 'status' || colId === 'tripStatus') {
-    return row.presenceLabel || (row.isAbroad ? 'Đang ở nước ngoài' : (row.isOverdue ? 'Quá hạn chưa về' : 'Đã về nước'));
-  }
-  if (colId === 'qua_han_chua_ve' || colId === 'overdueStatus' || colId === 'isOverdue') {
-    const allMap = {};
-    (personnelStore.importMappingTrips || []).forEach((g) => {
-      (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
-    });
-    const colDef = allMap[colId];
-    if (colDef && colDef.format === 'formula') {
-      const res = evaluateFormula(row, colDef);
-      return res?.label || res?.shortLabel || '-';
-    }
-    const overdueRes = computeOverdueStatus(row);
-    return overdueRes?.label || '-';
-  }
-
-  // Check formula columns from mapping
+  // 1. Check formula column from mapping (Khớp 100% ChildDashboardView)
   const allMap = {};
   (personnelStore.importMappingTrips || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
@@ -1809,56 +1791,26 @@ const getRowFieldValue = (row, colId) => {
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
   });
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
     const res = evaluateFormula(row, colDef);
     return res?.label || res?.shortLabel || '';
   }
 
-  // 1. Direct property
+  // 2. Direct property lookup
   let raw = row[colId];
-
-  // 2. In rawPerson / rawTrip
   if (raw === undefined || raw === null || raw === '') {
-    raw = row.rawPerson?.[colId] ?? row.rawTrip?.[colId];
+    raw = row.custom_data?.[colId] ?? row.rawTrip?.[colId] ?? row.rawPerson?.[colId] ?? row.rawTrip?.custom_data?.[colId] ?? row.rawPerson?.custom_data?.[colId];
   }
-
-  // 3. In custom_data
-  if (raw === undefined || raw === null || raw === '') {
-    let cd = row.custom_data;
-    if (typeof cd === 'string') {
-      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
-    }
-    if (cd && typeof cd === 'object') {
-      raw = cd[colId];
-    }
+  if ((raw === undefined || raw === null || raw === '') && (colId === 'personnelName' || colId === 'name')) {
+    raw = row.personnelName || row.name || row.rawPerson?.name;
   }
-
-  // 4. In rawPerson.custom_data or rawTrip.custom_data
-  if (raw === undefined || raw === null || raw === '') {
-    let pcd = row.rawPerson?.custom_data;
-    if (typeof pcd === 'string') {
-      try { pcd = JSON.parse(pcd); } catch (e) { pcd = {}; }
-    }
-    if (pcd && typeof pcd === 'object') {
-      raw = pcd[colId];
-    }
-  }
-
-  // 5. Case-insensitive key match in custom_data
-  if (raw === undefined || raw === null || raw === '') {
-    const targetKeyClean = String(colId).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const searchInObj = (obj) => {
-      if (!obj || typeof obj !== 'object') return null;
-      for (const [k, v] of Object.entries(obj)) {
-        const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (cleanK === targetKeyClean && v !== undefined && v !== null && String(v).trim() !== '') {
-          return v;
-        }
-      }
-      return null;
-    };
-    raw = searchInObj(row) ?? searchInObj(row.custom_data) ?? searchInObj(row.rawPerson?.custom_data) ?? searchInObj(row.rawTrip?.custom_data);
+  if ((raw === undefined || raw === null || raw === '') && (colId === 'personnelCode' || colId === 'code')) {
+    raw = row.personnelCode || row.code || row.rawPerson?.code;
   }
 
   if (raw === undefined || raw === null || raw === '' || raw === '-') return '';
