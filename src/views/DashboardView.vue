@@ -2559,6 +2559,9 @@ const stats = computed(() => {
   const countries = {}; // { [key]: { trips: 0, relatives: 0, total: 0 } }
   const fundings = {};  // { [key]: { trips: 0, relatives: 0, total: 0 } }
 
+  const countryColId = colConfig.value.country || 'quoc_gia_xuat_canh';
+  const fundingColId = colConfig.value.funding || 'nguon_kinh_phi';
+
   // Lấy trực tiếp từ danh sách chuyến đi đã gom của Cán bộ và Thân nhân
   const allTrips = unifiedTripsList.value || [];
 
@@ -2568,16 +2571,14 @@ const stats = computed(() => {
       return;
     }
 
-    const cName = String(t.quoc_gia_xuat_canh || t.countryName || t.custom_data?.quoc_gia_xuat_canh || '').trim();
-    const fName = String(t.nguon_kinh_phi || t.fundingName || t.custom_data?.nguon_kinh_phi || '').trim();
+    const cName = String(getTripValue(t, countryColId) || t[countryColId] || t.countryName || '').trim();
+    const fName = String(getTripValue(t, fundingColId) || t[fundingColId] || t.fundingName || '').trim();
     const isRelativeTrip = Boolean(t.isRelative || t.isRelativeTrip);
 
     const enrichedTrip = {
       ...t,
       countryName: cName || '-',
-      quoc_gia_xuat_canh: cName || '-',
       fundingName: fName || '-',
-      nguon_kinh_phi: fName || '-',
       isRelativeTrip,
     };
 
@@ -2599,7 +2600,7 @@ const stats = computed(() => {
       }
     }
 
-    // 1. Đếm trực tiếp trường quoc_gia_xuat_canh nếu có dữ liệu
+    // 1. Đếm trực tiếp theo cột Quốc gia đã cài đặt trong Setting
     if (cName && cName !== '-' && cName !== 'Chưa rõ') {
       if (!countries[cName]) countries[cName] = { trips: 0, relatives: 0, total: 0 };
       if (isRelativeTrip) {
@@ -2610,7 +2611,7 @@ const stats = computed(() => {
       countries[cName].total += 1;
     }
 
-    // 2. Đếm trực tiếp trường nguon_kinh_phi nếu có dữ liệu
+    // 2. Đếm trực tiếp theo cột Nguồn kinh phí đã cài đặt trong Setting
     if (fName && fName !== '-' && fName !== 'Chưa rõ') {
       if (!fundings[fName]) fundings[fName] = { trips: 0, relatives: 0, total: 0 };
       if (isRelativeTrip) {
@@ -2835,9 +2836,10 @@ const openDrilldown = (type, title, filterContext = {}) => {
     drilldownCategory.value = 'trips';
     drilldownData.value = [...stats.value.onTimeTrips];
   } else if (type === 'country' && filterContext.countryName) {
+    const countryColId = colConfig.value.country || 'quoc_gia_xuat_canh';
     const cTarget = String(filterContext.countryName).toLowerCase().trim();
     const matchingTrips = stats.value.filteredTrips.filter((t) => {
-      const c = String(t.quoc_gia_xuat_canh || t.countryName || '').toLowerCase().trim();
+      const c = String(getTripValue(t, countryColId) || t[countryColId] || t.countryName || '').toLowerCase().trim();
       return c === cTarget;
     });
 
@@ -2847,9 +2849,10 @@ const openDrilldown = (type, title, filterContext = {}) => {
     drilldownActiveTab.value = drilldownTripsList.value.length > 0 ? 'trips' : 'relatives';
     drilldownCategory.value = drilldownActiveTab.value;
   } else if (type === 'funding' && filterContext.fundingName) {
+    const fundingColId = colConfig.value.funding || 'nguon_kinh_phi';
     const fTarget = String(filterContext.fundingName).toLowerCase().trim();
     const matchingTrips = stats.value.filteredTrips.filter((t) => {
-      const f = String(t.nguon_kinh_phi || t.fundingName || '').toLowerCase().trim();
+      const f = String(getTripValue(t, fundingColId) || t[fundingColId] || t.fundingName || '').toLowerCase().trim();
       return f === fTarget;
     });
 
