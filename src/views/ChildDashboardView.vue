@@ -686,7 +686,7 @@ const matchCardCondition = (item, card) => {
   // 2. Preset Presence Checks
   if (cond === 'completed' || lbl === 'đã về nước') {
     const presence = getTripPresence(item);
-    return presence.status === 'completed';
+    return presence.status === 'completed' && !presence.isOverdue;
   }
   if (cond === 'abroad' || lbl === 'đang ở nước ngoài') {
     const presence = getTripPresence(item);
@@ -694,7 +694,7 @@ const matchCardCondition = (item, card) => {
   }
   if (cond === 'overdue' || lbl === 'quá hạn chưa về') {
     const presence = getTripPresence(item);
-    return presence.status === 'overdue';
+    return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
   }
 
   // 3. Special Formula Fields
@@ -705,13 +705,13 @@ const matchCardCondition = (item, card) => {
   if (card.field === 'trang_thai_hien_dien') {
     const presence = getTripPresence(item);
     const target = String(card.value || '').toLowerCase().trim();
-    if (target.includes('đã về nước')) return presence.status === 'completed';
+    if (target.includes('đã về nước')) return presence.status === 'completed' && !presence.isOverdue;
     if (target.includes('đang ở nước ngoài')) return presence.status === 'abroad';
-    if (target.includes('quá hạn')) return presence.status === 'overdue';
+    if (target.includes('quá hạn')) return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
   }
   if (card.field === 'qua_han_chua_ve') {
     const presence = getTripPresence(item);
-    return presence.status === 'overdue';
+    return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
   }
 
   // 4. Dynamic Field Condition
