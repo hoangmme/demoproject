@@ -1959,13 +1959,19 @@ const getCardMetricValueForTopic = (card, topic) => {
     `card_${idx}` === cardIdToMatch
   ) || card;
 
-  const src = topic?.source || actualCard.source || card.source || 'trips';
+  let src = topic?.source || actualCard.source || card.source;
+  if (!src) {
+    const str = `${card.topicTitle || ''} ${card.title || ''} ${topic?.title || ''}`.toLowerCase();
+    if (str.includes('thân nhân')) src = 'relatives';
+    else if (str.includes('cán bộ')) src = 'personnel';
+    else src = 'trips';
+  }
   const list = getSourceList(src);
 
-  // If card is "Toàn bộ" or "Tất cả" and no specific field filter, return full list length
+  // If card is "Toàn bộ" or "Tất cả" or condition === 'all' (or field is cccdparent / personnelName), return full list length
   const cond = actualCard.condition || actualCard.id || actualCard.cardCondition || actualCard.cardId || 'all';
-  const lbl = String(actualCard.label || actualCard.cardLabel || '').trim().toLowerCase();
-  if ((cond === 'all' || lbl === 'toàn bộ' || lbl === 'tất cả') && (!actualCard.field || actualCard.field === 'personnelName')) {
+  const lbl = String(actualCard.label || actualCard.cardLabel || card.label || card.title || '').trim().toLowerCase();
+  if ((cond === 'all' || lbl === 'toàn bộ' || lbl === 'tất cả' || lbl.startsWith('tổng số')) && (!actualCard.field || actualCard.field === 'personnelName' || actualCard.field === 'cccdparent')) {
     return list.length;
   }
 
@@ -2962,13 +2968,11 @@ const refreshData = async () => {
 };
 
 onMounted(async () => {
-  await loadDashboardSettings();
-  await loadCustomGroups();
-  await loadTopicDashboards();
   await personnelStore.loadSettings();
-  if (personnelStore.personnelList.length === 0) {
-    await personnelStore.init();
-  }
+  await personnelStore.fetchPersonnel();
+  await loadDashboardSettings();
+  await loadTopicDashboards();
+  await loadCustomGroups();
 });
 </script>
 
