@@ -2542,46 +2542,6 @@ const getTripValue = (trip, colId) => {
   return String(raw).trim();
 };
 
-const isFundingKeyword = (val) => {
-  if (!val) return false;
-  const s = String(val).toLowerCase().trim();
-  return (
-    s === 'tự túc' ||
-    s === 'tu tuc' ||
-    s === 'ngân sách' ||
-    s === 'ngan sach' ||
-    s === 'ngân sách nhà nước' ||
-    s === 'tài trợ' ||
-    s === 'tai tro' ||
-    s === 'học bổng' ||
-    s === 'hoc bong' ||
-    s === 'khác' ||
-    s === 'khac' ||
-    s.includes('ngân sách') ||
-    s.includes('tài trợ') ||
-    s.includes('tự túc') ||
-    s.includes('học bổng')
-  );
-};
-
-const normalizeFundingCategory = (rawVal) => {
-  if (!rawVal) return null;
-  const str = String(rawVal).toLowerCase().trim();
-  if (!str || str === '-' || str === 'chưa rõ' || str === 'null' || str === 'undefined') return null;
-  if (str.includes('ngân sách') || str.includes('ngan sach') || str.includes('budget') || str.includes('nhà nước')) {
-    return 'Ngân sách nhà nước';
-  }
-  if (str.includes('tài trợ') || str.includes('tai tro') || str.includes('học bổng') || str.includes('hoc bong') || str.includes('sponsor') || str.includes('scholarship')) {
-    return 'Tài trợ';
-  }
-  if (str.includes('tự túc') || str.includes('tu tuc') || str.includes('self') || str.includes('cá nhân')) {
-    return 'Tự túc';
-  }
-  if (str.includes('khác') || str.includes('khac') || str.includes('other')) {
-    return 'Khác';
-  }
-  return rawVal.trim();
-};
 
 const stats = computed(() => {
   const pList = personnelStore.personnelList || [];
