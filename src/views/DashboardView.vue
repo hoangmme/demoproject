@@ -1840,9 +1840,48 @@ const getRowFieldValue = (row, colId) => {
 };
 
 const getSourceList = (source) => {
-  if (source === 'relatives') return personnelStore.relativesList || [];
-  if (source === 'trips') return unifiedTripsList.value || [];
-  return personnelStore.personnelList || [];
+  if (source === 'relatives' || source === 'relative') {
+    return (personnelStore.relativesList || []).map((r, idx) => {
+      let rCustom = {};
+      if (r.custom_data) {
+        try {
+          rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
+        } catch (e) {}
+      }
+      return {
+        ...rCustom,
+        ...r,
+        uniqueKey: r.id || `rel_${idx}`,
+        personnelName: r.relativeName || r.name || 'Thân nhân',
+        personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
+        rawPerson: r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || r,
+        rawRelative: r,
+        custom_data: rCustom,
+      };
+    });
+  }
+  if (source === 'trips' || source === 'trip') {
+    return unifiedTripsList.value || [];
+  }
+  return (personnelStore.personnelList || []).map((p) => {
+    let pCustom = {};
+    if (p.custom_data) {
+      try {
+        pCustom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+      } catch (e) {}
+    }
+    return {
+      ...pCustom,
+      ...p,
+      uniqueKey: p.id || p.code,
+      personnelName: p.name,
+      personnelCode: p.code,
+      departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
+      position: p.positionName || p.position || '',
+      rawPerson: p,
+      custom_data: pCustom,
+    };
+  });
 };
 
 const matchCardCondition = (item, card) => {
@@ -1889,18 +1928,19 @@ const matchCardCondition = (item, card) => {
 
   // 2. Preset Condition (when no field is selected) — Khớp 100% ChildDashboardView
   const cond = card.condition || card.id || card.cardCondition || card.cardId || 'all';
-  if (cond === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả' || card.cardLabel === 'Toàn bộ' || card.cardLabel === 'Tất cả') {
+  const lbl = String(card.label || card.cardLabel || '').trim().toLowerCase();
+  if (cond === 'all' || lbl === 'toàn bộ' || lbl === 'tất cả') {
     return true;
   }
 
   const presence = getTripPresence(item);
-  if (cond === 'completed' || card.label === 'Đã về nước' || card.cardLabel === 'Đã về nước') {
+  if (cond === 'completed' || lbl === 'đã về nước') {
     return presence.status === 'completed';
   }
-  if (cond === 'abroad' || card.label === 'Đang ở nước ngoài' || card.cardLabel === 'Đang ở nước ngoài') {
+  if (cond === 'abroad' || lbl === 'đang ở nước ngoài') {
     return presence.status === 'abroad';
   }
-  if (cond === 'overdue' || card.label === 'Quá hạn chưa về' || card.cardLabel === 'Quá hạn chưa về') {
+  if (cond === 'overdue' || lbl === 'quá hạn chưa về') {
     return presence.status === 'overdue';
   }
 
@@ -1921,6 +1961,13 @@ const getCardMetricValueForTopic = (card, topic) => {
 
   const src = topic?.source || actualCard.source || card.source || 'trips';
   const list = getSourceList(src);
+
+  // If card is "Toàn bộ" or "Tất cả" and no specific field filter, return full list length
+  const cond = actualCard.condition || actualCard.id || actualCard.cardCondition || actualCard.cardId || 'all';
+  const lbl = String(actualCard.label || actualCard.cardLabel || '').trim().toLowerCase();
+  if ((cond === 'all' || lbl === 'toàn bộ' || lbl === 'tất cả') && (!actualCard.field || actualCard.field === 'personnelName')) {
+    return list.length;
+  }
 
   return list.filter((item) => matchCardCondition(item, actualCard)).length;
 };
