@@ -2545,6 +2545,52 @@ const normalizeFundingCategory = (rawVal) => {
   return rawVal.trim();
 };
 
+const isInvalidCountryName = (name) => {
+  if (!name) return true;
+  const s = String(name).toLowerCase().trim();
+  return (
+    !s ||
+    s === '-' ||
+    s === '--' ||
+    s === 'chưa rõ' ||
+    s === 'chua ro' ||
+    s === 'không có' ||
+    s === 'không có thông tin' ||
+    s === 'khong co thong tin' ||
+    s === 'không xác định' ||
+    s === 'khong xac dinh' ||
+    s === 'chưa có' ||
+    s === 'chua co' ||
+    s === 'chưa có thông tin' ||
+    s === 'n/a' ||
+    s === 'na' ||
+    s === 'null' ||
+    s === 'undefined' ||
+    s === 'việt nam' ||
+    s === 'viet nam' ||
+    s === 'vn' ||
+    isFundingKeyword(name)
+  );
+};
+
+const isInvalidFundingName = (name) => {
+  if (!name) return true;
+  const s = String(name).toLowerCase().trim();
+  return (
+    !s ||
+    s === '-' ||
+    s === '--' ||
+    s === 'chưa rõ' ||
+    s === 'chua ro' ||
+    s === 'không có' ||
+    s === 'không có thông tin' ||
+    s === 'khong co thong tin' ||
+    s === 'n/a' ||
+    s === 'null' ||
+    s === 'undefined'
+  );
+};
+
 const extractCountryFromAddress = (address) => {
   if (!address) return '';
   const s = String(address).toLowerCase();
@@ -2593,11 +2639,11 @@ const stats = computed(() => {
       return;
     }
 
-    const cName = (t.countryName && String(t.countryName).trim() !== '-' && String(t.countryName).trim() !== 'Chưa rõ')
+    const cName = (t.countryName && !isInvalidCountryName(t.countryName))
       ? String(t.countryName).trim()
       : '';
 
-    const fName = (t.fundingName && String(t.fundingName).trim() !== '-' && String(t.fundingName).trim() !== 'Chưa rõ')
+    const fName = (t.fundingName && !isInvalidFundingName(t.fundingName))
       ? String(t.fundingName).trim()
       : '';
 
@@ -2628,7 +2674,7 @@ const stats = computed(() => {
       }
     }
 
-    if (cName) {
+    if (cName && !isInvalidCountryName(cName)) {
       if (isFundingKeyword(cName)) {
         const normalizedF = normalizeFundingCategory(cName) || 'Tự túc';
         if (!fundings[normalizedF]) fundings[normalizedF] = { trips: 0, relatives: 0, total: 0 };
@@ -2649,7 +2695,7 @@ const stats = computed(() => {
       }
     }
 
-    if (fName) {
+    if (fName && !isInvalidFundingName(fName)) {
       const parts = String(fName).split(/[,;+]/).map((s) => s.trim()).filter(Boolean);
       parts.forEach((rawPart) => {
         const norm = normalizeFundingCategory(rawPart);
@@ -2666,22 +2712,8 @@ const stats = computed(() => {
     }
   });
 
-  // 2. Also count Thân nhân đang cư trú / định cư ở nước ngoài từ danh sách Thân nhân (rList)
-  rList.forEach((r) => {
-    let rCountry = getRowFieldValue(r, colConfig.value.countryRelative) || r.countryName || r.country || r.countryNameTN || r.quoc_gia || r.custom_data?.countryNameTN || r.custom_data?.countryName || '';
-    if (rCountry && String(rCountry).trim() !== '-' && String(rCountry).trim() !== 'Chưa rõ' && String(rCountry).trim() !== 'Việt Nam' && String(rCountry).trim() !== 'VN') {
-      rCountry = String(rCountry).trim();
-      const hasTrip = (r.trips && r.trips.length > 0) || allTrips.some((t) => t.isRelative && (t.cccdthannhan === r.cccdthannhan || (t.relativeName && t.relativeName === r.relativeName)));
-      if (!hasTrip) {
-        if (!countries[rCountry]) countries[rCountry] = { trips: 0, relatives: 0, total: 0 };
-        countries[rCountry].relatives += 1;
-        countries[rCountry].total += 1;
-      }
-    }
-  });
-
   const countryList = Object.entries(countries)
-    .filter(([name]) => !isFundingKeyword(name) && name !== 'Chưa rõ' && name !== '-')
+    .filter(([name]) => !isInvalidCountryName(name))
     .map(([name, data]) => ({
       name,
       count: data.total,
