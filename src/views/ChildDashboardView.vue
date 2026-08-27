@@ -1855,9 +1855,32 @@ const openPersonnelDetail = (trip) => {
   }
 };
 
+const isSameTripItem = (t, trip) => {
+  if (!t || !trip) return false;
+  if (t === trip || t === trip.rawTrip) return true;
+  if (t.id && trip.id && String(t.id) === String(trip.id)) return true;
+  if (t.id && trip.uniqueKey && String(t.id) === String(trip.uniqueKey)) return true;
+  if (t.uniqueKey && trip.uniqueKey && String(t.uniqueKey) === String(trip.uniqueKey)) return true;
+
+  const dep1 = String(t.ngay_xuat_canh || t.departureDate || t.approvedDepartureDate || '').trim();
+  const dep2 = String(trip.ngay_xuat_canh || trip.departureDate || trip.approvedDepartureDate || '').trim();
+
+  const c1 = String(t.quoc_gia_xuat_canh || t.countryName || t.country || '').trim().toLowerCase();
+  const c2 = String(trip.quoc_gia_xuat_canh || trip.countryName || trip.country || '').trim().toLowerCase();
+
+  const dec1 = String(t.so_quyet_dinh || t.decisionNumber || '').trim();
+  const dec2 = String(trip.so_quyet_dinh || trip.decisionNumber || '').trim();
+
+  if (dep1 && dep2 && dep1 === dep2 && c1 && c2 && c1 === c2) {
+    if (dec1 || dec2) return dec1 === dec2;
+    return true;
+  }
+  return false;
+};
+
 const handleDeleteTrip = async (trip) => {
   const name = trip.personnelName || trip.name || 'Cán bộ';
-  const cName = trip.countryName || trip.country || 'chuyến đi';
+  const cName = trip.countryName || trip.quoc_gia_xuat_canh || trip.country || 'chuyến đi';
   if (!confirm(`Bạn có chắc chắn muốn xóa chuyến đi "${cName}" của ${name}?`)) return;
 
   const targetPerson = resolveTargetPersonnel(trip);
@@ -1866,27 +1889,45 @@ const handleDeleteTrip = async (trip) => {
     return;
   }
 
-  // Remove from targetPerson.trips
-  if (Array.isArray(targetPerson.trips)) {
-    targetPerson.trips = targetPerson.trips.filter(
-      (t) => (t.id && t.id !== trip.id) || (t.departureDate !== trip.departureDate || t.countryName !== trip.countryName)
-    );
+  // Clone to safely update
+  const updatedPerson = JSON.parse(JSON.stringify(targetPerson));
+
+  // 1. Remove from updatedPerson.trips
+  if (Array.isArray(updatedPerson.trips)) {
+    updatedPerson.trips = updatedPerson.trips.filter((t) => !isSameTripItem(t, trip));
   }
 
-  // Remove from targetPerson.relatives[].trips
-  if (Array.isArray(targetPerson.relatives)) {
-    targetPerson.relatives.forEach((r) => {
+  // 2. Remove from updatedPerson.relatives[].trips
+  if (Array.isArray(updatedPerson.relatives)) {
+    updatedPerson.relatives.forEach((r) => {
       if (Array.isArray(r.trips)) {
-        r.trips = r.trips.filter(
-          (t) => (t.id && t.id !== trip.id) || (t.departureDate !== trip.departureDate || t.countryName !== trip.countryName)
-        );
+        r.trips = r.trips.filter((t) => !isSameTripItem(t, trip));
       }
     });
   }
 
+  // 3. Remove from custom_data if present
+  let custom = {};
+  if (updatedPerson.custom_data) {
+    try {
+      custom = typeof updatedPerson.custom_data === 'string' ? JSON.parse(updatedPerson.custom_data) : updatedPerson.custom_data;
+    } catch (e) {}
+  }
+  if (Array.isArray(custom.trips)) {
+    custom.trips = custom.trips.filter((t) => !isSameTripItem(t, trip));
+  }
+  delete custom['Khối B: Chuyến đi nước ngoài'];
+  if (Array.isArray(custom.relatives)) {
+    custom.relatives.forEach((r) => {
+      if (Array.isArray(r.trips)) {
+        r.trips = r.trips.filter((t) => !isSameTripItem(t, trip));
+      }
+    });
+  }
+  updatedPerson.custom_data = custom;
+
   try {
-    await personnelStore.savePerson(targetPerson);
-    await personnelStore.fetchPersonnel();
+    await personnelStore.savePerson(updatedPerson);
     alert('Đã xóa chuyến đi thành công!');
   } catch (e) {
     alert('Lỗi xóa chuyến đi: ' + (e.message || e));

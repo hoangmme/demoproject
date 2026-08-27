@@ -461,18 +461,33 @@ export const usePersonnelStore = defineStore('personnel', {
         ];
 
         const payload = {};
-        const customData = { ...(formData.custom_data || {}) };
+        let customData = {};
+        if (formData.custom_data) {
+          try {
+            customData = typeof formData.custom_data === 'string' ? JSON.parse(formData.custom_data) : { ...formData.custom_data };
+          } catch (e) {
+            customData = {};
+          }
+        }
+
+        const skipKeys = ['custom_data', 'rawPerson', 'rawRelative', 'rawTrip', 'uniqueKey', 'trips', 'relatives', 'flags', 'files'];
 
         Object.keys(formData).forEach((k) => {
           if (coreKeys.includes(k)) {
             payload[k] = formData[k];
-          } else {
+          } else if (!skipKeys.includes(k)) {
             customData[k] = formData[k];
           }
         });
 
-        if (Array.isArray(formData.trips)) customData.trips = formData.trips;
-        if (Array.isArray(formData.relatives)) customData.relatives = formData.relatives;
+        if (Array.isArray(formData.trips)) {
+          customData.trips = formData.trips;
+        }
+        delete customData['Khối B: Chuyến đi nước ngoài'];
+
+        if (Array.isArray(formData.relatives)) {
+          customData.relatives = formData.relatives;
+        }
         if (formData.flags) customData.flags = formData.flags;
         if (formData.files) customData.files = formData.files;
 
@@ -494,8 +509,8 @@ export const usePersonnelStore = defineStore('personnel', {
           ...payload,
           ...customData,
           custom_data: JSON.stringify(customData),
-          trips: formData.trips || customData.trips || [],
-          relatives: formData.relatives || customData.relatives || [],
+          trips: Array.isArray(formData.trips) ? formData.trips : (customData.trips || []),
+          relatives: Array.isArray(formData.relatives) ? formData.relatives : (customData.relatives || []),
           flags: formData.flags || customData.flags || {},
         };
 
@@ -506,8 +521,7 @@ export const usePersonnelStore = defineStore('personnel', {
           this.personnelList.unshift(fullSavedObj);
         }
 
-        // Refresh in background
-        this.fetchPersonnel().catch(() => {});
+        await this.fetchPersonnel();
         this.isDialogOpen = false;
         return saved;
       } catch (e) {
