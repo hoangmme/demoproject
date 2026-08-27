@@ -12,10 +12,10 @@
       </div>
 
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <!-- Nút Xuất Excel theo tab hiện tại -->
+        <!-- Nút Tải file mẫu Excel theo tab hiện tại -->
         <Button
           v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
-          :label="`Xuất Bảng Excel (${getTabName(activeTab)})`"
+          :label="`Tải File Mẫu Excel (${getTabName(activeTab)})`"
           icon="pi pi-file-excel"
           severity="secondary"
           outlined
@@ -1694,14 +1694,11 @@ const onWizardImported = async () => {
 
 const handleExportCurrentTabExcel = (tab) => {
   if (tab === 'personnel') {
-    const list = personnelStore.personnelList || [];
-    exportFullPersonnelExcel(list, personnelGroups.value, personnelStore.getDepartmentName);
+    downloadPersonnelTemplate(personnelGroups.value);
   } else if (tab === 'relative') {
-    const list = personnelStore.relativesList || personnelStore.flattenedRelatives || [];
-    exportFullRelativesExcel(list, relativeGroups.value);
+    downloadRelativeTemplate(relativeGroups.value);
   } else if (tab === 'trips') {
-    const list = personnelStore.tripsList || personnelStore.allTrips || [];
-    exportFullTripsExcel(list, tripsGroups.value, personnelStore.getDepartmentName);
+    downloadTripsTemplate(tripsGroups.value);
   }
 };
 

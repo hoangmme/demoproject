@@ -293,16 +293,54 @@ function getFieldValue(p, fieldId, getDepartmentName) {
   return '';
 }
 
+export const getMappingHeadersList = (mappingConfig) => {
+  let currentColIdx = 0;
+  const headers = [];
+
+  (mappingConfig || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      currentColIdx++;
+      if (c.id === 'stt') {
+        headers.push(`[Cột ${currentColIdx}] STT`);
+        return;
+      }
+
+      const subOpts = getSubOptionsList(c);
+      if (subOpts.length > 1) {
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = currentColIdx + sIdx;
+          headers.push(`[Cột ${colNum}] ${c.label || c.id}: ${opt}`);
+        });
+        currentColIdx += (subOpts.length - 1);
+      } else {
+        headers.push(`[Cột ${currentColIdx}] ${c.label || c.id}`);
+      }
+    });
+  });
+
+  return headers;
+};
+
+export const exportTemplateWithHeaders = (headers, fileName = 'Mau_Excel', sheetName = 'Mẫu nhập liệu') => {
+  const ws = XLSX.utils.aoa_to_sheet([headers]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
 export const downloadPersonnelTemplate = (mappingConfig = null) => {
-  exportFullPersonnelExcel([], mappingConfig);
+  const headers = getMappingHeadersList(mappingConfig);
+  exportTemplateWithHeaders(headers, 'Mau_Import_Can_Bo', 'Mẫu Cán bộ');
 };
 
 export const downloadRelativeTemplate = (mappingConfig = null) => {
-  exportFullRelativesExcel([], mappingConfig);
+  const headers = getMappingHeadersList(mappingConfig);
+  exportTemplateWithHeaders(headers, 'Mau_Import_Than_Nhan', 'Mẫu Thân nhân');
 };
 
 export const downloadTripsTemplate = (mappingConfig = null) => {
-  exportFullTripsExcel([], mappingConfig);
+  const headers = getMappingHeadersList(mappingConfig);
+  exportTemplateWithHeaders(headers, 'Mau_Import_Chuyen_Di', 'Mẫu Chuyến đi');
 };
 
 export const readExcelWorkbook = (file) => {
