@@ -184,23 +184,13 @@
             />
 
             <div v-show="isDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
-              <div class="menu-action-item" @click="openImportModal('personnel'); isDataMenuOpen = false;">
+              <div class="menu-action-item" @click="openImportWizard('personnel'); isDataMenuOpen = false;">
                 <div class="action-icon-box" style="background: #e0f2fe; color: #0284c7;">
                   <i class="pi pi-upload"></i>
                 </div>
                 <div>
-                  <div class="menu-action-title">Import Excel Cán bộ</div>
+                  <div class="menu-action-title">Import Excel Cán bộ (Wizard 4 Bước)</div>
                   <div class="menu-action-sub">Tải dữ liệu từ tệp Excel .xlsx vào hệ thống</div>
-                </div>
-              </div>
-
-              <div class="menu-action-item" @click="handleExportPersonnelFull(); isDataMenuOpen = false;">
-                <div class="action-icon-box" style="background: #dcfce7; color: #16a34a;">
-                  <i class="pi pi-file-excel"></i>
-                </div>
-                <div>
-                  <div class="menu-action-title">{{ selectedPersonnel.length > 0 ? `Xuất Excel (${selectedPersonnel.length} đã chọn)` : 'Xuất Bảng Excel (Toàn bộ cột)' }}</div>
-                  <div class="menu-action-sub">Tải file Excel danh sách cán bộ</div>
                 </div>
               </div>
 
@@ -390,23 +380,13 @@
             />
 
             <div v-show="isRelativeDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
-              <div class="menu-action-item" @click="openImportModal('relative'); isRelativeDataMenuOpen = false;">
+              <div class="menu-action-item" @click="openImportWizard('relative'); isRelativeDataMenuOpen = false;">
                 <div class="action-icon-box" style="background: #e0f2fe; color: #0284c7;">
                   <i class="pi pi-upload"></i>
                 </div>
                 <div>
-                  <div class="menu-action-title">Import Excel Thân nhân</div>
+                  <div class="menu-action-title">Import Excel Thân nhân (Wizard 4 Bước)</div>
                   <div class="menu-action-sub">Tải dữ liệu thân nhân từ file .xlsx</div>
-                </div>
-              </div>
-
-              <div class="menu-action-item" @click="handleExportRelativesFull(); isRelativeDataMenuOpen = false;">
-                <div class="action-icon-box" style="background: #dcfce7; color: #16a34a;">
-                  <i class="pi pi-file-excel"></i>
-                </div>
-                <div>
-                  <div class="menu-action-title">{{ selectedRelatives.length > 0 ? `Xuất Excel (${selectedRelatives.length} đã chọn)` : 'Xuất Bảng Excel Thân nhân' }}</div>
-                  <div class="menu-action-sub">Tải file Excel danh sách toàn bộ thân nhân</div>
                 </div>
               </div>
 
@@ -775,6 +755,13 @@
       :selectedPersonnel="selectedPersonnel"
       :allPersonnel="filteredPersonnel"
     />
+
+    <!-- Excel Import Wizard (4 Steps) -->
+    <ExcelImportWizard
+      v-model:visible="isWizardOpen"
+      :defaultTarget="wizardTarget"
+      @imported="onWizardImported"
+    />
   </div>
 </template>
 
@@ -787,6 +774,7 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
+import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
@@ -810,6 +798,18 @@ import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDial
 const route = useRoute();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
+
+const isWizardOpen = ref(false);
+const wizardTarget = ref('personnel');
+
+const openImportWizard = (target = 'personnel') => {
+  wizardTarget.value = target;
+  isWizardOpen.value = true;
+};
+
+const onWizardImported = async () => {
+  await personnelStore.fetchPersonnel();
+};
 
 const mainTab = ref('canhan'); // 'canhan' or 'thannhan'
 const searchQuery = ref('');

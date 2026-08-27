@@ -11,14 +11,38 @@
         </p>
       </div>
 
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <!-- Nút Xuất Excel theo tab hiện tại -->
+        <Button
+          v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
+          :label="`Xuất Bảng Excel (${getTabName(activeTab)})`"
+          icon="pi pi-file-excel"
+          severity="secondary"
+          outlined
+          size="small"
+          @click="handleExportCurrentTabExcel(activeTab)"
+          style="font-size: 0.82rem;"
+        />
+
+        <!-- Nút Nhập Excel Wizard -->
+        <Button
+          v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
+          label="Nhập Excel (Wizard)"
+          icon="pi pi-upload"
+          severity="info"
+          size="small"
+          @click="openImportWizard(activeTab)"
+          style="font-size: 0.82rem;"
+        />
+
         <Button
           label="Lưu Cấu hình"
           icon="pi pi-save"
           severity="success"
+          size="small"
           :loading="saving"
           @click="saveConfig"
-          style="font-size: 0.85rem;"
+          style="font-size: 0.82rem;"
         />
       </div>
     </div>
@@ -1617,6 +1641,13 @@
         <Button label="Lưu Khối Thống kê" severity="success" size="small" @click="saveDashWidget" />
       </template>
     </Dialog>
+
+    <!-- Excel Import Wizard (4 Steps) -->
+    <ExcelImportWizard
+      v-model:visible="isWizardOpen"
+      :defaultTarget="wizardTarget"
+      @imported="onWizardImported"
+    />
   </div>
 </template>
 
@@ -1626,11 +1657,13 @@ import { useRoute, useRouter } from 'vue-router';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
+import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { uploadFile, getFileUrl } from '@/api/files';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import { createSampleDocxTemplateBlob } from '@/utils/docxExport';
+import { exportFullPersonnelExcel, exportFullRelativesExcel, exportFullTripsExcel, downloadPersonnelTemplate, downloadRelativeTemplate } from '@/utils/excel';
 import { saveAs } from 'file-saver';
 
 const route = useRoute();
@@ -1639,6 +1672,46 @@ const personnelStore = usePersonnelStore();
 
 const activeTab = ref('personnel');
 const saving = ref(false);
+
+const isWizardOpen = ref(false);
+const wizardTarget = ref('personnel');
+
+const getTabName = (tab) => {
+  if (tab === 'personnel') return 'Cán bộ';
+  if (tab === 'relative') return 'Thân nhân';
+  if (tab === 'trips') return 'Chuyến đi';
+  return tab;
+};
+
+const openImportWizard = (tab) => {
+  wizardTarget.value = tab || 'personnel';
+  isWizardOpen.value = true;
+};
+
+const onWizardImported = async () => {
+  await personnelStore.fetchPersonnel();
+};
+
+const handleExportCurrentTabExcel = (tab) => {
+  if (tab === 'personnel') {
+    const list = personnelStore.personnelList || [];
+    if (list.length > 0) {
+      exportFullPersonnelExcel(list, personnelGroups.value, personnelStore.getDepartmentName);
+    } else {
+      downloadPersonnelTemplate(personnelGroups.value);
+    }
+  } else if (tab === 'relative') {
+    const list = personnelStore.flattenedRelatives || [];
+    if (list.length > 0) {
+      exportFullRelativesExcel(list, relativeGroups.value);
+    } else {
+      downloadRelativeTemplate(relativeGroups.value);
+    }
+  } else if (tab === 'trips') {
+    const list = personnelStore.allTrips || [];
+    exportFullTripsExcel(list, tripsGroups.value, personnelStore.getDepartmentName);
+  }
+};
 
 const personnelGroups = ref([]);
 const relativeGroups = ref([]);

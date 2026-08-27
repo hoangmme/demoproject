@@ -132,6 +132,80 @@ export const exportFullRelativesExcel = (relativesList, mappingConfig) => {
   exportToExcel(rows, 'Danh_sach_Than_nhan_Full_Cot', 'Hồ sơ Thân nhân');
 };
 
+// Export Full Columns for Trips with [Cột N] prefix
+export const exportFullTripsExcel = (tripsList, mappingConfig, getDepartmentName) => {
+  let currentColIdx = 0;
+  const columnHeaders = [];
+
+  (mappingConfig || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      currentColIdx++;
+      if (c.id === 'stt') {
+        columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
+        return;
+      }
+
+      const subOpts = getSubOptionsList(c);
+      if (subOpts.length > 1) {
+        subOpts.forEach((opt, sIdx) => {
+          const colNum = currentColIdx + sIdx;
+          columnHeaders.push({
+            id: c.id,
+            subOpt: opt,
+            header: `[Cột ${colNum}] ${c.label || c.id}: ${opt}`,
+            col: c,
+          });
+        });
+        currentColIdx += (subOpts.length - 1);
+      } else {
+        columnHeaders.push({
+          id: c.id,
+          header: `[Cột ${currentColIdx}] ${c.label || c.id}`,
+          col: c,
+        });
+      }
+    });
+  });
+
+  const rows = (tripsList || []).map((t, idx) => {
+    const row = {};
+    columnHeaders.forEach((item) => {
+      if (item.id === 'stt') {
+        row[item.header] = idx + 1;
+      } else if (item.subOpt) {
+        const val = getTripFieldValue(t, item.id, item.col.label, getDepartmentName);
+        row[item.header] = String(val).toLowerCase().includes(item.subOpt.toLowerCase()) ? 'X' : '';
+      } else {
+        row[item.header] = getTripFieldValue(t, item.id, item.col.label, getDepartmentName);
+      }
+    });
+    return row;
+  });
+
+  exportToExcel(rows, 'Danh_sach_Chuyen_di_Full_Cot', 'Hồ sơ Chuyến đi');
+};
+
+function getTripFieldValue(t, fieldId, colLabel = '', getDepartmentName) {
+  if (!t) return '';
+  if (fieldId === 'personnelName' || fieldId === 'name' || fieldId === 'ho_va_ten') {
+    return t.personnelName || t.name || t.rawPerson?.name || '';
+  }
+  if (fieldId === 'departmentId' || fieldId === 'departmentName') {
+    return (getDepartmentName && getDepartmentName(t.departmentId)) || t.departmentName || t.rawPerson?.departmentName || '';
+  }
+  if (fieldId === 'position' || fieldId === 'positionName') {
+    return t.position || t.positionName || t.rawPerson?.position || '';
+  }
+  if (fieldId === 'cccd' || fieldId === 'cccdchuyendi' || fieldId === 'cccdparent') {
+    return t.cccd || t.cccdchuyendi || t.cccdparent || t.rawPerson?.cccd || '';
+  }
+  if (t[fieldId] !== undefined && t[fieldId] !== null) return t[fieldId];
+  if (t.custom_data && t.custom_data[fieldId] !== undefined && t.custom_data[fieldId] !== null) {
+    return t.custom_data[fieldId];
+  }
+  return '';
+}
+
 function getRelativeFieldValue(r, fieldId, colLabel = '') {
   if (!r) return '';
   const labelLower = (colLabel || '').toLowerCase();
