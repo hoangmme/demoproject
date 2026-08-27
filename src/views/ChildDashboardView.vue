@@ -139,62 +139,27 @@
       </div>
     </div>
 
-    <!-- Filter Bar Container -->
+    <!-- Filter Bar Container (Chỉ giữ lại ô tìm kiếm) -->
     <div class="app-card" style="padding: 12px 16px; margin-bottom: 1rem;">
-      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <div style="display: flex; gap: 10px; align-items: center;">
         <!-- Search -->
-        <div style="position: relative; flex: 1; min-width: 240px;">
+        <div style="position: relative; flex: 1;">
           <i class="pi pi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem;"></i>
           <InputText
             v-model="searchQuery"
             placeholder="Tìm trong danh sách: họ tên, đơn vị, số quyết định, quốc gia..."
             style="width: 100%; padding-left: 30px; font-size: 0.82rem; height: 34px;"
           />
+          <button
+            v-if="searchQuery"
+            type="button"
+            @click="searchQuery = ''"
+            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; padding: 2px 6px; font-size: 0.8rem;"
+            title="Xóa tìm kiếm"
+          >
+            <i class="pi pi-times"></i>
+          </button>
         </div>
-
-        <!-- Year / Time Filter -->
-        <div style="min-width: 150px;">
-          <select v-model="timeFilterYear" class="filter-select">
-            <option value="all">Khoảng thời gian: Tất cả</option>
-            <option v-for="y in availableYears" :key="y" :value="y">Năm {{ y }}</option>
-          </select>
-        </div>
-
-        <!-- Country Filter -->
-        <div style="min-width: 140px;">
-          <select v-model="selectedCountry" class="filter-select">
-            <option value="">Quốc gia: Tất cả</option>
-            <option v-for="c in availableCountries" :key="c" :value="c">{{ c }}</option>
-          </select>
-        </div>
-
-        <!-- Department Filter -->
-        <div style="min-width: 150px;">
-          <select v-model="selectedDepartment" class="filter-select">
-            <option value="">Đơn vị: Tất cả</option>
-            <option v-for="d in availableDepartments" :key="d" :value="d">{{ d }}</option>
-          </select>
-        </div>
-
-        <!-- Funding Filter -->
-        <div style="min-width: 140px;">
-          <select v-model="selectedFunding" class="filter-select">
-            <option value="">Kinh phí: Tất cả</option>
-            <option v-for="f in availableFundings" :key="f" :value="f">{{ f }}</option>
-          </select>
-        </div>
-
-        <!-- Reset Button -->
-        <Button
-          v-if="hasActiveFilters"
-          label="Xóa bộ lọc"
-          icon="pi pi-filter-slash"
-          severity="secondary"
-          text
-          size="small"
-          @click="resetAllFilters"
-          style="font-size: 0.78rem; padding: 4px 8px;"
-        />
       </div>
     </div>
 

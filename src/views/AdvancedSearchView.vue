@@ -388,7 +388,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
-import { parseDateObj, formatDate, computePresenceStatus } from '@/utils/formatters';
+import { parseDateObj, formatDate, computePresenceStatus, computeTripPresence } from '@/utils/formatters';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 
@@ -622,24 +622,102 @@ const buildDataset = () => {
   const now = new Date();
 
   pList.forEach((p) => {
-    const pTrips = p.trips || [];
-    const pRelatives = p.relatives || [];
+    let custom = {};
+    if (p.custom_data) {
+      try {
+        custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+      } catch (e) {}
+    }
+
+    const pTrips = Array.isArray(p.trips || custom.trips) ? (p.trips || custom.trips) : [];
+    const pRelatives = Array.isArray(p.relatives || custom.relatives) ? (p.relatives || custom.relatives) : [];
 
     const tripCount2026 = pTrips.filter((t) => {
-      const d = parseDateObj(t.departureDate || t.custom_data?.departureDate);
+      const d = parseDateObj(t.ngay_xuat_canh || t.departureDate || t.custom_data?.departureDate);
       return d && d.getFullYear() === now.getFullYear();
     }).length;
 
-    if (pTrips.length === 0) {
+    let validTripsCount = 0;
+
+    pTrips.forEach((t, tIdx) => {
+      let tCustom = {};
+      if (t.custom_data) {
+        try {
+          tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+        } catch (e) {}
+      }
+
+      const depDate = t.ngay_xuat_canh || tCustom.ngay_xuat_canh || t.ngayDi || tCustom.ngayDi || t.departureDate || tCustom.departureDate || '';
+      const arrDate = t.ngay_nhap_canh || tCustom.ngay_nhap_canh || t.ngayVe || tCustom.ngayVe || t.arrivalDate || tCustom.arrivalDate || '';
+      const appArrDate = t.thoi_gian_duyet_ve || tCustom.thoi_gian_duyet_ve || t.thoiGianDuyetVe || t.approvedArrivalDate || tCustom.approvedArrivalDate || '';
+      const extDate = t.thoi_gian_duyet_gia_han || tCustom.thoi_gian_duyet_gia_han || t.gia_han_den_ngay || tCustom.gia_han_den_ngay || t.approvedExtensionDate || tCustom.approvedExtensionDate || '';
+      const decNum = t.so_quyet_dinh || tCustom.so_quyet_dinh || t.decisionNumber || tCustom.decisionNumber || t.decision || '';
+      const cName = t.quoc_gia_xuat_canh || tCustom.quoc_gia_xuat_canh || t.countryName || tCustom.countryName || t.country || '';
+      const fName = t.nguon_kinh_phi || tCustom.nguon_kinh_phi || t.fundingName || t.funding || t.kinh_phi || t.nguonKinhPhi || t.kinhPhi || tCustom.fundingName || tCustom.funding || '';
+      const purp = t.muc_dich_xuat_canh || tCustom.muc_dich_xuat_canh || t.purpose || tCustom.purpose || '';
+
+      // Skip empty/dummy placeholder trip objects
+      if (!cName && !depDate && !arrDate && !decNum && !purp) {
+        return;
+      }
+      validTripsCount++;
+
+      const presence = computeTripPresence({
+        departureDate: depDate,
+        arrivalDate: arrDate,
+        approvedArrivalDate: appArrDate,
+        approvedExtensionDate: extDate,
+        custom_data: tCustom,
+      });
+
+      dataset.push({
+        ...p.custom_data,
+        ...tCustom,
+        ...t,
+        uniqueKey: t.id || `trip_${p.id}_${tIdx}`,
+        rawPerson: p,
+        rawTrip: t,
+        personnelId: p.id,
+        personnelCode: p.code || '',
+        personnelName: p.name || 'Cán bộ',
+        position: p.positionName || p.position || '',
+        departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
+        countryName: cName || '-',
+        quoc_gia_xuat_canh: cName,
+        departureDate: depDate ? formatDate(depDate) : '-',
+        ngay_xuat_canh: depDate ? formatDate(depDate) : '',
+        arrivalDate: arrDate ? formatDate(arrDate) : '-',
+        ngay_nhap_canh: arrDate ? formatDate(arrDate) : '',
+        decisionNumber: decNum || '-',
+        so_quyet_dinh: decNum,
+        fundingName: fName || '-',
+        nguon_kinh_phi: fName,
+        purpose: purp || '-',
+        muc_dich_xuat_canh: purp,
+        trang_thai_hien_dien: presence.label,
+        isOverdue: presence.isOverdue,
+        overdueDays: presence.overdueDays,
+        hasRelatives: pRelatives.length > 0,
+        trip_count_year: tripCount2026,
+        hcCaNhan: p.hcCaNhan || p.custom_data?.hcCaNhan || '',
+        hcCongVu: p.hcCongVu || p.custom_data?.hcCongVu || '',
+        kqThamTra: p.kqThamTra || p.custom_data?.kqThamTra || '',
+        cccd: p.cccd || p.cccdparent || '',
+      });
+    });
+
+    if (validTripsCount === 0) {
       // Personnel without trips
       dataset.push({
+        ...p.custom_data,
+        ...p,
         uniqueKey: `person_${p.id}`,
         rawPerson: p,
         personnelId: p.id,
         personnelCode: p.code || '',
         personnelName: p.name || 'Cán bộ',
         position: p.positionName || p.position || '',
-        departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
+        departmentName: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
         countryName: '-',
         departureDate: '-',
         arrivalDate: '-',
@@ -649,89 +727,11 @@ const buildDataset = () => {
         trang_thai_hien_dien: 'Trong nước',
         isOverdue: false,
         hasRelatives: pRelatives.length > 0,
-        trip_count_year: tripCount2026,
+        trip_count_year: 0,
         hcCaNhan: p.hcCaNhan || p.custom_data?.hcCaNhan || '',
         hcCongVu: p.hcCongVu || p.custom_data?.hcCongVu || '',
         kqThamTra: p.kqThamTra || p.custom_data?.kqThamTra || '',
         cccd: p.cccd || p.cccdparent || '',
-        ...p.custom_data,
-        ...p,
-      });
-    } else {
-      pTrips.forEach((t, tIdx) => {
-        let custom = {};
-        if (t.custom_data) {
-          try {
-            custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
-          } catch (e) {}
-        }
-
-        const depDate = t.departureDate || custom.departureDate || t.ngay_xuat_canh || custom.ngay_xuat_canh || '';
-        const arrDate = t.arrivalDate || custom.arrivalDate || t.ngay_nhap_canh || custom.ngay_nhap_canh || '';
-        const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || t.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || '';
-        const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || t.thoi_gian_duyet_gia_han || custom.thoi_gian_duyet_gia_han || '';
-
-        const depObj = parseDateObj(depDate);
-        const arrObj = parseDateObj(arrDate);
-        const appArrObj = parseDateObj(extDate || appArrDate);
-
-        let isOverdue = false;
-        let overdueDays = 0;
-        let presenceStatus = 'Đã về nước';
-
-        if (arrObj && appArrObj && arrObj > appArrObj) {
-          isOverdue = true;
-          overdueDays = Math.max(1, Math.floor((arrObj - appArrObj) / (1000 * 60 * 60 * 24)));
-          presenceStatus = `Quá hạn (${overdueDays} ngày)`;
-        } else if (depObj && depObj <= now && (!arrDate || (arrObj && arrObj >= now))) {
-          if (appArrObj && now > appArrObj) {
-            isOverdue = true;
-            overdueDays = Math.max(1, Math.floor((now - appArrObj) / (1000 * 60 * 60 * 24)));
-            presenceStatus = `Quá hạn (${overdueDays} ngày)`;
-          } else {
-            presenceStatus = 'Đang ở nước ngoài';
-          }
-        }
-
-        const decNum = t.so_quyet_dinh || t.decisionNumber || custom.so_quyet_dinh || custom.decisionNumber || '';
-        const cName = t.quoc_gia_xuat_canh || t.countryName || custom.quoc_gia_xuat_canh || custom.countryName || t.country || '';
-        const fName = t.nguon_kinh_phi || t.fundingName || custom.nguon_kinh_phi || custom.fundingName || t.funding || t.funding2 || '';
-        const purp = t.muc_dich_xuat_canh || t.purpose || custom.muc_dich_xuat_canh || custom.purpose || '';
-
-        dataset.push({
-          uniqueKey: t.id || `trip_${p.id}_${tIdx}`,
-          rawPerson: p,
-          rawTrip: t,
-          personnelId: p.id,
-          personnelCode: p.code || '',
-          personnelName: p.name,
-          position: p.positionName || p.position || '',
-          departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-          countryName: cName || '-',
-          quoc_gia_xuat_canh: cName || '',
-          departureDate: depDate ? formatDate(depDate) : '-',
-          ngay_xuat_canh: depDate ? formatDate(depDate) : '',
-          arrivalDate: arrDate ? formatDate(arrDate) : '',
-          ngay_nhap_canh: arrDate ? formatDate(arrDate) : '',
-          decisionNumber: decNum || '-',
-          so_quyet_dinh: decNum || '',
-          fundingName: fName || '-',
-          nguon_kinh_phi: fName || '',
-          purpose: purp || '-',
-          muc_dich_xuat_canh: purp || '',
-          trang_thai_hien_dien: presenceStatus,
-          isOverdue,
-          overdueDays,
-          hasRelatives: pRelatives.length > 0,
-          trip_count_year: tripCount2026,
-          hcCaNhan: p.hcCaNhan || p.custom_data?.hcCaNhan || '',
-          hcCongVu: p.hcCongVu || p.custom_data?.hcCongVu || '',
-          kqThamTra: p.kqThamTra || p.custom_data?.kqThamTra || '',
-          cccd: p.cccd || p.cccdparent || '',
-          ...p.custom_data,
-          ...custom,
-          ...t,
-        });
       });
     }
   });
