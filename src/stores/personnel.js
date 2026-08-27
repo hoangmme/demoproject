@@ -576,23 +576,28 @@ export const usePersonnelStore = defineStore('personnel', {
           const s1 = String(r.relationshipName || r.relationship || '').trim().toLowerCase();
           const s2 = String(rel.relationshipName || rel.relationship || '').trim().toLowerCase();
           if (n1 && n2 && n1 === n2 && s1 && s2 && s1 === s2) return true;
+          if (n1 && n2 && n1 === n2 && (c1 || c2 ? c1 === c2 : true)) return true;
           return false;
         };
 
-        const parent = (this.personnelList || []).find((p) => {
-          if (rel.personnelId && String(p.id) === String(rel.personnelId)) return true;
-          if (rel.cccdparent && (p.cccd === rel.cccdparent || p.cccdparent === rel.cccdparent)) return true;
-          if (rel.parentPersonnelName && p.name && p.name.trim().toLowerCase() === rel.parentPersonnelName.trim().toLowerCase()) return true;
-          if (Array.isArray(p.relatives) && p.relatives.some(isSameRel)) return true;
-          return false;
-        });
-
-        if (parent) {
-          const updatedParent = JSON.parse(JSON.stringify(parent));
-          if (Array.isArray(updatedParent.relatives)) {
-            updatedParent.relatives = updatedParent.relatives.filter((r) => !isSameRel(r));
+        for (const p of this.personnelList) {
+          let custom = {};
+          if (p.custom_data) {
+            try {
+              custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+            } catch (e) {}
           }
-          await this.savePerson(updatedParent);
+          const relsInP = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(custom.relatives) ? custom.relatives : []);
+          const isTargetP = relsInP.some(isSameRel) || (rel.personnelId && String(p.id) === String(rel.personnelId)) || (rel.cccdparent && (p.cccd === rel.cccdparent || p.cccdparent === rel.cccdparent));
+          
+          if (isTargetP) {
+            const updatedP = JSON.parse(JSON.stringify(p));
+            updatedP.relatives = relsInP.filter((r) => !isSameRel(r));
+            custom.relatives = updatedP.relatives;
+            updatedP.custom_data = custom;
+            await this.savePerson(updatedP);
+            break;
+          }
         }
 
         if (rel.id) {

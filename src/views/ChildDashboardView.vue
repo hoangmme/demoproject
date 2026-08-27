@@ -1879,9 +1879,11 @@ const isSameTripItem = (t, trip) => {
 };
 
 const handleDeleteItem = async (item) => {
-  const src = currentDashboardConfig.value?.source || 'trips';
+  const src = currentDashboardConfig.value?.source || '';
+  const isRelative = src === 'relatives' || src === 'relative' || Boolean(item.relativeName || item.cccdthannhan || item.relationshipName || item.birthYearTN || item.currentAddress || item.relationship);
+  const isPersonnel = src === 'personnel' || (Boolean(item.positionName || item.position || item.departmentName) && !item.departureDate && !item.ngay_xuat_canh && !isRelative);
 
-  if (src === 'relative') {
+  if (isRelative) {
     const relName = item.relativeName || item.name || 'Thân nhân';
     const parentName = item.parentName || item.parentPersonnelName || 'Cán bộ';
     if (!confirm(`Bạn có chắc chắn muốn xóa thân nhân "${relName}" (thuộc cán bộ ${parentName})?`)) return;
@@ -1892,7 +1894,7 @@ const handleDeleteItem = async (item) => {
     } catch (e) {
       alert('Lỗi xóa thân nhân: ' + (e.message || e));
     }
-  } else if (src === 'personnel') {
+  } else if (isPersonnel) {
     const pName = item.name || 'Cán bộ';
     if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ cán bộ "${pName}"?`)) return;
 
