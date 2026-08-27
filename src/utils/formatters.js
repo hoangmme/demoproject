@@ -772,10 +772,10 @@ export const computeTripPresence = (t) => {
         }
       }
       return {
-        status: isOverdue ? 'overdue' : 'completed',
+        status: 'completed',
         isAbroad: false,
         isOverdue,
-        label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đã về nước',
+        label: isOverdue ? `Đã về nước (quá hạn ${overdueDays} ngày)` : 'Đã về nước',
         overdueDays,
       };
     }
