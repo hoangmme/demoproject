@@ -638,14 +638,42 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
   const fType = formulaConfig.formulaType || 'presence_status';
 
   switch (fType) {
-    case 'presence_status':
+    case 'presence_status': {
+      const depRaw = record.departureDate || record.approvedDepartureDate || record.ngay_xuat_canh || record.ngayDi || record.custom_data?.departureDate || record.custom_data?.ngay_xuat_canh;
+      const arrRaw = record.arrivalDate || record.ngay_nhap_canh || record.ngayVe || record.custom_data?.arrivalDate || record.custom_data?.ngay_nhap_canh;
+      if (depRaw || arrRaw || record.rawTrip || !Array.isArray(record.trips)) {
+        const tripRes = computeTripPresence(record);
+        return {
+          status: tripRes.status,
+          label: tripRes.label,
+          shortLabel: tripRes.status === 'completed' ? 'Đã về nước' : (tripRes.status === 'abroad' ? 'Đang ở nước ngoài' : (tripRes.status === 'overdue' ? 'Quá hạn chưa về' : tripRes.label)),
+          isAbroad: tripRes.isAbroad,
+          isOverdue: tripRes.isOverdue,
+        };
+      }
       return computePresenceStatus(record, {
         departureCol: formulaConfig.formulaDepartureCol || formulaConfig.departureCol,
         arrivalCol: formulaConfig.formulaArrivalCol || formulaConfig.arrivalCol,
         countryCol: formulaConfig.formulaCountryCol || formulaConfig.countryCol,
       });
-    case 'overdue_status':
+    }
+    case 'overdue_status': {
+      const depRaw = record.departureDate || record.approvedDepartureDate || record.ngay_xuat_canh || record.ngayDi;
+      const arrRaw = record.arrivalDate || record.ngay_nhap_canh || record.ngayVe;
+      if (depRaw || arrRaw || record.rawTrip || !Array.isArray(record.trips)) {
+        const tripRes = computeTripPresence(record);
+        if (tripRes.isOverdue) {
+          return {
+            status: 'overdue',
+            label: `Quá hạn (${tripRes.overdueDays} ngày)`,
+            shortLabel: 'Quá hạn',
+            isOverdue: true,
+            overdueDays: tripRes.overdueDays,
+          };
+        }
+      }
       return computeOverdueStatus(record, formulaConfig);
+    }
     case 'date_delta':
       return computeDateDelta(record, formulaConfig);
     case 'conditional_check':
