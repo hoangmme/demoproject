@@ -1399,8 +1399,14 @@
                 @click="openTopicDashboard(currentSelectedDashboard.id)"
                 style="font-size: 0.78rem;"
               />
-              <span style="font-size: 0.74rem; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                <i class="pi pi-check-circle"></i> Tự động lưu khi chỉnh sửa
+              <span v-if="dashboardSaveStatus === 'saving'" style="font-size: 0.74rem; color: #d97706; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                <i class="pi pi-spin pi-spinner"></i> Đang tự động lưu...
+              </span>
+              <span v-else-if="dashboardSaveStatus === 'saved'" style="font-size: 0.74rem; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                <i class="pi pi-check-circle"></i> Đã tự động lưu
+              </span>
+              <span v-else style="font-size: 0.74rem; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 4px;">
+                <i class="pi pi-cloud"></i> Tự động đồng bộ khi sửa
               </span>
             </div>
             <Button
@@ -2220,8 +2226,10 @@ const DEFAULT_TOPIC_DASHBOARDS_CONFIG = [
 
 const customDashboards = ref([...DEFAULT_TOPIC_DASHBOARDS_CONFIG]);
 const selectedDashboardIdx = ref(0);
+const dashboardSaveStatus = ref(''); // '', 'saving', 'saved'
 let isDashboardLoaded = false;
 let autoSaveTimer = null;
+let lastSavedDashboardsJson = '';
 
 const currentSelectedDashboard = computed(() => {
   return customDashboards.value[selectedDashboardIdx.value] || customDashboards.value[0] || null;
@@ -2241,6 +2249,7 @@ const loadCustomDashboards = async () => {
     console.error('Error loading custom dashboards:', e);
   } finally {
     setTimeout(() => {
+      lastSavedDashboardsJson = JSON.stringify(customDashboards.value);
       isDashboardLoaded = true;
     }, 150);
   }
@@ -2248,19 +2257,29 @@ const loadCustomDashboards = async () => {
 
 const debouncedAutoSaveDashboards = () => {
   if (!isDashboardLoaded) return;
+  const currentJson = JSON.stringify(customDashboards.value);
+  if (currentJson === lastSavedDashboardsJson) return;
+
+  dashboardSaveStatus.value = 'saving';
   try {
-    localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+    localStorage.setItem('custom_dashboards_config', currentJson);
   } catch (e) {}
 
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
   autoSaveTimer = setTimeout(async () => {
     try {
       await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      lastSavedDashboardsJson = JSON.stringify(customDashboards.value);
+      dashboardSaveStatus.value = 'saved';
       console.log('Auto-saved custom dashboards config to DB.');
+      setTimeout(() => {
+        if (dashboardSaveStatus.value === 'saved') dashboardSaveStatus.value = '';
+      }, 2500);
     } catch (e) {
       console.error('Error auto-saving custom dashboards:', e);
+      dashboardSaveStatus.value = '';
     }
-  }, 500);
+  }, 600);
 };
 
 watch(
@@ -2272,9 +2291,13 @@ watch(
 );
 
 const saveDashboardsConfig = async () => {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
   try {
-    localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+    const currentJson = JSON.stringify(customDashboards.value);
+    localStorage.setItem('custom_dashboards_config', currentJson);
     await saveAppSettings('custom_dashboards_config', customDashboards.value);
+    lastSavedDashboardsJson = currentJson;
+    dashboardSaveStatus.value = 'saved';
     alert('Đã lưu cấu hình Dashboard thành công! Thanh menu và trang Dashboard đã được cập nhật.');
   } catch (e) {
     console.error('Error saving custom dashboards:', e);

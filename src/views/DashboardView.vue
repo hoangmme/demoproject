@@ -1796,6 +1796,27 @@ const getRowFieldValue = (row, colId) => {
   if ((raw === undefined || raw === null || raw === '') && (colId === 'personnelCode' || colId === 'code')) {
     raw = row.personnelCode || row.code || row.rawPerson?.code;
   }
+  if (
+    (raw === undefined || raw === null || raw === '') &&
+    (colId === 'countryName' || colId === 'country' || colId === 'quoc_gia' || colId === 'quocGia' || colId.toLowerCase().includes('quoc_gia') || colId.toLowerCase().includes('country'))
+  ) {
+    raw =
+      row.countryName ||
+      row.country ||
+      row.quoc_gia ||
+      row.quocGia ||
+      row.rawRelative?.countryName ||
+      row.rawRelative?.country ||
+      row.rawRelative?.quoc_gia ||
+      row.rawTrip?.countryName ||
+      row.rawTrip?.country ||
+      row.rawTrip?.quoc_gia ||
+      row.custom_data?.countryName ||
+      row.custom_data?.quoc_gia ||
+      row.custom_data?.country ||
+      row.rawRelative?.custom_data?.countryName ||
+      row.rawRelative?.custom_data?.quoc_gia;
+  }
 
   if (raw === undefined || raw === null || raw === '' || raw === '-') return '';
   if (typeof raw === 'object') {
@@ -1819,12 +1840,19 @@ const getSourceList = (source) => {
           rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
         } catch (e) {}
       }
+      const cName = r.countryName || r.country || r.quoc_gia || r.quocGia || rCustom.countryName || rCustom.country || rCustom.quoc_gia || rCustom.quocGia || r.noi_o_hien_nay || rCustom.noi_o_hien_nay || '';
       return {
         ...rCustom,
         ...r,
         uniqueKey: r.id || `rel_${idx}`,
+        isRelative: true,
         personnelName: r.relativeName || r.name || 'Thân nhân',
         personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
+        relativeName: r.relativeName || r.name || 'Thân nhân',
+        relationshipName: r.relationshipName || r.relationship || '',
+        countryName: cName,
+        country: cName,
+        quoc_gia: cName,
         rawPerson: r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || r,
         rawRelative: r,
         custom_data: rCustom,

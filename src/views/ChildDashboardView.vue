@@ -1445,8 +1445,16 @@ const currentSourceList = computed(() => {
   }
   if (src === 'relatives') {
     return (personnelStore.relativesList || []).map((r, idx) => {
+      let rCustom = {};
+      if (r.custom_data) {
+        try {
+          rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
+        } catch (e) {}
+      }
       const parentPerson = r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || null;
+      const cName = r.countryName || r.country || r.quoc_gia || r.quocGia || rCustom.countryName || rCustom.country || rCustom.quoc_gia || rCustom.quocGia || r.noi_o_hien_nay || rCustom.noi_o_hien_nay || '';
       return {
+        ...rCustom,
         ...r,
         uniqueKey: r.id || `rel_${idx}`,
         isRelative: true,
@@ -1460,8 +1468,12 @@ const currentSourceList = computed(() => {
         cccdparent: r.cccdparent || parentPerson?.cccd || parentPerson?.cccdparent || '',
         cccdthannhan: r.cccdthannhan || r.cccd || '',
         departmentName: parentPerson?.departmentName || (parentPerson?.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || '',
+        countryName: cName,
+        country: cName,
+        quoc_gia: cName,
         rawPerson: parentPerson || r,
         rawRelative: r,
+        custom_data: rCustom,
       };
     });
   }
@@ -1676,6 +1688,37 @@ const getCellValue = (trip, colId) => {
   }
   if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'personnelCode' || colId === 'code')) {
     rawVal = trip.personnelCode || trip.code || trip.rawPerson?.code;
+  }
+
+  // Fallback for country fields across trips / relatives / personnel
+  if (
+    (rawVal === undefined || rawVal === null || rawVal === '') &&
+    (colId === 'countryName' || colId === 'country' || colId === 'quoc_gia' || colId === 'quocGia' || colId.toLowerCase().includes('quoc_gia') || colId.toLowerCase().includes('country'))
+  ) {
+    rawVal =
+      trip.countryName ||
+      trip.country ||
+      trip.quoc_gia ||
+      trip.quocGia ||
+      trip.rawRelative?.countryName ||
+      trip.rawRelative?.country ||
+      trip.rawRelative?.quoc_gia ||
+      trip.rawTrip?.countryName ||
+      trip.rawTrip?.country ||
+      trip.rawTrip?.quoc_gia ||
+      trip.custom_data?.countryName ||
+      trip.custom_data?.quoc_gia ||
+      trip.custom_data?.country ||
+      trip.rawRelative?.custom_data?.countryName ||
+      trip.rawRelative?.custom_data?.quoc_gia;
+  }
+
+  // Fallback for relative fields
+  if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'relativeName' || colId.toLowerCase().includes('than_nhan'))) {
+    rawVal = trip.relativeName || trip.rawRelative?.relativeName || trip.rawRelative?.name;
+  }
+  if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'relationshipName' || colId === 'relationship' || colId.toLowerCase().includes('quan_he'))) {
+    rawVal = trip.relationshipName || trip.relationship || trip.rawRelative?.relationshipName || trip.rawRelative?.relationship;
   }
 
   if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '' || String(rawVal).trim() === '-') {

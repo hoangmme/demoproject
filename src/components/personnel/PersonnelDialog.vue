@@ -235,12 +235,15 @@ const initFormData = (val) => {
       custom_data: { ...cd, ...parsedVal },
     };
   } else {
+    isEdit.value = false;
     form.value = {
       id: null,
       code: '',
       name: '',
       otherName: '',
       birthYear: '',
+      gender: 'Nam',
+      birthDate: '',
       ethnicity: 'Kinh',
       religion: 'Không',
       hometown: '',
@@ -264,7 +267,12 @@ const initFormData = (val) => {
       files: [],
     };
   }
+  initialJsonSnapshot = JSON.stringify(form.value);
 };
+
+const autoSaveStatus = ref('');
+let autoSaveTimer = null;
+let initialJsonSnapshot = '';
 
 watch(
   () => [props.modelValue, props.initialTab, props.personData],
@@ -272,13 +280,13 @@ watch(
     if (isOpen) {
       activeTab.value = Number(tab) === 1 ? 1 : 0;
       initFormData(pData || props.personData);
+    } else {
+      if (autoSaveTimer) clearTimeout(autoSaveTimer);
+      autoSaveStatus.value = '';
     }
   },
   { immediate: true, deep: true }
 );
-
-const autoSaveStatus = ref('');
-let autoSaveTimer = null;
 
 const triggerAutoSave = () => {
   if (!isEdit.value || !form.value.id || !form.value.name?.trim()) return;
@@ -292,6 +300,7 @@ const triggerAutoSave = () => {
     try {
       form.value.cccdparent = String(cccdVal).trim();
       const saved = await personnelStore.savePerson(form.value);
+      initialJsonSnapshot = JSON.stringify(form.value);
       autoSaveStatus.value = 'saved';
       emit('saved', saved);
       setTimeout(() => {
@@ -306,7 +315,14 @@ const triggerAutoSave = () => {
 watch(
   () => form.value,
   () => {
-    if (visible.value && isEdit.value) {
+    if (!visible.value || !isEdit.value) return;
+    const currentJson = JSON.stringify(form.value);
+    if (!initialJsonSnapshot) {
+      initialJsonSnapshot = currentJson;
+      return;
+    }
+    // Chỉ kích hoạt tự động lưu khi CÓ SỰ THAY ĐỔI thực sự so với snapshot ban đầu
+    if (currentJson !== initialJsonSnapshot) {
       triggerAutoSave();
     }
   },
@@ -325,10 +341,13 @@ const handleSave = async () => {
     activeTab.value = 0;
     return;
   }
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
   form.value.cccdparent = String(cccdVal).trim();
   saving.value = true;
   try {
     const saved = await personnelStore.savePerson(form.value);
+    initialJsonSnapshot = JSON.stringify(form.value);
+    autoSaveStatus.value = 'saved';
     alert('Lưu hồ sơ cán bộ thành công!');
     emit('saved', saved);
     visible.value = false;
