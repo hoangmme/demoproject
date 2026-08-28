@@ -1452,15 +1452,12 @@ const currentSourceList = computed(() => {
         } catch (e) {}
       }
       const parentPerson = r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || null;
-      const trips = Array.isArray(r.trips) ? r.trips : [];
-      const firstTripCountry = trips.length > 0 ? (trips[0].countryName || trips[0].country || trips[0].quoc_gia || '') : '';
-      const cName = r.countryName || r.country || r.quoc_gia || r.quocGia || rCustom.countryName || rCustom.country || rCustom.quoc_gia || rCustom.quocGia || firstTripCountry || '';
       return {
         ...rCustom,
         ...r,
         uniqueKey: r.id || `rel_${idx}`,
         isRelative: true,
-        trips,
+        trips: Array.isArray(r.trips) ? r.trips : [],
         personnelName: r.relativeName || r.name || 'Thân nhân',
         personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
         relativeName: r.relativeName || r.name || 'Thân nhân',
@@ -1471,9 +1468,6 @@ const currentSourceList = computed(() => {
         cccdparent: r.cccdparent || parentPerson?.cccd || parentPerson?.cccdparent || '',
         cccdthannhan: r.cccdthannhan || r.cccd || '',
         departmentName: parentPerson?.departmentName || (parentPerson?.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || '',
-        countryName: cName,
-        country: cName,
-        quoc_gia: cName,
         rawPerson: parentPerson || r,
         rawRelative: r,
         custom_data: rCustom,
@@ -1664,12 +1658,15 @@ const getCellValue = (trip, colId) => {
     return trip.isRelative ? (trip.relationshipName || '-') : '-';
   }
 
-  // 1. Check if col is Formula column in Trips/Personnel mapping
+  // 1. Check if col is Formula column in any mapping
   const allMap = {};
   (personnelStore.importMappingTrips || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
   });
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (personnelStore.importMappingRelative || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
   });
 
@@ -1679,61 +1676,55 @@ const getCellValue = (trip, colId) => {
     return result?.label || result?.shortLabel || '-';
   }
 
-  // 2. Direct lookup by exact column ID
-  let rawVal = trip[colId];
-  if (rawVal === undefined || rawVal === null || rawVal === '') {
-    rawVal = trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawPerson?.[colId] ?? trip.rawRelative?.[colId] ?? trip.rawTrip?.custom_data?.[colId] ?? trip.rawRelative?.custom_data?.[colId];
-  }
+  // 2. Identify column origin strictly from import mappings
+  const tripColIds = (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id));
+  const relColIds = (personnelStore.importMappingRelative || []).flatMap((g) => (g.columns || []).map((c) => c.id));
+  const perColIds = (personnelStore.importMappingPersonnel || []).flatMap((g) => (g.columns || []).map((c) => c.id));
 
-  // Fallback for core personnel fields if not found on trip
-  if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'personnelName' || colId === 'name')) {
-    rawVal = trip.personnelName || trip.name || trip.rawPerson?.name;
-  }
-  if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'personnelCode' || colId === 'code')) {
-    rawVal = trip.personnelCode || trip.code || trip.rawPerson?.code;
-  }
+  let rawVal = undefined;
 
-  // Fallback for country fields across trips / relatives / personnel
-  if (
-    (rawVal === undefined || rawVal === null || rawVal === '') &&
-    (colId === 'countryName' || colId === 'country' || colId === 'quoc_gia' || colId === 'quocGia' || colId.toLowerCase().includes('quoc_gia') || colId.toLowerCase().includes('country'))
-  ) {
-    rawVal =
-      trip.countryName ||
-      trip.country ||
-      trip.quoc_gia ||
-      trip.quocGia ||
-      trip.rawRelative?.countryName ||
-      trip.rawRelative?.country ||
-      trip.rawRelative?.quoc_gia ||
-      trip.rawTrip?.countryName ||
-      trip.rawTrip?.country ||
-      trip.rawTrip?.quoc_gia ||
-      trip.custom_data?.countryName ||
-      trip.custom_data?.quoc_gia ||
-      trip.custom_data?.country ||
-      trip.rawRelative?.custom_data?.countryName ||
-      trip.rawRelative?.custom_data?.quoc_gia;
-  }
-
-  // Fallback for relative fields
-  if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'relativeName' || colId.toLowerCase().includes('than_nhan'))) {
-    rawVal = trip.relativeName || trip.rawRelative?.relativeName || trip.rawRelative?.name;
-  }
-  if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'relationshipName' || colId === 'relationship' || colId.toLowerCase().includes('quan_he'))) {
-    rawVal = trip.relationshipName || trip.relationship || trip.rawRelative?.relationshipName || trip.rawRelative?.relationship;
-  }
-
-  // Fallback for trip fields if item is a Relative and has trips
-  if ((rawVal === undefined || rawVal === null || rawVal === '') && Array.isArray(trip.trips) && trip.trips.length > 0) {
-    for (const t of trip.trips) {
-      const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-      const v = t[colId] ?? tCustom[colId] ?? (colId.toLowerCase().includes('country') || colId.toLowerCase().includes('quoc_gia') ? (t.countryName || t.country || t.quoc_gia) : null);
-      if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
-        rawVal = v;
-        break;
+  if (tripColIds.includes(colId)) {
+    // Cột thuộc Bảng Chuyến đi
+    if (trip.isRelative || currentDashboardConfig.value?.source === 'relatives') {
+      // Đối tượng là Thân nhân -> chỉ đọc trong danh sách chuyến đi thực tế (trip.trips)
+      const trips = Array.isArray(trip.trips) ? trip.trips : [];
+      for (const t of trips) {
+        const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
+        const v = t[colId] !== undefined ? t[colId] : tCustom[colId];
+        if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
+          rawVal = v;
+          break;
+        }
       }
+    } else if (currentDashboardConfig.value?.source === 'personnel') {
+      // Đối tượng là Cán bộ -> chỉ đọc trong danh sách chuyến đi thực tế (trip.trips)
+      const trips = Array.isArray(trip.trips) ? trip.trips : [];
+      for (const t of trips) {
+        const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
+        const v = t[colId] !== undefined ? t[colId] : tCustom[colId];
+        if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
+          rawVal = v;
+          break;
+        }
+      }
+    } else {
+      // Đối tượng là Bản ghi Chuyến đi
+      rawVal = trip[colId] !== undefined ? trip[colId] : (trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawTrip?.custom_data?.[colId]);
     }
+  } else if (relColIds.includes(colId)) {
+    // Cột thuộc Bảng Thân nhân
+    if (trip.isRelative || currentDashboardConfig.value?.source === 'relatives') {
+      rawVal = trip[colId] !== undefined ? trip[colId] : (trip.custom_data?.[colId] ?? trip.rawRelative?.[colId] ?? trip.rawRelative?.custom_data?.[colId]);
+    } else if (trip.rawRelative) {
+      rawVal = trip.rawRelative[colId] !== undefined ? trip.rawRelative[colId] : (trip.rawRelative.custom_data?.[colId]);
+    }
+  } else if (perColIds.includes(colId)) {
+    // Cột thuộc Bảng Cán bộ
+    const p = trip.rawPerson || trip;
+    rawVal = p[colId] !== undefined ? p[colId] : (p.custom_data?.[colId]);
+  } else {
+    // Cột thông thường / fallback trực tiếp
+    rawVal = trip[colId] !== undefined ? trip[colId] : (trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawRelative?.[colId] ?? trip.rawPerson?.[colId]);
   }
 
   if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '' || String(rawVal).trim() === '-') {
