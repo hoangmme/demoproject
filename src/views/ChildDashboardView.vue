@@ -214,7 +214,7 @@
             </div>
           </template>
           <template #body="{ data }">
-            <!-- 1. Họ và tên Cán bộ (configurable rows) -->
+            <!-- 1. Cột ảo Thông tin Cán bộ (configurable rows) -->
             <template v-if="isNameColumn(col.id)">
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
                 <!-- Tên cán bộ -->
@@ -236,6 +236,11 @@
                   {{ getPersonInfo(data).department }}
                 </div>
               </div>
+            </template>
+
+            <!-- 1b. Cột Họ và tên gốc (chỉ hiện tên thuần túy) -->
+            <template v-else-if="col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
+              <strong style="color: #0f172a; font-weight: 700;">{{ data[col.id] || data.personnelName || data.name || '-' }}</strong>
             </template>
 
             <!-- 2. Đơn vị công tác -->
@@ -516,7 +521,7 @@
     <!-- Name Column Config Popover -->
     <div v-if="showNameColConfig" class="name-col-config-overlay" @click.self="showNameColConfig = false">
       <div class="name-col-config-panel" :style="nameColConfigPos">
-        <div style="font-weight: 600; font-size: 0.82rem; margin-bottom: 8px; color: #1e293b;">Tùy chỉnh cột "Họ và tên"</div>
+        <div style="font-weight: 600; font-size: 0.82rem; margin-bottom: 8px; color: #1e293b;">Tùy chỉnh cột "Thông tin cán bộ"</div>
         <label v-for="opt in nameColFieldOptions" :key="opt.key" class="name-col-opt">
           <input type="checkbox" :checked="nameColFields[opt.key]" @change="toggleNameColField(opt.key)" />
           <span>{{ opt.label }}</span>
@@ -549,7 +554,7 @@ const authStore = useAuthStore();
 const isExportDocxDialogOpen = ref(false);
 
 // ===== Name Column Config =====
-const NAME_COL_IDS = new Set(['personnelName', 'name', '_parentPersonnelName', 'ho_va_ten', 'hoTen']);
+const NAME_COL_IDS = new Set(['_parentPersonnelName']);
 const isNameColumn = (colId) => NAME_COL_IDS.has(colId);
 
 const nameColFieldOptions = [
@@ -1026,7 +1031,7 @@ const STANDARD_LABELS = {
   quan_he: 'Quan hệ thân nhân',
   parentName: 'Cán bộ liên quan',
   ho_ten_can_bo: 'Cán bộ liên quan',
-  _parentPersonnelName: 'Họ và tên',
+  _parentPersonnelName: 'Thông tin cán bộ',
   _parentPersonnelCode: 'Mã cán bộ',
   _parentPosition: 'Chức vụ',
   _parentDepartment: 'Đơn vị công tác',
@@ -1084,7 +1089,7 @@ const allAvailableColumnsList = computed(() => {
 
     // Các cột ánh xạ thông tin Cán bộ / Thân nhân
     const virtualTripCols = [
-      { id: '_parentPersonnelName', label: 'Họ và tên', width: '180px' },
+      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
       { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
       { id: '_parentPosition', label: 'Chức vụ', width: '150px' },
       { id: '_parentDepartment', label: 'Đơn vị công tác', width: '180px' },
@@ -1123,7 +1128,7 @@ const allAvailableColumnsList = computed(() => {
 
     // Các cột ảo ánh xạ thông tin Cán bộ / Thân nhân (giống Trips)
     const virtualRelativeCols = [
-      { id: '_parentPersonnelName', label: 'Họ và tên', width: '180px' },
+      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
       { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
       { id: '_parentPosition', label: 'Chức vụ', width: '150px' },
       { id: '_parentDepartment', label: 'Đơn vị công tác', width: '180px' },
@@ -1157,6 +1162,23 @@ const allAvailableColumnsList = computed(() => {
           });
         }
       });
+    });
+
+    // Cột ảo Thông tin cán bộ cho Cán bộ
+    const virtualPersonnelCols = [
+      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
+    ];
+
+    virtualPersonnelCols.forEach((vc) => {
+      if (!seen.has(vc.id)) {
+        seen.add(vc.id);
+        rawList.push({
+          ...vc,
+          colIndex: null,
+          isVirtual: true,
+          tableWidth: null,
+        });
+      }
     });
   }
 
@@ -2196,29 +2218,28 @@ const initTopicColumns = async () => {
   const validIds = new Set(allAvailableColumnsList.value.map((c) => c.id));
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
 
-  // 1. Try loading specific column setup from DB
+  // 1. Áp dụng ngay lập tức cấu hình cột có sẵn trong bộ nhớ (0ms latency, không bị nhấp nháy trống cột)
+  if (currentDashboardConfig.value?.columns && currentDashboardConfig.value.columns.length > 0) {
+    const validCfg = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
+    if (validCfg.length > 0) {
+      selectedColIds.value = validCfg;
+    } else {
+      selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
+    }
+  } else {
+    selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
+  }
+
+  // 2. Kiểm tra bất đồng bộ cấu hình riêng đã lưu (nếu có tùy chỉnh thêm)
   try {
     const dbCols = await getAppSettings(currentKey, null);
     if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
       const validDb = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
       if (validDb.length > 0) {
         selectedColIds.value = validDb;
-        return;
       }
     }
   } catch (e) {}
-
-  // 2. Prioritize columns configured in DB for this dashboard
-  if (currentDashboardConfig.value?.columns && currentDashboardConfig.value.columns.length > 0) {
-    const validCfg = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
-    if (validCfg.length > 0) {
-      selectedColIds.value = validCfg;
-      return;
-    }
-  }
-
-  // 3. Default: all available columns for this topic
-  selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
 };
 
 const handleRouteQueryChange = () => {

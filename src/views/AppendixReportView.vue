@@ -39,11 +39,11 @@
           </span>
 
           <Button
-            label="Xuất Excel Phụ lục"
-            icon="pi pi-file-excel"
-            severity="success"
+            label="Xuất Hồ sơ (PDF / Word)"
+            icon="pi pi-file-pdf"
+            severity="primary"
             size="small"
-            @click="handleExport"
+            @click="isExportDocxDialogOpen = true"
             style="font-size: 0.8rem;"
           />
 
@@ -130,6 +130,12 @@
         </Column>
       </DataTable>
     </div>
+
+    <!-- Advanced Word / PDF Export Dialog -->
+    <AdvancedDocxExportDialog
+      v-model="isExportDocxDialogOpen"
+      :allPersonnel="allPersonnelForExport"
+    />
   </div>
 </template>
 
@@ -146,11 +152,21 @@ import { useAuthStore } from '@/stores/auth';
 import { formatDate, formatExcelDate, computePresenceStatus } from '@/utils/formatters';
 import { exportToExcel } from '@/utils/excel';
 import { getAppSettings } from '@/api/settings';
+import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
+const isExportDocxDialogOpen = ref(false);
+
+const allPersonnelForExport = computed(() => {
+  const currentPIds = new Set((filteredRows.value || []).map((r) => r.personnelId || r.rawPerson?.id || r.id).filter(Boolean));
+  if (currentPIds.size > 0) {
+    return (personnelStore.personnelList || []).filter((p) => currentPIds.has(p.id));
+  }
+  return personnelStore.personnelList || [];
+});
 
 const props = defineProps({
   defaultId: {
