@@ -343,6 +343,28 @@ export const downloadTripsTemplate = (mappingConfig = null) => {
   exportTemplateWithHeaders(headers, 'Mau_Import_Chuyen_Di', 'Mẫu Chuyến đi');
 };
 
+export const downloadAllInOneTemplate = (personnelMapping = null, relativeMapping = null, tripsMapping = null) => {
+  const pHeaders = getMappingHeadersList(personnelMapping);
+  const rHeaders = getMappingHeadersList(relativeMapping);
+  const tHeaders = getMappingHeadersList(tripsMapping);
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Cán bộ
+  const wsP = XLSX.utils.aoa_to_sheet([pHeaders]);
+  XLSX.utils.book_append_sheet(wb, wsP, 'Cán bộ');
+
+  // Sheet 2: Thân nhân
+  const wsR = XLSX.utils.aoa_to_sheet([rHeaders]);
+  XLSX.utils.book_append_sheet(wb, wsR, 'Thân nhân');
+
+  // Sheet 3: Chuyến đi
+  const wsT = XLSX.utils.aoa_to_sheet([tHeaders]);
+  XLSX.utils.book_append_sheet(wb, wsT, 'Chuyến đi');
+
+  XLSX.writeFile(wb, `Mau_Nhap_Lieu_Tong_Hop_3_Sheet_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
 export const readExcelWorkbook = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

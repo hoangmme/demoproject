@@ -12,11 +12,22 @@
       </div>
 
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <!-- Nút Tải file mẫu Tổng hợp 3 Sheet -->
+        <Button
+          v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
+          label="Tải Mẫu Tổng Hợp (3 Sheet: Cán bộ, Thân nhân, Chuyến đi)"
+          icon="pi pi-file-excel"
+          severity="success"
+          size="small"
+          @click="handleExportAllInOneTemplate"
+          style="font-size: 0.82rem; font-weight: 600;"
+        />
+
         <!-- Nút Tải file mẫu Excel theo tab hiện tại -->
         <Button
           v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
-          :label="`Tải File Mẫu Excel (${getTabName(activeTab)})`"
-          icon="pi pi-file-excel"
+          :label="`Tải Mẫu Đơn (${getTabName(activeTab)})`"
+          icon="pi pi-download"
           severity="secondary"
           outlined
           size="small"
@@ -1752,7 +1763,15 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { uploadFile, getFileUrl } from '@/api/files';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import { createSampleDocxTemplateBlob } from '@/utils/docxExport';
-import { exportFullPersonnelExcel, exportFullRelativesExcel, exportFullTripsExcel, downloadPersonnelTemplate, downloadRelativeTemplate } from '@/utils/excel';
+import {
+  exportFullPersonnelExcel,
+  exportFullRelativesExcel,
+  exportFullTripsExcel,
+  downloadPersonnelTemplate,
+  downloadRelativeTemplate,
+  downloadTripsTemplate,
+  downloadAllInOneTemplate,
+} from '@/utils/excel';
 import { saveAs } from 'file-saver';
 
 const route = useRoute();
@@ -1779,6 +1798,10 @@ const openImportWizard = (tab) => {
 
 const onWizardImported = async () => {
   await personnelStore.fetchPersonnel();
+};
+
+const handleExportAllInOneTemplate = () => {
+  downloadAllInOneTemplate(personnelGroups.value, relativeGroups.value, tripsGroups.value);
 };
 
 const handleExportCurrentTabExcel = (tab) => {
