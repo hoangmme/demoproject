@@ -1652,7 +1652,7 @@ const getCellValue = (trip, colId) => {
   // 2. Direct lookup by exact column ID
   let rawVal = trip[colId];
   if (rawVal === undefined || rawVal === null || rawVal === '') {
-    rawVal = trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawPerson?.[colId] ?? trip.rawTrip?.custom_data?.[colId];
+    rawVal = trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawPerson?.[colId] ?? trip.rawRelative?.[colId] ?? trip.rawTrip?.custom_data?.[colId] ?? trip.rawRelative?.custom_data?.[colId];
   }
 
   // Fallback for core personnel fields if not found on trip

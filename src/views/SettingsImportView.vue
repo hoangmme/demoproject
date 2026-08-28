@@ -1336,9 +1336,11 @@
                   <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Cột cần đếm / lọc:</label>
                   <select v-model="card.field" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
                     <option value="">-- Toàn bộ danh sách (Đếm tất cả) --</option>
-                    <option v-for="col in availableDashboardCols" :key="col.id" :value="col.id">
-                      {{ col.displayLabel || col.label }}
-                    </option>
+                    <optgroup v-for="grp in categorizedDashboardCols" :key="grp.category" :label="grp.category">
+                      <option v-for="col in grp.options" :key="col.id" :value="col.id">
+                        {{ col.displayLabel || col.label }}
+                      </option>
+                    </optgroup>
                   </select>
                 </div>
 
@@ -2329,39 +2331,60 @@ const removeMetricCard = (dash, cIdx) => {
   dash.metricCards.splice(cIdx, 1);
 };
 
-const availableDashboardCols = computed(() => {
-  const src = currentSelectedDashboard.value?.source || 'trips';
-  let rawList = [];
-  if (src === 'trips') {
-    const defaultCols = [
-      { id: 'personnelName', label: 'Họ và tên người đi' },
-      { id: 'position', label: 'Chức vụ' },
-      { id: 'departmentName', label: 'Đơn vị công tác' },
-      { id: 'countryName', label: 'Quốc gia / Nơi đến' },
-      { id: 'departureDate', label: 'Ngày xuất cảnh' },
-      { id: 'arrivalDate', label: 'Ngày nhập cảnh' },
-      { id: 'decisionNumber', label: 'Số quyết định duyệt' },
-      { id: 'fundingName', label: 'Nguồn kinh phí' },
-      { id: 'purpose', label: 'Mục đích chuyến đi' },
-    ];
-    const seen = new Set(defaultCols.map((c) => c.id));
-    rawList = [...defaultCols];
-    (availableTripCols.value || []).forEach((c) => {
-      if (c.id && !seen.has(c.id)) {
-        seen.add(c.id);
-        rawList.push(c);
-      }
-    });
-  } else if (src === 'relatives') {
-    rawList = availableRelativeCols.value || [];
-  } else {
-    rawList = availablePersonnelCols.value || [];
-  }
+const categorizedDashboardCols = computed(() => {
+  const groups = [];
 
-  return rawList.map((c, idx) => ({
-    ...c,
-    displayLabel: `(Cột ${idx + 1}) - ${c.label || c.id}`,
-  }));
+  // 1. Nhóm Chuyến đi (Trips)
+  const tripCols = [];
+  tripCols.push({ id: 'isRelative', label: 'Đối tượng (true: Thân nhân, false: Cán bộ)', displayLabel: '🎯 Đối tượng (Thân nhân / Cán bộ)' });
+  tripCols.push({ id: 'trang_thai_hien_dien', label: 'Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)', displayLabel: '🎯 Trạng thái hiện diện' });
+  tripCols.push({ id: 'qua_han_chua_ve', label: 'Quá hạn chưa về', displayLabel: '🎯 Quá hạn chưa về' });
+  tripCols.push({ id: 'di_truoc_khi_co_quyet_dinh', label: 'Xuất cảnh trước ngày có QĐ', displayLabel: '🎯 Xuất cảnh trước ngày có QĐ' });
+
+  const defaultTripCols = [
+    { id: 'personnelName', label: 'Họ và tên người đi' },
+    { id: 'position', label: 'Chức vụ' },
+    { id: 'departmentName', label: 'Đơn vị công tác' },
+    { id: 'countryName', label: 'Quốc gia / Nơi đến' },
+    { id: 'departureDate', label: 'Ngày xuất cảnh' },
+    { id: 'arrivalDate', label: 'Ngày nhập cảnh' },
+    { id: 'decisionNumber', label: 'Số quyết định duyệt' },
+    { id: 'fundingName', label: 'Nguồn kinh phí' },
+    { id: 'purpose', label: 'Mục đích chuyến đi' },
+  ];
+  const seenTrip = new Set(tripCols.map((c) => c.id).concat(defaultTripCols.map((c) => c.id)));
+  defaultTripCols.forEach((c) => tripCols.push({ ...c, displayLabel: `(Chuyến đi) - ${c.label}` }));
+  (availableTripCols.value || []).forEach((c, idx) => {
+    if (c.id && !seenTrip.has(c.id)) {
+      seenTrip.add(c.id);
+      tripCols.push({ ...c, displayLabel: `(Chuyến đi - Cột ${c.colIndex || idx + 1}) - ${c.label || c.id}` });
+    }
+  });
+  groups.push({ category: '✈️ Bảng Chuyến đi (Trips)', options: tripCols });
+
+  // 2. Nhóm Thân nhân (Relatives)
+  const relCols = [];
+  (availableRelativeCols.value || []).forEach((c, idx) => {
+    relCols.push({ ...c, displayLabel: `(Thân nhân - Cột ${c.colIndex || idx + 1}) - ${c.label || c.id}` });
+  });
+  groups.push({ category: '👨‍👩‍👧 Bảng Thân nhân (Relatives)', options: relCols });
+
+  // 3. Nhóm Cán bộ (Personnel)
+  const pCols = [];
+  (availablePersonnelCols.value || []).forEach((c, idx) => {
+    pCols.push({ ...c, displayLabel: `(Cán bộ - Cột ${c.colIndex || idx + 1}) - ${c.label || c.id}` });
+  });
+  groups.push({ category: '📌 Bảng Cán bộ (Personnel)', options: pCols });
+
+  return groups;
+});
+
+const availableDashboardCols = computed(() => {
+  const all = [];
+  categorizedDashboardCols.value.forEach((grp) => {
+    all.push(...grp.options);
+  });
+  return all;
 });
 
 const openTopicDashboard = (id) => {
