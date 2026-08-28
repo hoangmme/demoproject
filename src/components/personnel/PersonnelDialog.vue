@@ -85,10 +85,10 @@
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
           <span v-if="autoSaveStatus === 'saving'" style="font-size: 0.75rem; color: #0284c7; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
-            <i class="pi pi-spin pi-spinner"></i> Đang tự động lưu...
+            <i class="pi pi-spin pi-spinner"></i> Đang lưu...
           </span>
           <span v-else-if="autoSaveStatus === 'saved'" style="font-size: 0.75rem; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
-            <i class="pi pi-check-circle"></i> Đã tự động lưu
+            <i class="pi pi-check-circle"></i> Đã lưu thành công
           </span>
 
           <Button
@@ -344,14 +344,17 @@ const handleSave = async () => {
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
   form.value.cccdparent = String(cccdVal).trim();
   saving.value = true;
+  autoSaveStatus.value = 'saving';
   try {
     const saved = await personnelStore.savePerson(form.value);
     initialJsonSnapshot = JSON.stringify(form.value);
     autoSaveStatus.value = 'saved';
-    alert('Lưu hồ sơ cán bộ thành công!');
     emit('saved', saved);
-    visible.value = false;
+    setTimeout(() => {
+      if (autoSaveStatus.value === 'saved') autoSaveStatus.value = '';
+    }, 2500);
   } catch (e) {
+    autoSaveStatus.value = '';
     alert('Lỗi lưu dữ liệu: ' + (e.message || e));
   } finally {
     saving.value = false;
