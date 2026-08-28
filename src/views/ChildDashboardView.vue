@@ -1102,6 +1102,26 @@ const allAvailableColumnsList = computed(() => {
         }
       });
     });
+
+    // Các cột ảo ánh xạ thông tin Cán bộ / Thân nhân (giống Trips)
+    const virtualRelativeCols = [
+      { id: '_parentPersonnelName', label: 'Họ và tên', width: '180px' },
+      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
+      { id: '_parentPosition', label: 'Chức vụ', width: '150px' },
+      { id: '_parentDepartment', label: 'Đơn vị công tác', width: '180px' },
+    ];
+
+    virtualRelativeCols.forEach((vc) => {
+      if (!seen.has(vc.id)) {
+        seen.add(vc.id);
+        rawList.push({
+          ...vc,
+          colIndex: null,
+          isVirtual: true,
+          tableWidth: null,
+        });
+      }
+    });
   } else {
     // personnel
     (personnelStore.importMappingPersonnel || []).forEach((g) => {
