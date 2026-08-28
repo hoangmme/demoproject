@@ -38,6 +38,77 @@
             />
           </span>
 
+          <!-- ⚙️ Cài đặt Cột & Bộ Lọc Thông Minh Popover (Đồng bộ module với Chuyên đề & Cán bộ) -->
+          <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
+            <Button
+              icon="pi pi-sliders-h"
+              :label="hasActiveFilters ? 'Đang lọc (Bật)' : 'Lọc & Cột'"
+              :severity="hasActiveFilters ? 'primary' : 'secondary'"
+              outlined
+              size="small"
+              @click="isFilterMenuOpen = !isFilterMenuOpen"
+              title="Tùy biến cột hiển thị và Bộ lọc dữ liệu thông minh"
+              style="font-size: 0.8rem;"
+            />
+
+            <div v-show="isFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown">
+              <!-- Phần 1: Bộ lọc nhanh thông minh (cho phụ lục chuyến đi/thân nhân) -->
+              <div v-if="currentAppendix.source === 'trips' || currentAppendix.source === 'relatives'" class="filter-section">
+                <div class="filter-section-title">
+                  <i class="pi pi-filter" style="color: #2563eb;"></i>
+                  <span>Bộ lọc dữ liệu thông minh</span>
+                </div>
+                <div class="smart-chips-grid">
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': statusFilter === 'all' }"
+                    @click="statusFilter = 'all'"
+                  >
+                    Tất cả ({{ rawRows.length }})
+                  </button>
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': statusFilter === 'completed' }"
+                    @click="statusFilter = 'completed'"
+                  >
+                    <i class="pi pi-check-circle" style="color: #16a34a;"></i> Đã về nước
+                  </button>
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': statusFilter === 'abroad' }"
+                    @click="statusFilter = 'abroad'"
+                  >
+                    <i class="pi pi-globe" style="color: #d97706;"></i> Đang ở nước ngoài
+                  </button>
+                  <button
+                    type="button"
+                    class="smart-chip"
+                    :class="{ 'chip-active': statusFilter === 'overdue' }"
+                    @click="statusFilter = 'overdue'"
+                  >
+                    <i class="pi pi-exclamation-triangle" style="color: #dc2626;"></i> Quá hạn chưa về
+                  </button>
+                </div>
+              </div>
+
+              <!-- Phần 2: Tùy chọn Ẩn/Hiện Cột -->
+              <div class="filter-section" :style="currentAppendix.source === 'trips' || currentAppendix.source === 'relatives' ? 'border-top: 1px solid #e2e8f0; margin-top: 10px; padding-top: 10px;' : ''">
+                <div class="filter-section-title" style="margin-bottom: 8px;">
+                  <i class="pi pi-table" style="color: #7c3aed;"></i>
+                  <span>Tùy chọn Cột hiển thị</span>
+                </div>
+                <ColumnSelector
+                  v-model="selectedColIds"
+                  :options="availableColumnsForSelector"
+                  @change="onColumnsChange"
+                />
+              </div>
+            </div>
+          </div>
+
           <Button
             label="Xuất Hồ sơ (PDF / Word)"
             icon="pi pi-file-pdf"
@@ -151,14 +222,32 @@ import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
 import { formatDate, formatExcelDate, computePresenceStatus } from '@/utils/formatters';
 import { exportToExcel } from '@/utils/excel';
-import { getAppSettings } from '@/api/settings';
+import { getAppSettings, saveAppSettings } from '@/api/settings';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
+import ColumnSelector from '@/components/common/ColumnSelector.vue';
 
 const route = useRoute();
 const router = useRouter();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 const isExportDocxDialogOpen = ref(false);
+
+const isFilterMenuOpen = ref(false);
+let filterMenuTimeout = null;
+
+const onMouseEnterFilter = () => {
+  if (filterMenuTimeout) clearTimeout(filterMenuTimeout);
+  isFilterMenuOpen.value = true;
+};
+
+const onMouseLeaveFilter = () => {
+  filterMenuTimeout = setTimeout(() => {
+    isFilterMenuOpen.value = false;
+  }, 250);
+};
+
+const statusFilter = ref('all');
+const hasActiveFilters = computed(() => statusFilter.value !== 'all');
 
 const allPersonnelForExport = computed(() => {
   const currentPIds = new Set((filteredRows.value || []).map((r) => r.personnelId || r.rawPerson?.id || r.id).filter(Boolean));
@@ -269,9 +358,65 @@ const goToAppendixSettings = () => {
   router.push('/settings-import?tab=appendices');
 };
 
+const availableColumnsForSelector = computed(() => {
+  const src = currentAppendix.value.source || 'trips';
+  const seen = new Set();
+  const rawList = [];
+  let colIdx = 0;
+
+  if (src === 'trips') {
+    (personnelStore.importMappingTrips || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+          seen.add(c.id);
+          colIdx++;
+          rawList.push({ id: c.id, label: c.label || c.id, colIndex: colIdx });
+        }
+      });
+    });
+  } else if (src === 'relatives') {
+    (personnelStore.importMappingRelative || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+          seen.add(c.id);
+          colIdx++;
+          rawList.push({ id: c.id, label: c.label || c.id, colIndex: colIdx });
+        }
+      });
+    });
+  } else {
+    (personnelStore.importMappingPersonnel || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+          seen.add(c.id);
+          colIdx++;
+          rawList.push({ id: c.id, label: c.label || c.id, colIndex: colIdx });
+        }
+      });
+    });
+  }
+
+  return rawList;
+});
+
+const onColumnsChange = async (newCols) => {
+  const idx = allAppendices.value.findIndex((x) => x.id === currentAppendixId.value);
+  if (idx !== -1) {
+    allAppendices.value[idx].columns = [...newCols];
+    try {
+      await saveAppSettings('custom_appendices_config', allAppendices.value);
+    } catch (e) {}
+  }
+};
+
 // All available columns mapped from Personnel & Relative imports
 const allColsMap = computed(() => {
   const map = {};
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id) map[c.id] = c;
+    });
+  });
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (c.id) map[c.id] = c;
@@ -287,10 +432,12 @@ const allColsMap = computed(() => {
 
 // Active display columns for current appendix
 const activeDisplayColumns = computed(() => {
-  const selectedColIds = currentAppendix.value.columns || [];
-  return selectedColIds
+  const selectedCols = currentAppendix.value.columns || [];
+  return selectedCols
     .filter((id) => id !== 'stt')
     .map((id) => {
+      const cfg = allColsMap.value[id];
+      if (cfg && cfg.label) return { ...cfg, id: cfg.id, label: cfg.label };
       if (id === 'code') return { id: 'code', label: 'Mã CB' };
       if (id === 'name') return { id: 'name', label: 'Họ và tên' };
       if (id === 'parentName') return { id: 'parentName', label: 'Cán bộ liên quan' };
@@ -303,9 +450,6 @@ const activeDisplayColumns = computed(() => {
       if (id === 'arrivalDate') return { id: 'arrivalDate', label: 'Ngày về' };
       if (id === 'purpose') return { id: 'purpose', label: 'Mục đích' };
       if (id === 'fundingName' || id === 'funding') return { id: 'fundingName', label: 'Nguồn kinh phí' };
-
-      const cfg = allColsMap.value[id];
-      if (cfg && cfg.label) return { ...cfg, id: cfg.id, label: cfg.label };
       return { id, label: id };
     });
 });
@@ -454,9 +598,21 @@ const rawRows = computed(() => {
 });
 
 const filteredRows = computed(() => {
-  if (!searchQuery.value.trim()) return rawRows.value;
+  let list = rawRows.value;
+
+  if (statusFilter.value !== 'all') {
+    list = list.filter((item) => {
+      const p = computePresenceStatus(item);
+      if (statusFilter.value === 'completed') return p.presenceStatus === 'completed';
+      if (statusFilter.value === 'abroad') return p.isAbroad;
+      if (statusFilter.value === 'overdue') return p.isOverdue;
+      return true;
+    });
+  }
+
+  if (!searchQuery.value.trim()) return list;
   const q = searchQuery.value.toLowerCase().trim();
-  return rawRows.value.filter((row) => {
+  return list.filter((row) => {
     return Object.values(row).some((val) => {
       if (val === undefined || val === null) return false;
       return String(val).toLowerCase().includes(q);
@@ -506,5 +662,83 @@ const handleExport = () => {
   color: #ffffff !important;
   border-color: #0284c7 !important;
   box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+
+/* Header Menu Dropdown & Filter Panel */
+.header-menu-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.header-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+  padding: 10px;
+  margin-top: 4px;
+}
+
+.header-menu-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: transparent;
+}
+
+.filter-panel-dropdown {
+  width: 320px;
+  max-width: 90vw;
+}
+
+.filter-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.smart-chips-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.smart-chip {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.smart-chip:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.chip-active {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border-color: #3b82f6 !important;
+  font-weight: 700 !important;
 }
 </style>
