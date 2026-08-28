@@ -1374,14 +1374,26 @@ const currentSourceList = computed(() => {
     }));
   }
   if (src === 'relatives') {
-    return (personnelStore.relativesList || []).map((r, idx) => ({
-      ...r,
-      uniqueKey: r.id || `rel_${idx}`,
-      personnelName: r.relativeName || r.name || 'Thân nhân',
-      personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
-      rawPerson: r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || r,
-      rawRelative: r,
-    }));
+    return (personnelStore.relativesList || []).map((r, idx) => {
+      const parentPerson = r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || null;
+      return {
+        ...r,
+        uniqueKey: r.id || `rel_${idx}`,
+        isRelative: true,
+        personnelName: r.relativeName || r.name || 'Thân nhân',
+        personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
+        relativeName: r.relativeName || r.name || 'Thân nhân',
+        relationshipName: r.relationshipName || r.relationship || '',
+        parentName: parentPerson?.name || '',
+        parentPersonnelName: parentPerson?.name || '',
+        parentPosition: parentPerson?.positionName || parentPerson?.position || '',
+        cccdparent: r.cccdparent || parentPerson?.cccd || parentPerson?.cccdparent || '',
+        cccdthannhan: r.cccdthannhan || r.cccd || '',
+        departmentName: parentPerson?.departmentName || (parentPerson?.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || '',
+        rawPerson: parentPerson || r,
+        rawRelative: r,
+      };
+    });
   }
   return unifiedTripsList.value;
 });
