@@ -347,47 +347,67 @@ export const formatCellForExcel = (val, colDef) => {
   if (val === undefined || val === null || val === '') return '';
   if (colDef && colDef.format === 'formula') return ''; // Cột công thức: giữ nguyên tiêu đề cột nhưng bỏ qua nội dung
 
+  let result = '';
+
   if (typeof val === 'string') {
+    // Tránh xuất chuỗi base64 file/ảnh khổng lồ gây tràn giới hạn ô Excel
+    if (val.startsWith('data:') || (val.length > 500 && /^[A-Za-z0-9+/=]+$/.test(val.slice(0, 500)))) {
+      return '[Tệp đính kèm / File data]';
+    }
     if (val.startsWith('[') || val.startsWith('{')) {
       try {
         const parsed = JSON.parse(val);
         return formatCellForExcel(parsed, colDef);
       } catch (e) {}
     }
-    return val;
-  }
-
-  if (Array.isArray(val)) {
+    result = val;
+  } else if (Array.isArray(val)) {
     if (val.length === 0) return '';
     // Mảng các dòng (bảng lặp table_loop / table_2col)
     if (typeof val[0] === 'object' && val[0] !== null) {
-      return val
+      result = val
         .map((row) => {
-          const keys = Object.keys(row).filter((k) => k.startsWith('col') || k !== 'id');
+          if (!row || typeof row !== 'object') return String(row ?? '');
+          const keys = Object.keys(row).filter((k) => k.startsWith('col') || (k !== 'id' && !k.startsWith('_')));
           if (keys.length > 0) {
             keys.sort((a, b) => {
               const na = parseInt(a.replace(/\D/g, ''), 10) || 0;
               const nb = parseInt(b.replace(/\D/g, ''), 10) || 0;
               return na - nb;
             });
-            return keys.map((k) => row[k] ?? '').join(' | ');
+            return keys
+              .map((k) => {
+                const cellVal = row[k];
+                if (cellVal && typeof cellVal === 'string' && cellVal.startsWith('data:')) return '[Tệp]';
+                return cellVal ?? '';
+              })
+              .join(' | ');
           }
-          return Object.values(row).join(' | ');
+          return Object.values(row)
+            .map((cv) => (typeof cv === 'string' && cv.startsWith('data:') ? '[Tệp]' : (cv ?? '')))
+            .join(' | ');
         })
         .join('\n');
+    } else if (colDef && colDef.format === 'text_loop') {
+      // Mảng text_loop (xuống dòng mỗi mục)
+      result = val.join('\n');
+    } else {
+      result = val.join(', ');
     }
-    // Mảng text_loop (xuống dòng mỗi mục)
-    if (colDef && colDef.format === 'text_loop') {
-      return val.join('\n');
-    }
-    return val.join(', ');
+  } else if (typeof val === 'object') {
+    result = Object.values(val)
+      .map((cv) => (typeof cv === 'string' && cv.startsWith('data:') ? '[Tệp]' : (cv ?? '')))
+      .join(' | ');
+  } else {
+    result = String(val);
   }
 
-  if (typeof val === 'object') {
-    return Object.values(val).join(' | ');
+  // EXCEL SPEC LIMIT: Tối đa 32,767 ký tự cho 1 ô Excel (Cắt an toàn ở 32,000 ký tự)
+  if (result.length > 32000) {
+    result = result.substring(0, 32000) + '... [Đã cắt do vượt quá 32,000 ký tự Excel]';
   }
 
-  return String(val);
+  return result;
 };
 
 export const exportAllInOneDataExcel = (

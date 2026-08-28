@@ -11,16 +11,16 @@
         </p>
       </div>
 
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
         <!-- Nút Xuất toàn bộ dữ liệu web thực tế 3 sheet -->
         <Button
           v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
-          label="Xuất Dữ Liệu Web (3 Sheet Full)"
-          icon="pi pi-file-export"
+          label="Xuất Dữ Liệu Web (3 Sheet)"
+          icon="pi pi-file-excel"
           severity="primary"
           size="small"
           @click="handleExportAllInOneData"
-          style="font-size: 0.82rem; font-weight: 700;"
+          style="font-size: 0.8rem; font-weight: 700;"
           title="Xuất toàn bộ dữ liệu thực tế đang có trên hệ thống ra 1 file Excel gồm 3 Sheet: Cán bộ, Thân nhân, Chuyến đi"
         />
 
@@ -28,24 +28,12 @@
         <Button
           v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
           label="Tải Mẫu Tổng Hợp (3 Sheet)"
-          icon="pi pi-file-excel"
-          severity="success"
+          icon="pi pi-download"
+          severity="secondary"
           outlined
           size="small"
           @click="handleExportAllInOneTemplate"
-          style="font-size: 0.82rem; font-weight: 600;"
-        />
-
-        <!-- Nút Mở Công cụ Nhập Bảng & List (/bang-tuy-chinh) -->
-        <Button
-          label="🛠️ Công cụ Nhập Bảng & List"
-          icon="pi pi-external-link"
-          severity="help"
-          outlined
-          size="small"
-          @click="openTableHelper"
-          style="font-size: 0.82rem; font-weight: 600;"
-          title="Mở công cụ hỗ trợ cán bộ/đơn vị soạn thảo Bảng lặp và List dữ liệu để dán vào Excel"
+          style="font-size: 0.8rem; font-weight: 600;"
         />
 
         <!-- Nút Tải file mẫu Excel theo tab hiện tại -->
@@ -57,20 +45,22 @@
           outlined
           size="small"
           @click="handleExportCurrentTabExcel(activeTab)"
-          style="font-size: 0.82rem;"
+          style="font-size: 0.8rem;"
         />
 
-        <!-- Nút Nhập Excel Wizard -->
+        <!-- Nút Mở Công cụ Nhập Bảng & List (/bang-tuy-chinh) -->
         <Button
-          v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
-          label="Nhập Excel (Wizard)"
-          icon="pi pi-upload"
-          severity="info"
+          label="🛠️ Công cụ Nhập Bảng & List"
+          icon="pi pi-external-link"
+          severity="help"
+          outlined
           size="small"
-          @click="openImportWizard(activeTab)"
-          style="font-size: 0.82rem;"
+          @click="openTableHelper"
+          style="font-size: 0.8rem; font-weight: 600;"
+          title="Mở công cụ hỗ trợ cán bộ/đơn vị soạn thảo Bảng lặp và List dữ liệu để dán vào Excel"
         />
 
+        <!-- Nút Lưu Cấu hình -->
         <Button
           label="Lưu Cấu hình"
           icon="pi pi-save"
@@ -78,7 +68,7 @@
           size="small"
           :loading="saving"
           @click="saveConfig"
-          style="font-size: 0.82rem;"
+          style="font-size: 0.8rem; font-weight: 700;"
         />
       </div>
     </div>
