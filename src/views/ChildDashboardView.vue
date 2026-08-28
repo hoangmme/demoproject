@@ -719,85 +719,101 @@ const getCardMinWidthStyle = (card) => {
   return '160px';
 };
 
+const matchSingleCondition = (item, cond) => {
+  if (!cond || !cond.field || String(cond.field).trim() === '') return true;
+
+  const field = cond.field;
+  const op = cond.operator || 'has_value';
+  const target = String(cond.value || '').trim().toLowerCase();
+
+  // 1a. Đối tượng Thân nhân / Cán bộ
+  if (field === 'isRelative') {
+    const isRel = !!item.isRelative;
+    if (op === 'has_value') return isRel;
+    if (op === 'empty') return !isRel;
+    if (op === 'equals') {
+      if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === true;
+      if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === false;
+    }
+    if (op === 'not_equals') {
+      if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === false;
+      if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === true;
+    }
+    return isRel;
+  }
+
+  // 1b. Special Formula Fields
+  if (field === 'di_truoc_khi_co_quyet_dinh') {
+    const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
+    return res.isWarning;
+  }
+  if (field === 'trang_thai_hien_dien') {
+    const presence = getTripPresence(item);
+    if (target.includes('đã về nước')) return presence.status === 'completed' && !presence.isOverdue;
+    if (target.includes('đang ở nước ngoài')) return presence.status === 'abroad';
+    if (target.includes('quá hạn')) return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
+  }
+  if (field === 'qua_han_chua_ve') {
+    const presence = getTripPresence(item);
+    return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
+  }
+
+  // 1c. Dynamic Field Condition (Cột thông thường hoặc Cột của 3 bảng)
+  const rawVal = getCellValue(item, field);
+  const fieldVal = (rawVal !== undefined && rawVal !== null && rawVal !== '-')
+    ? String(rawVal).trim()
+    : '';
+
+  if (op === 'has_value') {
+    return !!fieldVal && fieldVal !== 'Chưa rõ' && fieldVal !== '-';
+  }
+  if (op === 'empty') {
+    return !fieldVal || fieldVal === 'Chưa rõ' || fieldVal === '-';
+  }
+
+  const strVal = fieldVal.toLowerCase();
+  const strTarget = String(cond.value || '').trim().toLowerCase();
+
+  if (op === 'equals') return strVal === strTarget;
+  if (op === 'contains') return strVal.includes(strTarget);
+  if (op === 'not_contains') return !strVal.includes(strTarget);
+
+  if (op === 'before' || op === 'after') {
+    const dVal = new Date(rawVal).getTime();
+    const dTarget = new Date(cond.value).getTime();
+    if (isNaN(dVal) || isNaN(dTarget)) return false;
+    return op === 'before' ? dVal < dTarget : dVal > dTarget;
+  }
+
+  if (op === 'gte' || op === 'lte') {
+    const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
+    const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
+    if (isNaN(numVal) || isNaN(numTarget)) return false;
+    return op === 'gte' ? numVal >= numTarget : numVal <= numTarget;
+  }
+
+  return true;
+};
+
 const matchCardCondition = (item, card) => {
   if (!card) return true;
 
-  // 1. Nếu có cấu hình Cột đếm / lọc (card.field) -> BẮT BUỘC kiểm tra điều kiện của cột này trước tiên
-  if (card.field && String(card.field).trim() !== '') {
-    // 1a. Đối tượng Thân nhân / Cán bộ
-    if (card.field === 'isRelative') {
-      const isRel = !!item.isRelative;
-      const op = card.operator || 'has_value';
-      const target = String(card.value || '').trim().toLowerCase();
-      if (op === 'has_value') return isRel;
-      if (op === 'empty') return !isRel;
-      if (op === 'equals') {
-        if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === true;
-        if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === false;
-      }
-      if (op === 'not_equals') {
-        if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === false;
-        if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === true;
-      }
-      return isRel;
-    }
+  // 1. Kiểm tra danh sách điều kiện (hỗ trợ cả conditions[] mới và card.field cũ)
+  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
+    ? card.conditions
+    : (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []);
 
-    // 1b. Special Formula Fields
-    if (card.field === 'di_truoc_khi_co_quyet_dinh') {
-      const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
-      return res.isWarning;
-    }
-    if (card.field === 'trang_thai_hien_dien') {
-      const presence = getTripPresence(item);
-      const target = String(card.value || '').toLowerCase().trim();
-      if (target.includes('đã về nước')) return presence.status === 'completed' && !presence.isOverdue;
-      if (target.includes('đang ở nước ngoài')) return presence.status === 'abroad';
-      if (target.includes('quá hạn')) return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
-    }
-    if (card.field === 'qua_han_chua_ve') {
-      const presence = getTripPresence(item);
-      return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
-    }
+  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
 
-    // 1c. Dynamic Field Condition (Cột thông thường hoặc Cột của 3 bảng)
-    const rawVal = getCellValue(item, card.field);
-    const fieldVal = (rawVal !== undefined && rawVal !== null && rawVal !== '-')
-      ? String(rawVal).trim()
-      : '';
-
-    const op = card.operator || 'has_value';
-    if (op === 'has_value') {
-      return !!fieldVal && fieldVal !== 'Chưa rõ' && fieldVal !== '-';
+  if (activeConds.length > 0) {
+    const logicOp = (card.logicOp || 'AND').toUpperCase();
+    if (logicOp === 'OR') {
+      return activeConds.some((cond) => matchSingleCondition(item, cond));
     }
-    if (op === 'empty') {
-      return !fieldVal || fieldVal === 'Chưa rõ' || fieldVal === '-';
-    }
-
-    const strVal = fieldVal.toLowerCase();
-    const strTarget = String(card.value || '').trim().toLowerCase();
-
-    if (op === 'equals') return strVal === strTarget;
-    if (op === 'contains') return strVal.includes(strTarget);
-    if (op === 'not_contains') return !strVal.includes(strTarget);
-
-    if (op === 'before' || op === 'after') {
-      const dVal = new Date(rawVal).getTime();
-      const dTarget = new Date(card.value).getTime();
-      if (isNaN(dVal) || isNaN(dTarget)) return false;
-      return op === 'before' ? dVal < dTarget : dVal > dTarget;
-    }
-
-    if (op === 'gte' || op === 'lte') {
-      const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
-      const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
-      if (isNaN(numVal) || isNaN(numTarget)) return false;
-      return op === 'gte' ? numVal >= numTarget : numVal <= numTarget;
-    }
-
-    return true;
+    return activeConds.every((cond) => matchSingleCondition(item, cond));
   }
 
-  // 2. Không có card.field -> Kiểm tra Preset condition
+  // 2. Không có card.field / conditions -> Kiểm tra Preset condition
   const cond = card.condition || card.id || '';
   if (cond === 'completed') {
     const presence = getTripPresence(item);
@@ -818,8 +834,11 @@ const matchCardCondition = (item, card) => {
 
 const isCardAllType = (card) => {
   if (!card) return false;
-  // Nếu có chọn cột lọc hoặc có preset condition đặc biệt thì không phải là Toàn bộ
-  if (card.field && String(card.field).trim() !== '') return false;
+  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
+    ? card.conditions
+    : (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []);
+  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
+  if (activeConds.length > 0) return false;
   if (card.condition && card.condition !== 'all') return false;
   return true;
 };

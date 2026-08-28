@@ -1331,19 +1331,6 @@
                   </button>
                 </div>
 
-                <!-- Chọn Cột để đếm -->
-                <div style="display: flex; flex-direction: column; gap: 3px;">
-                  <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Cột cần đếm / lọc:</label>
-                  <select v-model="card.field" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
-                    <option value="">-- Toàn bộ danh sách (Đếm tất cả) --</option>
-                    <optgroup v-for="grp in categorizedDashboardCols" :key="grp.category" :label="grp.category">
-                      <option v-for="col in grp.options" :key="col.id" :value="col.id">
-                        {{ col.displayLabel || col.label }}
-                      </option>
-                    </optgroup>
-                  </select>
-                </div>
-
                 <!-- Độ rộng khối (% Width) -->
                 <div style="display: flex; flex-direction: column; gap: 3px;">
                   <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Độ rộng khối:</label>
@@ -1358,30 +1345,85 @@
                   </select>
                 </div>
 
-                <!-- Điều kiện đếm / lọc -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;" v-if="card.field">
-                  <div>
-                    <label style="font-size: 0.68rem; font-weight: 600; color: #475569;">Cách đếm:</label>
-                    <select v-model="card.operator" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px;">
-                      <option value="has_value">Có dữ liệu (khác rỗng)</option>
-                      <option value="empty">Để trống (chưa có)</option>
-                      <option value="equals">Là (khớp chính xác)</option>
-                      <option value="contains">Chứa từ khóa</option>
-                      <option value="not_contains">Không chứa từ khóa</option>
-                      <option value="before">Trước ngày</option>
-                      <option value="after">Sau ngày</option>
-                      <option value="gte">Lớn hơn hoặc bằng (&gt;=)</option>
-                      <option value="lte">Nhỏ hơn hoặc bằng (&lt;=)</option>
-                    </select>
+                <!-- Kiểu kết hợp (Khi có từ 2 điều kiện trở lên) -->
+                <div v-if="getCardConditions(card).length > 1" style="display: flex; flex-direction: column; gap: 3px; background: #eff6ff; padding: 6px 8px; border-radius: 4px; border: 1px dashed #93c5fd;">
+                  <label style="font-size: 0.68rem; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 4px;">
+                    <i class="pi pi-sliders-h"></i> Kiểu kết hợp điều kiện:
+                  </label>
+                  <select v-model="card.logicOp" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; font-weight: 600; color: #1e40af;">
+                    <option value="AND">🔗 VÀ (AND) - Thỏa mãn TẤT CẢ điều kiện</option>
+                    <option value="OR">🔀 HOẶC (OR) - Thỏa mãn MỘT TRONG CÁC điều kiện</option>
+                  </select>
+                </div>
+
+                <!-- Danh sách các điều kiện lọc -->
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <div
+                    v-for="(cond, condIdx) in getCardConditions(card)"
+                    :key="cond.id || condIdx"
+                    style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; display: flex; flex-direction: column; gap: 4px;"
+                  >
+                    <!-- Tiêu đề dòng điều kiện + nút xóa -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">
+                        Điều kiện #{{ condIdx + 1 }}:
+                      </span>
+                      <button
+                        v-if="getCardConditions(card).length > 1 || cond.field"
+                        type="button"
+                        @click="removeConditionFromCard(card, condIdx)"
+                        style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 0 2px; font-size: 0.75rem;"
+                        title="Xóa điều kiện này"
+                      >
+                        <i class="pi pi-times-circle"></i>
+                      </button>
+                    </div>
+
+                    <!-- Chọn Cột để đếm -->
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                      <select v-model="cond.field" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px;">
+                        <option value="">-- Toàn bộ danh sách (Không lọc cột) --</option>
+                        <optgroup v-for="grp in categorizedDashboardCols" :key="grp.category" :label="grp.category">
+                          <option v-for="col in grp.options" :key="col.id" :value="col.id">
+                            {{ col.displayLabel || col.label }}
+                          </option>
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    <!-- Toán tử & Giá trị so sánh -->
+                    <div v-if="cond.field" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                      <div>
+                        <select v-model="cond.operator" class="custom-key-select" style="font-size: 0.7rem; padding: 2px 4px;">
+                          <option value="has_value">Có dữ liệu (khác rỗng)</option>
+                          <option value="empty">Để trống (chưa có)</option>
+                          <option value="equals">Là (khớp chính xác)</option>
+                          <option value="contains">Chứa từ khóa</option>
+                          <option value="not_contains">Không chứa từ khóa</option>
+                          <option value="before">Trước ngày</option>
+                          <option value="after">Sau ngày</option>
+                          <option value="gte">Lớn hơn hoặc bằng (&gt;=)</option>
+                          <option value="lte">Nhỏ hơn hoặc bằng (&lt;=)</option>
+                        </select>
+                      </div>
+                      <div v-if="cond.operator !== 'has_value' && cond.operator !== 'empty'">
+                        <input
+                          v-model="cond.value"
+                          placeholder="Nhập giá trị..."
+                          style="font-size: 0.72rem; border: 1px solid #cbd5e1; background: #fff; padding: 2px 4px; border-radius: 4px; width: 100%;"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div v-if="card.operator !== 'has_value' && card.operator !== 'empty'">
-                    <label style="font-size: 0.68rem; font-weight: 600; color: #475569;">Giá trị so sánh:</label>
-                    <input
-                      v-model="card.value"
-                      placeholder="Nhập giá trị..."
-                      style="font-size: 0.75rem; border: 1px solid #cbd5e1; background: #fff; padding: 3px 6px; border-radius: 4px; width: 100%;"
-                    />
-                  </div>
+
+                  <!-- Nút + Thêm điều kiện lọc -->
+                  <button
+                    type="button"
+                    @click="addConditionToCard(card)"
+                    style="display: flex; align-items: center; justify-content: center; gap: 4px; background: #fff; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 5px 8px; color: #0284c7; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                  >
+                    <i class="pi pi-plus" style="font-size: 0.65rem;"></i> Thêm điều kiện lọc (+)
+                  </button>
                 </div>
               </div>
             </div>
@@ -2347,7 +2389,51 @@ const addMetricCardToDashboard = (dash) => {
     label: 'Chỉ số ' + (dash.metricCards.length + 1),
     condition: 'all',
     color: 'blue',
+    widthPercent: '',
+    logicOp: 'AND',
+    conditions: [
+      { id: 'cond_' + Date.now(), field: '', operator: 'has_value', value: '' }
+    ],
   });
+};
+
+const getCardConditions = (card) => {
+  if (!card) return [];
+  if (!card.conditions || !Array.isArray(card.conditions)) {
+    if (card.field) {
+      card.conditions = [
+        { id: 'cond_1', field: card.field, operator: card.operator || 'has_value', value: card.value || '' }
+      ];
+    } else {
+      card.conditions = [
+        { id: 'cond_1', field: '', operator: 'has_value', value: '' }
+      ];
+    }
+  }
+  if (!card.logicOp) card.logicOp = 'AND';
+  return card.conditions;
+};
+
+const addConditionToCard = (card) => {
+  const conds = getCardConditions(card);
+  conds.push({
+    id: 'cond_' + Date.now(),
+    field: '',
+    operator: 'has_value',
+    value: ''
+  });
+};
+
+const removeConditionFromCard = (card, condIdx) => {
+  const conds = getCardConditions(card);
+  if (conds.length <= 1) {
+    conds[0].field = '';
+    conds[0].operator = 'has_value';
+    conds[0].value = '';
+    card.field = '';
+  } else {
+    conds.splice(condIdx, 1);
+  }
 };
 
 const removeMetricCard = (dash, cIdx) => {
