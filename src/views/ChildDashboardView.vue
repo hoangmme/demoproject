@@ -802,19 +802,34 @@ const matchCardCondition = (item, card) => {
   return true;
 };
 
+const isCardAllType = (card) => {
+  if (!card) return false;
+  if (card.field && card.field !== 'personnelName' && card.field !== 'cccdparent' && String(card.field).trim() !== '') return false;
+  if (card.id === 'all' || card.condition === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả') return true;
+  return false;
+};
+
+// Tập dữ liệu cơ sở của Chuyên đề (được lọc dựa theo điều kiện của thẻ đầu tiên / thẻ Toàn bộ)
+const topicBaselineList = computed(() => {
+  const fullList = currentSourceList.value || [];
+  const firstCard = activeMetricCards.value[0];
+  if (firstCard && !isCardAllType(firstCard)) {
+    return fullList.filter((item) => matchCardCondition(item, firstCard));
+  }
+  return fullList;
+});
+
 const getCardMetricValue = (card) => {
   if (!card) return 0;
-  return currentSourceList.value.filter((item) => matchCardCondition(item, card)).length;
+  const firstCard = activeMetricCards.value[0];
+  if (card === firstCard || isCardAllType(card)) {
+    return topicBaselineList.value.length;
+  }
+  // Các thẻ lọc sau luôn lọc dựa trên tập cơ sở (topicBaselineList)
+  return topicBaselineList.value.filter((item) => matchCardCondition(item, card)).length;
 };
 
 const activeMetricCardId = ref('all');
-
-const isCardAllType = (card) => {
-  if (!card) return false;
-  if (card.field && card.field !== 'personnelName' && String(card.field).trim() !== '') return false;
-  if (card.id === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả') return true;
-  return false;
-};
 
 const isCardActive = (card, cIdx) => {
   if (!card) return false;
@@ -1495,12 +1510,13 @@ const availableFundings = computed(() => {
 
 // Filtered List
 const filteredList = computed(() => {
-  let list = [...currentSourceList.value];
+  let list = [...topicBaselineList.value];
 
   // 0. Active Metric Card Filter (Top KPI Pill)
   if (activeMetricCardId.value && activeMetricCardId.value !== 'all') {
     const targetCard = activeMetricCards.value.find((c, idx) => (c.id || c.label || `card_${idx}`) === activeMetricCardId.value);
-    if (targetCard && !isCardAllType(targetCard)) {
+    const firstCard = activeMetricCards.value[0];
+    if (targetCard && targetCard !== firstCard && !isCardAllType(targetCard)) {
       list = list.filter((t) => matchCardCondition(t, targetCard));
     }
   }

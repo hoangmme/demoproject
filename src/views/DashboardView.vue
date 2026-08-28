@@ -1938,6 +1938,13 @@ const matchCardCondition = (item, card) => {
   return true;
 };
 
+const isCardAllType = (card) => {
+  if (!card) return false;
+  if (card.field && card.field !== 'personnelName' && card.field !== 'cccdparent' && String(card.field).trim() !== '') return false;
+  if (card.id === 'all' || card.condition === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả') return true;
+  return false;
+};
+
 const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
   // Resolve actual card definition from topic if card is a widget reference
@@ -1957,16 +1964,22 @@ const getCardMetricValueForTopic = (card, topic) => {
     else if (str.includes('cán bộ')) src = 'personnel';
     else src = 'trips';
   }
-  const list = getSourceList(src);
+  const fullList = getSourceList(src);
 
-  // If card is "Toàn bộ" or "Tất cả" or condition === 'all' (or field is cccdparent / personnelName), return full list length
-  const cond = actualCard.condition || actualCard.id || actualCard.cardCondition || actualCard.cardId || 'all';
-  const lbl = String(actualCard.label || actualCard.cardLabel || card.label || card.title || '').trim().toLowerCase();
-  if ((cond === 'all' || lbl === 'toàn bộ' || lbl === 'tất cả' || lbl.startsWith('tổng số')) && (!actualCard.field || actualCard.field === 'personnelName' || actualCard.field === 'cccdparent')) {
-    return list.length;
+  // Xác định tập dữ liệu cơ sở của Chuyên đề (Baseline List dựa trên thẻ đầu tiên)
+  const firstCard = topicCards[0];
+  let baselineList = fullList;
+  if (firstCard && !isCardAllType(firstCard)) {
+    baselineList = fullList.filter((item) => matchCardCondition(item, firstCard));
   }
 
-  return list.filter((item) => matchCardCondition(item, actualCard)).length;
+  // Nếu là thẻ đầu tiên (Toàn bộ) -> trả về độ dài tập cơ sở
+  if (actualCard === firstCard || isCardAllType(actualCard)) {
+    return baselineList.length;
+  }
+
+  // Các thẻ con luôn lọc TRÊN TẬP CƠ SỞ (baselineList)
+  return baselineList.filter((item) => matchCardCondition(item, actualCard)).length;
 };
 
 const onTopicCardSelectChange = () => {
