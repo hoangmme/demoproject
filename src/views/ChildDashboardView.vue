@@ -721,47 +721,45 @@ const getCardMinWidthStyle = (card) => {
 
 const matchCardCondition = (item, card) => {
   if (!card) return true;
-  const lbl = String(card.label || card.cardLabel || '').trim().toLowerCase();
-  const cond = card.condition || card.id || '';
 
-  // 1. "Toàn bộ" / "Tất cả"
-  if ((cond === 'all' && (!card.field || card.field === 'personnelName' || card.field === 'cccdparent')) || lbl === 'toàn bộ' || lbl === 'tất cả' || lbl.startsWith('tổng số')) {
-    return true;
-  }
-
-  // 2. Preset Presence Checks
-  if (cond === 'completed' || lbl === 'đã về nước') {
-    const presence = getTripPresence(item);
-    return presence.status === 'completed' && !presence.isOverdue;
-  }
-  if (cond === 'abroad' || lbl === 'đang ở nước ngoài') {
-    const presence = getTripPresence(item);
-    return presence.status === 'abroad';
-  }
-  if (cond === 'overdue' || lbl === 'quá hạn chưa về') {
-    const presence = getTripPresence(item);
-    return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
-  }
-
-  // 3. Special Formula Fields
-  if (card.field === 'di_truoc_khi_co_quyet_dinh' || lbl === 'đi trước khi có quyết định') {
-    const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
-    return res.isWarning;
-  }
-  if (card.field === 'trang_thai_hien_dien') {
-    const presence = getTripPresence(item);
-    const target = String(card.value || '').toLowerCase().trim();
-    if (target.includes('đã về nước')) return presence.status === 'completed' && !presence.isOverdue;
-    if (target.includes('đang ở nước ngoài')) return presence.status === 'abroad';
-    if (target.includes('quá hạn')) return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
-  }
-  if (card.field === 'qua_han_chua_ve') {
-    const presence = getTripPresence(item);
-    return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
-  }
-
-  // 4. Dynamic Field Condition
+  // 1. Nếu có cấu hình Cột đếm / lọc (card.field) -> BẮT BUỘC kiểm tra điều kiện của cột này trước tiên
   if (card.field && String(card.field).trim() !== '') {
+    // 1a. Đối tượng Thân nhân / Cán bộ
+    if (card.field === 'isRelative') {
+      const isRel = !!item.isRelative;
+      const op = card.operator || 'has_value';
+      const target = String(card.value || '').trim().toLowerCase();
+      if (op === 'has_value') return isRel;
+      if (op === 'empty') return !isRel;
+      if (op === 'equals') {
+        if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === true;
+        if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === false;
+      }
+      if (op === 'not_equals') {
+        if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === false;
+        if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === true;
+      }
+      return isRel;
+    }
+
+    // 1b. Special Formula Fields
+    if (card.field === 'di_truoc_khi_co_quyet_dinh') {
+      const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
+      return res.isWarning;
+    }
+    if (card.field === 'trang_thai_hien_dien') {
+      const presence = getTripPresence(item);
+      const target = String(card.value || '').toLowerCase().trim();
+      if (target.includes('đã về nước')) return presence.status === 'completed' && !presence.isOverdue;
+      if (target.includes('đang ở nước ngoài')) return presence.status === 'abroad';
+      if (target.includes('quá hạn')) return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
+    }
+    if (card.field === 'qua_han_chua_ve') {
+      const presence = getTripPresence(item);
+      return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
+    }
+
+    // 1c. Dynamic Field Condition (Cột thông thường hoặc Cột của 3 bảng)
     const rawVal = getCellValue(item, card.field);
     const fieldVal = (rawVal !== undefined && rawVal !== null && rawVal !== '-')
       ? String(rawVal).trim()
@@ -796,6 +794,32 @@ const matchCardCondition = (item, card) => {
       return op === 'gte' ? numVal >= numTarget : numVal <= numTarget;
     }
 
+    return true;
+  }
+
+  // 2. Không có card.field -> Kiểm tra theo nhãn Preset hoặc 'all'
+  const lbl = String(card.label || card.cardLabel || '').trim().toLowerCase();
+  const cond = card.condition || card.id || '';
+
+  if (cond === 'completed' || lbl === 'đã về nước') {
+    const presence = getTripPresence(item);
+    return presence.status === 'completed' && !presence.isOverdue;
+  }
+  if (cond === 'abroad' || lbl === 'đang ở nước ngoài') {
+    const presence = getTripPresence(item);
+    return presence.status === 'abroad';
+  }
+  if (cond === 'overdue' || lbl === 'quá hạn chưa về') {
+    const presence = getTripPresence(item);
+    return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
+  }
+  if (lbl === 'đi trước khi có quyết định') {
+    const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
+    return res.isWarning;
+  }
+
+  // 3. Mặc định: "Toàn bộ" / "Tất cả"
+  if (cond === 'all' || lbl === 'toàn bộ' || lbl === 'tất cả' || lbl.startsWith('tổng số')) {
     return true;
   }
 
