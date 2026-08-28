@@ -541,7 +541,15 @@
                       <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Quá hạn (Tùy chọn):</span>
                       <input
                         v-model="col.formulaLabelOverdue"
-                        placeholder="Mặc định: Quá hạn chưa về"
+                        placeholder="Mặc định: Quá hạn"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Chưa về nước (Vượt deadline):</span>
+                      <input
+                        v-model="col.formulaLabelNotReturnedYet"
+                        placeholder="Mặc định: Chưa về nước"
                         style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
                       />
                     </div>

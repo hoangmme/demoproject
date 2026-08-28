@@ -344,6 +344,7 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
 
   // Nhãn tùy chỉnh
   const labelOverdue = formulaConfig.formulaLabelOverdue || formulaConfig.labelOverdue || 'Quá hạn';
+  const labelNotReturnedYet = formulaConfig.formulaLabelNotReturnedYet || formulaConfig.labelNotReturnedYet || 'Chưa về nước';
   const labelOntime = formulaConfig.formulaLabelOntime || formulaConfig.labelOntime || 'Đã nhập cảnh đúng hạn';
   const labelNotYet = formulaConfig.formulaLabelNotYet || formulaConfig.labelNotYet || 'Chưa quá hạn';
 
@@ -363,6 +364,7 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
   let hasValidDeadline = false;
   let maxOverdueDays = 0;
   let hasOverdue = false;
+  let overdueLabelType = 'overdue'; // 'overdue' (đã về trễ hạn) hoặc 'not_returned' (chưa có ngày về và quá hạn)
   let hasOntime = false;
   let hasNotYet = false;
   let overdueTrip = null;
@@ -398,7 +400,7 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
 
     const arrDate = parseDateValue(arrRaw);
 
-    // Nhánh 1: Nếu B2 có giá trị
+    // Nhánh 1: Nếu B2 có giá trị (Đã nhập cảnh thực tế)
     if (arrDate) {
       const arrNorm = new Date(arrDate);
       arrNorm.setHours(0, 0, 0, 0);
@@ -408,19 +410,21 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
         // Nhập cảnh muộn hơn thời gian duyệt về
         const days = Math.max(1, Math.floor((arrNorm - approvedNorm) / (1000 * 60 * 60 * 24)));
         hasOverdue = true;
-        if (days > maxOverdueDays) {
+        if (days >= maxOverdueDays) {
           maxOverdueDays = days;
           overdueTrip = t;
+          overdueLabelType = 'overdue';
         }
       }
     } else {
-      // Nhánh 2: Chưa có ngày nhập cảnh (chưa về) → so sánh Today vs B3
+      // Nhánh 2: Chưa có ngày nhập cảnh (chưa về nước) → so sánh Today vs B3
       if (today > approvedNorm) {
         const days = Math.max(1, Math.floor((today - approvedNorm) / (1000 * 60 * 60 * 24)));
         hasOverdue = true;
-        if (days > maxOverdueDays) {
+        if (days >= maxOverdueDays) {
           maxOverdueDays = days;
           overdueTrip = t;
+          overdueLabelType = 'not_returned';
         }
       } else {
         hasNotYet = true;
@@ -434,12 +438,13 @@ export const computeOverdueStatus = (record, formulaConfig = {}) => {
   }
 
   if (hasOverdue) {
+    const finalPrefix = overdueLabelType === 'not_returned' ? labelNotReturnedYet : labelOverdue;
     return {
       status: 'overdue',
       isOverdue: true,
       overdueDays: maxOverdueDays,
-      label: `${labelOverdue} (${maxOverdueDays} ngày)`,
-      shortLabel: labelOverdue,
+      label: `${finalPrefix} (${maxOverdueDays} ngày)`,
+      shortLabel: finalPrefix,
       cssClass: 'formula-overdue',
       trip: overdueTrip,
     };
