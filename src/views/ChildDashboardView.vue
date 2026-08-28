@@ -214,36 +214,24 @@
             </div>
           </template>
           <template #body="{ data }">
-            <!-- 1. Họ và tên (configurable rows) -->
+            <!-- 1. Họ và tên Cán bộ (configurable rows) -->
             <template v-if="isNameColumn(col.id)">
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
-                <!-- Badge trên cùng -->
-                <div v-if="nameColFields.badge && data.isRelative">
-                  <span class="badge-role-tn">Thân nhân</span>
-                </div>
-                <!-- Tên -->
+                <!-- Tên cán bộ -->
                 <div v-if="nameColFields.name">
                   <strong style="color: #0f172a; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
                     {{ getPersonInfo(data).name }}
                   </strong>
                 </div>
-                <!-- CCCD Thân nhân -->
-                <div v-if="nameColFields.cccdTN && getPersonInfo(data).cccdTN" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
-                  {{ getPersonInfo(data).cccdTN }}
-                </div>
                 <!-- CCCD Cán bộ -->
                 <div v-if="nameColFields.cccdCB && getPersonInfo(data).cccdCB" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
                   {{ getPersonInfo(data).cccdCB }}
                 </div>
-                <!-- Quan hệ / Chức vụ -->
+                <!-- Chức vụ -->
                 <div v-if="nameColFields.position && getPersonInfo(data).position" style="font-size: 0.72rem; color: #334155;">
                   {{ getPersonInfo(data).position }}
                 </div>
-                <!-- Chức vụ CB (khi là Thân nhân) -->
-                <div v-if="nameColFields.parentPosition && getPersonInfo(data).parentPosition" style="font-size: 0.72rem; color: #334155;">
-                  {{ getPersonInfo(data).parentPosition }}
-                </div>
-                <!-- Đơn vị -->
+                <!-- Đơn vị công tác -->
                 <div v-if="nameColFields.department && getPersonInfo(data).department" style="font-size: 0.72rem; color: #64748b;">
                   {{ getPersonInfo(data).department }}
                 </div>
@@ -565,16 +553,13 @@ const NAME_COL_IDS = new Set(['personnelName', 'name', '_parentPersonnelName', '
 const isNameColumn = (colId) => NAME_COL_IDS.has(colId);
 
 const nameColFieldOptions = [
-  { key: 'badge', label: 'Badge (Thân nhân / Cán bộ)' },
-  { key: 'name', label: 'Họ và tên' },
-  { key: 'cccdTN', label: 'CCCD Thân nhân' },
+  { key: 'name', label: 'Họ và tên Cán bộ' },
   { key: 'cccdCB', label: 'CCCD Cán bộ' },
-  { key: 'position', label: 'Quan hệ / Chức vụ' },
-  { key: 'parentPosition', label: 'Chức vụ Cán bộ (TN)' },
+  { key: 'position', label: 'Chức vụ Cán bộ' },
   { key: 'department', label: 'Đơn vị công tác' },
 ];
 
-const DEFAULT_NAME_COL_FIELDS = { badge: true, name: true, cccdTN: false, cccdCB: true, position: true, parentPosition: false, department: true };
+const DEFAULT_NAME_COL_FIELDS = { name: true, cccdCB: true, position: true, department: true };
 const nameColFields = ref({ ...DEFAULT_NAME_COL_FIELDS });
 const showNameColConfig = ref(false);
 const nameColConfigPos = ref({});
@@ -896,49 +881,26 @@ const getActiveCardCellValue = (row) => {
 };
 
 const getPersonInfo = (data) => {
-  if (!data) return { name: '-', cccdTN: '', cccdCB: '', position: '', parentPosition: '', department: '' };
+  if (!data) return { name: '-', cccdCB: '', position: '', department: '' };
 
   const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
   const posField = personnelStore.getPersonnelPositionField ? personnelStore.getPersonnelPositionField() : 'position';
   const deptField = personnelStore.getPersonnelDepartmentField ? personnelStore.getPersonnelDepartmentField() : 'departmentName';
 
-  if (data.isRelative) {
-    const parentName = data.rawPerson?.name || data.parentName || data.parentPersonnelName || '';
-    const parentPos = data.rawPerson?.positionName || data.rawPerson?.position || (posField && data.rawPerson?.[posField]) || data.parentPosition || '';
-    const relName = data.relativeName || data.name || data.rawRelative?.relativeName || data.rawRelative?.name || data.personnelName || 'Thân nhân';
-    const relCccd = data.cccdthannhan || data.rawRelative?.cccdthannhan || data.rawRelative?.cccd || (!String(data.cccd).startsWith('p_') && !String(data.cccd).startsWith('cd_') && data.cccd !== data.cccdparent ? data.cccd : '');
-    const parentCccd = data.cccdparent || data.parentCccd || data.rawPerson?.cccdparent || data.rawPerson?.cccd || data.rawPerson?.[pKeyField] || '';
-    const parentDept = data.rawPerson?.departmentName || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || data.departmentName || '';
-    const relationship = data.relationshipName || data.rawRelative?.relationshipName || 'Thân nhân';
-
-    const isValidId = (val) => val && String(val).trim() !== '' && String(val).trim() !== '-' && !String(val).startsWith('p_') && !String(val).startsWith('cd_') && !String(val).startsWith('rel_') && !String(val).startsWith('trip_');
-
-    return {
-      name: relName,
-      isRelative: true,
-      cccdTN: isValidId(relCccd) ? `CCCD-TN: ${String(relCccd).trim()}` : '',
-      cccdCB: isValidId(parentCccd) ? `CCCD-CB: ${String(parentCccd).trim()}` : '',
-      position: parentName ? `${relationship} của CB: ${parentName}` : relationship,
-      parentPosition: parentPos && String(parentPos).trim() !== '-' && String(parentPos).trim() !== 'Chưa phân bổ' ? `Chức vụ CB: ${String(parentPos).trim()}` : '',
-      department: parentDept ? `Đơn vị CB: ${parentDept}` : '',
-    };
-  }
-
-  const name = data.personnelName || data.name || data.rawPerson?.name || '-';
-  const cccd = data[pKeyField] || data.rawPerson?.[pKeyField] || data.cccd || data.cccdparent || data.rawPerson?.cccd || data.rawPerson?.cccdparent || '';
-  const pos = data[posField] || data.rawPerson?.[posField] || data.positionName || data.position || data.rawPerson?.positionName || data.rawPerson?.position || '';
-  const dept = data[deptField] || data.rawPerson?.[deptField] || data.departmentName || (data.departmentId ? personnelStore.getDepartmentName(data.departmentId) : '') || (data.rawPerson?.departmentId ? personnelStore.getDepartmentName(data.rawPerson.departmentId) : '') || '';
-
   const isValidId = (val) => val && String(val).trim() !== '' && String(val).trim() !== '-' && !String(val).startsWith('p_') && !String(val).startsWith('cd_') && !String(val).startsWith('rel_') && !String(val).startsWith('trip_');
 
+  // Lấy thông tin Cán bộ liên quan (hoặc cán bộ chính)
+  const parentPerson = data.rawPerson || (data.cccdparent ? personnelStore.findPersonByCccd(data.cccdparent) : null);
+  const cbName = parentPerson?.name || data.parentPersonnelName || data.parentName || (!data.isRelative ? (data.personnelName || data.name) : '') || '-';
+  const cbCccd = parentPerson?.[pKeyField] || parentPerson?.cccd || parentPerson?.cccdparent || data.parentCccd || data.cccdparent || (!data.isRelative ? (data[pKeyField] || data.cccd) : '') || '';
+  const cbPos = parentPerson?.[posField] || parentPerson?.positionName || parentPerson?.position || data.parentPosition || (!data.isRelative ? (data[posField] || data.positionName || data.position) : '') || '';
+  const cbDept = parentPerson?.[deptField] || parentPerson?.departmentName || (parentPerson?.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || (!data.isRelative ? (data[deptField] || data.departmentName) : '') || '';
+
   return {
-    name,
-    isRelative: false,
-    cccdTN: '',
-    cccdCB: isValidId(cccd) ? `CCCD-CB: ${String(cccd).trim()}` : '',
-    position: pos && String(pos).trim() !== '-' ? String(pos).trim() : '',
-    parentPosition: '',
-    department: dept && String(dept).trim() !== '-' ? String(dept).trim() : '',
+    name: cbName,
+    cccdCB: isValidId(cbCccd) ? `CCCD-CB: ${String(cbCccd).trim()}` : '',
+    position: cbPos && String(cbPos).trim() !== '-' && String(cbPos).trim() !== 'Chưa phân bổ' ? String(cbPos).trim() : '',
+    department: cbDept && String(cbDept).trim() !== '-' ? String(cbDept).trim() : '',
   };
 };
 
