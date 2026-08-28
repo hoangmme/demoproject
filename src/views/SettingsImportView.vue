@@ -1211,35 +1211,65 @@
               </span>
             </div>
 
-            <button
-              v-if="customDashboards.length > 1"
-              type="button"
-              @click.stop="removeDashboard(dIdx)"
-              title="Xóa dashboard này"
-              style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 4px;"
-            >
-              <i class="pi pi-trash" style="font-size: 0.75rem;"></i>
-            </button>
+            <div style="display: flex; align-items: center; gap: 2px;">
+              <button
+                type="button"
+                :disabled="dIdx === 0"
+                @click.stop="moveDashboardUp(dIdx)"
+                title="Di chuyển lên"
+                style="background: transparent; border: none; color: #475569; cursor: pointer; padding: 2px 4px;"
+                :style="dIdx === 0 ? 'opacity: 0.25; cursor: not-allowed;' : ''"
+              >
+                <i class="pi pi-arrow-up" style="font-size: 0.72rem;"></i>
+              </button>
+              <button
+                type="button"
+                :disabled="dIdx === customDashboards.length - 1"
+                @click.stop="moveDashboardDown(dIdx)"
+                title="Di chuyển xuống"
+                style="background: transparent; border: none; color: #475569; cursor: pointer; padding: 2px 4px;"
+                :style="dIdx === customDashboards.length - 1 ? 'opacity: 0.25; cursor: not-allowed;' : ''"
+              >
+                <i class="pi pi-arrow-down" style="font-size: 0.72rem;"></i>
+              </button>
+              <button
+                v-if="customDashboards.length > 1"
+                type="button"
+                @click.stop="removeDashboard(dIdx)"
+                title="Xóa dashboard này"
+                style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 2px 4px;"
+              >
+                <i class="pi pi-trash" style="font-size: 0.72rem;"></i>
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Cột Phải: Form Chi tiết Dashboard đang chọn -->
         <div v-if="currentSelectedDashboard" style="display: flex; flex-direction: column; gap: 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
           <!-- 1. Thông tin cơ bản Dashboard -->
-          <div style="display: grid; grid-template-columns: 100px 1fr 140px 160px; gap: 12px; align-items: center;">
+          <div style="display: grid; grid-template-columns: 90px 1fr 130px 140px 150px; gap: 10px; align-items: center;">
             <div>
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Mã Code:</label>
               <InputText v-model="currentSelectedDashboard.code" placeholder="CD-03" size="small" style="width: 100%; font-size: 0.8rem;" />
             </div>
 
             <div>
-              <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Tiêu đề Dashboard:</label>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Tiêu đề:</label>
               <InputText v-model="currentSelectedDashboard.title" placeholder="VD: Danh sách Chuyến đi" size="small" style="width: 100%; font-size: 0.8rem;" />
             </div>
 
             <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Chế độ hiển thị:</label>
+              <select v-model="currentSelectedDashboard.displayMode" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
+                <option value="dashboard">📊 Chuyên đề</option>
+                <option value="appendix">📑 Phụ lục (Clean View)</option>
+              </select>
+            </div>
+
+            <div>
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Nguồn Dữ liệu:</label>
-              <select v-model="currentSelectedDashboard.source" class="custom-key-select" style="font-size: 0.78rem; padding: 5px 8px;">
+              <select v-model="currentSelectedDashboard.source" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
                 <option value="trips">✈️ Chuyến đi</option>
                 <option value="personnel">👤 Cán bộ</option>
                 <option value="relatives">👥 Thân nhân</option>
@@ -1248,7 +1278,7 @@
 
             <div>
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Biểu tượng Icon:</label>
-              <select v-model="currentSelectedDashboard.icon" class="custom-key-select" style="font-size: 0.78rem; padding: 5px 8px;">
+              <select v-model="currentSelectedDashboard.icon" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
                 <option value="pi-send">✈️ pi-send (Chuyến đi)</option>
                 <option value="pi-globe">🌐 pi-globe (Quốc tế)</option>
                 <option value="pi-users">👥 pi-users (Cán bộ)</option>
@@ -1273,21 +1303,22 @@
             <InputText v-model="currentSelectedDashboard.description" placeholder="VD: Tổng hợp các chuyến đi nước ngoài của cán bộ và thân nhân" size="small" style="width: 100%; font-size: 0.8rem;" />
           </div>
 
-          <!-- 2. Cấu hình Khối Thống kê ở trên (Top Stat Cards) -->
+          <!-- 2. Cấu hình Khối Thống kê ở trên / Khối Điều kiện Phụ lục -->
           <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <div>
                 <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                  <i class="pi pi-th-large" style="color: #0284c7;"></i>
-                  1. Khối Thống kê ở trên (Top Metric KPI Cards):
+                  <i :class="currentSelectedDashboard.displayMode === 'appendix' ? 'pi pi-filter' : 'pi pi-th-large'" style="color: #0284c7;"></i>
+                  {{ currentSelectedDashboard.displayMode === 'appendix' ? '1. Khối Điều kiện Lọc của Phụ lục (Filter Conditions):' : '1. Khối Thống kê ở trên (Top Metric KPI Cards):' }}
                 </span>
                 <span style="font-size: 0.72rem; color: #64748b;">
-                  Các thẻ số liệu nhanh ở hàng trên cùng của Dashboard để người dùng lọc nhanh.
+                  {{ currentSelectedDashboard.displayMode === 'appendix' ? 'Cấu hình các tiêu chí lọc dữ liệu cho Phụ lục này (kết quả bảng sẽ tự động áp dụng các điều kiện này).' : 'Các thẻ số liệu nhanh ở hàng trên cùng của Dashboard để người dùng lọc nhanh.' }}
                 </span>
               </div>
 
               <Button
-                label="Thêm Khối Thống kê"
+                v-if="currentSelectedDashboard.displayMode !== 'appendix' || (!currentSelectedDashboard.metricCards || currentSelectedDashboard.metricCards.length === 0)"
+                :label="currentSelectedDashboard.displayMode === 'appendix' ? 'Thiết lập Điều kiện Lọc' : 'Thêm Khối Thống kê'"
                 icon="pi pi-plus"
                 severity="primary"
                 size="small"
@@ -2370,6 +2401,24 @@ const addNewDashboard = () => {
   };
   customDashboards.value.push(newDash);
   selectedDashboardIdx.value = customDashboards.value.length - 1;
+};
+
+const moveDashboardUp = async (idx) => {
+  if (idx <= 0) return;
+  const temp = customDashboards.value[idx];
+  customDashboards.value[idx] = customDashboards.value[idx - 1];
+  customDashboards.value[idx - 1] = temp;
+  selectedDashboardIdx.value = idx - 1;
+  debouncedAutoSaveDashboards();
+};
+
+const moveDashboardDown = async (idx) => {
+  if (idx >= customDashboards.value.length - 1) return;
+  const temp = customDashboards.value[idx];
+  customDashboards.value[idx] = customDashboards.value[idx + 1];
+  customDashboards.value[idx + 1] = temp;
+  selectedDashboardIdx.value = idx + 1;
+  debouncedAutoSaveDashboards();
 };
 
 const removeDashboard = async (idx) => {

@@ -116,8 +116,8 @@
       </div>
     </div>
 
-    <!-- Quick Metric Pill Cards (Top Row) -->
-    <div style="display: flex; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap;">
+    <!-- Quick Metric Pill Cards (Top Row - Ẩn khi ở chế độ Báo cáo Phụ lục) -->
+    <div v-if="currentDashboardConfig.displayMode !== 'appendix'" style="display: flex; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap;">
       <div
         v-for="(card, cIdx) in activeMetricCards"
         :key="card.id || cIdx"
@@ -344,31 +344,85 @@
         </div>
       </div>
 
-      <div style="margin-bottom: 8px;">
-        <InputText
-          v-model="columnSearchQuery"
-          placeholder="🔍 Tìm nhanh tên cột..."
-          size="small"
-          style="width: 100%; font-size: 0.8rem;"
-        />
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 380px; overflow-y: auto; padding: 4px; border: 1px solid #f1f5f9; border-radius: 8px; background: #f8fafc;">
-        <label
-          v-for="col in filteredPickerColumns"
-          :key="col.id"
-          style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0; background: #ffffff;"
-        >
-          <input
-            type="checkbox"
-            :value="col.id"
-            v-model="selectedColIds"
-            style="accent-color: #1e3a8a;"
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 420px;">
+        <!-- Cột Trái: Chọn Cột -->
+        <div style="display: flex; flex-direction: column; gap: 6px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #f8fafc;">
+          <div style="font-size: 0.75rem; font-weight: 700; color: #475569;">1. Chọn cột hiển thị:</div>
+          <InputText
+            v-model="columnSearchQuery"
+            placeholder="🔍 Tìm nhanh tên cột..."
+            size="small"
+            style="width: 100%; font-size: 0.78rem; padding: 4px 8px;"
           />
-          <span style="font-weight: 500; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="col.label">
-            {{ col.label }}
-          </span>
-        </label>
+          <div style="display: flex; flex-direction: column; gap: 4px; overflow-y: auto; max-height: 320px; padding-right: 4px;">
+            <label
+              v-for="col in filteredPickerColumns"
+              :key="col.id"
+              style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; cursor: pointer; padding: 5px 8px; border-radius: 6px; border: 1px solid #e2e8f0; background: #ffffff;"
+            >
+              <input
+                type="checkbox"
+                :value="col.id"
+                v-model="selectedColIds"
+                style="accent-color: #1e3a8a;"
+              />
+              <span style="font-weight: 500; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="col.label">
+                {{ col.label }}
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Cột Phải: Sắp xếp Thứ tự Cột đã chọn -->
+        <div style="display: flex; flex-direction: column; gap: 6px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #ffffff;">
+          <div style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a; display: flex; justify-content: space-between; align-items: center;">
+            <span>2. Thứ tự hiển thị trên Bảng ({{ selectedColIds.length }} cột):</span>
+          </div>
+          <div style="font-size: 0.7rem; color: #64748b;">
+            Bấm nút ▲ / ▼ để đổi vị trí cột từ trái sang phải:
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px; overflow-y: auto; max-height: 320px; padding-right: 4px;">
+            <div
+              v-for="(colId, sIdx) in selectedColIds"
+              :key="colId"
+              style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: 6px; background: #f1f5f9; border: 1px solid #cbd5e1; font-size: 0.78rem;"
+            >
+              <span style="font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">
+                {{ sIdx + 1 }}. {{ getColumnLabel(colId) }}
+              </span>
+              <div style="display: flex; align-items: center; gap: 2px;">
+                <button
+                  type="button"
+                  :disabled="sIdx === 0"
+                  @click="moveSelectedColUp(sIdx)"
+                  title="Di chuyển lên trước"
+                  style="background: transparent; border: none; color: #475569; cursor: pointer; padding: 2px 4px;"
+                  :style="sIdx === 0 ? 'opacity: 0.25; cursor: not-allowed;' : ''"
+                >
+                  <i class="pi pi-arrow-up" style="font-size: 0.7rem;"></i>
+                </button>
+                <button
+                  type="button"
+                  :disabled="sIdx === selectedColIds.length - 1"
+                  @click="moveSelectedColDown(sIdx)"
+                  title="Di chuyển xuống sau"
+                  style="background: transparent; border: none; color: #475569; cursor: pointer; padding: 2px 4px;"
+                  :style="sIdx === selectedColIds.length - 1 ? 'opacity: 0.25; cursor: not-allowed;' : ''"
+                >
+                  <i class="pi pi-arrow-down" style="font-size: 0.7rem;"></i>
+                </button>
+                <button
+                  type="button"
+                  @click="removeSelectedCol(sIdx)"
+                  title="Bỏ chọn cột này"
+                  style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 2px 4px;"
+                >
+                  <i class="pi pi-times" style="font-size: 0.7rem;"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <template #footer>
@@ -904,8 +958,13 @@ const activeMetricCard = computed(() => {
 const activeCardColLabel = computed(() => {
   if (!activeMetricCard.value) return '';
   const card = activeMetricCard.value;
-  if (card.field) {
-    return getColumnLabel(card.field) || card.field;
+  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
+    ? card.conditions
+    : (card.field ? [{ field: card.field }] : []);
+  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
+
+  if (activeConds.length > 0) {
+    return activeConds.map((c) => getColumnLabel(c.field) || c.field).join(' & ');
   }
   if (card.condition === 'overdue' || card.condition === 'isOverdue') {
     return 'Trạng thái Quá hạn';
@@ -919,8 +978,17 @@ const activeCardColLabel = computed(() => {
 const getActiveCardCellValue = (row) => {
   if (!row || !activeMetricCard.value) return '-';
   const card = activeMetricCard.value;
-  if (card.field) {
-    return getCellValue(row, card.field);
+  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
+    ? card.conditions
+    : (card.field ? [{ field: card.field }] : []);
+  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
+
+  if (activeConds.length > 0) {
+    const vals = activeConds.map((c) => {
+      const v = getCellValue(row, c.field);
+      return (v !== undefined && v !== null && v !== '') ? String(v).trim() : '-';
+    });
+    return vals.join(' | ');
   }
   if (card.condition === 'overdue') {
     return row.isOverdue ? `Quá hạn (${row.overdueDays} ngày)` : (row.overdueStatus || '-');
@@ -2008,6 +2076,24 @@ const resetDefaultColumns = () => {
   } else {
     selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id);
   }
+};
+
+const moveSelectedColUp = (idx) => {
+  if (idx <= 0) return;
+  const temp = selectedColIds.value[idx];
+  selectedColIds.value[idx] = selectedColIds.value[idx - 1];
+  selectedColIds.value[idx - 1] = temp;
+};
+
+const moveSelectedColDown = (idx) => {
+  if (idx >= selectedColIds.value.length - 1) return;
+  const temp = selectedColIds.value[idx];
+  selectedColIds.value[idx] = selectedColIds.value[idx + 1];
+  selectedColIds.value[idx + 1] = temp;
+};
+
+const removeSelectedCol = (idx) => {
+  selectedColIds.value.splice(idx, 1);
 };
 
 const saveColumnSelection = async () => {

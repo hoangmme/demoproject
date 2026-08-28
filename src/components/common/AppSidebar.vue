@@ -29,10 +29,10 @@
         <span>Hồ sơ Cán bộ</span>
       </router-link>
 
-      <div class="app-nav-heading">Chuyên đề</div>
+      <div class="app-nav-heading" v-if="topicDashboards.length > 0">Chuyên đề</div>
 
       <router-link
-        v-for="dash in dynamicDashboards"
+        v-for="dash in topicDashboards"
         :key="dash.id"
         :to="getDashboardRoute(dash)"
         class="app-nav-item"
@@ -67,18 +67,18 @@
         <span>Thêm Chuyến đi</span>
       </a>
 
-      <div class="app-nav-heading">Báo cáo Phụ lục</div>
+      <div class="app-nav-heading" v-if="appendixDashboards.length > 0">Báo cáo Phụ lục</div>
 
       <router-link
-        v-for="pl in dynamicAppendices"
+        v-for="pl in appendixDashboards"
         :key="pl.id"
         :to="getAppendixRoute(pl)"
         class="app-nav-item"
         :title="pl.title"
       >
-        <i :class="pl.icon ? `pi ${pl.icon}` : getAppendixIcon(pl.source)"></i>
+        <i :class="pl.icon ? `pi ${pl.icon}` : 'pi pi-table'"></i>
         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          {{ getAppendixNavLabel(pl) }}
+          {{ pl.title }}
         </span>
       </router-link>
 
@@ -269,6 +269,16 @@ const DEFAULT_DASHBOARDS = [
 const dynamicAppendices = ref([...DEFAULT_APPENDICES]);
 const dynamicDashboards = ref([...DEFAULT_DASHBOARDS]);
 
+const topicDashboards = computed(() => {
+  return (dynamicDashboards.value || []).filter((d) => d.displayMode !== 'appendix');
+});
+
+const appendixDashboards = computed(() => {
+  const fromDash = (dynamicDashboards.value || []).filter((d) => d.displayMode === 'appendix');
+  if (fromDash.length > 0) return fromDash;
+  return dynamicAppendices.value || [];
+});
+
 const loadSidebarData = async () => {
   try {
     const saved = await getAppSettings('custom_appendices_config', null);
@@ -299,20 +309,13 @@ const getDashboardRoute = (dash) => {
 };
 
 const getAppendixRoute = (pl) => {
+  if (pl.displayMode === 'appendix' || pl.id?.startsWith('dash_') || pl.id?.startsWith('DB-')) {
+    return `/dashboard-topic/${pl.id}`;
+  }
   if (pl.id === 'pl1') return '/pl1';
   if (pl.id === 'pl2') return '/pl2';
   if (pl.id === 'pl3') return '/pl3';
   return `/appendix/${pl.id}`;
-};
-
-const getAppendixIcon = (source) => {
-  if (source === 'trips') return 'pi pi-globe';
-  if (source === 'relatives') return 'pi pi-heart';
-  return 'pi pi-exclamation-triangle';
-};
-
-const getAppendixNavLabel = (pl) => {
-  return pl.title || (pl.code ? `[${pl.code}] Phụ lục` : 'Phụ lục');
 };
 
 const handleInputClick = (action) => {
