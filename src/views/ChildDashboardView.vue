@@ -208,44 +208,43 @@
           :bodyStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
         >
           <template #header>
-            <span class="table-col-header-ellipsis" :title="col.label">{{ col.label }}</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span class="table-col-header-ellipsis" :title="col.label">{{ col.label }}</span>
+              <i v-if="isNameColumn(col.id)" class="pi pi-cog" style="font-size: 0.7rem; cursor: pointer; color: #94a3b8; margin-left: 2px;" @click.stop="toggleNameColConfig($event)" title="Tùy chỉnh nội dung cột" />
+            </div>
           </template>
           <template #body="{ data }">
-            <!-- 1. Họ và tên người đi (Mỗi cái 1 hàng: Tên, CCCD-TN, CCCD-CB, Chức vụ/Quan hệ, Chức vụ CB, Đơn vị) -->
-            <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === '_parentPersonnelName' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
+            <!-- 1. Họ và tên (configurable rows) -->
+            <template v-if="isNameColumn(col.id)">
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
-                <!-- Hàng 1: Họ tên (Bôi đậm) -->
-                <div style="display: flex; align-items: center; gap: 6px;">
+                <!-- Badge trên cùng -->
+                <div v-if="nameColFields.badge && data.isRelative">
+                  <span class="badge-role-tn">Thân nhân</span>
+                </div>
+                <!-- Tên -->
+                <div v-if="nameColFields.name">
                   <strong style="color: #0f172a; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
                     {{ getPersonInfo(data).name }}
                   </strong>
-                  <span v-if="data.isRelative" class="badge-role-tn">
-                    Thân nhân
-                  </span>
                 </div>
-
-                <!-- Hàng 2: CCCD Thân nhân (nếu có) -->
-                <div v-if="getPersonInfo(data).cccdTN" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
+                <!-- CCCD Thân nhân -->
+                <div v-if="nameColFields.cccdTN && getPersonInfo(data).cccdTN" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
                   {{ getPersonInfo(data).cccdTN }}
                 </div>
-
-                <!-- Hàng 3: CCCD Cán bộ (ghi rõ CCCD-CB) -->
-                <div v-if="getPersonInfo(data).cccdCB" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
+                <!-- CCCD Cán bộ -->
+                <div v-if="nameColFields.cccdCB && getPersonInfo(data).cccdCB" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
                   {{ getPersonInfo(data).cccdCB }}
                 </div>
-
-                <!-- Hàng 4: Chức vụ / Quan hệ -->
-                <div v-if="getPersonInfo(data).position" style="font-size: 0.72rem; color: #334155;">
+                <!-- Quan hệ / Chức vụ -->
+                <div v-if="nameColFields.position && getPersonInfo(data).position" style="font-size: 0.72rem; color: #334155;">
                   {{ getPersonInfo(data).position }}
                 </div>
-
-                <!-- Hàng 5: Chức vụ Cán bộ (khi là Thân nhân) -->
-                <div v-if="getPersonInfo(data).parentPosition" style="font-size: 0.72rem; color: #334155;">
+                <!-- Chức vụ CB (khi là Thân nhân) -->
+                <div v-if="nameColFields.parentPosition && getPersonInfo(data).parentPosition" style="font-size: 0.72rem; color: #334155;">
                   {{ getPersonInfo(data).parentPosition }}
                 </div>
-
-                <!-- Hàng 6: Đơn vị -->
-                <div v-if="getPersonInfo(data).department" style="font-size: 0.72rem; color: #64748b;">
+                <!-- Đơn vị -->
+                <div v-if="nameColFields.department && getPersonInfo(data).department" style="font-size: 0.72rem; color: #64748b;">
                   {{ getPersonInfo(data).department }}
                 </div>
               </div>
@@ -525,6 +524,17 @@
       :selectedPersonnel="selectedPersonnelForExport"
       :allPersonnel="allPersonnelForExport"
     />
+
+    <!-- Name Column Config Popover -->
+    <div v-if="showNameColConfig" class="name-col-config-overlay" @click.self="showNameColConfig = false">
+      <div class="name-col-config-panel" :style="nameColConfigPos">
+        <div style="font-weight: 600; font-size: 0.82rem; margin-bottom: 8px; color: #1e293b;">Tùy chỉnh cột "Họ và tên"</div>
+        <label v-for="opt in nameColFieldOptions" :key="opt.key" class="name-col-opt">
+          <input type="checkbox" :checked="nameColFields[opt.key]" @change="toggleNameColField(opt.key)" />
+          <span>{{ opt.label }}</span>
+        </label>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -549,6 +559,52 @@ const route = useRoute();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 const isExportDocxDialogOpen = ref(false);
+
+// ===== Name Column Config =====
+const NAME_COL_IDS = new Set(['personnelName', 'name', '_parentPersonnelName', 'ho_va_ten', 'hoTen']);
+const isNameColumn = (colId) => NAME_COL_IDS.has(colId);
+
+const nameColFieldOptions = [
+  { key: 'badge', label: 'Badge (Thân nhân / Cán bộ)' },
+  { key: 'name', label: 'Họ và tên' },
+  { key: 'cccdTN', label: 'CCCD Thân nhân' },
+  { key: 'cccdCB', label: 'CCCD Cán bộ' },
+  { key: 'position', label: 'Quan hệ / Chức vụ' },
+  { key: 'parentPosition', label: 'Chức vụ Cán bộ (TN)' },
+  { key: 'department', label: 'Đơn vị công tác' },
+];
+
+const DEFAULT_NAME_COL_FIELDS = { badge: true, name: true, cccdTN: false, cccdCB: true, position: true, parentPosition: false, department: true };
+const nameColFields = ref({ ...DEFAULT_NAME_COL_FIELDS });
+const showNameColConfig = ref(false);
+const nameColConfigPos = ref({});
+
+const toggleNameColConfig = (event) => {
+  if (showNameColConfig.value) {
+    showNameColConfig.value = false;
+    return;
+  }
+  const rect = event.target.getBoundingClientRect();
+  nameColConfigPos.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, zIndex: 9999 };
+  showNameColConfig.value = true;
+};
+
+const toggleNameColField = async (key) => {
+  nameColFields.value = { ...nameColFields.value, [key]: !nameColFields.value[key] };
+  try {
+    await saveAppSettings('name_col_display_config', nameColFields.value);
+  } catch (e) {}
+};
+
+const loadNameColConfig = async () => {
+  try {
+    const saved = await getAppSettings('name_col_display_config');
+    if (saved && typeof saved === 'object') {
+      nameColFields.value = { ...DEFAULT_NAME_COL_FIELDS, ...saved };
+    }
+  } catch (e) {}
+};
+// ===== End Name Column Config =====
 
 const openAdvancedDocxExport = () => {
   isExportDocxDialogOpen.value = true;
@@ -2237,6 +2293,7 @@ onMounted(async () => {
   await loadCustomDashboards();
   initTopicColumns();
   handleRouteQueryChange();
+  loadNameColConfig();
 });
 </script>
 
@@ -2723,4 +2780,36 @@ onMounted(async () => {
   text-overflow: ellipsis;
   max-width: 100%;
 }
+
+.name-col-config-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 9998;
+}
+.name-col-config-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.name-col-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #334155;
+  cursor: pointer;
+  padding: 3px 0;
+}
+.name-col-opt input[type="checkbox"] {
+  accent-color: #3b82f6;
+  width: 15px;
+  height: 15px;
+}
 </style>
+
