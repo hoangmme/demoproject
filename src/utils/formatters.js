@@ -663,20 +663,6 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
       });
     }
     case 'overdue_status': {
-      const depRaw = record.departureDate || record.approvedDepartureDate || record.ngay_xuat_canh || record.ngayDi;
-      const arrRaw = record.arrivalDate || record.ngay_nhap_canh || record.ngayVe;
-      if (depRaw || arrRaw || record.rawTrip || !Array.isArray(record.trips)) {
-        const tripRes = computeTripPresence(record);
-        if (tripRes.isOverdue) {
-          return {
-            status: 'overdue',
-            label: `Quá hạn (${tripRes.overdueDays} ngày)`,
-            shortLabel: 'Quá hạn',
-            isOverdue: true,
-            overdueDays: tripRes.overdueDays,
-          };
-        }
-      }
       return computeOverdueStatus(record, formulaConfig);
     }
     case 'date_delta':
@@ -829,7 +815,8 @@ export const computeTripPresence = (t) => {
     status: isOverdue ? 'overdue' : 'abroad',
     isAbroad: true,
     isOverdue,
-    label: isOverdue ? `Quá hạn (${overdueDays} ngày)` : 'Đang ở nước ngoài',
+    label: isOverdue ? `Chưa về nước (${overdueDays} ngày)` : 'Đang ở nước ngoài',
+    shortLabel: isOverdue ? 'Chưa về nước' : 'Đang ở nước ngoài',
     overdueDays,
   };
 };
