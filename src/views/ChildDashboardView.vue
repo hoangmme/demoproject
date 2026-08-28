@@ -797,40 +797,31 @@ const matchCardCondition = (item, card) => {
     return true;
   }
 
-  // 2. Không có card.field -> Kiểm tra theo nhãn Preset hoặc 'all'
-  const lbl = String(card.label || card.cardLabel || '').trim().toLowerCase();
+  // 2. Không có card.field -> Kiểm tra Preset condition
   const cond = card.condition || card.id || '';
-
-  if (cond === 'completed' || lbl === 'đã về nước') {
+  if (cond === 'completed') {
     const presence = getTripPresence(item);
     return presence.status === 'completed' && !presence.isOverdue;
   }
-  if (cond === 'abroad' || lbl === 'đang ở nước ngoài') {
+  if (cond === 'abroad') {
     const presence = getTripPresence(item);
     return presence.status === 'abroad';
   }
-  if (cond === 'overdue' || lbl === 'quá hạn chưa về') {
+  if (cond === 'overdue') {
     const presence = getTripPresence(item);
     return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
   }
-  if (lbl === 'đi trước khi có quyết định') {
-    const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
-    return res.isWarning;
-  }
 
-  // 3. Mặc định: "Toàn bộ" / "Tất cả"
-  if (cond === 'all' || lbl === 'toàn bộ' || lbl === 'tất cả' || lbl.startsWith('tổng số')) {
-    return true;
-  }
-
+  // 3. Mặc định không chọn cột lọc gì -> Toàn bộ danh sách của bảng
   return true;
 };
 
 const isCardAllType = (card) => {
   if (!card) return false;
-  if (card.field && card.field !== 'personnelName' && card.field !== 'cccdparent' && String(card.field).trim() !== '') return false;
-  if (card.id === 'all' || card.condition === 'all' || card.label === 'Toàn bộ' || card.label === 'Tất cả') return true;
-  return false;
+  // Nếu có chọn cột lọc hoặc có preset condition đặc biệt thì không phải là Toàn bộ
+  if (card.field && String(card.field).trim() !== '') return false;
+  if (card.condition && card.condition !== 'all') return false;
+  return true;
 };
 
 // Tập dữ liệu cơ sở của Chuyên đề (được lọc dựa theo điều kiện của thẻ đầu tiên / thẻ Toàn bộ)
