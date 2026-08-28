@@ -1452,12 +1452,15 @@ const currentSourceList = computed(() => {
         } catch (e) {}
       }
       const parentPerson = r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || null;
-      const cName = r.countryName || r.country || r.quoc_gia || r.quocGia || rCustom.countryName || rCustom.country || rCustom.quoc_gia || rCustom.quocGia || r.noi_o_hien_nay || rCustom.noi_o_hien_nay || '';
+      const trips = Array.isArray(r.trips) ? r.trips : [];
+      const firstTripCountry = trips.length > 0 ? (trips[0].countryName || trips[0].country || trips[0].quoc_gia || '') : '';
+      const cName = r.countryName || r.country || r.quoc_gia || r.quocGia || rCustom.countryName || rCustom.country || rCustom.quoc_gia || rCustom.quocGia || firstTripCountry || '';
       return {
         ...rCustom,
         ...r,
         uniqueKey: r.id || `rel_${idx}`,
         isRelative: true,
+        trips,
         personnelName: r.relativeName || r.name || 'Thân nhân',
         personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
         relativeName: r.relativeName || r.name || 'Thân nhân',
@@ -1719,6 +1722,18 @@ const getCellValue = (trip, colId) => {
   }
   if ((rawVal === undefined || rawVal === null || rawVal === '') && (colId === 'relationshipName' || colId === 'relationship' || colId.toLowerCase().includes('quan_he'))) {
     rawVal = trip.relationshipName || trip.relationship || trip.rawRelative?.relationshipName || trip.rawRelative?.relationship;
+  }
+
+  // Fallback for trip fields if item is a Relative and has trips
+  if ((rawVal === undefined || rawVal === null || rawVal === '') && Array.isArray(trip.trips) && trip.trips.length > 0) {
+    for (const t of trip.trips) {
+      const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
+      const v = t[colId] ?? tCustom[colId] ?? (colId.toLowerCase().includes('country') || colId.toLowerCase().includes('quoc_gia') ? (t.countryName || t.country || t.quoc_gia) : null);
+      if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
+        rawVal = v;
+        break;
+      }
+    }
   }
 
   if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '' || String(rawVal).trim() === '-') {

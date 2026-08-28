@@ -1818,6 +1818,18 @@ const getRowFieldValue = (row, colId) => {
       row.rawRelative?.custom_data?.quoc_gia;
   }
 
+  // Fallback for trip fields if item is a Relative and has trips
+  if ((raw === undefined || raw === null || raw === '' || raw === '-') && Array.isArray(row.trips) && row.trips.length > 0) {
+    for (const t of row.trips) {
+      const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
+      const v = t[colId] ?? tCustom[colId] ?? (colId.toLowerCase().includes('country') || colId.toLowerCase().includes('quoc_gia') ? (t.countryName || t.country || t.quoc_gia) : null);
+      if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
+        raw = v;
+        break;
+      }
+    }
+  }
+
   if (raw === undefined || raw === null || raw === '' || raw === '-') return '';
   if (typeof raw === 'object') {
     if (Array.isArray(raw)) {
@@ -1840,12 +1852,15 @@ const getSourceList = (source) => {
           rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
         } catch (e) {}
       }
-      const cName = r.countryName || r.country || r.quoc_gia || r.quocGia || rCustom.countryName || rCustom.country || rCustom.quoc_gia || rCustom.quocGia || r.noi_o_hien_nay || rCustom.noi_o_hien_nay || '';
+      const trips = Array.isArray(r.trips) ? r.trips : [];
+      const firstTripCountry = trips.length > 0 ? (trips[0].countryName || trips[0].country || trips[0].quoc_gia || '') : '';
+      const cName = r.countryName || r.country || r.quoc_gia || r.quocGia || rCustom.countryName || rCustom.country || rCustom.quoc_gia || rCustom.quocGia || firstTripCountry || '';
       return {
         ...rCustom,
         ...r,
         uniqueKey: r.id || `rel_${idx}`,
         isRelative: true,
+        trips,
         personnelName: r.relativeName || r.name || 'Thân nhân',
         personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
         relativeName: r.relativeName || r.name || 'Thân nhân',
