@@ -343,6 +343,160 @@ export const downloadTripsTemplate = (mappingConfig = null) => {
   exportTemplateWithHeaders(headers, 'Mau_Import_Chuyen_Di', 'Mẫu Chuyến đi');
 };
 
+export const formatCellForExcel = (val, colDef) => {
+  if (val === undefined || val === null || val === '') return '';
+  if (colDef && colDef.format === 'formula') return ''; // Cột công thức: giữ nguyên tiêu đề cột nhưng bỏ qua nội dung
+
+  if (typeof val === 'string') {
+    if (val.startsWith('[') || val.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(val);
+        return formatCellForExcel(parsed, colDef);
+      } catch (e) {}
+    }
+    return val;
+  }
+
+  if (Array.isArray(val)) {
+    if (val.length === 0) return '';
+    // Mảng các dòng (bảng lặp table_loop / table_2col)
+    if (typeof val[0] === 'object' && val[0] !== null) {
+      return val
+        .map((row) => {
+          const keys = Object.keys(row).filter((k) => k.startsWith('col') || k !== 'id');
+          if (keys.length > 0) {
+            keys.sort((a, b) => {
+              const na = parseInt(a.replace(/\D/g, ''), 10) || 0;
+              const nb = parseInt(b.replace(/\D/g, ''), 10) || 0;
+              return na - nb;
+            });
+            return keys.map((k) => row[k] ?? '').join(' | ');
+          }
+          return Object.values(row).join(' | ');
+        })
+        .join('\n');
+    }
+    // Mảng text_loop (xuống dòng mỗi mục)
+    if (colDef && colDef.format === 'text_loop') {
+      return val.join('\n');
+    }
+    return val.join(', ');
+  }
+
+  if (typeof val === 'object') {
+    return Object.values(val).join(' | ');
+  }
+
+  return String(val);
+};
+
+export const exportAllInOneDataExcel = (
+  personnelList = [],
+  relativesList = [],
+  tripsList = [],
+  personnelMapping = [],
+  relativeMapping = [],
+  tripsMapping = [],
+  getDepartmentName = null
+) => {
+  const wb = XLSX.utils.book_new();
+
+  // 1. Sheet Cán bộ
+  const pHeaders = [];
+  let pIdx = 0;
+  (personnelMapping || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      pIdx++;
+      if (c.id === 'stt') {
+        pHeaders.push({ id: 'stt', header: `[Cột ${pIdx}] STT`, col: c });
+      } else {
+        pHeaders.push({ id: c.id, header: `[Cột ${pIdx}] ${c.label || c.id}`, col: c });
+      }
+    });
+  });
+
+  const pRows = (personnelList || []).map((p, idx) => {
+    const row = {};
+    pHeaders.forEach((item) => {
+      if (item.id === 'stt') {
+        row[item.header] = idx + 1;
+      } else if (item.col.format === 'formula') {
+        row[item.header] = ''; // Giữ cột, bỏ qua nội dung
+      } else {
+        const raw = getFieldValue(p, item.id, getDepartmentName);
+        row[item.header] = formatCellForExcel(raw, item.col);
+      }
+    });
+    return row;
+  });
+  const wsP = XLSX.utils.json_to_sheet(pRows.length > 0 ? pRows : [pHeaders.reduce((acc, h) => ({ ...acc, [h.header]: '' }), {})]);
+  XLSX.utils.book_append_sheet(wb, wsP, 'Cán bộ');
+
+  // 2. Sheet Thân nhân
+  const rHeaders = [];
+  let rIdx = 0;
+  (relativeMapping || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      rIdx++;
+      if (c.id === 'stt') {
+        rHeaders.push({ id: 'stt', header: `[Cột ${rIdx}] STT`, col: c });
+      } else {
+        rHeaders.push({ id: c.id, header: `[Cột ${rIdx}] ${c.label || c.id}`, col: c });
+      }
+    });
+  });
+
+  const rRows = (relativesList || []).map((r, idx) => {
+    const row = {};
+    rHeaders.forEach((item) => {
+      if (item.id === 'stt') {
+        row[item.header] = idx + 1;
+      } else if (item.col.format === 'formula') {
+        row[item.header] = ''; // Giữ cột, bỏ qua nội dung
+      } else {
+        const raw = getRelativeFieldValue(r, item.id, item.col.label);
+        row[item.header] = formatCellForExcel(raw, item.col);
+      }
+    });
+    return row;
+  });
+  const wsR = XLSX.utils.json_to_sheet(rRows.length > 0 ? rRows : [rHeaders.reduce((acc, h) => ({ ...acc, [h.header]: '' }), {})]);
+  XLSX.utils.book_append_sheet(wb, wsR, 'Thân nhân');
+
+  // 3. Sheet Chuyến đi
+  const tHeaders = [];
+  let tIdx = 0;
+  (tripsMapping || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      tIdx++;
+      if (c.id === 'stt') {
+        tHeaders.push({ id: 'stt', header: `[Cột ${tIdx}] STT`, col: c });
+      } else {
+        tHeaders.push({ id: c.id, header: `[Cột ${tIdx}] ${c.label || c.id}`, col: c });
+      }
+    });
+  });
+
+  const tRows = (tripsList || []).map((t, idx) => {
+    const row = {};
+    tHeaders.forEach((item) => {
+      if (item.id === 'stt') {
+        row[item.header] = idx + 1;
+      } else if (item.col.format === 'formula') {
+        row[item.header] = ''; // Giữ cột, bỏ qua nội dung
+      } else {
+        const raw = getTripFieldValue(t, item.id, item.col.label, getDepartmentName);
+        row[item.header] = formatCellForExcel(raw, item.col);
+      }
+    });
+    return row;
+  });
+  const wsT = XLSX.utils.json_to_sheet(tRows.length > 0 ? tRows : [tHeaders.reduce((acc, h) => ({ ...acc, [h.header]: '' }), {})]);
+  XLSX.utils.book_append_sheet(wb, wsT, 'Chuyến đi');
+
+  XLSX.writeFile(wb, `Du_Lieu_Web_Thuc_Te_3_Sheet_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
 export const downloadAllInOneTemplate = (personnelMapping = null, relativeMapping = null, tripsMapping = null) => {
   const pHeaders = getMappingHeadersList(personnelMapping);
   const rHeaders = getMappingHeadersList(relativeMapping);

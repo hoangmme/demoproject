@@ -11,11 +11,18 @@ import SettingsImportView from '@/views/SettingsImportView.vue';
 import UserManagementView from '@/views/UserManagementView.vue';
 import AuditLogView from '@/views/AuditLogView.vue';
 import AdvancedSearchView from '@/views/AdvancedSearchView.vue';
+import TableHelperView from '@/views/TableHelperView.vue';
 
 const routes = [
   {
     path: '/',
     redirect: '/dashboard',
+  },
+  {
+    path: '/bang-tuy-chinh',
+    name: 'TableHelper',
+    component: TableHelperView,
+    meta: { title: 'Công cụ Nhập Bảng & List Dữ liệu' },
   },
   {
     path: '/advanced-search',

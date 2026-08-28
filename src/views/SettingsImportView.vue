@@ -12,15 +12,40 @@
       </div>
 
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <!-- Nút Xuất toàn bộ dữ liệu web thực tế 3 sheet -->
+        <Button
+          v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
+          label="Xuất Dữ Liệu Web (3 Sheet Full)"
+          icon="pi pi-file-export"
+          severity="primary"
+          size="small"
+          @click="handleExportAllInOneData"
+          style="font-size: 0.82rem; font-weight: 700;"
+          title="Xuất toàn bộ dữ liệu thực tế đang có trên hệ thống ra 1 file Excel gồm 3 Sheet: Cán bộ, Thân nhân, Chuyến đi"
+        />
+
         <!-- Nút Tải file mẫu Tổng hợp 3 Sheet -->
         <Button
           v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
-          label="Tải Mẫu Tổng Hợp (3 Sheet: Cán bộ, Thân nhân, Chuyến đi)"
+          label="Tải Mẫu Tổng Hợp (3 Sheet)"
           icon="pi pi-file-excel"
           severity="success"
+          outlined
           size="small"
           @click="handleExportAllInOneTemplate"
           style="font-size: 0.82rem; font-weight: 600;"
+        />
+
+        <!-- Nút Mở Công cụ Nhập Bảng & List (/bang-tuy-chinh) -->
+        <Button
+          label="🛠️ Công cụ Nhập Bảng & List"
+          icon="pi pi-external-link"
+          severity="help"
+          outlined
+          size="small"
+          @click="openTableHelper"
+          style="font-size: 0.82rem; font-weight: 600;"
+          title="Mở công cụ hỗ trợ cán bộ/đơn vị soạn thảo Bảng lặp và List dữ liệu để dán vào Excel"
         />
 
         <!-- Nút Tải file mẫu Excel theo tab hiện tại -->
@@ -1771,6 +1796,7 @@ import {
   downloadRelativeTemplate,
   downloadTripsTemplate,
   downloadAllInOneTemplate,
+  exportAllInOneDataExcel,
 } from '@/utils/excel';
 import { saveAs } from 'file-saver';
 
@@ -1798,6 +1824,56 @@ const openImportWizard = (tab) => {
 
 const onWizardImported = async () => {
   await personnelStore.fetchPersonnel();
+};
+
+const handleExportAllInOneData = () => {
+  const pList = personnelStore.personnelList || [];
+  const rList = personnelStore.relativesList || [];
+
+  const allTrips = [];
+  pList.forEach((p) => {
+    (p.trips || []).forEach((t) => {
+      allTrips.push({
+        ...t,
+        personnelName: p.name || p.fullName || '',
+        departmentName: p.departmentName || '',
+        departmentId: p.departmentId || '',
+        position: p.position || '',
+        cccd: p.cccd || '',
+        rawPerson: p,
+      });
+    });
+  });
+
+  rList.forEach((r) => {
+    (r.trips || []).forEach((t) => {
+      allTrips.push({
+        ...t,
+        personnelName: r.name || r.relativeName || '',
+        departmentName: '',
+        position: '',
+        cccd: r.cccd || '',
+        isRelative: true,
+        parentName: r.parentName || '',
+        rawPerson: r,
+      });
+    });
+  });
+
+  exportAllInOneDataExcel(
+    pList,
+    rList,
+    allTrips,
+    personnelGroups.value,
+    relativeGroups.value,
+    tripsGroups.value,
+    (id) => personnelStore.getDepartmentName(id)
+  );
+};
+
+const openTableHelper = () => {
+  const routeData = router.resolve({ name: 'TableHelper' });
+  window.open(routeData.href, '_blank');
 };
 
 const handleExportAllInOneTemplate = () => {
