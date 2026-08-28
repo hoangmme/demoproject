@@ -208,7 +208,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
