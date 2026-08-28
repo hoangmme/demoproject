@@ -14,12 +14,6 @@
             </p>
           </div>
         </div>
-        <div class="header-actions">
-          <router-link to="/login" class="back-link">
-            <i class="pi pi-sign-in"></i>
-            <span>Đăng nhập Hệ thống</span>
-          </router-link>
-        </div>
       </div>
     </header>
 
@@ -34,7 +28,7 @@
           @click="activeTab = 'table_loop'"
         >
           <i class="pi pi-list-check"></i>
-          <span>1. Bảng lặp nhiều cột (Quá trình công tác, Khen thưởng...)</span>
+          <span>1. Bảng lặp nhiều cột</span>
         </button>
         <button
           type="button"
@@ -43,58 +37,41 @@
           @click="activeTab = 'text_loop'"
         >
           <i class="pi pi-align-left"></i>
-          <span>2. List Dữ liệu (Mỗi dòng 1 mục: Hộ chiếu, Bằng cấp...)</span>
+          <span>2. List Dữ liệu (Mỗi dòng 1 mục)</span>
         </button>
       </div>
 
       <!-- TAB 1: BẢNG LẶP NHIỀU CỘT -->
       <div v-if="activeTab === 'table_loop'" class="tab-content">
-        <!-- Preset Templates Selector -->
+        <!-- Column Headers Configuration -->
         <div class="card-box">
-          <div class="box-title">
-            <i class="pi pi-th-large text-primary"></i>
-            <span>Chọn mẫu bảng nhanh hoặc tự cấu hình số cột:</span>
-          </div>
-          <div class="preset-buttons">
-            <button
-              v-for="(p, pIdx) in tablePresets"
-              :key="pIdx"
-              type="button"
-              class="preset-chip"
-              :class="{ selected: selectedPresetId === p.id }"
-              @click="applyPreset(p)"
-            >
-              {{ p.name }}
+          <div class="col-config-header">
+            <div class="box-title">
+              <i class="pi pi-th-large text-primary"></i>
+              <span>Cấu hình Tiêu đề các Cột ({{ tableColumns.length }} cột):</span>
+            </div>
+            <button type="button" class="btn-text-sm" @click="addColumn">
+              <i class="pi pi-plus"></i> Thêm cột
             </button>
           </div>
-
-          <!-- Column Headers Configuration -->
-          <div class="col-config-section">
-            <div class="col-config-header">
-              <span class="sub-label">Tiêu đề các cột ({{ tableColumns.length }} cột):</span>
-              <button type="button" class="btn-text-sm" @click="addColumn">
-                <i class="pi pi-plus"></i> Thêm cột
+          <div class="col-inputs-grid">
+            <div v-for="(col, cIdx) in tableColumns" :key="cIdx" class="col-input-pill">
+              <span class="col-num">Cột {{ cIdx + 1 }}:</span>
+              <input
+                v-model="tableColumns[cIdx]"
+                type="text"
+                class="input-clean"
+                :placeholder="`Tiêu đề cột ${cIdx + 1}`"
+              />
+              <button
+                v-if="tableColumns.length > 1"
+                type="button"
+                class="btn-icon-del"
+                title="Xóa cột này"
+                @click="removeColumn(cIdx)"
+              >
+                <i class="pi pi-times"></i>
               </button>
-            </div>
-            <div class="col-inputs-grid">
-              <div v-for="(col, cIdx) in tableColumns" :key="cIdx" class="col-input-pill">
-                <span class="col-num">Cột {{ cIdx + 1 }}:</span>
-                <input
-                  v-model="tableColumns[cIdx]"
-                  type="text"
-                  class="input-clean"
-                  :placeholder="`Tiêu đề cột ${cIdx + 1}`"
-                />
-                <button
-                  v-if="tableColumns.length > 1"
-                  type="button"
-                  class="btn-icon-del"
-                  title="Xóa cột này"
-                  @click="removeColumn(cIdx)"
-                >
-                  <i class="pi pi-times"></i>
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -234,9 +211,9 @@
             rows="8"
             class="input-textarea"
             placeholder="Nhập danh sách dữ liệu, mỗi dòng 1 mục. Ví dụ:
-Hộ chiếu số C1234567 (Cấp ngày 10/01/2023)
-Hộ chiếu số C9876543 (Cấp ngày 15/05/2025)
-Bằng Thạc sĩ Quản lý công..."
+Mục 1
+Mục 2
+Mục 3..."
           ></textarea>
           <div class="hint-text">
             💡 <strong>Quy tắc:</strong> Mỗi dòng xuống hàng ứng với 1 mục riêng biệt. Khi nhập vào hệ thống, các dòng sẽ được tự động tách thành danh sách độc lập.
@@ -288,57 +265,11 @@ const copyToClipboard = async (text, successMsg) => {
 // ==========================================
 // TAB 1: BẢNG LẶP NHIỀU CỘT
 // ==========================================
-const tablePresets = [
-  {
-    id: 'career',
-    name: '💼 Quá trình công tác',
-    columns: ['Từ tháng/năm', 'Đến tháng/năm', 'Chức danh / Chức vụ', 'Đơn vị công tác'],
-    initialRows: [
-      ['01/2015', '12/2019', 'Chuyên viên', 'Phòng Tham mưu'],
-      ['01/2020', 'Nay', 'Phó Trưởng phòng', 'Phòng Tổ chức cán bộ'],
-    ],
-  },
-  {
-    id: 'reward',
-    name: '🏆 Khen thưởng',
-    columns: ['Năm', 'Hình thức khen thưởng', 'Số quyết định', 'Cơ quan ban hành'],
-    initialRows: [
-      ['2022', 'Chiến sĩ thi đua cơ sở', 'QĐ số 123/QĐ-CATP', 'Công an Thành phố'],
-    ],
-  },
-  {
-    id: 'discipline',
-    name: '⚠️ Xử lý kỷ luật',
-    columns: ['Năm', 'Hình thức kỷ luật', 'Số quyết định', 'Lý do'],
-    initialRows: [],
-  },
-  {
-    id: 'family',
-    name: '👨‍👩‍👧 Quan hệ gia đình',
-    columns: ['Họ và tên', 'Quan hệ', 'Năm sinh', 'Nghề nghiệp / Nơi cư trú'],
-    initialRows: [
-      ['Nguyễn Văn A', 'Cha đẻ', '1955', 'Hưu trí, TP.HCM'],
-    ],
-  },
-  {
-    id: 'custom',
-    name: '✨ Tùy chỉnh tự do',
-    columns: ['Cột 1', 'Cột 2', 'Cột 3'],
-    initialRows: [['', '', '']],
-  },
-];
-
-const selectedPresetId = ref('career');
-const tableColumns = ref([...tablePresets[0].columns]);
-const tableRows = ref(tablePresets[0].initialRows.map((r) => [...r]));
-
-const applyPreset = (p) => {
-  selectedPresetId.value = p.id;
-  tableColumns.value = [...p.columns];
-  tableRows.value = p.initialRows && p.initialRows.length > 0
-    ? p.initialRows.map((r) => [...r])
-    : [['', '', '']];
-};
+const tableColumns = ref(['Từ tháng/năm', 'Đến tháng/năm', 'Chức danh / Chức vụ', 'Đơn vị công tác']);
+const tableRows = ref([
+  ['01/2015', '12/2019', 'Chuyên viên', 'Phòng Tham mưu'],
+  ['01/2020', 'Nay', 'Phó Trưởng phòng', 'Phòng Tổ chức cán bộ'],
+]);
 
 const addColumn = () => {
   const newNum = tableColumns.value.length + 1;
@@ -421,7 +352,7 @@ const decodeFromExcelTable = () => {
 // TAB 2: LIST DỮ LIỆU (TEXT LOOP)
 // ==========================================
 const textLoopInput = ref(
-  'Hộ chiếu số C1234567 (Cấp ngày 10/01/2023)\nHộ chiếu số C9876543 (Cấp ngày 15/05/2025)'
+  'Mục thứ nhất\nMục thứ hai\nMục thứ ba'
 );
 </script>
 
@@ -446,8 +377,6 @@ const textLoopInput = ref(
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
 }
 
 .header-branding {
@@ -480,25 +409,6 @@ const textLoopInput = ref(
   font-size: 0.82rem;
   color: #64748b;
   margin: 4px 0 0 0;
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #1e3a8a;
-  text-decoration: none;
-  background: #eff6ff;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid #bfdbfe;
-  transition: all 0.15s;
-}
-
-.back-link:hover {
-  background: #dbeafe;
 }
 
 .helper-main {
@@ -581,52 +491,11 @@ const textLoopInput = ref(
   margin-bottom: 10px;
 }
 
-.preset-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.preset-chip {
-  padding: 6px 12px;
-  border-radius: 20px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  color: #334155;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.preset-chip:hover {
-  background: #e2e8f0;
-}
-
-.preset-chip.selected {
-  background: #1e3a8a;
-  color: #ffffff;
-  border-color: #1e3a8a;
-}
-
-.col-config-section {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px dashed #e2e8f0;
-}
-
 .col-config-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-}
-
-.sub-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #64748b;
+  margin-bottom: 12px;
 }
 
 .col-inputs-grid {
@@ -658,7 +527,7 @@ const textLoopInput = ref(
   font-weight: 600;
   color: #1e293b;
   outline: none;
-  width: 120px;
+  width: 140px;
 }
 
 .btn-icon-del {

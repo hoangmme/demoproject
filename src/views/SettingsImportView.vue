@@ -1818,7 +1818,36 @@ const onWizardImported = async () => {
 
 const handleExportAllInOneData = () => {
   const pList = personnelStore.personnelList || [];
-  const rList = personnelStore.relativesList || [];
+  
+  // Extract all relatives with their parent personnel info attached
+  const allRelatives = [];
+  pList.forEach((p) => {
+    let custom = {};
+    if (p.custom_data) {
+      try {
+        custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+      } catch (e) {}
+    }
+    const personCccd = String(p.cccdparent || p.cccd || p.so_cccd || custom.cccdparent || custom.cccd || custom.so_cccd || '').trim();
+    const rels = p.relatives || custom.relatives || [];
+    if (Array.isArray(rels)) {
+      rels.forEach((r) => {
+        allRelatives.push({
+          ...r,
+          parentName: p.name || p.fullName || '',
+          parentPersonnelName: p.name || p.fullName || '',
+          cccdparent: personCccd,
+          parentCccd: personCccd,
+          parentPersonnelCccd: personCccd,
+          parentPosition: p.position || p.positionName || custom.position || '',
+          parentDepartment: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
+          rawPerson: p,
+        });
+      });
+    }
+  });
+
+  const rList = allRelatives.length > 0 ? allRelatives : (personnelStore.relativesList || []);
 
   const allTrips = [];
   pList.forEach((p) => {

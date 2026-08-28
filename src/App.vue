@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!isLoginPage" class="app-container">
+  <div v-if="!isStandalonePage" class="app-container">
     <AppSidebar />
     <main class="app-main">
       <AppHeader />
@@ -23,7 +23,9 @@ const route = useRoute();
 const authStore = useAuthStore();
 const personnelStore = usePersonnelStore();
 
-const isLoginPage = computed(() => route.name === 'Login');
+const isStandalonePage = computed(() => {
+  return route.name === 'Login' || route.name === 'TableHelper' || route.path === '/bang-tuy-chinh';
+});
 
 onMounted(async () => {
   authStore.initAuth();

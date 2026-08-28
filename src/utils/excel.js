@@ -243,17 +243,78 @@ function getRelativeFieldValue(r, fieldId, colLabel = '') {
   if (!r) return '';
   const labelLower = (colLabel || '').toLowerCase();
 
-  if (fieldId === 'parentPersonnelName' || fieldId === 'parentName' || labelLower.includes('tên cán bộ')) {
-    return r.parentName || r.parentPersonnelName || '';
+  // 1. Tên cán bộ liên quan
+  if (
+    fieldId === 'parentPersonnelName' ||
+    fieldId === 'parentName' ||
+    fieldId === '_parentPersonnelName' ||
+    labelLower.includes('tên cán bộ') ||
+    labelLower.includes('tên cb') ||
+    labelLower.includes('cb liên quan (tên)')
+  ) {
+    return (
+      r.parentName ||
+      r.parentPersonnelName ||
+      r.rawPerson?.name ||
+      r.rawPerson?.fullName ||
+      ''
+    );
   }
-  if (fieldId === 'parentPersonnelCccd' || fieldId === 'parentCccd' || (labelLower.includes('cccd') && labelLower.includes('cán bộ'))) {
-    return r.parentCccd || r.parentPersonnelCccd || '';
+
+  // 2. CCCD Cán bộ liên quan
+  if (
+    fieldId === 'parentPersonnelCccd' ||
+    fieldId === 'parentCccd' ||
+    fieldId === 'cccdparent' ||
+    fieldId === '_parentPersonnelCccd' ||
+    (labelLower.includes('cccd') && (labelLower.includes('cán bộ') || labelLower.includes('cb') || labelLower.includes('liên quan'))) ||
+    labelLower.includes('cccd người thân')
+  ) {
+    return (
+      r.cccdparent ||
+      r.parentCccd ||
+      r.parentPersonnelCccd ||
+      r.rawPerson?.cccdparent ||
+      r.rawPerson?.cccd ||
+      r.rawPerson?.so_cccd ||
+      r.rawPerson?.custom_data?.cccdparent ||
+      r.rawPerson?.custom_data?.cccd ||
+      r.rawPerson?.custom_data?.so_cccd ||
+      r.custom_data?.cccdparent ||
+      r.custom_data?.parentCccd ||
+      ''
+    );
   }
-  if (fieldId === 'parentPosition' || labelLower.includes('chức vụ cb')) {
-    return r.parentPosition || '';
+
+  // 3. Chức vụ cán bộ liên quan
+  if (
+    fieldId === 'parentPosition' ||
+    fieldId === '_parentPosition' ||
+    labelLower.includes('chức vụ cb') ||
+    labelLower.includes('chức vụ cán bộ')
+  ) {
+    return (
+      r.parentPosition ||
+      r.rawPerson?.position ||
+      r.rawPerson?.positionName ||
+      r.rawPerson?.custom_data?.position ||
+      ''
+    );
   }
-  if (fieldId === 'parentDepartment' || labelLower.includes('đơn vị cb')) {
-    return r.parentDepartment || '';
+
+  // 4. Đơn vị cán bộ liên quan
+  if (
+    fieldId === 'parentDepartment' ||
+    fieldId === '_parentDepartment' ||
+    labelLower.includes('đơn vị cb') ||
+    labelLower.includes('đơn vị cán bộ')
+  ) {
+    return (
+      r.parentDepartment ||
+      r.rawPerson?.departmentName ||
+      r.rawPerson?.custom_data?.departmentName ||
+      ''
+    );
   }
 
   if (r[fieldId] !== undefined && r[fieldId] !== null) return r[fieldId];
