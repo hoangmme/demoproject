@@ -163,82 +163,67 @@ export const parseDateObj = parseDateValue;
  * Duyệt qua danh sách chuyến đi hoặc tính toán trực tiếp trên 1 chuyến đi.
  */
 export const computePresenceStatus = (record, formulaConfig = {}) => {
-  if (!record) return { status: 'domestic', label: 'Trong nước', isAbroad: false };
+  if (!record) return { status: 'none', label: '-', shortLabel: '-', isAbroad: false };
 
   const depCol = formulaConfig.departureCol || 'departureDate';
   const arrCol = formulaConfig.arrivalCol || 'arrivalDate';
   const countryCol = formulaConfig.countryCol || 'countryName';
-  const labelDomestic = formulaConfig.labelDomestic || 'Trong nước';
+  const labelDomestic = formulaConfig.labelDomestic || 'Đã về nước';
   const labelAbroad = formulaConfig.labelAbroad || 'Đang ở nước ngoài';
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Nếu là 1 bản ghi Chuyến đi trực tiếp (không phải là Object chứa mảng .trips)
+  // Nếu là 1 bản ghi Chuyến đi đơn lẻ
   if (!Array.isArray(record.trips) && !Array.isArray(record.tripList)) {
     const t = record;
     const depRaw = t[depCol] || t.departureDate || t.approvedDepartureDate || t.custom_data?.[depCol];
-    const arrRaw = t[arrCol] || t.arrivalDate || t.approvedArrivalDate || t.approvedExtensionDate || t.custom_data?.[arrCol];
+    const arrRaw = t[arrCol] || t.arrivalDate || t.approvedArrivalDate || t.custom_data?.[arrCol];
     const country = t[countryCol] || t.countryName || t.custom_data?.[countryCol] || '';
 
     const depDate = parseDateValue(depRaw);
     const arrDate = parseDateValue(arrRaw);
 
-    if (depDate) {
-      const depNormalized = new Date(depDate);
-      depNormalized.setHours(0, 0, 0, 0);
-
-      // Nếu hôm nay >= Ngày đi
-      if (today >= depNormalized) {
-        if (arrDate) {
-          const arrNormalized = new Date(arrDate);
-          arrNormalized.setHours(23, 59, 59, 999);
-
-          // Hôm nay nằm trong khoảng từ Ngày đi đến Ngày về
-          if (today <= arrNormalized) {
-            const countrySuffix = country ? `: ${country}` : '';
-            return {
-              status: 'abroad',
-              isAbroad: true,
-              label: `${labelAbroad}${countrySuffix}`,
-              shortLabel: labelAbroad,
-              country,
-              trip: t,
-            };
-          } else {
-            return {
-              status: 'completed',
-              isAbroad: false,
-              label: 'Đã về nước',
-              shortLabel: 'Đã về nước',
-              country,
-              trip: t,
-            };
-          }
-        } else {
-          // Chưa có ngày về -> Đang ở nước ngoài
-          const countrySuffix = country ? `: ${country}` : '';
-          return {
-            status: 'abroad',
-            isAbroad: true,
-            label: `${labelAbroad}${countrySuffix}`,
-            shortLabel: labelAbroad,
-            country,
-            trip: t,
-          };
-        }
-      } else {
-        // Chưa đến ngày đi
+    // 1. Đã có ngày về và today >= ngày về -> Đã về nước
+    if (arrDate) {
+      const arrNormalized = new Date(arrDate);
+      arrNormalized.setHours(0, 0, 0, 0);
+      if (today >= arrNormalized) {
         return {
-          status: 'upcoming',
+          status: 'completed',
           isAbroad: false,
-          label: 'Chưa khởi hành',
-          shortLabel: 'Chưa khởi hành',
+          label: labelDomestic,
+          shortLabel: labelDomestic,
           country,
           trip: t,
         };
       }
     }
+
+    // 2. Đã xuất cảnh (ngày đi <= today) và chưa có ngày về -> Đang ở nước ngoài
+    if (depDate) {
+      const depNormalized = new Date(depDate);
+      depNormalized.setHours(0, 0, 0, 0);
+      if (today >= depNormalized) {
+        const countrySuffix = country ? `: ${country}` : '';
+        return {
+          status: 'abroad',
+          isAbroad: true,
+          label: `${labelAbroad}${countrySuffix}`,
+          shortLabel: labelAbroad,
+          country,
+          trip: t,
+        };
+      }
+    }
+
+    // 3. Không có ngày đi/về hoặc chưa đến ngày đi -> '-'
+    return {
+      status: 'none',
+      isAbroad: false,
+      label: '-',
+      shortLabel: '-',
+    };
   }
 
   // Nếu là Hồ sơ Cán bộ / Thân nhân chứa danh sách nhiều chuyến đi
@@ -251,38 +236,39 @@ export const computePresenceStatus = (record, formulaConfig = {}) => {
     trips = [record];
   }
 
+  let hasAnyAbroad = false;
   let activeAbroadTrip = null;
+  let hasAnyCompleted = false;
 
   for (const t of trips) {
     const depRaw = t[depCol] || t.departureDate || t.approvedDepartureDate || t.custom_data?.[depCol];
-    const arrRaw = t[arrCol] || t.arrivalDate || t.approvedArrivalDate || t.approvedExtensionDate || t.custom_data?.[arrCol];
+    const arrRaw = t[arrCol] || t.arrivalDate || t.approvedArrivalDate || t.custom_data?.[arrCol];
     const country = t[countryCol] || t.countryName || t.custom_data?.[countryCol] || '';
 
     const depDate = parseDateValue(depRaw);
     const arrDate = parseDateValue(arrRaw);
 
+    if (arrDate) {
+      const arrNorm = new Date(arrDate);
+      arrNorm.setHours(0, 0, 0, 0);
+      if (today >= arrNorm) {
+        hasAnyCompleted = true;
+        continue;
+      }
+    }
+
     if (depDate) {
-      const depNormalized = new Date(depDate);
-      depNormalized.setHours(0, 0, 0, 0);
-
-      if (today >= depNormalized) {
-        if (arrDate) {
-          const arrNormalized = new Date(arrDate);
-          arrNormalized.setHours(23, 59, 59, 999);
-
-          if (today <= arrNormalized) {
-            activeAbroadTrip = { trip: t, country, departureDate: depDate, arrivalDate: arrDate };
-            break;
-          }
-        } else {
-          activeAbroadTrip = { trip: t, country, departureDate: depDate, arrivalDate: null };
-          break;
-        }
+      const depNorm = new Date(depDate);
+      depNorm.setHours(0, 0, 0, 0);
+      if (today >= depNorm) {
+        hasAnyAbroad = true;
+        activeAbroadTrip = { trip: t, country };
+        break;
       }
     }
   }
 
-  if (activeAbroadTrip) {
+  if (hasAnyAbroad && activeAbroadTrip) {
     const countrySuffix = activeAbroadTrip.country ? `: ${activeAbroadTrip.country}` : '';
     return {
       status: 'abroad',
@@ -294,13 +280,24 @@ export const computePresenceStatus = (record, formulaConfig = {}) => {
     };
   }
 
+  if (hasAnyCompleted) {
+    return {
+      status: 'completed',
+      isAbroad: false,
+      label: labelDomestic,
+      shortLabel: labelDomestic,
+    };
+  }
+
   return {
-    status: 'domestic',
+    status: 'none',
     isAbroad: false,
-    label: labelDomestic,
-    shortLabel: labelDomestic,
+    label: '-',
+    shortLabel: '-',
   };
 };
+
+
 
 /**
  * Helper trích xuất giá trị trường từ bản ghi theo đúng ID cột người dùng cấu hình
@@ -651,15 +648,16 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
         return {
           status: tripRes.status,
           label: tripRes.label,
-          shortLabel: tripRes.status === 'completed' ? 'Đã về nước' : (tripRes.status === 'abroad' ? 'Đang ở nước ngoài' : (tripRes.status === 'overdue' ? 'Quá hạn chưa về' : tripRes.label)),
+          shortLabel: tripRes.label,
           isAbroad: tripRes.isAbroad,
-          isOverdue: tripRes.isOverdue,
         };
       }
       return computePresenceStatus(record, {
         departureCol: formulaConfig.formulaDepartureCol || formulaConfig.departureCol,
         arrivalCol: formulaConfig.formulaArrivalCol || formulaConfig.arrivalCol,
         countryCol: formulaConfig.formulaCountryCol || formulaConfig.countryCol,
+        labelDomestic: formulaConfig.formulaLabelDomestic || formulaConfig.labelDomestic,
+        labelAbroad: formulaConfig.formulaLabelAbroad || formulaConfig.labelAbroad,
       });
     }
     case 'overdue_status': {
@@ -747,76 +745,59 @@ export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
  *      - Kiểm tra today vs deadline → 'abroad' hoặc 'overdue'
  */
 export const computeTripPresence = (t) => {
-  if (!t) return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
+  if (!t) return { status: 'none', isAbroad: false, isOverdue: false, label: '-', shortLabel: '-', overdueDays: 0 };
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const depRaw = t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngayDi || t.custom_data?.departureDate || t.custom_data?.ngay_xuat_canh;
   const arrRaw = t.arrivalDate || t.ngay_nhap_canh || t.ngayVe || t.custom_data?.arrivalDate || t.custom_data?.ngay_nhap_canh;
-  const appArrRaw = t.approvedExtensionDate || t.approvedArrivalDate || t.thoi_gian_duyet_ve || t.thoiGianDuyetVe || t.gia_han_den_ngay || t.custom_data?.approvedArrivalDate || t.custom_data?.thoi_gian_duyet_ve;
+  const country = t.countryName || t.country || t.custom_data?.countryName || t.custom_data?.country || '';
 
   const depDate = parseDateValue(depRaw);
   const arrDate = parseDateValue(arrRaw);
-  const appArrDate = parseDateValue(appArrRaw);
 
-  if (!depDate && !arrDate) {
-    return { status: 'domestic', isAbroad: false, isOverdue: false, label: 'Trong nước', overdueDays: 0 };
-  }
-
-  // Chưa đến ngày đi
-  if (depDate) {
-    const depNorm = new Date(depDate);
-    depNorm.setHours(0, 0, 0, 0);
-    if (today < depNorm) {
-      return { status: 'upcoming', isAbroad: false, isOverdue: false, label: 'Chưa khởi hành', overdueDays: 0 };
-    }
-  }
-
-  // Đã có ngày nhập cảnh thực tế và today đã qua ngày đó → Đã về nước
+  // 1. Đã có ngày nhập cảnh thực tế và hôm nay >= ngày nhập cảnh -> Đã về nước
   if (arrDate) {
     const arrNorm = new Date(arrDate);
-    arrNorm.setHours(23, 59, 59, 999);
-    if (today > arrNorm) {
-      // Kiểm tra có về muộn so với deadline không
-      let isOverdue = false;
-      let overdueDays = 0;
-      if (appArrDate) {
-        const appArrNorm = new Date(appArrDate);
-        appArrNorm.setHours(23, 59, 59, 999);
-        if (arrNorm > appArrNorm) {
-          isOverdue = true;
-          overdueDays = Math.max(1, Math.floor((arrNorm - appArrNorm) / (1000 * 60 * 60 * 24)));
-        }
-      }
+    arrNorm.setHours(0, 0, 0, 0);
+    if (today >= arrNorm) {
       return {
         status: 'completed',
         isAbroad: false,
-        isOverdue,
-        label: isOverdue ? `Đã về nước (quá hạn ${overdueDays} ngày)` : 'Đã về nước',
-        overdueDays,
+        isOverdue: false,
+        label: 'Đã về nước',
+        shortLabel: 'Đã về nước',
+        overdueDays: 0,
       };
     }
   }
 
-  // Đang ở nước ngoài: ngày đi <= today, chưa về hoặc ngày về chưa tới
-  let isOverdue = false;
-  let overdueDays = 0;
-  if (appArrDate) {
-    const appArrNorm = new Date(appArrDate);
-    appArrNorm.setHours(23, 59, 59, 999);
-    if (today > appArrNorm) {
-      isOverdue = true;
-      overdueDays = Math.max(1, Math.floor((today - appArrNorm) / (1000 * 60 * 60 * 24)));
+  // 2. Đã xuất cảnh (ngày đi <= today) và chưa có ngày về -> Đang ở nước ngoài
+  if (depDate) {
+    const depNorm = new Date(depDate);
+    depNorm.setHours(0, 0, 0, 0);
+    if (today >= depNorm) {
+      const countrySuffix = country ? `: ${country}` : '';
+      return {
+        status: 'abroad',
+        isAbroad: true,
+        isOverdue: false,
+        label: `Đang ở nước ngoài${countrySuffix}`,
+        shortLabel: 'Đang ở nước ngoài',
+        country,
+        overdueDays: 0,
+      };
     }
   }
 
+  // 3. Không có ngày đi/về hoặc chưa đến ngày đi -> '-'
   return {
-    status: isOverdue ? 'overdue' : 'abroad',
-    isAbroad: true,
-    isOverdue,
-    label: isOverdue ? `Chưa về nước (${overdueDays} ngày)` : 'Đang ở nước ngoài',
-    shortLabel: isOverdue ? 'Chưa về nước' : 'Đang ở nước ngoài',
-    overdueDays,
+    status: 'none',
+    isAbroad: false,
+    isOverdue: false,
+    label: '-',
+    shortLabel: '-',
+    overdueDays: 0,
   };
 };
