@@ -503,10 +503,16 @@
                   </select>
                 </div>
 
-                <!-- 1. Trạng thái Hiện diện -->
+                <!-- 1. Trạng thái Hiện diện & Chấp hành thời hạn -->
                 <div v-if="!col.formulaType || col.formulaType === 'presence_status'" style="display: flex; flex-direction: column; gap: 6px;">
                   <div style="font-size: 0.72rem; color: #15803d; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> Tự động duyệt qua toàn bộ các chuyến đi của người này. Nếu có bất kỳ chuyến đi nào đang diễn ra tại thời điểm <strong>Ngày hiện tại (Today)</strong>, hệ thống tự động gán trạng thái <strong>"Đang ở nước ngoài"</strong>. Ngược lại gán <strong>"Trong nước"</strong>.
+                    💡 <strong>Nguyên lý:</strong> Tự động tính toán vị trí thực tế kết hợp đối chiếu <strong>Thời gian duyệt về (Deadline)</strong>:
+                    <ul style="margin: 2px 0 0 16px; padding: 0;">
+                      <li>Nếu đã nhập cảnh &le; Deadline &rarr; <strong>"Đã về nước"</strong>.</li>
+                      <li>Nếu đã nhập cảnh &gt; Deadline &rarr; <strong>"Đã về nước (quá hạn X ngày)"</strong>.</li>
+                      <li>Nếu đã xuất cảnh, chưa về và Today &le; Deadline &rarr; <strong>"Đang ở nước ngoài: [Quốc gia]"</strong>.</li>
+                      <li>Nếu đã xuất cảnh, chưa về và Today &gt; Deadline &rarr; <strong>"Chưa về nước (quá hạn X ngày)"</strong>.</li>
+                    </ul>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
                     <div>
@@ -528,6 +534,15 @@
                       </select>
                     </div>
                     <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Thời gian duyệt về (Deadline):</span>
+                      <select v-model="col.formulaApprovedArrivalCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định (approvedArrivalDate) --</option>
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
+                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                    <div>
                       <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Quốc gia (Tùy chọn):</span>
                       <select v-model="col.formulaCountryCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
                         <option value="">-- Mặc định (countryName) --</option>
@@ -535,6 +550,38 @@
                           Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
                         </option>
                       </select>
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đã về nước (Tùy chọn):</span>
+                      <input
+                        v-model="col.formulaLabelDomestic"
+                        placeholder="Mặc định: Đã về nước"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đang ở nước ngoài (Tùy chọn):</span>
+                      <input
+                        v-model="col.formulaLabelAbroad"
+                        placeholder="Mặc định: Đang ở nước ngoài"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Chưa về nước vượt hạn (Tùy chọn):</span>
+                      <input
+                        v-model="col.formulaLabelNotReturnedYet"
+                        placeholder="Mặc định: Chưa về nước"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Từ khóa khi Quá hạn (Tùy chọn):</span>
+                      <input
+                        v-model="col.formulaLabelOverdue"
+                        placeholder="Mặc định: quá hạn"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
                     </div>
                   </div>
                 </div>
