@@ -1419,28 +1419,50 @@
                 :key="card.id || cIdx"
                 style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #fafafa; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
               >
-                <!-- Tiêu đề thẻ & Nút xóa -->
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <!-- Tiêu đề thẻ & Các nút thao tác di chuyển/xóa -->
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
                   <input
                     v-model="card.label"
                     placeholder="Tên thẻ (VD: Có vấn đề chính trị, Đi Nhật...)"
                     style="font-size: 0.82rem; font-weight: 700; color: #1e293b; border: 1px solid #cbd5e1; background: #fff; padding: 3px 6px; border-radius: 4px; flex: 1;"
                   />
-                  <select v-model="card.color" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; width: 100px;">
-                    <option value="blue">🔵 Xanh dương</option>
-                    <option value="green">🟢 Xanh lá</option>
-                    <option value="amber">🟠 Vàng cam</option>
+                  <select v-model="card.color" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; width: 95px;">
+                    <option value="blue">🔵 Xanh</option>
+                    <option value="green">🟢 Lá</option>
+                    <option value="amber">🟠 Cam</option>
                     <option value="red">🔴 Đỏ</option>
                     <option value="purple">🟣 Tím</option>
                   </select>
-                  <button
-                    type="button"
-                    @click="removeMetricCard(currentSelectedDashboard, cIdx)"
-                    style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 2px;"
-                    title="Xóa thẻ này"
-                  >
-                    <i class="pi pi-trash" style="font-size: 0.8rem;"></i>
-                  </button>
+                  <div style="display: flex; align-items: center; gap: 2px;">
+                    <button
+                      type="button"
+                      :disabled="cIdx === 0"
+                      @click="moveMetricCard(currentSelectedDashboard, cIdx, -1)"
+                      title="Di chuyển sang trái / lên trước"
+                      style="background: transparent; border: none; color: #475569; cursor: pointer; padding: 2px 4px;"
+                      :style="cIdx === 0 ? 'opacity: 0.25; cursor: not-allowed;' : ''"
+                    >
+                      <i class="pi pi-arrow-left" style="font-size: 0.72rem;"></i>
+                    </button>
+                    <button
+                      type="button"
+                      :disabled="cIdx === currentSelectedDashboard.metricCards.length - 1"
+                      @click="moveMetricCard(currentSelectedDashboard, cIdx, 1)"
+                      title="Di chuyển sang phải / xuống sau"
+                      style="background: transparent; border: none; color: #475569; cursor: pointer; padding: 2px 4px;"
+                      :style="cIdx === currentSelectedDashboard.metricCards.length - 1 ? 'opacity: 0.25; cursor: not-allowed;' : ''"
+                    >
+                      <i class="pi pi-arrow-right" style="font-size: 0.72rem;"></i>
+                    </button>
+                    <button
+                      type="button"
+                      @click="removeMetricCard(currentSelectedDashboard, cIdx)"
+                      style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 2px 4px;"
+                      title="Xóa thẻ này"
+                    >
+                      <i class="pi pi-trash" style="font-size: 0.75rem;"></i>
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Độ rộng khối (% Width) -->
@@ -2660,6 +2682,16 @@ const removeConditionFromCard = (card, condIdx) => {
 
 const removeMetricCard = (dash, cIdx) => {
   dash.metricCards.splice(cIdx, 1);
+  debouncedAutoSaveDashboards();
+};
+
+const moveMetricCard = (dash, cIdx, direction) => {
+  const targetIdx = cIdx + direction;
+  if (!dash || !dash.metricCards || targetIdx < 0 || targetIdx >= dash.metricCards.length) return;
+  const temp = dash.metricCards[cIdx];
+  dash.metricCards[cIdx] = dash.metricCards[targetIdx];
+  dash.metricCards[targetIdx] = temp;
+  debouncedAutoSaveDashboards();
 };
 
 const categorizedDashboardCols = computed(() => {
