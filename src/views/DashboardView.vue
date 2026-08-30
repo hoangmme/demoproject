@@ -1580,18 +1580,8 @@ const matchSingleCondition = (item, cond) => {
     const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
     return res.isWarning;
   }
-  if (field === 'trang_thai_hien_dien') {
-    const presence = getTripPresence(item);
-    if (target.includes('đã về nước')) return presence.status === 'completed' && !presence.isOverdue;
-    if (target.includes('đang ở nước ngoài')) return presence.status === 'abroad';
-    if (target.includes('quá hạn')) return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
-  }
-  if (field === 'qua_han_chua_ve') {
-    const presence = getTripPresence(item);
-    return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
-  }
 
-  // 1c. Dynamic Field Condition
+  // 1c. Dynamic Field Condition (Áp dụng chuẩn toán tử cho TẤT CẢ các cột và công thức)
   const rawVal = getRowFieldValue(item, field);
   const fieldVal = (rawVal !== undefined && rawVal !== null && rawVal !== '-')
     ? String(rawVal).trim()
@@ -1608,6 +1598,7 @@ const matchSingleCondition = (item, cond) => {
   const strTarget = String(cond.value || '').trim().toLowerCase();
 
   if (op === 'equals') return strVal === strTarget;
+  if (op === 'not_equals') return strVal !== strTarget;
   if (op === 'contains') return strVal.includes(strTarget);
   if (op === 'not_contains') return !strVal.includes(strTarget);
 
