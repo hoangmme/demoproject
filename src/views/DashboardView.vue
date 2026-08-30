@@ -496,19 +496,9 @@
           </select>
         </div>
 
-        <!-- 2. CHỌN DẠNG HIỂN THỊ (SỐ ĐẾM / CỘT DỌC / CỘT NGANG) -->
+        <!-- 2. CHỌN KHỐI THỐNG KÊ Ở CHUYÊN ĐỀ -->
         <div class="field-item">
-          <label class="field-label" style="font-weight: 700; color: #1e293b;">2. Chọn Dạng hiển thị trên Dashboard <span style="color: #ef4444;">*</span></label>
-          <select v-model="widgetForm.displayType" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onDisplayTypeChange">
-            <option value="count">🔢 Dạng Số đếm (Metric Card)</option>
-            <option value="vertical_bar">📊 Dạng Cột dọc (Vertical Bar Chart)</option>
-            <option value="horizontal_bar">📋 Dạng Danh sách cột ngang (Horizontal Progress Bar)</option>
-          </select>
-        </div>
-
-        <!-- 3A. NẾU LÀ DẠNG SỐ ĐẾM: CHỌN THẺ CHỈ SỐ -->
-        <div v-if="widgetForm.displayType === 'count'" class="field-item">
-          <label class="field-label" style="font-weight: 700; color: #1e293b;">3. Chọn Khối Thống kê (Metric Card) cần đưa ra Dashboard <span style="color: #ef4444;">*</span></label>
+          <label class="field-label" style="font-weight: 700; color: #1e293b;">2. Chọn Khối Thống kê (Metric Card) của Chuyên đề <span style="color: #ef4444;">*</span></label>
           <select v-model="selectedWidgetCardKey" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onTopicCardSelectChange">
             <option v-for="(card, cIdx) in availableCardsForSelectedTopic" :key="card.id || cIdx" :value="card.id || card.label || `card_${cIdx}`">
               🎯 {{ card.label }} (Đang có: {{ getCardMetricValueForTopic(card, selectedTopicObject) }} bản ghi)
@@ -516,14 +506,13 @@
           </select>
         </div>
 
-        <!-- 3B. NẾU LÀ DẠNG BIỂU ĐỒ (CỘT DỌC HOẶC NGANG): CHỌN CỘT DỮ LIỆU ĐỂ PHÂN LOẠI -->
-        <div v-else class="field-item">
-          <label class="field-label" style="font-weight: 700; color: #1e293b;">3. Chọn Cột dữ liệu để Phân loại / Thống kê <span style="color: #ef4444;">*</span></label>
-          <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onWidgetColumnSelect">
-            <option value="">-- Chọn cột phân loại --</option>
-            <option v-for="col in availableColumnsForWidgetSource" :key="col.id" :value="col.id">
-              {{ col.label }}
-            </option>
+        <!-- 3. CHỌN DẠNG HIỂN THỊ (SỐ ĐẾM / CỘT DỌC / CỘT NGANG) -->
+        <div class="field-item">
+          <label class="field-label" style="font-weight: 700; color: #1e293b;">3. Chọn Dạng hiển thị trên Dashboard <span style="color: #ef4444;">*</span></label>
+          <select v-model="widgetForm.displayType" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;">
+            <option value="count">🔢 Dạng Số đếm (Metric Card)</option>
+            <option value="vertical_bar">📊 Dạng Cột dọc (Vertical Bar Chart)</option>
+            <option value="horizontal_bar">📋 Dạng Danh sách cột ngang (Horizontal Progress Bar)</option>
           </select>
         </div>
 
@@ -1739,6 +1728,9 @@ const onTopicCardSelectChange = () => {
     teal: '#0d9488',
   };
 
+  const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
+  const primaryField = cardConds.length > 0 ? cardConds[0].field : '';
+
   widgetForm.value = {
     ...widgetForm.value,
     title: card.label === 'Toàn bộ' ? `Tổng số ${topic.title}` : `${topic.title} - ${card.label}`,
@@ -1746,11 +1738,13 @@ const onTopicCardSelectChange = () => {
     topicTitle: topic.title,
     cardId: card.id || card.label,
     cardCondition: card.condition || card.id,
-    field: card.field || '',
+    field: primaryField,
+    columnId: primaryField,
+    conditions: card.conditions || (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []),
     operator: card.operator || 'has_value',
     value: card.value || '',
     source: topic.source || 'trips',
-    displayType: 'count',
+    displayType: widgetForm.value.displayType || 'count',
     color: colorMap[card.color] || card.color || '#2e7d32',
     icon: topic.icon ? `pi ${topic.icon}` : 'pi-send',
   };
@@ -1981,46 +1975,34 @@ const handleWidgetClick = (widget) => {
 };
 
 const computeWidgetChartData = (widget) => {
-  if (widget.source === 'combined_country') {
-    const counts = {};
-    let total = 0;
-    (stats.value.filteredTrips || []).forEach((t) => {
-      const c = t.countryName || getTripValue(t, colConfig.value.country);
-      if (c && c !== 'Chưa rõ' && c !== '-') {
-        counts[c] = (counts[c] || 0) + 1;
-        total++;
-      }
-    });
-    (personnelStore.relativesList || []).forEach((r) => {
-      const c = getRowFieldValue(r, colConfig.value.countryRelative);
-      if (c && c !== 'Chưa rõ' && c !== '-') {
-        counts[c] = (counts[c] || 0) + 1;
-        total++;
-      }
-    });
-    const chartList = Object.entries(counts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
-    const max = chartList.length > 0 ? chartList[0].count : 1;
-    return { list: chartList, max, total };
-  }
+  const topic = availableTopicDashboards.value.find((t) => t.id === widget.topicId);
+  const source = widget.source || topic?.source || 'trips';
+  const list = getSourceList(source);
 
-  if (widget.source === 'combined_funding') {
-    return {
-      list: stats.value.fundingList || [],
-      max: stats.value.maxFunding || 1,
-      total: (stats.value.fundingList || []).reduce((sum, item) => sum + item.count, 0),
-    };
-  }
+  // Tìm Metric Card tương ứng trong Chuyên đề
+  const card = (topic?.metricCards || []).find((c) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title) || widget;
 
-  const list = getSourceList(widget.source);
-  if (!widget.columnId) return { list: [], max: 1, total: 0 };
+  // Lọc danh sách bản ghi theo điều kiện của Metric Card
+  const matchedList = list.filter((row) => matchCardCondition(row, card));
+
+  // Xác định Cột cần Gom nhóm (Group by Field)
+  const cardConds = (card.conditions && card.conditions.length > 0)
+    ? card.conditions
+    : (card.field ? [{ field: card.field }] : []);
+
+  let groupField = widget.columnId;
+  if (!groupField && cardConds.length > 0 && cardConds[0].field) {
+    groupField = cardConds[0].field;
+  }
+  if (!groupField) {
+    groupField = source === 'trips' ? 'countryName' : (source === 'relatives' ? 'countryName' : 'departmentName');
+  }
 
   const counts = {};
   let total = 0;
 
-  list.forEach((row) => {
-    const val = getRowFieldValue(row, widget.columnId);
+  matchedList.forEach((row) => {
+    const val = getRowFieldValue(row, groupField);
     if (val === undefined || val === null) return;
     const strVal = String(val).trim();
     if (!strVal || strVal === '-') return;
@@ -2030,11 +2012,11 @@ const computeWidgetChartData = (widget) => {
   });
 
   const chartList = Object.entries(counts)
-    .map(([name, count]) => ({ name, count }))
+    .map(([name, count]) => ({ name, count, field: groupField }))
     .sort((a, b) => b.count - a.count);
 
   const max = chartList.length > 0 ? chartList[0].count : 1;
-  return { list: chartList, max, total };
+  return { list: chartList, max, total, groupField };
 };
 
 const getFilteredChartList = (widget) => {
@@ -2439,14 +2421,20 @@ const handleChartItemClick = (widget, itemName) => {
     ? (widget.source === 'personnel' ? '/personnel' : (widget.source === 'relatives' ? '/personnel' : '/trips'))
     : `/dashboard-topic/${widget.topicId}`;
 
-  if (widget.columnId === 'countryName' || widget.columnId === 'quoc_gia_xuat_canh' || widget.columnId === 'country') {
-    router.push({ path: targetPath, query: { country: itemName } });
-  } else if (widget.columnId === 'fundingName' || widget.columnId === 'nguon_kinh_phi' || widget.columnId === 'funding') {
-    router.push({ path: targetPath, query: { funding: itemName } });
-  } else if (widget.columnId === 'departmentId' || widget.columnId === 'departmentName') {
-    router.push({ path: targetPath, query: { department: itemName } });
+  const cardParam = widget.cardId || widget.id;
+  const topic = availableTopicDashboards.value.find((t) => t.id === widget.topicId);
+  const card = (topic?.metricCards || []).find((c) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title) || widget;
+  const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
+  const field = widget.columnId || (cardConds.length > 0 ? cardConds[0].field : '') || 'countryName';
+
+  if (field === 'countryName' || field === 'quoc_gia_xuat_canh' || field === 'country') {
+    router.push({ path: targetPath, query: { card: cardParam, country: itemName } });
+  } else if (field === 'fundingName' || field === 'nguon_kinh_phi' || field === 'funding') {
+    router.push({ path: targetPath, query: { card: cardParam, funding: itemName } });
+  } else if (field === 'departmentId' || field === 'departmentName') {
+    router.push({ path: targetPath, query: { card: cardParam, department: itemName } });
   } else {
-    router.push({ path: targetPath, query: { filterField: widget.columnId, filterValue: itemName } });
+    router.push({ path: targetPath, query: { card: cardParam, filterField: field, filterValue: itemName } });
   }
 };
 
