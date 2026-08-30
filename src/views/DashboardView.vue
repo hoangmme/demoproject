@@ -1972,7 +1972,12 @@ const handleWidgetClick = (widget) => {
     router.push({ path: targetPath, query: { card: cardParam } });
     return;
   }
-  openCustomWidgetDrilldown(widget);
+  const targetPath = widget.source === 'personnel' ? '/personnel' : (widget.source === 'relatives' ? '/personnel' : '/trips');
+  if (widget.columnId) {
+    router.push({ path: targetPath, query: { filterField: widget.columnId, filterValue: widget.countValue || '' } });
+  } else {
+    router.push({ path: targetPath });
+  }
 };
 
 const computeWidgetChartData = (widget) => {
