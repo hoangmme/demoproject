@@ -454,64 +454,129 @@ export const usePersonnelStore = defineStore('personnel', {
     async savePerson(formData) {
       this.loading = true;
       try {
-        const coreKeys = [
-          'id', 'code', 'name', 'cccd', 'birthYear', 'departmentId',
-          'position', 'positionName', 'departmentName', 'hometown',
-          'ethnicity', 'religion', 'email', 'otherName', 'isDeleted',
-        ];
+        if (!formData) throw new Error('Dữ liệu cán bộ không hợp lệ');
 
-        const payload = {};
+        // 1. Unnest and sanitize customData recursively to eliminate any nested custom_data
         let customData = {};
         if (formData.custom_data) {
-          try {
-            customData = typeof formData.custom_data === 'string' ? JSON.parse(formData.custom_data) : { ...formData.custom_data };
-          } catch (e) {
-            customData = {};
+          let cd = formData.custom_data;
+          if (typeof cd === 'string') {
+            try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+          }
+          if (typeof cd === 'object' && cd !== null) {
+            customData = { ...cd };
           }
         }
 
-        const skipKeys = ['custom_data', 'rawPerson', 'rawRelative', 'rawTrip', 'uniqueKey', 'trips', 'relatives', 'flags', 'files'];
+        // Recursively unnest any legacy nested custom_data
+        let unnestDepth = 0;
+        while (customData.custom_data && unnestDepth < 20) {
+          unnestDepth++;
+          let nested = customData.custom_data;
+          delete customData.custom_data;
+          if (typeof nested === 'string') {
+            try { nested = JSON.parse(nested); } catch (e) { nested = null; }
+          }
+          if (nested && typeof nested === 'object') {
+            customData = { ...nested, ...customData };
+          }
+        }
 
+        // Clean out runtime / circular / transient properties from customData
+        delete customData.rawPerson;
+        delete customData.rawRelative;
+        delete customData.rawTrip;
+        delete customData.uniqueKey;
+        delete customData.parentPerson;
+        delete customData.parentPersonnel;
+        delete customData.isDeleted;
+        delete customData['Khối B: Chuyến đi nước ngoài'];
+
+        // 2. Extract strictly core database keys for Directus root payload
+        const coreKeys = ['id', 'code', 'name', 'cccd', 'birthYear', 'departmentId', 'position'];
+        const skipKeys = [
+          'custom_data',
+          'rawPerson',
+          'rawRelative',
+          'rawTrip',
+          'uniqueKey',
+          'trips',
+          'relatives',
+          'flags',
+          'files',
+          'isDeleted',
+        ];
+
+        const payload = {};
         Object.keys(formData).forEach((k) => {
           if (coreKeys.includes(k)) {
-            payload[k] = formData[k];
+            if (formData[k] !== undefined && formData[k] !== null) {
+              payload[k] = formData[k];
+            }
           } else if (!skipKeys.includes(k)) {
+            // Dynamic custom columns (and any other profile fields) go cleanly into customData
             customData[k] = formData[k];
           }
         });
 
+        // 3. Ensure CCCD is synchronized
+        const cccdVal = formData.cccdparent || formData.cccd || customData.cccdparent || customData.cccd || '';
+        if (cccdVal) {
+          payload.cccd = String(cccdVal).trim();
+          customData.cccdparent = String(cccdVal).trim();
+          customData.cccd = String(cccdVal).trim();
+        }
+
+        // 4. Attach trips, relatives, flags, files into customData
         if (Array.isArray(formData.trips)) {
-          customData.trips = formData.trips;
+          customData.trips = formData.trips.map((t) => {
+            const cleanT = { ...t };
+            delete cleanT.rawPerson;
+            delete cleanT.rawRelative;
+            delete cleanT.rawTrip;
+            return cleanT;
+          });
         }
-        delete customData['Khối B: Chuyến đi nước ngoài'];
-
         if (Array.isArray(formData.relatives)) {
-          customData.relatives = formData.relatives;
+          customData.relatives = formData.relatives.map((r) => {
+            const cleanR = { ...r };
+            delete cleanR.rawPerson;
+            delete cleanR.rawRelative;
+            delete cleanR.rawTrip;
+            return cleanR;
+          });
         }
-        if (formData.flags) customData.flags = formData.flags;
-        if (formData.files) customData.files = formData.files;
+        if (formData.flags && typeof formData.flags === 'object') {
+          customData.flags = formData.flags;
+        }
+        if (formData.files && Array.isArray(formData.files)) {
+          customData.files = formData.files;
+        }
 
+        // 5. Final check to guarantee no custom_data recursion
+        delete customData.custom_data;
         payload.custom_data = JSON.stringify(customData);
 
         let saved = null;
         if (payload.id) {
           saved = await updatePersonnel(payload.id, payload);
-          logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name} (${formData.code || formData.id})`).catch(() => {});
+          logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name || payload.name} (${formData.code || payload.code || payload.id})`).catch(() => {});
         } else {
           payload.id = 'CB-' + Date.now();
           if (!payload.code) payload.code = payload.id;
           saved = await createPersonnel(payload);
-          logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name}`).catch(() => {});
+          logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name || payload.name}`).catch(() => {});
         }
 
-        // Fast optimistic in-memory update
+        // 6. Fast optimistic in-memory update
         const fullSavedObj = {
           ...payload,
           ...customData,
           custom_data: JSON.stringify(customData),
-          trips: Array.isArray(formData.trips) ? formData.trips : (customData.trips || []),
-          relatives: Array.isArray(formData.relatives) ? formData.relatives : (customData.relatives || []),
-          flags: formData.flags || customData.flags || {},
+          trips: Array.isArray(customData.trips) ? customData.trips : [],
+          relatives: Array.isArray(customData.relatives) ? customData.relatives : [],
+          flags: customData.flags || {},
+          files: customData.files || [],
         };
 
         const existingIdx = this.personnelList.findIndex((p) => String(p.id) === String(payload.id));

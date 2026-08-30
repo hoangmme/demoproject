@@ -217,8 +217,23 @@ const form = ref({
 
 const initFormData = (val) => {
   if (val) {
-    const cd = val.custom_data || {};
+    let cd = val.custom_data || {};
+    if (typeof cd === 'string') {
+      try {
+        cd = JSON.parse(cd);
+      } catch (e) {
+        cd = {};
+      }
+    }
     const parsedVal = JSON.parse(JSON.stringify(val));
+    // Clean out custom_data and recursive keys from parsedVal and cd
+    delete parsedVal.custom_data;
+    delete cd.custom_data;
+    delete parsedVal.rawPerson;
+    delete parsedVal.rawRelative;
+    delete parsedVal.rawTrip;
+    delete parsedVal.uniqueKey;
+
     form.value = {
       ...cd,
       ...parsedVal,
@@ -234,6 +249,7 @@ const initFormData = (val) => {
       files: Array.isArray(parsedVal.files) ? parsedVal.files : (cd.files || []),
       custom_data: { ...cd, ...parsedVal },
     };
+    delete form.value.custom_data.custom_data;
   } else {
     isEdit.value = false;
     form.value = {

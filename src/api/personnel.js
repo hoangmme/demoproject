@@ -47,8 +47,18 @@ export const createPersonnel = async (data) => {
     ...data,
     id: data.id || ('p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7)),
   };
-  const res = await apiClient.post('/items/personnels', payload);
-  return res.data?.data;
+  try {
+    const res = await apiClient.post('/items/personnels', payload);
+    return res.data?.data;
+  } catch (e) {
+    try {
+      const res = await apiClient.post('/items/personnel', payload);
+      return res.data?.data;
+    } catch (err) {
+      console.error('Directus createPersonnel error:', err?.response?.data || err);
+      throw err;
+    }
+  }
 };
 
 export const updatePersonnel = async (id, data) => {
@@ -56,8 +66,13 @@ export const updatePersonnel = async (id, data) => {
     const res = await apiClient.patch(`/items/personnels/${id}`, data);
     return res.data?.data;
   } catch (e) {
-    const res = await apiClient.patch(`/items/personnel/${id}`, data);
-    return res.data?.data;
+    try {
+      const res = await apiClient.patch(`/items/personnel/${id}`, data);
+      return res.data?.data;
+    } catch (err) {
+      console.error('Directus updatePersonnel error:', err?.response?.data || err);
+      throw err;
+    }
   }
 };
 
