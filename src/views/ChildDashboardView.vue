@@ -1051,6 +1051,8 @@ const timeFilterYear = ref('all');
 const selectedCountry = ref('');
 const selectedDepartment = ref('');
 const selectedFunding = ref('');
+const customFilterField = ref('');
+const customFilterValue = ref('');
 
 // Selection & Sorting & Pagination
 const selectedTrips = ref([]);
@@ -1663,6 +1665,15 @@ const filteredList = computed(() => {
   // 5. Funding Filter
   if (selectedFunding.value) {
     list = list.filter((t) => (t.fundingName || t.funding || '') === selectedFunding.value);
+  }
+
+  // 5.5. Custom Field Filter from URL Query
+  if (customFilterField.value && customFilterValue.value) {
+    const targetVal = customFilterValue.value.toLowerCase().trim();
+    list = list.filter((t) => {
+      const cellVal = getCellValue(t, customFilterField.value);
+      return String(cellVal || '').toLowerCase().trim() === targetVal;
+    });
   }
 
   // 6. Search Query
@@ -2431,6 +2442,22 @@ const handleRouteQueryChange = () => {
   if (route.query?.card) {
     activeMetricCardId.value = String(route.query.card);
   }
+  if (route.query?.country) {
+    selectedCountry.value = String(route.query.country);
+  }
+  if (route.query?.funding) {
+    selectedFunding.value = String(route.query.funding);
+  }
+  if (route.query?.department) {
+    selectedDepartment.value = String(route.query.department);
+  }
+  if (route.query?.search) {
+    searchQuery.value = String(route.query.search);
+  }
+  if (route.query?.filterField && route.query?.filterValue) {
+    customFilterField.value = String(route.query.filterField);
+    customFilterValue.value = String(route.query.filterValue);
+  }
 };
 
 watch(
@@ -2444,6 +2471,8 @@ watch(
     selectedCountry.value = '';
     selectedDepartment.value = '';
     selectedFunding.value = '';
+    customFilterField.value = '';
+    customFilterValue.value = '';
     currentPage.value = 1;
     handleRouteQueryChange();
   }
