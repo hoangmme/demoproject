@@ -67,6 +67,9 @@
             @click="setTemplateSource('sample')"
           >
             <i class="pi pi-th-large"></i> Theo Nhóm Cột (Group)
+            <span v-if="!defaultSavedTemplate" style="font-size: 0.68rem; font-weight: 700; color: #1d4ed8; background: #dbeafe; padding: 1px 6px; border-radius: 9999px; margin-left: 4px;">
+              Mặc định
+            </span>
           </button>
           <button
             type="button"
@@ -75,6 +78,9 @@
             @click="setTemplateSource('upload')"
           >
             <i class="pi pi-file-edit"></i> Theo Mẫu có sẵn / Tải lên
+            <span v-if="defaultSavedTemplate" style="font-size: 0.68rem; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 1px 6px; border-radius: 9999px; margin-left: 4px;">
+              ⭐ Mặc định: {{ (defaultSavedTemplate.name || '').replace(/\.docx$/i, '') }}
+            </span>
           </button>
         </div>
 
@@ -643,6 +649,10 @@ const base64ToArrayBuffer = (base64) => {
 const savedTemplatesList = ref([]);
 const selectedSavedTemplateId = ref('');
 
+const defaultSavedTemplate = computed(() => {
+  return (savedTemplatesList.value || []).find((t) => t.isDefault && t.base64);
+});
+
 const selectSavedTemplate = (tpl) => {
   if (!tpl.base64) return;
   selectedSavedTemplateId.value = tpl.id;
@@ -655,17 +665,17 @@ const loadSavedTemplate = async () => {
     const list = await getAppSettings('system_docx_templates', []);
     if (Array.isArray(list) && list.length > 0) {
       savedTemplatesList.value = list;
-      const defaultTpl = list.find((t) => t.isDefault) || list[0];
+      const defaultTpl = list.find((t) => t.isDefault && t.base64);
       if (defaultTpl) {
         selectSavedTemplate(defaultTpl);
+        templateSource.value = 'upload';
         return;
       }
     }
-    const serverTemplate = await getAppSettings('custom_docx_template', null);
-    if (serverTemplate?.base64) {
-      customTemplateBuffer.value = base64ToArrayBuffer(serverTemplate.base64);
-      customTemplateFileName.value = serverTemplate.fileName || 'Mau_Word_tuy_bien.docx';
-    }
+    // Nếu không có mẫu tải lên nào được đánh dấu mặc định (isDefault), hệ thống dùng mẫu theo nhóm cột
+    templateSource.value = 'sample';
+    selectedSavedTemplateId.value = '';
+    customTemplateBuffer.value = null;
   } catch (err) { console.warn('Failed to load saved template:', err); }
 };
 
