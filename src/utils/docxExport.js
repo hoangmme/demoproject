@@ -373,67 +373,102 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   });
 
   // 7. Danh sách Chuyến đi Nước ngoài (Loop {#xuatnhapcanh} / {#chuyen_di} / {#trips})
-  const rawTrips = Array.isArray(person.trips) ? person.trips : (cd.trips || []);
-  const processedTrips = rawTrips.map((trip, tIdx) => {
-    const tcd = trip.custom_data || {};
+  let rawTrips = Array.isArray(person.trips) && person.trips.length > 0
+    ? person.trips
+    : (cd.trips || cd['Khối B: Chuyến đi nước ngoài'] || []);
+
+  if (typeof rawTrips === 'string' && rawTrips.trim()) {
+    try {
+      const parsed = JSON.parse(rawTrips);
+      if (Array.isArray(parsed)) rawTrips = parsed;
+    } catch (e) {}
+  }
+
+  // Nếu vẫn rỗng, tìm trong personnelStore.tripsList / allTrips
+  if ((!rawTrips || rawTrips.length === 0) && personnelStore?.allTrips?.length > 0) {
+    const pId = String(person.id || '').trim();
+    const pCode = String(person.code || '').trim();
+    const pCccd = String(person.cccdparent || cd.cccdparent || person.cccd || '').trim();
+    rawTrips = personnelStore.allTrips.filter((t) => {
+      const tPId = String(t.personnelId || t.rawPerson?.id || '').trim();
+      const tCode = String(t.personnelCode || t.rawPerson?.code || '').trim();
+      const tCccd = String(t.cccdparent || t.parentCccd || '').trim();
+      return (pId && tPId === pId) || (pCode && tCode === pCode) || (pCccd && tCccd === pCccd);
+    });
+  }
+
+  const processedTrips = (rawTrips || []).map((trip, tIdx) => {
+    let tcd = {};
+    if (trip.custom_data) {
+      try {
+        tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data) : trip.custom_data;
+      } catch (e) {}
+    }
+    const combinedTrip = { ...tcd, ...trip };
+
     const tripObj = {
       stt: tIdx + 1,
-      countryName: trip.countryName || trip.country || '',
-      quoc_gia: trip.countryName || trip.country || '',
-      quoc_gia_den: trip.countryName || trip.country || '',
-      purpose: trip.purpose || '',
-      muc_dich: trip.purpose || '',
-      departureDate: formatDate(trip.departureDate || trip.approvedDepartureDate),
-      ngay_di: formatDate(trip.departureDate || trip.approvedDepartureDate),
-      ngay_xuat_canh: formatDate(trip.departureDate || trip.approvedDepartureDate),
-      arrivalDate: formatDate(trip.arrivalDate || trip.approvedArrivalDate),
-      ngay_ve: formatDate(trip.arrivalDate || trip.approvedArrivalDate),
-      ngay_nhap_canh: formatDate(trip.arrivalDate || trip.approvedArrivalDate),
-      approvedDepartureDate: formatDate(trip.approvedDepartureDate || trip.departureDate),
-      ngay_di_duoc_duyet: formatDate(trip.approvedDepartureDate || trip.departureDate),
-      approvedArrivalDate: formatDate(trip.approvedArrivalDate || trip.arrivalDate),
-      ngay_ve_duoc_duyet: formatDate(trip.approvedArrivalDate || trip.arrivalDate),
-      approvedExtensionDate: formatDate(trip.approvedExtensionDate),
-      ngay_gia_han: formatDate(trip.approvedExtensionDate),
-      decisionNumber: trip.decisionNumber || trip.decision || '',
-      so_quyet_dinh: trip.decisionNumber || trip.decision || '',
-      decisionDate: formatDate(trip.decisionDate || tcd.decisionDate),
-      ngay_ban_hanh: formatDate(trip.decisionDate || tcd.decisionDate),
-      decisionIssuer: trip.decisionIssuer || tcd.decisionIssuer || '',
-      co_quan_ban_hanh: trip.decisionIssuer || tcd.decisionIssuer || '',
-      tripCount: trip.tripCount || tcd.tripCount || '1',
-      so_lan: trip.tripCount || tcd.tripCount || '1',
-      dienDaoTao: trip.dienDaoTao || tcd.dienDaoTao || '',
-      dien_dao_tao: trip.dienDaoTao || tcd.dienDaoTao || '',
-      noiDaoTao: trip.noiDaoTao || tcd.noiDaoTao || '',
-      noi_dao_tao: trip.noiDaoTao || tcd.noiDaoTao || '',
-      vaiTroDaoTao: trip.vaiTroDaoTao || tcd.vaiTroDaoTao || '',
-      vai_tro_dao_tao: trip.vaiTroDaoTao || tcd.vaiTroDaoTao || '',
-      donViChonCu: trip.donViChonCu || tcd.donViChonCu || '',
-      don_vi_chon_cu: trip.donViChonCu || tcd.donViChonCu || '',
-      kinhPhiDaoTao: trip.kinhPhiDaoTao || tcd.kinhPhiDaoTao || '',
-      kinh_phi_dao_tao: trip.kinhPhiDaoTao || tcd.kinhPhiDaoTao || '',
-      thoiGianDaoTao: trip.thoiGianDaoTao || tcd.thoiGianDaoTao || '',
-      thoi_gian_dao_tao: trip.thoiGianDaoTao || tcd.thoiGianDaoTao || '',
-      truongDoan: trip.truongDoan || tcd.truongDoan || '',
-      truong_doan: trip.truongDoan || tcd.truongDoan || '',
-      thanhPhanDoan: trip.thanhPhanDoan || tcd.thanhPhanDoan || '',
-      thanh_phan_doan: trip.thanhPhanDoan || tcd.thanhPhanDoan || '',
-      soLuongThanhVien: trip.soLuongThanhVien || tcd.soLuongThanhVien || '',
-      so_luong_thanh_vien: trip.soLuongThanhVien || tcd.soLuongThanhVien || '',
-      fundingName: trip.fundingName || trip.funding || '',
-      kinh_phi: trip.fundingName || trip.funding || '',
-      bao_cao_ket_qua: trip.bao_cao_ket_qua || tcd.bao_cao_ket_qua || trip.baoCaoKetQua || tcd.baoCaoKetQua || '',
-      nop_ho_chieu_cong_vu: trip.nop_ho_chieu_cong_vu || tcd.nop_ho_chieu_cong_vu || trip.nopHoChieuCongVu || tcd.nopHoChieuCongVu || '',
-      destinationDetails: trip.destinationDetails || '',
-      dia_diem_cu_the: trip.destinationDetails || '',
-      status: trip.status || '',
-      trang_thai: trip.status || '',
+      countryName: combinedTrip.countryName || combinedTrip.country || combinedTrip.quoc_gia_xuat_canh || combinedTrip.quoc_gia || '',
+      quoc_gia: combinedTrip.countryName || combinedTrip.country || combinedTrip.quoc_gia_xuat_canh || combinedTrip.quoc_gia || '',
+      quoc_gia_den: combinedTrip.countryName || combinedTrip.country || combinedTrip.quoc_gia_xuat_canh || combinedTrip.quoc_gia || '',
+      quoc_gia_xuat_canh: combinedTrip.countryName || combinedTrip.country || combinedTrip.quoc_gia_xuat_canh || combinedTrip.quoc_gia || '',
+      purpose: combinedTrip.purpose || combinedTrip.muc_dich_xuat_canh || combinedTrip.muc_dich || '',
+      muc_dich: combinedTrip.purpose || combinedTrip.muc_dich_xuat_canh || combinedTrip.muc_dich || '',
+      muc_dich_xuat_canh: combinedTrip.purpose || combinedTrip.muc_dich_xuat_canh || combinedTrip.muc_dich || '',
+      departureDate: formatDate(combinedTrip.departureDate || combinedTrip.approvedDepartureDate || combinedTrip.ngay_xuat_canh),
+      ngay_di: formatDate(combinedTrip.departureDate || combinedTrip.approvedDepartureDate || combinedTrip.ngay_xuat_canh),
+      ngay_xuat_canh: formatDate(combinedTrip.departureDate || combinedTrip.approvedDepartureDate || combinedTrip.ngay_xuat_canh),
+      arrivalDate: formatDate(combinedTrip.arrivalDate || combinedTrip.approvedArrivalDate || combinedTrip.ngay_nhap_canh),
+      ngay_ve: formatDate(combinedTrip.arrivalDate || combinedTrip.approvedArrivalDate || combinedTrip.ngay_nhap_canh),
+      ngay_nhap_canh: formatDate(combinedTrip.arrivalDate || combinedTrip.approvedArrivalDate || combinedTrip.ngay_nhap_canh),
+      approvedDepartureDate: formatDate(combinedTrip.approvedDepartureDate || combinedTrip.departureDate || combinedTrip.ngay_xuat_canh),
+      ngay_di_duoc_duyet: formatDate(combinedTrip.approvedDepartureDate || combinedTrip.departureDate || combinedTrip.ngay_xuat_canh),
+      approvedArrivalDate: formatDate(combinedTrip.approvedArrivalDate || combinedTrip.arrivalDate || combinedTrip.thoi_gian_duyet_ve),
+      ngay_ve_duoc_duyet: formatDate(combinedTrip.approvedArrivalDate || combinedTrip.arrivalDate || combinedTrip.thoi_gian_duyet_ve),
+      thoi_gian_duyet_ve: formatDate(combinedTrip.approvedArrivalDate || combinedTrip.arrivalDate || combinedTrip.thoi_gian_duyet_ve),
+      approvedExtensionDate: formatDate(combinedTrip.approvedExtensionDate || combinedTrip.gia_han_den_ngay),
+      ngay_gia_han: formatDate(combinedTrip.approvedExtensionDate || combinedTrip.gia_han_den_ngay),
+      gia_han_den_ngay: formatDate(combinedTrip.approvedExtensionDate || combinedTrip.gia_han_den_ngay),
+      decisionNumber: combinedTrip.decisionNumber || combinedTrip.decision || combinedTrip.so_quyet_dinh || '',
+      so_quyet_dinh: combinedTrip.decisionNumber || combinedTrip.decision || combinedTrip.so_quyet_dinh || '',
+      decisionDate: formatDate(combinedTrip.decisionDate || combinedTrip.ngay_ban_hanh || combinedTrip.ngay_quyet_dinh),
+      ngay_ban_hanh: formatDate(combinedTrip.decisionDate || combinedTrip.ngay_ban_hanh || combinedTrip.ngay_quyet_dinh),
+      decisionIssuer: combinedTrip.decisionIssuer || combinedTrip.co_quan_ban_hanh || '',
+      co_quan_ban_hanh: combinedTrip.decisionIssuer || combinedTrip.co_quan_ban_hanh || '',
+      tripCount: combinedTrip.tripCount || '1',
+      so_lan: combinedTrip.tripCount || '1',
+      dienDaoTao: combinedTrip.dienDaoTao || '',
+      dien_dao_tao: combinedTrip.dienDaoTao || '',
+      noiDaoTao: combinedTrip.noiDaoTao || '',
+      noi_dao_tao: combinedTrip.noiDaoTao || '',
+      vaiTroDaoTao: combinedTrip.vaiTroDaoTao || '',
+      vai_tro_dao_tao: combinedTrip.vaiTroDaoTao || '',
+      donViChonCu: combinedTrip.donViChonCu || '',
+      don_vi_chon_cu: combinedTrip.donViChonCu || '',
+      kinhPhiDaoTao: combinedTrip.kinhPhiDaoTao || '',
+      kinh_phi_dao_tao: combinedTrip.kinhPhiDaoTao || '',
+      thoiGianDaoTao: combinedTrip.thoiGianDaoTao || '',
+      thoi_gian_dao_tao: combinedTrip.thoiGianDaoTao || '',
+      truongDoan: combinedTrip.truongDoan || '',
+      truong_doan: combinedTrip.truongDoan || '',
+      thanhPhanDoan: combinedTrip.thanhPhanDoan || '',
+      thanh_phan_doan: combinedTrip.thanhPhanDoan || '',
+      soLuongThanhVien: combinedTrip.soLuongThanhVien || '',
+      so_luong_thanh_vien: combinedTrip.soLuongThanhVien || '',
+      fundingName: combinedTrip.fundingName || combinedTrip.funding || combinedTrip.nguon_kinh_phi || combinedTrip.kinh_phi || '',
+      kinh_phi: combinedTrip.fundingName || combinedTrip.funding || combinedTrip.nguon_kinh_phi || combinedTrip.kinh_phi || '',
+      nguon_kinh_phi: combinedTrip.fundingName || combinedTrip.funding || combinedTrip.nguon_kinh_phi || combinedTrip.kinh_phi || '',
+      bao_cao_ket_qua: combinedTrip.bao_cao_ket_qua || combinedTrip.baoCaoKetQua || '',
+      nop_ho_chieu_cong_vu: combinedTrip.nop_ho_chieu_cong_vu || combinedTrip.nopHoChieuCongVu || '',
+      destinationDetails: combinedTrip.destinationDetails || '',
+      dia_diem_cu_the: combinedTrip.destinationDetails || '',
+      status: combinedTrip.status || '',
+      trang_thai: combinedTrip.status || '',
     };
 
-    Object.entries(tcd).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) {
-        tripObj[k] = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : v;
+    Object.entries(combinedTrip).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && k !== 'custom_data') {
+        tripObj[k] = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : formatFieldValueForDocx(v);
       }
     });
 

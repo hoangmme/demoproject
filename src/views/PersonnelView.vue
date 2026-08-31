@@ -879,7 +879,7 @@ const isDocxExportOpen = ref(false);
 const docxExportTargetPerson = ref(null);
 
 const effectiveSelectedPersonnelForDocx = computed(() => {
-  if (activeTab.value === 'relatives') {
+  if (mainTab.value === 'thannhan') {
     if (selectedRelatives.value && selectedRelatives.value.length > 0) {
       const list = [];
       const seenIds = new Set();
@@ -898,7 +898,7 @@ const effectiveSelectedPersonnelForDocx = computed(() => {
 });
 
 const effectiveAllPersonnelForDocx = computed(() => {
-  if (activeTab.value === 'relatives') {
+  if (mainTab.value === 'thannhan') {
     const list = [];
     const seenIds = new Set();
     (filteredRelatives.value || []).forEach((r) => {
