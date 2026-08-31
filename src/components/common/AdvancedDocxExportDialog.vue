@@ -67,9 +67,6 @@
             @click="setTemplateSource('sample')"
           >
             <i class="pi pi-th-large"></i> Theo Nhóm Cột (Group)
-            <span v-if="!defaultSavedTemplate" style="font-size: 0.68rem; font-weight: 700; color: #1d4ed8; background: #dbeafe; padding: 1px 6px; border-radius: 9999px; margin-left: 4px;">
-              Mặc định
-            </span>
           </button>
           <button
             type="button"
@@ -78,9 +75,6 @@
             @click="setTemplateSource('upload')"
           >
             <i class="pi pi-file-edit"></i> Theo Mẫu có sẵn / Tải lên
-            <span v-if="defaultSavedTemplate" style="font-size: 0.68rem; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 1px 6px; border-radius: 9999px; margin-left: 4px;">
-              ⭐ Mặc định: {{ (defaultSavedTemplate.name || '').replace(/\.docx$/i, '') }}
-            </span>
           </button>
         </div>
 
@@ -629,6 +623,11 @@ const effectiveTemplateBuffer = computed(() => {
   if (templateSource.value === 'upload' && customTemplateBuffer.value) {
     return customTemplateBuffer.value;
   }
+  // Khi ở tab 'sample' (Theo Nhóm Cột Group):
+  // Ưu tiên tệp mẫu được đánh dấu là Mặc định cho Group (nếu có trong hệ thống)
+  if (defaultSavedTemplate.value?.base64) {
+    return base64ToArrayBuffer(defaultSavedTemplate.value.base64);
+  }
   return sampleTemplateBuffer.value;
 });
 
@@ -668,14 +667,8 @@ const loadSavedTemplate = async () => {
       const defaultTpl = list.find((t) => t.isDefault && t.base64);
       if (defaultTpl) {
         selectSavedTemplate(defaultTpl);
-        templateSource.value = 'upload';
-        return;
       }
     }
-    // Nếu không có mẫu tải lên nào được đánh dấu mặc định (isDefault), hệ thống dùng mẫu theo nhóm cột
-    templateSource.value = 'sample';
-    selectedSavedTemplateId.value = '';
-    customTemplateBuffer.value = null;
   } catch (err) { console.warn('Failed to load saved template:', err); }
 };
 
@@ -712,6 +705,7 @@ watch(
 
 watch(() => [props.modelValue], ([isOpen]) => {
   if (isOpen) {
+    templateSource.value = 'sample'; // Mặc định luôn mở tab Theo Nhóm Cột (Group)
     if (props.targetPerson) exportScope.value = 'single';
     else if (selectedCount.value > 0) exportScope.value = 'selected';
     else exportScope.value = 'all';
