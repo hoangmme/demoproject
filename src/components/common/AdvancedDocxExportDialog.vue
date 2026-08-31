@@ -142,7 +142,7 @@
                       v-model="selectedFieldIds"
                       style="accent-color: #2563eb; cursor: pointer;"
                     />
-                    <span>{{ getCleanFieldLabel(col, getPersonnelColNum(gIdx, cIdx)) }}</span>
+                    <span>{{ col.label || col.id }}</span>
                   </label>
                 </div>
               </div>
@@ -203,7 +203,7 @@
                         v-model="selectedRelativeFieldIds"
                         style="accent-color: #7c3aed; cursor: pointer;"
                       />
-                      <span>{{ getCleanFieldLabel(col, getRelativeColNum(rIdx, rcIdx)) }}</span>
+                      <span>{{ col.label || col.id }}</span>
                     </label>
                   </div>
                 </div>
