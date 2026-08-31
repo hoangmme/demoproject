@@ -568,13 +568,40 @@ const allSearchableGroups = computed(() => {
   return groups;
 });
 
+const resolvePersonFromSearchItem = (item) => {
+  if (!item) return null;
+  if (item.rawPerson && item.rawPerson.id) return item.rawPerson;
+  if (item.personnelId) {
+    const found = (personnelStore.personnelList || []).find((p) => p.id === item.personnelId);
+    if (found) return found;
+  }
+  if (item.personnelCode) {
+    const found = (personnelStore.personnelList || []).find((p) => p.code === item.personnelCode);
+    if (found) return found;
+  }
+  const cccd = item.parentCccd || item.cccdparent || (!item.isRelative ? item.cccd : '');
+  if (cccd) {
+    const found = personnelStore.findPersonByCccd(cccd);
+    if (found) return found;
+  }
+  if (item.id && !item.isRelative) {
+    const found = (personnelStore.personnelList || []).find((p) => p.id === item.id);
+    if (found) return found;
+  }
+  return null;
+};
+
 const selectedPersonnelForExport = computed(() => {
-  const pIds = new Set();
+  const list = [];
+  const seenIds = new Set();
   searchResults.value.forEach((item) => {
-    if (item.personnelId) pIds.add(item.personnelId);
-    else if (item.rawPerson?.id) pIds.add(item.rawPerson.id);
+    const p = resolvePersonFromSearchItem(item);
+    if (p && p.id && !seenIds.has(p.id)) {
+      seenIds.add(p.id);
+      list.push(p);
+    }
   });
-  return (personnelStore.personnelList || []).filter((p) => pIds.has(p.id));
+  return list;
 });
 
 const createNewPreset = () => {

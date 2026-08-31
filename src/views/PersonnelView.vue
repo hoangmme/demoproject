@@ -752,8 +752,8 @@
     <AdvancedDocxExportDialog
       v-model="isDocxExportOpen"
       :targetPerson="docxExportTargetPerson"
-      :selectedPersonnel="selectedPersonnel"
-      :allPersonnel="filteredPersonnel"
+      :selectedPersonnel="effectiveSelectedPersonnelForDocx"
+      :allPersonnel="effectiveAllPersonnelForDocx"
     />
 
     <!-- Excel Import Wizard (4 Steps) -->
@@ -877,6 +877,42 @@ const onMouseLeaveRelFilter = () => {
 // Advanced DOCX Export Modal State
 const isDocxExportOpen = ref(false);
 const docxExportTargetPerson = ref(null);
+
+const effectiveSelectedPersonnelForDocx = computed(() => {
+  if (activeTab.value === 'relatives') {
+    if (selectedRelatives.value && selectedRelatives.value.length > 0) {
+      const list = [];
+      const seenIds = new Set();
+      selectedRelatives.value.forEach((r) => {
+        const p = r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || (r.personnelId ? (personnelStore.personnelList || []).find((x) => x.id === r.personnelId) : null);
+        if (p && p.id && !seenIds.has(p.id)) {
+          seenIds.add(p.id);
+          list.push(p);
+        }
+      });
+      return list;
+    }
+    return [];
+  }
+  return selectedPersonnel.value || [];
+});
+
+const effectiveAllPersonnelForDocx = computed(() => {
+  if (activeTab.value === 'relatives') {
+    const list = [];
+    const seenIds = new Set();
+    (filteredRelatives.value || []).forEach((r) => {
+      const p = r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || (r.personnelId ? (personnelStore.personnelList || []).find((x) => x.id === r.personnelId) : null);
+      if (p && p.id && !seenIds.has(p.id)) {
+        seenIds.add(p.id);
+        list.push(p);
+      }
+    });
+    if (list.length > 0) return list;
+    return personnelStore.personnelList || [];
+  }
+  return filteredPersonnel.value || personnelStore.personnelList || [];
+});
 
 const openAdvancedDocxExport = (person = null) => {
   docxExportTargetPerson.value = person;

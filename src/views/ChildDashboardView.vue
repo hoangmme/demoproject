@@ -654,22 +654,58 @@ const openAdvancedDocxExport = () => {
   isExportDocxDialogOpen.value = true;
 };
 
+const resolvePersonFromItem = (item) => {
+  if (!item) return null;
+  if (item.rawPerson && item.rawPerson.id) return item.rawPerson;
+  if (item.personnelId) {
+    const found = (personnelStore.personnelList || []).find((p) => p.id === item.personnelId);
+    if (found) return found;
+  }
+  if (item.personnelCode) {
+    const found = (personnelStore.personnelList || []).find((p) => p.code === item.personnelCode);
+    if (found) return found;
+  }
+  const cccd = item.parentCccd || item.cccdparent || (!item.isRelative ? item.cccd : '');
+  if (cccd) {
+    const found = personnelStore.findPersonByCccd(cccd);
+    if (found) return found;
+  }
+  if (item.id && !item.isRelative) {
+    const found = (personnelStore.personnelList || []).find((p) => p.id === item.id);
+    if (found) return found;
+  }
+  return null;
+};
+
 const selectedPersonnelForExport = computed(() => {
   if (selectedTrips.value && selectedTrips.value.length > 0) {
-    const matchedPIds = new Set();
+    const list = [];
+    const seenIds = new Set();
     selectedTrips.value.forEach((t) => {
-      if (t.personnelId) matchedPIds.add(t.personnelId);
-      else if (t.rawPerson?.id) matchedPIds.add(t.rawPerson.id);
+      const p = resolvePersonFromItem(t);
+      if (p && p.id && !seenIds.has(p.id)) {
+        seenIds.add(p.id);
+        list.push(p);
+      }
     });
-    return (personnelStore.personnelList || []).filter((p) => matchedPIds.has(p.id));
+    return list;
   }
   return [];
 });
 
 const allPersonnelForExport = computed(() => {
-  const currentPIds = new Set((filteredList.value || []).map((t) => t.personnelId || t.rawPerson?.id).filter(Boolean));
-  if (currentPIds.size > 0) {
-    return (personnelStore.personnelList || []).filter((p) => currentPIds.has(p.id));
+  const rows = filteredList.value || [];
+  if (rows.length > 0) {
+    const list = [];
+    const seenIds = new Set();
+    rows.forEach((t) => {
+      const p = resolvePersonFromItem(t);
+      if (p && p.id && !seenIds.has(p.id)) {
+        seenIds.add(p.id);
+        list.push(p);
+      }
+    });
+    if (list.length > 0) return list;
   }
   return personnelStore.personnelList || [];
 });
