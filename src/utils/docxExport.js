@@ -649,6 +649,56 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     });
   }
 
+  // Thêm chuyến đi nước ngoài nếu được tích chọn
+  const canIncludeTrips = exportOptions?.includeTrips !== false;
+  const selTripFields = exportOptions?.selectedTripFieldIds;
+  if (canIncludeTrips && processedTrips.length > 0) {
+    formgroupLines.push('');
+    formgroupLines.push('* Thông tin chuyến đi nước ngoài (xuất nhập cảnh):');
+
+    const tripGroups = personnelStore?.importMappingTrips || [];
+
+    processedTrips.forEach((trip, tIdx) => {
+      const tripHeader = `▶ Chuyến ${tIdx + 1}: Quốc gia ${trip.quoc_gia || trip.countryName || 'Chưa rõ'} (Từ ${trip.ngay_di || trip.departureDate || '-'} đến ${trip.ngay_ve || trip.arrivalDate || '-'})`;
+      formgroupLines.push(tripHeader);
+
+      let tColIdx = 1;
+      if (tripGroups.length > 0) {
+        tripGroups.forEach((tGrp) => {
+          (tGrp.columns || []).forEach((col) => {
+            if (!col.id || col.id === 'stt') return;
+            if (selTripFields && Array.isArray(selTripFields) && !selTripFields.includes(col.id)) return;
+
+            let label = col.label || col.id;
+            if (showColNumbers && !label.includes('(')) label = `${label} (${tColIdx++})`;
+
+            const rawVal = trip[col.id];
+            const formattedVal = formatFieldValueForDocx(rawVal, col);
+            formgroupLines.push(`   - ${label}: ${formattedVal !== undefined && formattedVal !== null ? formattedVal : ''}`);
+          });
+        });
+      } else {
+        const defaultTripFields = [
+          { id: 'quoc_gia', label: 'Quốc gia / Nơi đến' },
+          { id: 'ngay_xuat_canh', label: 'Ngày xuất cảnh' },
+          { id: 'ngay_nhap_canh', label: 'Ngày nhập cảnh' },
+          { id: 'thoi_gian_duyet_ve', label: 'Thời gian duyệt về' },
+          { id: 'so_quyet_dinh', label: 'Số quyết định duyệt' },
+          { id: 'kinh_phi', label: 'Nguồn kinh phí' },
+          { id: 'muc_dich', label: 'Mục đích chuyến đi' },
+        ];
+        defaultTripFields.forEach((col, idx) => {
+          if (!selTripFields || selTripFields.includes(col.id)) {
+            const rawVal = trip[col.id];
+            const formattedVal = formatFieldValueForDocx(rawVal, col);
+            const numSuffix = showColNumbers ? ` (${idx + 1})` : '';
+            formgroupLines.push(`   - ${col.label}${numSuffix}: ${formattedVal || ''}`);
+          }
+        });
+      }
+    });
+  }
+
   const fullFormgroupText = formgroupLines.join('\n');
   data.formgroup = fullFormgroupText;
   data.form_group = fullFormgroupText;

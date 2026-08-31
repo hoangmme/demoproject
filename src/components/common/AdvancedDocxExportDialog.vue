@@ -620,8 +620,7 @@ const totalPersonnelCount = computed(() => {
 });
 
 const effectiveTemplateBuffer = computed(() => {
-  // Ưu tiên tệp mẫu mặc định đã lưu / đã chọn nếu có
-  if (customTemplateBuffer.value) {
+  if (templateSource.value === 'upload' && customTemplateBuffer.value) {
     return customTemplateBuffer.value;
   }
   return sampleTemplateBuffer.value;
@@ -788,6 +787,8 @@ const handleExport = async () => {
       selectedRelativeGroupIndices: (relativeGroups.value || []).map((_, i) => i),
       selectedFieldIds: selectedFieldIds.value,
       selectedRelativeFieldIds: selectedRelativeFieldIds.value,
+      includeTrips: includeTrips.value,
+      selectedTripFieldIds: selectedTripFieldIds.value,
       showColumnNumbers: showColumnNumbers.value,
     };
     const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
