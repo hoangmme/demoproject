@@ -563,8 +563,9 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   if (isFieldSelected('passportOfficial', ['hcCongVu', 'ho_chieu_cong_vu'])) group0Lines.push(`- Số Hộ chiếu công vụ (14): ${data.passportOfficial || ''}`);
   if (isFieldSelected('politicalVerificationResult', ['tcctResult', 'ket_qua_tham_tra', 'tcct'])) group0Lines.push(`- Kết quả thẩm tra tiêu chuẩn chính trị (15): ${data.politicalVerificationResult || ''}`);
 
+  let secNum = 1;
   if (group0Lines.length > 0) {
-    formgroupLines.push('1. Thông tin cá nhân');
+    formgroupLines.push(`${secNum++}. Thông tin cá nhân`);
     formgroupLines.push(...group0Lines);
   }
 
@@ -590,7 +591,8 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
 
       if (groupLines.length > 0) {
         formgroupLines.push('');
-        formgroupLines.push(`* ${grp.group || 'Thông tin bổ sung'}:`);
+        const grpTitle = (grp.group || 'Thông tin bổ sung').replace(/^[\*\-\d\.\s]+/, '').trim();
+        formgroupLines.push(`${secNum++}. ${grpTitle}`);
         formgroupLines.push(...groupLines);
       }
     });
@@ -601,7 +603,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   const showColNumbers = exportOptions?.showColumnNumbers === true;
   if (canIncludeRelatives && processedRelatives.length > 0) {
     formgroupLines.push('');
-    formgroupLines.push('* Thông tin thân nhân có yếu tố nước ngoài:');
+    formgroupLines.push(`${secNum++}. Thông tin thân nhân liên quan`);
     
     // Lấy cấu hình các nhóm cột thân nhân từ store
     const relGroups = personnelStore?.importMappingRelative || [];
@@ -654,12 +656,15 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   const selTripFields = exportOptions?.selectedTripFieldIds;
   if (canIncludeTrips && processedTrips.length > 0) {
     formgroupLines.push('');
-    formgroupLines.push('* Thông tin chuyến đi nước ngoài (xuất nhập cảnh):');
+    formgroupLines.push(`${secNum++}. Thông tin chuyến đi nước ngoài (xuất nhập cảnh)`);
 
     const tripGroups = personnelStore?.importMappingTrips || [];
 
     processedTrips.forEach((trip, tIdx) => {
-      const tripHeader = `▶ Chuyến ${tIdx + 1}: Quốc gia ${trip.quoc_gia || trip.countryName || 'Chưa rõ'} (Từ ${trip.ngay_di || trip.departureDate || '-'} đến ${trip.ngay_ve || trip.arrivalDate || '-'})`;
+      const dFrom = formatDate(trip.ngay_xuat_canh || trip.ngay_di || trip.departureDate);
+      const dTo = formatDate(trip.ngay_nhap_canh || trip.ngay_ve || trip.arrivalDate);
+      const dateRangeStr = (dFrom || dTo) ? ` (Từ ${dFrom || '-'} đến ${dTo || '-'})` : '';
+      const tripHeader = `▶ Chuyến ${tIdx + 1}: Quốc gia ${trip.quoc_gia || trip.countryName || 'Chưa rõ'}${dateRangeStr}`;
       formgroupLines.push(tripHeader);
 
       let tColIdx = 1;
@@ -1122,8 +1127,9 @@ export async function createDynamicDocxTemplateBlob(
   if (isFieldIncluded('passportOfficial', ['hcCongVu', 'ho_chieu_cong_vu'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu công vụ${pfx(14)}: </w:t></w:r><w:r><w:t>{hcCongVu}</w:t></w:r></w:p>`;
   if (isFieldIncluded('politicalVerificationResult', ['tcctResult', 'ket_qua_tham_tra', 'tcct'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Kết quả thẩm tra tiêu chuẩn chính trị${pfx(15)}: </w:t></w:r><w:r><w:t>{tcctResult}</w:t></w:r></w:p>`;
 
+  let dynamicSecNum = 1;
   if (group0Content) {
-    bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>1. Thông tin cá nhân</w:t></w:r></w:p>`;
+    bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>${dynamicSecNum++}. Thông tin cá nhân</w:t></w:r></w:p>`;
     bodyContent += group0Content;
     bodyContent += `<w:p/>`;
   }
@@ -1133,7 +1139,7 @@ export async function createDynamicDocxTemplateBlob(
   (personnelGroups || []).forEach((grp, idx) => {
     if (idx === 0) return;
     if (selectedGroupIndices.includes(idx)) {
-      const grpTitle = escapeXml(grp.group || 'Thông tin bổ sung');
+      const grpTitle = escapeXml((grp.group || 'Thông tin bổ sung').replace(/^[\*\-\d\.\s]+/, '').trim());
       let grpBody = '';
       (grp.columns || []).forEach((col) => {
         if (!col.id || col.id === 'stt') return;
@@ -1152,7 +1158,7 @@ export async function createDynamicDocxTemplateBlob(
       });
 
       if (grpBody) {
-        bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* ${grpTitle}:</w:t></w:r></w:p>`;
+        bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>${dynamicSecNum++}. ${grpTitle}</w:t></w:r></w:p>`;
         bodyContent += grpBody;
         bodyContent += `<w:p/>`;
       }
@@ -1162,7 +1168,7 @@ export async function createDynamicDocxTemplateBlob(
   // 3. Khối Thân nhân nếu được chọn (Hỗ trợ từng nhóm thân nhân từ Tab Thân nhân)
   if (includeRelatives) {
     bodyContent += `
-      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* Thông tin thân nhân liên quan:</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>${dynamicSecNum++}. Thông tin thân nhân liên quan</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#than_nhan}</w:t></w:r></w:p>
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Thân nhân {stt} ({relationshipName}): {name}</w:t></w:r></w:p>
     `;
@@ -1210,9 +1216,9 @@ export async function createDynamicDocxTemplateBlob(
   // 4. Khối Chuyến đi xuất nhập cảnh nếu được chọn
   if (includeTrips) {
     bodyContent += `
-      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>* Thông tin chuyến đi nước ngoài (xuất nhập cảnh):</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>${dynamicSecNum++}. Thông tin chuyến đi nước ngoài (xuất nhập cảnh)</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#xuatnhapcanh}</w:t></w:r></w:p>
-      <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Chuyến {stt}: Quốc gia {countryName} (Từ {departureDate} đến {arrivalDate})</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Chuyến {stt}: Quốc gia {quoc_gia} (Từ {ngay_xuat_canh} đến {ngay_nhap_canh})</w:t></w:r></w:p>
     `;
 
     const activeTripCols = [];
