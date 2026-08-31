@@ -67,19 +67,49 @@ export function formatFieldValueForDocx(val, col = {}) {
     return String(val).trim();
   }
 
-  // 3. Format: Tệp đính kèm (file)
-  if (format === 'file') {
-    if (Array.isArray(val)) {
-      const fileNames = val.map((f) => {
-        if (typeof f === 'object' && f !== null) return f.name || f.filename_download || f.id || '';
-        return String(f).trim();
-      }).filter(Boolean);
-      return fileNames.join(', ');
+  // Helper: Trích xuất tên file sạch sẽ từ object, array hoặc chuỗi JSON
+  const extractFileName = (item) => {
+    if (!item) return '';
+    if (typeof item === 'string') {
+      const trimmed = item.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          return extractFileName(parsed);
+        } catch (e) {}
+      }
+      return trimmed;
     }
-    if (typeof val === 'object' && val !== null) {
-      return val.name || val.filename_download || '';
+    if (Array.isArray(item)) {
+      return item.map(extractFileName).filter(Boolean).join(', ');
     }
-    return String(val).trim();
+    if (typeof item === 'object') {
+      return item.name || item.fileName || item.filename_download || item.title || item.id || '';
+    }
+    return String(item);
+  };
+
+  // 3. Format: Tệp đính kèm (file hoặc trường đính kèm)
+  const isFileField = format === 'file' || /dinh_kem|attachment|file/i.test(col.id || '') || /dinh_kem|đính kèm|tệp/i.test(col.label || '');
+  if (isFileField) {
+    return extractFileName(val);
+  }
+
+  // Nếu val là object hoặc mảng chứa file (có name/filename_download/url)
+  if (Array.isArray(val) && val.some((x) => typeof x === 'object' && x !== null && (x.name || x.filename_download || x.url))) {
+    return extractFileName(val);
+  }
+  if (typeof val === 'object' && val !== null && (val.name || val.filename_download || val.url)) {
+    return extractFileName(val);
+  }
+  if (typeof val === 'string' && (val.trim().startsWith('{') || val.trim().startsWith('['))) {
+    try {
+      const parsed = JSON.parse(val.trim());
+      if ((Array.isArray(parsed) && parsed.some((x) => typeof x === 'object' && (x.name || x.filename_download || x.url))) ||
+          (typeof parsed === 'object' && parsed !== null && (parsed.name || parsed.filename_download || parsed.url))) {
+        return extractFileName(parsed);
+      }
+    } catch (e) {}
   }
 
   // 4. Format: Hộp kiểm nhiều lựa chọn (checkbox) & Dropdown & Text Loop
