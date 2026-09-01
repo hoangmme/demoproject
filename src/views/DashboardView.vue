@@ -1285,10 +1285,11 @@ const unifiedTripsList = computed(() => {
       processedTripKeys.add(uniqueKey);
 
       const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-      const pCccd = p.cccd || p.cccdparent || '';
+      const pCccd = p.cccd || p.cccdparent || (p.custom_data && p.custom_data.cccdparent) || '';
       const relCccd = t.cccdthannhan || (!isInternalId(t.cccd) && isRel ? t.cccd : '');
       const relName = t.relativeName || (isRel ? 'Thân nhân' : p.name);
       const relShip = t.relationshipName || (isRel ? 'Thân nhân' : '');
+      const travelerCccd = !isInternalId(t.cccdchuyendi) ? t.cccdchuyendi : (!isInternalId(t.cccd) ? t.cccd : (isRel ? relCccd : pCccd));
 
       list.push({
         ...custom,
@@ -1306,9 +1307,10 @@ const unifiedTripsList = computed(() => {
         parentCccd: pCccd,
         cccdthannhan: relCccd,
         cccdparent: pCccd,
+        cccdchuyendi: travelerCccd,
+        cccd: travelerCccd || pCccd,
         position: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.positionName || p.position || ''),
         departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-        cccd: isRel ? (relCccd || pCccd) : pCccd,
         countryName: cName,
         departureDate: depDate,
         arrivalDate: arrDate,
@@ -1368,10 +1370,11 @@ const unifiedTripsList = computed(() => {
 
         const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
         const rCccd = !isInternalId(r.cccdthannhan) ? r.cccdthannhan : (!isInternalId(r.cccd) ? r.cccd : '');
-        const pCccd = p.cccd || p.cccdparent || '';
+        const pCccd = p.cccd || p.cccdparent || (p.custom_data && p.custom_data.cccdparent) || '';
         const tripCccd = !isInternalId(rt.cccdchuyendi) ? rt.cccdchuyendi : (!isInternalId(rt.cccdthannhan) ? rt.cccdthannhan : (!isInternalId(rt.cccd) ? rt.cccd : rCccd));
         const relName = r.relativeName || r.name || custom.relativeName || 'Thân nhân';
         const relShip = r.relationshipName || r.relationship || custom.relationshipName || 'Thân nhân';
+        const travelerCccd = tripCccd || rCccd;
 
         list.push({
           ...custom,
@@ -1387,8 +1390,10 @@ const unifiedTripsList = computed(() => {
           parentName: p.name,
           parentPersonnelName: p.name,
           parentCccd: pCccd,
-          cccdthannhan: tripCccd || rCccd,
+          cccdthannhan: travelerCccd,
           cccdparent: pCccd,
+          cccdchuyendi: travelerCccd,
+          cccd: travelerCccd || pCccd,
           position: `${relShip} của: ${p.name}`,
           departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
           countryName: cName,
@@ -1418,9 +1423,32 @@ const unifiedTripsList = computed(() => {
   return list;
 });
 
-
 const getRowFieldValue = (row, colId) => {
   if (!row || !colId) return '';
+
+  // Xử lý các cột CCCD / Định danh
+  const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
+  if (colId === 'cccdchuyendi' || colId === 'cccd_chuyen_di' || colId === 'cccd_nguoi_di') {
+    const directVal = row.cccdchuyendi || row.rawTrip?.cccdchuyendi || row[colId];
+    if (!isInternalId(directVal)) return String(directVal).trim();
+    if (row.isRelative) {
+      const rCccd = row.cccdthannhan || row.rawRelative?.cccdthannhan || row.rawRelative?.cccd || row.cccd;
+      if (!isInternalId(rCccd)) return String(rCccd).trim();
+    }
+    const pCccd = row.rawPerson?.cccd || row.rawPerson?.cccdparent || (row.rawPerson?.custom_data && row.rawPerson.custom_data.cccdparent) || row.parentCccd || row.cccdparent || row.cccd;
+    if (!isInternalId(pCccd)) return String(pCccd).trim();
+    return '-';
+  }
+  if (colId === 'cccdparent' || colId === 'cccd_can_bo') {
+    const pCccd = row.parentCccd || row.cccdparent || row.rawPerson?.cccd || row.rawPerson?.cccdparent || (row.rawPerson?.custom_data && row.rawPerson.custom_data.cccdparent);
+    if (!isInternalId(pCccd)) return String(pCccd).trim();
+    return '-';
+  }
+  if (colId === 'cccdthannhan' || colId === 'cccd_than_nhan') {
+    const rCccd = row.cccdthannhan || row.rawRelative?.cccdthannhan || row.rawRelative?.cccd;
+    if (!isInternalId(rCccd)) return String(rCccd).trim();
+    return '-';
+  }
 
   // 1. Check formula column from mapping (Khớp 100% ChildDashboardView)
   const allMap = {};

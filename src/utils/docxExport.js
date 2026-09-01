@@ -496,6 +496,18 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       trang_thai: combinedTrip.status || '',
     };
 
+    const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
+    const travelerCccd = !isInternalId(combinedTrip.cccdchuyendi) 
+      ? combinedTrip.cccdchuyendi 
+      : (!isInternalId(combinedTrip.cccdthannhan) ? combinedTrip.cccdthannhan : (!isInternalId(combinedTrip.cccd) ? combinedTrip.cccd : pCccd));
+    
+    tripObj.cccdchuyendi = travelerCccd;
+    tripObj.cccd_chuyen_di = travelerCccd;
+    tripObj.cccd_nguoi_di = travelerCccd;
+    tripObj.cccd = travelerCccd;
+    tripObj.cccdparent = pCccd;
+    tripObj.cccd_can_bo = pCccd;
+
     Object.entries(combinedTrip).forEach(([k, v]) => {
       if (v !== undefined && v !== null && k !== 'custom_data') {
         tripObj[k] = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : formatFieldValueForDocx(v);
