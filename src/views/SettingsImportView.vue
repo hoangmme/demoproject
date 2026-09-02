@@ -3187,17 +3187,23 @@ const saveConfig = async () => {
 
     if (activeTab.value === 'personnel') {
       const allActiveCols = (personnelGroups.value || []).flatMap((g) => g.columns || []).filter((c) => c.id && c.id !== 'stt');
-      await syncCollectionFields('personnels', allActiveCols);
-      await saveAppSettings('mapping_config_personnel', personnelGroups.value);
-      await saveAppSettings('importMappingPersonnel', personnelGroups.value);
+      await Promise.all([
+        syncCollectionFields('personnels', allActiveCols),
+        saveAppSettings('mapping_config_personnel', personnelGroups.value),
+        saveAppSettings('importMappingPersonnel', personnelGroups.value),
+      ]);
       personnelStore.importMappingPersonnel = personnelGroups.value;
     } else if (activeTab.value === 'relative') {
-      await saveAppSettings('mapping_config_relative', relativeGroups.value);
-      await saveAppSettings('importMappingRelative', relativeGroups.value);
+      await Promise.all([
+        saveAppSettings('mapping_config_relative', relativeGroups.value),
+        saveAppSettings('importMappingRelative', relativeGroups.value),
+      ]);
       personnelStore.importMappingRelative = relativeGroups.value;
     } else if (activeTab.value === 'trips') {
-      await saveAppSettings('mapping_config_trips', tripsGroups.value);
-      await saveAppSettings('importMappingTrips', tripsGroups.value);
+      await Promise.all([
+        saveAppSettings('mapping_config_trips', tripsGroups.value),
+        saveAppSettings('importMappingTrips', tripsGroups.value),
+      ]);
       personnelStore.importMappingTrips = tripsGroups.value;
     }
     alert('Đã lưu cấu hình cột và đồng bộ trực tiếp vào cơ sở dữ liệu Directus thành công!');

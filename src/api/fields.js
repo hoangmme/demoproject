@@ -174,7 +174,7 @@ export const deleteDirectusField = async (collection = 'personnels', fieldName) 
 };
 
 /**
- * Đồng bộ toàn bộ danh sách cột giao diện với cấu trúc cột trên Directus (An toàn, không xóa cột cũ)
+ * Đồng bộ danh sách cột giao diện với Directus (Tối ưu tốc độ: Chạy song song Promise.all, chỉ tạo cột mới chưa có)
  */
 export const syncCollectionFields = async (collection = 'personnels', activeCols = []) => {
   const systemCols = new Set([
@@ -204,14 +204,13 @@ export const syncCollectionFields = async (collection = 'personnels', activeCols
       }
     });
 
-    // 1. Tạo các cột mới chưa có trong Directus
-    for (const [colId, colDef] of Object.entries(activeFieldMap)) {
-      if (!existingFieldMap[colId]) {
-        await createDirectusField(collection, colDef);
-      } else {
-        // Cập nhật nhãn / options nếu có
-        await updateDirectusField(collection, colId, colDef);
-      }
+    // Chỉ tạo các cột MỚI chưa tồn tại trên Directus và gửi song song (Promise.all)
+    const newColsToCreate = Object.entries(activeFieldMap)
+      .filter(([colId]) => !existingFieldMap[colId])
+      .map(([_, colDef]) => createDirectusField(collection, colDef));
+
+    if (newColsToCreate.length > 0) {
+      await Promise.all(newColsToCreate);
     }
   } catch (err) {
     console.warn(`[Directus Sync] Lỗi đồng bộ cấu trúc cột:`, err);
