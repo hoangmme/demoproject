@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.github
+backend/uploads
+backend/database
+backend
+WINDOWS_OFFLINE_APP
+*.zip
+*.tar.gz
+*.log
