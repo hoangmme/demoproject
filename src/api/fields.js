@@ -66,11 +66,9 @@ export const getCollectionFields = async (collection = 'personnels') => {
         const res = await apiClient.get('/fields/personnel');
         return res.data?.data || [];
       } catch (err) {
-        console.warn('Lỗi lấy danh sách fields Directus:', err?.response?.data || err);
         return [];
       }
     }
-    console.warn('Lỗi lấy danh sách fields Directus:', e?.response?.data || e);
     return [];
   }
 };
@@ -111,11 +109,9 @@ export const createDirectusField = async (collection = 'personnels', colDef) => 
         const res = await apiClient.post('/fields/personnel', payload);
         return res.data?.data;
       } catch (err) {
-        console.warn(`Không thể tạo field ${fieldName} trên Directus:`, err?.response?.data || err);
         return null;
       }
     }
-    console.warn(`Không thể tạo field ${fieldName} trên Directus:`, e?.response?.data || e);
     return null;
   }
 };
@@ -149,11 +145,9 @@ export const updateDirectusField = async (collection = 'personnels', fieldName, 
         const res = await apiClient.patch(`/fields/personnel/${fieldName}`, payload);
         return res.data?.data;
       } catch (err) {
-        console.warn(`Không thể cập nhật field ${fieldName} trên Directus:`, err?.response?.data || err);
         return null;
       }
     }
-    console.warn(`Không thể cập nhật field ${fieldName} trên Directus:`, e?.response?.data || e);
     return null;
   }
 };
@@ -172,17 +166,15 @@ export const deleteDirectusField = async (collection = 'personnels', fieldName) 
         const res = await apiClient.delete(`/fields/personnel/${fieldName}`);
         return res.data?.data;
       } catch (err) {
-        console.warn(`Không thể xóa field ${fieldName} trên Directus:`, err?.response?.data || err);
         return null;
       }
     }
-    console.warn(`Không thể xóa field ${fieldName} trên Directus:`, e?.response?.data || e);
     return null;
   }
 };
 
 /**
- * Đồng bộ toàn bộ danh sách cột giao diện với cấu trúc cột trên Directus
+ * Đồng bộ toàn bộ danh sách cột giao diện với cấu trúc cột trên Directus (An toàn, không xóa cột cũ)
  */
 export const syncCollectionFields = async (collection = 'personnels', activeCols = []) => {
   const systemCols = new Set([
@@ -215,23 +207,13 @@ export const syncCollectionFields = async (collection = 'personnels', activeCols
     // 1. Tạo các cột mới chưa có trong Directus
     for (const [colId, colDef] of Object.entries(activeFieldMap)) {
       if (!existingFieldMap[colId]) {
-        console.log(`[Directus Sync] Tạo mới cột vật lý: ${colId}`);
         await createDirectusField(collection, colDef);
       } else {
         // Cập nhật nhãn / options nếu có
         await updateDirectusField(collection, colId, colDef);
       }
     }
-
-    // 2. Xóa các cột vật lý trên Directus không còn nằm trong activeCols
-    // Chỉ xóa các cột do người dùng tạo (không xóa system cols)
-    for (const [fieldName, fieldDef] of Object.entries(existingFieldMap)) {
-      if (!systemCols.has(fieldName) && !activeFieldMap[fieldName]) {
-        console.log(`[Directus Sync] Xóa cột vật lý không còn sử dụng: ${fieldName}`);
-        await deleteDirectusField(collection, fieldName);
-      }
-    }
   } catch (err) {
-    console.error(`[Directus Sync] Lỗi đồng bộ cấu trúc cột cho collection ${collection}:`, err);
+    console.warn(`[Directus Sync] Lỗi đồng bộ cấu trúc cột:`, err);
   }
 };

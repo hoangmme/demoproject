@@ -1881,10 +1881,10 @@ const getCellValue = (trip, colId) => {
   } else if (perColIds.includes(colId)) {
     // Cột thuộc Bảng Cán bộ
     const p = trip.rawPerson || trip;
-    rawVal = p[colId] !== undefined ? p[colId] : (p.custom_data?.[colId]);
+    rawVal = p[colId] !== undefined ? p[colId] : (p.custom_data?.[colId] ?? trip[colId] ?? trip.custom_data?.[colId]);
   } else {
     // Cột thông thường / fallback trực tiếp
-    rawVal = trip[colId] !== undefined ? trip[colId] : (trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawRelative?.[colId] ?? trip.rawPerson?.[colId]);
+    rawVal = trip[colId] !== undefined ? trip[colId] : (trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawRelative?.[colId] ?? trip.rawPerson?.[colId] ?? trip.rawPerson?.custom_data?.[colId]);
   }
 
   if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '' || String(rawVal).trim() === '-') {

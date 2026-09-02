@@ -42,6 +42,16 @@ export const getDepartments = async () => {
   }
 };
 
+const fallbackDirectusFields = (obj) => {
+  const allowed = ['id', 'code', 'name', 'departmentId', 'birthYear', 'cccd', 'custom_data', 'status', 'sort'];
+  const res = {};
+  allowed.forEach((k) => {
+    if (obj[k] !== undefined) res[k] = obj[k];
+  });
+  if (obj.custom_data !== undefined) res.custom_data = obj.custom_data;
+  return res;
+};
+
 export const createPersonnel = async (data) => {
   const payload = {
     ...data,
@@ -55,8 +65,20 @@ export const createPersonnel = async (data) => {
       const res = await apiClient.post('/items/personnel', payload);
       return res.data?.data;
     } catch (err) {
-      console.error('Directus createPersonnel error:', err?.response?.data || err);
-      throw err;
+      // Fallback: If Directus rejects unknown root fields, send standard fields + custom_data
+      const safePayload = fallbackDirectusFields(payload);
+      try {
+        const res = await apiClient.post('/items/personnels', safePayload);
+        return res.data?.data;
+      } catch (err2) {
+        try {
+          const res = await apiClient.post('/items/personnel', safePayload);
+          return res.data?.data;
+        } catch (err3) {
+          console.error('Directus createPersonnel error:', err3?.response?.data || err3);
+          throw err3;
+        }
+      }
     }
   }
 };
@@ -70,8 +92,20 @@ export const updatePersonnel = async (id, data) => {
       const res = await apiClient.patch(`/items/personnel/${id}`, data);
       return res.data?.data;
     } catch (err) {
-      console.error('Directus updatePersonnel error:', err?.response?.data || err);
-      throw err;
+      // Fallback: If Directus rejects unknown root fields, send standard fields + custom_data
+      const safePayload = fallbackDirectusFields(data);
+      try {
+        const res = await apiClient.patch(`/items/personnels/${id}`, safePayload);
+        return res.data?.data;
+      } catch (err2) {
+        try {
+          const res = await apiClient.patch(`/items/personnel/${id}`, safePayload);
+          return res.data?.data;
+        } catch (err3) {
+          console.error('Directus updatePersonnel error:', err3?.response?.data || err3);
+          throw err3;
+        }
+      }
     }
   }
 };
