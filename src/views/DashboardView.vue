@@ -666,8 +666,10 @@ const personnelStore = usePersonnelStore();
 const isDrilldownColDialogOpen = ref(false);
 const tempSelectedDrilldownCols = ref([]);
 const customDrilldownColsPersonnel = ref([]);
-const customDrilldownColsRelatives = ref([]);
 const drilldownTargetCriterion = ref(null);
+const drilldownCategory = ref('personnel');
+const drilldownHasDualTabs = ref(false);
+const drilldownActiveTab = ref('personnel');
 
 const loadDrilldownColSettings = async () => {
   try {
