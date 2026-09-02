@@ -42,16 +42,6 @@ export const getDepartments = async () => {
   }
 };
 
-const fallbackDirectusFields = (obj) => {
-  const allowed = ['id', 'code', 'name', 'departmentId', 'birthYear', 'cccd', 'custom_data', 'status', 'sort'];
-  const res = {};
-  allowed.forEach((k) => {
-    if (obj[k] !== undefined) res[k] = obj[k];
-  });
-  if (obj.custom_data !== undefined) res.custom_data = obj.custom_data;
-  return res;
-};
-
 export const createPersonnel = async (data) => {
   const payload = {
     ...data,
@@ -61,25 +51,8 @@ export const createPersonnel = async (data) => {
     const res = await apiClient.post('/items/personnels', payload);
     return res.data?.data;
   } catch (e) {
-    try {
-      const res = await apiClient.post('/items/personnel', payload);
-      return res.data?.data;
-    } catch (err) {
-      // Fallback: If Directus rejects unknown root fields, send standard fields + custom_data
-      const safePayload = fallbackDirectusFields(payload);
-      try {
-        const res = await apiClient.post('/items/personnels', safePayload);
-        return res.data?.data;
-      } catch (err2) {
-        try {
-          const res = await apiClient.post('/items/personnel', safePayload);
-          return res.data?.data;
-        } catch (err3) {
-          console.error('Directus createPersonnel error:', err3?.response?.data || err3);
-          throw err3;
-        }
-      }
-    }
+    const res = await apiClient.post('/items/personnel', payload);
+    return res.data?.data;
   }
 };
 
@@ -88,58 +61,26 @@ export const updatePersonnel = async (id, data) => {
     const res = await apiClient.patch(`/items/personnels/${id}`, data);
     return res.data?.data;
   } catch (e) {
-    try {
-      const res = await apiClient.patch(`/items/personnel/${id}`, data);
-      return res.data?.data;
-    } catch (err) {
-      // Fallback: If Directus rejects unknown root fields, send standard fields + custom_data
-      const safePayload = fallbackDirectusFields(data);
-      try {
-        const res = await apiClient.patch(`/items/personnels/${id}`, safePayload);
-        return res.data?.data;
-      } catch (err2) {
-        try {
-          const res = await apiClient.patch(`/items/personnel/${id}`, safePayload);
-          return res.data?.data;
-        } catch (err3) {
-          console.error('Directus updatePersonnel error:', err3?.response?.data || err3);
-          throw err3;
-        }
-      }
-    }
+    const res = await apiClient.patch(`/items/personnel/${id}`, data);
+    return res.data?.data;
   }
 };
 
 const deleteChildrenForParents = async (parentIds, collections = ['appendix1', 'appendix2', 'appendix3']) => {
   if (!parentIds || parentIds.length === 0) return;
-  const filterParams = parentIds.length === 1 
-    ? { 'filter[personnelId][_eq]': parentIds[0], fields: ['id'], limit: -1 }
-    : { 'filter[personnelId][_in]': parentIds.join(','), fields: ['id'], limit: -1 };
-
-  await Promise.allSettled(
-    collections.map(async (col) => {
-      try {
-        const res = await apiClient.get(`/items/${col}`, { params: filterParams });
-        const childIds = (res.data?.data || []).map((x) => x.id).filter(Boolean);
-        if (childIds.length > 0) {
-          try {
-            await apiClient.delete(`/items/${col}`, { data: childIds });
-          } catch (delErr) {
-            await Promise.allSettled(childIds.map((cid) => apiClient.delete(`/items/${col}/${cid}`)));
-          }
-        }
-      } catch (err) {}
-    })
-  );
+  for (const col of collections) {
+    try {
+      await apiClient.delete(`/items/${col}`, {
+        params: {
+          'filter[parent_id][_in]': parentIds.join(','),
+        },
+      });
+    } catch (e) {}
+  }
 };
 
 export const deletePersonnel = async (id) => {
-  if (!id) return;
-  
-  // 1. Delete all child records in appendix1, appendix2, appendix3 first to satisfy foreign key constraints
   await deleteChildrenForParents([id]);
-
-  // 2. Delete from personnels
   try {
     const res = await apiClient.delete(`/items/personnels/${id}`);
     return res.data;
@@ -150,21 +91,17 @@ export const deletePersonnel = async (id) => {
 };
 
 export const deleteMultiplePersonnel = async (ids) => {
-  if (!Array.isArray(ids) || ids.length === 0) return;
-
-  // 1. Clean up child records in parallel
+  if (!ids || ids.length === 0) return;
   await deleteChildrenForParents(ids);
-
-  // 2. Batch delete all personnels in 1 single HTTP request
   try {
-    await apiClient.delete('/items/personnels', { data: ids });
+    const res = await apiClient.delete('/items/personnels', {
+      data: ids,
+    });
+    return res.data;
   } catch (e) {
-    // Fallback: Concurrently delete in parallel
-    await Promise.allSettled(
-      ids.map((id) =>
-        apiClient.delete(`/items/personnels/${id}`).catch(() => apiClient.delete(`/items/personnel/${id}`))
-      )
-    );
+    const res = await apiClient.delete('/items/personnel', {
+      data: ids,
+    });
+    return res.data;
   }
-  return { success: true };
 };
