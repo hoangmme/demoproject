@@ -778,7 +778,7 @@ import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula } from '@/utils/formatters';
+import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, formatGenericCellValue } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
@@ -1339,45 +1339,8 @@ const getDisplayValue = (person, colId) => {
     }
   }
 
-  if (val === undefined || val === null || val === '' || val === '-') return '-';
-
-  if (typeof val === 'object') {
-    if (val instanceof Date) {
-      return formatDate(val);
-    }
-    if (Array.isArray(val)) {
-      return val
-        .map((x) => {
-          if (typeof x === 'object' && x !== null) {
-            if (x.col1 !== undefined || x.col2 !== undefined) {
-              return `${x.col1 || ''}: ${x.col2 || ''}`.trim().replace(/^:\s*/, '');
-            }
-            return x.name || x.label || x.value || JSON.stringify(x);
-          }
-          return x;
-        })
-        .filter(Boolean)
-        .join('; ') || '-';
-    }
-    return val.name || JSON.stringify(val) || '-';
-  }
-
-  const str = String(val).trim();
-  const cLower = String(colId || '').toLowerCase();
-  if (
-    cLower.includes('birth') ||
-    cLower.includes('date') ||
-    cLower.includes('ngay') ||
-    cLower.includes('nam_sinh') ||
-    cLower.includes('departure') ||
-    cLower.includes('arrival') ||
-    str.includes('GMT') ||
-    str.includes('T00:') ||
-    /^\d{4}-\d{2}-\d{2}/.test(str)
-  ) {
-    return formatDate(str);
-  }
-  return str;
+  const colDef = allColumnDefsMap.value[colId] || { id: colId };
+  return formatGenericCellValue(val, colDef);
 };
 
 const onColumnsChange = () => {

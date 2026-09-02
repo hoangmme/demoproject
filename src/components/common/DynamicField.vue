@@ -379,19 +379,43 @@ const updateTableModel = () => {
   emit('update:modelValue', [...tableRows.value]);
 };
 
+const normalizeArrayValue = (val) => {
+  if (val === undefined || val === null || val === '') return [];
+  if (Array.isArray(val)) {
+    return val
+      .flatMap((item) => {
+        if (typeof item === 'string' && (item.startsWith('[') || item.startsWith('{'))) {
+          try {
+            const sub = JSON.parse(item);
+            if (Array.isArray(sub)) return normalizeArrayValue(sub);
+          } catch (e) {}
+        }
+        return item;
+      })
+      .map((s) => String(s).trim())
+      .filter(Boolean);
+  }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return normalizeArrayValue(parsed);
+      } catch (e) {}
+    }
+    return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+};
+
 // Checkbox (Multi-select)
 const isCheckboxChecked = (opt) => {
-  if (Array.isArray(props.modelValue)) {
-    return props.modelValue.includes(opt);
-  }
-  if (typeof props.modelValue === 'string') {
-    return props.modelValue.split(',').map((s) => s.trim()).includes(opt);
-  }
-  return false;
+  const currentList = normalizeArrayValue(props.modelValue);
+  return currentList.includes(opt);
 };
 
 const toggleCheckbox = (opt) => {
-  let list = Array.isArray(props.modelValue) ? [...props.modelValue] : (props.modelValue ? String(props.modelValue).split(',').map((s) => s.trim()) : []);
+  let list = normalizeArrayValue(props.modelValue);
   if (list.includes(opt)) {
     list = list.filter((x) => x !== opt);
   } else {

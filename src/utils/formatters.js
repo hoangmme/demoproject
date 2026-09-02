@@ -777,3 +777,68 @@ export const computeTripPresence = (t, formulaConfig = {}) => {
     overdueDays: 0,
   };
 };
+
+/**
+ * Giải nén và định dạng chuẩn cho giá trị ô dữ liệu bất kỳ (xử lý sạch mảng JSON, JSON lồng, Checkbox, Date...)
+ */
+export const formatGenericCellValue = (val, colDef = {}) => {
+  if (val === undefined || val === null || val === '' || val === '-') return '-';
+
+  let parsed = val;
+  // Parse JSON đệ quy nếu giá trị là chuỗi JSON array hoặc object
+  if (typeof parsed === 'string' && (parsed.startsWith('[') || parsed.startsWith('{'))) {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch (e) {}
+  }
+
+  // Xử lý mảng (Array)
+  if (Array.isArray(parsed)) {
+    const flatList = parsed
+      .map((item) => {
+        if (item === undefined || item === null) return '';
+        if (typeof item === 'string' && (item.startsWith('[') || item.startsWith('{'))) {
+          try {
+            const sub = JSON.parse(item);
+            if (Array.isArray(sub)) return sub.filter(Boolean).join(', ');
+            if (typeof sub === 'object' && sub !== null) return sub.name || sub.label || sub.value || JSON.stringify(sub);
+          } catch (e) {}
+        }
+        if (typeof item === 'object' && item !== null) {
+          if (item.col0 !== undefined || item.col1 !== undefined || item.col2 !== undefined) {
+            return Object.values(item).filter(Boolean).join(': ');
+          }
+          return item.name || item.label || item.value || JSON.stringify(item);
+        }
+        return String(item).trim();
+      })
+      .filter((s) => s && s !== '-' && s !== 'null' && s !== 'undefined');
+
+    return flatList.join(', ') || '-';
+  }
+
+  // Xử lý Object
+  if (typeof parsed === 'object' && parsed !== null) {
+    if (parsed instanceof Date) return formatDate(parsed);
+    if (parsed.col0 !== undefined || parsed.col1 !== undefined) {
+      return Object.values(parsed).filter(Boolean).join(': ');
+    }
+    return parsed.name || parsed.label || parsed.value || JSON.stringify(parsed) || '-';
+  }
+
+  const str = String(parsed).trim();
+  const cIdLower = String(colDef?.id || '').toLowerCase();
+  const isDate =
+    colDef?.format === 'date' ||
+    cIdLower.includes('date') ||
+    cIdLower.includes('ngay') ||
+    cIdLower.includes('birth') ||
+    cIdLower.includes('nam_sinh') ||
+    /^\d{4}-\d{2}-\d{2}/.test(str);
+
+  if (isDate) {
+    return formatDate(str);
+  }
+
+  return str;
+};

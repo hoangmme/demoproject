@@ -599,7 +599,7 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
-import { formatDate, parseDateObj, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision } from '@/utils/formatters';
+import { formatDate, parseDateObj, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue } from '@/utils/formatters';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
@@ -1887,21 +1887,7 @@ const getCellValue = (trip, colId) => {
     rawVal = trip[colId] !== undefined ? trip[colId] : (trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawRelative?.[colId] ?? trip.rawPerson?.[colId] ?? trip.rawPerson?.custom_data?.[colId]);
   }
 
-  if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '' || String(rawVal).trim() === '-') {
-    return '-';
-  }
-
-  // Format date if configured as date format
-  if (colDef?.format === 'date' || colId.toLowerCase().includes('date') || colId.toLowerCase().includes('ngay')) {
-    return formatDisplayDate(rawVal);
-  }
-
-  if (typeof rawVal === 'object') {
-    if (Array.isArray(rawVal)) return rawVal.join(', ');
-    return JSON.stringify(rawVal);
-  }
-
-  return String(rawVal);
+  return formatGenericCellValue(rawVal, colDef || { id: colId });
 };
 
 const getDepartmentValue = (trip) => {
