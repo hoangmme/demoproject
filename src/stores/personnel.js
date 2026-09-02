@@ -299,10 +299,11 @@ export const usePersonnelStore = defineStore('personnel', {
             }
           }
           const extractedPosition = (
-            p.positionName ||
             p.position ||
-            custom.positionName ||
+            p.positionName ||
+            p.chuc_vu ||
             custom.position ||
+            custom.positionName ||
             custom.chuc_vu ||
             custom.chucVu ||
             ''
@@ -314,6 +315,8 @@ export const usePersonnelStore = defineStore('personnel', {
             cccdparent: personCccd,
             position: extractedPosition,
             positionName: extractedPosition,
+            chuc_vu: extractedPosition,
+            chucVu: extractedPosition,
             departmentName: extractedDept,
             hcCaNhan: p.hcCaNhan || p.passportPersonal || custom.hcCaNhan || custom.passportPersonal || '',
             hcCongVu: p.hcCongVu || p.passportOfficial || custom.hcCongVu || custom.passportOfficial || '',
@@ -492,7 +495,7 @@ export const usePersonnelStore = defineStore('personnel', {
         delete customData.isDeleted;
         delete customData['Khối B: Chuyến đi nước ngoài'];
 
-        // 2. Extract strictly core database keys for Directus root payload
+        // 2. Extract core database keys for Directus root payload, AND always persist into customData
         const coreKeys = ['id', 'code', 'name', 'cccd', 'birthYear', 'departmentId', 'position'];
         const skipKeys = [
           'custom_data',
@@ -513,18 +516,36 @@ export const usePersonnelStore = defineStore('personnel', {
             if (formData[k] !== undefined && formData[k] !== null) {
               payload[k] = formData[k];
             }
-          } else if (!skipKeys.includes(k)) {
-            // Dynamic custom columns (and any other profile fields) go cleanly into customData
+          }
+          if (!skipKeys.includes(k)) {
+            // All profile fields go cleanly into customData so they are never lost if Directus schema lacks dedicated column
             customData[k] = formData[k];
           }
         });
 
-        // 3. Ensure CCCD is synchronized
-        const cccdVal = formData.cccdparent || formData.cccd || customData.cccdparent || customData.cccd || '';
+        // 3. Ensure Position, Department, CCCD, and common fields are synchronized in both payload & customData
+        const posVal = formData.position || formData.chuc_vu || formData.positionName || formData.chucVu || customData.position || customData.chuc_vu || customData.positionName || customData.chucVu || '';
+        if (posVal) {
+          payload.position = posVal;
+          customData.position = posVal;
+          customData.positionName = posVal;
+          customData.chuc_vu = posVal;
+          customData.chucVu = posVal;
+        }
+
+        const deptName = formData.departmentName || customData.departmentName || (formData.departmentId ? this.getDepartmentName(formData.departmentId) : '') || '';
+        if (deptName) {
+          customData.departmentName = deptName;
+          customData.don_vi_cong_tac = deptName;
+          customData.don_vi = deptName;
+        }
+
+        const cccdVal = formData.cccdparent || formData.cccd || formData.so_cccd || customData.cccdparent || customData.cccd || '';
         if (cccdVal) {
           payload.cccd = String(cccdVal).trim();
           customData.cccdparent = String(cccdVal).trim();
           customData.cccd = String(cccdVal).trim();
+          customData.so_cccd = String(cccdVal).trim();
         }
 
         // 4. Attach trips, relatives, flags, files into customData
