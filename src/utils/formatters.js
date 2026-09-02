@@ -785,39 +785,61 @@ export const formatGenericCellValue = (val, colDef = {}) => {
   if (val === undefined || val === null || val === '' || val === '-') return '-';
 
   let parsed = val;
-  // Parse JSON đệ quy nếu giá trị là chuỗi JSON array hoặc object
-  if (typeof parsed === 'string' && (parsed.startsWith('[') || parsed.startsWith('{'))) {
-    try {
-      parsed = JSON.parse(parsed);
-    } catch (e) {}
+  // 1. Recursive JSON parse if valid JSON string
+  if (typeof parsed === 'string') {
+    let str = parsed.trim();
+    while ((str.startsWith('[') && str.endsWith(']')) || (str.startsWith('{') && str.endsWith('}')) || (str.startsWith('"') && str.endsWith('"'))) {
+      try {
+        const next = JSON.parse(str);
+        if (next === str) break;
+        parsed = next;
+        if (typeof parsed === 'string') str = parsed.trim();
+        else break;
+      } catch (e) {
+        break;
+      }
+    }
   }
 
-  // Xử lý mảng (Array)
+  // 2. Xử lý mảng (Array)
   if (Array.isArray(parsed)) {
-    const flatList = parsed
-      .map((item) => {
-        if (item === undefined || item === null) return '';
-        if (typeof item === 'string' && (item.startsWith('[') || item.startsWith('{'))) {
-          try {
-            const sub = JSON.parse(item);
-            if (Array.isArray(sub)) return sub.filter(Boolean).join(', ');
-            if (typeof sub === 'object' && sub !== null) return sub.name || sub.label || sub.value || JSON.stringify(sub);
-          } catch (e) {}
-        }
-        if (typeof item === 'object' && item !== null) {
+    const tokens = [];
+    const extractTokens = (arr) => {
+      arr.forEach((item) => {
+        if (item === undefined || item === null) return;
+        if (Array.isArray(item)) {
+          extractTokens(item);
+        } else if (typeof item === 'object' && item !== null) {
           if (item.col0 !== undefined || item.col1 !== undefined || item.col2 !== undefined) {
-            return Object.values(item).filter(Boolean).join(': ');
+            tokens.push(Object.values(item).filter(Boolean).join(': '));
+          } else {
+            tokens.push(item.name || item.label || item.value || JSON.stringify(item));
           }
-          return item.name || item.label || item.value || JSON.stringify(item);
+        } else {
+          const s = String(item).trim();
+          if ((s.startsWith('[') && s.endsWith(']')) || (s.startsWith('{') && s.endsWith('}'))) {
+            try {
+              const sub = JSON.parse(s);
+              if (Array.isArray(sub)) {
+                extractTokens(sub);
+                return;
+              }
+            } catch (e) {}
+          }
+          const cleaned = s.replace(/[\[\]"'\\]/g, ' ').replace(/\s+/g, ' ').trim();
+          if (cleaned && cleaned !== '-' && cleaned !== 'null' && cleaned !== 'undefined') {
+            tokens.push(cleaned);
+          }
         }
-        return String(item).trim();
-      })
-      .filter((s) => s && s !== '-' && s !== 'null' && s !== 'undefined');
+      });
+    };
+    extractTokens(parsed);
 
-    return flatList.join(', ') || '-';
+    const uniqueTokens = [...new Set(tokens)];
+    return uniqueTokens.join(', ') || '-';
   }
 
-  // Xử lý Object
+  // 3. Xử lý Object
   if (typeof parsed === 'object' && parsed !== null) {
     if (parsed instanceof Date) return formatDate(parsed);
     if (parsed.col0 !== undefined || parsed.col1 !== undefined) {
@@ -826,7 +848,20 @@ export const formatGenericCellValue = (val, colDef = {}) => {
     return parsed.name || parsed.label || parsed.value || JSON.stringify(parsed) || '-';
   }
 
-  const str = String(parsed).trim();
+  // 4. Xử lý chuỗi (Làm sạch hoàn toàn nếu chuỗi chứa dấu ngoặc hoặc nháy thoát lồng)
+  let str = String(parsed).trim();
+  if (str.includes('[') || str.includes(']') || str.includes('\\"') || str.includes('", "') || str.includes('","')) {
+    const parts = str
+      .replace(/[\[\]"'\\]/g, ' ')
+      .split(/[,;\n]/)
+      .map((s) => s.replace(/\s+/g, ' ').trim())
+      .filter((s) => s && s !== '-' && s !== 'null' && s !== 'undefined');
+    const unique = [...new Set(parts)];
+    if (unique.length > 0) {
+      str = unique.join(', ');
+    }
+  }
+
   const cIdLower = String(colDef?.id || '').toLowerCase();
   const isDate =
     colDef?.format === 'date' ||

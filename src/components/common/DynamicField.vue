@@ -381,31 +381,31 @@ const updateTableModel = () => {
 
 const normalizeArrayValue = (val) => {
   if (val === undefined || val === null || val === '') return [];
+  const tokens = [];
+
+  const addToken = (str) => {
+    if (!str) return;
+    const cleaned = String(str)
+      .replace(/[\[\]"'\\]/g, ' ')
+      .split(/[,;\n]/)
+      .map((s) => s.replace(/\s+/g, ' ').trim())
+      .filter((s) => s && s !== '-' && s !== 'null' && s !== 'undefined');
+    tokens.push(...cleaned);
+  };
+
   if (Array.isArray(val)) {
-    return val
-      .flatMap((item) => {
-        if (typeof item === 'string' && (item.startsWith('[') || item.startsWith('{'))) {
-          try {
-            const sub = JSON.parse(item);
-            if (Array.isArray(sub)) return normalizeArrayValue(sub);
-          } catch (e) {}
-        }
-        return item;
-      })
-      .map((s) => String(s).trim())
-      .filter(Boolean);
+    val.forEach((item) => {
+      if (Array.isArray(item)) {
+        item.forEach(addToken);
+      } else {
+        addToken(item);
+      }
+    });
+  } else if (typeof val === 'string') {
+    addToken(val);
   }
-  if (typeof val === 'string') {
-    const trimmed = val.trim();
-    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        if (Array.isArray(parsed)) return normalizeArrayValue(parsed);
-      } catch (e) {}
-    }
-    return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
-  }
-  return [];
+
+  return [...new Set(tokens)];
 };
 
 // Checkbox (Multi-select)
