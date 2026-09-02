@@ -312,15 +312,6 @@ export const usePersonnelStore = defineStore('personnel', {
           return {
             ...custom,
             ...p,
-            cccdparent: personCccd,
-            position: extractedPosition,
-            positionName: extractedPosition,
-            chuc_vu: extractedPosition,
-            chucVu: extractedPosition,
-            departmentName: extractedDept,
-            hcCaNhan: p.hcCaNhan || p.passportPersonal || custom.hcCaNhan || custom.passportPersonal || '',
-            hcCongVu: p.hcCongVu || p.passportOfficial || custom.hcCongVu || custom.passportOfficial || '',
-            kqThamTra: p.kqThamTra || p.tcctResult || custom.kqThamTra || custom.tcctResult || '',
             trips: Array.isArray(matchedTrips) ? matchedTrips : [],
             relatives: Array.isArray(matchedRelatives) ? matchedRelatives : [],
             flags: typeof flags === 'object' ? flags : {},
@@ -495,14 +486,14 @@ export const usePersonnelStore = defineStore('personnel', {
         delete customData.isDeleted;
         delete customData['Khối B: Chuyến đi nước ngoài'];
 
-        // 2. Extract core database keys for Directus root payload, AND always persist into customData
-        const coreKeys = ['id', 'code', 'name', 'cccd', 'birthYear', 'departmentId', 'position'];
         const skipKeys = [
           'custom_data',
           'rawPerson',
           'rawRelative',
           'rawTrip',
           'uniqueKey',
+          'parentPerson',
+          'parentPersonnel',
           'trips',
           'relatives',
           'flags',
@@ -510,45 +501,16 @@ export const usePersonnelStore = defineStore('personnel', {
           'isDeleted',
         ];
 
+        // 2. Gán trực tiếp 100% tất cả các trường dữ liệu vào payload Directus và customData
         const payload = {};
         Object.keys(formData).forEach((k) => {
-          if (coreKeys.includes(k)) {
-            if (formData[k] !== undefined && formData[k] !== null) {
-              payload[k] = formData[k];
-            }
-          }
-          if (!skipKeys.includes(k)) {
-            // All profile fields go cleanly into customData so they are never lost if Directus schema lacks dedicated column
+          if (!skipKeys.includes(k) && formData[k] !== undefined && formData[k] !== null) {
+            payload[k] = formData[k];
             customData[k] = formData[k];
           }
         });
 
-        // 3. Ensure Position, Department, CCCD, and common fields are synchronized in both payload & customData
-        const posVal = formData.position || formData.chuc_vu || formData.positionName || formData.chucVu || customData.position || customData.chuc_vu || customData.positionName || customData.chucVu || '';
-        if (posVal) {
-          payload.position = posVal;
-          customData.position = posVal;
-          customData.positionName = posVal;
-          customData.chuc_vu = posVal;
-          customData.chucVu = posVal;
-        }
-
-        const deptName = formData.departmentName || customData.departmentName || (formData.departmentId ? this.getDepartmentName(formData.departmentId) : '') || '';
-        if (deptName) {
-          customData.departmentName = deptName;
-          customData.don_vi_cong_tac = deptName;
-          customData.don_vi = deptName;
-        }
-
-        const cccdVal = formData.cccdparent || formData.cccd || formData.so_cccd || customData.cccdparent || customData.cccd || '';
-        if (cccdVal) {
-          payload.cccd = String(cccdVal).trim();
-          customData.cccdparent = String(cccdVal).trim();
-          customData.cccd = String(cccdVal).trim();
-          customData.so_cccd = String(cccdVal).trim();
-        }
-
-        // 4. Attach trips, relatives, flags, files into customData
+        // 3. Đính kèm danh sách chuyến đi, thân nhân, cờ cảnh báo, tệp tin
         if (Array.isArray(formData.trips)) {
           customData.trips = formData.trips.map((t) => {
             const cleanT = { ...t };
@@ -574,7 +536,7 @@ export const usePersonnelStore = defineStore('personnel', {
           customData.files = formData.files;
         }
 
-        // 5. Final check to guarantee no custom_data recursion
+        // 4. Lưu chuỗi custom_data làm bản sao lưu an toàn
         delete customData.custom_data;
         payload.custom_data = JSON.stringify(customData);
 

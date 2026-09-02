@@ -234,25 +234,9 @@ const initFormData = (val) => {
     delete parsedVal.rawTrip;
     delete parsedVal.uniqueKey;
 
-    const pos = parsedVal.position || parsedVal.chuc_vu || parsedVal.positionName || parsedVal.chucVu || cd.position || cd.chuc_vu || cd.positionName || cd.chucVu || '';
-    const dept = parsedVal.departmentName || (parsedVal.departmentId ? personnelStore.getDepartmentName(parsedVal.departmentId) : '') || cd.departmentName || cd.don_vi || cd.don_vi_cong_tac || '';
-    const cccd = parsedVal.cccdparent || parsedVal.cccd || parsedVal.so_cccd || cd.cccdparent || cd.cccd || cd.so_cccd || '';
-
     form.value = {
       ...cd,
       ...parsedVal,
-      position: pos,
-      positionName: pos,
-      chuc_vu: pos,
-      chucVu: pos,
-      departmentName: dept,
-      departmentId: parsedVal.departmentId || cd.departmentId || null,
-      cccdparent: cccd,
-      cccd: cccd,
-      so_cccd: cccd,
-      hcCaNhan: parsedVal.hcCaNhan || parsedVal.passportPersonal || cd.hcCaNhan || cd.passportPersonal || '',
-      hcCongVu: parsedVal.hcCongVu || parsedVal.passportOfficial || cd.hcCongVu || cd.passportOfficial || '',
-      kqThamTra: parsedVal.kqThamTra || parsedVal.tcctResult || cd.kqThamTra || cd.tcctResult || '',
       trips: Array.isArray(parsedVal.trips) ? parsedVal.trips : (cd.trips || []),
       relatives: Array.isArray(parsedVal.relatives) ? parsedVal.relatives : (cd.relatives || []),
       flags: (typeof parsedVal.flags === 'object' && parsedVal.flags) ? parsedVal.flags : (cd.flags || {}),
@@ -324,12 +308,6 @@ const triggerAutoSave = () => {
 
   autoSaveTimer = setTimeout(async () => {
     try {
-      const posVal = form.value.position || form.value.chuc_vu || form.value.positionName || form.value.chucVu || '';
-      form.value.position = posVal;
-      form.value.positionName = posVal;
-      form.value.chuc_vu = posVal;
-      form.value.chucVu = posVal;
-      form.value.cccdparent = String(cccdVal).trim();
       const saved = await personnelStore.savePerson(form.value);
       initialJsonSnapshot = JSON.stringify(form.value);
       autoSaveStatus.value = 'saved';
@@ -366,19 +344,7 @@ const handleSave = async () => {
     activeTab.value = 0;
     return;
   }
-  const cccdVal = form.value.cccdparent || form.value.cccd || form.value.so_cccd;
-  if (!cccdVal || !String(cccdVal).trim()) {
-    alert('Vui lòng nhập Số CCCD của cán bộ (Số CCCD là thông tin bắt buộc để liên kết dữ liệu)!');
-    activeTab.value = 0;
-    return;
-  }
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
-  const posVal = form.value.position || form.value.chuc_vu || form.value.positionName || form.value.chucVu || '';
-  form.value.position = posVal;
-  form.value.positionName = posVal;
-  form.value.chuc_vu = posVal;
-  form.value.chucVu = posVal;
-  form.value.cccdparent = String(cccdVal).trim();
   saving.value = true;
   autoSaveStatus.value = 'saving';
   try {

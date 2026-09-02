@@ -1844,6 +1844,7 @@ import Dialog from 'primevue/dialog';
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
+import { syncCollectionFields } from '@/api/fields';
 import { uploadFile, getFileUrl } from '@/api/files';
 import { computeColumnIndexMap } from '@/utils/formatters';
 import { createSampleDocxTemplateBlob } from '@/utils/docxExport';
@@ -3185,6 +3186,8 @@ const saveConfig = async () => {
     personnelStore.systemKeyConfig = keyConfig;
 
     if (activeTab.value === 'personnel') {
+      const allActiveCols = (personnelGroups.value || []).flatMap((g) => g.columns || []).filter((c) => c.id && c.id !== 'stt');
+      await syncCollectionFields('personnels', allActiveCols);
       await saveAppSettings('mapping_config_personnel', personnelGroups.value);
       await saveAppSettings('importMappingPersonnel', personnelGroups.value);
       personnelStore.importMappingPersonnel = personnelGroups.value;
@@ -3197,7 +3200,7 @@ const saveConfig = async () => {
       await saveAppSettings('importMappingTrips', tripsGroups.value);
       personnelStore.importMappingTrips = tripsGroups.value;
     }
-    alert('Đã lưu cấu hình cột và khóa liên kết thành công!');
+    alert('Đã lưu cấu hình cột và đồng bộ trực tiếp vào cơ sở dữ liệu Directus thành công!');
   } catch (err) {
     alert('Lỗi lưu cấu hình: ' + (err.message || err));
   } finally {
