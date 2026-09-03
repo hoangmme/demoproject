@@ -1238,20 +1238,16 @@ const allAvailableColumnsList = computed(() => {
       });
     });
 
-    // Các cột ảo ánh xạ thông tin Cán bộ / Thân nhân (Không có số cột nhưng VẪN HIỆN Ở LỌC & CỘT)
+    // Các cột ảo: CHỈ CÓ Mã cán bộ và Thông tin cán bộ
     const virtualTripCols = [
-      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
       { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
-      { id: '_parentPosition', label: 'Chức vụ', width: '150px' },
-      { id: '_parentDepartment', label: 'Đơn vị công tác', width: '180px' },
-      { id: '_relativeName', label: 'Họ tên thân nhân', width: '180px' },
-      { id: '_relationshipName', label: 'Mối quan hệ', width: '140px' },
+      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
     ];
 
     virtualTripCols.forEach((vc) => {
       if (!seen.has(vc.id)) {
         seen.add(vc.id);
-        rawList.push({
+        rawList.unshift({
           ...vc,
           colIndex: null,
           isVirtual: true,
@@ -1280,18 +1276,16 @@ const allAvailableColumnsList = computed(() => {
       });
     });
 
-    // Các cột ảo ánh xạ thông tin Cán bộ / Thân nhân (Không có số cột nhưng VẪN HIỆN Ở LỌC & CỘT)
+    // Các cột ảo: CHỈ CÓ Mã cán bộ và Thông tin cán bộ
     const virtualRelativeCols = [
-      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
       { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
-      { id: '_parentPosition', label: 'Chức vụ', width: '150px' },
-      { id: '_parentDepartment', label: 'Đơn vị công tác', width: '180px' },
+      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
     ];
 
     virtualRelativeCols.forEach((vc) => {
       if (!seen.has(vc.id)) {
         seen.add(vc.id);
-        rawList.push({
+        rawList.unshift({
           ...vc,
           colIndex: null,
           isVirtual: true,
@@ -1321,15 +1315,16 @@ const allAvailableColumnsList = computed(() => {
       });
     });
 
-    // Cột ảo Thông tin cán bộ cho Cán bộ (Không có số cột nhưng VẪN HIỆN Ở LỌC & CỘT)
+    // Các cột ảo: CHỈ CÓ Mã cán bộ và Thông tin cán bộ
     const virtualPersonnelCols = [
+      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
       { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
     ];
 
     virtualPersonnelCols.forEach((vc) => {
       if (!seen.has(vc.id)) {
         seen.add(vc.id);
-        rawList.push({
+        rawList.unshift({
           ...vc,
           colIndex: null,
           isVirtual: true,

@@ -62,14 +62,27 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
+      // Cột ảo: CHỈ CÓ Mã cán bộ và Thông tin cán bộ (không có số cột nhưng vẫn hiện ở chọn cột & lọc)
+      const virtualPersonnelCols = [
+        { id: 'code', label: 'Mã cán bộ', width: '115px', isVirtual: true, colIndex: null },
+        { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
+      ];
+      virtualPersonnelCols.forEach((vc) => {
+        if (!seen.has(vc.id)) {
+          seen.add(vc.id);
+          list.unshift(vc);
+        }
+      });
+
       if (list.length === 0) {
         return [
-          { id: 'code', label: 'Mã CB', colIndex: '1', width: '110px', isVirtual: false },
-          { id: 'name', label: 'Họ và tên', colIndex: '2', width: '200px', isVirtual: false },
-          { id: 'birthYear', label: 'Năm sinh', colIndex: '3', width: '120px', isVirtual: false },
-          { id: 'departmentId', label: 'Phòng ban', colIndex: '4', width: '160px', isVirtual: false },
-          { id: 'position', label: 'Chức vụ', colIndex: '5', width: '140px', isVirtual: false },
-          { id: 'cccdparent', label: 'Số CCCD', colIndex: '6', width: '140px', isVirtual: false },
+          { id: 'code', label: 'Mã CB', width: '115px', isVirtual: true, colIndex: null },
+          { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
+          { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false },
+          { id: 'birthYear', label: 'Năm sinh', colIndex: '2', width: '120px', isVirtual: false },
+          { id: 'departmentId', label: 'Phòng ban', colIndex: '3', width: '160px', isVirtual: false },
+          { id: 'position', label: 'Chức vụ', colIndex: '4', width: '140px', isVirtual: false },
+          { id: 'cccdparent', label: 'Số CCCD', colIndex: '5', width: '140px', isVirtual: false },
         ];
       }
       return list;
@@ -100,14 +113,27 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
+      // Cột ảo: CHỈ CÓ Mã cán bộ và Thông tin cán bộ
+      const virtualPersonnelCols = [
+        { id: 'code', label: 'Mã cán bộ', width: '115px', isVirtual: true, colIndex: null },
+        { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
+      ];
+      virtualPersonnelCols.forEach((vc) => {
+        if (!seen.has(vc.id)) {
+          seen.add(vc.id);
+          list.unshift(vc);
+        }
+      });
+
       if (list.length === 0) {
         return [
-          { id: 'code', label: 'Mã CB', colIndex: '1', width: '110px', isVirtual: false },
-          { id: 'name', label: 'Họ và tên', colIndex: '2', width: '200px', isVirtual: false },
-          { id: 'birthYear', label: 'Năm sinh', colIndex: '3', width: '120px', isVirtual: false },
-          { id: 'departmentId', label: 'Phòng ban', colIndex: '4', width: '160px', isVirtual: false },
-          { id: 'position', label: 'Chức vụ', colIndex: '5', width: '140px', isVirtual: false },
-          { id: 'cccdparent', label: 'Số CCCD', colIndex: '6', width: '140px', isVirtual: false },
+          { id: 'code', label: 'Mã CB', width: '115px', isVirtual: true, colIndex: null },
+          { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
+          { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false },
+          { id: 'birthYear', label: 'Năm sinh', colIndex: '2', width: '120px', isVirtual: false },
+          { id: 'departmentId', label: 'Phòng ban', colIndex: '3', width: '160px', isVirtual: false },
+          { id: 'position', label: 'Chức vụ', colIndex: '4', width: '140px', isVirtual: false },
+          { id: 'cccdparent', label: 'Số CCCD', colIndex: '5', width: '140px', isVirtual: false },
         ];
       }
       return list;
@@ -138,14 +164,15 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
+      // Cột ảo Thân nhân: CHỈ CÓ Mã cán bộ và Thông tin cán bộ
       const virtualRelCols = [
-        { id: 'parentName', label: 'Cán bộ liên quan (Họ tên)', width: '180px', isVirtual: true, colIndex: null },
-        { id: 'parentDepartment', label: 'Đơn vị công tác CB', width: '180px', isVirtual: true, colIndex: null },
+        { id: 'code', label: 'Mã cán bộ', width: '115px', isVirtual: true, colIndex: null },
+        { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
       ];
       virtualRelCols.forEach((vc) => {
         if (!seen.has(vc.id)) {
           seen.add(vc.id);
-          list.push(vc);
+          list.unshift(vc);
         }
       });
 

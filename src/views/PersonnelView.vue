@@ -244,7 +244,14 @@
             <span style="font-weight: 600; color: #4b5563;">{{ dtFirst + index + 1 }}</span>
           </template>
         </Column>
-        <Column field="code" header="Mã CB" sortable :headerStyle="{ width: '115px', minWidth: '115px' }" :bodyStyle="{ width: '115px', minWidth: '115px' }">
+        <Column
+          v-if="personnelStore.visibleColumns.includes('code')"
+          field="code"
+          header="Mã CB"
+          sortable
+          :headerStyle="{ width: '115px', minWidth: '115px' }"
+          :bodyStyle="{ width: '115px', minWidth: '115px' }"
+        >
           <template #body="{ data }">
             <span class="badge-code">{{ data.code || formatPersonnelCode(data.id) }}</span>
           </template>
@@ -253,7 +260,7 @@
           v-for="col in activeColumns"
           :key="col.id"
           :field="col.id"
-          :sortable="col.id !== 'stt' && col.id !== 'name'"
+          :sortable="col.id !== 'stt' && col.id !== 'name' && col.id !== '_parentPersonnelName'"
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
           :headerStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
@@ -263,8 +270,17 @@
             <span class="table-col-header-ellipsis" :title="col.label">{{ col.label }}</span>
           </template>
           <template #body="{ data }">
+            <!-- Cột ảo Thông tin cán bộ -->
+            <template v-if="col.id === '_parentPersonnelName'">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <strong style="color: #1f2937;">{{ data.name || '-' }}</strong>
+                <span style="font-size: 0.72rem; color: #4b5563;">{{ data.cccdparent || data.cccd ? `CCCD: ${data.cccdparent || data.cccd}` : '' }}</span>
+                <span style="font-size: 0.72rem; color: #6b7280;">{{ data.positionName || data.position || '' }} {{ data.departmentName || '' }}</span>
+              </div>
+            </template>
+
             <!-- Name column -->
-            <template v-if="col.id === 'name'">
+            <template v-else-if="col.id === 'name'">
               <strong style="color: #1f2937; cursor: pointer;">{{ getDisplayValue(data, col.id) !== '-' ? getDisplayValue(data, col.id) : (data.name || '-') }}</strong>
             </template>
 
@@ -1036,7 +1052,9 @@ watch(
 );
 
 const activeColumns = computed(() => {
-  const map = {};
+  const map = {
+    _parentPersonnelName: { id: '_parentPersonnelName', label: 'Thông tin cán bộ', tableWidth: '220px', format: 'text', isVirtual: true },
+  };
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (c.id && c.id !== 'stt' && c.id !== 'code') map[c.id] = c;
