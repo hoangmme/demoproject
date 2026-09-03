@@ -6,13 +6,13 @@
         alt="Bộ Công An"
         style="width: 85px; height: 85px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"
       />
-      <div style="font-size: 0.76rem; font-weight: 800; color: #ffffff; text-transform: uppercase; line-height: 1.3; white-space: nowrap;">
+      <div style="font-size: 0.76rem; font-weight: 800; color: #000000; text-transform: uppercase; line-height: 1.3; white-space: nowrap;">
         CÔNG AN THÀNH PHỐ HỒ CHÍ MINH
       </div>
-      <div style="font-size: 0.76rem; font-weight: 800; color: #ffffff; margin-top: 4px; line-height: 1.3; white-space: nowrap;">
+      <div style="font-size: 0.76rem; font-weight: 800; color: #000000; margin-top: 4px; line-height: 1.3; white-space: nowrap;">
         PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
       </div>
-      <div style="font-size: 0.71rem; font-weight: 800; color: #fde047; margin: 8px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 0;">
+      <div style="font-size: 0.71rem; font-weight: 800; color: #1e293b; background: rgba(255, 255, 255, 0.45); border-radius: 4px; margin: 8px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 4px 2px;">
         <div style="white-space: nowrap;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
         <div style="margin-top: 2px; white-space: nowrap;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
       </div>
