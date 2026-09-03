@@ -306,6 +306,80 @@
       </template>
     </template>
 
+    <!-- 6b. Checkbox + Đính kèm tệp (Không cần loop) -->
+    <template v-else-if="col.format === 'checkbox_file'">
+      <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;">
+          <!-- Có danh sách options -->
+          <template v-if="parsedOptions.length > 0">
+            <label
+              v-for="opt in parsedOptions"
+              :key="opt"
+              style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer; user-select: none;"
+            >
+              <input
+                type="checkbox"
+                :checked="isCheckboxFileOptActive(opt)"
+                @change="toggleCheckboxFileOpt(opt)"
+                style="accent-color: #2e7d32; width: 16px; height: 16px;"
+              />
+              <span style="font-weight: 500; color: #1e293b;">{{ opt }}</span>
+            </label>
+          </template>
+          <!-- Không có options: Hộp kiểm đơn giản -->
+          <template v-else>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer; user-select: none;">
+              <input
+                type="checkbox"
+                v-model="checkboxFileSingleChecked"
+                @change="syncCheckboxFileModel"
+                style="accent-color: #2e7d32; width: 16px; height: 16px;"
+              />
+              <span style="font-weight: 600; color: #1e293b;">{{ col.options || 'Có phát sinh / Chọn' }}</span>
+            </label>
+          </template>
+        </div>
+
+        <!-- File đính kèm minh chứng cho trường này -->
+        <div style="display: flex; align-items: center; gap: 8px; padding-left: 2px;">
+          <div v-if="checkboxFileObject.file" style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #ffffff; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; max-width: 90%;">
+            <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.82rem; flex-shrink: 0;"></i>
+            <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+              {{ checkboxFileObject.file.name || 'Tài liệu đính kèm' }}
+            </span>
+            <a v-if="checkboxFileObject.file.url" :href="checkboxFileObject.file.url" target="_blank" style="text-decoration: none; margin-left: 4px;">
+              <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
+            </a>
+            <i
+              class="pi pi-times"
+              style="color: #ef4444; font-size: 0.72rem; cursor: pointer; margin-left: 6px;"
+              title="Xóa tệp đính kèm này"
+              @click.stop="removeCheckboxFileAttachment"
+            ></i>
+          </div>
+          <div v-else style="display: flex; align-items: center; gap: 6px;">
+            <input
+              type="file"
+              ref="checkboxFileInputRef"
+              style="display: none;"
+              @change="handleCheckboxFileUpload"
+            />
+            <Button
+              type="button"
+              :label="isUploadingCheckboxFile ? 'Đang tải lên...' : '+ Đính kèm tệp minh chứng'"
+              :icon="isUploadingCheckboxFile ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
+              size="small"
+              outlined
+              severity="secondary"
+              :disabled="isUploadingCheckboxFile"
+              @click.stop="triggerCheckboxFileInput"
+              style="font-size: 0.75rem; padding: 3px 10px; height: 28px;"
+            />
+          </div>
+        </div>
+      </div>
+    </template>
+
     <!-- 7. Dropdown -->
     <template v-else-if="col.format === 'dropdown'">
       <select
@@ -569,6 +643,9 @@ watch(
       if (currentJson !== incomingJson) {
         initTextFileList(val);
       }
+    } else if (fmt === 'checkbox_file') {
+      if (isInternalCheckboxFile) return;
+      initCheckboxFile(val);
     }
   },
   { immediate: true, deep: true }
@@ -679,6 +756,114 @@ const syncSingleConditional = () => {
   } else {
     emit('update:modelValue', singleConditionalText.value || 'Có');
   }
+};
+
+// Checkbox + File (Không cần loop)
+const checkboxFileSingleChecked = ref(false);
+const checkboxFileActiveOpts = ref([]);
+const checkboxFileObject = ref({ file: null });
+const isUploadingCheckboxFile = ref(false);
+const checkboxFileInputRef = ref(null);
+let isInternalCheckboxFile = false;
+
+const triggerCheckboxFileInput = () => {
+  checkboxFileInputRef.value?.click();
+};
+
+const handleCheckboxFileUpload = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  isUploadingCheckboxFile.value = true;
+  try {
+    const uploaded = await uploadFile(file);
+    if (uploaded && uploaded.id) {
+      const url = getFileUrl(uploaded.id);
+      checkboxFileObject.value.file = {
+        id: uploaded.id,
+        name: file.name,
+        url: url,
+        size: file.size,
+        type: file.type,
+      };
+      syncCheckboxFileModel();
+    }
+  } catch (err) {
+    alert('Lỗi tải tệp: ' + (err.response?.data?.errors?.[0]?.message || err.message));
+  } finally {
+    isUploadingCheckboxFile.value = false;
+    event.target.value = '';
+  }
+};
+
+const removeCheckboxFileAttachment = () => {
+  checkboxFileObject.value.file = null;
+  syncCheckboxFileModel();
+};
+
+const isCheckboxFileOptActive = (opt) => {
+  return checkboxFileActiveOpts.value.includes(opt);
+};
+
+const toggleCheckboxFileOpt = (opt) => {
+  const idx = checkboxFileActiveOpts.value.indexOf(opt);
+  if (idx !== -1) {
+    checkboxFileActiveOpts.value.splice(idx, 1);
+  } else {
+    checkboxFileActiveOpts.value.push(opt);
+  }
+  syncCheckboxFileModel();
+};
+
+const initCheckboxFile = (val) => {
+  if (props.col.format !== 'checkbox_file') return;
+  if (!val) {
+    checkboxFileSingleChecked.value = false;
+    checkboxFileActiveOpts.value = [];
+    checkboxFileObject.value = { file: null };
+    return;
+  }
+
+  let obj = val;
+  if (typeof val === 'string' && val.trim()) {
+    try {
+      obj = JSON.parse(val);
+    } catch {
+      if (val === 'Có' || val === 'true' || val === true) {
+        checkboxFileSingleChecked.value = true;
+      } else {
+        checkboxFileActiveOpts.value = val.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+        if (checkboxFileActiveOpts.value.length === 0) checkboxFileSingleChecked.value = true;
+      }
+      checkboxFileObject.value = { file: null };
+      return;
+    }
+  }
+
+  if (typeof obj === 'object' && obj !== null) {
+    checkboxFileSingleChecked.value = Boolean(obj.checked);
+    checkboxFileActiveOpts.value = Array.isArray(obj.selected) ? [...obj.selected] : [];
+    checkboxFileObject.value.file = obj.file || null;
+  }
+};
+
+const syncCheckboxFileModel = () => {
+  isInternalCheckboxFile = true;
+  const isChecked = parsedOptions.value.length > 0 ? checkboxFileActiveOpts.value.length > 0 : checkboxFileSingleChecked.value;
+  const textSummary = parsedOptions.value.length > 0
+    ? checkboxFileActiveOpts.value.join('; ')
+    : (checkboxFileSingleChecked.value ? (props.col.options || 'Có') : '');
+
+  const payload = {
+    checked: isChecked,
+    selected: [...checkboxFileActiveOpts.value],
+    file: checkboxFileObject.value.file || null,
+    text: textSummary,
+  };
+  emit('update:modelValue', payload);
+  setTimeout(() => {
+    isInternalCheckboxFile = false;
+  }, 100);
 };
 </script>
 

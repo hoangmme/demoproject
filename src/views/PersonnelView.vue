@@ -318,6 +318,26 @@
               <span v-else>-</span>
             </template>
 
+            <!-- Checkbox + File (Không loop) -->
+            <template v-else-if="col.format === 'checkbox_file'">
+              <div v-if="getCheckboxFileItem(data, col.id).hasValue" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.76rem; line-height: 1.35;">
+                <span v-if="getCheckboxFileItem(data, col.id).text" style="color: #1e293b; font-weight: 600;">
+                  {{ getCheckboxFileItem(data, col.id).text }}
+                </span>
+                <a
+                  v-if="getCheckboxFileItem(data, col.id).file?.url"
+                  :href="getCheckboxFileItem(data, col.id).file.url"
+                  target="_blank"
+                  style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                  title="Mở xem tệp"
+                >
+                  <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                  <span>{{ getCheckboxFileItem(data, col.id).file.name || 'Tệp' }}</span>
+                </a>
+              </div>
+              <span v-else>-</span>
+            </template>
+
             <!-- General columns (Direct value matching Chi tiết 100%) -->
             <template v-else>
               <span style="word-break: break-word; line-height: 1.45;">{{ getDisplayValue(data, col.id) }}</span>
@@ -1121,6 +1141,35 @@ const getTextFileLoopItems = (data, colId) => {
     } catch (e) {}
   }
   return [];
+};
+
+const getCheckboxFileItem = (data, colId) => {
+  const val = data?.[colId] ?? (data?.custom_data ? data.custom_data[colId] : null);
+  if (!val) return { hasValue: false, text: '', file: null };
+  if (typeof val === 'object') {
+    const text = val.text || (val.selected ? val.selected.join('; ') : (val.checked ? 'Có' : ''));
+    const file = val.file || null;
+    return {
+      hasValue: Boolean(text || file),
+      text,
+      file,
+    };
+  }
+  if (typeof val === 'string') {
+    try {
+      const p = JSON.parse(val);
+      if (typeof p === 'object' && p !== null) {
+        const text = p.text || (p.selected ? p.selected.join('; ') : (p.checked ? 'Có' : ''));
+        const file = p.file || null;
+        return { hasValue: Boolean(text || file), text, file };
+      }
+    } catch {}
+    return { hasValue: true, text: val, file: null };
+  }
+  if (typeof val === 'boolean') {
+    return { hasValue: val, text: val ? 'Có' : '', file: null };
+  }
+  return { hasValue: false, text: '', file: null };
 };
 
 const activeRelativeColumns = computed(() => {

@@ -471,9 +471,9 @@
                 </div>
               </div>
 
-              <!-- Options Config (for Checkbox, Checkbox_Text, Dropdown, Table Loop) -->
+              <!-- Options Config (for Checkbox, Checkbox_Text, Checkbox_File, Dropdown, Table Loop) -->
               <div
-                v-if="col.format === 'checkbox' || col.format === 'checkbox_text' || col.format === 'dropdown' || col.format === 'table_2col' || col.format === 'table_loop'"
+                v-if="col.format === 'checkbox' || col.format === 'checkbox_text' || col.format === 'checkbox_file' || col.format === 'dropdown' || col.format === 'table_2col' || col.format === 'table_loop'"
                 style="padding-left: 104px; display: flex; flex-direction: column; gap: 4px;"
               >
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -2626,6 +2626,7 @@ const formatOptions = [
   { label: 'Bảng lặp nhiều cột (Tùy biến tiêu đề)', value: 'table_loop' },
   { label: 'Hộp kiểm (Nhiều lựa chọn)', value: 'checkbox' },
   { label: 'Hộp kiểm + Nhập Text (Có điều kiện)', value: 'checkbox_text' },
+  { label: 'Hộp kiểm + Tệp đính kèm', value: 'checkbox_file' },
   { label: 'Dropdown (Lựa chọn đơn)', value: 'dropdown' },
   { label: 'Cột Công thức (Formula / Trạng thái)', value: 'formula' },
   { label: 'Tệp đính kèm (File/Ảnh/PDF)', value: 'file' },

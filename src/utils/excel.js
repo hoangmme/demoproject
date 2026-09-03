@@ -468,6 +468,21 @@ export const formatCellForExcel = (val, colDef) => {
     } else {
       result = val.join(', ');
     }
+  } else if (colDef && colDef.format === 'checkbox_file') {
+    let obj = val;
+    if (typeof obj === 'string' && (obj.startsWith('{') || obj.startsWith('['))) {
+      try {
+        obj = JSON.parse(obj);
+      } catch {}
+    }
+    if (typeof obj === 'object' && obj !== null) {
+      const t = obj.text || (obj.selected ? obj.selected.join('; ') : (obj.checked ? 'Có' : ''));
+      const fName = obj.file?.name || (obj.file?.url ? 'Tài liệu' : '');
+      const f = fName ? `[Đính kèm: ${fName}]` : '';
+      result = [t, f].filter(Boolean).join(' ');
+    } else {
+      result = String(val ?? '');
+    }
   } else if (typeof val === 'object') {
     result = Object.values(val)
       .map((cv) => (typeof cv === 'string' && cv.startsWith('data:') ? '[Tệp]' : (cv ?? '')))

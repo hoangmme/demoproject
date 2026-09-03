@@ -36,17 +36,37 @@ export const getAppSettings = async (key, defaultValue = null) => {
           finalVal = val;
         }
       }
+      try {
+        localStorage.setItem(`app_settings_${key}`, typeof val === 'string' ? val : JSON.stringify(val));
+      } catch {}
       return finalVal;
     }
   } catch (e) {
     console.warn('Error fetching app settings for key:', key, e);
   }
 
+  // Fallback sang localStorage nếu Directus gặp sự cố
+  try {
+    const cached = localStorage.getItem(`app_settings_${key}`);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        return cached;
+      }
+    }
+  } catch {}
+
   return defaultValue;
 };
 
 export const saveAppSettings = async (key, value) => {
   const serialized = (typeof value === 'object' && value !== null) ? JSON.stringify(value) : (value === null ? '' : String(value));
+
+  // Luôn lưu bản sao vào localStorage làm bộ đệm
+  try {
+    localStorage.setItem(`app_settings_${key}`, serialized);
+  } catch {}
 
   // Ghi trực tiếp lên Directus Database
   try {
@@ -64,6 +84,10 @@ export const saveAppSettings = async (key, value) => {
     }
   } catch (e) {
     console.error('Error saving app settings for key:', key, e);
+    const errText = e.response?.data?.errors?.[0]?.message || e.message || '';
+    if (errText.includes('SQLITE_FULL') || errText.includes('disk is full')) {
+      throw new Error('Ổ cứng máy chủ backend (api.hscb.online) đang bị đầy dung lượng (SQLITE_FULL: disk is full). Đã lưu tạm cấu hình vào bộ nhớ máy này! Bạn cần giải phóng dung lượng ổ cứng VPS backend.');
+    }
     throw e;
   }
 };
