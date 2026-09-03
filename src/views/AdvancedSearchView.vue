@@ -1333,6 +1333,10 @@ onMounted(async () => {
   padding: 8px 10px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.45;
 }
 .advanced-table tr:hover td {
   background: #f8fafc;

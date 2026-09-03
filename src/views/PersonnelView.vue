@@ -300,14 +300,14 @@
                 <div
                   v-for="(it, iIdx) in getTextFileLoopItems(data, col.id)"
                   :key="iIdx"
-                  style="display: flex; align-items: center; gap: 6px; font-size: 0.76rem; line-height: 1.3;"
+                  style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.76rem; line-height: 1.35;"
                 >
-                  <span v-if="it.text" style="color: #1e293b;">{{ it.text }}</span>
+                  <span v-if="it.text" style="color: #1e293b; word-break: break-word;">{{ it.text }}</span>
                   <a
                     v-if="it.file && it.file.url"
                     :href="it.file.url"
                     target="_blank"
-                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500;"
+                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
                     title="Mở xem tệp"
                   >
                     <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
@@ -320,7 +320,7 @@
 
             <!-- General columns (Direct value matching Chi tiết 100%) -->
             <template v-else>
-              <span>{{ getDisplayValue(data, col.id) }}</span>
+              <span style="word-break: break-word; line-height: 1.45;">{{ getDisplayValue(data, col.id) }}</span>
             </template>
           </template>
         </Column>

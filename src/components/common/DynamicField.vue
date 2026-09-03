@@ -120,12 +120,13 @@
         <!-- Trạng thái chưa ấn (chưa có mục nào): Hiện nút bấm ban đầu -->
         <div v-if="textFileList.length === 0" style="display: flex; align-items: center;">
           <Button
-            label="+ Thêm mục (Văn bản + Tệp đính kèm)"
+            type="button"
+            label="Thêm mục (Văn bản + Tệp đính kèm)"
             icon="pi pi-plus"
             size="small"
             outlined
             severity="success"
-            @click="addTextFileRow"
+            @click.stop="addTextFileRow"
             style="font-size: 0.78rem; padding: 5px 12px;"
           />
         </div>
@@ -147,11 +148,12 @@
                 @input="syncTextFileModel"
               />
               <Button
+                type="button"
                 icon="pi pi-trash"
                 severity="danger"
                 text
                 size="small"
-                @click="removeTextFileRow(idx)"
+                @click.stop="removeTextFileRow(idx)"
                 title="Xóa mục này"
                 style="padding: 2px 6px;"
               />
@@ -171,7 +173,7 @@
                   class="pi pi-times"
                   style="color: #ef4444; font-size: 0.7rem; cursor: pointer; margin-left: 6px;"
                   title="Xóa tệp đính kèm này"
-                  @click="removeRowFile(idx)"
+                  @click.stop="removeRowFile(idx)"
                 ></i>
               </div>
               <div v-else style="display: flex; align-items: center; gap: 6px;">
@@ -182,13 +184,14 @@
                   @change="e => handleRowFileUpload(e, idx)"
                 />
                 <Button
-                  :label="uploadingRowIdx === idx ? 'Đang tải lên...' : '+ Đính kèm tệp'"
+                  type="button"
+                  :label="uploadingRowIdx === idx ? 'Đang tải lên...' : 'Đính kèm tệp'"
                   :icon="uploadingRowIdx === idx ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
                   size="small"
                   outlined
                   severity="secondary"
                   :disabled="uploadingRowIdx === idx"
-                  @click="triggerRowFileInput(idx)"
+                  @click.stop="triggerRowFileInput(idx)"
                   style="font-size: 0.72rem; padding: 2px 8px; height: 26px;"
                 />
               </div>
@@ -196,13 +199,14 @@
           </div>
 
           <Button
-            label="+ Thêm mục mới (Văn bản + Tệp)"
+            type="button"
+            label="Thêm mục mới (Văn bản + Tệp)"
             icon="pi pi-plus"
             size="small"
-            text
+            outlined
             severity="success"
-            @click="addTextFileRow"
-            style="font-size: 0.75rem; align-self: flex-start; padding: 3px 8px;"
+            @click.stop="addTextFileRow"
+            style="font-size: 0.75rem; align-self: flex-start; padding: 4px 10px;"
           />
         </template>
       </div>
@@ -364,9 +368,12 @@ const parsedOptions = computed(() => {
 
 // Text Loop
 const loopItems = ref(['']);
+let isInternalTextLoop = false;
+
 watch(
   () => props.modelValue,
   (val) => {
+    if (isInternalTextLoop) return;
     if (Array.isArray(val)) {
       loopItems.value = val.length > 0 ? [...val] : [''];
     } else if (typeof val === 'string' && val) {
@@ -380,6 +387,7 @@ watch(
 
 const addLoopItem = () => {
   loopItems.value.push('');
+  updateLoopModel();
 };
 
 const removeLoopItem = (idx) => {
@@ -389,8 +397,11 @@ const removeLoopItem = (idx) => {
 };
 
 const updateLoopModel = () => {
-  const filtered = loopItems.value.filter((s) => s && s.trim().length > 0);
-  emit('update:modelValue', filtered);
+  isInternalTextLoop = true;
+  emit('update:modelValue', [...loopItems.value]);
+  setTimeout(() => {
+    isInternalTextLoop = false;
+  }, 100);
 };
 
 // Table Loop (Multi-Column Custom Headers)
@@ -446,6 +457,7 @@ const initTableRows = (val) => {
 const textFileList = ref([]);
 const fileInputRefs = ref({});
 const uploadingRowIdx = ref(-1);
+let isInternalTextFileLoop = false;
 
 const setFileInputRef = (el, idx) => {
   if (el) fileInputRefs.value[idx] = el;
@@ -467,7 +479,7 @@ const initTextFileList = (val) => {
         text: item.text || item.content || item.name || '',
         file: item.file || (item.url ? { name: item.fileName || item.name, url: item.url, id: item.fileId } : null),
       };
-    }).filter(it => (it.text && it.text.trim()) || it.file);
+    });
   } else if (typeof val === 'string' && val.trim()) {
     try {
       const parsed = JSON.parse(val);
@@ -483,7 +495,11 @@ const initTextFileList = (val) => {
 };
 
 const addTextFileRow = () => {
-  textFileList.value.push({ id: 'tf_' + Date.now(), text: '', file: null });
+  textFileList.value.push({
+    id: 'tf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    text: '',
+    file: null,
+  });
   syncTextFileModel();
 };
 
@@ -532,8 +548,11 @@ const handleRowFileUpload = async (event, idx) => {
 };
 
 const syncTextFileModel = () => {
-  const valid = textFileList.value.filter((it) => (it.text && it.text.trim()) || it.file);
-  emit('update:modelValue', valid);
+  isInternalTextFileLoop = true;
+  emit('update:modelValue', [...textFileList.value]);
+  setTimeout(() => {
+    isInternalTextFileLoop = false;
+  }, 100);
 };
 
 watch(
@@ -546,6 +565,7 @@ watch(
         initTableRows(val);
       }
     } else if (fmt === 'text_file_loop') {
+      if (isInternalTextFileLoop) return;
       const currentJson = JSON.stringify(textFileList.value);
       const incomingJson = JSON.stringify(val);
       if (currentJson !== incomingJson) {

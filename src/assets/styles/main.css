@@ -568,6 +568,27 @@ html, body {
   font-size: 0.82rem !important;
   color: #374151 !important;
   vertical-align: middle !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.45 !important;
+}
+
+/* Cho phép nội dung bảng xuống dòng tự nhiên khi dài */
+.p-datatable .p-datatable-tbody > tr > td,
+.advanced-table td,
+.trips-table td {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.45 !important;
+}
+
+.p-datatable .p-datatable-tbody > tr > td.col-center,
+.advanced-table td.col-center,
+.trips-table td.col-center,
+.table-actions {
+  white-space: nowrap !important;
 }
 
 .p-datatable-tbody > tr:hover {
