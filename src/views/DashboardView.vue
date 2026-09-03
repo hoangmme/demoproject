@@ -12,62 +12,8 @@
         </div>
       </div>
 
-      <!-- Time Filter Selector & Action Buttons -->
+      <!-- Action Buttons -->
       <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-        <div class="time-filter-group" style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
-          <button
-            type="button"
-            class="time-btn"
-            :class="{ 'time-btn-active': timeFilterMode === 'all' }"
-            @click="setTimeFilter('all')"
-          >
-            Tất cả
-          </button>
-          <button
-            type="button"
-            class="time-btn"
-            :class="{ 'time-btn-active': timeFilterMode === 'week' }"
-            @click="setTimeFilter('week')"
-          >
-            Tuần này
-          </button>
-          <button
-            type="button"
-            class="time-btn"
-            :class="{ 'time-btn-active': timeFilterMode === 'month' }"
-            @click="setTimeFilter('month')"
-          >
-            Tháng này
-          </button>
-          <button
-            type="button"
-            class="time-btn"
-            :class="{ 'time-btn-active': timeFilterMode === 'year' }"
-            @click="setTimeFilter('year')"
-          >
-            Năm nay
-          </button>
-          <button
-            type="button"
-            class="time-btn"
-            :class="{ 'time-btn-active': timeFilterMode === 'custom' }"
-            @click="setTimeFilter('custom')"
-          >
-            <i class="pi pi-calendar" style="font-size: 0.75rem;"></i> Tùy chỉnh
-          </button>
-        </div>
-
-        <!-- Custom Date Range Inputs -->
-        <div v-if="timeFilterMode === 'custom'" style="display: flex; align-items: center; gap: 6px;">
-          <div style="width: 130px;">
-            <AppDatePicker v-model="customStartDate" placeholder="Từ ngày" />
-          </div>
-          <span style="font-size: 0.8rem; color: #64748b;">-</span>
-          <div style="width: 130px;">
-            <AppDatePicker v-model="customEndDate" placeholder="Đến ngày" />
-          </div>
-        </div>
-
         <!-- Add Custom Group Button -->
         <Button
           icon="pi pi-plus"
@@ -2389,58 +2335,10 @@ const allAvailableTripColumns = computed(() => {
 });
 
 // =========================================================================
-// 3. TIME FILTER STATE & STAT COMPUTATION
+// 3. STAT COMPUTATION
 // =========================================================================
-const timeFilterMode = ref('all');
-const customStartDate = ref('');
-const customEndDate = ref('');
-
 const countrySearch = ref('');
 const fundingSearch = ref('');
-
-const setTimeFilter = (mode) => {
-  timeFilterMode.value = mode;
-};
-
-const getTimeFilterLabel = () => {
-  if (timeFilterMode.value === 'all') return 'Tất cả thời gian';
-  if (timeFilterMode.value === 'week') return 'Trong tuần này';
-  if (timeFilterMode.value === 'month') return 'Trong tháng này';
-  if (timeFilterMode.value === 'year') return 'Trong năm nay';
-  if (timeFilterMode.value === 'custom') {
-    return `Từ ${customStartDate.value || '...'} đến ${customEndDate.value || '...'}`;
-  }
-  return 'Tất cả';
-};
-
-const isWithinTimeFilter = (dateStr) => {
-  if (timeFilterMode.value === 'all') return true;
-  if (!dateStr) return false;
-  const d = parseDateObj(dateStr);
-  if (!d) return false;
-
-  const now = new Date();
-  if (timeFilterMode.value === 'week') {
-    const day = now.getDay() || 7;
-    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
-    return d >= mon;
-  }
-  if (timeFilterMode.value === 'month') {
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-  }
-  if (timeFilterMode.value === 'year') {
-    return d.getFullYear() === now.getFullYear();
-  }
-  if (timeFilterMode.value === 'custom') {
-    const start = customStartDate.value ? parseDateObj(customStartDate.value) : null;
-    const end = customEndDate.value ? parseDateObj(customEndDate.value) : null;
-    if (start && d < start) return false;
-    if (end && d > end) return false;
-    return true;
-  }
-
-  return true;
-};
 
 const getTripValue = (trip, colId) => {
   if (!trip || !colId) return '';
@@ -2488,11 +2386,6 @@ const stats = computed(() => {
   const allTrips = (unifiedTripsList.value || []).filter((t) => !t.isRelative && !t.isRelativeTrip);
 
   allTrips.forEach((t) => {
-    const depDate = t.ngay_xuat_canh || t.departureDate || t.approvedDepartureDate || '';
-    if (!isWithinTimeFilter(depDate)) {
-      return;
-    }
-
     const cName = String(getTripValue(t, countryColId) || t[countryColId] || t.countryName || '').trim();
     const fName = String(getTripValue(t, fundingColId) || t[fundingColId] || t.fundingName || '').trim();
 
@@ -2752,31 +2645,6 @@ onMounted(async () => {
 .btn-card-setting:hover {
   color: #334155;
   background: #f1f5f9;
-}
-
-.time-btn {
-  background: transparent;
-  border: none;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.time-btn:hover {
-  color: #1e293b;
-}
-
-.time-btn-active {
-  background: #ffffff;
-  color: #16a34a !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .breakdown-row {
