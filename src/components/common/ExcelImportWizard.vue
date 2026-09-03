@@ -716,6 +716,17 @@ const buildParsedRows = () => {
           matchedCol.id.toLowerCase().includes('sinh')
         ) {
           finalVal = formatExcelDate(cellVal);
+        } else if (
+          matchedCol.id.toLowerCase().includes('cccd') ||
+          matchedCol.id.toLowerCase().includes('cmnd') ||
+          matchedCol.id.toLowerCase().includes('dinhdanh')
+        ) {
+          if (typeof cellVal === 'number') {
+            const integerStr = String(Math.trunc(cellVal));
+            finalVal = integerStr.length <= 12 && integerStr.length >= 9 ? integerStr.padStart(12, '0') : integerStr;
+          } else {
+            finalVal = String(finalVal).replace(/\.0+$/, '').trim();
+          }
         }
         rowObj[matchedCol.id] = finalVal;
       }
