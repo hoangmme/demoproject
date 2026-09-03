@@ -791,7 +791,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap, formatDate, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const router = useRouter();
@@ -1667,17 +1667,7 @@ const getRowFieldValue = (row, colId) => {
     raw = row[colId] !== undefined ? row[colId] : (row.custom_data?.[colId] ?? row.rawTrip?.[colId] ?? row.rawRelative?.[colId] ?? row.rawPerson?.[colId]);
   }
 
-  if (raw === undefined || raw === null || raw === '' || raw === '-') return '';
-  if (typeof raw === 'object') {
-    if (Array.isArray(raw)) {
-      return raw
-        .map((x) => (typeof x === 'object' && x !== null ? (x.name || x.label || x.col1 || x.value || JSON.stringify(x)) : x))
-        .filter(Boolean)
-        .join(', ');
-    }
-    return raw.name || raw.label || raw.col1 || raw.value || JSON.stringify(raw);
-  }
-  return String(raw).trim();
+  return formatGenericCellValue(raw, colDef || { id: colId });
 };
 
 const getSourceList = (source) => {
