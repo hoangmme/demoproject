@@ -51,8 +51,11 @@ export const createPersonnel = async (data) => {
     const res = await apiClient.post('/items/personnels', payload);
     return res.data?.data;
   } catch (e) {
-    const res = await apiClient.post('/items/personnel', payload);
-    return res.data?.data;
+    if (e.response?.status === 404) {
+      const res = await apiClient.post('/items/personnel', payload);
+      return res.data?.data;
+    }
+    throw e;
   }
 };
 
@@ -61,8 +64,11 @@ export const updatePersonnel = async (id, data) => {
     const res = await apiClient.patch(`/items/personnels/${id}`, data);
     return res.data?.data;
   } catch (e) {
-    const res = await apiClient.patch(`/items/personnel/${id}`, data);
-    return res.data?.data;
+    if (e.response?.status === 404) {
+      const res = await apiClient.patch(`/items/personnel/${id}`, data);
+      return res.data?.data;
+    }
+    throw e;
   }
 };
 

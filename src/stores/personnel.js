@@ -648,7 +648,8 @@ export const usePersonnelStore = defineStore('personnel', {
           this.personnelList.unshift(fullSavedObj);
         }
 
-        await this.fetchPersonnel();
+        // Đồng bộ ngầm trong background mà không block giao diện
+        this.fetchPersonnel().catch((err) => console.warn('Background sync failed:', err));
         this.isDialogOpen = false;
         return saved;
       } catch (e) {

@@ -298,15 +298,19 @@ watch(
   { immediate: true, deep: true }
 );
 
+let isSavingInternal = false;
+
 const triggerAutoSave = () => {
-  if (!isEdit.value || !form.value.id || !form.value.name?.trim()) return;
+  if (!isEdit.value || !form.value.id || !form.value.name?.trim() || isSavingInternal || saving.value) return;
   const cccdVal = form.value.cccdparent || form.value.cccd || form.value.so_cccd;
   if (!cccdVal || !String(cccdVal).trim()) return;
 
-  autoSaveStatus.value = 'saving';
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
 
   autoSaveTimer = setTimeout(async () => {
+    if (isSavingInternal || saving.value) return;
+    isSavingInternal = true;
+    autoSaveStatus.value = 'saving';
     try {
       const saved = await personnelStore.savePerson(form.value);
       initialJsonSnapshot = JSON.stringify(form.value);
@@ -317,8 +321,10 @@ const triggerAutoSave = () => {
       }, 2500);
     } catch (e) {
       autoSaveStatus.value = '';
+    } finally {
+      isSavingInternal = false;
     }
-  }, 1000);
+  }, 2000);
 };
 
 watch(
@@ -345,7 +351,12 @@ const handleSave = async () => {
     return;
   }
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  if (isSavingInternal || saving.value) {
+    // Chờ 300ms nếu auto-save vừa gửi đi
+    await new Promise((r) => setTimeout(r, 400));
+  }
   saving.value = true;
+  isSavingInternal = true;
   autoSaveStatus.value = 'saving';
   try {
     const saved = await personnelStore.savePerson(form.value);
@@ -360,6 +371,7 @@ const handleSave = async () => {
     alert('Lỗi lưu dữ liệu: ' + (e.message || e));
   } finally {
     saving.value = false;
+    isSavingInternal = false;
   }
 };
 
