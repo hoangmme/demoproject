@@ -146,6 +146,16 @@
           >
             <i class="pi pi-plus" style="font-size: 0.75rem;"></i> Thêm Khối Thống kê
           </button>
+          <button
+            v-if="group.widgets && group.widgets.length > 1"
+            type="button"
+            class="btn-secondary-action"
+            @click="openReorderWidgetsDialog(group)"
+            title="Sắp xếp thứ tự các khối thống kê trong nhóm này (đưa lên đầu tiên, thứ 2, 3...)"
+            style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #334155; font-weight: 600; cursor: pointer;"
+          >
+            <i class="pi pi-sort-alt" style="font-size: 0.75rem; color: #0284c7;"></i> Sắp xếp vị trí
+          </button>
           <Button
             icon="pi pi-pencil"
             size="small"
@@ -178,7 +188,7 @@
       <!-- Unified Flexible Grid for Group Widgets -->
       <div v-else style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch;">
         <div
-          v-for="widget in group.widgets"
+          v-for="(widget, wIdx) in group.widgets"
           :key="widget.id"
           :style="getWidgetStyle(widget)"
         >
@@ -200,13 +210,47 @@
           >
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <div>
+                <div style="flex: 1; padding-right: 6px;">
                   <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px;">
+                <div style="display: flex; align-items: center; gap: 3px; flex-shrink: 0;" @click.stop>
+                  <!-- Nút dời trái (lên trước) -->
+                  <button
+                    v-if="wIdx > 0"
+                    type="button"
+                    class="btn-card-setting"
+                    @click.stop="moveWidget(group, widget, -1)"
+                    title="Dời thẻ sang trái (lên trước)"
+                  >
+                    <i class="pi pi-arrow-left" style="font-size: 0.7rem;"></i>
+                  </button>
+                  <!-- Nút dời phải (về sau) -->
+                  <button
+                    v-if="wIdx < group.widgets.length - 1"
+                    type="button"
+                    class="btn-card-setting"
+                    @click.stop="moveWidget(group, widget, 1)"
+                    title="Dời thẻ sang phải (về sau)"
+                  >
+                    <i class="pi pi-arrow-right" style="font-size: 0.7rem;"></i>
+                  </button>
+                  <!-- Chọn vị trí trực tiếp (1, 2, 3...) -->
+                  <select
+                    :value="wIdx + 1"
+                    @click.stop
+                    @change.stop="e => setWidgetPosition(group, widget, Number(e.target.value))"
+                    title="Đổi vị trí hiển thị của thẻ này"
+                    style="font-size: 0.7rem; height: 22px; padding: 0 4px; border-radius: 4px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; font-weight: 700; cursor: pointer; outline: none;"
+                  >
+                    <option v-for="n in group.widgets.length" :key="n" :value="n">
+                      #{{ n }}
+                    </option>
+                  </select>
+                  <!-- Sửa -->
                   <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa khối này">
                     <i class="pi pi-pencil"></i>
                   </button>
+                  <!-- Xóa -->
                   <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa khối này" style="color: #ef4444;">
                     <i class="pi pi-trash"></i>
                   </button>
@@ -564,6 +608,18 @@
               <option value="#f8fafc">Pastel Xám nhạt</option>
             </select>
           </div>
+          <div class="field-item">
+            <label class="field-label" style="font-weight: 700; color: #1e293b;">Vị trí hiển thị (Thứ tự trong nhóm)</label>
+            <select v-model="widgetOrder" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option
+                v-for="n in (editingWidget ? (activeGroupForWidget?.widgets?.length || 1) : ((activeGroupForWidget?.widgets?.length || 0) + 1))"
+                :key="n"
+                :value="n"
+              >
+                {{ n === 1 ? 'Vị trí 1 (Đưa lên đầu tiên)' : (n === (editingWidget ? activeGroupForWidget?.widgets?.length : (activeGroupForWidget?.widgets?.length + 1)) ? `Vị trí ${n} (Cuối cùng)` : `Vị trí ${n}`) }}
+              </option>
+            </select>
+          </div>
         </div>
 
         <div style="font-size: 0.76rem; color: #0369a1; background: #e0f2fe; border: 1px solid #bae6fd; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; line-height: 1.4;">
@@ -576,6 +632,99 @@
           <Button label="Hủy" severity="secondary" text size="small" @click="isWidgetDialogOpen = false" />
           <Button label="Lưu Khối Thống Kê" icon="pi pi-check" severity="success" size="small" @click="saveWidget" />
         </div>
+      </template>
+    </Dialog>
+
+    <!-- Dialog Sắp xếp vị trí các khối thống kê trong nhóm -->
+    <Dialog
+      v-model:visible="isReorderWidgetsDialogOpen"
+      modal
+      header="Sắp xếp Thứ tự Khối Thống kê"
+      :style="{ width: '580px' }"
+    >
+      <div v-if="reorderingGroup" style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 0.82rem; color: #475569; background: #f1f5f9; padding: 8px 12px; border-radius: 6px;">
+          Đang sắp xếp các thẻ của nhóm: <strong style="color: #0f172a;">{{ reorderingGroup.title }}</strong>. Bạn có thể chọn vị trí trực tiếp hoặc dùng nút mũi tên để dời thẻ lên/xuống:
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; padding-right: 4px;">
+          <div
+            v-for="(w, idx) in reorderingGroup.widgets"
+            :key="w.id"
+            style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; gap: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
+          >
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1; overflow: hidden;">
+              <span style="font-size: 0.78rem; font-weight: 700; background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 4px; min-width: 28px; text-align: center;">
+                #{{ idx + 1 }}
+              </span>
+              <div style="display: flex; flex-direction: column; overflow: hidden;">
+                <span style="font-size: 0.84rem; font-weight: 600; color: #1e293b; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                  {{ w.title }}
+                </span>
+                <span style="font-size: 0.7rem; color: #64748b;">
+                  {{ w.displayType === 'count' ? 'Thẻ đếm số lượng' : (w.displayType === 'vertical_bar' ? 'Biểu đồ cột dọc' : 'Biểu đồ thanh ngang') }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Điều khiển vị trí -->
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <select
+                :value="idx + 1"
+                @change="e => setWidgetPosition(reorderingGroup, w, Number(e.target.value))"
+                style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: 700; cursor: pointer;"
+                title="Chọn vị trí trực tiếp"
+              >
+                <option v-for="n in reorderingGroup.widgets.length" :key="n" :value="n">
+                  {{ n === 1 ? '1 (Đầu tiên)' : (n === reorderingGroup.widgets.length ? `${n} (Cuối)` : `Vị trí ${n}`) }}
+                </option>
+              </select>
+
+              <button
+                type="button"
+                class="btn-card-setting"
+                :disabled="idx === 0"
+                @click="moveWidgetToTop(reorderingGroup, w)"
+                title="Đưa lên đầu tiên"
+                style="padding: 4px 6px; height: 28px;"
+              >
+                <i class="pi pi-angle-double-up" style="font-size: 0.8rem;"></i>
+              </button>
+              <button
+                type="button"
+                class="btn-card-setting"
+                :disabled="idx === 0"
+                @click="moveWidget(reorderingGroup, w, -1)"
+                title="Lên 1 bậc"
+                style="padding: 4px 6px; height: 28px;"
+              >
+                <i class="pi pi-chevron-up" style="font-size: 0.8rem;"></i>
+              </button>
+              <button
+                type="button"
+                class="btn-card-setting"
+                :disabled="idx === reorderingGroup.widgets.length - 1"
+                @click="moveWidget(reorderingGroup, w, 1)"
+                title="Xuống 1 bậc"
+                style="padding: 4px 6px; height: 28px;"
+              >
+                <i class="pi pi-chevron-down" style="font-size: 0.8rem;"></i>
+              </button>
+              <button
+                type="button"
+                class="btn-card-setting"
+                :disabled="idx === reorderingGroup.widgets.length - 1"
+                @click="moveWidgetToBottom(reorderingGroup, w)"
+                title="Đưa về cuối cùng"
+                style="padding: 4px 6px; height: 28px;"
+              >
+                <i class="pi pi-angle-double-down" style="font-size: 0.8rem;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Xong" severity="primary" size="small" @click="isReorderWidgetsDialogOpen = false" />
       </template>
     </Dialog>
 
@@ -1073,6 +1222,9 @@ const groupForm = ref({
 });
 
 const isWidgetDialogOpen = ref(false);
+const isReorderWidgetsDialogOpen = ref(false);
+const reorderingGroup = ref(null);
+const widgetOrder = ref(1);
 const activeGroupForWidget = ref(null);
 const editingWidget = ref(null);
 const widgetForm = ref({
@@ -1813,6 +1965,7 @@ const openAddWidgetDialog = (group) => {
     cardId: '',
     cardCondition: '',
   };
+  widgetOrder.value = (group.widgets || []).length + 1;
   onTopicSelectChange();
   isWidgetDialogOpen.value = true;
 };
@@ -1825,6 +1978,8 @@ const openEditWidgetDialog = (group, widget) => {
     selectedWidgetTopicId.value = widget.topicId;
     selectedWidgetCardKey.value = widget.cardId || widget.cardCondition || 'all';
   }
+  const curIdx = (group.widgets || []).findIndex((w) => w.id === widget.id);
+  widgetOrder.value = curIdx !== -1 ? curIdx + 1 : (group.widgets || []).length;
   widgetForm.value = {
     widthPercent: 33,
     ...JSON.parse(JSON.stringify(widget)),
@@ -1868,12 +2023,17 @@ const saveWidget = async () => {
     };
 
     if (editingWidget.value) {
-      const idx = group.widgets.findIndex((w) => w.id === editingWidget.value.id);
-      if (idx !== -1) {
-        group.widgets[idx] = payload;
+      const oldIdx = group.widgets.findIndex((w) => w.id === editingWidget.value.id);
+      if (oldIdx !== -1) {
+        group.widgets.splice(oldIdx, 1);
+        const targetIdx = Math.max(0, Math.min(Number(widgetOrder.value) - 1, group.widgets.length));
+        group.widgets.splice(targetIdx, 0, payload);
+      } else {
+        group.widgets.push(payload);
       }
     } else {
-      group.widgets.push(payload);
+      const targetIdx = Math.max(0, Math.min(Number(widgetOrder.value) - 1, group.widgets.length));
+      group.widgets.splice(targetIdx, 0, payload);
     }
 
     await saveCustomGroupsToDb();
@@ -1882,6 +2042,51 @@ const saveWidget = async () => {
   } finally {
     isSavingWidget.value = false;
   }
+};
+
+const openReorderWidgetsDialog = (group) => {
+  reorderingGroup.value = group;
+  isReorderWidgetsDialogOpen.value = true;
+};
+
+const moveWidget = async (group, widget, direction) => {
+  if (!group?.widgets) return;
+  const idx = group.widgets.findIndex((w) => w.id === widget.id);
+  if (idx === -1) return;
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= group.widgets.length) return;
+  const item = group.widgets.splice(idx, 1)[0];
+  group.widgets.splice(newIdx, 0, item);
+  await saveCustomGroupsToDb();
+};
+
+const moveWidgetToTop = async (group, widget) => {
+  if (!group?.widgets) return;
+  const idx = group.widgets.findIndex((w) => w.id === widget.id);
+  if (idx <= 0) return;
+  const item = group.widgets.splice(idx, 1)[0];
+  group.widgets.unshift(item);
+  await saveCustomGroupsToDb();
+};
+
+const moveWidgetToBottom = async (group, widget) => {
+  if (!group?.widgets) return;
+  const idx = group.widgets.findIndex((w) => w.id === widget.id);
+  if (idx === -1 || idx === group.widgets.length - 1) return;
+  const item = group.widgets.splice(idx, 1)[0];
+  group.widgets.push(item);
+  await saveCustomGroupsToDb();
+};
+
+const setWidgetPosition = async (group, widget, targetPos1Based) => {
+  if (!group?.widgets) return;
+  const idx = group.widgets.findIndex((w) => w.id === widget.id);
+  if (idx === -1) return;
+  const targetIdx = Math.max(0, Math.min(targetPos1Based - 1, group.widgets.length - 1));
+  if (targetIdx === idx) return;
+  const item = group.widgets.splice(idx, 1)[0];
+  group.widgets.splice(targetIdx, 0, item);
+  await saveCustomGroupsToDb();
 };
 
 const getWidgetStyle = (widget) => {
