@@ -113,6 +113,10 @@ const handleUpload = async (event) => {
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
+    if (file.size > 100 * 1024 * 1024) {
+      alert(`Tệp "${file.name}" quá lớn (${(file.size / 1024 / 1024).toFixed(1)}MB). Giới hạn tối đa là 100MB.`);
+      continue;
+    }
     try {
       const res = await uploadFile(file);
       if (res?.id) {
@@ -124,13 +128,8 @@ const handleUpload = async (event) => {
         });
       }
     } catch (err) {
-      // Fallback base64
-      const b64 = await toBase64(file);
-      current.push({
-        name: file.name,
-        type: file.type,
-        url: b64,
-      });
+      console.error('Upload error for:', file.name, err);
+      alert(`Lỗi tải lên tệp "${file.name}": ` + (err.response?.data?.errors?.[0]?.message || err.message || 'Quá thời gian tải lên'));
     }
   }
   emit('update:modelValue', current);

@@ -30,6 +30,8 @@ services:
       CORS_ORIGIN: "true"
       CORS_METHODS: "GET,POST,PATCH,DELETE,OPTIONS"
       PUBLIC_URL: "https://api.hscb.online"
+      MAX_PAYLOAD_SIZE: "100mb"
+      FILES_MAX_UPLOAD_SIZE: "100mb"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.directus.rule=Host(`api.hscb.online`)"

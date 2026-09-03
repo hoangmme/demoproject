@@ -7,6 +7,7 @@ export const uploadFile = async (file) => {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
+    timeout: 300000, // 5 phút để tải tệp lớn lên tới 100MB
   });
   return res.data?.data;
 };

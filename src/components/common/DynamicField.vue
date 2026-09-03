@@ -591,6 +591,12 @@ const handleRowFileUpload = async (event, idx) => {
   const file = event.target.files?.[0];
   if (!file) return;
 
+  if (file.size > 100 * 1024 * 1024) {
+    alert(`Tệp "${file.name}" quá lớn (${(file.size / 1024 / 1024).toFixed(1)}MB). Giới hạn tối đa là 100MB.`);
+    event.target.value = '';
+    return;
+  }
+
   uploadingRowIdx.value = idx;
   try {
     const uploaded = await uploadFile(file);
@@ -749,6 +755,12 @@ const triggerCheckboxFileInput = () => {
 const handleCheckboxFileUpload = async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
+
+  if (file.size > 100 * 1024 * 1024) {
+    alert(`Tệp "${file.name}" quá lớn (${(file.size / 1024 / 1024).toFixed(1)}MB). Giới hạn tối đa là 100MB.`);
+    event.target.value = '';
+    return;
+  }
 
   isUploadingCheckboxFile.value = true;
   try {
