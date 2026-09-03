@@ -213,8 +213,8 @@
                 <div style="flex: 1; padding-right: 6px;">
                   <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 3px; flex-shrink: 0;" @click.stop>
-                  <!-- Nút dời trái (lên trước) -->
+                <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;" @click.stop>
+                  <!-- Nút dời trái < (lên trước) -->
                   <button
                     v-if="wIdx > 0"
                     type="button"
@@ -222,9 +222,9 @@
                     @click.stop="moveWidget(group, widget, -1)"
                     title="Dời thẻ sang trái (lên trước)"
                   >
-                    <i class="pi pi-arrow-left" style="font-size: 0.7rem;"></i>
+                    <i class="pi pi-chevron-left" style="font-size: 0.72rem;"></i>
                   </button>
-                  <!-- Nút dời phải (về sau) -->
+                  <!-- Nút dời phải > (về sau) -->
                   <button
                     v-if="wIdx < group.widgets.length - 1"
                     type="button"
@@ -232,22 +232,10 @@
                     @click.stop="moveWidget(group, widget, 1)"
                     title="Dời thẻ sang phải (về sau)"
                   >
-                    <i class="pi pi-arrow-right" style="font-size: 0.7rem;"></i>
+                    <i class="pi pi-chevron-right" style="font-size: 0.72rem;"></i>
                   </button>
-                  <!-- Chọn vị trí trực tiếp (1, 2, 3...) -->
-                  <select
-                    :value="wIdx + 1"
-                    @click.stop
-                    @change.stop="e => setWidgetPosition(group, widget, Number(e.target.value))"
-                    title="Đổi vị trí hiển thị của thẻ này"
-                    style="font-size: 0.7rem; height: 22px; padding: 0 4px; border-radius: 4px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; font-weight: 700; cursor: pointer; outline: none;"
-                  >
-                    <option v-for="n in group.widgets.length" :key="n" :value="n">
-                      #{{ n }}
-                    </option>
-                  </select>
-                  <!-- Sửa -->
-                  <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa khối này">
+                  <!-- Cài đặt khối -->
+                  <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Cài đặt khối này">
                     <i class="pi pi-pencil"></i>
                   </button>
                   <!-- Xóa -->
