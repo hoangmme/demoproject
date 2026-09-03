@@ -449,6 +449,19 @@ export const formatCellForExcel = (val, colDef) => {
             .join(' | ');
         })
         .join('\n');
+    } else if (colDef && colDef.format === 'text_file_loop') {
+      result = val
+        .map((it, idx) => {
+          if (typeof it === 'object' && it !== null) {
+            const t = it.text ? String(it.text).trim() : '';
+            const fName = it.file?.name || (it.file?.url ? 'Tài liệu' : '');
+            const f = fName ? `[Đính kèm: ${fName}]` : '';
+            const combined = [t, f].filter(Boolean).join(' ');
+            return `${idx + 1}. ${combined}`;
+          }
+          return `${idx + 1}. ${it}`;
+        })
+        .join('\n');
     } else if (colDef && colDef.format === 'text_loop') {
       // Mảng text_loop (xuống dòng mỗi mục)
       result = val.join('\n');

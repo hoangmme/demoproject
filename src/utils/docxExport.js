@@ -112,6 +112,31 @@ export function formatFieldValueForDocx(val, col = {}) {
     } catch (e) {}
   }
 
+  // 3b. Format: Văn bản + Tệp đính kèm (Loop)
+  if (format === 'text_file_loop') {
+    let items = val;
+    if (typeof items === 'string' && (items.startsWith('[') || items.startsWith('{'))) {
+      try {
+        items = JSON.parse(items);
+      } catch (e) {}
+    }
+    if (Array.isArray(items)) {
+      return items
+        .map((it, idx) => {
+          if (typeof it === 'object' && it !== null) {
+            const t = it.text ? String(it.text).trim() : '';
+            const fName = it.file?.name || (it.file?.url ? 'Tài liệu' : '');
+            const f = fName ? `[Tệp: ${fName}]` : '';
+            const combined = [t, f].filter(Boolean).join(' ');
+            return `${idx + 1}. ${combined}`;
+          }
+          return `${idx + 1}. ${it}`;
+        })
+        .join('\n');
+    }
+    return String(val).trim();
+  }
+
   // 4. Format: Hộp kiểm nhiều lựa chọn (checkbox) & Dropdown & Text Loop
   if (format === 'checkbox' || format === 'text_loop') {
     if (Array.isArray(val)) {

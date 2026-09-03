@@ -114,6 +114,86 @@
       </div>
     </template>
 
+    <!-- 4c. Text + File Loop (Danh sách Văn bản + Tệp đính kèm lặp) -->
+    <template v-else-if="col.format === 'text_file_loop'">
+      <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+        <div
+          v-for="(item, idx) in textFileList"
+          :key="item.id || idx"
+          style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;"
+        >
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; width: 22px; text-align: center;">
+              #{{ idx + 1 }}
+            </span>
+            <InputText
+              v-model="item.text"
+              size="small"
+              style="flex: 1; font-size: 0.8rem;"
+              :placeholder="'Nhập nội dung văn bản / diễn giải #' + (idx + 1)"
+              @input="syncTextFileModel"
+            />
+            <Button
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              size="small"
+              @click="removeTextFileRow(idx)"
+              title="Xóa mục này"
+              style="padding: 2px 6px;"
+            />
+          </div>
+
+          <!-- File Attachment Area for this row -->
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-left: 30px; gap: 8px;">
+            <div v-if="item.file" style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #ffffff; padding: 3px 8px; border-radius: 6px; border: 1px solid #cbd5e1; max-width: 85%; overflow: hidden;">
+              <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.8rem; flex-shrink: 0;"></i>
+              <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                {{ item.file.name || 'Tài liệu đính kèm' }}
+              </span>
+              <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none; margin-left: 4px;">
+                <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
+              </a>
+              <i
+                class="pi pi-times"
+                style="color: #ef4444; font-size: 0.7rem; cursor: pointer; margin-left: 6px;"
+                title="Xóa tệp đính kèm này"
+                @click="removeRowFile(idx)"
+              ></i>
+            </div>
+            <div v-else style="display: flex; align-items: center; gap: 6px;">
+              <input
+                type="file"
+                :ref="el => setFileInputRef(el, idx)"
+                style="display: none;"
+                @change="e => handleRowFileUpload(e, idx)"
+              />
+              <Button
+                :label="uploadingRowIdx === idx ? 'Đang tải lên...' : '+ Đính kèm tệp'"
+                :icon="uploadingRowIdx === idx ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
+                size="small"
+                outlined
+                severity="secondary"
+                :disabled="uploadingRowIdx === idx"
+                @click="triggerRowFileInput(idx)"
+                style="font-size: 0.72rem; padding: 2px 8px; height: 26px;"
+              />
+            </div>
+          </div>
+        </div>
+
+        <Button
+          label="Thêm mục mới (Văn bản + Tệp)"
+          icon="pi pi-plus"
+          size="small"
+          text
+          severity="success"
+          @click="addTextFileRow"
+          style="font-size: 0.75rem; align-self: flex-start; padding: 3px 8px;"
+        />
+      </div>
+    </template>
+
     <!-- 5. Checkbox (Nhiều lựa chọn) -->
     <template v-else-if="col.format === 'checkbox'">
       <div style="display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 4px 0; align-items: center;">
@@ -240,6 +320,7 @@ import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
 import AppDatePicker from './AppDatePicker.vue';
 import PersonnelAttachments from '@/components/personnel/PersonnelAttachments.vue';
+import { uploadFile, getFileUrl } from '@/api/files';
 
 const props = defineProps({
   modelValue: {
@@ -356,6 +437,12 @@ watch(
       if (currentJson !== incomingJson) {
         initTableRows(val);
       }
+    } else if (fmt === 'text_file_loop') {
+      const currentJson = JSON.stringify(textFileList.value);
+      const incomingJson = JSON.stringify(val);
+      if (currentJson !== incomingJson) {
+        initTextFileList(val);
+      }
     }
   },
   { immediate: true, deep: true }
@@ -377,6 +464,106 @@ const removeTableRow = (idx) => {
 
 const updateTableModel = () => {
   emit('update:modelValue', [...tableRows.value]);
+};
+
+// Text + File Loop (Danh sách Văn bản + Tệp đính kèm)
+const textFileList = ref([]);
+const fileInputRefs = ref({});
+const uploadingRowIdx = ref(-1);
+
+const setFileInputRef = (el, idx) => {
+  if (el) fileInputRefs.value[idx] = el;
+};
+
+const triggerRowFileInput = (idx) => {
+  fileInputRefs.value[idx]?.click();
+};
+
+const initTextFileList = (val) => {
+  if (props.col.format !== 'text_file_loop') return;
+  if (Array.isArray(val)) {
+    textFileList.value = val.map((item, i) => {
+      if (typeof item === 'string') {
+        return { id: 'tf_' + Date.now() + '_' + i, text: item, file: null };
+      }
+      return {
+        id: item.id || ('tf_' + Date.now() + '_' + i),
+        text: item.text || item.content || item.name || '',
+        file: item.file || (item.url ? { name: item.fileName || item.name, url: item.url, id: item.fileId } : null),
+      };
+    });
+    if (textFileList.value.length === 0) {
+      textFileList.value = [{ id: 'tf_' + Date.now(), text: '', file: null }];
+    }
+  } else if (typeof val === 'string' && val.trim()) {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) {
+        initTextFileList(parsed);
+        return;
+      }
+    } catch (e) {}
+    textFileList.value = [{ id: 'tf_' + Date.now(), text: val, file: null }];
+  } else {
+    textFileList.value = [{ id: 'tf_' + Date.now(), text: '', file: null }];
+  }
+};
+
+const addTextFileRow = () => {
+  textFileList.value.push({ id: 'tf_' + Date.now(), text: '', file: null });
+  syncTextFileModel();
+};
+
+const removeTextFileRow = (idx) => {
+  textFileList.value.splice(idx, 1);
+  if (textFileList.value.length === 0) {
+    textFileList.value.push({ id: 'tf_' + Date.now(), text: '', file: null });
+  }
+  syncTextFileModel();
+};
+
+const removeRowFile = (idx) => {
+  if (textFileList.value[idx]) {
+    textFileList.value[idx].file = null;
+    syncTextFileModel();
+  }
+};
+
+const handleRowFileUpload = async (event, idx) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  uploadingRowIdx.value = idx;
+  try {
+    const uploaded = await uploadFile(file);
+    if (uploaded && uploaded.id) {
+      const url = getFileUrl(uploaded.id);
+      if (!textFileList.value[idx]) {
+        textFileList.value[idx] = { id: 'tf_' + Date.now(), text: '', file: null };
+      }
+      textFileList.value[idx].file = {
+        id: uploaded.id,
+        name: file.name,
+        url: url,
+        size: file.size,
+        type: file.type,
+      };
+      if (!textFileList.value[idx].text) {
+        textFileList.value[idx].text = file.name.replace(/\.[^/.]+$/, '');
+      }
+      syncTextFileModel();
+    }
+  } catch (err) {
+    alert('Lỗi tải tệp: ' + (err.response?.data?.errors?.[0]?.message || err.message));
+  } finally {
+    uploadingRowIdx.value = -1;
+    event.target.value = '';
+  }
+};
+
+const syncTextFileModel = () => {
+  const valid = textFileList.value.filter((it) => (it.text && it.text.trim()) || it.file);
+  emit('update:modelValue', valid);
 };
 
 const normalizeArrayValue = (val) => {

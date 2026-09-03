@@ -810,7 +810,13 @@ export const formatGenericCellValue = (val, colDef = {}) => {
         if (Array.isArray(item)) {
           extractTokens(item);
         } else if (typeof item === 'object' && item !== null) {
-          if (item.col0 !== undefined || item.col1 !== undefined || item.col2 !== undefined) {
+          if (item.text !== undefined || item.file !== undefined) {
+            const t = item.text ? String(item.text).trim() : '';
+            const fName = item.file?.name || (item.file?.url ? 'Tài liệu' : '');
+            const f = fName ? `📎 ${fName}` : '';
+            const combined = [t, f].filter(Boolean).join(' - ');
+            if (combined) tokens.push(combined);
+          } else if (item.col0 !== undefined || item.col1 !== undefined || item.col2 !== undefined) {
             tokens.push(Object.values(item).filter(Boolean).join(': '));
           } else {
             tokens.push(item.name || item.label || item.value || JSON.stringify(item));
@@ -836,12 +842,18 @@ export const formatGenericCellValue = (val, colDef = {}) => {
     extractTokens(parsed);
 
     const uniqueTokens = [...new Set(tokens)];
-    return uniqueTokens.join(', ') || '-';
+    return uniqueTokens.join('; ') || '-';
   }
 
   // 3. Xử lý Object
   if (typeof parsed === 'object' && parsed !== null) {
     if (parsed instanceof Date) return formatDate(parsed);
+    if (parsed.text !== undefined || parsed.file !== undefined) {
+      const t = parsed.text ? String(parsed.text).trim() : '';
+      const fName = parsed.file?.name || (parsed.file?.url ? 'Tài liệu' : '');
+      const f = fName ? `📎 ${fName}` : '';
+      return [t, f].filter(Boolean).join(' - ') || '-';
+    }
     if (parsed.col0 !== undefined || parsed.col1 !== undefined) {
       return Object.values(parsed).filter(Boolean).join(': ');
     }

@@ -294,6 +294,30 @@
               </span>
             </template>
 
+            <!-- Text + File Loop column -->
+            <template v-else-if="col.format === 'text_file_loop'">
+              <div v-if="getTextFileLoopItems(data, col.id).length > 0" style="display: flex; flex-direction: column; gap: 4px;">
+                <div
+                  v-for="(it, iIdx) in getTextFileLoopItems(data, col.id)"
+                  :key="iIdx"
+                  style="display: flex; align-items: center; gap: 6px; font-size: 0.76rem; line-height: 1.3;"
+                >
+                  <span v-if="it.text" style="color: #1e293b;">{{ it.text }}</span>
+                  <a
+                    v-if="it.file && it.file.url"
+                    :href="it.file.url"
+                    target="_blank"
+                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500;"
+                    title="Mở xem tệp"
+                  >
+                    <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                    <span>{{ it.file.name || 'Tệp' }}</span>
+                  </a>
+                </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+
             <!-- General columns (Direct value matching Chi tiết 100%) -->
             <template v-else>
               <span>{{ getDisplayValue(data, col.id) }}</span>
@@ -1085,6 +1109,19 @@ const activeColumns = computed(() => {
       };
     });
 });
+
+const getTextFileLoopItems = (data, colId) => {
+  const val = data?.[colId] ?? (data?.custom_data ? data.custom_data[colId] : null);
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+    try {
+      const p = JSON.parse(val);
+      if (Array.isArray(p)) return p;
+    } catch (e) {}
+  }
+  return [];
+};
 
 const activeRelativeColumns = computed(() => {
   const map = {};

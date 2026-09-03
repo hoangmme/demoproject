@@ -2629,6 +2629,7 @@ const formatOptions = [
   { label: 'Dropdown (Lựa chọn đơn)', value: 'dropdown' },
   { label: 'Cột Công thức (Formula / Trạng thái)', value: 'formula' },
   { label: 'Tệp đính kèm (File/Ảnh/PDF)', value: 'file' },
+  { label: 'Văn bản + Tệp đính kèm (Loop)', value: 'text_file_loop' },
 ];
 
 const widthOptions = [
