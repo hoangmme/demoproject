@@ -61,16 +61,6 @@ export const getCollectionFields = async (collection = 'personnels') => {
     const res = await apiClient.get(`/fields/${collection}`);
     return res.data?.data || [];
   } catch (e) {
-    if (e?.response?.status === 403) return null;
-    if (collection === 'personnels') {
-      try {
-        const res = await apiClient.get('/fields/personnel');
-        return res.data?.data || [];
-      } catch (err) {
-        if (err?.response?.status === 403) return null;
-        return [];
-      }
-    }
     return [];
   }
 };
@@ -106,14 +96,6 @@ export const createDirectusField = async (collection = 'personnels', colDef) => 
     const res = await apiClient.post(`/fields/${collection}`, payload);
     return res.data?.data;
   } catch (e) {
-    if (collection === 'personnels') {
-      try {
-        const res = await apiClient.post('/fields/personnel', payload);
-        return res.data?.data;
-      } catch (err) {
-        return null;
-      }
-    }
     return null;
   }
 };
@@ -142,14 +124,6 @@ export const updateDirectusField = async (collection = 'personnels', fieldName, 
     const res = await apiClient.patch(`/fields/${collection}/${fieldName}`, payload);
     return res.data?.data;
   } catch (e) {
-    if (collection === 'personnels') {
-      try {
-        const res = await apiClient.patch(`/fields/personnel/${fieldName}`, payload);
-        return res.data?.data;
-      } catch (err) {
-        return null;
-      }
-    }
     return null;
   }
 };
@@ -163,14 +137,6 @@ export const deleteDirectusField = async (collection = 'personnels', fieldName) 
     const res = await apiClient.delete(`/fields/${collection}/${fieldName}`);
     return res.data?.data;
   } catch (e) {
-    if (collection === 'personnels') {
-      try {
-        const res = await apiClient.delete(`/fields/personnel/${fieldName}`);
-        return res.data?.data;
-      } catch (err) {
-        return null;
-      }
-    }
     return null;
   }
 };

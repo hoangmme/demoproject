@@ -32,12 +32,27 @@ apiClient.interceptors.request.use(
       if (session) {
         const parsed = JSON.parse(session);
         if (parsed?.access_token) {
-          token = parsed.access_token;
+          // Kiểm tra nếu JWT token đã hết hạn (sau 15 phút) thì dùng STATIC_TOKEN Admin
+          try {
+            const parts = parsed.access_token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              if (payload.exp && Date.now() >= (payload.exp - 30) * 1000) {
+                token = STATIC_TOKEN;
+              } else {
+                token = parsed.access_token;
+              }
+            } else {
+              token = parsed.access_token;
+            }
+          } catch (err) {
+            token = parsed.access_token;
+          }
         }
       }
     } catch (e) {}
 
-    if (token && token.trim() !== '' && !config.headers['Authorization']) {
+    if (token && token.trim() !== '') {
       config.headers['Authorization'] = `Bearer ${token.trim()}`;
     }
     return config;
