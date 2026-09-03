@@ -244,6 +244,38 @@ const initFormData = (val) => {
       custom_data: { ...cd, ...parsedVal },
     };
     delete form.value.custom_data.custom_data;
+
+    // Đồng bộ 2 chiều các trường định danh và tương đương giữa Database gốc và cấu hình cột
+    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+    const cccdVal = form.value[pKeyField] || form.value.cccdparent || form.value.cccd || form.value.so_cccd || cd?.[pKeyField] || cd?.cccdparent || cd?.cccd || '';
+    if (cccdVal) {
+      form.value[pKeyField] = cccdVal;
+      form.value.cccdparent = cccdVal;
+      form.value.cccd = cccdVal;
+    }
+
+    const posVal = form.value.positionName || form.value.position || cd?.positionName || cd?.position || '';
+    if (posVal) {
+      form.value.positionName = posVal;
+      form.value.position = posVal;
+    }
+
+    const deptVal = form.value.departmentName || form.value.department || cd?.departmentName || cd?.department || '';
+    if (deptVal) {
+      form.value.departmentName = deptVal;
+      form.value.department = deptVal;
+    }
+
+    // Đảm bảo tất cả các cột cấu hình đều nhận đúng giá trị nếu có trong custom_data
+    (personnelStore.importMappingPersonnel || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && (form.value[c.id] === undefined || form.value[c.id] === null || form.value[c.id] === '')) {
+          if (cd && cd[c.id] !== undefined && cd[c.id] !== null && cd[c.id] !== '') {
+            form.value[c.id] = cd[c.id];
+          }
+        }
+      });
+    });
   } else {
     isEdit.value = false;
     form.value = {
