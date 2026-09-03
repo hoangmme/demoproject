@@ -150,7 +150,7 @@
                       :key="c.id"
                       :value="c.id"
                     >
-                      Chỉ hiện dòng có: {{ c.label }}
+                      Chỉ hiện dòng có: {{ c.colIndex && !c.isVirtual ? `[Cột ${c.colIndex}] ` : '' }}{{ c.label }}
                     </option>
                   </select>
                 </div>

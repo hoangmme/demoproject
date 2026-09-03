@@ -367,6 +367,9 @@
                 style="accent-color: #1e3a8a;"
               />
               <span style="font-weight: 500; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="col.label">
+                <span v-if="col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
+                  Cột {{ col.colIndex }}:
+                </span>
                 {{ col.label }}
               </span>
             </label>
@@ -599,7 +602,7 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
-import { formatDate, parseDateObj, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateObj, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue } from '@/utils/formatters';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
@@ -1213,27 +1216,29 @@ const allAvailableColumnsList = computed(() => {
   const src = currentDashboardConfig.value?.source || 'trips';
   const seen = new Set();
   const rawList = [];
-  let colIdx = 0;
 
   if (src === 'trips') {
+    const colMap = computeColumnIndexMap(personnelStore.importMappingTrips || []);
     (personnelStore.importMappingTrips || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
-          colIdx++;
+          const rawIdx = colMap[c.id];
+          const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
           rawList.push({
             id: c.id,
             label: c.label || c.id,
-            colIndex: colIdx,
+            colIndex: idxText,
             width: c.width || '150px',
             tableWidth: c.tableWidth || null,
             format: c.format,
+            isVirtual: false,
           });
         }
       });
     });
 
-    // Các cột ánh xạ thông tin Cán bộ / Thân nhân
+    // Các cột ảo ánh xạ thông tin Cán bộ / Thân nhân (Không có số cột nhưng VẪN HIỆN Ở LỌC & CỘT)
     const virtualTripCols = [
       { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
       { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
@@ -1255,24 +1260,27 @@ const allAvailableColumnsList = computed(() => {
       }
     });
   } else if (src === 'relatives') {
+    const colMap = computeColumnIndexMap(personnelStore.importMappingRelative || []);
     (personnelStore.importMappingRelative || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
-          colIdx++;
+          const rawIdx = colMap[c.id];
+          const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
           rawList.push({
             id: c.id,
             label: c.label || c.id,
-            colIndex: colIdx,
+            colIndex: idxText,
             width: c.width || '150px',
             tableWidth: c.tableWidth || null,
             format: c.format,
+            isVirtual: false,
           });
         }
       });
     });
 
-    // Các cột ảo ánh xạ thông tin Cán bộ / Thân nhân (giống Trips)
+    // Các cột ảo ánh xạ thông tin Cán bộ / Thân nhân (Không có số cột nhưng VẪN HIỆN Ở LỌC & CỘT)
     const virtualRelativeCols = [
       { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
       { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
@@ -1293,24 +1301,27 @@ const allAvailableColumnsList = computed(() => {
     });
   } else {
     // personnel
+    const colMap = computeColumnIndexMap(personnelStore.importMappingPersonnel || []);
     (personnelStore.importMappingPersonnel || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
-          colIdx++;
+          const rawIdx = colMap[c.id];
+          const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
           rawList.push({
             id: c.id,
             label: c.label || c.id,
-            colIndex: colIdx,
+            colIndex: idxText,
             width: c.width || '150px',
             tableWidth: c.tableWidth || null,
             format: c.format,
+            isVirtual: false,
           });
         }
       });
     });
 
-    // Cột ảo Thông tin cán bộ cho Cán bộ
+    // Cột ảo Thông tin cán bộ cho Cán bộ (Không có số cột nhưng VẪN HIỆN Ở LỌC & CỘT)
     const virtualPersonnelCols = [
       { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
     ];

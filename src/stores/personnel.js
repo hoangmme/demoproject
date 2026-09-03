@@ -10,7 +10,7 @@ import {
 } from '@/api/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { logActivity } from '@/api/audit';
-import { cleanObjectWhitespace } from '@/utils/formatters';
+import { cleanObjectWhitespace, computeColumnIndexMap } from '@/utils/formatters';
 
 export const usePersonnelStore = defineStore('personnel', {
   state: () => ({
@@ -26,15 +26,9 @@ export const usePersonnelStore = defineStore('personnel', {
     importMappingPersonnel: [],
     importMappingRelative: [],
     importMappingTrips: [],
-    systemKeyConfig: {
-      personnelKeyField: 'cccdparent',
-      relativeParentKeyField: 'cccdparent',
-      relativeKeyField: 'cccdthannhan',
-    },
+    systemKeyConfig: null,
   }),
   getters: {
-    allTrips: (state) => state.tripsList || [],
-    flattenedRelatives: (state) => state.relativesList || [],
     departmentMap: (state) => {
       const map = {};
       state.departments.forEach((d) => {
@@ -45,18 +39,24 @@ export const usePersonnelStore = defineStore('personnel', {
     allAvailableColumns: (state) => {
       const list = [];
       const seen = new Set();
+      const colMap = computeColumnIndexMap(state.importMappingPersonnel || []);
 
       (state.importMappingPersonnel || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
           if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
             seen.add(c.id);
+            const rawIdx = colMap[c.id];
+            const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
             list.push({
               id: c.id,
               label: c.label || c.id,
-              width: '160px',
+              colIndex: idxText,
+              width: c.width || '160px',
+              tableWidth: c.tableWidth || null,
               format: c.format || 'text',
               options: c.options || '',
               group: g.group,
+              isVirtual: false,
             });
           }
         });
@@ -64,12 +64,12 @@ export const usePersonnelStore = defineStore('personnel', {
 
       if (list.length === 0) {
         return [
-          { id: 'code', label: 'Mã CB', width: '110px' },
-          { id: 'name', label: 'Họ và tên', width: '200px' },
-          { id: 'birthYear', label: 'Năm sinh', width: '120px' },
-          { id: 'departmentId', label: 'Phòng ban', width: '160px' },
-          { id: 'position', label: 'Chức vụ', width: '140px' },
-          { id: 'cccdparent', label: 'Số CCCD', width: '140px' },
+          { id: 'code', label: 'Mã CB', colIndex: '1', width: '110px', isVirtual: false },
+          { id: 'name', label: 'Họ và tên', colIndex: '2', width: '200px', isVirtual: false },
+          { id: 'birthYear', label: 'Năm sinh', colIndex: '3', width: '120px', isVirtual: false },
+          { id: 'departmentId', label: 'Phòng ban', colIndex: '4', width: '160px', isVirtual: false },
+          { id: 'position', label: 'Chức vụ', colIndex: '5', width: '140px', isVirtual: false },
+          { id: 'cccdparent', label: 'Số CCCD', colIndex: '6', width: '140px', isVirtual: false },
         ];
       }
       return list;
@@ -77,18 +77,24 @@ export const usePersonnelStore = defineStore('personnel', {
     allAvailablePersonnelColumns: (state) => {
       const list = [];
       const seen = new Set();
+      const colMap = computeColumnIndexMap(state.importMappingPersonnel || []);
 
       (state.importMappingPersonnel || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
           if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
             seen.add(c.id);
+            const rawIdx = colMap[c.id];
+            const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
             list.push({
               id: c.id,
               label: c.label || c.id,
-              width: '160px',
+              colIndex: idxText,
+              width: c.width || '160px',
+              tableWidth: c.tableWidth || null,
               format: c.format || 'text',
               options: c.options || '',
               group: g.group,
+              isVirtual: false,
             });
           }
         });
@@ -96,12 +102,12 @@ export const usePersonnelStore = defineStore('personnel', {
 
       if (list.length === 0) {
         return [
-          { id: 'code', label: 'Mã CB', width: '110px' },
-          { id: 'name', label: 'Họ và tên', width: '200px' },
-          { id: 'birthYear', label: 'Năm sinh', width: '120px' },
-          { id: 'departmentId', label: 'Phòng ban', width: '160px' },
-          { id: 'position', label: 'Chức vụ', width: '140px' },
-          { id: 'cccdparent', label: 'Số CCCD', width: '140px' },
+          { id: 'code', label: 'Mã CB', colIndex: '1', width: '110px', isVirtual: false },
+          { id: 'name', label: 'Họ và tên', colIndex: '2', width: '200px', isVirtual: false },
+          { id: 'birthYear', label: 'Năm sinh', colIndex: '3', width: '120px', isVirtual: false },
+          { id: 'departmentId', label: 'Phòng ban', colIndex: '4', width: '160px', isVirtual: false },
+          { id: 'position', label: 'Chức vụ', colIndex: '5', width: '140px', isVirtual: false },
+          { id: 'cccdparent', label: 'Số CCCD', colIndex: '6', width: '140px', isVirtual: false },
         ];
       }
       return list;
@@ -109,31 +115,48 @@ export const usePersonnelStore = defineStore('personnel', {
     allAvailableRelativeColumns: (state) => {
       const list = [];
       const seen = new Set();
+      const colMap = computeColumnIndexMap(state.importMappingRelative || []);
 
       (state.importMappingRelative || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
           if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
             seen.add(c.id);
+            const rawIdx = colMap[c.id];
+            const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
             list.push({
               id: c.id,
               label: c.label || c.id,
-              width: '160px',
+              colIndex: idxText,
+              width: c.width || '160px',
+              tableWidth: c.tableWidth || null,
               format: c.format || 'text',
               options: c.options || '',
               group: g.group,
+              isVirtual: false,
             });
           }
         });
       });
 
+      const virtualRelCols = [
+        { id: 'parentName', label: 'Cán bộ liên quan (Họ tên)', width: '180px', isVirtual: true, colIndex: null },
+        { id: 'parentDepartment', label: 'Đơn vị công tác CB', width: '180px', isVirtual: true, colIndex: null },
+      ];
+      virtualRelCols.forEach((vc) => {
+        if (!seen.has(vc.id)) {
+          seen.add(vc.id);
+          list.push(vc);
+        }
+      });
+
       if (list.length === 0) {
         return [
-          { id: 'relationshipName', label: 'Mối quan hệ', width: '130px' },
-          { id: 'relativeName', label: 'Họ và tên Thân nhân', width: '180px' },
-          { id: 'birthYear', label: 'Năm sinh', width: '110px' },
-          { id: 'currentAddress', label: 'Nơi cư trú', width: '180px' },
-          { id: 'occupation', label: 'Nghề nghiệp', width: '160px' },
-          { id: 'countryName', label: 'Quốc gia', width: '140px' },
+          { id: 'relationshipName', label: 'Mối quan hệ', colIndex: '1', width: '130px', isVirtual: false },
+          { id: 'relativeName', label: 'Họ và tên Thân nhân', colIndex: '2', width: '180px', isVirtual: false },
+          { id: 'birthYear', label: 'Năm sinh', colIndex: '3', width: '110px', isVirtual: false },
+          { id: 'currentAddress', label: 'Nơi cư trú', colIndex: '4', width: '180px', isVirtual: false },
+          { id: 'occupation', label: 'Nghề nghiệp', colIndex: '5', width: '160px', isVirtual: false },
+          { id: 'countryName', label: 'Quốc gia', colIndex: '6', width: '140px', isVirtual: false },
         ];
       }
       return list;
