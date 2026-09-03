@@ -267,7 +267,7 @@
           :bodyStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
         >
           <template #header>
-            <span class="table-col-header-ellipsis" :title="col.label">{{ col.label }}</span>
+            <span class="table-col-header-wrap">{{ col.label }}</span>
           </template>
           <template #body="{ data }">
             <!-- Cột ảo Thông tin cán bộ -->
@@ -533,7 +533,7 @@
           :bodyStyle="{ width: col.tableWidth || col.width || '150px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '150px') }"
         >
           <template #header>
-            <span class="table-col-header-ellipsis" :title="col.label">{{ col.label }}</span>
+            <span class="table-col-header-wrap">{{ col.label }}</span>
           </template>
           <template #body="{ data }">
             <span :class="col.id === 'countryName' || col.id === 'country' || col.id === 'content' ? 'badge-pill badge-blue' : ''">
@@ -2307,19 +2307,20 @@ const onPersonDeleted = () => {};
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.table-col-header-ellipsis {
-  display: inline-block;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
+.table-col-header-wrap {
+  display: block;
+  width: 100%;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.35 !important;
 }
 :deep(.p-datatable .p-datatable-thead > tr > th .p-column-title),
 :deep(.p-datatable .p-datatable-thead > tr > th .p-column-header-content) {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.35 !important;
   max-width: 100%;
 }
 </style>

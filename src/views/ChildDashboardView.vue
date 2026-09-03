@@ -208,9 +208,9 @@
           :bodyStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
         >
           <template #header>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <span class="table-col-header-ellipsis" :title="col.label">{{ col.label }}</span>
-              <i v-if="isNameColumn(col.id)" class="pi pi-cog" style="font-size: 0.7rem; cursor: pointer; color: #94a3b8; margin-left: 2px;" @click.stop="toggleNameColConfig($event)" title="Tùy chỉnh nội dung cột" />
+            <div style="display: flex; align-items: center; gap: 4px; width: 100%;">
+              <span class="table-col-header-wrap">{{ col.label }}</span>
+              <i v-if="isNameColumn(col.id)" class="pi pi-cog" style="font-size: 0.7rem; cursor: pointer; color: #94a3b8; margin-left: 2px; flex-shrink: 0;" @click.stop="toggleNameColConfig($event)" title="Tùy chỉnh nội dung cột" />
             </div>
           </template>
           <template #body="{ data }">
@@ -3102,19 +3102,20 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.table-col-header-ellipsis {
-  display: inline-block;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
+.table-col-header-wrap {
+  display: block;
+  width: 100%;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.35 !important;
 }
 :deep(.p-datatable .p-datatable-thead > tr > th .p-column-title),
 :deep(.p-datatable .p-datatable-thead > tr > th .p-column-header-content) {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.35 !important;
   max-width: 100%;
 }
 

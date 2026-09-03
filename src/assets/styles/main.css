@@ -550,7 +550,18 @@ html, body {
   padding: 0.65rem 0.75rem !important;
   border: none !important;
   border-bottom: 1px solid #e5e7eb !important;
-  white-space: nowrap !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.35 !important;
+}
+
+.p-datatable-thead > tr > th .p-column-title,
+.p-datatable-thead > tr > th .p-column-header-content {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.35 !important;
 }
 
 .p-datatable-thead > tr > th.p-sortable-column {
