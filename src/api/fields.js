@@ -61,11 +61,13 @@ export const getCollectionFields = async (collection = 'personnels') => {
     const res = await apiClient.get(`/fields/${collection}`);
     return res.data?.data || [];
   } catch (e) {
+    if (e?.response?.status === 403) return null;
     if (collection === 'personnels') {
       try {
         const res = await apiClient.get('/fields/personnel');
         return res.data?.data || [];
       } catch (err) {
+        if (err?.response?.status === 403) return null;
         return [];
       }
     }
@@ -192,6 +194,11 @@ export const syncCollectionFields = async (collection = 'personnels', activeCols
 
   try {
     const existingFields = await getCollectionFields(collection);
+    // Nếu quyền bị 403 (không phải Admin Directus), bỏ qua đồng bộ schema vật lý (hệ thống lưu vào custom_data an toàn)
+    if (existingFields === null) {
+      return;
+    }
+
     const existingFieldMap = {};
     existingFields.forEach((f) => {
       if (f.field) existingFieldMap[f.field] = f;

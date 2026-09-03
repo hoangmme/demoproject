@@ -428,44 +428,6 @@ const initTableRows = (val) => {
   }
 };
 
-watch(
-  () => [props.modelValue, props.col.format, props.col.options],
-  ([val, fmt]) => {
-    if (fmt === 'table_2col' || fmt === 'table_loop') {
-      const currentJson = JSON.stringify(tableRows.value);
-      const incomingJson = JSON.stringify(val);
-      if (currentJson !== incomingJson) {
-        initTableRows(val);
-      }
-    } else if (fmt === 'text_file_loop') {
-      const currentJson = JSON.stringify(textFileList.value);
-      const incomingJson = JSON.stringify(val);
-      if (currentJson !== incomingJson) {
-        initTextFileList(val);
-      }
-    }
-  },
-  { immediate: true, deep: true }
-);
-
-const addTableRow = () => {
-  const row = {};
-  tableHeaders.value.forEach((_, idx) => {
-    row['col' + idx] = '';
-  });
-  tableRows.value.push(row);
-  emit('update:modelValue', [...tableRows.value]);
-};
-
-const removeTableRow = (idx) => {
-  tableRows.value.splice(idx, 1);
-  emit('update:modelValue', [...tableRows.value]);
-};
-
-const updateTableModel = () => {
-  emit('update:modelValue', [...tableRows.value]);
-};
-
 // Text + File Loop (Danh sách Văn bản + Tệp đính kèm)
 const textFileList = ref([]);
 const fileInputRefs = ref({});
@@ -564,6 +526,44 @@ const handleRowFileUpload = async (event, idx) => {
 const syncTextFileModel = () => {
   const valid = textFileList.value.filter((it) => (it.text && it.text.trim()) || it.file);
   emit('update:modelValue', valid);
+};
+
+watch(
+  () => [props.modelValue, props.col.format, props.col.options],
+  ([val, fmt]) => {
+    if (fmt === 'table_2col' || fmt === 'table_loop') {
+      const currentJson = JSON.stringify(tableRows.value);
+      const incomingJson = JSON.stringify(val);
+      if (currentJson !== incomingJson) {
+        initTableRows(val);
+      }
+    } else if (fmt === 'text_file_loop') {
+      const currentJson = JSON.stringify(textFileList.value);
+      const incomingJson = JSON.stringify(val);
+      if (currentJson !== incomingJson) {
+        initTextFileList(val);
+      }
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+const addTableRow = () => {
+  const row = {};
+  tableHeaders.value.forEach((_, idx) => {
+    row['col' + idx] = '';
+  });
+  tableRows.value.push(row);
+  emit('update:modelValue', [...tableRows.value]);
+};
+
+const removeTableRow = (idx) => {
+  tableRows.value.splice(idx, 1);
+  emit('update:modelValue', [...tableRows.value]);
+};
+
+const updateTableModel = () => {
+  emit('update:modelValue', [...tableRows.value]);
 };
 
 const normalizeArrayValue = (val) => {
