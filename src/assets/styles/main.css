@@ -481,6 +481,17 @@ html, body {
   background-color: transparent !important;
 }
 
+.p-button-outlined.p-button-success {
+  border-color: #86efac !important;
+  color: #166534 !important;
+  background-color: #f0fdf4 !important;
+}
+.p-button-outlined.p-button-success:hover {
+  background-color: #dcfce7 !important;
+  border-color: #22c55e !important;
+  color: #14532d !important;
+}
+
 .p-button-outlined.p-button-secondary {
   border-color: #d1d5db !important;
   color: #4b5563 !important;

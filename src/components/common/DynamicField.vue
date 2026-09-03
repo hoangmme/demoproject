@@ -119,16 +119,14 @@
       <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
         <!-- Trạng thái chưa ấn (chưa có mục nào): Hiện nút bấm ban đầu -->
         <div v-if="textFileList.length === 0" style="display: flex; align-items: center;">
-          <Button
+          <button
             type="button"
-            label="Thêm mục (Văn bản + Tệp đính kèm)"
-            icon="pi pi-plus"
-            size="small"
-            outlined
-            severity="success"
+            class="btn-add-text-file-initial"
             @click.stop="addTextFileRow"
-            style="font-size: 0.78rem; padding: 5px 12px;"
-          />
+          >
+            <i class="pi pi-plus" style="font-size: 0.8rem;"></i>
+            <span>Thêm mục (Văn bản + Tệp đính kèm)</span>
+          </button>
         </div>
         <template v-else>
           <div
@@ -198,16 +196,14 @@
             </div>
           </div>
 
-          <Button
+          <button
             type="button"
-            label="Thêm mục mới (Văn bản + Tệp)"
-            icon="pi pi-plus"
-            size="small"
-            outlined
-            severity="success"
+            class="btn-add-text-file-more"
             @click.stop="addTextFileRow"
-            style="font-size: 0.75rem; align-self: flex-start; padding: 4px 10px;"
-          />
+          >
+            <i class="pi pi-plus" style="font-size: 0.75rem;"></i>
+            <span>Thêm mục mới (Văn bản + Tệp)</span>
+          </button>
         </template>
       </div>
     </template>
@@ -708,5 +704,47 @@ const syncSingleConditional = () => {
 .custom-col-select:focus {
   border-color: #16a34a;
   box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+
+.btn-add-text-file-initial {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1.5px dashed #86efac;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-add-text-file-initial:hover {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #14532d;
+}
+
+.btn-add-text-file-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f8fafc;
+  color: #166534;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: all 0.15s ease;
+}
+
+.btn-add-text-file-more:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
 }
 </style>
