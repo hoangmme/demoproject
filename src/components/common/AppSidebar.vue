@@ -1,6 +1,16 @@
 <template>
-  <aside class="app-sidebar">
-    <div class="app-sidebar-header" style="padding: 1.15rem 0.5rem; text-align: center;">
+  <aside class="app-sidebar" style="position: relative; overflow: hidden;">
+    <!-- Lớp phủ ảnh nền tùy biến cover với độ trong suốt tùy chỉnh -->
+    <div
+      v-if="sidebarCustomBg"
+      class="sidebar-bg-layer"
+      :style="{
+        backgroundImage: `url(${sidebarCustomBg})`,
+        opacity: Number(sidebarBgOpacity) / 100
+      }"
+    ></div>
+
+    <div class="app-sidebar-header" style="position: relative; z-index: 1; padding: 1.15rem 0.5rem; text-align: center;">
       <img
         src="/bo-cong-an-logo.png"
         alt="Bộ Công An"
@@ -12,13 +22,13 @@
       <div style="font-size: 0.76rem; font-weight: 800; color: #000000; margin-top: 4px; line-height: 1.3; white-space: nowrap;">
         PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
       </div>
-      <div style="font-size: 0.71rem; font-weight: 800; color: #1e293b; background: rgba(255, 255, 255, 0.45); border-radius: 4px; margin: 8px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 4px 2px;">
+      <div style="font-size: 0.71rem; font-weight: 800; color: #fde047; margin: 8px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
         <div style="white-space: nowrap;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
         <div style="margin-top: 2px; white-space: nowrap;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
       </div>
     </div>
 
-    <nav class="app-sidebar-nav">
+    <nav class="app-sidebar-nav" style="position: relative; z-index: 1;">
       <router-link to="/dashboard" class="app-nav-item">
         <i class="pi pi-chart-pie"></i>
         <span>Thống kê</span>
@@ -208,7 +218,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
@@ -370,9 +380,52 @@ const confirmQuickTripNavigate = () => {
     });
   }
 };
+
+const sidebarCustomBg = ref('');
+const sidebarBgOpacity = ref(40);
+
+const loadSidebarBg = async () => {
+  try {
+    const bg = await getAppSettings('sidebar_custom_bg');
+    if (bg) sidebarCustomBg.value = typeof bg === 'string' ? bg : (bg.value || '');
+    else sidebarCustomBg.value = '';
+
+    const op = await getAppSettings('sidebar_bg_opacity');
+    if (op !== null && op !== undefined && op !== '') {
+      sidebarBgOpacity.value = Number(op);
+    } else {
+      sidebarBgOpacity.value = 40;
+    }
+  } catch (e) {
+    sidebarCustomBg.value = '';
+  }
+};
+
+onMounted(() => {
+  loadSidebarBg();
+  window.addEventListener('sidebar-bg-updated', loadSidebarBg);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('sidebar-bg-updated', loadSidebarBg);
+});
 </script>
 
 <style scoped>
+.sidebar-bg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.3s ease, background-image 0.3s ease;
+}
+
 .sidebar-input-btn {
   display: flex;
   align-items: center;

@@ -797,6 +797,16 @@ const validateRowItem = (rowItem) => {
     }
   });
 
+  // Kiểm tra các cột được cấu hình Bắt buộc (col.required === true)
+  (targetColumns.value || []).forEach((col) => {
+    if (col.required) {
+      const val = data[col.id];
+      if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') {
+        issues.push(`Thiếu trường bắt buộc: ${col.label || col.id}`);
+      }
+    }
+  });
+
   rowItem.issues = issues;
 };
 

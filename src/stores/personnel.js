@@ -10,6 +10,7 @@ import {
 } from '@/api/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { logActivity } from '@/api/audit';
+import { cleanObjectWhitespace } from '@/utils/formatters';
 
 export const usePersonnelStore = defineStore('personnel', {
   state: () => ({
@@ -550,30 +551,44 @@ export const usePersonnelStore = defineStore('personnel', {
           }
         }
 
-        // 5. Lưu chuỗi custom_data làm bản sao lưu an toàn
-        delete customData.custom_data;
-        payload.custom_data = JSON.stringify(customData);
-
-        let saved = null;
-        if (payload.id) {
-          saved = await updatePersonnel(payload.id, payload);
-          logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name || payload.name} (${formData.code || payload.code || payload.id})`).catch(() => {});
-        } else {
-          payload.id = 'CB-' + Date.now();
-          if (!payload.code) payload.code = payload.id;
-          saved = await createPersonnel(payload);
-          logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name || payload.name}`).catch(() => {});
+        // 5. Kiểm tra các trường BẮT BUỘC NHẬP (col.required === true)
+        const allPersonnelCols = (this.importMappingPersonnel || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
+        for (const col of allPersonnelCols) {
+          if (col.required) {
+            const rawVal = formData[col.id] ?? customData[col.id];
+            if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '' || String(rawVal).trim() === '-') {
+              throw new Error(`Vui lòng nhập trường bắt buộc: "${col.label || col.id}"!`);
+            }
+          }
         }
 
-        // 6. Fast optimistic in-memory update
+        // 6. Tự động chuẩn hóa chính tả khoảng trắng và bảng mã tiếng Việt Unicode NFC
+        const cleanPayload = cleanObjectWhitespace(payload);
+        const cleanCustomData = cleanObjectWhitespace(customData);
+
+        delete cleanCustomData.custom_data;
+        cleanPayload.custom_data = JSON.stringify(cleanCustomData);
+
+        let saved = null;
+        if (cleanPayload.id) {
+          saved = await updatePersonnel(cleanPayload.id, cleanPayload);
+          logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name || cleanPayload.name} (${formData.code || cleanPayload.code || cleanPayload.id})`).catch(() => {});
+        } else {
+          cleanPayload.id = 'CB-' + Date.now();
+          if (!cleanPayload.code) cleanPayload.code = cleanPayload.id;
+          saved = await createPersonnel(cleanPayload);
+          logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name || cleanPayload.name}`).catch(() => {});
+        }
+
+        // 7. Fast optimistic in-memory update
         const fullSavedObj = {
-          ...payload,
-          ...customData,
-          custom_data: JSON.stringify(customData),
-          trips: Array.isArray(customData.trips) ? customData.trips : [],
-          relatives: Array.isArray(customData.relatives) ? customData.relatives : [],
-          flags: customData.flags || {},
-          files: customData.files || [],
+          ...cleanPayload,
+          ...cleanCustomData,
+          custom_data: JSON.stringify(cleanCustomData),
+          trips: Array.isArray(cleanCustomData.trips) ? cleanCustomData.trips : [],
+          relatives: Array.isArray(cleanCustomData.relatives) ? cleanCustomData.relatives : [],
+          flags: cleanCustomData.flags || {},
+          files: cleanCustomData.files || [],
         };
 
         const existingIdx = this.personnelList.findIndex((p) => String(p.id) === String(payload.id));

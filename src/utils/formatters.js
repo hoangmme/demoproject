@@ -877,3 +877,57 @@ export const formatGenericCellValue = (val, colDef = {}) => {
 
   return str;
 };
+
+/**
+ * Chuẩn hóa chính tả khoảng trắng và bảng mã tiếng Việt Unicode NFC
+ */
+export const normalizeVietnameseText = (val) => {
+  if (val === undefined || val === null) return '';
+  if (typeof val !== 'string') return val;
+
+  let str = String(val);
+
+  // 1. Chuẩn hóa bảng mã Unicode sang NFC (Dựng sẵn)
+  try {
+    str = str.normalize('NFC');
+  } catch (e) {}
+
+  // 2. Xóa các ký tự khoảng trắng ẩn đặc biệt (Zero-width space, Non-breaking space \u00A0...)
+  str = str.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\u00A0/g, ' ');
+
+  // 3. Rút gọn nhiều khoảng trắng liên tiếp trong văn bản thành 1 khoảng trắng
+  str = str.replace(/[ \t\r\f]+/g, ' ');
+
+  // 4. Chuẩn hóa khoảng trắng quanh dấu câu:
+  // - Xóa khoảng trắng trước dấu phẩy, chấm, hai chấm, chấm phẩy, chấm hỏi, chấm than
+  str = str.replace(/\s+([,.:;?!])/g, '$1');
+  // - Đảm bảo sau dấu phẩy, chấm, hai chấm, chấm phẩy có 1 khoảng trắng (nếu sau đó là chữ/số)
+  str = str.replace(/([,.:;?!])([^\s\d,.:;?!])/g, '$1 $2');
+  // - Chuẩn hóa khoảng trắng bên trong ngoặc đơn ( text ) -> (text)
+  str = str.replace(/\(\s+/g, '(').replace(/\s+\)/g, ')');
+
+  // 5. Trim đầu và cuối chuỗi
+  return str.trim();
+};
+
+/**
+ * Đệ quy làm sạch khoảng trắng và chuẩn hóa Unicode cho toàn bộ các trường của một object/array
+ */
+export const cleanObjectWhitespace = (obj) => {
+  if (obj === undefined || obj === null) return obj;
+  if (typeof obj === 'string') {
+    return normalizeVietnameseText(obj);
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => cleanObjectWhitespace(item));
+  }
+  if (typeof obj === 'object') {
+    if (obj instanceof Date) return obj;
+    const cleaned = {};
+    for (const [key, value] of Object.entries(obj)) {
+      cleaned[key] = cleanObjectWhitespace(value);
+    }
+    return cleaned;
+  }
+  return obj;
+};

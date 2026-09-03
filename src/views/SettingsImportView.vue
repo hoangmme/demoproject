@@ -390,6 +390,21 @@
 
                 <!-- Format & Width Settings using clean native selects -->
                 <div style="display: flex; align-items: center; gap: 8px;">
+                  <!-- Checkbox Bắt buộc nhập -->
+                  <label
+                    style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #ffffff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; white-space: nowrap;"
+                    :title="col.required ? 'Đang BẮT BUỘC có dữ liệu mới được lưu file/hồ sơ' : 'Không bắt buộc nhập (Tùy chọn)'"
+                  >
+                    <input
+                      type="checkbox"
+                      v-model="col.required"
+                      style="accent-color: #dc2626; width: 14px; height: 14px; cursor: pointer;"
+                    />
+                    <span :style="{ color: col.required ? '#dc2626' : '#64748b', fontWeight: col.required ? '700' : '600' }">
+                      {{ col.required ? '★ Bắt buộc' : 'Bắt buộc' }}
+                    </span>
+                  </label>
+
                   <!-- Nút tick ẩn khi nhập chuyến đi cho Thân nhân -->
                   <label
                     v-if="activeTab === 'trips'"
@@ -1673,6 +1688,123 @@
           </div>
         </div>
       </div>
+
+      <!-- Khối 2: Tùy chỉnh Hình nền Menu Bên Trái (Sidebar Background) -->
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 1.5rem; margin-top: 1.5rem;">
+        <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="pi pi-palette" style="color: #16a34a; font-size: 1.15rem;"></i>
+            Tùy chỉnh Hình nền Menu Bên Trái (Sidebar Background)
+          </h3>
+          <p style="font-size: 0.78rem; color: #64748b; margin: 4px 0 0 0;">
+            Tải lên hình ảnh tùy biến phủ lên nền rêu của thanh Menu chính bên trái (Cover mặc định) và chỉnh độ trong suốt.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+          <!-- Cột 1: Preview Sidebar Background -->
+          <div>
+            <div style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 8px;">
+              Xem trước Menu với Ảnh nền & Độ trong suốt:
+            </div>
+            <div style="width: 275px; height: 260px; border-radius: 12px; overflow: hidden; border: 2px solid #889962; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; background: #889962;">
+              <!-- Background layer -->
+              <div
+                v-if="currentSidebarBg"
+                style="position: absolute; inset: 0; background-size: cover; background-position: center; pointer-events: none;"
+                :style="{ backgroundImage: `url(${currentSidebarBg})`, opacity: Number(sidebarBgOpacity) / 100 }"
+              ></div>
+              <!-- Mock sidebar content -->
+              <div style="position: relative; z-index: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; height: 100%;">
+                <div style="text-align: center; border-bottom: 1px solid rgba(0,0,0,0.15); padding-bottom: 8px;">
+                  <div style="font-size: 0.7rem; font-weight: 800; color: #000000; text-transform: uppercase;">CÔNG AN TP. HỒ CHÍ MINH</div>
+                  <div style="font-size: 0.65rem; font-weight: 800; color: #fde047; text-shadow: 0 1px 2px rgba(0,0,0,0.4); margin-top: 2px;">DỮ LIỆU CÁN BỘ & THÂN NHÂN</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                  <div style="padding: 6px 10px; background: rgba(0,0,0,0.15); border-radius: 6px; font-size: 0.78rem; font-weight: bold; color: #000000; display: flex; align-items: center; gap: 6px;">
+                    <i class="pi pi-chart-pie" style="font-size: 0.85rem;"></i> Thống kê
+                  </div>
+                  <div style="padding: 6px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: bold; color: #000000; display: flex; align-items: center; gap: 6px;">
+                    <i class="pi pi-users" style="font-size: 0.85rem;"></i> Hồ sơ Cán bộ
+                  </div>
+                </div>
+                <div style="margin-top: auto; font-size: 0.68rem; color: #000000; text-align: center; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 4px;">
+                  {{ currentSidebarBg ? `Độ trong suốt: ${sidebarBgOpacity}%` : 'Nền xanh rêu mặc định (#889962)' }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cột 2: Upload, Slider, Reset -->
+          <div style="display: flex; flex-direction: column; gap: 14px; background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+                Tải lên Ảnh nền Menu Mới:
+              </div>
+              <div style="font-size: 0.74rem; color: #64748b; line-height: 1.4; margin-bottom: 10px;">
+                Tải ảnh tùy ý (tự động căn Cover). Hỗ trợ JPG, PNG, WEBP.
+              </div>
+              <input
+                type="file"
+                ref="sidebarBgFileInputRef"
+                accept="image/jpeg,image/png,image/webp,image/jpg"
+                style="display: none;"
+                @change="handleUploadSidebarBg"
+              />
+              <Button
+                label="Chọn Tệp Ảnh & Lưu Ngay"
+                icon="pi pi-upload"
+                severity="success"
+                size="small"
+                @click="triggerUploadSidebarBg"
+                style="font-size: 0.82rem;"
+              />
+            </div>
+
+            <!-- Opacity Slider -->
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;" v-if="currentSidebarBg">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">
+                  Độ trong suốt ảnh nền (Opacity):
+                </label>
+                <span style="font-size: 0.82rem; font-weight: 800; color: #16a34a;">{{ sidebarBgOpacity }}%</span>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                step="5"
+                v-model="sidebarBgOpacity"
+                @change="saveSidebarBgOpacity"
+                style="width: 100%; accent-color: #16a34a; cursor: pointer;"
+              />
+              <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #94a3b8; margin-top: 2px;">
+                <span>5% (Rất mờ, hiện rõ rêu)</span>
+                <span>50% (Hòa trộn vừa)</span>
+                <span>100% (Hiện rõ ảnh)</span>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
+              <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+                Khôi phục Menu Mặc định:
+              </div>
+              <div style="font-size: 0.74rem; color: #64748b; margin-bottom: 10px;">
+                Xóa ảnh nền tùy biến và trở về màu xanh rêu nguyên bản (#889962).
+              </div>
+              <Button
+                label="Khôi phục Menu Mặc định"
+                icon="pi pi-refresh"
+                severity="secondary"
+                outlined
+                size="small"
+                @click="resetDefaultSidebarBg"
+                style="font-size: 0.82rem;"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Dialog Thêm / Sửa Nhóm Dashboard -->
@@ -2239,6 +2371,76 @@ const resetDefaultLoginBg = async () => {
   alert('Đã khôi phục ảnh nền đăng nhập mặc định!');
 };
 
+// Cài đặt Ảnh nền Menu Bên Trái (Sidebar)
+const sidebarBgFileInputRef = ref(null);
+const currentSidebarBg = ref('');
+const sidebarBgOpacity = ref(40);
+
+const loadSidebarBgSettings = async () => {
+  try {
+    const bgData = await getAppSettings('sidebar_custom_bg', null);
+    if (bgData) currentSidebarBg.value = typeof bgData === 'string' ? bgData : (bgData.value || '');
+    else currentSidebarBg.value = '';
+    const op = await getAppSettings('sidebar_bg_opacity', null);
+    if (op !== null && op !== undefined && op !== '') {
+      sidebarBgOpacity.value = Number(op);
+    } else {
+      sidebarBgOpacity.value = 40;
+    }
+  } catch (err) {
+    console.warn('Failed to load sidebar bg:', err);
+  }
+};
+
+const triggerUploadSidebarBg = () => sidebarBgFileInputRef.value?.click();
+
+const handleUploadSidebarBg = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const uploaded = await uploadFile(file);
+    if (uploaded && uploaded.id) {
+      const bgUrl = getFileUrl(uploaded.id);
+      currentSidebarBg.value = bgUrl;
+      await saveAppSettings('sidebar_custom_bg', bgUrl);
+      window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
+      alert('Đã tải lên và lưu ảnh nền Menu bên trái thành công!');
+      return;
+    }
+    throw new Error('Không nhận được mã tệp');
+  } catch (err) {
+    try {
+      const compressedBase64 = await compressImage(file, 1920, 1080, 0.85);
+      currentSidebarBg.value = compressedBase64;
+      await saveAppSettings('sidebar_custom_bg', compressedBase64);
+      window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
+      alert('Đã lưu ảnh nền Menu bên trái thành công!');
+    } catch (fallbackErr) {
+      alert('Lỗi lưu ảnh: ' + (fallbackErr.message || err.message));
+    }
+  } finally {
+    event.target.value = '';
+  }
+};
+
+const saveSidebarBgOpacity = async () => {
+  try {
+    await saveAppSettings('sidebar_bg_opacity', Number(sidebarBgOpacity.value));
+    window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
+  } catch (e) {}
+};
+
+const resetDefaultSidebarBg = async () => {
+  if (!confirm('Bạn có chắc muốn khôi phục lại nền Menu mặc định (xanh rêu #889962)?')) return;
+  currentSidebarBg.value = '';
+  sidebarBgOpacity.value = 40;
+  await saveAppSettings('sidebar_custom_bg', null);
+  await saveAppSettings('sidebar_bg_opacity', 40);
+  window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
+  alert('Đã khôi phục nền Menu mặc định!');
+};
+
 // Quản lý Danh sách Mẫu Word (.docx)
 const tplFileInputRef = ref(null);
 const docxTemplates = ref([]);
@@ -2766,6 +2968,7 @@ onMounted(async () => {
   tripKeyField.value = personnelStore.getTripKeyField();
   await loadDocxTemplates();
   await loadLoginBg();
+  await loadSidebarBgSettings();
   await loadCustomAppendices();
   await loadCustomDashboards();
 });
