@@ -627,30 +627,6 @@ const syncTextFileModel = () => {
   }, 100);
 };
 
-watch(
-  () => [props.modelValue, props.col.format, props.col.options],
-  ([val, fmt]) => {
-    if (fmt === 'table_2col' || fmt === 'table_loop') {
-      const currentJson = JSON.stringify(tableRows.value);
-      const incomingJson = JSON.stringify(val);
-      if (currentJson !== incomingJson) {
-        initTableRows(val);
-      }
-    } else if (fmt === 'text_file_loop') {
-      if (isInternalTextFileLoop) return;
-      const currentJson = JSON.stringify(textFileList.value);
-      const incomingJson = JSON.stringify(val);
-      if (currentJson !== incomingJson) {
-        initTextFileList(val);
-      }
-    } else if (fmt === 'checkbox_file') {
-      if (isInternalCheckboxFile) return;
-      initCheckboxFile(val);
-    }
-  },
-  { immediate: true, deep: true }
-);
-
 const addTableRow = () => {
   const row = {};
   tableHeaders.value.forEach((_, idx) => {
@@ -865,6 +841,31 @@ const syncCheckboxFileModel = () => {
     isInternalCheckboxFile = false;
   }, 100);
 };
+
+// Đồng bộ khởi tạo dữ liệu cho các trường phức tạp (Table loop, Text file loop, Checkbox file)
+watch(
+  () => [props.modelValue, props.col.format, props.col.options],
+  ([val, fmt]) => {
+    if (fmt === 'table_2col' || fmt === 'table_loop') {
+      const currentJson = JSON.stringify(tableRows.value);
+      const incomingJson = JSON.stringify(val);
+      if (currentJson !== incomingJson) {
+        initTableRows(val);
+      }
+    } else if (fmt === 'text_file_loop') {
+      if (isInternalTextFileLoop) return;
+      const currentJson = JSON.stringify(textFileList.value);
+      const incomingJson = JSON.stringify(val);
+      if (currentJson !== incomingJson) {
+        initTextFileList(val);
+      }
+    } else if (fmt === 'checkbox_file') {
+      if (isInternalCheckboxFile) return;
+      initCheckboxFile(val);
+    }
+  },
+  { immediate: true, deep: true }
+);
 </script>
 
 <style scoped>
