@@ -122,10 +122,11 @@
           <button
             type="button"
             class="btn-add-text-file-initial"
+            style="background: #f0fdf4 !important; color: #166534 !important; border: 1.5px dashed #86efac !important; display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;"
             @click.stop="addTextFileRow"
           >
-            <i class="pi pi-plus" style="font-size: 0.8rem;"></i>
-            <span>Thêm mục (Văn bản + Tệp đính kèm)</span>
+            <i class="pi pi-plus" style="font-size: 0.8rem; color: #166534 !important;"></i>
+            <span style="color: #166534 !important; font-weight: 600;">Thêm mục (Văn bản + Tệp đính kèm)</span>
           </button>
         </div>
         <template v-else>
@@ -199,10 +200,11 @@
           <button
             type="button"
             class="btn-add-text-file-more"
+            style="background: #f8fafc !important; color: #166534 !important; border: 1px solid #86efac !important; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; align-self: flex-start;"
             @click.stop="addTextFileRow"
           >
-            <i class="pi pi-plus" style="font-size: 0.75rem;"></i>
-            <span>Thêm mục mới (Văn bản + Tệp)</span>
+            <i class="pi pi-plus" style="font-size: 0.75rem; color: #166534 !important;"></i>
+            <span style="color: #166534 !important; font-weight: 600;">Thêm mục mới (Văn bản + Tệp)</span>
           </button>
         </template>
       </div>

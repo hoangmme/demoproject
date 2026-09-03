@@ -481,12 +481,23 @@ html, body {
   background-color: transparent !important;
 }
 
-.p-button-outlined.p-button-success {
+.p-button-outlined.p-button-success,
+.p-button-outlined.p-button-success .p-button-label,
+.p-button-outlined.p-button-success .p-button-icon,
+.p-button.p-button-outlined.p-button-success,
+.p-button.p-button-outlined.p-button-success .p-button-label,
+.p-button.p-button-outlined.p-button-success .p-button-icon {
+  border: 1px solid #86efac !important;
   border-color: #86efac !important;
   color: #166534 !important;
   background-color: #f0fdf4 !important;
 }
-.p-button-outlined.p-button-success:hover {
+.p-button-outlined.p-button-success:hover,
+.p-button-outlined.p-button-success:hover .p-button-label,
+.p-button-outlined.p-button-success:hover .p-button-icon,
+.p-button.p-button-outlined.p-button-success:hover,
+.p-button.p-button-outlined.p-button-success:hover .p-button-label,
+.p-button.p-button-outlined.p-button-success:hover .p-button-icon {
   background-color: #dcfce7 !important;
   border-color: #22c55e !important;
   color: #14532d !important;
