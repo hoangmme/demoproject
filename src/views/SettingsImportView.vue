@@ -112,7 +112,7 @@
         @click="activeTab = 'dashboard'"
       >
         <i class="pi pi-send"></i>
-        <span>Quản lý Dashboard Chuyên đề</span>
+        <span>Quản lý Chuyên đề</span>
       </button>
 
       <button
@@ -1249,16 +1249,16 @@
       </div>
     </div>
 
-    <!-- Tab: Quản lý Dashboard Chuyên đề -->
+    <!-- Tab: Quản lý Chuyên đề -->
     <div v-else-if="activeTab === 'dashboard'" class="app-card" style="padding: 1.25rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
         <div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <i class="pi pi-send" style="color: #1e3a8a; font-size: 1.2rem;"></i>
-            <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0;">Quản lý & Cấu hình Dashboard Chuyên đề (Trang Danh sách & Thống kê)</h3>
+            <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0;">Quản lý & Cấu hình Chuyên đề (Trang Danh sách & Thống kê)</h3>
           </div>
           <p style="font-size: 0.75rem; color: #64748b; margin: 4px 0 0 0;">
-            Tạo mới các trang Dashboard chuyên đề (như Danh sách Chuyến đi), tùy chỉnh các khối thẻ thống kê ở trên và chọn cột hiển thị trên bảng danh sách bên dưới (thay vì popup).
+            Tạo mới các trang chuyên đề (như Danh sách Chuyến đi), tùy chỉnh các khối thẻ thống kê ở trên và chọn cột hiển thị trên bảng danh sách bên dưới.
           </p>
         </div>
 
