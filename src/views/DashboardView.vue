@@ -1696,7 +1696,35 @@ const matchSingleCondition = (item, cond) => {
     return isRel;
   }
 
-  // 1b. Special Formula Fields
+  // 1b. Special Formula Fields & Điều kiện đếm
+  if (field === 'dieu_kien_dem' || field === '_tripCount') {
+    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+    const canBoCccd = String(item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? '').trim();
+    
+    let count = 0;
+    if (Array.isArray(item.rawPerson?.trips) && item.rawPerson.trips.length > 0) {
+      count = item.rawPerson.trips.length;
+    } else if (Array.isArray(item.trips) && item.trips.length > 0) {
+      count = item.trips.length;
+    } else if (canBoCccd) {
+      const p = (personnelStore.personnelList || []).find((x) => String(x[pKeyField] ?? x.custom_data?.[pKeyField] ?? x.cccdparent ?? '').trim() === canBoCccd);
+      count = Array.isArray(p?.trips) ? p.trips.length : 1;
+    } else {
+      count = 1;
+    }
+
+    const numTarget = parseFloat(target.replace(/[^0-9.-]+/g, ''));
+    if (isNaN(numTarget)) return true;
+
+    if (op === 'gt') return count > numTarget;
+    if (op === 'gte') return count >= numTarget;
+    if (op === 'lt') return count < numTarget;
+    if (op === 'lte') return count <= numTarget;
+    if (op === 'equals') return count === numTarget;
+    if (op === 'not_equals') return count !== numTarget;
+    return count >= numTarget;
+  }
+
   if (field === 'di_truoc_khi_co_quyet_dinh') {
     const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
     return res.isWarning;
@@ -1730,11 +1758,14 @@ const matchSingleCondition = (item, cond) => {
     return op === 'before' ? dVal < dTarget : dVal > dTarget;
   }
 
-  if (op === 'gte' || op === 'lte') {
+  if (op === 'gte' || op === 'lte' || op === 'gt' || op === 'lt') {
     const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
     const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
     if (isNaN(numVal) || isNaN(numTarget)) return false;
-    return op === 'gte' ? numVal >= numTarget : numVal <= numTarget;
+    if (op === 'gt') return numVal > numTarget;
+    if (op === 'gte') return numVal >= numTarget;
+    if (op === 'lt') return numVal < numTarget;
+    if (op === 'lte') return numVal <= numTarget;
   }
 
   return true;
@@ -1814,6 +1845,22 @@ const getCardMetricValueForTopic = (card, topic) => {
   let baselineList = fullList;
   if (firstCard && !isCardAllType(firstCard)) {
     baselineList = fullList.filter((item) => matchCardCondition(item, firstCard));
+  }
+
+  const isUnique = !!(actualCard.isUnique || card.isUnique);
+  if (isUnique) {
+    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+    const uniqueSet = new Set();
+    const targetItems = (actualCard === firstCard || isCardAllType(actualCard))
+      ? baselineList
+      : baselineList.filter((item) => matchCardCondition(item, actualCard));
+    targetItems.forEach((item) => {
+      const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? item.personnelId ?? item.id;
+      if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
+        uniqueSet.add(String(keyVal).trim());
+      }
+    });
+    return uniqueSet.size;
   }
 
   // Nếu là thẻ đầu tiên (Toàn bộ) -> trả về độ dài tập cơ sở

@@ -1494,6 +1494,22 @@
                   </select>
                 </div>
 
+                <!-- Đếm giá trị duy nhất (Unique) -->
+                <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
+                  <input
+                    type="checkbox"
+                    v-model="card.isUnique"
+                    :id="'uniq_' + (card.id || cIdx)"
+                    style="margin: 0; cursor: pointer;"
+                  />
+                  <label
+                    :for="'uniq_' + (card.id || cIdx)"
+                    style="font-size: 0.72rem; font-weight: 600; color: #334155; cursor: pointer;"
+                  >
+                    Đếm giá trị duy nhất (Unique)
+                  </label>
+                </div>
+
                 <!-- Kiểu kết hợp (Khi có từ 2 điều kiện trở lên) -->
                 <div v-if="getCardConditions(card).length > 1" style="display: flex; flex-direction: column; gap: 3px; background: #eff6ff; padding: 6px 8px; border-radius: 4px; border: 1px dashed #93c5fd;">
                   <label style="font-size: 0.68rem; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 4px;">
@@ -1547,12 +1563,15 @@
                           <option value="has_value">Có dữ liệu (khác rỗng)</option>
                           <option value="empty">Để trống (chưa có)</option>
                           <option value="equals">Là (khớp chính xác)</option>
+                          <option value="not_equals">Khác</option>
                           <option value="contains">Chứa từ khóa</option>
                           <option value="not_contains">Không chứa từ khóa</option>
+                          <option value="gt">Lớn hơn (&gt;)</option>
+                          <option value="gte">Lớn hơn hoặc bằng (&gt;=)</option>
+                          <option value="lt">Nhỏ hơn (&lt;)</option>
+                          <option value="lte">Nhỏ hơn hoặc bằng (&lt;=)</option>
                           <option value="before">Trước ngày</option>
                           <option value="after">Sau ngày</option>
-                          <option value="gte">Lớn hơn hoặc bằng (&gt;=)</option>
-                          <option value="lte">Nhỏ hơn hoặc bằng (&lt;=)</option>
                         </select>
                       </div>
                       <div v-if="cond.operator !== 'has_value' && cond.operator !== 'empty'">
@@ -2901,6 +2920,14 @@ const moveMetricCard = (dash, cIdx, direction) => {
 
 const categorizedDashboardCols = computed(() => {
   const groups = [];
+
+  // 0. Nhóm Điều kiện đếm tổng hợp
+  groups.push({
+    category: '📊 Chỉ số Tổng hợp & Đếm',
+    options: [
+      { id: 'dieu_kien_dem', label: 'Điều kiện đếm', displayLabel: '📊 Điều kiện đếm' },
+    ],
+  });
 
   // 1. Nhóm Chuyến đi (Trips)
   const tripCols = (availableTripCols.value || []).map((c, idx) => ({
