@@ -1764,9 +1764,18 @@ const filteredList = computed(() => {
     });
   }
 
-  // 6. Search Query
+  // 6. Search Query theo đúng Primary Key & Key Config đã cấu hình
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase().trim();
+
+    const pKeyField = personnelStore.getPersonnelKeyField();
+    const pNameField = personnelStore.getPersonnelNameField();
+    const pPosField = personnelStore.getPersonnelPositionField();
+    const pDeptField = personnelStore.getPersonnelDepartmentField();
+    const rParentKeyField = personnelStore.getRelativeParentKeyField();
+    const rKeyField = personnelStore.getRelativeKeyField();
+    const tKeyField = personnelStore.getTripKeyField();
+
     list = list.filter((t) => {
       let custom = t.custom_data;
       if (typeof custom === 'string') {
@@ -1777,34 +1786,78 @@ const filteredList = computed(() => {
       if (typeof rawPCustom === 'string') {
         try { rawPCustom = JSON.parse(rawPCustom); } catch (e) { rawPCustom = {}; }
       }
+      let rawRel = t.rawRelative || {};
+      let rawRelCustom = rawRel.custom_data;
+      if (typeof rawRelCustom === 'string') {
+        try { rawRelCustom = JSON.parse(rawRelCustom); } catch (e) { rawRelCustom = {}; }
+      }
 
-      // Tên (Cán bộ / Thân nhân / Người đi)
-      const name = String(t.personnelName || t.name || t.relativeName || rawP.name || rawP.fullName || custom?.name || custom?.relativeName || '').toLowerCase();
-      // CCCD (Cán bộ, Thân nhân, Người đi)
-      const cccd = String(t.cccd || t.cccdparent || t.cccdthannhan || t.cccdchuyendi || rawP.cccd || rawP.cccdparent || rawP.so_cccd || custom?.cccd || custom?.cccdparent || custom?.cccdthannhan || custom?.so_cccd || rawPCustom?.cccdparent || rawPCustom?.cccd || '').toLowerCase();
-      // Chức vụ (Người đi, Cán bộ liên quan)
-      const pos = String(t.position || t.positionName || rawP.positionName || rawP.position || rawP.chuc_vu || custom?.chuc_vu || custom?.positionName || custom?.position || rawPCustom?.chuc_vu || rawPCustom?.positionName || '').toLowerCase();
-      // Đơn vị (Đơn vị công tác người đi, Cán bộ liên quan, Cơ quan ban hành)
-      const dept = String(t.departmentName || t.department || rawP.departmentName || (rawP.departmentId ? personnelStore.getDepartmentName(rawP.departmentId) : '') || custom?.departmentName || custom?.don_vi_cong_tac || custom?.don_vi || custom?.phong_ban || rawPCustom?.don_vi_cong_tac || rawPCustom?.don_vi || t.co_quan_ban_hanh || t.decisionIssuer || '').toLowerCase();
+      // CCCD Cán bộ / Thân nhân / Chuyến đi theo đúng Primary Key đã cài đặt
+      const cccd = String(
+        t[tKeyField] ??
+        custom?.[tKeyField] ??
+        rawP[pKeyField] ??
+        rawPCustom?.[pKeyField] ??
+        t[rParentKeyField] ??
+        custom?.[rParentKeyField] ??
+        rawRel[rKeyField] ??
+        rawRelCustom?.[rKeyField] ??
+        t[pKeyField] ??
+        custom?.[pKeyField] ??
+        t.cccdchuyendi ??
+        t.cccdparent ??
+        t.cccdthannhan ??
+        t.cccd ??
+        ''
+      ).toLowerCase();
+
+      // Tên Cán bộ / Thân nhân theo Cấu hình
+      const name = String(
+        rawP[pNameField] ??
+        rawPCustom?.[pNameField] ??
+        t[pNameField] ??
+        custom?.[pNameField] ??
+        t.personnelName ??
+        t.name ??
+        t.relativeName ??
+        rawP.name ??
+        ''
+      ).toLowerCase();
+
+      // Chức vụ theo Cấu hình
+      const pos = String(
+        rawP[pPosField] ??
+        rawPCustom?.[pPosField] ??
+        t[pPosField] ??
+        custom?.[pPosField] ??
+        t.positionName ??
+        t.position ??
+        rawP.positionName ??
+        rawP.position ??
+        ''
+      ).toLowerCase();
+
+      // Đơn vị theo Cấu hình
+      const dept = String(
+        rawP[pDeptField] ??
+        rawPCustom?.[pDeptField] ??
+        t[pDeptField] ??
+        custom?.[pDeptField] ??
+        rawP.departmentName ??
+        (rawP.departmentId ? personnelStore.getDepartmentName(rawP.departmentId) : '') ??
+        t.departmentName ??
+        ''
+      ).toLowerCase();
 
       // Mã
       const code = String(t.personnelCode || t.code || rawP.code || '').toLowerCase();
-      // Quốc gia, Quyết định, Mục đích, Nguồn kinh phí
-      const country = String(t.countryName || t.country || custom?.quoc_gia_xuat_canh || '').toLowerCase();
-      const dec = String(t.decisionNumber || t.so_quyet_dinh || custom?.so_quyet_dinh || '').toLowerCase();
-      const pur = String(t.purpose || t.muc_dich_xuat_canh || custom?.muc_dich_xuat_canh || '').toLowerCase();
-      const funding = String(t.fundingName || t.nguon_kinh_phi || custom?.nguon_kinh_phi || '').toLowerCase();
 
       return (
         name.includes(q) ||
         cccd.includes(q) ||
         pos.includes(q) ||
         dept.includes(q) ||
-        code.includes(q) ||
-        country.includes(q) ||
-        dec.includes(q) ||
-        pur.includes(q) ||
-        funding.includes(q)
+        code.includes(q)
       );
     });
   }

@@ -1265,28 +1265,37 @@ const filteredPersonnel = computed(() => {
     });
   }
 
-  // 2. Tìm kiếm từ khóa (Search Query)
+  // 2. Tìm kiếm từ khóa (Search Query) theo đúng Primary Key & Key Config đã cấu hình
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) return list;
+
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  const pNameField = personnelStore.getPersonnelNameField();
+  const pPosField = personnelStore.getPersonnelPositionField();
+  const pDeptField = personnelStore.getPersonnelDepartmentField();
+
   return list.filter((p) => {
     let cd = p.custom_data;
     if (typeof cd === 'string') {
       try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
     }
-    const name = String(p.name || p.fullName || cd?.name || cd?.fullName || '').toLowerCase();
-    const cccd = String(p.cccd || p.cccdparent || p.so_cccd || cd?.cccd || cd?.cccdparent || cd?.so_cccd || '').toLowerCase();
-    const code = String(p.code || p.id || cd?.code || '').toLowerCase();
-    const position = String(p.positionName || p.position || p.chuc_vu || cd?.positionName || cd?.position || cd?.chuc_vu || '').toLowerCase();
-    const dept = String(p.departmentName || p.department || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || cd?.departmentName || cd?.don_vi_cong_tac || cd?.don_vi || cd?.phong_ban || '').toLowerCase();
-    const birthYear = String(p.birthYear || cd?.birthYear || '');
+    // CCCD Cán bộ theo Primary Key cấu hình
+    const cccd = String(p[pKeyField] ?? cd?.[pKeyField] ?? p.cccd ?? p.cccdparent ?? '').toLowerCase();
+    // Tên Cán bộ theo Cấu hình
+    const name = String(p[pNameField] ?? cd?.[pNameField] ?? p.name ?? p.fullName ?? '').toLowerCase();
+    // Chức vụ theo Cấu hình
+    const position = String(p[pPosField] ?? cd?.[pPosField] ?? p.positionName ?? p.position ?? '').toLowerCase();
+    // Đơn vị theo Cấu hình
+    const dept = String(p[pDeptField] ?? cd?.[pDeptField] ?? p.departmentName ?? (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') ?? '').toLowerCase();
+    // Mã hồ sơ
+    const code = String(p.code || p.id || '').toLowerCase();
 
     return (
       name.includes(q) ||
       cccd.includes(q) ||
-      code.includes(q) ||
       position.includes(q) ||
       dept.includes(q) ||
-      birthYear.includes(q)
+      code.includes(q)
     );
   });
 });
@@ -1320,33 +1329,49 @@ const flattenedRelatives = computed(() => {
 const filteredRelatives = computed(() => {
   const q = relativeSearchQuery.value.trim().toLowerCase();
   if (!q) return flattenedRelatives.value;
+
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  const pNameField = personnelStore.getPersonnelNameField();
+  const pPosField = personnelStore.getPersonnelPositionField();
+  const pDeptField = personnelStore.getPersonnelDepartmentField();
+  const rParentKeyField = personnelStore.getRelativeParentKeyField();
+  const rKeyField = personnelStore.getRelativeKeyField();
+
   return flattenedRelatives.value.filter((r) => {
     let cd = r.custom_data;
     if (typeof cd === 'string') {
       try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
     }
+    const parent = r.parentPerson || {};
+    let parentCd = parent.custom_data;
+    if (typeof parentCd === 'string') {
+      try { parentCd = JSON.parse(parentCd); } catch (e) { parentCd = {}; }
+    }
+
+    // CCCD Cán bộ liên quan theo Primary Key cấu hình
+    const parentCccd = String(r[rParentKeyField] ?? cd?.[rParentKeyField] ?? parent[pKeyField] ?? parentCd?.[pKeyField] ?? r.cccdparent ?? parent.cccd ?? '').toLowerCase();
+    // CCCD Thân nhân theo Primary Key cấu hình
+    const relCccd = String(r[rKeyField] ?? cd?.[rKeyField] ?? r.cccdthannhan ?? r.cccd ?? '').toLowerCase();
+    // Họ và tên Cán bộ / Thân nhân theo cấu hình
     const relName = String(r.relativeName || r.name || cd?.relativeName || '').toLowerCase();
-    const parentName = String(r.parentName || r.parentPerson?.name || r.personnelName || '').toLowerCase();
-    const relCccd = String(r.cccdthannhan || r.cccd || cd?.cccdthannhan || cd?.cccd || '').toLowerCase();
-    const parentCccd = String(r.cccdparent || r.parentPerson?.cccd || r.parentPerson?.cccdparent || cd?.cccdparent || '').toLowerCase();
+    const parentName = String(parent[pNameField] ?? parentCd?.[pNameField] ?? r.parentName ?? parent.name ?? '').toLowerCase();
+    // Chức vụ theo cấu hình
+    const position = String(parent[pPosField] ?? parentCd?.[pPosField] ?? r.parentPosition ?? parent.positionName ?? parent.position ?? r.position ?? '').toLowerCase();
+    // Đơn vị theo cấu hình
+    const dept = String(parent[pDeptField] ?? parentCd?.[pDeptField] ?? r.parentDepartment ?? parent.departmentName ?? (parent.departmentId ? personnelStore.getDepartmentName(parent.departmentId) : '') ?? r.departmentName ?? '').toLowerCase();
+
     const relCode = String(r.code || r.id || '').toLowerCase();
-    const parentCode = String(r.parentPerson?.code || r.personnelCode || '').toLowerCase();
-    const position = String(r.parentPosition || r.parentPerson?.positionName || r.parentPerson?.position || r.position || r.occupation || cd?.position || cd?.chuc_vu || '').toLowerCase();
-    const dept = String(r.parentDepartment || r.parentPerson?.departmentName || (r.parentPerson?.departmentId ? personnelStore.getDepartmentName(r.parentPerson.departmentId) : '') || r.departmentName || r.currentUnit || cd?.currentUnit || cd?.don_vi_cong_tac || '').toLowerCase();
-    const relType = String(r.relationshipName || r.relationship || cd?.relationshipName || '').toLowerCase();
-    const country = String(r.countryName || r.country || cd?.countryName || '').toLowerCase();
+    const parentCode = String(parent.code || r.personnelCode || '').toLowerCase();
 
     return (
+      parentCccd.includes(q) ||
+      relCccd.includes(q) ||
       relName.includes(q) ||
       parentName.includes(q) ||
-      relCccd.includes(q) ||
-      parentCccd.includes(q) ||
-      relCode.includes(q) ||
-      parentCode.includes(q) ||
       position.includes(q) ||
       dept.includes(q) ||
-      relType.includes(q) ||
-      country.includes(q)
+      relCode.includes(q) ||
+      parentCode.includes(q)
     );
   });
 });
