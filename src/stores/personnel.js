@@ -21,7 +21,7 @@ export const usePersonnelStore = defineStore('personnel', {
     loading: false,
     selectedPerson: null,
     isDialogOpen: false,
-    visibleColumns: ['code', 'name', 'birthYear', 'departmentId', 'position', 'cccd'],
+    visibleColumns: ['name', 'birthYear', 'departmentId', 'position', 'cccd'],
     visibleRelativeColumns: ['parentName', 'relationshipName', 'relativeName', 'birthYear', 'currentAddress', 'occupation', 'countryName'],
     importMappingPersonnel: [],
     importMappingRelative: [],
@@ -70,7 +70,7 @@ export const usePersonnelStore = defineStore('personnel', {
       virtualPersonnelCols.forEach((vc) => {
         if (!seen.has(vc.id)) {
           seen.add(vc.id);
-          list.unshift(vc);
+          list.push(vc);
         }
       });
 
@@ -240,16 +240,23 @@ export const usePersonnelStore = defineStore('personnel', {
         dbCols = await getAppSettings('vue_visible_columns', null);
       } catch (e) {}
 
+      const getDefaultColumns = () => {
+        return this.allAvailableColumns
+          .filter((c) => c.id !== 'code' && c.id !== '_parentPersonnelName')
+          .slice(0, 6)
+          .map((c) => c.id);
+      };
+
       let saved = dbCols && Array.isArray(dbCols) && dbCols.length > 0 ? dbCols : null;
       if (saved && Array.isArray(saved) && saved.length > 0) {
         const filtered = saved.filter((id) => validIds.has(id));
         if (filtered.length >= 3) {
           this.visibleColumns = filtered;
         } else {
-          this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
+          this.visibleColumns = getDefaultColumns();
         }
       } else {
-        this.visibleColumns = this.allAvailableColumns.slice(0, 6).map((c) => c.id);
+        this.visibleColumns = getDefaultColumns();
       }
 
       const validRelativeIds = new Set(this.allAvailableRelativeColumns.map((c) => c.id));

@@ -31,19 +31,6 @@
             Danh sách Cán bộ ({{ personnelStore.personnelList.length }} hồ sơ)
           </span>
 
-          <!-- Reset / Đánh lại Mã CB Button -->
-          <Button
-            v-if="authStore.isAdmin"
-            icon="pi pi-refresh"
-            label="Đánh lại Mã CB"
-            severity="warn"
-            text
-            size="small"
-            @click="personnelStore.renumberPersonnelCodes"
-            title="Đánh lại Mã CB liên tục (CB-00001, CB-00002...)"
-            style="font-size: 0.8rem;"
-          />
-
           <!-- Bulk delete button -->
           <Button
             v-if="authStore.isAdmin && selectedPersonnel.length > 0"
@@ -284,10 +271,17 @@
           <template #body="{ data }">
             <!-- Cột ảo Thông tin cán bộ -->
             <template v-if="col.id === '_parentPersonnelName'">
-              <div style="display: flex; flex-direction: column; gap: 2px;">
-                <strong style="color: #1f2937;">{{ data.name || '-' }}</strong>
-                <span style="font-size: 0.72rem; color: #4b5563;">{{ data.cccdparent || data.cccd ? `CCCD: ${data.cccdparent || data.cccd}` : '' }}</span>
-                <span style="font-size: 0.72rem; color: #6b7280;">{{ data.positionName || data.position || '' }} {{ data.departmentName || '' }}</span>
+              <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
+                <strong style="color: #1f2937; font-size: 0.85rem;">{{ getPersonVirtualInfo(data).name }}</strong>
+                <span v-if="getPersonVirtualInfo(data).cccd" style="font-size: 0.72rem; color: #4b5563;">
+                  CCCD: {{ getPersonVirtualInfo(data).cccd }}
+                </span>
+                <span v-if="getPersonVirtualInfo(data).position" style="font-size: 0.72rem; color: #334155;">
+                  {{ getPersonVirtualInfo(data).position }}
+                </span>
+                <span v-if="getPersonVirtualInfo(data).dept" style="font-size: 0.72rem; color: #6b7280;">
+                  {{ getPersonVirtualInfo(data).dept }}
+                </span>
               </div>
             </template>
 
@@ -1118,6 +1112,28 @@ watch(
     handleRouteAction();
   }
 );
+
+const getPersonVirtualInfo = (data) => {
+  if (!data) return { name: '-', cccd: '', position: '', dept: '' };
+  const pKey = personnelStore.getPersonnelKeyField();
+  const pName = personnelStore.getPersonnelNameField();
+  const pPos = personnelStore.getPersonnelPositionField();
+  const pDept = personnelStore.getPersonnelDepartmentField();
+  let cd = data.custom_data;
+  if (typeof cd === 'string') {
+    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+  }
+  const name = data[pName] || cd?.[pName] || data.name || data.fullName || '-';
+  const cccd = data[pKey] || cd?.[pKey] || data.cccdparent || data.cccd || '';
+  const position = data[pPos] || cd?.[pPos] || data.positionName || data.position || data.chuc_vu || '';
+  const dept = data[pDept] || cd?.[pDept] || data.departmentName || data.department || (data.departmentId ? personnelStore.getDepartmentName(data.departmentId) : '') || '';
+  return {
+    name,
+    cccd: cccd && String(cccd).trim() !== '-' ? String(cccd).trim() : '',
+    position: position && String(position).trim() !== '-' ? String(position).trim() : '',
+    dept: dept && String(dept).trim() !== '-' ? String(dept).trim() : '',
+  };
+};
 
 const activeColumns = computed(() => {
   const map = {
