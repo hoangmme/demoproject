@@ -57,13 +57,25 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <!-- Search input -->
-          <InputText
-            v-model="searchQuery"
-            placeholder="Tìm tên, CCCD, chức vụ..."
-            size="small"
-            style="width: 160px; font-size: 0.8rem;"
-          />
+          <!-- Search input with Icon -->
+          <div class="search-input-wrapper">
+            <i class="pi pi-search search-icon-left"></i>
+            <InputText
+              v-model="searchQuery"
+              placeholder="Tìm tên, CCCD, chức vụ, đơn vị..."
+              size="small"
+              style="width: 230px; font-size: 0.8rem;"
+            />
+            <button
+              v-if="searchQuery"
+              type="button"
+              class="search-clear-btn"
+              @click="searchQuery = ''"
+              title="Xóa tìm kiếm"
+            >
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
 
           <!-- ⚙️ Cài đặt Cột & Bộ Lọc Thông Minh Popover -->
           <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
@@ -392,12 +404,24 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <InputText
-            v-model="relativeSearchQuery"
-            placeholder="Tìm tên thân nhân, cán bộ..."
-            size="small"
-            style="width: 190px; font-size: 0.8rem;"
-          />
+          <div class="search-input-wrapper">
+            <i class="pi pi-search search-icon-left"></i>
+            <InputText
+              v-model="relativeSearchQuery"
+              placeholder="Tìm tên thân nhân, cán bộ, CCCD, đơn vị..."
+              size="small"
+              style="width: 250px; font-size: 0.8rem;"
+            />
+            <button
+              v-if="relativeSearchQuery"
+              type="button"
+              class="search-clear-btn"
+              @click="relativeSearchQuery = ''"
+              title="Xóa tìm kiếm"
+            >
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
 
           <!-- ⚙️ Cài đặt Cột Thân nhân Popover -->
           <div class="header-menu-wrapper" @mouseenter="onMouseEnterRelFilter" @mouseleave="onMouseLeaveRelFilter">
@@ -1245,12 +1269,24 @@ const filteredPersonnel = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) return list;
   return list.filter((p) => {
+    let cd = p.custom_data;
+    if (typeof cd === 'string') {
+      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+    }
+    const name = String(p.name || p.fullName || cd?.name || cd?.fullName || '').toLowerCase();
+    const cccd = String(p.cccd || p.cccdparent || p.so_cccd || cd?.cccd || cd?.cccdparent || cd?.so_cccd || '').toLowerCase();
+    const code = String(p.code || p.id || cd?.code || '').toLowerCase();
+    const position = String(p.positionName || p.position || p.chuc_vu || cd?.positionName || cd?.position || cd?.chuc_vu || '').toLowerCase();
+    const dept = String(p.departmentName || p.department || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || cd?.departmentName || cd?.don_vi_cong_tac || cd?.don_vi || cd?.phong_ban || '').toLowerCase();
+    const birthYear = String(p.birthYear || cd?.birthYear || '');
+
     return (
-      (p.name && p.name.toLowerCase().includes(q)) ||
-      (p.cccd && p.cccd.toLowerCase().includes(q)) ||
-      (p.code && p.code.toLowerCase().includes(q)) ||
-      (p.position && p.position.toLowerCase().includes(q)) ||
-      (p.birthYear && String(p.birthYear).includes(q))
+      name.includes(q) ||
+      cccd.includes(q) ||
+      code.includes(q) ||
+      position.includes(q) ||
+      dept.includes(q) ||
+      birthYear.includes(q)
     );
   });
 });
@@ -1275,7 +1311,8 @@ const flattenedRelatives = computed(() => {
       code: formattedCode,
       parentPerson: parent,
       parentName: parent?.name || r.personnelName || 'Chưa liên kết',
-      parentDepartment: parent ? personnelStore.getDepartmentName(parent.departmentId) : (r.departmentName || '-'),
+      parentDepartment: parent ? (parent.departmentName || personnelStore.getDepartmentName(parent.departmentId)) : (r.departmentName || '-'),
+      parentPosition: parent ? (parent.positionName || parent.position || '') : (r.parentPosition || ''),
     };
   });
 });
@@ -1284,11 +1321,32 @@ const filteredRelatives = computed(() => {
   const q = relativeSearchQuery.value.trim().toLowerCase();
   if (!q) return flattenedRelatives.value;
   return flattenedRelatives.value.filter((r) => {
+    let cd = r.custom_data;
+    if (typeof cd === 'string') {
+      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+    }
+    const relName = String(r.relativeName || r.name || cd?.relativeName || '').toLowerCase();
+    const parentName = String(r.parentName || r.parentPerson?.name || r.personnelName || '').toLowerCase();
+    const relCccd = String(r.cccdthannhan || r.cccd || cd?.cccdthannhan || cd?.cccd || '').toLowerCase();
+    const parentCccd = String(r.cccdparent || r.parentPerson?.cccd || r.parentPerson?.cccdparent || cd?.cccdparent || '').toLowerCase();
+    const relCode = String(r.code || r.id || '').toLowerCase();
+    const parentCode = String(r.parentPerson?.code || r.personnelCode || '').toLowerCase();
+    const position = String(r.parentPosition || r.parentPerson?.positionName || r.parentPerson?.position || r.position || r.occupation || cd?.position || cd?.chuc_vu || '').toLowerCase();
+    const dept = String(r.parentDepartment || r.parentPerson?.departmentName || (r.parentPerson?.departmentId ? personnelStore.getDepartmentName(r.parentPerson.departmentId) : '') || r.departmentName || r.currentUnit || cd?.currentUnit || cd?.don_vi_cong_tac || '').toLowerCase();
+    const relType = String(r.relationshipName || r.relationship || cd?.relationshipName || '').toLowerCase();
+    const country = String(r.countryName || r.country || cd?.countryName || '').toLowerCase();
+
     return (
-      (r.relativeName && r.relativeName.toLowerCase().includes(q)) ||
-      (r.parentName && r.parentName.toLowerCase().includes(q)) ||
-      (r.relationshipName && r.relationshipName.toLowerCase().includes(q)) ||
-      (r.countryName && r.countryName.toLowerCase().includes(q))
+      relName.includes(q) ||
+      parentName.includes(q) ||
+      relCccd.includes(q) ||
+      parentCccd.includes(q) ||
+      relCode.includes(q) ||
+      parentCode.includes(q) ||
+      position.includes(q) ||
+      dept.includes(q) ||
+      relType.includes(q) ||
+      country.includes(q)
     );
   });
 });

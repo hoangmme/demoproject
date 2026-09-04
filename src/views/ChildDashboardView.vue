@@ -143,18 +143,18 @@
     <div class="app-card" style="padding: 12px 16px; margin-bottom: 1rem;">
       <div style="display: flex; gap: 10px; align-items: center;">
         <!-- Search -->
-        <div style="position: relative; flex: 1;">
-          <i class="pi pi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem;"></i>
+        <div class="search-input-wrapper" style="flex: 1;">
+          <i class="pi pi-search search-icon-left"></i>
           <InputText
             v-model="searchQuery"
-            placeholder="Tìm trong danh sách: họ tên, đơn vị, số quyết định, quốc gia..."
-            style="width: 100%; padding-left: 30px; font-size: 0.82rem; height: 34px;"
+            placeholder="Tìm theo tên, CCCD, chức vụ, đơn vị, số quyết định, quốc gia..."
+            style="width: 100%; font-size: 0.82rem; height: 34px;"
           />
           <button
             v-if="searchQuery"
             type="button"
+            class="search-clear-btn"
             @click="searchQuery = ''"
-            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; padding: 2px 6px; font-size: 0.8rem;"
             title="Xóa tìm kiếm"
           >
             <i class="pi pi-times"></i>
@@ -1768,24 +1768,43 @@ const filteredList = computed(() => {
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase().trim();
     list = list.filter((t) => {
-      const name = String(t.personnelName || t.name || t.relativeName || '').toLowerCase();
-      const code = String(t.personnelCode || t.code || '').toLowerCase();
-      const dept = String(t.departmentName || '').toLowerCase();
-      const pos = String(t.position || t.positionName || '').toLowerCase();
-      const country = String(t.countryName || t.country || '').toLowerCase();
-      const cccd = String(t.cccd || t.cccdparent || t.cccdthannhan || t.cccdchuyendi || '').toLowerCase();
-      const dec = String(t.decisionNumber || '').toLowerCase();
-      const pur = String(t.purpose || '').toLowerCase();
+      let custom = t.custom_data;
+      if (typeof custom === 'string') {
+        try { custom = JSON.parse(custom); } catch (e) { custom = {}; }
+      }
+      let rawP = t.rawPerson || {};
+      let rawPCustom = rawP.custom_data;
+      if (typeof rawPCustom === 'string') {
+        try { rawPCustom = JSON.parse(rawPCustom); } catch (e) { rawPCustom = {}; }
+      }
+
+      // Tên (Cán bộ / Thân nhân / Người đi)
+      const name = String(t.personnelName || t.name || t.relativeName || rawP.name || rawP.fullName || custom?.name || custom?.relativeName || '').toLowerCase();
+      // CCCD (Cán bộ, Thân nhân, Người đi)
+      const cccd = String(t.cccd || t.cccdparent || t.cccdthannhan || t.cccdchuyendi || rawP.cccd || rawP.cccdparent || rawP.so_cccd || custom?.cccd || custom?.cccdparent || custom?.cccdthannhan || custom?.so_cccd || rawPCustom?.cccdparent || rawPCustom?.cccd || '').toLowerCase();
+      // Chức vụ (Người đi, Cán bộ liên quan)
+      const pos = String(t.position || t.positionName || rawP.positionName || rawP.position || rawP.chuc_vu || custom?.chuc_vu || custom?.positionName || custom?.position || rawPCustom?.chuc_vu || rawPCustom?.positionName || '').toLowerCase();
+      // Đơn vị (Đơn vị công tác người đi, Cán bộ liên quan, Cơ quan ban hành)
+      const dept = String(t.departmentName || t.department || rawP.departmentName || (rawP.departmentId ? personnelStore.getDepartmentName(rawP.departmentId) : '') || custom?.departmentName || custom?.don_vi_cong_tac || custom?.don_vi || custom?.phong_ban || rawPCustom?.don_vi_cong_tac || rawPCustom?.don_vi || t.co_quan_ban_hanh || t.decisionIssuer || '').toLowerCase();
+
+      // Mã
+      const code = String(t.personnelCode || t.code || rawP.code || '').toLowerCase();
+      // Quốc gia, Quyết định, Mục đích, Nguồn kinh phí
+      const country = String(t.countryName || t.country || custom?.quoc_gia_xuat_canh || '').toLowerCase();
+      const dec = String(t.decisionNumber || t.so_quyet_dinh || custom?.so_quyet_dinh || '').toLowerCase();
+      const pur = String(t.purpose || t.muc_dich_xuat_canh || custom?.muc_dich_xuat_canh || '').toLowerCase();
+      const funding = String(t.fundingName || t.nguon_kinh_phi || custom?.nguon_kinh_phi || '').toLowerCase();
 
       return (
         name.includes(q) ||
-        code.includes(q) ||
-        dept.includes(q) ||
-        pos.includes(q) ||
-        country.includes(q) ||
         cccd.includes(q) ||
+        pos.includes(q) ||
+        dept.includes(q) ||
+        code.includes(q) ||
+        country.includes(q) ||
         dec.includes(q) ||
-        pur.includes(q)
+        pur.includes(q) ||
+        funding.includes(q)
       );
     });
   }

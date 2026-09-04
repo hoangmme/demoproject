@@ -927,3 +927,50 @@ td.col-right {
   background: rgba(255, 255, 255, 0.25);
   color: #ffffff;
 }
+
+/* Search input with icon & clear button */
+.search-input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.search-input-wrapper .search-icon-left {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 0.85rem;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.search-input-wrapper .p-inputtext,
+.search-input-wrapper input {
+  padding-left: 32px !important;
+  padding-right: 28px !important;
+}
+
+.search-input-wrapper .search-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  z-index: 2;
+  transition: color 0.15s;
+}
+
+.search-input-wrapper .search-clear-btn:hover {
+  color: #475569;
+}
+
