@@ -1560,18 +1560,27 @@
                     <div v-if="cond.field" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
                       <div>
                         <select v-model="cond.operator" class="custom-key-select" style="font-size: 0.7rem; padding: 2px 4px;">
-                          <option value="has_value">Có dữ liệu (khác rỗng)</option>
-                          <option value="empty">Để trống (chưa có)</option>
-                          <option value="equals">Là (khớp chính xác)</option>
-                          <option value="not_equals">Khác</option>
-                          <option value="contains">Chứa từ khóa</option>
-                          <option value="not_contains">Không chứa từ khóa</option>
-                          <option value="gt">Lớn hơn (&gt;)</option>
-                          <option value="gte">Lớn hơn hoặc bằng (&gt;=)</option>
-                          <option value="lt">Nhỏ hơn (&lt;)</option>
-                          <option value="lte">Nhỏ hơn hoặc bằng (&lt;=)</option>
-                          <option value="before">Trước ngày</option>
-                          <option value="after">Sau ngày</option>
+                          <optgroup label="-- So sánh giá trị cột --">
+                            <option value="has_value">Có dữ liệu (khác rỗng)</option>
+                            <option value="empty">Để trống (chưa có)</option>
+                            <option value="equals">Là (khớp chính xác)</option>
+                            <option value="not_equals">Khác</option>
+                            <option value="contains">Chứa từ khóa</option>
+                            <option value="not_contains">Không chứa từ khóa</option>
+                            <option value="gt">Giá trị lớn hơn (&gt;)</option>
+                            <option value="gte">Giá trị lớn hơn hoặc bằng (&gt;=)</option>
+                            <option value="lt">Giá trị nhỏ hơn (&lt;)</option>
+                            <option value="lte">Giá trị nhỏ hơn hoặc bằng (&lt;=)</option>
+                            <option value="before">Trước ngày</option>
+                            <option value="after">Sau ngày</option>
+                          </optgroup>
+                          <optgroup label="-- Điều kiện đếm (Tần suất / Số lần) --">
+                            <option value="count_gt">Điều kiện đếm: Lớn hơn (&gt;)</option>
+                            <option value="count_gte">Điều kiện đếm: Lớn hơn hoặc bằng (&gt;=)</option>
+                            <option value="count_lt">Điều kiện đếm: Nhỏ hơn (&lt;)</option>
+                            <option value="count_lte">Điều kiện đếm: Nhỏ hơn hoặc bằng (&lt;=)</option>
+                            <option value="count_eq">Điều kiện đếm: Bằng (=)</option>
+                          </optgroup>
                         </select>
                       </div>
                       <div v-if="cond.operator !== 'has_value' && cond.operator !== 'empty'">
@@ -2920,14 +2929,6 @@ const moveMetricCard = (dash, cIdx, direction) => {
 
 const categorizedDashboardCols = computed(() => {
   const groups = [];
-
-  // 0. Nhóm Điều kiện đếm tổng hợp
-  groups.push({
-    category: '📊 Chỉ số Tổng hợp & Đếm',
-    options: [
-      { id: 'dieu_kien_dem', label: 'Điều kiện đếm', displayLabel: '📊 Điều kiện đếm' },
-    ],
-  });
 
   // 1. Nhóm Chuyến đi (Trips)
   const tripCols = (availableTripCols.value || []).map((c, idx) => ({

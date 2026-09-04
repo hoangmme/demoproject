@@ -880,30 +880,34 @@ const matchSingleCondition = (item, cond) => {
   }
 
   // 1b. Special Formula Fields & Điều kiện đếm
-  if (field === 'dieu_kien_dem' || field === '_tripCount') {
+  if (op.startsWith('count_') || field === 'dieu_kien_dem' || field === '_tripCount') {
     const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
     const canBoCccd = String(item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? '').trim();
+    const p = canBoCccd ? (personnelStore.personnelList || []).find((x) => String(x[pKeyField] ?? x.custom_data?.[pKeyField] ?? x.cccdparent ?? '').trim() === canBoCccd) : null;
+    const personTrips = Array.isArray(item.rawPerson?.trips) ? item.rawPerson.trips : (Array.isArray(item.trips) ? item.trips : (Array.isArray(p?.trips) ? p.trips : []));
     
     let count = 0;
-    if (Array.isArray(item.rawPerson?.trips) && item.rawPerson.trips.length > 0) {
-      count = item.rawPerson.trips.length;
-    } else if (Array.isArray(item.trips) && item.trips.length > 0) {
-      count = item.trips.length;
-    } else if (canBoCccd) {
-      const p = (personnelStore.personnelList || []).find((x) => String(x[pKeyField] ?? x.custom_data?.[pKeyField] ?? x.cccdparent ?? '').trim() === canBoCccd);
-      count = Array.isArray(p?.trips) ? p.trips.length : 1;
+    if (field && !['cccdparent', 'parentCccd', 'personnelId', 'name', 'dieu_kien_dem', '_tripCount'].includes(field)) {
+      const targetVal = String(item[field] ?? item.custom_data?.[field] ?? '').trim().toLowerCase();
+      if (targetVal && targetVal !== '-') {
+        const sameFieldTrips = personTrips.filter(t => String(t[field] ?? t.custom_data?.[field] ?? '').trim().toLowerCase() === targetVal);
+        count = sameFieldTrips.length > 0 ? sameFieldTrips.length : personTrips.length;
+      } else {
+        count = personTrips.length;
+      }
     } else {
-      count = 1;
+      count = personTrips.length;
     }
+    if (count === 0 && personTrips.length === 0) count = 1;
 
     const numTarget = parseFloat(target.replace(/[^0-9.-]+/g, ''));
     if (isNaN(numTarget)) return true;
 
-    if (op === 'gt') return count > numTarget;
-    if (op === 'gte') return count >= numTarget;
-    if (op === 'lt') return count < numTarget;
-    if (op === 'lte') return count <= numTarget;
-    if (op === 'equals') return count === numTarget;
+    if (op === 'count_gt' || op === 'gt') return count > numTarget;
+    if (op === 'count_gte' || op === 'gte') return count >= numTarget;
+    if (op === 'count_lt' || op === 'lt') return count < numTarget;
+    if (op === 'count_lte' || op === 'lte') return count <= numTarget;
+    if (op === 'count_eq' || op === 'equals') return count === numTarget;
     if (op === 'not_equals') return count !== numTarget;
     return count >= numTarget;
   }
