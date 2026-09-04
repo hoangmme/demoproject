@@ -1374,11 +1374,15 @@ const unifiedTripsList = computed(() => {
       processedTripKeys.add(uniqueKey);
 
       const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-      const pCccd = p.cccd || p.cccdparent || (p.custom_data && p.custom_data.cccdparent) || '';
-      const relCccd = t.cccdthannhan || (!isInternalId(t.cccd) && isRel ? t.cccd : '');
+      const pKeyField = personnelStore.getPersonnelKeyField();
+      const tKeyField = personnelStore.getTripKeyField();
+      const rKeyField = personnelStore.getRelativeKeyField();
+      const canBoCccd = String(p[pKeyField] ?? p.custom_data?.[pKeyField] ?? '').trim();
+      const relCccd = String(t[rKeyField] ?? (isRel && !isInternalId(t.cccd) ? t.cccd : '')).trim();
       const relName = t.relativeName || (isRel ? 'Thân nhân' : p.name);
       const relShip = t.relationshipName || (isRel ? 'Thân nhân' : '');
-      const travelerCccd = !isInternalId(t.cccdchuyendi) ? t.cccdchuyendi : (!isInternalId(t.cccd) ? t.cccd : (isRel ? relCccd : pCccd));
+      const directTripCccd = t[tKeyField] ?? t.cccdchuyendi;
+      const travelerCccd = !isInternalId(directTripCccd) ? directTripCccd : (isRel ? relCccd : canBoCccd);
 
       list.push({
         ...custom,
@@ -1393,11 +1397,11 @@ const unifiedTripsList = computed(() => {
         relationshipName: relShip,
         parentName: p.name,
         parentPersonnelName: p.name,
-        parentCccd: pCccd,
+        parentCccd: canBoCccd,
         cccdthannhan: relCccd,
-        cccdparent: pCccd,
+        cccdparent: canBoCccd,
         cccdchuyendi: travelerCccd,
-        cccd: travelerCccd || pCccd,
+        cccd: travelerCccd || canBoCccd,
         position: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.position || p.positionName || p.chuc_vu || p.chucVu || custom.position || custom.chuc_vu || ''),
         positionName: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.position || p.positionName || p.chuc_vu || p.chucVu || custom.position || custom.chuc_vu || ''),
         chuc_vu: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.position || p.positionName || p.chuc_vu || p.chucVu || custom.position || custom.chuc_vu || ''),
@@ -1461,9 +1465,9 @@ const unifiedTripsList = computed(() => {
         processedTripKeys.add(uniqueKey);
 
         const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-        const rCccd = !isInternalId(r.cccdthannhan) ? r.cccdthannhan : (!isInternalId(r.cccd) ? r.cccd : '');
-        const pCccd = p.cccd || p.cccdparent || (p.custom_data && p.custom_data.cccdparent) || '';
-        const tripCccd = !isInternalId(rt.cccdchuyendi) ? rt.cccdchuyendi : (!isInternalId(rt.cccdthannhan) ? rt.cccdthannhan : (!isInternalId(rt.cccd) ? rt.cccd : rCccd));
+        const rCccd = !isInternalId(r[rKeyField] ?? r.cccdthannhan) ? String(r[rKeyField] ?? r.cccdthannhan).trim() : '';
+        const canBoCccd = String(p[pKeyField] ?? p.custom_data?.[pKeyField] ?? '').trim();
+        const tripCccd = !isInternalId(rt[tKeyField] ?? rt.cccdchuyendi) ? String(rt[tKeyField] ?? rt.cccdchuyendi).trim() : rCccd;
         const relName = r.relativeName || r.name || custom.relativeName || 'Thân nhân';
         const relShip = r.relationshipName || r.relationship || custom.relationshipName || 'Thân nhân';
         const travelerCccd = tripCccd || rCccd;
@@ -1481,11 +1485,11 @@ const unifiedTripsList = computed(() => {
           relationshipName: relShip,
           parentName: p.name,
           parentPersonnelName: p.name,
-          parentCccd: pCccd,
+          parentCccd: canBoCccd,
           cccdthannhan: travelerCccd,
-          cccdparent: pCccd,
+          cccdparent: canBoCccd,
           cccdchuyendi: travelerCccd,
-          cccd: travelerCccd || pCccd,
+          cccd: travelerCccd || canBoCccd,
           position: `${relShip} của: ${p.name}`,
           positionName: `${relShip} của: ${p.name}`,
           chuc_vu: `${relShip} của: ${p.name}`,
@@ -1523,24 +1527,28 @@ const getRowFieldValue = (row, colId) => {
 
   // Xử lý các cột CCCD / Định danh
   const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-  if (colId === 'cccdchuyendi' || colId === 'cccd_chuyen_di' || colId === 'cccd_nguoi_di') {
-    const directVal = row.cccdchuyendi || row.rawTrip?.cccdchuyendi || row[colId];
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  const tKeyField = personnelStore.getTripKeyField();
+  const rKeyField = personnelStore.getRelativeKeyField();
+
+  if (colId === tKeyField || colId === 'cccdchuyendi' || colId === 'cccd_chuyen_di' || colId === 'cccd_nguoi_di') {
+    const directVal = row[tKeyField] ?? row.cccdchuyendi ?? row.rawTrip?.[tKeyField] ?? row.rawTrip?.cccdchuyendi ?? row[colId];
     if (!isInternalId(directVal)) return String(directVal).trim();
     if (row.isRelative) {
-      const rCccd = row.cccdthannhan || row.rawRelative?.cccdthannhan || row.rawRelative?.cccd || row.cccd;
+      const rCccd = row[rKeyField] ?? row.cccdthannhan ?? row.rawRelative?.[rKeyField] ?? row.rawRelative?.cccdthannhan;
       if (!isInternalId(rCccd)) return String(rCccd).trim();
     }
-    const pCccd = row.rawPerson?.cccd || row.rawPerson?.cccdparent || (row.rawPerson?.custom_data && row.rawPerson.custom_data.cccdparent) || row.parentCccd || row.cccdparent || row.cccd;
-    if (!isInternalId(pCccd)) return String(pCccd).trim();
+    const canBoCccd = row.rawPerson?.[pKeyField] ?? row.rawPerson?.custom_data?.[pKeyField] ?? row.parentCccd ?? row.cccdparent;
+    if (!isInternalId(canBoCccd)) return String(canBoCccd).trim();
     return '-';
   }
-  if (colId === 'cccdparent' || colId === 'cccd_can_bo') {
-    const pCccd = row.parentCccd || row.cccdparent || row.rawPerson?.cccd || row.rawPerson?.cccdparent || (row.rawPerson?.custom_data && row.rawPerson.custom_data.cccdparent);
-    if (!isInternalId(pCccd)) return String(pCccd).trim();
+  if (colId === pKeyField || colId === 'cccdparent' || colId === 'cccd_can_bo') {
+    const canBoCccd = row.parentCccd ?? row.cccdparent ?? row.rawPerson?.[pKeyField] ?? row.rawPerson?.custom_data?.[pKeyField];
+    if (!isInternalId(canBoCccd)) return String(canBoCccd).trim();
     return '-';
   }
-  if (colId === 'cccdthannhan' || colId === 'cccd_than_nhan') {
-    const rCccd = row.cccdthannhan || row.rawRelative?.cccdthannhan || row.rawRelative?.cccd;
+  if (colId === rKeyField || colId === 'cccdthannhan' || colId === 'cccd_than_nhan') {
+    const rCccd = row[rKeyField] ?? row.cccdthannhan ?? row.rawRelative?.[rKeyField] ?? row.rawRelative?.cccdthannhan;
     if (!isInternalId(rCccd)) return String(rCccd).trim();
     return '-';
   }

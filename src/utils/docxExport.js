@@ -187,6 +187,15 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   if (!person) return {};
 
   const cd = person.custom_data || {};
+
+  // Lấy khóa chính CCCD Cán bộ, Chuyến đi, Thân nhân theo Cài đặt hệ thống (Primary Unique Key)
+  const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+  const tKeyField = personnelStore?.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
+  const rKeyField = personnelStore?.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+  const canBoCccd = String(person[pKeyField] ?? cd?.[pKeyField] ?? person.cccdparent ?? cd?.cccdparent ?? '').trim();
+  const pId = String(person.id || '').trim();
+  const pCode = String(person.code || '').trim();
+
   const today = new Date();
   const dayStr = String(today.getDate()).padStart(2, '0');
   const monthStr = String(today.getMonth() + 1).padStart(2, '0');
@@ -366,12 +375,9 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   // 6. Danh sách Thân nhân (Loop {#than_nhan} / {#relatives})
   let rawRelatives = Array.isArray(person.relatives) && person.relatives.length > 0 ? person.relatives : (cd.relatives || []);
   if ((!rawRelatives || rawRelatives.length === 0) && personnelStore?.relativesList?.length > 0) {
-    const pCccd = String(person.cccdparent || cd.cccdparent || person.cccd || '').trim();
-    const pId = String(person.id || '').trim();
-    const pCode = String(person.code || '').trim();
     rawRelatives = personnelStore.relativesList.filter((r) => {
       const rParent = String(r.cccdparent || r.personnelId || r.personnelCode || '').trim();
-      return (pCccd && rParent === pCccd) || (pId && rParent === pId) || (pCode && rParent === pCode);
+      return (canBoCccd && rParent === canBoCccd) || (pId && rParent === pId) || (pCode && rParent === pCode);
     });
   }
 
@@ -458,14 +464,11 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
 
   // Nếu vẫn rỗng, tìm trong personnelStore.tripsList / allTrips
   if ((!rawTrips || rawTrips.length === 0) && personnelStore?.allTrips?.length > 0) {
-    const pId = String(person.id || '').trim();
-    const pCode = String(person.code || '').trim();
-    const pCccd = String(person.cccdparent || cd.cccdparent || person.cccd || '').trim();
     rawTrips = personnelStore.allTrips.filter((t) => {
       const tPId = String(t.personnelId || t.rawPerson?.id || '').trim();
       const tCode = String(t.personnelCode || t.rawPerson?.code || '').trim();
       const tCccd = String(t.cccdparent || t.parentCccd || '').trim();
-      return (pId && tPId === pId) || (pCode && tCode === pCode) || (pCccd && tCccd === pCccd);
+      return (pId && tPId === pId) || (pCode && tCode === pCode) || (canBoCccd && tCccd === canBoCccd);
     });
   }
 
@@ -539,16 +542,17 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     };
 
     const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-    const travelerCccd = !isInternalId(combinedTrip.cccdchuyendi) 
-      ? combinedTrip.cccdchuyendi 
-      : (!isInternalId(combinedTrip.cccdthannhan) ? combinedTrip.cccdthannhan : (!isInternalId(combinedTrip.cccd) ? combinedTrip.cccd : pCccd));
+    const directTripCccd = combinedTrip[tKeyField] ?? combinedTrip.cccdchuyendi;
+    const travelerCccd = !isInternalId(directTripCccd) 
+      ? directTripCccd 
+      : (combinedTrip.isRelative ? (!isInternalId(combinedTrip[rKeyField] ?? combinedTrip.cccdthannhan) ? (combinedTrip[rKeyField] ?? combinedTrip.cccdthannhan) : '') : canBoCccd);
     
     tripObj.cccdchuyendi = travelerCccd;
     tripObj.cccd_chuyen_di = travelerCccd;
     tripObj.cccd_nguoi_di = travelerCccd;
     tripObj.cccd = travelerCccd;
-    tripObj.cccdparent = pCccd;
-    tripObj.cccd_can_bo = pCccd;
+    tripObj.cccdparent = canBoCccd;
+    tripObj.cccd_can_bo = canBoCccd;
 
     Object.entries(combinedTrip).forEach(([k, v]) => {
       if (v !== undefined && v !== null && k !== 'custom_data') {

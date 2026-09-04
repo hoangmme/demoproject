@@ -1814,11 +1814,12 @@ const executeImport = async () => {
         });
       });
 
-      // Existing Personnel map strictly by cccdparent
+      // Existing Personnel map strictly by configured primary key (cccdparent)
+      const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
       const existingByCccd = {};
       personnelStore.personnelList.forEach((p) => {
-        const pCccd = p.cccdparent || p.custom_data?.cccdparent;
-        if (pCccd) existingByCccd[String(pCccd).trim()] = p;
+        const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent;
+        if (canBoCccd) existingByCccd[String(canBoCccd).trim()] = p;
       });
 
       for (let i = 1; i < rawRows.length; i++) {

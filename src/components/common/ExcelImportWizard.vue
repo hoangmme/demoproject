@@ -772,13 +772,13 @@ const validateRowItem = (rowItem) => {
       issues.push('Thiếu Tên thân nhân');
     }
     // CCCD cán bộ liên quan
-    const parentCccd = data[relParentKeyField] || data.parentCccd || data.cccdparent;
+    const parentCccd = data[relParentKeyField];
     if (!parentCccd || String(parentCccd).trim() === '') {
       issues.push(`Thiếu CCCD Cán bộ liên quan (${relParentKeyField})`);
     }
   } else if (targetEntity.value === 'trips') {
     // CCCD người đi là khóa duy nhất để định danh
-    const tripCccd = data[tripKeyField] || data.cccd || data.cccdchuyendi || data.cccdparent;
+    const tripCccd = data[tripKeyField];
     if (!tripCccd || String(tripCccd).trim() === '' || String(tripCccd).trim() === '-') {
       issues.push(`Thiếu CCCD người đi (${tripKeyField})`);
     }
@@ -973,10 +973,10 @@ const executeImport = async () => {
       // Import thân nhân gắn vào cán bộ
       for (const rowItem of rowsToImport) {
         const rowData = { ...rowItem.data };
-        const parentCccd = String(rowData[relParentKeyField] || rowData.parentCccd || rowData.cccdparent || '').trim();
+        const parentCccd = String(rowData[relParentKeyField] || '').trim();
         const parentPerson = personnelStore.personnelList.find(p => {
-          const pCccd = p[pKeyField] || p.cccd || p.cccdparent || p.custom_data?.[pKeyField];
-          return pCccd && String(pCccd).trim() === parentCccd;
+          const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent;
+          return canBoCccd && String(canBoCccd).trim() === parentCccd;
         });
 
         const newRelId = 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
@@ -1006,13 +1006,14 @@ const executeImport = async () => {
       }
     } else if (targetEntity.value === 'trips') {
       // Import chuyến đi gắn vào cán bộ hoặc thân nhân
+      const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
       for (const rowItem of rowsToImport) {
         const rowData = { ...rowItem.data };
-        const tripCccd = String(rowData[tripKeyField] || rowData.cccd || rowData.cccdchuyendi || rowData.cccdparent || '').trim();
+        const tripCccd = String(rowData[tripKeyField] || '').trim();
         
         let resolvedPerson = personnelStore.personnelList.find(p => {
-          const pCccd = p[pKeyField] || p.cccd || p.cccdparent || p.custom_data?.[pKeyField];
-          return pCccd && String(pCccd).trim() === tripCccd;
+          const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent;
+          return canBoCccd && String(canBoCccd).trim() === tripCccd;
         });
         let resolvedName = rowData.personnelName || rowData.name || '';
         let isRelativeTrip = false;
@@ -1022,7 +1023,7 @@ const executeImport = async () => {
           for (const p of (personnelStore.personnelList || [])) {
             const rels = Array.isArray(p.relatives) ? p.relatives : [];
             const matchedRel = rels.find(r => {
-              const rCccd = r.cccdthannhan || r.cccd || r.custom_data?.cccdthannhan;
+              const rCccd = r[rKeyField] ?? r.custom_data?.[rKeyField] ?? r.cccdthannhan;
               return rCccd && String(rCccd).trim() === tripCccd;
             });
             if (matchedRel) {

@@ -596,12 +596,12 @@ export const usePersonnelStore = defineStore('personnel', {
 
         // 4. Kiểm tra chống trùng Khóa định danh chính (Số CCCD Cán bộ)
         const pKeyField = this.getPersonnelKeyField();
-        const currentCccd = String(formData[pKeyField] || formData.cccd || formData.cccdparent || '').trim();
+        const currentCccd = String(formData[pKeyField] ?? formData.custom_data?.[pKeyField] ?? '').trim();
         if (currentCccd && currentCccd !== '-' && !currentCccd.startsWith('p_') && !currentCccd.startsWith('CB-')) {
           const duplicate = (this.personnelList || []).find((p) => {
             if (formData.id && String(p.id) === String(formData.id)) return false;
-            const pCccd = String(p[pKeyField] || p.cccd || p.cccdparent || p.custom_data?.[pKeyField] || '').trim();
-            return pCccd && pCccd.toLowerCase() === currentCccd.toLowerCase();
+            const canBoCccd = String(p[pKeyField] ?? p.custom_data?.[pKeyField] ?? '').trim();
+            return canBoCccd && canBoCccd.toLowerCase() === currentCccd.toLowerCase();
           });
           if (duplicate) {
             throw new Error(`Số định danh/CCCD "${currentCccd}" đã tồn tại trên hồ sơ cán bộ: ${duplicate.name || duplicate.code} (Mã: ${duplicate.code || duplicate.id})!`);
