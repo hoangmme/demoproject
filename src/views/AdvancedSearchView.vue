@@ -863,19 +863,29 @@ const testCondition = (item, crit) => {
     const hasV = !!itemVal && itemVal !== '-' && itemVal !== 'Chưa rõ';
     return { matches: hasV, reason: `${fieldLabel}: ${itemVal}` };
   }
+  const strVal = String(itemVal).toLowerCase().trim().replace(/\s+/g, ' ');
+  const strTarget = String(val).toLowerCase().trim().replace(/\s+/g, ' ');
+  const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+
   if (op === 'equals') {
-    const eq = String(itemVal).toLowerCase() === val;
+    const eq = subKeywords.length > 1
+      ? (subKeywords.some((k) => strVal === k) || strVal === strTarget)
+      : strVal === strTarget;
     let reasonText = `${fieldLabel}: ${itemVal}`;
     if (f === 'hasRelatives') reasonText = 'Có thân nhân ở nước ngoài';
     if (f === 'isOverdue') reasonText = 'Quá hạn chưa về';
     return { matches: eq, reason: reasonText };
   }
   if (op === 'contains') {
-    const cnt = String(itemVal).toLowerCase().includes(val);
+    const cnt = subKeywords.length > 1
+      ? (subKeywords.some((k) => strVal.includes(k)) || strVal.includes(strTarget))
+      : strVal.includes(strTarget);
     return { matches: cnt, reason: `${fieldLabel}: ${itemVal}` };
   }
   if (op === 'not_contains') {
-    const ncnt = !String(itemVal).toLowerCase().includes(val);
+    const ncnt = subKeywords.length > 1
+      ? !subKeywords.some((k) => strVal.includes(k))
+      : !strVal.includes(strTarget);
     return { matches: ncnt, reason: `${fieldLabel} không chứa "${val}"` };
   }
   if (op === 'before_date') {

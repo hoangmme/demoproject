@@ -1603,22 +1603,33 @@ const getRowFieldValue = (row, colId) => {
       }
     } else {
       // Bản ghi là Chuyến đi
-      raw = row[colId] !== undefined ? row[colId] : (row.custom_data?.[colId] ?? row.rawTrip?.[colId] ?? row.rawTrip?.custom_data?.[colId]);
+      const rcd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data || '{}') : (row.custom_data || {});
+      const rtcd = typeof row.rawTrip?.custom_data === 'string' ? JSON.parse(row.rawTrip.custom_data || '{}') : (row.rawTrip?.custom_data || {});
+      raw = row[colId] !== undefined ? row[colId] : (rcd[colId] ?? row.rawTrip?.[colId] ?? rtcd[colId]);
     }
   } else if (relColIds.includes(colId)) {
     // Cột thuộc Bảng Thân nhân
+    const rcd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data || '{}') : (row.custom_data || {});
+    const rrcd = typeof row.rawRelative?.custom_data === 'string' ? JSON.parse(row.rawRelative.custom_data || '{}') : (row.rawRelative?.custom_data || {});
     if (row.isRelative || row.rawRelative) {
-      raw = row[colId] !== undefined ? row[colId] : (row.custom_data?.[colId] ?? row.rawRelative?.[colId] ?? row.rawRelative?.custom_data?.[colId]);
+      raw = row[colId] !== undefined ? row[colId] : (rcd[colId] ?? row.rawRelative?.[colId] ?? rrcd[colId]);
     } else if (row.rawRelative) {
-      raw = row.rawRelative[colId] !== undefined ? row.rawRelative[colId] : (row.rawRelative.custom_data?.[colId]);
+      raw = row.rawRelative[colId] !== undefined ? row.rawRelative[colId] : (rrcd[colId]);
     }
   } else if (perColIds.includes(colId)) {
     // Cột thuộc Bảng Cán bộ
     const p = row.rawPerson || row;
-    raw = p[colId] !== undefined ? p[colId] : (p.custom_data?.[colId]);
+    const pcd = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p.custom_data || {});
+    const rcd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data || '{}') : (row.custom_data || {});
+    raw = p[colId] !== undefined ? p[colId] : (pcd[colId] ?? row[colId] ?? rcd[colId]);
   } else {
     // Cột trực tiếp
-    raw = row[colId] !== undefined ? row[colId] : (row.custom_data?.[colId] ?? row.rawTrip?.[colId] ?? row.rawRelative?.[colId] ?? row.rawPerson?.[colId]);
+    const rcd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data || '{}') : (row.custom_data || {});
+    const rtcd = typeof row.rawTrip?.custom_data === 'string' ? JSON.parse(row.rawTrip.custom_data || '{}') : (row.rawTrip?.custom_data || {});
+    const rrcd = typeof row.rawRelative?.custom_data === 'string' ? JSON.parse(row.rawRelative.custom_data || '{}') : (row.rawRelative?.custom_data || {});
+    const p = row.rawPerson;
+    const pcd = typeof p?.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p?.custom_data || {});
+    raw = row[colId] !== undefined ? row[colId] : (rcd[colId] ?? row.rawTrip?.[colId] ?? rtcd[colId] ?? row.rawRelative?.[colId] ?? rrcd[colId] ?? p?.[colId] ?? pcd[colId]);
   }
 
   return formatGenericCellValue(raw, colDef || { id: colId });
@@ -1747,13 +1758,40 @@ const matchSingleCondition = (item, cond) => {
     return !fieldVal || fieldVal === 'Chưa rõ' || fieldVal === '-';
   }
 
-  const strVal = fieldVal.toLowerCase();
-  const strTarget = String(cond.value || '').trim().toLowerCase();
+  const strVal = fieldVal.toLowerCase().replace(/\s+/g, ' ');
+  const rawTarget = String(cond.value || '').trim();
+  const strTarget = rawTarget.toLowerCase().replace(/\s+/g, ' ');
 
-  if (op === 'equals') return strVal === strTarget;
-  if (op === 'not_equals') return strVal !== strTarget;
-  if (op === 'contains') return strVal.includes(strTarget);
-  if (op === 'not_contains') return !strVal.includes(strTarget);
+  if (op === 'equals') {
+    if (strVal === strTarget) return true;
+    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (subKeywords.length > 1) {
+      return subKeywords.some((k) => strVal === k);
+    }
+    return false;
+  }
+  if (op === 'not_equals') {
+    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (subKeywords.length > 1) {
+      return !subKeywords.some((k) => strVal === k) && strVal !== strTarget;
+    }
+    return strVal !== strTarget;
+  }
+  if (op === 'contains') {
+    if (strVal.includes(strTarget)) return true;
+    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (subKeywords.length > 1) {
+      return subKeywords.some((k) => strVal.includes(k));
+    }
+    return strVal.includes(strTarget);
+  }
+  if (op === 'not_contains') {
+    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (subKeywords.length > 1) {
+      return !subKeywords.some((k) => strVal.includes(k));
+    }
+    return !strVal.includes(strTarget);
+  }
 
   if (op === 'before' || op === 'after') {
     const dVal = new Date(rawVal).getTime();

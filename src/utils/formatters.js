@@ -242,6 +242,11 @@ export const getRecordFieldValue = (row, colId) => {
     try { rtcd = JSON.parse(rtcd); } catch (e) { rtcd = {}; }
   }
   if (rtcd && typeof rtcd === 'object' && rtcd[colId] !== undefined && rtcd[colId] !== null && rtcd[colId] !== '') return rtcd[colId];
+  let rpcd = row.rawPerson?.custom_data;
+  if (typeof rpcd === 'string') {
+    try { rpcd = JSON.parse(rpcd); } catch (e) { rpcd = {}; }
+  }
+  if (rpcd && typeof rpcd === 'object' && rpcd[colId] !== undefined && rpcd[colId] !== null && rpcd[colId] !== '') return rpcd[colId];
   return null;
 };
 

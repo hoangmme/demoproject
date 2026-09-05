@@ -940,13 +940,40 @@ const matchSingleCondition = (item, cond) => {
     return !fieldVal || fieldVal === 'Chưa rõ' || fieldVal === '-';
   }
 
-  const strVal = fieldVal.toLowerCase();
-  const strTarget = String(cond.value || '').trim().toLowerCase();
+  const strVal = fieldVal.toLowerCase().replace(/\s+/g, ' ');
+  const rawTarget = String(cond.value || '').trim();
+  const strTarget = rawTarget.toLowerCase().replace(/\s+/g, ' ');
 
-  if (op === 'equals') return strVal === strTarget;
-  if (op === 'not_equals') return strVal !== strTarget;
-  if (op === 'contains') return strVal.includes(strTarget);
-  if (op === 'not_contains') return !strVal.includes(strTarget);
+  if (op === 'equals') {
+    if (strVal === strTarget) return true;
+    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (subKeywords.length > 1) {
+      return subKeywords.some((k) => strVal === k);
+    }
+    return false;
+  }
+  if (op === 'not_equals') {
+    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (subKeywords.length > 1) {
+      return !subKeywords.some((k) => strVal === k) && strVal !== strTarget;
+    }
+    return strVal !== strTarget;
+  }
+  if (op === 'contains') {
+    if (strVal.includes(strTarget)) return true;
+    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (subKeywords.length > 1) {
+      return subKeywords.some((k) => strVal.includes(k));
+    }
+    return strVal.includes(strTarget);
+  }
+  if (op === 'not_contains') {
+    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (subKeywords.length > 1) {
+      return !subKeywords.some((k) => strVal.includes(k));
+    }
+    return !strVal.includes(strTarget);
+  }
 
   if (op === 'before' || op === 'after') {
     const dVal = new Date(rawVal).getTime();
@@ -2122,22 +2149,33 @@ const getCellValue = (trip, colId) => {
       }
     } else {
       // Đối tượng là Bản ghi Chuyến đi
-      rawVal = trip[colId] !== undefined ? trip[colId] : (trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawTrip?.custom_data?.[colId]);
+      const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
+      const rtcd = typeof trip.rawTrip?.custom_data === 'string' ? JSON.parse(trip.rawTrip.custom_data || '{}') : (trip.rawTrip?.custom_data || {});
+      rawVal = trip[colId] !== undefined ? trip[colId] : (tcd[colId] ?? trip.rawTrip?.[colId] ?? rtcd[colId]);
     }
   } else if (relColIds.includes(colId)) {
     // Cột thuộc Bảng Thân nhân
+    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
+    const rrcd = typeof trip.rawRelative?.custom_data === 'string' ? JSON.parse(trip.rawRelative.custom_data || '{}') : (trip.rawRelative?.custom_data || {});
     if (trip.isRelative || currentDashboardConfig.value?.source === 'relatives') {
-      rawVal = trip[colId] !== undefined ? trip[colId] : (trip.custom_data?.[colId] ?? trip.rawRelative?.[colId] ?? trip.rawRelative?.custom_data?.[colId]);
+      rawVal = trip[colId] !== undefined ? trip[colId] : (tcd[colId] ?? trip.rawRelative?.[colId] ?? rrcd[colId]);
     } else if (trip.rawRelative) {
-      rawVal = trip.rawRelative[colId] !== undefined ? trip.rawRelative[colId] : (trip.rawRelative.custom_data?.[colId]);
+      rawVal = trip.rawRelative[colId] !== undefined ? trip.rawRelative[colId] : (rrcd[colId]);
     }
   } else if (perColIds.includes(colId)) {
     // Cột thuộc Bảng Cán bộ
     const p = trip.rawPerson || trip;
-    rawVal = p[colId] !== undefined ? p[colId] : (p.custom_data?.[colId] ?? trip[colId] ?? trip.custom_data?.[colId]);
+    const pcd = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p.custom_data || {});
+    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
+    rawVal = p[colId] !== undefined ? p[colId] : (pcd[colId] ?? trip[colId] ?? tcd[colId]);
   } else {
     // Cột thông thường / fallback trực tiếp
-    rawVal = trip[colId] !== undefined ? trip[colId] : (trip.custom_data?.[colId] ?? trip.rawTrip?.[colId] ?? trip.rawRelative?.[colId] ?? trip.rawPerson?.[colId] ?? trip.rawPerson?.custom_data?.[colId]);
+    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
+    const rtcd = typeof trip.rawTrip?.custom_data === 'string' ? JSON.parse(trip.rawTrip.custom_data || '{}') : (trip.rawTrip?.custom_data || {});
+    const rrcd = typeof trip.rawRelative?.custom_data === 'string' ? JSON.parse(trip.rawRelative.custom_data || '{}') : (trip.rawRelative?.custom_data || {});
+    const p = trip.rawPerson;
+    const pcd = typeof p?.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p?.custom_data || {});
+    rawVal = trip[colId] !== undefined ? trip[colId] : (tcd[colId] ?? trip.rawTrip?.[colId] ?? rtcd[colId] ?? trip.rawRelative?.[colId] ?? rrcd[colId] ?? p?.[colId] ?? pcd[colId]);
   }
 
   return formatGenericCellValue(rawVal, colDef || { id: colId });
