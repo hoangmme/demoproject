@@ -39,3 +39,16 @@
 ### 5. XUẤT HỒ SƠ PDF TOÀN DIỆN (DOCX/PDF EXPORT ARCHITECTURE)
 - Chuyến đi (`trips`) và Thân nhân (`relatives`) không tồn tại độc lập mà luôn liên kết chặt chẽ với Cán bộ chủ quản (`personnel`).
 - Khi xuất PDF từ bất kỳ giao diện nào (Hồ sơ Cán bộ, Tab Thân nhân, Bảng Chuyên đề hay Tìm kiếm nâng cao), hệ thống luôn tự động phân giải (`resolvePersonFromItem`) về đúng hồ sơ Cán bộ chủ quản để xuất đầy đủ và chính xác 100%.
+
+### 6. BỘ LỌC ĐA TỪ KHÓA (MULTI-KEYWORD FILTER ENGINE)
+- **Toán tử `contains` & `equals`**: Hỗ trợ danh sách từ khóa phân tách bằng dấu phẩy `,` hoặc chấm phẩy `;` (ví dụ: `Sở, Ban, Ngành` hoặc `Xã, Phường, Đặc khu`).
+  - `contains`: Khớp nếu giá trị ô chứa BẤT KỲ từ khóa nào trong danh sách.
+  - `equals`: Khớp nếu giá trị ô bằng BẤT KỲ từ khóa nào trong danh sách.
+  - Tự động chuẩn hóa khoảng trắng thừa (`\s+`) và viết thường không phân biệt hoa/thường.
+- **Phân giải an toàn `custom_data`**: Luôn an toàn parse chuỗi JSON sang object nếu `custom_data` được lưu dưới dạng chuỗi (Directus stringified JSON).
+- Đồng bộ nhất quán trên cả 3 view: `ChildDashboardView.vue`, `DashboardView.vue`, và `AdvancedSearchView.vue`.
+
+### 7. LEDGER STATUS
+- **Status**: Done (Đã sửa lỗi bộ lọc chứa từ khóa đa giá trị, parse custom_data an toàn và push lên git main `dd4d1c2`).
+- **Flags**: None.
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã qua kiểm thử build thành công).
