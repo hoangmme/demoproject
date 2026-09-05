@@ -758,7 +758,17 @@ const allPersonnelForExport = computed(() => {
 });
 
 // Dynamic Dashboard Topic State
-const customDashboards = ref([]);
+const getInitialCustomDashboards = () => {
+  try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return [];
+};
+const customDashboards = ref(getInitialCustomDashboards());
 
 const topicId = computed(() => {
   return route.params.id || (route.path === '/trips' ? 'trips' : 'trips');
@@ -1434,13 +1444,31 @@ const allAvailableColumnsList = computed(() => {
 });
 
 const allColumns = computed(() => allAvailableColumnsList.value);
-const selectedColIds = ref([]);
+const getInitialSelectedCols = () => {
+  try {
+    const tid = route.params.id || (route.path === '/trips' ? 'trips' : 'trips');
+    const localKey = `child_dashboard_cols_${tid || 'default'}`;
+    const local = localStorage.getItem(localKey) || (tid === 'trips' ? localStorage.getItem('trips_dashboard_columns') : null);
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.filter((id) => id !== 'status' && id !== 'tripStatus');
+      }
+    }
+  } catch (e) {}
+  return [];
+};
+const selectedColIds = ref(getInitialSelectedCols());
 
 const onColumnsChange = async (newCols) => {
   selectedColIds.value = [...newCols];
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
 
   try {
+    localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
+    if (topicId.value === 'trips') {
+      localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
+    }
     await saveAppSettings(currentKey, selectedColIds.value);
     await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
   } catch (e) {}
@@ -1449,6 +1477,7 @@ const onColumnsChange = async (newCols) => {
   if (idx !== -1) {
     customDashboards.value[idx].columns = [...selectedColIds.value];
     try {
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
       await saveAppSettings('custom_dashboards_config', customDashboards.value);
     } catch (e) {}
   }
@@ -2382,11 +2411,19 @@ const removeSelectedCol = (idx) => {
 const saveColumnSelection = async () => {
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
 
+  try {
+    localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
+    if (topicId.value === 'trips') {
+      localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
+    }
+  } catch (e) {}
+
   // Also persist into customDashboards in DB
   const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
   if (idx !== -1) {
     customDashboards.value[idx].columns = [...selectedColIds.value];
     try {
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
       await saveAppSettings('custom_dashboards_config', customDashboards.value);
     } catch (e) {}
   }
@@ -2673,9 +2710,19 @@ const exportExcel = () => {
 
 const loadCustomDashboards = async () => {
   try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        customDashboards.value = parsed;
+      }
+    }
     const saved = await getAppSettings('custom_dashboards_config', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
       customDashboards.value = saved;
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(saved));
+      } catch (e) {}
     }
   } catch (e) {
     console.error('Error loading custom dashboards in ChildDashboardView:', e);
@@ -2683,31 +2730,49 @@ const loadCustomDashboards = async () => {
 };
 
 const initTopicColumns = async () => {
-  const validIds = new Set(allAvailableColumnsList.value.map((c) => c.id));
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
 
-  // 1. Áp dụng ngay lập tức cấu hình cột có sẵn trong bộ nhớ (0ms latency, không bị nhấp nháy trống cột)
-  if (currentDashboardConfig.value?.columns && currentDashboardConfig.value.columns.length > 0) {
-    const validCfg = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
-    if (validCfg.length > 0) {
-      selectedColIds.value = validCfg;
-    } else {
-      selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
-    }
-  } else {
-    selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
-  }
-
-  // 2. Kiểm tra bất đồng bộ cấu hình riêng đã lưu (nếu có tùy chỉnh thêm)
+  // 1. Kiểm tra cache local trước để 0ms hiển thị chính xác ngay lập tức
   try {
-    const dbCols = await getAppSettings(currentKey, null);
-    if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
-      const validDb = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus' && validIds.has(id));
-      if (validDb.length > 0) {
-        selectedColIds.value = validDb;
+    const localCols = localStorage.getItem(currentKey) || (topicId.value === 'trips' ? localStorage.getItem('trips_dashboard_columns') : null);
+    if (localCols) {
+      const parsed = JSON.parse(localCols);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        selectedColIds.value = parsed.filter((id) => id !== 'status' && id !== 'tripStatus');
+        return;
       }
     }
   } catch (e) {}
+
+  // 2. Kiểm tra cấu hình riêng đã lưu trong DB
+  try {
+    const dbCols = (await getAppSettings(currentKey, null)) || (topicId.value === 'trips' ? await getAppSettings('trips_dashboard_columns', null) : null);
+    if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
+      const valid = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus');
+      if (valid.length > 0) {
+        selectedColIds.value = valid;
+        try {
+          localStorage.setItem(currentKey, JSON.stringify(valid));
+        } catch (e) {}
+        return;
+      }
+    }
+  } catch (e) {}
+
+  // 3. Nếu trong customDashboards có cấu hình columns riêng của chuyên đề này
+  if (currentDashboardConfig.value?.columns && currentDashboardConfig.value.columns.length > 0) {
+    const validCfg = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
+    if (validCfg.length > 0) {
+      selectedColIds.value = validCfg;
+      return;
+    }
+  }
+
+  // 4. Mặc định: Hiển thị TOÀN BỘ các cột có trong chuyên đề (không bị giấu/bớt cột tạm bợ)
+  const allIds = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
+  if (allIds.length > 0) {
+    selectedColIds.value = allIds;
+  }
 };
 
 const handleRouteQueryChange = () => {
@@ -2734,8 +2799,8 @@ const handleRouteQueryChange = () => {
 
 watch(
   () => topicId.value,
-  () => {
-    initTopicColumns();
+  async () => {
+    await initTopicColumns();
     activeMetricCardId.value = 'all';
     statusFilter.value = 'all';
     searchQuery.value = '';
@@ -2758,9 +2823,21 @@ watch(
   { deep: true }
 );
 
+watch(
+  () => allAvailableColumnsList.value.length,
+  (newLen, oldLen) => {
+    if (newLen > (oldLen || 0) && selectedColIds.value.length <= 2) {
+      initTopicColumns();
+    }
+  }
+);
+
 onMounted(async () => {
+  if (!personnelStore.importMappingTrips || personnelStore.importMappingTrips.length === 0) {
+    await personnelStore.loadSettings();
+  }
   await loadCustomDashboards();
-  initTopicColumns();
+  await initTopicColumns();
   handleRouteQueryChange();
   loadNameColConfig();
 });

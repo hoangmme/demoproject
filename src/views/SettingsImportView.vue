@@ -2721,7 +2721,7 @@ const DEFAULT_TOPIC_DASHBOARDS_CONFIG = [
       { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
       { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
     ],
-    columns: ['personnelName', 'position', 'departmentName', 'countryName', 'departureDate', 'arrivalDate', 'decisionNumber', 'fundingName', 'purpose'],
+    columns: [], // Để trống = Mặc định hiển thị đầy đủ toàn bộ cột khả dụng của chuyên đề
   },
 ];
 
@@ -2825,7 +2825,7 @@ const addNewDashboard = () => {
     metricCards: [
       { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
     ],
-    columns: ['personnelName', 'position', 'departmentName', 'countryName'],
+    columns: [], // Để trống = Mặc định hiển thị đầy đủ toàn bộ cột khả dụng của chuyên đề
   };
   customDashboards.value.push(newDash);
   selectedDashboardIdx.value = customDashboards.value.length - 1;
