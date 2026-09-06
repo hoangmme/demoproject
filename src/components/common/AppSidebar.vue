@@ -4,7 +4,9 @@
     style="position: relative; overflow: hidden;"
     :style="{
       backgroundColor: sidebarCustomColor || '#889962',
+      '--sidebar-bg': sidebarCustomColor || '#889962',
       '--sidebar-text-color': sidebarCustomTextColor || '#000000',
+      '--sidebar-heading-color': sidebarCustomTextColor || '#1a2e05',
     }"
   >
     <!-- Lớp phủ ảnh nền tùy biến cover với độ trong suốt tùy chỉnh -->
@@ -261,7 +263,18 @@ const DEFAULT_DASHBOARDS = [
   },
 ];
 
-const dynamicDashboards = ref([...DEFAULT_DASHBOARDS]);
+const getInitialDashboards = () => {
+  try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return [...DEFAULT_DASHBOARDS];
+};
+
+const dynamicDashboards = ref(getInitialDashboards());
 
 const topicDashboards = computed(() => {
   return (dynamicDashboards.value || []).filter((d) => d.displayMode !== 'appendix');
@@ -276,15 +289,14 @@ const loadSidebarData = async () => {
     const savedDash = await getAppSettings('custom_dashboards_config', null);
     if (savedDash && Array.isArray(savedDash) && savedDash.length > 0) {
       dynamicDashboards.value = savedDash;
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(savedDash));
+      } catch (e) {}
     }
   } catch (e) {
     console.error('Error loading sidebar dashboards:', e);
   }
 };
-
-onMounted(() => {
-  loadSidebarData();
-});
 
 const getDashboardRoute = (dash) => {
   if (dash.id === 'trips') return '/trips';
@@ -348,69 +360,69 @@ const confirmQuickTripNavigate = () => {
   }
 };
 
-const sidebarCustomBg = ref('');
-const sidebarBgOpacity = ref(40);
-const sidebarCustomColor = ref('#889962');
-const sidebarCustomTextColor = ref('');
-const sidebarOrgTextColor = ref('');
-const sidebarSubtitleTextColor = ref('');
+const sidebarCustomBg = ref(localStorage.getItem('sidebar_custom_bg') || '');
+const sidebarBgOpacity = ref(Number(localStorage.getItem('sidebar_bg_opacity')) || 40);
+const sidebarCustomColor = ref(localStorage.getItem('sidebar_custom_color') || '#889962');
+const sidebarCustomTextColor = ref(localStorage.getItem('sidebar_custom_text_color') || '');
+const sidebarOrgTextColor = ref(localStorage.getItem('sidebar_org_text_color') || '');
+const sidebarSubtitleTextColor = ref(localStorage.getItem('sidebar_subtitle_text_color') || '');
 
 const loadSidebarBg = async () => {
   try {
-    const bg = await getAppSettings('sidebar_custom_bg');
-    if (bg) sidebarCustomBg.value = typeof bg === 'string' ? bg : (bg.value || '');
-    else sidebarCustomBg.value = '';
+    const [bgRes, opRes, colRes, txtColRes, orgTxtColRes, subTxtColRes] = await Promise.allSettled([
+      getAppSettings('sidebar_custom_bg', null),
+      getAppSettings('sidebar_bg_opacity', null),
+      getAppSettings('sidebar_custom_color', null),
+      getAppSettings('sidebar_custom_text_color', null),
+      getAppSettings('sidebar_org_text_color', null),
+      getAppSettings('sidebar_subtitle_text_color', null),
+    ]);
 
-    const op = await getAppSettings('sidebar_bg_opacity');
-    if (op !== null && op !== undefined && op !== '') {
-      sidebarBgOpacity.value = Number(op);
-    } else {
-      sidebarBgOpacity.value = 40;
+    if (bgRes.status === 'fulfilled') {
+      const bg = bgRes.value;
+      const val = bg ? (typeof bg === 'string' ? bg : (bg.value || '')) : '';
+      sidebarCustomBg.value = val;
+      try { localStorage.setItem('sidebar_custom_bg', val); } catch (e) {}
     }
-
-    const col = await getAppSettings('sidebar_custom_color');
-    if (col) {
-      sidebarCustomColor.value = typeof col === 'string' ? col : (col.value || '#889962');
-    } else {
-      sidebarCustomColor.value = '#889962';
+    if (opRes.status === 'fulfilled' && opRes.value !== null && opRes.value !== undefined && opRes.value !== '') {
+      sidebarBgOpacity.value = Number(opRes.value);
+      try { localStorage.setItem('sidebar_bg_opacity', String(opRes.value)); } catch (e) {}
     }
-
-    const txtCol = await getAppSettings('sidebar_custom_text_color');
-    if (txtCol) {
-      sidebarCustomTextColor.value = typeof txtCol === 'string' ? txtCol : (txtCol.value || '');
-    } else {
-      sidebarCustomTextColor.value = '';
+    if (colRes.status === 'fulfilled' && colRes.value) {
+      const col = typeof colRes.value === 'string' ? colRes.value : (colRes.value.value || '#889962');
+      sidebarCustomColor.value = col;
+      try { localStorage.setItem('sidebar_custom_color', col); } catch (e) {}
     }
-
-    const orgTxtCol = await getAppSettings('sidebar_org_text_color');
-    if (orgTxtCol) {
-      sidebarOrgTextColor.value = typeof orgTxtCol === 'string' ? orgTxtCol : (orgTxtCol.value || '');
-    } else {
-      sidebarOrgTextColor.value = '';
+    if (txtColRes.status === 'fulfilled' && txtColRes.value) {
+      const txtCol = typeof txtColRes.value === 'string' ? txtColRes.value : (txtColRes.value.value || '');
+      sidebarCustomTextColor.value = txtCol;
+      try { localStorage.setItem('sidebar_custom_text_color', txtCol); } catch (e) {}
     }
-
-    const subTxtCol = await getAppSettings('sidebar_subtitle_text_color');
-    if (subTxtCol) {
-      sidebarSubtitleTextColor.value = typeof subTxtCol === 'string' ? subTxtCol : (subTxtCol.value || '');
-    } else {
-      sidebarSubtitleTextColor.value = '';
+    if (orgTxtColRes.status === 'fulfilled' && orgTxtColRes.value) {
+      const orgCol = typeof orgTxtColRes.value === 'string' ? orgTxtColRes.value : (orgTxtColRes.value.value || '');
+      sidebarOrgTextColor.value = orgCol;
+      try { localStorage.setItem('sidebar_org_text_color', orgCol); } catch (e) {}
+    }
+    if (subTxtColRes.status === 'fulfilled' && subTxtColRes.value) {
+      const subCol = typeof subTxtColRes.value === 'string' ? subTxtColRes.value : (subTxtColRes.value.value || '');
+      sidebarSubtitleTextColor.value = subCol;
+      try { localStorage.setItem('sidebar_subtitle_text_color', subCol); } catch (e) {}
     }
   } catch (e) {
-    sidebarCustomBg.value = '';
-    sidebarCustomColor.value = '#889962';
-    sidebarCustomTextColor.value = '';
-    sidebarOrgTextColor.value = '';
-    sidebarSubtitleTextColor.value = '';
+    console.warn('Error loading sidebar background settings:', e);
   }
 };
 
 onMounted(() => {
   loadSidebarBg();
+  loadSidebarData();
   window.addEventListener('sidebar-bg-updated', loadSidebarBg);
+  window.addEventListener('custom-dashboards-updated', loadSidebarData);
 });
 
 onUnmounted(() => {
   window.removeEventListener('sidebar-bg-updated', loadSidebarBg);
+  window.removeEventListener('custom-dashboards-updated', loadSidebarData);
 });
 </script>
 
@@ -426,7 +438,7 @@ onUnmounted(() => {
   background-repeat: no-repeat;
   pointer-events: none;
   z-index: 0;
-  transition: opacity 0.3s ease, background-image 0.3s ease;
+  transition: opacity 0.25s ease;
 }
 
 .sidebar-input-btn {
@@ -476,17 +488,5 @@ onUnmounted(() => {
 
 .flyout-item:hover {
   background: #f1f5f9;
-}
-
-:deep(.app-nav-item) {
-  color: var(--sidebar-text-color, #000000) !important;
-}
-
-:deep(.app-nav-item i) {
-  color: var(--sidebar-text-color, #000000) !important;
-}
-
-:deep(.app-nav-heading) {
-  color: var(--sidebar-text-color, #1a2e05) !important;
 }
 </style>

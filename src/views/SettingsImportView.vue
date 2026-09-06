@@ -2510,6 +2510,7 @@ const loadSidebarBgSettings = async () => {
 const saveSidebarCustomColor = async (color) => {
   if (color) sidebarCustomColor.value = color;
   try {
+    localStorage.setItem('sidebar_custom_color', sidebarCustomColor.value);
     await saveAppSettings('sidebar_custom_color', sidebarCustomColor.value);
     window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
   } catch (e) {}
@@ -2518,6 +2519,7 @@ const saveSidebarCustomColor = async (color) => {
 const saveSidebarCustomTextColor = async (color) => {
   if (color !== undefined) sidebarCustomTextColor.value = color;
   try {
+    localStorage.setItem('sidebar_custom_text_color', sidebarCustomTextColor.value);
     await saveAppSettings('sidebar_custom_text_color', sidebarCustomTextColor.value);
     window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
   } catch (e) {}
@@ -2526,6 +2528,7 @@ const saveSidebarCustomTextColor = async (color) => {
 const saveSidebarOrgTextColor = async (color) => {
   if (color !== undefined) sidebarOrgTextColor.value = color;
   try {
+    localStorage.setItem('sidebar_org_text_color', sidebarOrgTextColor.value);
     await saveAppSettings('sidebar_org_text_color', sidebarOrgTextColor.value);
     window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
   } catch (e) {}
@@ -2534,6 +2537,7 @@ const saveSidebarOrgTextColor = async (color) => {
 const saveSidebarSubtitleTextColor = async (color) => {
   if (color !== undefined) sidebarSubtitleTextColor.value = color;
   try {
+    localStorage.setItem('sidebar_subtitle_text_color', sidebarSubtitleTextColor.value);
     await saveAppSettings('sidebar_subtitle_text_color', sidebarSubtitleTextColor.value);
     window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
   } catch (e) {}
@@ -2550,6 +2554,7 @@ const handleUploadSidebarBg = async (event) => {
     if (uploaded && uploaded.id) {
       const bgUrl = getFileUrl(uploaded.id);
       currentSidebarBg.value = bgUrl;
+      localStorage.setItem('sidebar_custom_bg', bgUrl);
       await saveAppSettings('sidebar_custom_bg', bgUrl);
       window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
       alert('Đã tải lên và lưu ảnh nền Menu bên trái thành công!');
@@ -2560,6 +2565,7 @@ const handleUploadSidebarBg = async (event) => {
     try {
       const compressedBase64 = await compressImage(file, 1920, 1080, 0.85);
       currentSidebarBg.value = compressedBase64;
+      localStorage.setItem('sidebar_custom_bg', compressedBase64);
       await saveAppSettings('sidebar_custom_bg', compressedBase64);
       window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
       alert('Đã lưu ảnh nền Menu bên trái thành công!');
@@ -2573,6 +2579,7 @@ const handleUploadSidebarBg = async (event) => {
 
 const saveSidebarBgOpacity = async () => {
   try {
+    localStorage.setItem('sidebar_bg_opacity', String(sidebarBgOpacity.value));
     await saveAppSettings('sidebar_bg_opacity', Number(sidebarBgOpacity.value));
     window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
   } catch (e) {}
@@ -2586,6 +2593,14 @@ const resetDefaultSidebarBg = async () => {
   sidebarCustomTextColor.value = '';
   sidebarOrgTextColor.value = '';
   sidebarSubtitleTextColor.value = '';
+  try {
+    localStorage.removeItem('sidebar_custom_bg');
+    localStorage.setItem('sidebar_bg_opacity', '40');
+    localStorage.setItem('sidebar_custom_color', '#889962');
+    localStorage.removeItem('sidebar_custom_text_color');
+    localStorage.removeItem('sidebar_org_text_color');
+    localStorage.removeItem('sidebar_subtitle_text_color');
+  } catch (e) {}
   await saveAppSettings('sidebar_custom_bg', null);
   await saveAppSettings('sidebar_bg_opacity', 40);
   await saveAppSettings('sidebar_custom_color', '#889962');

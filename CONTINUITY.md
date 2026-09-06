@@ -595,10 +595,38 @@
      - Trong `filteredList`: Không lọc lặp lại khi đang ở thẻ baseline; chỉ lọc các trường `status`, `country`, `funding`, `year` khi có tham số truyền trực tiếp từ URL query (`route.query`), loại bỏ hoàn toàn việc lọc ngầm từ state cũ.
      - Đồng bộ logic chọn `firstCard` không bị ẩn trong `DashboardView.vue`.
 
-### 55. LEDGER STATUS
-- **Status**: Done (Đã build thành công dist và sync sang WINDOWS_OFFLINE_APP, giải quyết triệt để 4 yêu cầu của người dùng).
+### 55. TỐI ƯU HÓA CSS SIDEBAR MENU, XÓA BỎ TOÀN BỘ !IMPORTANT & CƠ CHẾ INSTANT 0MS HYDRATION (2026-09-07)
+- **Vấn đề người dùng phản hồi**:
+  - Khi load trang, menu bên trái tạo cảm giác có nhiều lớp CSS đè lên nhau, giật/nháy hình, lạm dụng `!important` thay vì tối ưu kiến trúc.
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. **Xung đột specificity & lạm dụng `!important`**:
+     - `src/assets/styles/main.css`: Khai báo `.app-nav-item i { color: #000000 !important; }` đè lên mọi icon.
+     - `AppSidebar.vue`: Dùng `:deep(.app-nav-item) { ... !important; }`, `:deep(.app-nav-item i) { ... !important; }`, `:deep(.app-nav-heading) { ... !important; }` để ép màu biến CSS.
+     - Hệ quả: Các icon có màu ngữ cảnh riêng (như Thêm cán bộ `#60a5fa`, Thêm thân nhân `#c084fc`, Thêm chuyến đi `#4ade80`) bị ép thành màu đen thuần.
+  2. **Trễ mạng & Flash of Unstyled Content (FOUC)**:
+     - Trên frame 0 khi tải trang, `dynamicDashboards` khởi tạo với 1 item duy nhất, `sidebarCustomBg` rỗng.
+     - Sau đó `AppSidebar` thực hiện tới 7 request tuần tự tới Directus DB để lấy danh sách chuyên đề, ảnh nền, độ mờ, màu chữ, màu nền...
+     - Khi từng request phản hồi (sau 200ms - 800ms), danh sách menu nhảy layout, ảnh nền trống đồng giật vào, các biến màu sắc chớp đổi liên tục khiến người dùng thấy "nhiều lớp đè lên nhau".
+  3. **Lớp phủ nền (Overlay) và highlight active quá gắt**:
+     - Menu active có nền `rgba(0, 0, 0, 0.16)` đậm đục đè lên hoa văn trống đồng và nền xanh rêu, tạo cảm giác nặng nề, lem luốc.
+- **Giải pháp & Triển khai**:
+  1. **Xóa bỏ triệt để 100% các từ khóa `!important`**:
+     - Xóa `!important` trong `main.css` tại `.app-nav-item i`, chuyển thành `color: inherit;` để các icon có màu inline style hiển thị đúng màu sắc rực rỡ, rõ ràng.
+     - Xóa bỏ hoàn toàn khối `:deep(...) !important` trong `AppSidebar.vue`.
+  2. **Thống nhất hệ thống CSS Variables chuẩn mực**:
+     - Toàn bộ màu chữ, màu tiêu đề, màu nền sidebar được quản lý tự nhiên qua CSS Variables: `--sidebar-bg`, `--sidebar-text-color`, `--sidebar-heading-color`.
+     - Highlight mục active chuyển sang phong cách glassmorphic tinh tế (`rgba(0, 0, 0, 0.13)`, `backdrop-filter: blur(4px)`), hòa quyện hài hòa với ảnh nền.
+  3. **Instant 0ms Cache Hydration từ `localStorage`**:
+     - Khởi tạo ngay lập tức danh sách menu (`dynamicDashboards`) từ cache `custom_dashboards_config`.
+     - Khởi tạo đồng thời `sidebarCustomBg`, `sidebarBgOpacity`, `sidebarCustomColor`, `sidebarCustomTextColor`, `sidebarOrgTextColor` ngay từ `localStorage`.
+     - Chạy đồng bộ ngầm song song bằng `Promise.allSettled` không block UI, loại bỏ hoàn toàn hiện tượng chớp nháy/nhảy layout khi tải trang.
+     - Đồng bộ lưu cache tức thì trong `SettingsImportView.vue` và phát sự kiện `custom-dashboards-updated`, `sidebar-bg-updated` phản hồi tức thời.
+
+### 56. LEDGER STATUS
+- **Status**: Done (Đã loại bỏ hoàn toàn !important, tối ưu kiến trúc CSS sidebar và áp dụng cơ chế instant hydration 0ms).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
+
 
 
 
