@@ -273,8 +273,8 @@
                   v-for="(item, cIdx) in getFilteredChartList(widget)"
                   :key="item.name"
                   class="country-column-item"
-                  @click="handleChartItemClick(widget, item)"
-                  :title="`${item.name}\n- Số lượng: ${item.count} bản ghi`"
+                  @click="handleWidgetClick(widget)"
+                  :title="`${item.name}: ${item.count} bản ghi\n(Bấm để mở Chuyên đề)`"
                   style="cursor: pointer;"
                 >
                   <span class="column-top-total">{{ item.count }}</span>
@@ -341,7 +341,8 @@
                 v-for="(item, cIdx) in getFilteredChartList(widget)"
                 :key="item.name"
                 class="breakdown-row"
-                @click="handleChartItemClick(widget, item)"
+                @click="handleWidgetClick(widget)"
+                :title="`${item.name}: ${item.count} bản ghi\n(Bấm để mở Chuyên đề)`"
                 style="cursor: pointer;"
               >
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -2911,26 +2912,8 @@ const filteredFundingList = computed(() => {
 // =========================================================================
 // 4. CHART ITEM CLICK & NAVIGATION
 // =========================================================================
-const handleChartItemClick = (widget, itemOrName) => {
-  const targetPath = widget.topicId === 'trips' || !widget.topicId
-    ? (widget.source === 'personnel' ? '/personnel' : (widget.source === 'relatives' ? '/personnel' : '/trips'))
-    : `/dashboard-topic/${widget.topicId}`;
-
-  const itemName = typeof itemOrName === 'object' && itemOrName !== null ? itemOrName.name : String(itemOrName);
-  const itemField = typeof itemOrName === 'object' && itemOrName !== null ? itemOrName.field : null;
-
-  const topic = availableTopicDashboards.value.find((t) => t.id === widget.topicId);
-  const card = (topic?.metricCards || []).find((c) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title);
-  const cardParam = card?.id || 'all';
-  const cardConds = (card && card.conditions && card.conditions.length > 0) ? card.conditions : (card?.field ? [{ field: card.field }] : []);
-  const field = itemField || widget.columnId || (cardConds.length > 0 ? cardConds[0].field : '');
-
-  const query = { card: cardParam };
-  if (field) {
-    query.filterField = field;
-    query.filterValue = itemName;
-  }
-  router.push({ path: targetPath, query });
+const handleChartItemClick = (widget) => {
+  handleWidgetClick(widget);
 };
 
 const onDisplayTypeChange = () => {

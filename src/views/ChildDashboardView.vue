@@ -861,7 +861,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
@@ -879,6 +879,7 @@ import { getFileUrl } from '@/api/files';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
+const router = useRouter();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 const isExportDocxDialogOpen = ref(false);
