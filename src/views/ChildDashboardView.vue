@@ -2905,6 +2905,14 @@ const loadCustomDashboards = async () => {
         localStorage.setItem('custom_dashboards_config', JSON.stringify(saved));
       } catch (e) {}
     }
+    // Sanitize card IDs: đảm bảo các thẻ con không bị trùng id: 'all' với thẻ gốc
+    customDashboards.value.forEach((dash) => {
+      (dash.metricCards || []).forEach((c, idx) => {
+        if (idx > 0 && (!c.id || c.id === 'all')) {
+          c.id = 'card_' + (dash.id || 'dash') + '_' + idx;
+        }
+      });
+    });
   } catch (e) {
     console.error('Error loading custom dashboards in ChildDashboardView:', e);
   }

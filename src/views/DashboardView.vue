@@ -526,7 +526,7 @@
         <div class="field-item">
           <label class="field-label" style="font-weight: 700; color: #1e293b;">2. Chọn Khối Thống kê (Metric Card) của Chuyên đề <span style="color: #ef4444;">*</span></label>
           <select v-model="selectedWidgetCardKey" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onTopicCardSelectChange">
-            <option v-for="(card, cIdx) in availableCardsForSelectedTopic" :key="card.id || cIdx" :value="card.id || card.label || `card_${cIdx}`">
+            <option v-for="(card, cIdx) in availableCardsForSelectedTopic" :key="card.id || cIdx" :value="card.id || `card_${cIdx}`">
               🎯 {{ card.label }} (Đang có: {{ getCardMetricValueForTopic(card, selectedTopicObject) }} bản ghi)
             </option>
           </select>
@@ -1425,10 +1425,13 @@ const selectedTopicObject = computed(() => {
 
 const availableCardsForSelectedTopic = computed(() => {
   const t = selectedTopicObject.value;
-  if (t && t.metricCards && t.metricCards.length > 0) {
-    return t.metricCards;
-  }
-  return DEFAULT_TOPIC_DASHBOARDS[0].metricCards;
+  const rawCards = (t && t.metricCards && t.metricCards.length > 0) ? t.metricCards : DEFAULT_TOPIC_DASHBOARDS[0].metricCards;
+  return rawCards.map((c, idx) => {
+    if (idx > 0 && (!c.id || c.id === 'all')) {
+      return { ...c, id: `card_${t?.id || 't'}_${idx}` };
+    }
+    return c;
+  });
 });
 
 const parseDateObj = (str) => {
@@ -1944,15 +1947,23 @@ const isCardAllType = (card) => isSharedCardAllType(card);
 
 const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
-  // Resolve actual card definition from topic if card is a widget reference
   const topicCards = topic?.metricCards || [];
-  const cardIdToMatch = card.cardId || card.id || card.cardCondition || card.condition;
-  const cardLabelToMatch = card.cardLabel || card.label || card.title;
-  const actualCard = topicCards.find((c, idx) =>
-    (c.id && (c.id === cardIdToMatch || c.condition === cardIdToMatch)) ||
-    (c.label && (c.label === cardLabelToMatch)) ||
-    `card_${idx}` === cardIdToMatch
-  ) || card;
+
+  // Nếu card truyền vào đã là đối tượng thẻ trực tiếp từ topicCards hoặc có đầy đủ label/conditions
+  let actualCard = card;
+  const cardIndexInTopic = topicCards.indexOf(card);
+  if (cardIndexInTopic === -1 && (card.cardId || card.cardCondition || card.id)) {
+    const cardIdToMatch = card.cardId || card.id || card.cardCondition || card.condition;
+    const cardLabelToMatch = card.cardLabel || card.label || card.title;
+    actualCard = topicCards.find((c, idx) => {
+      if (cardIdToMatch === 'all' && idx > 0 && cardLabelToMatch && c.label !== cardLabelToMatch) return false;
+      return (
+        (cardLabelToMatch && c.label === cardLabelToMatch) ||
+        (c.id && c.id !== 'all' && (c.id === cardIdToMatch || c.condition === cardIdToMatch)) ||
+        `card_${idx}` === cardIdToMatch
+      );
+    }) || card;
+  }
 
   let src = topic?.source || actualCard.source || card.source;
   if (!src) {
@@ -1969,7 +1980,7 @@ const getCardMetricValueForTopic = (card, topic) => {
 const onTopicCardSelectChange = () => {
   const topic = selectedTopicObject.value;
   const cards = availableCardsForSelectedTopic.value;
-  const card = cards.find((c, idx) => (c.id || c.label || `card_${idx}`) === selectedWidgetCardKey.value) || cards[0];
+  const card = cards.find((c, idx) => (c.id || `card_${idx}`) === selectedWidgetCardKey.value || c.label === selectedWidgetCardKey.value) || cards[0];
   if (!card || !topic) return;
 
   const colorMap = {

@@ -451,10 +451,27 @@
      - Cập nhật `getPresenceBadge`: Đồng thời kiểm tra cả `p.status === 'completed'` lẫn nhãn chứa từ khóa về nước.
   3. `src/views/PersonnelView.vue`: Bổ sung template `isPresenceField(col.id)` và phân giải cột ảo `resolveVirtualColumnValue` cho cả bảng Cán bộ & Thân nhân để đảm bảo mọi bảng đều đồng nhất 100%.
 
-### 44. LEDGER STATUS
-- **Status**: Done (Đã đồng bộ hiển thị cột Trạng thái hiện diện khớp hoàn toàn với cột đối chiếu 🎯, đã build và deploy).
+### 44. KHẮC PHỤC TRIỆT ĐỂ LỆCH SỐ LIỆU DO TRÙNG MÃ THẺ (`id: 'all'`) GIỮA DASHBOARD & CHILD DASHBOARD
+- **Nguyên nhân cốt lõi phát hiện qua Console log**:
+  - Thẻ con "Xử lý kỷ luật" mang `id: 'all'` (trùng mã với thẻ đầu tiên "Tất cả cán bộ, đảng viên" - `id: 'all'`).
+  - Trong `DashboardView.vue`:
+    - Khi vẽ dropdown `<option>`, cả thẻ 0 và thẻ 1 đều có giá trị `value="all"`.
+    - Khi tính số lượng `getCardMetricValueForTopic(card, topic)`, hàm tìm thẻ thực tế bằng `topicCards.find(c => c.id === cardIdToMatch)`. Vì `cardIdToMatch === 'all'`, hàm luôn tìm thấy thẻ 0 ("Tất cả cán bộ, đảng viên") và đếm trọn 17 người của toàn bộ chuyên đề thay vì lọc điều kiện của thẻ "Xử lý kỷ luật" (6 người).
+    - Ngược lại, trên Child Dashboard, thẻ được duyệt theo object trực tiếp trong mảng nên lọc đúng 6 người.
+- **Giải pháp xử lý**:
+  1. `src/views/DashboardView.vue`:
+     - Nâng cấp `availableCardsForSelectedTopic`: Tự động cấp mã ID riêng biệt cho mọi thẻ con (`idx > 0`) nếu thẻ mang `id: 'all'` hoặc thiếu `id`.
+     - Template dropdown: Đảm bảo `:value="card.id || 'card_' + cIdx"` luôn duy nhất 100%, không bao giờ trùng lặp `value="all"`.
+     - Nâng cấp `getCardMetricValueForTopic`: Ưu tiên sử dụng đối tượng thẻ trực tiếp truyền vào từ dropdown; nếu phải tìm theo ID thì không bao giờ so sánh trùng `id === 'all'` với thẻ con.
+     - Đồng bộ `onTopicCardSelectChange`: Khớp chuẩn thẻ theo ID duy nhất hoặc nhãn tên thẻ.
+  2. `src/views/SettingsImportView.vue` & `src/views/ChildDashboardView.vue`:
+     - Bổ sung cơ chế tự động làm sạch (sanitize) mã ID thẻ lúc đọc (`loadCustomDashboards`) và lúc ghi (`saveDashboardsConfig`). Đảm bảo mọi thẻ con (`idx > 0`) đều có `card.id` riêng biệt.
+
+### 45. LEDGER STATUS
+- **Status**: Done (Đã sửa lỗi trùng id: 'all' gây lệch số liệu giữa Dashboard và Child Dashboard, đã build và deploy).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã test và build thành công).
+
 
 
 

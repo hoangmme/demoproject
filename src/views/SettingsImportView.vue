@@ -2833,6 +2833,14 @@ const loadCustomDashboards = async () => {
       const local = localStorage.getItem('custom_dashboards_config');
       if (local) customDashboards.value = JSON.parse(local);
     }
+    // Sanitize card IDs: đảm bảo các thẻ con không bị trùng id: 'all' với thẻ gốc
+    customDashboards.value.forEach((dash) => {
+      (dash.metricCards || []).forEach((c, idx) => {
+        if (idx > 0 && (!c.id || c.id === 'all')) {
+          c.id = 'card_' + (dash.id || 'dash') + '_' + idx;
+        }
+      });
+    });
   } catch (e) {
     console.error('Error loading custom dashboards:', e);
   } finally {
@@ -2881,6 +2889,14 @@ watch(
 const saveDashboardsConfig = async () => {
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
   try {
+    // Sanitize card IDs trước khi lưu
+    customDashboards.value.forEach((dash) => {
+      (dash.metricCards || []).forEach((c, idx) => {
+        if (idx > 0 && (!c.id || c.id === 'all')) {
+          c.id = 'card_' + (dash.id || 'dash') + '_' + idx;
+        }
+      });
+    });
     const currentJson = JSON.stringify(customDashboards.value);
     localStorage.setItem('custom_dashboards_config', currentJson);
     await saveAppSettings('custom_dashboards_config', customDashboards.value);
