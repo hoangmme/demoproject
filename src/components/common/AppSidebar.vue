@@ -74,22 +74,22 @@
       <!-- KHỐI NHẬP LIỆU (DANH SÁCH MENU TRỰC TIẾP TRÊN SIDEBAR) -->
       <div class="app-nav-heading">Nhập liệu</div>
 
-      <a class="app-nav-item" href="javascript:void(0)" @click="handleInputClick('new_personnel')" title="Thêm Cán bộ mới">
+      <a class="app-nav-item" href="javascript:void(0)" @click="handleInputClick('new_personnel')" title="Thêm cán bộ mới">
         <i class="pi pi-user-plus" style="color: #60a5fa;"></i>
-        <span>Thêm Cán bộ</span>
+        <span>Thêm cán bộ</span>
       </a>
 
-      <a class="app-nav-item" href="javascript:void(0)" @click="openQuickRelativeDialog" title="Thêm Thân nhân mới">
+      <a class="app-nav-item" href="javascript:void(0)" @click="openQuickRelativeDialog" title="Thêm thân nhân mới">
         <i class="pi pi-users" style="color: #c084fc;"></i>
-        <span>Thêm Thân nhân</span>
+        <span>Thêm thân nhân</span>
       </a>
 
-      <a class="app-nav-item" href="javascript:void(0)" @click="openQuickTripDialog" title="Thêm Chuyến đi nước ngoài">
+      <a class="app-nav-item" href="javascript:void(0)" @click="openQuickTripDialog" title="Thêm chuyến đi nước ngoài">
         <i class="pi pi-send" style="color: #4ade80;"></i>
-        <span>Thêm Chuyến đi</span>
+        <span>Thêm chuyến đi</span>
       </a>
 
-      <div class="app-nav-heading" v-if="appendixDashboards.length > 0">Báo cáo Phụ lục</div>
+      <div class="app-nav-heading" v-if="appendixDashboards.length > 0">Báo cáo phụ lục</div>
 
       <router-link
         v-for="pl in appendixDashboards"
@@ -109,17 +109,17 @@
 
         <router-link to="/users" class="app-nav-item">
           <i class="pi pi-user-plus"></i>
-          <span>Quản lý Người dùng</span>
+          <span>Quản lý người dùng</span>
         </router-link>
 
         <router-link to="/audit" class="app-nav-item">
           <i class="pi pi-history"></i>
-          <span>Nhật ký Hệ thống</span>
+          <span>Nhật ký hệ thống</span>
         </router-link>
 
         <router-link to="/settings-import" class="app-nav-item">
           <i class="pi pi-cog"></i>
-          <span>Cấu hình Cột & Phụ lục</span>
+          <span>Cấu hình cột & phụ lục</span>
         </router-link>
       </template>
     </nav>

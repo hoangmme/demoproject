@@ -291,21 +291,6 @@ export const extractRowFieldValue = (item, field, personnelStore) => {
     }
   }
 
-  // 4. Aliases tương thích chuẩn giữa tên tiếng Việt và tiếng Anh của chuyến đi
-  if (val === undefined || val === null || val === '') {
-    if (field === 'ngay_xuat_canh' || field === 'departureDate') {
-      val = item.ngay_xuat_canh ?? item.departureDate ?? item.ngayDi ?? item.approvedDepartureDate ?? item.custom_data?.departureDate ?? item.custom_data?.ngay_xuat_canh;
-    } else if (field === 'ngay_nhap_canh' || field === 'arrivalDate') {
-      val = item.ngay_nhap_canh ?? item.arrivalDate ?? item.ngayVe ?? item.approvedArrivalDate ?? item.custom_data?.arrivalDate ?? item.custom_data?.ngay_nhap_canh;
-    } else if (field === 'so_quyet_dinh' || field === 'decisionNumber') {
-      val = item.so_quyet_dinh ?? item.decisionNumber ?? item.decision ?? item.custom_data?.decisionNumber ?? item.custom_data?.so_quyet_dinh;
-    } else if (field === 'countryName' || field === 'quoc_gia' || field === 'quoc_gia_xuat_canh') {
-      val = item.countryName ?? item.country ?? item.quoc_gia ?? item.quoc_gia_xuat_canh ?? item.custom_data?.countryName;
-    } else if (field === 'purpose' || field === 'muc_dich') {
-      val = item.purpose ?? item.muc_dich ?? item.custom_data?.purpose;
-    }
-  }
-
   return val !== undefined && val !== null ? val : '';
 };
 

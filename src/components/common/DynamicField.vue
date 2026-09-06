@@ -266,7 +266,7 @@
                 <label
                   v-for="opt in availableCheckboxFileLoopOptions"
                   :key="opt"
-                  style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.78rem; font-weight: 600; color: #334155; user-select: none;"
+                  style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.78rem; font-weight: 600; color: #334155; user-select: none; white-space: nowrap; flex-shrink: 0;"
                 >
                   <input
                     :type="isSingleSelectMode ? 'radio' : 'checkbox'"

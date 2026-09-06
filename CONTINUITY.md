@@ -196,10 +196,23 @@
      - Khi `item` là Cán bộ có mảng `item.trips`: tách riêng điều kiện thuộc tính Cán bộ và điều kiện Chuyến đi.
      - Với các điều kiện Chuyến đi kết hợp `AND` (ví dụ: `Ngày xuất cảnh có dữ liệu` VÀ `Số QĐ để trống`), hệ thống kiểm tra tồn tại ít nhất 1 chuyến đi thỏa mãn **ĐỒNG THỜI** tất cả các điều kiện đó trên cùng 1 chuyến đi, đảm bảo tính chặt chẽ về mặt nghiệp vụ.
 
-### 26. LEDGER STATUS
-- **Status**: Done (Đã sửa triệt để logic nhận diện bản ghi chuyến đi và so khớp đa điều kiện AND trong `dashboardMetrics.js`, `npm run build` thành công, sync sang offline app thành công).
+### 27. LOẠI BỎ ALIASES DỰ PHÒNG, CỐ ĐỊNH TEXT HỘP KIỂM LOOP & CHUẨN HÓA VIẾT HOA MENU (main.css, AppSidebar.vue, ChildDashboardView.vue, PersonnelView.vue, dashboardMetrics.js)
+- **Yêu cầu người dùng**:
+  1. Xóa bỏ hoàn toàn cơ chế tự động đối chiếu aliases (`ngay_xuat_canh` <-> `departureDate`, `so_quyet_dinh` <-> `decisionNumber`...) trong `extractRowFieldValue`. Tuân thủ nghiêm ngặt nguyên tắc Zero-Guessing / Không tự ý fallback. Cột nào lấy chính xác trường đó theo `col.id`.
+  2. Cột Hộp kiểm + tệp đính kèm lặp (`checkbox_file_loop`): Text của hộp kiểm (badge) ưu tiên KHÔNG xuống hàng (`white-space: nowrap; flex-shrink: 0;`), tránh tình trạng chữ bị bóp nghẹt dọc từng chữ (như "Đ-ả-n-g"). Phần text mô tả phía sau xuống hàng bình thường.
+  3. Menu "Nhập liệu" và "Hệ thống": Bỏ `text-transform: uppercase` trong `.app-nav-heading` và chuẩn hóa viết hoa chỉ chữ cái đầu tiên (Sentence case) cho tiêu đề khối và các mục con trong Menu.
+- **Thực hiện**:
+  1. `src/utils/dashboardMetrics.js`: Xóa bỏ hoàn toàn khối aliases dự phòng trong `extractRowFieldValue`.
+  2. `src/views/ChildDashboardView.vue` & `src/views/PersonnelView.vue`: Tinh chỉnh template hiển thị `checkbox_file_loop` với `white-space: nowrap; flex-shrink: 0;` cho badge hộp kiểm, và `flex: 1; word-break: break-word;` cho nội dung text.
+  3. `src/components/common/DynamicField.vue`: Thêm `white-space: nowrap; flex-shrink: 0;` cho nhãn hộp kiểm trong form nhập liệu.
+  4. `src/assets/styles/main.css`: Gỡ bỏ `text-transform: uppercase;` khỏi `.app-nav-heading`.
+  5. `src/components/common/AppSidebar.vue`: Cập nhật text các mục menu sang kiểu viết hoa chữ đầu tiên (`Thêm cán bộ`, `Thêm thân nhân`, `Thêm chuyến đi`, `Quản lý người dùng`, `Nhật ký hệ thống`, `Cấu hình cột & phụ lục`).
+
+### 28. LEDGER STATUS
+- **Status**: Done (Đã xóa bỏ aliases, sửa giao diện hộp kiểm loop không vỡ dòng, chuẩn hóa viết hoa menu sidebar, build và sync `WINDOWS_OFFLINE_APP` thành công).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` sạch sẽ).
+
 
 
 
