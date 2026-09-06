@@ -52,14 +52,20 @@
 
 ### 8. ĐỊNH DẠNG HỘP KIỂM + TỆP ĐÍNH KÈM LẶP (CHECKBOX_FILE_LOOP)
 - **Cấu hình cột (`SettingsImportView.vue`)**:
-  - Chứa tùy chọn `🔘 Chọn duy nhất 1 mục (Single Choice - Chỉ tick chọn 1 hộp kiểm)` (`col.isSingleSelect`). Nếu không chọn: cho phép tick chọn cùng lúc nhiều hộp kiểm.
-  - Hiển thị trực quan preview các hộp kiểm đã tạo sẵn từ `col.options`.
+  - Tùy chọn `🔘 Chọn duy nhất 1 mục (Single Choice - Chỉ tick chọn 1 hộp kiểm)` (`col.isSingleSelect`). Nếu không chọn: cho phép tick chọn cùng lúc nhiều hộp kiểm.
+  - Cấu hình danh sách các lựa chọn box kiểm (`col.options`, ví dụ: `Đảng, Chính quyền`).
 - **Form nhập liệu (`DynamicField.vue`)**:
-  - Không hiển thị hộp checkbox cấu hình quy tắc "Chọn duy nhất" tại form nhập liệu.
-  - Hiển thị ngay lập tức danh sách các hộp kiểm đã tạo từ cấu hình (`col.options`). Mỗi hộp kiểm khi được tick sẽ mở ô nhập chi tiết/ghi chú và nút đính kèm tệp tương ứng.
-  - Hỗ trợ nút `+ Thêm mục khác ngoài danh mục (Hộp kiểm + Tệp)` để bổ sung các mục phát sinh không có trong danh mục định sẵn.
+  - Không show sẵn các checkbox tĩnh gây rối giao diện.
+  - Khi người dùng bấm **`+ Thêm mục`**: Mới thêm 1 dòng lặp (loop item).
+  - Trong mỗi dòng lặp (nằm chung trong 1 div flex duy nhất):
+    1. **Inline Box kiểm**: Hiển thị các lựa chọn từ `col.options` (ví dụ: `Đảng`, `Chính quyền`) dạng radio (nếu chọn duy nhất) hoặc checkbox (nếu chọn nhiều).
+    2. **Nhập text**: Ô `InputText` nhập nội dung / hình thức / ghi chú.
+    3. **Đính kèm tệp**: Nút đính kèm tệp văn bản / huy hiệu tệp đã tải lên.
+    4. **Nút xóa**: Icon thùng rác xóa dòng này.
+- **Hiển thị Bảng & Xuất Excel/Word**:
+  - Tự động hiển thị huy hiệu `[Đảng]`, `[Chính quyền]` kèm nội dung text và link mở tệp đính kèm.
 
 ### 9. LEDGER STATUS
-- **Status**: Done (Hoàn tất chuẩn hóa format Hộp kiểm + Tệp lặp: chuyển tùy chọn Chọn duy nhất sang Cấu hình cột, hiển thị ngay các box kiểm đã tạo và hỗ trợ thêm mục khác ngoài danh mục).
+- **Status**: Done (Đã hoàn thiện chuẩn UX/UI: click + Thêm mục mới mở dòng lặp, mỗi dòng lặp có inline box kiểm, nhập text và đính kèm tệp chung trên 1 div).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã qua kiểm thử build thành công).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã build thành công).

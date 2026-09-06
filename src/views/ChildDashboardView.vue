@@ -337,7 +337,10 @@
                     }"
                   >
                     <i :class="it.checked ? 'pi pi-check-circle' : 'pi pi-circle'" :style="{ fontSize: '0.72rem', color: it.checked ? '#16a34a' : '#94a3b8' }"></i>
-                    {{ it.text || '(Chưa nhập tên)' }}
+                    <span v-if="it.selectedOptions && it.selectedOptions.length" style="background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">
+                      {{ Array.isArray(it.selectedOptions) ? it.selectedOptions.join(', ') : it.selectedOptions }}
+                    </span>
+                    <span>{{ it.text || (it.selectedOptions && it.selectedOptions.length ? '' : '(Chưa nhập tên)') }}</span>
                   </span>
                   <a
                     v-if="it.file && it.file.url"

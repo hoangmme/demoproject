@@ -474,10 +474,13 @@ export const formatCellForExcel = (val, colDef) => {
         .map((it, idx) => {
           if (typeof it === 'object' && it !== null) {
             const mark = it.checked ? '☑ ' : '☐ ';
+            const optLabel = Array.isArray(it.selectedOptions) && it.selectedOptions.length > 0
+              ? `[${it.selectedOptions.join(', ')}] `
+              : (it.selectedOption ? `[${it.selectedOption}] ` : '');
             const t = it.text ? String(it.text).trim() : '';
             const fName = it.file?.name || (it.file?.url ? 'Tài liệu' : '');
             const f = fName ? `[Đính kèm: ${fName}]` : '';
-            const combined = [t, f].filter(Boolean).join(' ');
+            const combined = [`${optLabel}${t}`.trim(), f].filter(Boolean).join(' ');
             return `${mark}${combined}`.trim();
           }
           return `${idx + 1}. ${it}`;
