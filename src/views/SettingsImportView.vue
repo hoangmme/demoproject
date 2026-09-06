@@ -1369,14 +1369,23 @@
                 v-for="(card, cIdx) in currentSelectedDashboard.metricCards"
                 :key="card.id || cIdx"
                 style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #fafafa; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
+                :style="(Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? 'background: #fef2f2; border-color: #fecaca;' : ''"
               >
-                <!-- Tiêu đề thẻ & Các nút thao tác di chuyển/xóa -->
+                <!-- Tiêu đề thẻ & Các nút thao tác di chuyển/ẩn/xóa -->
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-                  <input
-                    v-model="card.label"
-                    placeholder="Tên thẻ (VD: Có vấn đề chính trị, Đi Nhật...)"
-                    style="font-size: 0.82rem; font-weight: 700; color: #1e293b; border: 1px solid #cbd5e1; background: #fff; padding: 3px 6px; border-radius: 4px; flex: 1;"
-                  />
+                  <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
+                    <input
+                      v-model="card.label"
+                      placeholder="Tên thẻ (VD: Có vấn đề chính trị, Đi Nhật...)"
+                      style="font-size: 0.82rem; font-weight: 700; color: #1e293b; border: 1px solid #cbd5e1; background: #fff; padding: 3px 6px; border-radius: 4px; width: 100%;"
+                    />
+                    <span
+                      v-if="Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden"
+                      style="font-size: 0.65rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 2px 5px; border-radius: 4px; font-weight: 700; white-space: nowrap;"
+                    >
+                      ĐÃ ẨN
+                    </span>
+                  </div>
                   <select v-model="card.color" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; width: 95px;">
                     <option value="blue">🔵 Xanh</option>
                     <option value="green">🟢 Lá</option>
@@ -1405,6 +1414,16 @@
                     >
                       <i class="pi pi-arrow-right" style="font-size: 0.72rem;"></i>
                     </button>
+                    <!-- Nút Ẩn / Hiện Thống kê -->
+                    <button
+                      type="button"
+                      @click="card.widthPercent = (Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? '' : 0; card.hidden = (Number(card.widthPercent) === 0 || card.widthPercent === '0');"
+                      style="background: transparent; border: none; cursor: pointer; padding: 2px 4px;"
+                      :style="{ color: (Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? '#dc2626' : '#64748b' }"
+                      :title="(Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? 'Thẻ đang bị ẩn (Bấm để hiển thị lại)' : 'Ẩn thẻ thống kê này (0%)'"
+                    >
+                      <i :class="(Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? 'pi pi-eye-slash' : 'pi pi-eye'" style="font-size: 0.75rem;"></i>
+                    </button>
                     <button
                       type="button"
                       @click="removeMetricCard(currentSelectedDashboard, cIdx)"
@@ -1421,6 +1440,7 @@
                   <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Độ rộng khối:</label>
                   <select v-model="card.widthPercent" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
                     <option value="">Tự động co giãn (Mặc định)</option>
+                    <option :value="0">Ẩn thống kê (0% - Không hiển thị)</option>
                     <option :value="16.66">16.66% (1/6 hàng - 6 khối/dòng)</option>
                     <option :value="20">20% (1/5 hàng - 5 khối/dòng)</option>
                     <option :value="25">25% (1/4 hàng - 4 khối/dòng)</option>

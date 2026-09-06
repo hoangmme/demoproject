@@ -528,10 +528,27 @@
      - Giữ nguyên 100% style người dùng đã thiết lập (`color`, `widthPercent`, `icon`, `chartType`, `bgColor`, etc.), chỉ đồng bộ điều kiện logic để số liệu chính xác 100%.
      - Tự động chạy ngầm (`reconcileGroupsWithTopics(true)`) ngay khi mở Dashboard.
 
-### 49. LEDGER STATUS
-- **Status**: Done (Đã loại bỏ cột sai ở bảng Thân nhân, hiển thị đúng cột Quốc gia `countryNameTN`, khắc phục nháy trang và tích hợp bộ Smart Reconciler bảo tồn màu sắc).
+### 50. BỔ SUNG TÍNH NĂNG ẨN THẺ THỐNG KÊ (0% - KHÔNG HIỂN THỊ) TRONG CẤU HÌNH CHUYÊN ĐỀ (2026-09-07)
+- **Bối cảnh & Yêu cầu**:
+  - Người dùng yêu cầu thêm tùy chọn "Ẩn thống kê" trong cấu hình Chuyên đề, cụ thể là tại mục thiết lập Độ rộng khối (% Width) có thêm tùy chọn "Ẩn (0%)", hoặc nút bật/tắt ẩn nhanh.
+- **Giải pháp & Triển khai**:
+  1. **`SettingsImportView.vue`**:
+     - Thêm tùy chọn `<option :value="0">Ẩn thống kê (0% - Không hiển thị)</option>` trong menu chọn Độ rộng khối của thẻ thống kê (`metricCards`).
+     - Bổ sung nút bấm trực quan `pi pi-eye` / `pi pi-eye-slash` ngay cạnh nút Xóa thẻ để bật/tắt ẩn nhanh chỉ bằng 1 click.
+     - Hiển thị nhãn `[ĐÃ ẨN]` nổi bật cùng viền/nền màu hồng đỏ nhạt khi thẻ ở trạng thái ẩn giúp người quản trị dễ dàng nhận biết.
+  2. **`ChildDashboardView.vue`**:
+     - Cập nhật luồng render danh sách thẻ thống kê (Pill cards): Lọc bỏ các thẻ có `widthPercent === 0` hoặc cờ `hidden === true`.
+     - Điều chỉnh các hàm tính style `getCardWidthStyle` và `getCardFlexStyle` trả về `0px` / `0 0 0px` cho thẻ ẩn.
+  3. **`DashboardView.vue`**:
+     - Đồng bộ tùy chọn `Ẩn thống kê (0% - Không hiển thị)` trong form cài đặt khối widget.
+     - Hàm `getWidgetStyle` trả về `{ display: 'none' }` và template gắn `v-show` ẩn các khối có `widthPercent === 0` hoặc `hidden === true`.
+     - Bộ Smart Reconciler tự động đồng bộ trạng thái ẩn/hiện từ cấu hình Chuyên đề sang Dashboard chính.
+
+### 51. LEDGER STATUS
+- **Status**: Done (Đã hoàn thiện tính năng ẩn thẻ thống kê 0%, nút bấm toggle ẩn/hiện, build và deploy thành công).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi frontend [Reversible], bảo toàn 100% dữ liệu Directus DB của người dùng).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
+
 
 
 

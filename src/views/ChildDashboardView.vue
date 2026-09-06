@@ -87,25 +87,26 @@
 
     <!-- Quick Metric Pill Cards (Top Row - Ẩn khi ở chế độ Báo cáo Phụ lục) -->
     <div v-if="currentDashboardConfig.displayMode !== 'appendix'" style="display: flex; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap;">
-      <div
-        v-for="(card, cIdx) in activeMetricCards"
-        :key="card.id || cIdx"
-        class="quick-stat-card"
-        :class="{ 'stat-active': isCardActive(card, cIdx) }"
-        :style="{
-          width: getCardWidthStyle(card),
-          flex: getCardFlexStyle(card),
-          minWidth: getCardMinWidthStyle(card)
-        }"
-        @click="toggleMetricCardFilter(card, cIdx)"
-        style="cursor: pointer;"
-      >
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span :class="['dot-indicator', `dot-${card.color || 'blue'}`]"></span>
-          <span class="stat-name">{{ getCardDisplayLabel(card) }}</span>
+      <template v-for="(card, cIdx) in activeMetricCards" :key="card.id || cIdx">
+        <div
+          v-if="Number(card.widthPercent) !== 0 && card.widthPercent !== '0' && !card.hidden"
+          class="quick-stat-card"
+          :class="{ 'stat-active': isCardActive(card, cIdx) }"
+          :style="{
+            width: getCardWidthStyle(card),
+            flex: getCardFlexStyle(card),
+            minWidth: getCardMinWidthStyle(card)
+          }"
+          @click="toggleMetricCardFilter(card, cIdx)"
+          style="cursor: pointer;"
+        >
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span :class="['dot-indicator', `dot-${card.color || 'blue'}`]"></span>
+            <span class="stat-name">{{ getCardDisplayLabel(card) }}</span>
+          </div>
+          <span :class="['stat-number', `num-${card.color || 'blue'}`]">{{ getCardMetricValue(card) }}</span>
         </div>
-        <span :class="['stat-number', `num-${card.color || 'blue'}`]">{{ getCardMetricValue(card) }}</span>
-      </div>
+      </template>
     </div>
 
     <!-- Filter Bar Container (Chỉ giữ lại ô tìm kiếm) -->
@@ -1049,6 +1050,7 @@ const getFundingValue = (item) => {
 };
 
 const getCardWidthStyle = (card) => {
+  if (Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) return '0px';
   const wp = Number(card.widthPercent);
   if (!wp || isNaN(wp)) return 'auto';
   if (wp === 100) return '100%';
@@ -1061,6 +1063,7 @@ const getCardWidthStyle = (card) => {
 };
 
 const getCardFlexStyle = (card) => {
+  if (Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) return '0 0 0px';
   const wp = Number(card.widthPercent);
   if (!wp || isNaN(wp)) return '1 1 auto';
   if (wp === 100) return '1 1 100%';

@@ -152,6 +152,7 @@
         <div
           v-for="(widget, wIdx) in group.widgets"
           :key="widget.id"
+          v-show="!widget.hidden && Number(widget.widthPercent) !== 0 && widget.widthPercent !== '0'"
           :style="getWidgetStyle(widget)"
         >
           <!-- 1. Dạng Đếm Số Lượng (Count Metric Card) -->
@@ -553,6 +554,7 @@
           <div class="field-item">
             <label class="field-label" style="font-weight: 700; color: #1e293b;">Độ rộng của Khối</label>
             <select v-model="widgetForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option :value="0">Ẩn thống kê (0% - Không hiển thị)</option>
               <option :value="16.66">16.66% (1/6 hàng - 6 khối/dòng)</option>
               <option :value="20">20% (1/5 hàng - 5 khối/dòng)</option>
               <option :value="25">25% (1/4 hàng - 4 khối/dòng)</option>
@@ -1322,9 +1324,12 @@ const reconcileGroupsWithTopics = async (silent = true) => {
                (card.id && w.id && w.id.includes(card.id))
       );
 
+      const isCardHidden = !!card.hidden || Number(card.widthPercent) === 0 || card.widthPercent === '0';
+
       if (existingWidget) {
         matchedWidgetIds.add(existingWidget.id);
         // Giữ nguyên 100% style người dùng đã setup (color, widthPercent, icon, displayType, chartType, bgColor, etc.)
+        // Nếu thẻ bị ẩn từ Cấu hình Chuyên đề, đồng bộ trạng thái ẩn
         updatedWidgets.push({
           ...existingWidget,
           title: card.label || existingWidget.title,
@@ -1339,6 +1344,8 @@ const reconcileGroupsWithTopics = async (silent = true) => {
           value: card.value || '',
           source: topic.source || 'trips',
           isUnique: !!card.isUnique,
+          hidden: isCardHidden ? true : (existingWidget.hidden || false),
+          widthPercent: isCardHidden ? 0 : (existingWidget.widthPercent !== undefined ? existingWidget.widthPercent : (card.widthPercent ? Number(card.widthPercent) : widthPerCard)),
         });
       } else {
         // Thẻ mới được thêm ở Child Dashboard -> Tạo widget mới trong nhóm
@@ -1356,7 +1363,8 @@ const reconcileGroupsWithTopics = async (silent = true) => {
           value: card.value || '',
           source: topic.source || 'trips',
           displayType: 'count',
-          widthPercent: widthPerCard,
+          widthPercent: isCardHidden ? 0 : (card.widthPercent ? Number(card.widthPercent) : widthPerCard),
+          hidden: isCardHidden,
           color: colorMap[card.color] || card.color || '#2e7d32',
           icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
           isUnique: !!card.isUnique,
@@ -2249,6 +2257,11 @@ const setWidgetPosition = async (group, widget, targetPos1Based) => {
 };
 
 const getWidgetStyle = (widget) => {
+  if (widget.hidden === true || Number(widget.widthPercent) === 0 || widget.widthPercent === '0') {
+    return {
+      display: 'none',
+    };
+  }
   const wp = Number(widget.widthPercent) || 33;
   if (wp === 100) {
     return {
