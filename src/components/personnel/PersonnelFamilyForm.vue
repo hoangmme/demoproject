@@ -191,7 +191,7 @@ const colIndexMap = computed(() => {
 
 const filterRelativeColumns = (cols) => {
   const ignore = new Set(['stt', 'code', 'parentPersonnelName', 'parentPosition', 'parentDepartment', 'parentPersonnelCccd', 'parentCccd', 'cccdparent']);
-  return (cols || []).filter((c) => !ignore.has(c.id));
+  return (cols || []).filter((c) => !ignore.has(c.id) && !c.hidden && c.format !== 'formula');
 };
 
 const getRelativeFieldValue = (rel, colId) => {

@@ -659,18 +659,20 @@ export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
 
     const dateDep = parseDateValue(rawDep);
     const dateApproved = parseDateValue(rawApproved);
+    const hasDecision = rawDec !== undefined && rawDec !== null && String(rawDec).trim() !== '' && String(rawDec).trim() !== '-' && String(rawDec).trim().toLowerCase() !== 'chưa rõ';
 
-    if (!dateDep || !dateApproved) continue;
+    // Nếu có ô nào không có dữ liệu (thiếu Ngày xuất cảnh, Ngày duyệt đi, hoặc Cột quyết định trống) -> hiển thị '-'
+    if (!dateDep || !dateApproved || !hasDecision) {
+      continue;
+    }
 
     const normDep = new Date(dateDep);
     normDep.setHours(0, 0, 0, 0);
     const normApproved = new Date(dateApproved);
     normApproved.setHours(0, 0, 0, 0);
 
-    const hasDecision = rawDec !== undefined && rawDec !== null && String(rawDec).trim() !== '' && String(rawDec).trim() !== '-' && String(rawDec).trim().toLowerCase() !== 'chưa rõ';
-
     // 1. Ngày xuất cảnh > Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi trước khi có quyết định'
-    if (normDep > normApproved && hasDecision) {
+    if (normDep > normApproved) {
       return {
         status: 'warning',
         isWarning: true,
@@ -681,38 +683,14 @@ export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
       };
     }
 
-    // 2. Ngày xuất cảnh > Ngày duyệt đi & Chưa có quyết định (Trống) -> '- (Chưa đủ dữ liệu)'
-    if (normDep > normApproved && !hasDecision) {
-      return {
-        status: 'missing_data',
-        isWarning: false,
-        label: labelMissing,
-        shortLabel: labelMissing,
-        cssClass: 'formula-muted',
-        trip: t,
-      };
-    }
-
-    // 3. Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi đúng quyết định'
-    if (normDep <= normApproved && hasDecision) {
+    // 2. Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi đúng quyết định'
+    if (normDep <= normApproved) {
       return {
         status: 'ontime',
         isWarning: false,
         label: labelOnTime,
         shortLabel: labelOnTime,
         cssClass: 'formula-success',
-        trip: t,
-      };
-    }
-
-    // 4. Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định không có dữ liệu -> '-'
-    if (normDep <= normApproved && !hasDecision) {
-      return {
-        status: 'none',
-        isWarning: false,
-        label: labelDefault,
-        shortLabel: labelDefault,
-        cssClass: 'formula-muted',
         trip: t,
       };
     }

@@ -304,10 +304,32 @@
      - Cải tiến `getRelativeFieldValue` để phân giải sâu và toàn diện toàn bộ các cột Thân nhân (bao gồm Cột 20 - Cơ quan nhà nước) theo ID, Label, ColIndex và các bí danh chuẩn.
      - Tự động lưu trạng thái tìm kiếm hiện tại (`criteria`, `logicOperator`, `activePresetId`) và đồng bộ toàn bộ presets vào DB. Khôi phục chính xác điều kiện tìm kiếm khi tải lại trang.
 
-### 35. LEDGER STATUS
-- **Status**: Done (Đã hoàn thiện lưu DB cho toàn bộ Cột & Bộ lọc trên hệ thống, hoàn thiện công thức Đi khi chưa có cấp thẩm quyền quyết định, build dự án thành công).
+### 35. TINH GỌN CÔNG THỨC "ĐI KHI CHƯA CÓ QUYẾT ĐỊNH" & TỐI ƯU HÓA NÚT ẨN TRONG CHI TIẾT
+- **Yêu cầu người dùng**:
+  1. Công thức "Đi khi chưa có cấp thẩm quyền quyết định": Gộp lại nếu có bất kỳ ô nào không có dữ liệu (thiếu Ngày xuất cảnh, Ngày duyệt đi, hoặc Cột quyết định trống) thì hiển thị `'-'`. Chỉ khi đủ cả 3 dữ liệu mới so sánh:
+     - Ngày xuất cảnh > Ngày duyệt đi & Có QĐ -> 'Đi trước khi có quyết định'
+     - Ngày xuất cảnh <= Ngày duyệt đi & Có QĐ -> 'Đi đúng quyết định'
+     - Bất kỳ ô nào trống -> '-'
+  2. Mấy cột công thức mặc định ẩn (không hiện ở chi tiết popup/form).
+  3. Ở Cán bộ và Thân nhân: chỉ cần nút `[Ẩn]` (`col.hidden`).
+  4. Ở Chuyến đi: cần 2 nút `[Ẩn với cán bộ]` (`col.hideForPersonnel`) và `[Ẩn với thân nhân]` (`col.hideForRelative`).
+- **Thực hiện**:
+  1. `src/utils/formatters.js`:
+     - Tinh gọn `computeDepartBeforeDecision`: Nếu `!dateDep || !dateApproved || !hasDecision` thì tự động `continue` và trả về mặc định `'-'`.
+  2. `src/views/SettingsImportView.vue`:
+     - Bổ sung nút tick `[Ẩn]` (`col.hidden`) cho Tab Cán bộ và Tab Thân nhân.
+     - Tách thành 2 nút tick riêng biệt `[Ẩn với cán bộ]` (`col.hideForPersonnel`) và `[Ẩn với thân nhân]` (`col.hideForRelative`) cho Tab Chuyến đi.
+     - Cập nhật hướng dẫn và tinh gọn các ô nhập nhãn công thức.
+  3. `PersonnelBasicForm.vue`, `PersonnelFamilyForm.vue`, `PersonnelTravelForm.vue`, `PersonnelNotesForm.vue`:
+     - Mặc định ẩn toàn bộ các cột có `c.format === 'formula'`.
+     - Tôn trọng thuộc tính `c.hidden` (ẩn khi người dùng tick Ẩn ở Cán bộ/Thân nhân).
+     - Trong `PersonnelTravelForm.vue`: Nếu là chuyến đi của Cán bộ thì ẩn nếu `c.hideForPersonnel`, nếu là chuyến đi của Thân nhân thì ẩn nếu `c.hideForRelative`.
+
+### 36. LEDGER STATUS
+- **Status**: Done (Đã tinh gọn công thức và chuẩn hóa nút ẩn hiển thị form chi tiết, build thành công).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công trong 529ms).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công trong 511ms).
+
 
 
 

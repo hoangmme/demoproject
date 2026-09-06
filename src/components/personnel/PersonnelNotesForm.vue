@@ -74,7 +74,7 @@ const notesColumns = computed(() => {
   const ignore = new Set(['stt']);
   const targetGroup = props.group || (personnelStore.importMappingPersonnel || [])[2];
   if (targetGroup && Array.isArray(targetGroup.columns)) {
-    return targetGroup.columns.filter((c) => !ignore.has(c.id));
+    return targetGroup.columns.filter((c) => !ignore.has(c.id) && !c.hidden && c.format !== 'formula');
   }
   return [];
 });

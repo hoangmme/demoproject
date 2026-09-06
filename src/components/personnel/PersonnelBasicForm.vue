@@ -69,13 +69,15 @@ const colIndexMap = computed(() => {
 
 const dynamicGroups = computed(() => {
   const ignore = new Set(['stt', 'code']);
+  const isVisibleCol = (c) => !ignore.has(c.id) && !c.hidden && c.format !== 'formula';
+
   if (props.group) {
     return [
       {
         idx: 0,
         group: props.group.group || '',
         isMultiple: props.group.isMultiple,
-        columns: (props.group.columns || []).filter((c) => !ignore.has(c.id)),
+        columns: (props.group.columns || []).filter(isVisibleCol),
       },
     ];
   }
@@ -86,7 +88,7 @@ const dynamicGroups = computed(() => {
         idx,
         group: g.group || '',
         isMultiple: g.isMultiple,
-        columns: (g.columns || []).filter((c) => !ignore.has(c.id)),
+        columns: (g.columns || []).filter(isVisibleCol),
       }))
       .filter((g) => g.idx !== 1 && g.idx !== 2 && g.columns.length > 0);
   }

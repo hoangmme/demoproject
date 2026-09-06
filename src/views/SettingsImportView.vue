@@ -396,21 +396,52 @@
                     </span>
                   </label>
 
-                  <!-- Nút tick ẩn khi nhập chuyến đi cho Thân nhân -->
+                  <!-- Nút tick ẩn cho Cán bộ hoặc Thân nhân -->
                   <label
-                    v-if="activeTab === 'trips'"
+                    v-if="activeTab === 'personnel' || activeTab === 'relative'"
                     style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; white-space: nowrap;"
-                    :title="col.hideForRelative ? 'Đang ẨN trường này khi nhập chuyến đi của Thân nhân' : 'Trường này sẽ hiển thị khi nhập chuyến đi của Thân nhân'"
+                    :title="col.hidden ? 'Đang ẨN trường này (không hiện trong form chi tiết)' : 'Trường này sẽ hiển thị trong form chi tiết'"
                   >
                     <input
                       type="checkbox"
-                      v-model="col.hideForRelative"
+                      v-model="col.hidden"
                       style="accent-color: #ea580c; width: 14px; height: 14px; cursor: pointer;"
                     />
-                    <span :style="{ color: col.hideForRelative ? '#c2410c' : '#475569', fontWeight: col.hideForRelative ? '700' : '600' }">
-                      Ẩn với thân nhân
+                    <span :style="{ color: col.hidden ? '#c2410c' : '#475569', fontWeight: col.hidden ? '700' : '600' }">
+                      {{ col.hidden ? '👁️‍🗨️ Đang ẩn' : 'Ẩn' }}
                     </span>
                   </label>
+
+                  <!-- Nút tick ẩn khi nhập chuyến đi: Ẩn với cán bộ & Ẩn với thân nhân -->
+                  <template v-if="activeTab === 'trips'">
+                    <label
+                      style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; white-space: nowrap;"
+                      :title="col.hideForPersonnel ? 'Đang ẨN trường này khi nhập chuyến đi của Cán bộ' : 'Trường này sẽ hiển thị khi nhập chuyến đi của Cán bộ'"
+                    >
+                      <input
+                        type="checkbox"
+                        v-model="col.hideForPersonnel"
+                        style="accent-color: #ea580c; width: 14px; height: 14px; cursor: pointer;"
+                      />
+                      <span :style="{ color: col.hideForPersonnel ? '#c2410c' : '#475569', fontWeight: col.hideForPersonnel ? '700' : '600' }">
+                        {{ col.hideForPersonnel ? 'Ẩn với CB' : 'Ẩn với cán bộ' }}
+                      </span>
+                    </label>
+
+                    <label
+                      style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; white-space: nowrap;"
+                      :title="col.hideForRelative ? 'Đang ẨN trường này khi nhập chuyến đi của Thân nhân' : 'Trường này sẽ hiển thị khi nhập chuyến đi của Thân nhân'"
+                    >
+                      <input
+                        type="checkbox"
+                        v-model="col.hideForRelative"
+                        style="accent-color: #ea580c; width: 14px; height: 14px; cursor: pointer;"
+                      />
+                      <span :style="{ color: col.hideForRelative ? '#c2410c' : '#475569', fontWeight: col.hideForRelative ? '700' : '600' }">
+                        {{ col.hideForRelative ? 'Ẩn với TN' : 'Ẩn với thân nhân' }}
+                      </span>
+                    </label>
+                  </template>
 
                   <select
                     v-model="col.format"
@@ -764,12 +795,11 @@
                 <!-- 5. Đi khi chưa có cấp thẩm quyền quyết định -->
                 <div v-else-if="col.formulaType === 'depart_before_decision'" style="display: flex; flex-direction: column; gap: 6px;">
                   <div style="font-size: 0.72rem; color: #b45309; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày xuất cảnh</strong> với <strong>Ngày duyệt đi</strong> kết hợp <strong>Cột quyết định</strong>:
+                    💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày xuất cảnh</strong> với <strong>Ngày duyệt đi</strong> khi có <strong>Quyết định</strong>:
                     <ul style="margin: 2px 0 0 16px; padding: 0;">
-                      <li>Nếu Ngày xuất cảnh &gt; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi trước khi có quyết định"</strong>.</li>
-                      <li>Nếu Ngày xuất cảnh &gt; Ngày duyệt đi &amp; Chưa có quyết định &rarr; <strong>"- (Chưa đủ dữ liệu)"</strong>.</li>
-                      <li>Nếu Ngày xuất cảnh &le; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi đúng quyết định"</strong>.</li>
-                      <li>Nếu Ngày xuất cảnh &le; Ngày duyệt đi &amp; Không có quyết định &rarr; <strong>"-"</strong>.</li>
+                      <li>Nếu Ngày xuất cảnh &gt; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi trước khi có quyết định"</strong> (Cảnh báo).</li>
+                      <li>Nếu Ngày xuất cảnh &le; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi đúng quyết định"</strong> (Đúng hạn).</li>
+                      <li>Nếu có ô nào không có dữ liệu (hoặc chưa có quyết định) &rarr; hiển thị <strong>"-"</strong>.</li>
                     </ul>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
@@ -805,14 +835,6 @@
                       <input
                         v-model="col.formulaLabelWarning"
                         placeholder="Mặc định: Đi trước khi có quyết định"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Chưa đủ dữ liệu:</span>
-                      <input
-                        v-model="col.formulaLabelMissing"
-                        placeholder="Mặc định: - (Chưa đủ dữ liệu)"
                         style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
                       />
                     </div>
