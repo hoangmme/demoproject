@@ -486,17 +486,35 @@
                   />
                 </div>
 
-                <!-- Checkbox_file_loop: Tùy chọn mặc định Chọn duy nhất hoặc Cho phép chọn nhiều -->
-                <div v-if="col.format === 'checkbox_file_loop'" style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-                  <input
-                    type="checkbox"
-                    v-model="col.isSingleSelect"
-                    :id="'single_sel_' + (col.id || cIdx)"
-                    style="accent-color: #2563eb; cursor: pointer; width: 14px; height: 14px;"
-                  />
-                  <label :for="'single_sel_' + (col.id || cIdx)" style="font-size: 0.72rem; color: #1e40af; font-weight: 600; cursor: pointer;">
-                    Mặc định chọn duy nhất 1 mục (Nếu không tích: cho phép chọn cả 2 hoặc nhiều mục)
-                  </label>
+                <!-- Checkbox_file_loop: Cấu hình Chọn duy nhất / Chọn nhiều và xem trước các hộp kiểm -->
+                <div v-if="col.format === 'checkbox_file_loop'" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <input
+                      type="checkbox"
+                      v-model="col.isSingleSelect"
+                      :id="'single_sel_' + (col.id || cIdx)"
+                      style="accent-color: #2563eb; cursor: pointer; width: 15px; height: 15px;"
+                    />
+                    <label :for="'single_sel_' + (col.id || cIdx)" style="font-size: 0.74rem; color: #1e40af; font-weight: 700; cursor: pointer;">
+                      🔘 Chọn duy nhất 1 mục (Single Choice - Chỉ tick chọn 1 hộp kiểm)
+                    </label>
+                  </div>
+                  <span style="font-size: 0.7rem; color: #64748b; font-style: italic; padding-left: 21px;">
+                    (Nếu không tích tùy chọn trên: Cho phép tick chọn cùng lúc cả 2 hoặc nhiều hộp kiểm)
+                  </span>
+
+                  <!-- Xem trước danh sách các hộp kiểm sẽ hiển thị trong Form -->
+                  <div v-if="col.options && col.options.trim()" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; padding-left: 21px;">
+                    <span style="font-size: 0.7rem; color: #166534; font-weight: 600;">Các hộp kiểm tạo sẵn trong Form:</span>
+                    <span
+                      v-for="(opt, oIdx) in col.options.split(',').map(s => s.trim()).filter(Boolean)"
+                      :key="oIdx"
+                      style="font-size: 0.7rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 8px; border-radius: 4px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"
+                    >
+                      <i :class="col.isSingleSelect ? 'pi pi-circle' : 'pi pi-check-square'" style="font-size: 0.65rem;"></i>
+                      {{ opt }}
+                    </span>
+                  </div>
                 </div>
                 
                 <!-- Sub-columns Excel breakdown preview (Only for checkbox_text) -->

@@ -2131,7 +2131,7 @@ const getCheckboxFileLoopItems = (data, colId) => {
       else if (p && typeof p === 'object' && Array.isArray(p.items)) list = p.items;
     } catch (e) {}
   }
-  return list;
+  return list.filter((it) => it && (it.checked || it.file || (it.details && it.details.trim())));
 };
 
 const getCellValue = (trip, colId) => {

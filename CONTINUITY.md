@@ -50,7 +50,16 @@
 - **Công thức `trips_count_in_year` (Số lần xuất cảnh trong năm)**: Đếm thuần túy số lần xuất cảnh trong cùng năm của Cán bộ (dựa vào cột ngày xuất cảnh do người dùng cấu hình), hiển thị kết quả trực tiếp dạng số lần (VD: `1 lần`, `2 lần`, `3 lần`...). Không lạm dụng ngưỡng/cảnh báo cứng trong công thức.
 - **Lọc điều kiện theo Số lần xuất cảnh**: Hỗ trợ đồng bộ cả toán tử `Điều kiện đếm: Lớn hơn hoặc bằng (>=)` (`count_gte` / `count_gt`) và toán tử so sánh số (`gte` / `gt`). Hệ thống tự động bóc tách số lần từ cột để so sánh trực tiếp với giá trị người dùng nhập (ví dụ: `>= 2`).
 
-### 8. LEDGER STATUS
-- **Status**: Done (Đơn giản hóa công thức Số lần xuất cảnh trong năm và hỗ trợ đầy đủ bộ lọc điều kiện đếm / so sánh số trên thẻ KPI).
+### 8. ĐỊNH DẠNG HỘP KIỂM + TỆP ĐÍNH KÈM LẶP (CHECKBOX_FILE_LOOP)
+- **Cấu hình cột (`SettingsImportView.vue`)**:
+  - Chứa tùy chọn `🔘 Chọn duy nhất 1 mục (Single Choice - Chỉ tick chọn 1 hộp kiểm)` (`col.isSingleSelect`). Nếu không chọn: cho phép tick chọn cùng lúc nhiều hộp kiểm.
+  - Hiển thị trực quan preview các hộp kiểm đã tạo sẵn từ `col.options`.
+- **Form nhập liệu (`DynamicField.vue`)**:
+  - Không hiển thị hộp checkbox cấu hình quy tắc "Chọn duy nhất" tại form nhập liệu.
+  - Hiển thị ngay lập tức danh sách các hộp kiểm đã tạo từ cấu hình (`col.options`). Mỗi hộp kiểm khi được tick sẽ mở ô nhập chi tiết/ghi chú và nút đính kèm tệp tương ứng.
+  - Hỗ trợ nút `+ Thêm mục khác ngoài danh mục (Hộp kiểm + Tệp)` để bổ sung các mục phát sinh không có trong danh mục định sẵn.
+
+### 9. LEDGER STATUS
+- **Status**: Done (Hoàn tất chuẩn hóa format Hộp kiểm + Tệp lặp: chuyển tùy chọn Chọn duy nhất sang Cấu hình cột, hiển thị ngay các box kiểm đã tạo và hỗ trợ thêm mục khác ngoài danh mục).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã qua kiểm thử build thành công).

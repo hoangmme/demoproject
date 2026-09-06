@@ -210,43 +210,96 @@
       </div>
     </template>
 
-    <!-- 4d. Checkbox + File Loop (Hộp kiểm + Tệp đính kèm lặp, hỗ trợ Chọn duy nhất / Chọn nhiều) -->
+    <!-- 4d. Checkbox + File Loop (Hộp kiểm + Tệp đính kèm lặp) -->
     <template v-else-if="col.format === 'checkbox_file_loop'">
       <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
-        <!-- Thanh công cụ trên cùng: Nút tick "Chọn duy nhất" & Bộ đếm -->
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; background: #f8fafc; padding: 6px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-          <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 0.78rem; font-weight: 600; color: #1e293b; cursor: pointer; user-select: none;">
-            <input
-              type="checkbox"
-              v-model="checkboxFileLoopIsSingle"
-              @change="onToggleCheckboxFileLoopSingle"
-              style="accent-color: #2563eb; width: 16px; height: 16px; cursor: pointer;"
-            />
-            <span style="color: #1e40af; font-weight: 700;">Chọn duy nhất (Chỉ 1 mục)</span>
-            <span style="font-size: 0.72rem; color: #64748b; font-weight: normal;">(Bỏ tích = có thể chọn cả 2 hoặc nhiều mục)</span>
-          </label>
-          <span style="font-size: 0.74rem; color: #0369a1; font-weight: 600; background: #e0f2fe; padding: 2px 10px; border-radius: 12px; border: 1px solid #bae6fd;">
-            Đã chọn: {{ selectedCheckboxFileLoopCount }} / {{ checkboxFileLoopList.length }} mục
-          </span>
-        </div>
-
-        <!-- Trạng thái chưa có mục nào -->
-        <div v-if="checkboxFileLoopList.length === 0" style="display: flex; align-items: center;">
-          <button
-            type="button"
-            class="btn-add-text-file-initial"
-            style="background: #f0fdf4 !important; color: #166534 !important; border: 1.5px dashed #86efac !important; display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;"
-            @click.stop="addCheckboxFileLoopRow"
-          >
-            <i class="pi pi-plus" style="font-size: 0.8rem; color: #166534 !important;"></i>
-            <span style="color: #166534 !important; font-weight: 600;">Thêm mục mới (Hộp kiểm + Tệp)</span>
-          </button>
-        </div>
-
-        <!-- Danh sách các mục lặp -->
-        <template v-else>
+        <!-- 1. Danh sách các hộp kiểm đã tạo sẵn từ Cấu hình cột (col.options) -->
+        <div v-if="predefinedLoopOptions.length > 0" style="display: flex; flex-direction: column; gap: 6px;">
           <div
-            v-for="(item, idx) in checkboxFileLoopList"
+            v-for="item in predefinedLoopOptions"
+            :key="item.id"
+            :style="{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              padding: '8px 12px',
+              background: item.checked ? '#f0fdf4' : '#ffffff',
+              border: item.checked ? '1.5px solid #86efac' : '1px solid #e2e8f0',
+              borderRadius: '8px',
+              transition: 'all 0.2s',
+            }"
+          >
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; flex: 1;">
+                <input
+                  :type="isSingleSelectMode ? 'radio' : 'checkbox'"
+                  :checked="item.checked"
+                  :name="'cfl_grp_' + (col.id || 'field')"
+                  @change="togglePredefinedLoopOption(item)"
+                  style="accent-color: #16a34a; width: 17px; height: 17px; cursor: pointer; flex-shrink: 0;"
+                />
+                <span :style="{ fontSize: '0.84rem', fontWeight: item.checked ? '700' : '500', color: item.checked ? '#166534' : '#1e293b' }">
+                  {{ item.name }}
+                </span>
+              </label>
+
+              <!-- Huy hiệu tệp đính kèm (nếu đã có tệp) -->
+              <div v-if="item.file && item.checked" style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; max-width: 50%; overflow: hidden;">
+                <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.75rem; flex-shrink: 0;"></i>
+                <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                  {{ item.file.name }}
+                </span>
+                <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none; margin-left: 2px;">
+                  <span style="color: #0284c7; cursor: pointer; text-decoration: underline;">Xem</span>
+                </a>
+                <i
+                  class="pi pi-times"
+                  style="color: #ef4444; font-size: 0.68rem; cursor: pointer; margin-left: 4px;"
+                  title="Xóa tệp đính kèm"
+                  @click.stop="removePredefinedFile(item)"
+                ></i>
+              </div>
+            </div>
+
+            <!-- Khi mục được chọn: Cho phép nhập ghi chú/diễn giải và đính kèm tệp -->
+            <div
+              v-if="item.checked"
+              style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-left: 25px; padding-top: 6px; border-top: 1px dashed #bbf7d0; margin-top: 2px;"
+            >
+              <InputText
+                v-model="item.details"
+                size="small"
+                style="flex: 1; min-width: 140px; font-size: 0.78rem; height: 28px;"
+                :placeholder="'Nhập ghi chú / chi tiết cho ' + item.name + ' (nếu có)...'"
+                @input="syncFullCheckboxFileLoopModel"
+              />
+              <div v-if="!item.file">
+                <input
+                  type="file"
+                  :ref="el => setPredefinedFileInputRef(el, item.id)"
+                  style="display: none;"
+                  @change="e => handlePredefinedFileUpload(e, item)"
+                />
+                <Button
+                  type="button"
+                  :label="uploadingPredefinedId === item.id ? 'Đang tải...' : 'Đính kèm tệp'"
+                  :icon="uploadingPredefinedId === item.id ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
+                  size="small"
+                  outlined
+                  severity="secondary"
+                  :disabled="uploadingPredefinedId === item.id"
+                  @click.stop="triggerPredefinedFileInput(item.id)"
+                  style="font-size: 0.72rem; padding: 2px 8px; height: 28px;"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Danh sách các mục tự thêm động (Loop thêm mục phát sinh ngoài cấu hình) -->
+        <div v-if="customLoopItems.length > 0" style="display: flex; flex-direction: column; gap: 6px;">
+          <div
+            v-for="(item, idx) in customLoopItems"
             :key="item.id || idx"
             :style="{
               display: 'flex',
@@ -254,20 +307,18 @@
               gap: '6px',
               padding: '8px 10px',
               background: item.checked ? '#f0fdf4' : '#f8fafc',
-              border: item.checked ? '1px solid #86efac' : '1px solid #e2e8f0',
+              border: item.checked ? '1.5px solid #86efac' : '1px solid #e2e8f0',
               borderRadius: '8px',
               transition: 'all 0.2s',
             }"
           >
             <div style="display: flex; gap: 8px; align-items: center;">
-              <!-- Hộp kiểm tick chọn mục này -->
               <input
-                :type="checkboxFileLoopIsSingle ? 'radio' : 'checkbox'"
+                :type="isSingleSelectMode ? 'radio' : 'checkbox'"
                 :checked="item.checked"
                 :name="'cfl_grp_' + (col.id || 'field')"
-                @change="onToggleCheckboxFileLoopItem(idx)"
+                @change="toggleCustomLoopItem(idx)"
                 style="accent-color: #16a34a; width: 17px; height: 17px; cursor: pointer; flex-shrink: 0;"
-                :title="checkboxFileLoopIsSingle ? 'Chọn mục này (Duy nhất)' : 'Chọn mục này'"
               />
               <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; width: 22px; text-align: center;">
                 #{{ idx + 1 }}
@@ -275,9 +326,9 @@
               <InputText
                 v-model="item.text"
                 size="small"
-                style="flex: 1; font-size: 0.8rem;"
-                :placeholder="'Nhập tên mục / nội dung #' + (idx + 1)"
-                @input="syncCheckboxFileLoopModel"
+                style="flex: 1; font-size: 0.8rem; height: 30px;"
+                :placeholder="'Nhập tên mục / nội dung phát sinh #' + (idx + 1)"
+                @input="syncFullCheckboxFileLoopModel"
               />
               <Button
                 type="button"
@@ -285,13 +336,13 @@
                 severity="danger"
                 text
                 size="small"
-                @click.stop="removeCheckboxFileLoopRow(idx)"
+                @click.stop="removeCustomLoopItem(idx)"
                 title="Xóa mục này"
                 style="padding: 2px 6px;"
               />
             </div>
 
-            <!-- Tệp đính kèm cho mục này -->
+            <!-- Tệp đính kèm cho mục tự thêm -->
             <div style="display: flex; align-items: center; justify-content: space-between; padding-left: 47px; gap: 8px;">
               <div v-if="item.file" style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #ffffff; padding: 3px 8px; border-radius: 6px; border: 1px solid #cbd5e1; max-width: 85%; overflow: hidden;">
                 <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.8rem; flex-shrink: 0;"></i>
@@ -305,42 +356,44 @@
                   class="pi pi-times"
                   style="color: #ef4444; font-size: 0.7rem; cursor: pointer; margin-left: 6px;"
                   title="Xóa tệp đính kèm này"
-                  @click.stop="removeCheckboxFileLoopRowFile(idx)"
+                  @click.stop="removeCustomLoopItemFile(idx)"
                 ></i>
               </div>
               <div v-else style="display: flex; align-items: center; gap: 6px;">
                 <input
                   type="file"
-                  :ref="el => setCheckboxFileLoopInputRef(el, idx)"
+                  :ref="el => setCustomLoopFileInputRef(el, idx)"
                   style="display: none;"
-                  @change="e => handleCheckboxFileLoopUpload(e, idx)"
+                  @change="e => handleCustomLoopFileUpload(e, idx)"
                 />
                 <Button
                   type="button"
-                  :label="uploadingCheckboxFileLoopIdx === idx ? 'Đang tải lên...' : 'Đính kèm tệp'"
-                  :icon="uploadingCheckboxFileLoopIdx === idx ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
+                  :label="uploadingCustomLoopIdx === idx ? 'Đang tải lên...' : 'Đính kèm tệp'"
+                  :icon="uploadingCustomLoopIdx === idx ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
                   size="small"
                   outlined
                   severity="secondary"
-                  :disabled="uploadingCheckboxFileLoopIdx === idx"
-                  @click.stop="triggerCheckboxFileLoopFileInput(idx)"
+                  :disabled="uploadingCustomLoopIdx === idx"
+                  @click.stop="triggerCustomLoopFileInput(idx)"
                   style="font-size: 0.72rem; padding: 2px 8px; height: 26px;"
                 />
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Nút thêm mục mới -->
-          <button
-            type="button"
-            class="btn-add-text-file-more"
-            style="background: #f8fafc !important; color: #166534 !important; border: 1px solid #86efac !important; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; align-self: flex-start;"
-            @click.stop="addCheckboxFileLoopRow"
-          >
-            <i class="pi pi-plus" style="font-size: 0.75rem; color: #166534 !important;"></i>
-            <span style="color: #166534 !important; font-weight: 600;">Thêm mục mới (Hộp kiểm + Tệp)</span>
-          </button>
-        </template>
+        <!-- Nút + Thêm mục mới (Hộp kiểm + Tệp) -->
+        <button
+          type="button"
+          class="btn-add-text-file-more"
+          style="background: #f8fafc !important; color: #166534 !important; border: 1px dashed #86efac !important; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 0.76rem; font-weight: 600; cursor: pointer; align-self: flex-start; margin-top: 2px;"
+          @click.stop="addCustomLoopRow"
+        >
+          <i class="pi pi-plus" style="font-size: 0.75rem; color: #166534 !important;"></i>
+          <span style="color: #166534 !important; font-weight: 600;">
+            {{ predefinedLoopOptions.length > 0 ? '+ Thêm mục khác ngoài danh mục (Hộp kiểm + Tệp)' : '+ Thêm mục mới (Hộp kiểm + Tệp)' }}
+          </span>
+        </button>
       </div>
     </template>
 
@@ -767,135 +820,33 @@ const syncTextFileModel = () => {
   }, 100);
 };
 
-// Checkbox + File Loop (Hộp kiểm + Tệp lặp, có tùy chọn Duy nhất hoặc Chọn nhiều)
-const checkboxFileLoopList = ref([]);
-const checkboxFileLoopIsSingle = ref(false);
-const checkboxFileLoopInputRefs = ref({});
-const uploadingCheckboxFileLoopIdx = ref(-1);
+// Checkbox + File Loop (Hộp kiểm + Tệp lặp: hiển thị ngay các box kiểm từ cấu hình + cho phép loop thêm mục khác)
+const predefinedLoopOptions = ref([]);
+const customLoopItems = ref([]);
+const isSingleSelectMode = computed(() => Boolean(props.col?.isSingleSelect));
+
+const predefinedFileInputRefs = ref({});
+const uploadingPredefinedId = ref(null);
+
+const customLoopFileInputRefs = ref({});
+const uploadingCustomLoopIdx = ref(-1);
+
 let isInternalCheckboxFileLoop = false;
 
-const selectedCheckboxFileLoopCount = computed(() => {
-  return checkboxFileLoopList.value.filter((it) => it.checked).length;
-});
-
-const setCheckboxFileLoopInputRef = (el, idx) => {
-  if (el) checkboxFileLoopInputRefs.value[idx] = el;
+const setPredefinedFileInputRef = (el, id) => {
+  if (el && id) predefinedFileInputRefs.value[id] = el;
 };
 
-const triggerCheckboxFileLoopFileInput = (idx) => {
-  checkboxFileLoopInputRefs.value[idx]?.click();
+const triggerPredefinedFileInput = (id) => {
+  predefinedFileInputRefs.value[id]?.click();
 };
 
-const initCheckboxFileLoop = (val) => {
-  if (props.col.format !== 'checkbox_file_loop') return;
-
-  let isSingle = Boolean(props.col.isSingleSelect);
-  let rawList = [];
-
-  if (val && typeof val === 'object' && !Array.isArray(val)) {
-    if (val.isSingle !== undefined) isSingle = Boolean(val.isSingle);
-    rawList = Array.isArray(val.items) ? val.items : [];
-  } else if (Array.isArray(val)) {
-    rawList = val;
-  } else if (typeof val === 'string' && val.trim()) {
-    try {
-      const parsed = JSON.parse(val);
-      if (Array.isArray(parsed)) {
-        rawList = parsed;
-      } else if (parsed && typeof parsed === 'object') {
-        if (parsed.isSingle !== undefined) isSingle = Boolean(parsed.isSingle);
-        rawList = Array.isArray(parsed.items) ? parsed.items : [];
-      }
-    } catch (e) {
-      rawList = [{ id: 'cfl_' + Date.now(), text: val, checked: true, file: null }];
-    }
-  }
-
-  checkboxFileLoopIsSingle.value = isSingle;
-
-  // Nếu rỗng và có options định sẵn trong col.options:
-  if (rawList.length === 0 && props.col.options) {
-    const opts = String(props.col.options).split(',').map((s) => s.trim()).filter(Boolean);
-    if (opts.length > 0) {
-      checkboxFileLoopList.value = opts.map((opt, i) => ({
-        id: 'cfl_' + Date.now() + '_' + i,
-        checked: false,
-        text: opt,
-        file: null,
-      }));
-      return;
-    }
-  }
-
-  checkboxFileLoopList.value = rawList.map((item, i) => {
-    if (typeof item === 'string') {
-      return { id: 'cfl_' + Date.now() + '_' + i, checked: false, text: item, file: null };
-    }
-    return {
-      id: item.id || ('cfl_' + Date.now() + '_' + i),
-      checked: Boolean(item.checked),
-      text: item.text || item.name || '',
-      file: item.file || (item.url ? { name: item.fileName || item.name, url: item.url, id: item.fileId } : null),
-    };
-  });
+const removePredefinedFile = (item) => {
+  item.file = null;
+  syncFullCheckboxFileLoopModel();
 };
 
-const onToggleCheckboxFileLoopItem = (idx) => {
-  const target = checkboxFileLoopList.value[idx];
-  if (!target) return;
-
-  if (checkboxFileLoopIsSingle.value) {
-    // Duy nhất: chỉ chọn 1 mục này, bỏ chọn tất cả các mục khác
-    checkboxFileLoopList.value.forEach((item, i) => {
-      item.checked = (i === idx);
-    });
-  } else {
-    // Không tích là duy nhất -> có thể chọn cả 2 hoặc nhiều mục
-    target.checked = !target.checked;
-  }
-  syncCheckboxFileLoopModel();
-};
-
-const onToggleCheckboxFileLoopSingle = () => {
-  if (checkboxFileLoopIsSingle.value) {
-    // Khi bật duy nhất: nếu có nhiều hơn 1 mục đang checked, giữ lại mục đầu tiên
-    let foundFirst = false;
-    checkboxFileLoopList.value.forEach((item) => {
-      if (item.checked) {
-        if (!foundFirst) {
-          foundFirst = true;
-        } else {
-          item.checked = false;
-        }
-      }
-    });
-  }
-  syncCheckboxFileLoopModel();
-};
-
-const addCheckboxFileLoopRow = () => {
-  checkboxFileLoopList.value.push({
-    id: 'cfl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-    checked: false,
-    text: '',
-    file: null,
-  });
-  syncCheckboxFileLoopModel();
-};
-
-const removeCheckboxFileLoopRow = (idx) => {
-  checkboxFileLoopList.value.splice(idx, 1);
-  syncCheckboxFileLoopModel();
-};
-
-const removeCheckboxFileLoopRowFile = (idx) => {
-  if (checkboxFileLoopList.value[idx]) {
-    checkboxFileLoopList.value[idx].file = null;
-    syncCheckboxFileLoopModel();
-  }
-};
-
-const handleCheckboxFileLoopUpload = async (event, idx) => {
+const handlePredefinedFileUpload = async (event, item) => {
   const file = event.target.files?.[0];
   if (!file) return;
 
@@ -905,56 +856,267 @@ const handleCheckboxFileLoopUpload = async (event, idx) => {
     return;
   }
 
-  uploadingCheckboxFileLoopIdx.value = idx;
+  uploadingPredefinedId.value = item.id;
   try {
     const uploaded = await uploadFile(file);
     if (uploaded && uploaded.id) {
       const url = getFileUrl(uploaded.id);
-      if (!checkboxFileLoopList.value[idx]) {
-        checkboxFileLoopList.value[idx] = { id: 'cfl_' + Date.now(), checked: false, text: '', file: null };
-      }
-      checkboxFileLoopList.value[idx].file = {
+      item.file = {
         id: uploaded.id,
         name: file.name,
         url: url,
         size: file.size,
         type: file.type,
       };
-      if (!checkboxFileLoopList.value[idx].text) {
-        checkboxFileLoopList.value[idx].text = file.name.replace(/\.[^/.]+$/, '');
-      }
-      // Tự động tick mục này nếu chưa tick
-      checkboxFileLoopList.value[idx].checked = true;
-      if (checkboxFileLoopIsSingle.value) {
-        checkboxFileLoopList.value.forEach((item, i) => {
-          if (i !== idx) item.checked = false;
+      item.checked = true;
+      if (isSingleSelectMode.value) {
+        predefinedLoopOptions.value.forEach((p) => {
+          if (p.id !== item.id) p.checked = false;
+        });
+        customLoopItems.value.forEach((c) => {
+          c.checked = false;
         });
       }
-      syncCheckboxFileLoopModel();
+      syncFullCheckboxFileLoopModel();
     }
   } catch (err) {
     alert('Lỗi tải tệp: ' + (err.response?.data?.errors?.[0]?.message || err.message));
   } finally {
-    uploadingCheckboxFileLoopIdx.value = -1;
+    uploadingPredefinedId.value = null;
     event.target.value = '';
   }
 };
 
-const syncCheckboxFileLoopModel = () => {
+const togglePredefinedLoopOption = (item) => {
+  if (isSingleSelectMode.value) {
+    predefinedLoopOptions.value.forEach((p) => {
+      p.checked = (p.id === item.id);
+    });
+    customLoopItems.value.forEach((c) => {
+      c.checked = false;
+    });
+  } else {
+    item.checked = !item.checked;
+  }
+  syncFullCheckboxFileLoopModel();
+};
+
+const setCustomLoopFileInputRef = (el, idx) => {
+  if (el) customLoopFileInputRefs.value[idx] = el;
+};
+
+const triggerCustomLoopFileInput = (idx) => {
+  customLoopFileInputRefs.value[idx]?.click();
+};
+
+const removeCustomLoopItem = (idx) => {
+  customLoopItems.value.splice(idx, 1);
+  syncFullCheckboxFileLoopModel();
+};
+
+const removeCustomLoopItemFile = (idx) => {
+  if (customLoopItems.value[idx]) {
+    customLoopItems.value[idx].file = null;
+    syncFullCheckboxFileLoopModel();
+  }
+};
+
+const addCustomLoopRow = () => {
+  customLoopItems.value.push({
+    id: 'cfl_custom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    checked: true,
+    text: '',
+    file: null,
+    isPredefined: false,
+  });
+  if (isSingleSelectMode.value) {
+    const lastIdx = customLoopItems.value.length - 1;
+    predefinedLoopOptions.value.forEach((p) => { p.checked = false; });
+    customLoopItems.value.forEach((c, i) => {
+      c.checked = (i === lastIdx);
+    });
+  }
+  syncFullCheckboxFileLoopModel();
+};
+
+const toggleCustomLoopItem = (idx) => {
+  const target = customLoopItems.value[idx];
+  if (!target) return;
+
+  if (isSingleSelectMode.value) {
+    predefinedLoopOptions.value.forEach((p) => { p.checked = false; });
+    customLoopItems.value.forEach((c, i) => {
+      c.checked = (i === idx);
+    });
+  } else {
+    target.checked = !target.checked;
+  }
+  syncFullCheckboxFileLoopModel();
+};
+
+const handleCustomLoopFileUpload = async (event, idx) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (file.size > 100 * 1024 * 1024) {
+    alert(`Tệp "${file.name}" quá lớn (${(file.size / 1024 / 1024).toFixed(1)}MB). Giới hạn tối đa là 100MB.`);
+    event.target.value = '';
+    return;
+  }
+
+  uploadingCustomLoopIdx.value = idx;
+  try {
+    const uploaded = await uploadFile(file);
+    if (uploaded && uploaded.id) {
+      const url = getFileUrl(uploaded.id);
+      if (!customLoopItems.value[idx]) {
+        customLoopItems.value[idx] = { id: 'cfl_custom_' + Date.now(), checked: true, text: '', file: null, isPredefined: false };
+      }
+      customLoopItems.value[idx].file = {
+        id: uploaded.id,
+        name: file.name,
+        url: url,
+        size: file.size,
+        type: file.type,
+      };
+      if (!customLoopItems.value[idx].text) {
+        customLoopItems.value[idx].text = file.name.replace(/\.[^/.]+$/, '');
+      }
+      customLoopItems.value[idx].checked = true;
+      if (isSingleSelectMode.value) {
+        predefinedLoopOptions.value.forEach((p) => { p.checked = false; });
+        customLoopItems.value.forEach((c, i) => {
+          if (i !== idx) c.checked = false;
+        });
+      }
+      syncFullCheckboxFileLoopModel();
+    }
+  } catch (err) {
+    alert('Lỗi tải tệp: ' + (err.response?.data?.errors?.[0]?.message || err.message));
+  } finally {
+    uploadingCustomLoopIdx.value = -1;
+    event.target.value = '';
+  }
+};
+
+const syncFullCheckboxFileLoopModel = () => {
   isInternalCheckboxFileLoop = true;
-  const payload = {
-    isSingle: checkboxFileLoopIsSingle.value,
-    items: checkboxFileLoopList.value.map((it) => ({
-      id: it.id,
-      checked: it.checked,
-      text: it.text,
-      file: it.file,
+
+  const allItems = [
+    ...predefinedLoopOptions.value.map((p) => ({
+      id: p.id,
+      name: p.name,
+      checked: Boolean(p.checked),
+      details: p.details || '',
+      text: p.details ? `${p.name}: ${p.details}` : p.name,
+      file: p.file || null,
+      isPredefined: true,
     })),
+    ...customLoopItems.value.map((c) => ({
+      id: c.id,
+      name: c.text,
+      checked: Boolean(c.checked),
+      details: '',
+      text: c.text,
+      file: c.file || null,
+      isPredefined: false,
+    })),
+  ];
+
+  const payload = {
+    isSingle: isSingleSelectMode.value,
+    items: allItems,
   };
+
   emit('update:modelValue', payload);
   setTimeout(() => {
     isInternalCheckboxFileLoop = false;
   }, 100);
+};
+
+const initCheckboxFileLoop = (val) => {
+  if (props.col.format !== 'checkbox_file_loop') return;
+
+  const rawOpts = props.col?.options
+    ? String(props.col.options)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
+  let savedItems = [];
+  if (val && typeof val === 'object' && !Array.isArray(val)) {
+    savedItems = Array.isArray(val.items) ? val.items : [];
+  } else if (Array.isArray(val)) {
+    savedItems = val;
+  } else if (typeof val === 'string' && val.trim()) {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) {
+        savedItems = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        savedItems = Array.isArray(parsed.items) ? parsed.items : [];
+      }
+    } catch (e) {
+      savedItems = [{ id: 'cfl_' + Date.now(), text: val, checked: true, file: null }];
+    }
+  }
+
+  const predefined = rawOpts.map((opt, idx) => {
+    const match = savedItems.find((s) => {
+      const sName = (s.name || s.text || '').trim().toLowerCase();
+      const targetName = opt.toLowerCase();
+      return sName === targetName || sName.startsWith(targetName + ':');
+    });
+
+    let details = '';
+    let isChecked = false;
+    let file = null;
+
+    if (match) {
+      isChecked = Boolean(match.checked);
+      file = match.file || (match.url ? { name: match.fileName || match.name, url: match.url, id: match.fileId } : null);
+      if (match.details) {
+        details = match.details;
+      } else if (match.text && match.text.toLowerCase().startsWith(opt.toLowerCase() + ':')) {
+        details = match.text.substring(opt.length + 1).trim();
+      }
+    }
+
+    return {
+      id: 'pre_' + idx + '_' + opt.replace(/\s+/g, '_'),
+      name: opt,
+      checked: isChecked,
+      details: details,
+      file: file,
+      isPredefined: true,
+    };
+  });
+
+  const custom = [];
+  savedItems.forEach((s, sIdx) => {
+    const sName = (s.name || s.text || '').trim();
+    if (!sName && !s.file) return;
+
+    const isMatchedInPredefined = rawOpts.some((opt) => {
+      const target = opt.toLowerCase();
+      const lower = sName.toLowerCase();
+      return lower === target || lower.startsWith(target + ':');
+    });
+
+    if (!isMatchedInPredefined) {
+      custom.push({
+        id: s.id || ('custom_' + Date.now() + '_' + sIdx),
+        text: s.text || s.name || '',
+        checked: Boolean(s.checked),
+        file: s.file || (s.url ? { name: s.fileName || s.name, url: s.url, id: s.fileId } : null),
+        isPredefined: false,
+      });
+    }
+  });
+
+  predefinedLoopOptions.value = predefined;
+  customLoopItems.value = custom;
 };
 
 const addTableRow = () => {
@@ -1178,9 +1340,9 @@ const syncCheckboxFileModel = () => {
   }, 100);
 };
 
-// Đồng bộ khởi tạo dữ liệu cho các trường phức tạp (Table loop, Text file loop, Checkbox file)
+// Đồng bộ khởi tạo dữ liệu cho các trường phức tạp (Table loop, Text file loop, Checkbox file, Checkbox file loop)
 watch(
-  () => [props.modelValue, props.col.format, props.col.options],
+  () => [props.modelValue, props.col.format, props.col.options, props.col.isSingleSelect],
   ([val, fmt]) => {
     if (fmt === 'table_2col' || fmt === 'table_loop') {
       const currentJson = JSON.stringify(tableRows.value);
