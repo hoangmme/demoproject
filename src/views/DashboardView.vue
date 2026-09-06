@@ -238,7 +238,7 @@
                 <i :class="['pi', widget.icon || 'pi-chart-bar']" :style="{ color: widget.color || '#2e7d32', fontSize: '1.05rem' }"></i>
                 <div>
                   <h4 style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin: 0;">
-                    {{ widget.title }} ({{ computeWidgetChartData(widget).list.length }} phân loại)
+                    {{ widget.title }} ({{ getWidgetChartData(widget).list.length }} phân loại)
                   </h4>
                   <span style="font-size: 0.7rem; color: #64748b;">
                     {{ getSourceLabel(widget.source) }} - Cột: <b>{{ widget.columnLabel || widget.columnId }}</b>
@@ -273,7 +273,7 @@
                   v-for="(item, cIdx) in getFilteredChartList(widget)"
                   :key="item.name"
                   class="country-column-item"
-                  @click="handleChartItemClick(widget, item.name)"
+                  @click="handleChartItemClick(widget, item)"
                   :title="`${item.name}\n- Số lượng: ${item.count} bản ghi`"
                   style="cursor: pointer;"
                 >
@@ -283,7 +283,7 @@
                       v-if="item.count > 0"
                       class="column-segment-cb"
                       :style="{
-                        height: `${(item.count / (computeWidgetChartData(widget).max || 1)) * 100}%`,
+                        height: `${(item.count / (getWidgetChartData(widget).max || 1)) * 100}%`,
                         background: widget.color || '#2e7d32'
                       }"
                     >
@@ -311,7 +311,7 @@
                 <i :class="['pi', widget.icon || 'pi-bars']" :style="{ color: widget.color || '#2e7d32', fontSize: '1.05rem' }"></i>
                 <div>
                   <h4 style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin: 0;">
-                    {{ widget.title }} ({{ computeWidgetChartData(widget).list.length }} phân loại)
+                    {{ widget.title }} ({{ getWidgetChartData(widget).list.length }} phân loại)
                   </h4>
                   <span style="font-size: 0.7rem; color: #64748b;">
                     {{ getSourceLabel(widget.source) }} - Cột: <b>{{ widget.columnLabel || widget.columnId }}</b>
@@ -341,7 +341,7 @@
                 v-for="(item, cIdx) in getFilteredChartList(widget)"
                 :key="item.name"
                 class="breakdown-row"
-                @click="handleChartItemClick(widget, item.name)"
+                @click="handleChartItemClick(widget, item)"
                 style="cursor: pointer;"
               >
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -356,7 +356,7 @@
                       {{ item.count }} bản ghi
                     </span>
                     <span style="font-size: 0.68rem; color: #94a3b8;">
-                      ({{ computeWidgetChartData(widget).total > 0 ? Math.round((item.count / computeWidgetChartData(widget).total) * 100) : 0 }}%)
+                      ({{ getWidgetChartData(widget).total > 0 ? Math.round((item.count / getWidgetChartData(widget).total) * 100) : 0 }}%)
                     </span>
                   </div>
                 </div>
@@ -364,7 +364,7 @@
                   <div
                     style="height: 100%; border-radius: 4px; transition: width 0.4s ease;"
                     :style="{
-                      width: `${(item.count / (computeWidgetChartData(widget).max || 1)) * 100}%`,
+                      width: `${(item.count / (getWidgetChartData(widget).max || 1)) * 100}%`,
                       background: widget.color || '#2e7d32'
                     }"
                   ></div>
@@ -1983,8 +1983,14 @@ const getRowFieldValue = (row, colId) => {
   return formatGenericCellValue(raw, colDef || { id: colId });
 };
 
+const cachedSourceTrips = computed(() => buildTopicSourceList('trips', personnelStore));
+const cachedSourcePersonnel = computed(() => buildTopicSourceList('personnel', personnelStore));
+const cachedSourceRelatives = computed(() => buildTopicSourceList('relatives', personnelStore));
+
 const getSourceList = (source) => {
-  return buildTopicSourceList(source, personnelStore);
+  if (source === 'personnel') return cachedSourcePersonnel.value || [];
+  if (source === 'relatives' || source === 'relative') return cachedSourceRelatives.value || [];
+  return cachedSourceTrips.value || [];
 };
 
 
@@ -2528,8 +2534,29 @@ const computeWidgetChartData = (widget) => {
   return { list: chartList, max, total, groupField };
 };
 
+const chartDataCache = new Map();
+
+watch(
+  () => [personnelStore.personnelList, customGroups.value, availableTopicDashboards.value],
+  () => {
+    chartDataCache.clear();
+  },
+  { deep: false }
+);
+
+const getWidgetChartData = (widget) => {
+  if (!widget?.id) return { list: [], max: 1, total: 0, groupField: '' };
+  const cacheKey = `${widget.id}_${widget.topicId || ''}_${widget.columnId || ''}_${widget.cardId || ''}`;
+  if (chartDataCache.has(cacheKey)) {
+    return chartDataCache.get(cacheKey);
+  }
+  const res = computeWidgetChartData(widget);
+  chartDataCache.set(cacheKey, res);
+  return res;
+};
+
 const getFilteredChartList = (widget) => {
-  const data = computeWidgetChartData(widget).list;
+  const data = getWidgetChartData(widget).list;
   const q = (customChartSearches.value[widget.id] || '').toLowerCase().trim();
   if (!q) return data;
   return data.filter((item) => item.name.toLowerCase().includes(q));
@@ -2884,18 +2911,21 @@ const filteredFundingList = computed(() => {
 // =========================================================================
 // 4. CHART ITEM CLICK & NAVIGATION
 // =========================================================================
-const handleChartItemClick = (widget, itemName) => {
+const handleChartItemClick = (widget, itemOrName) => {
   const targetPath = widget.topicId === 'trips' || !widget.topicId
     ? (widget.source === 'personnel' ? '/personnel' : (widget.source === 'relatives' ? '/personnel' : '/trips'))
     : `/dashboard-topic/${widget.topicId}`;
 
-  const cardParam = widget.cardId || widget.id;
-  const topic = availableTopicDashboards.value.find((t) => t.id === widget.topicId);
-  const card = (topic?.metricCards || []).find((c) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title) || widget;
-  const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
-  const field = widget.columnId || (cardConds.length > 0 ? cardConds[0].field : '') || 'countryName';
+  const itemName = typeof itemOrName === 'object' && itemOrName !== null ? itemOrName.name : String(itemOrName);
+  const itemField = typeof itemOrName === 'object' && itemOrName !== null ? itemOrName.field : null;
 
-  if (field === 'countryName' || field === 'quoc_gia_xuat_canh' || field === 'country') {
+  const topic = availableTopicDashboards.value.find((t) => t.id === widget.topicId);
+  const card = (topic?.metricCards || []).find((c) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title);
+  const cardParam = card?.id || 'all';
+  const cardConds = (card && card.conditions && card.conditions.length > 0) ? card.conditions : (card?.field ? [{ field: card.field }] : []);
+  const field = itemField || widget.columnId || (cardConds.length > 0 ? cardConds[0].field : '') || 'countryName';
+
+  if (field === 'countryName' || field === 'quoc_gia_xuat_canh' || field === 'country' || field === 'countryNameTN') {
     router.push({ path: targetPath, query: { card: cardParam, country: itemName } });
   } else if (field === 'fundingName' || field === 'nguon_kinh_phi' || field === 'funding') {
     router.push({ path: targetPath, query: { card: cardParam, funding: itemName } });
@@ -2925,11 +2955,13 @@ const refreshData = async () => {
 };
 
 onMounted(async () => {
-  await personnelStore.loadSettings();
-  await personnelStore.fetchPersonnel();
-  await loadDashboardSettings();
-  await loadTopicDashboards();
-  await loadCustomGroups();
+  await Promise.all([
+    personnelStore.loadSettings(),
+    personnelStore.fetchPersonnel(),
+    loadDashboardSettings(),
+    loadTopicDashboards(),
+    loadCustomGroups(),
+  ]);
   await reconcileGroupsWithTopics(true);
 });
 </script>

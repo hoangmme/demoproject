@@ -652,10 +652,34 @@
   4. **Nạp đa tầng LocalStorage + Directus DB (0ms)**:
      - Cả `loadTopicDashboards` và `loadCustomGroups` đều nạp từ `localStorage` trước (0ms) rồi đối soát với Directus DB.
 
-### 57. LEDGER STATUS
-- **Status**: Done (Đã sửa triệt để lỗi type coercion Number('') === 0, khôi phục toàn bộ thẻ thống kê đồng bộ ra Dashboard chính và thêm nút đồng bộ trực tiếp tại nhóm).
+### 57. TỐI ƯU TỐC ĐỘ TẢI DASHBOARD & SỬA LỖI ĐIỀU HƯỚNG BIỂU ĐỒ SANG CHUYÊN ĐỀ (2026-09-07)
+- **Vấn đề người dùng phản hồi**:
+  1. Thống kê tải rất chậm, bị đơ giật.
+  2. Khi click vào phân loại trong biểu đồ dạng Cột dọc hoặc Cột ngang trên Dashboard chính, hệ thống chuyển sang Chuyên đề con nhưng bảng dữ liệu trống trơn (0 bản ghi). Bấm sang thẻ Tổng cộng hay thẻ khác số liệu vẫn đúng nhưng bảng vẫn bị lỗi/trống, phải bấm qua chuyên đề khác rồi bấm lại mới hiện đủ.
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. **Hiệu năng Dashboard**:
+     - `getSourceList(source)` là hàm thuần gọi `buildTopicSourceList` lặp đi lặp lại. Khi render frame, hàng chục thẻ và hàng chục cột biểu đồ gọi hàm này hàng trăm lần, giải nén JSON và tính toán ngày tháng liên tục làm nghẽn JS single thread.
+     - Biểu đồ cột dọc/ngang trong template gọi `computeWidgetChartData(widget)` nhiều lần trên từng thanh bar trong vòng lặp `v-for`.
+     - Các lệnh load dữ liệu trong `onMounted` chạy tuần tự nối tiếp `await` thay vì song song.
+  2. **Lỗi điều hướng và kẹt bộ lọc chuyên đề con**:
+     - **0 bản ghi khi click biểu đồ**: `handleChartItemClick` chỉ nhận `itemName` mà không truyền `item.field`. Cột đối soát bị đoán sai (ví dụ `field` thành chức vụ trong khi `itemName` là tên quốc gia). Ngoài ra với Thân nhân, trường quốc gia `countryNameTN` bị đè bởi `countryName` ("Tự túc").
+     - **Kẹt bảng dữ liệu**: Khi có tham số lọc ngoài URL query (`country`, `filterField`, `filterValue`), `filteredList` luôn áp dụng bộ lọc URL. Khi người dùng click vào thẻ "Tổng cộng" hoặc thẻ thống kê khác trong Chuyên đề, hàm `toggleMetricCardFilter` chỉ đổi `activeMetricCardIdx` mà KHÔNG xóa tham số ngoài URL, khiến bộ lọc URL cũ tiếp tục triệt tiêu dữ liệu của thẻ mới, dẫn đến 0 bản ghi cho tới khi chuyển route khác.
+- **Giải pháp & Triển khai**:
+  1. **Tăng tốc Dashboard 0ms**:
+     - Caching `getSourceList` bằng 3 `computed` properties (`cachedSourceTrips`, `cachedSourcePersonnel`, `cachedSourceRelatives`), chỉ tính toán đúng 1 lần duy nhất khi dữ liệu thay đổi.
+     - Thêm cơ chế Memoization `getWidgetChartData(widget)` lưu cache theo Map, tự động dọn sạch khi store hoặc groups thay đổi; thay thế toàn bộ lệnh gọi trong template `v-for`.
+     - Song song hóa tải dữ liệu trong `onMounted` bằng `Promise.all`.
+  2. **Chuẩn hóa điều hướng biểu đồ & Giải phóng kẹt bộ lọc**:
+     - Truyền toàn bộ object `item` (gồm cả `item.field`) vào `handleChartItemClick`, định tuyến chính xác 100% trường dữ liệu sang Chuyên đề con.
+     - Mở rộng bộ lọc `country` trong `filteredList` hỗ trợ kiểm tra tất cả biến thể (`countryNameTN`, `countryName`, `country`, `quoc_gia_xuat_canh`, custom_data, chuyến đi thân nhân).
+     - Trong `toggleMetricCardFilter`: Tự động gọi `clearChartFilter()` xóa sạch các query filter ngoài URL (`router.replace`) và reset state để không bao giờ bị kẹt bảng khi bấm chuyển thẻ.
+     - Thêm Banner thông báo bộ lọc biểu đồ đang áp dụng: `🎯 Đang lọc theo biểu đồ: [Tên trường]: [Giá trị] (X bản ghi)` kèm nút `[✖ Bỏ lọc biểu đồ]` giúp người dùng chủ động kiểm soát và giải phóng bộ lọc bất kỳ lúc nào.
+
+### 58. LEDGER STATUS
+- **Status**: Done (Đã tối ưu tốc độ tải Dashboard cực nhanh, sửa dứt điểm lỗi 0 bản ghi khi click biểu đồ sang chuyên đề con và giải phóng hoàn toàn hiện tượng kẹt bảng dữ liệu).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
+
 
 
 

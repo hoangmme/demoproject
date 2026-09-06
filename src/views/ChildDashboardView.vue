@@ -133,6 +133,27 @@
       </div>
     </div>
 
+    <!-- Active Chart Filter Banner -->
+    <div
+      v-if="hasActiveChartFilter"
+      style="margin-bottom: 0.85rem; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; color: #1e40af; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
+    >
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="pi pi-filter-fill" style="color: #2563eb; font-size: 0.95rem;"></i>
+        <span>
+          Đang lọc theo biểu đồ: <strong>{{ activeChartFilterLabel }}</strong> ({{ filteredList.length }} bản ghi)
+        </span>
+      </div>
+      <button
+        type="button"
+        @click="clearChartFilter"
+        style="background: #ffffff; border: 1px solid #93c5fd; color: #1d4ed8; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;"
+        title="Bỏ lọc theo biểu đồ này để hiển thị lại toàn bộ"
+      >
+        <i class="pi pi-times"></i> Bỏ lọc biểu đồ
+      </button>
+    </div>
+
     <!-- Main Data Table Card (Matching PersonnelView exactly) -->
     <div class="app-card" style="padding: 0; overflow: hidden; position: relative;">
       <DataTable
@@ -1149,7 +1170,50 @@ const isCardActive = (card, cIdx) => {
   return activeMetricCardIdx.value === cIdx;
 };
 
+const clearChartFilter = () => {
+  if (route.query?.country || route.query?.funding || route.query?.department || route.query?.filterField || route.query?.filterValue || route.query?.status || route.query?.year) {
+    const newQuery = { ...route.query };
+    delete newQuery.country;
+    delete newQuery.funding;
+    delete newQuery.department;
+    delete newQuery.filterField;
+    delete newQuery.filterValue;
+    delete newQuery.status;
+    delete newQuery.year;
+    router.replace({ path: route.path, query: newQuery });
+  }
+  selectedCountry.value = '';
+  selectedFunding.value = '';
+  selectedDepartment.value = '';
+  customFilterField.value = '';
+  customFilterValue.value = '';
+};
+
+const hasActiveChartFilter = computed(() => {
+  return !!(
+    route.query?.country ||
+    route.query?.funding ||
+    route.query?.department ||
+    (route.query?.filterField && route.query?.filterValue)
+  );
+});
+
+const activeChartFilterLabel = computed(() => {
+  const parts = [];
+  if (route.query?.country) parts.push(`Quốc gia: "${route.query.country}"`);
+  if (route.query?.funding) parts.push(`Kinh phí: "${route.query.funding}"`);
+  if (route.query?.department) parts.push(`Đơn vị: "${route.query.department}"`);
+  if (route.query?.filterField && route.query?.filterValue) {
+    const colName = getColumnLabel(route.query.filterField) || route.query.filterField;
+    parts.push(`${colName}: "${route.query.filterValue}"`);
+  }
+  return parts.join(', ');
+});
+
 const toggleMetricCardFilter = (card, cIdx) => {
+  // Luôn giải phóng bộ lọc biểu đồ khi bấm vào thẻ thống kê để không bị kẹt bảng
+  clearChartFilter();
+
   // Thẻ hiển thị đầu tiên là baseline của chuyên đề: click vào sẽ đưa về trạng thái xem toàn bộ baseline (-1)
   if (cIdx === firstVisibleCardIdx.value || cIdx === 0) {
     activeMetricCardIdx.value = -1;
@@ -2002,8 +2066,28 @@ const filteredList = computed(() => {
   if (route.query?.country) {
     const cTarget = String(route.query.country).trim().toLowerCase();
     list = list.filter((t) => {
-      const cVal = String(t.countryName || t.country || t.countryNameTN || '').trim().toLowerCase();
-      return cVal === cTarget;
+      let cd = t.custom_data;
+      if (typeof cd === 'string') {
+        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+      }
+      const vals = [
+        t.countryNameTN,
+        t.countryName,
+        t.country,
+        t.quoc_gia_xuat_canh,
+        cd?.countryNameTN,
+        cd?.countryName,
+        cd?.country,
+        t.rawPerson?.countryName,
+        t.activeTrip?.countryName,
+        t.activeTrip?.countryNameTN,
+      ];
+      if (Array.isArray(t.trips)) {
+        t.trips.forEach((trip) => {
+          vals.push(trip.countryName, trip.countryNameTN, trip.country);
+        });
+      }
+      return vals.some((v) => v && String(v).trim().toLowerCase() === cTarget);
     });
   }
 
@@ -2047,6 +2131,15 @@ const filteredList = computed(() => {
       if ((targetVal.includes('nước ngoài') || targetVal === 'abroad') && strCellVal.includes('nước ngoài')) return true;
       if ((targetVal.includes('quá hạn') || targetVal === 'overdue') && (strCellVal.includes('quá hạn') || strCellVal.includes('chưa về'))) return true;
       if ((targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') && (strCellVal.includes('trong nước') || strCellVal.includes('về nước') || strCellVal.includes('đã về'))) return true;
+
+      // Cũng kiểm tra trực tiếp trong t, custom_data hoặc rawPerson
+      let cd = t.custom_data;
+      if (typeof cd === 'string') {
+        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+      }
+      const rawVal = String(t[targetField] ?? cd?.[targetField] ?? t.rawPerson?.[targetField] ?? '').toLowerCase().trim();
+      if (rawVal === targetVal || (rawVal && rawVal.includes(targetVal))) return true;
+
       return strCellVal.includes(targetVal);
     });
   }
