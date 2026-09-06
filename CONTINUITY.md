@@ -502,10 +502,37 @@
      - Thêm `:key="activeMetricCardIdx"` vào `<ColumnSelector>` để reset trạng thái và hiển thị chính xác danh sách cột đã chọn của thẻ đó.
      - Hiển thị huy hiệu trực quan `🎯 [Tên thẻ đang chọn]` trong tiêu đề popover và modal "Tùy chọn Cột hiển thị" giúp người dùng luôn nhận biết rõ đang cấu hình cho thẻ nào.
 
-### 47. LEDGER STATUS
-- **Status**: Done (Đã sửa triệt để lỗi chuỗi bẩn `checkbox_file`, đã dọn dẹp DB Directus, đã hoàn thiện tính năng Tùy chọn cột độc lập theo từng thẻ thống kê, đã build và deploy).
+### 48. SỬA LỖI TẢI CHẬM/NHÁY TRANG, LOẠI BỎ CỘT SAI Ở BẢNG THÂN NHÂN VÀ ĐỒNG BỘ THÔNG MINH BẢO TỒN STYLE (2026-09-07)
+- **Bối cảnh & Vấn đề**:
+  1. **Nháy tiêu đề / Load chậm ở Chuyên đề con**: Khi truy cập `/dashboard/:id`, hệ thống fallback tạm thời về cấu hình `trips` khiến trang bị nháy chữ *"Danh sách Chuyến đi"* và nạp dữ liệu thừa trước khi chuyển sang Chuyên đề thực tế.
+  2. **Bảng Thân nhân hiển thị sai cột Quốc gia ("Tự túc")**:
+     - Trong DB Directus của Thân nhân, trường `countryName` lưu Kinh phí ("Tự túc", "Học bổng" do đợt import cũ), còn Quốc gia thực tế ("New Zealand", "Đức", "Anh"...) được lưu ở `countryNameTN`.
+     - Ở Modal Chi tiết (`PersonnelFamilyForm.vue`), trường hiển thị đúng 100% là `[Cột 8] Quốc gia` (`countryNameTN`).
+     - Tuy nhiên trên bảng `ChildDashboardView.vue`, một mảng tạm `tripColsForRel` đã tự ý nhồi cột giả `countryName` ("QUỐC GIA / NƠI ĐẾN") khiến bảng hiển thị "Tự túc" thay vì Quốc gia thực tế.
+     - **Yêu cầu nghiêm ngặt từ người dùng**: KHÔNG chạy script sửa DB Directus của hồ sơ cán bộ. PHẢI xóa cột sai ở bảng và gọi đúng cấu hình cột `countryNameTN` giống như ở chi tiết.
+  3. **Lệch số & Mất màu sắc/style khi thêm/bớt thẻ ở Dashboard con**: Khi thêm bớt thẻ ở Child Dashboard, Dashboard chính bị lệch số hoặc thừa thiếu thẻ. Khi ấn "Đồng bộ", toàn bộ màu sắc, kích thước và định dạng người dùng đã setup bị xóa sạch.
+
+- **Giải pháp & Triển khai**:
+  1. **Triệt tiêu nháy trang & Tối ưu tải song song (`ChildDashboardView.vue`)**:
+     - Sửa `currentDashboardConfig`: Khi `currentDashboardId !== 'trips'` và chưa nạp xong, trả về `isPending: true` thay vì fallback sang chuyến đi.
+     - `currentSourceList`: Trả về mảng rỗng `[]` khi đang pending, không tải trước dữ liệu chuyến đi.
+     - `onMounted`: Sử dụng `Promise.all` tải song song `loadSettings()` và `loadCustomDashboards()`, loại bỏ độ trễ tuần tự.
+  2. **Xóa triệt để cột giả, hiển thị đúng 100% `countryNameTN` (`ChildDashboardView.vue`)**:
+     - Xóa bỏ hoàn toàn mảng tiêm cột giả `tripColsForRel`. Bảng Thân nhân hiện chỉ đọc cấu hình cột chuẩn từ `importMappingRelative` (trong đó Cột 8 là `countryNameTN`).
+     - Bổ sung hàm `sanitizeRelCols`: Tự động map bất kỳ cột lưu cache cũ nào từ `countryName` sang `countryNameTN` trên bộ nhớ frontend mà không can thiệp/sửa DB Directus.
+     - Cập nhật template cột 6 ưu tiên hiển thị `countryNameTN` và `quoc_gia_xuat_canh`.
+  3. **Bộ đồng bộ thông minh bảo tồn Style (`DashboardView.vue`)**:
+     - Xây dựng `reconcileGroupsWithTopics(silent)` thay thế hàm đồng bộ ghi đè cũ.
+     - Tự động phát hiện thẻ mới thêm ở Child Dashboard -> Thêm widget mới.
+     - Tự động xóa thẻ bị gỡ ở Child Dashboard -> Loại bỏ widget mồ côi.
+     - Giữ nguyên 100% style người dùng đã thiết lập (`color`, `widthPercent`, `icon`, `chartType`, `bgColor`, etc.), chỉ đồng bộ điều kiện logic để số liệu chính xác 100%.
+     - Tự động chạy ngầm (`reconcileGroupsWithTopics(true)`) ngay khi mở Dashboard.
+
+### 49. LEDGER STATUS
+- **Status**: Done (Đã loại bỏ cột sai ở bảng Thân nhân, hiển thị đúng cột Quốc gia `countryNameTN`, khắc phục nháy trang và tích hợp bộ Smart Reconciler bảo tồn màu sắc).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã test và build thành công).
+- **Cost/Impact Alerts**: Không có (Thay đổi frontend [Reversible], bảo toàn 100% dữ liệu Directus DB của người dùng).
+
 
 
 

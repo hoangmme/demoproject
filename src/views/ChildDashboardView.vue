@@ -259,9 +259,9 @@
             </template>
 
             <!-- 6. Quốc gia -->
-            <template v-else-if="col.id === 'countryName' || col.id === 'country'">
+            <template v-else-if="col.id === 'countryName' || col.id === 'country' || col.id === 'countryNameTN' || col.id === 'quoc_gia_xuat_canh'">
               <span style="font-weight: 600; color: #1e293b;">
-                {{ data.countryName || data.country || '-' }}
+                {{ data[col.id] || getCellValue(data, col.id) }}
               </span>
             </template>
 
@@ -985,18 +985,28 @@ const currentDashboardId = computed(() => topicId.value);
 const currentDashboardConfig = computed(() => {
   const found = customDashboards.value.find((d) => d.id === currentDashboardId.value);
   if (found) return found;
+  if (currentDashboardId.value === 'trips' || route.path === '/trips') {
+    return {
+      id: 'trips',
+      code: 'CD-03',
+      title: 'Danh sách Chuyến đi',
+      source: 'trips',
+      icon: 'pi-send',
+      metricCards: [
+        { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
+        { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
+        { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
+        { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
+      ],
+    };
+  }
   return {
-    id: 'trips',
-    code: 'CD-03',
-    title: 'Danh sách Chuyến đi',
-    source: 'trips',
-    icon: 'pi-send',
-    metricCards: [
-      { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
-      { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
-      { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
-      { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
-    ],
+    id: currentDashboardId.value,
+    code: '',
+    title: '',
+    source: null,
+    isPending: true,
+    metricCards: [],
   };
 });
 
@@ -1474,27 +1484,7 @@ const allAvailableColumnsList = computed(() => {
       });
     });
 
-    // Thêm các cột quan trọng của chuyến đi nếu chưa có trong mapping thân nhân
-    const tripColsForRel = [
-      { id: 'countryName', label: 'Quốc gia / Nơi đến', width: '150px', format: 'text' },
-      { id: 'departureDate', label: 'Ngày xuất cảnh', width: '130px', format: 'date' },
-      { id: 'arrivalDate', label: 'Ngày nhập cảnh / về', width: '140px', format: 'date' },
-      { id: 'purpose', label: 'Mục đích chuyến đi', width: '160px', format: 'text' },
-      { id: 'decisionNumber', label: 'Số quyết định', width: '140px', format: 'text' },
-    ];
-    tripColsForRel.forEach((tc) => {
-      if (!seen.has(tc.id)) {
-        seen.add(tc.id);
-        rawList.push({
-          ...tc,
-          colIndex: null,
-          isVirtual: true,
-          tableWidth: null,
-        });
-      }
-    });
-
-    // Các cột ảo: Cán bộ liên quan, Trạng thái hiện diện, Mã cán bộ
+    // Các cột ảo bổ trợ: Cán bộ liên quan, Trạng thái hiện diện, Mã cán bộ
     const virtualRelativeCols = [
       { id: '_parentPersonnelName', label: 'Cán bộ liên quan', width: '180px' },
       { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px' },
@@ -1513,17 +1503,17 @@ const allAvailableColumnsList = computed(() => {
       }
     });
 
-    // Ưu tiên thứ tự cột hiển thị chuẩn cho thân nhân
+    // Ưu tiên thứ tự cột hiển thị chuẩn cho thân nhân (theo đúng mã cột trong cấu hình Cài đặt)
     const prioritizedRelCols = [
+      '_parentPersonnelName',
       'relativeName',
       'relationshipName',
       '_presenceStatus',
-      '_parentPersonnelName',
-      'countryName',
-      'departureDate',
-      'arrivalDate',
-      'purpose',
-      'decisionNumber',
+      'countryNameTN',
+      'cccdthannhan',
+      'birthYearTN',
+      'currentAddress',
+      'occupation',
       '_parentPersonnelCode',
     ];
     rawList.sort((a, b) => {
@@ -1859,6 +1849,7 @@ const unifiedTripsList = computed(() => {
 
 // Dynamic Data List based on configured source
 const currentSourceList = computed(() => {
+  if (currentDashboardConfig.value?.isPending) return [];
   const src = currentDashboardConfig.value?.source || 'trips';
   return buildTopicSourceList(src, personnelStore);
 });
@@ -2960,9 +2951,10 @@ const initTopicColumns = async () => {
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
 
   const finalizeColumns = () => {
-    // Đảm bảo cho bảng Thân nhân mặc định: có họ tên thân nhân, mối quan hệ và trạng thái hiện diện
+    // Đảm bảo cho bảng Thân nhân mặc định: có thông tin cán bộ, họ tên thân nhân, mối quan hệ, trạng thái hiện diện và quốc gia
     if (currentDashboardConfig.value?.source === 'relatives') {
-      const essential = ['relativeName', 'relationshipName', '_presenceStatus', '_parentPersonnelName', 'countryName', 'departureDate', 'arrivalDate'];
+      selectedColIds.value = selectedColIds.value.map((id) => (id === 'countryName' ? 'countryNameTN' : id));
+      const essential = ['_parentPersonnelName', 'relativeName', 'relationshipName', '_presenceStatus', 'countryNameTN'];
       const missing = essential.filter((c) => !selectedColIds.value.includes(c));
       if (missing.length > 0) {
         selectedColIds.value = [...missing, ...selectedColIds.value];
@@ -2970,14 +2962,21 @@ const initTopicColumns = async () => {
     }
   };
 
+  const sanitizeRelCols = (cols) => {
+    if (currentDashboardConfig.value?.source === 'relatives' && Array.isArray(cols)) {
+      return cols.map((id) => (id === 'countryName' ? 'countryNameTN' : id));
+    }
+    return cols;
+  };
+
   // 1. Kiểm tra cấu hình riêng đã lưu trong DB TRƯỚC TIÊN (Ưu tiên tuyệt đối DB hệ thống)
   try {
     const dbCols = (await getAppSettings(currentKey, null)) || (topicId.value === 'trips' ? await getAppSettings('trips_dashboard_columns', null) : null);
     if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
-      const valid = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus');
+      const valid = sanitizeRelCols(dbCols.filter((id) => id !== 'status' && id !== 'tripStatus'));
       if (valid.length > 0) {
         selectedColIds.value = valid;
-        // Đã lưu cấu hình người dùng mong muốn -> KHÔNG override bằng finalizeColumns
+        finalizeColumns();
         try {
           localStorage.setItem(currentKey, JSON.stringify(valid));
         } catch (e) {}
@@ -2992,7 +2991,8 @@ const initTopicColumns = async () => {
     if (localCols) {
       const parsed = JSON.parse(localCols);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        selectedColIds.value = parsed.filter((id) => id !== 'status' && id !== 'tripStatus');
+        selectedColIds.value = sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus'));
+        finalizeColumns();
         return;
       }
     }
@@ -3000,9 +3000,10 @@ const initTopicColumns = async () => {
 
   // 3. Nếu trong customDashboards có cấu hình columns riêng của chuyên đề này
   if (currentDashboardConfig.value?.columns && currentDashboardConfig.value.columns.length > 0) {
-    const validCfg = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
+    const validCfg = sanitizeRelCols(currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus'));
     if (validCfg.length > 0) {
       selectedColIds.value = validCfg;
+      finalizeColumns();
       return;
     }
   }
@@ -3010,7 +3011,7 @@ const initTopicColumns = async () => {
   // 4. Mặc định: Hiển thị TOÀN BỘ các cột có trong chuyên đề (không bị giấu/bớt cột tạm bợ)
   const allIds = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
   if (allIds.length > 0) {
-    selectedColIds.value = allIds;
+    selectedColIds.value = sanitizeRelCols(allIds);
     finalizeColumns();
   }
 };
@@ -3019,11 +3020,18 @@ const loadColumnsForCurrentCard = async () => {
   const isBaseline = activeMetricCardIdx.value <= 0;
   const currentKey = getCurrentCardColKey();
 
+  const sanitizeRelCols = (cols) => {
+    if (currentDashboardConfig.value?.source === 'relatives' && Array.isArray(cols)) {
+      return cols.map((id) => (id === 'countryName' ? 'countryNameTN' : id));
+    }
+    return cols;
+  };
+
   if (!isBaseline) {
     const card = activeMetricCards.value?.[activeMetricCardIdx.value];
     // 1. Kiểm tra columns riêng của thẻ trong cấu hình chuyên đề (customDashboards)
     if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
-      const valid = card.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
+      const valid = sanitizeRelCols(card.columns.filter((id) => id !== 'status' && id !== 'tripStatus'));
       if (valid.length > 0) {
         selectedColIds.value = valid;
         return;
@@ -3036,7 +3044,7 @@ const loadColumnsForCurrentCard = async () => {
       if (local) {
         const parsed = JSON.parse(local);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = parsed.filter((id) => id !== 'status' && id !== 'tripStatus');
+          const valid = sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus'));
           if (valid.length > 0) {
             selectedColIds.value = valid;
             return;
@@ -3049,7 +3057,7 @@ const loadColumnsForCurrentCard = async () => {
     try {
       const dbCols = await getAppSettings(currentKey, null);
       if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
-        const valid = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus');
+        const valid = sanitizeRelCols(dbCols.filter((id) => id !== 'status' && id !== 'tripStatus'));
         if (valid.length > 0) {
           selectedColIds.value = valid;
           try {
@@ -3203,10 +3211,12 @@ watch(
 );
 
 onMounted(async () => {
-  if (!personnelStore.importMappingTrips || personnelStore.importMappingTrips.length === 0) {
-    await personnelStore.loadSettings();
-  }
-  await loadCustomDashboards();
+  await Promise.all([
+    (!personnelStore.importMappingTrips || personnelStore.importMappingTrips.length === 0)
+      ? personnelStore.loadSettings()
+      : Promise.resolve(),
+    loadCustomDashboards(),
+  ]);
   await loadTopicFilterState();
   await loadColumnsForCurrentCard();
   handleRouteQueryChange();

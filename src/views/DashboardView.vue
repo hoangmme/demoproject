@@ -1245,15 +1245,11 @@ const saveCustomGroupsToDb = async () => {
   }
 };
 
-const syncAllTopicDashboardsToWidgets = async (replaceExisting = false) => {
+const reconcileGroupsWithTopics = async (silent = true) => {
   if (!availableTopicDashboards.value || availableTopicDashboards.value.length === 0) {
-    alert('Không tìm thấy cấu hình Chuyên đề nào!');
+    if (!silent) alert('Không tìm thấy cấu hình Chuyên đề nào!');
     return;
   }
-  const confirmMsg = replaceExisting
-    ? 'Bạn có chắc chắn muốn làm mới toàn bộ bảng thống kê và nạp 100% tất cả các thẻ của từng Chuyên đề?'
-    : 'Thao tác này sẽ tự động tạo các nhóm thống kê tương ứng với từng Chuyên đề và nạp đầy đủ 100% tất cả các thẻ con. Bạn có muốn tiếp tục?';
-  if (!confirm(confirmMsg)) return;
 
   const colorMap = {
     blue: '#0284c7',
@@ -1264,56 +1260,135 @@ const syncAllTopicDashboardsToWidgets = async (replaceExisting = false) => {
     teal: '#0d9488',
   };
 
-  const newGroups = replaceExisting ? [] : [...customGroups.value];
+  let hasChanges = false;
+  const currentGroups = JSON.parse(JSON.stringify(customGroups.value || []));
 
   availableTopicDashboards.value.forEach((topic, tIdx) => {
-    const existingGroupIdx = newGroups.findIndex(g => g.topicId === topic.id || g.title === topic.title);
+    let existingGroup = currentGroups.find((g) => g.topicId === topic.id || g.title === topic.title);
     const cards = topic.metricCards || [];
     const widthPerCard = cards.length <= 2 ? 50 : (cards.length === 3 ? 33 : 25);
 
-    const widgets = cards.map((card, cIdx) => {
+    if (!existingGroup) {
+      // Nếu nhóm này chưa có trên Dashboard chính -> Tạo nhóm mới với các thẻ tương ứng
+      const widgets = cards.map((card, cIdx) => {
+        const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
+        const primaryField = cardConds.length > 0 ? cardConds[0].field : '';
+        return {
+          id: `w_topic_${topic.id}_${card.id || cIdx}_${Date.now()}_${cIdx}`,
+          title: card.label || `Thẻ ${cIdx + 1}`,
+          topicId: topic.id,
+          topicTitle: topic.title,
+          cardId: card.id || card.label,
+          cardCondition: card.condition || card.id,
+          field: primaryField,
+          columnId: primaryField,
+          conditions: card.conditions || (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []),
+          operator: card.operator || 'has_value',
+          value: card.value || '',
+          source: topic.source || 'trips',
+          displayType: 'count',
+          widthPercent: widthPerCard,
+          color: colorMap[card.color] || card.color || '#2e7d32',
+          icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
+          isUnique: !!card.isUnique,
+        };
+      });
+
+      currentGroups.push({
+        id: `grp_topic_${topic.id || tIdx}_${Date.now()}`,
+        topicId: topic.id,
+        title: topic.title,
+        description: `Đồng bộ số liệu từ Chuyên đề: ${topic.title}`,
+        icon: topic.icon ? `pi ${topic.icon}` : 'pi-folder',
+        widgets,
+      });
+      hasChanges = true;
+      return;
+    }
+
+    // Nhóm đã tồn tại -> Smart Reconcile từng thẻ widget (BẢO TỒN 100% STYLE CỦA NGƯỜI DÙNG)
+    const existingWidgets = existingGroup.widgets || [];
+    const updatedWidgets = [];
+    const matchedWidgetIds = new Set();
+
+    cards.forEach((card, cIdx) => {
       const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
       const primaryField = cardConds.length > 0 ? cardConds[0].field : '';
-      return {
-        id: `w_topic_${topic.id}_${card.id || cIdx}_${Date.now()}_${cIdx}`,
-        title: card.label || `Thẻ ${cIdx + 1}`,
-        topicId: topic.id,
-        topicTitle: topic.title,
-        cardId: card.id || card.label,
-        cardCondition: card.condition || card.id,
-        field: primaryField,
-        columnId: primaryField,
-        conditions: card.conditions || (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []),
-        operator: card.operator || 'has_value',
-        value: card.value || '',
-        source: topic.source || 'trips',
-        displayType: 'count',
-        widthPercent: widthPerCard,
-        color: colorMap[card.color] || card.color || '#2e7d32',
-        icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
-        isUnique: !!card.isUnique,
-      };
+
+      // Tìm widget tương ứng đã có trong nhóm
+      const existingWidget = existingWidgets.find(
+        (w) => (w.cardId && (w.cardId === card.id || w.cardId === card.label)) ||
+               w.title === card.label ||
+               (card.id && w.id && w.id.includes(card.id))
+      );
+
+      if (existingWidget) {
+        matchedWidgetIds.add(existingWidget.id);
+        // Giữ nguyên 100% style người dùng đã setup (color, widthPercent, icon, displayType, chartType, bgColor, etc.)
+        updatedWidgets.push({
+          ...existingWidget,
+          title: card.label || existingWidget.title,
+          topicId: topic.id,
+          topicTitle: topic.title,
+          cardId: card.id || card.label,
+          cardCondition: card.condition || card.id,
+          field: primaryField,
+          columnId: primaryField,
+          conditions: card.conditions || (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []),
+          operator: card.operator || 'has_value',
+          value: card.value || '',
+          source: topic.source || 'trips',
+          isUnique: !!card.isUnique,
+        });
+      } else {
+        // Thẻ mới được thêm ở Child Dashboard -> Tạo widget mới trong nhóm
+        updatedWidgets.push({
+          id: `w_topic_${topic.id}_${card.id || cIdx}_${Date.now()}_${cIdx}`,
+          title: card.label || `Thẻ ${cIdx + 1}`,
+          topicId: topic.id,
+          topicTitle: topic.title,
+          cardId: card.id || card.label,
+          cardCondition: card.condition || card.id,
+          field: primaryField,
+          columnId: primaryField,
+          conditions: card.conditions || (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []),
+          operator: card.operator || 'has_value',
+          value: card.value || '',
+          source: topic.source || 'trips',
+          displayType: 'count',
+          widthPercent: widthPerCard,
+          color: colorMap[card.color] || card.color || '#2e7d32',
+          icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
+          isUnique: !!card.isUnique,
+        });
+        hasChanges = true;
+      }
     });
 
-    const groupPayload = {
-      id: existingGroupIdx !== -1 ? newGroups[existingGroupIdx].id : `grp_topic_${topic.id || tIdx}_${Date.now()}`,
-      topicId: topic.id,
-      title: topic.title,
-      description: `Đồng bộ 100% số liệu từ Chuyên đề: ${topic.title} (${cards.length} chỉ số)`,
-      icon: topic.icon ? `pi ${topic.icon}` : 'pi-folder',
-      widgets,
-    };
+    // Giữ lại các widget tùy biến không thuộc thẻ của topic này
+    const nonTopicWidgets = existingWidgets.filter((w) => !w.topicId && !w.cardId);
+    nonTopicWidgets.forEach((w) => updatedWidgets.push(w));
 
-    if (existingGroupIdx !== -1) {
-      newGroups[existingGroupIdx] = groupPayload;
-    } else {
-      newGroups.push(groupPayload);
+    // Kiểm tra xem có widget nào bị xóa hoặc thay đổi không
+    if (JSON.stringify(existingWidgets.map((w) => w.id)) !== JSON.stringify(updatedWidgets.map((w) => w.id))) {
+      hasChanges = true;
     }
+
+    existingGroup.widgets = updatedWidgets;
   });
 
-  customGroups.value = newGroups;
-  await saveCustomGroupsToDb();
-  alert('Đã đồng bộ thành công 100% tất cả thống kê từ các Chuyên đề con ra Dashboard chính!');
+  if (hasChanges) {
+    customGroups.value = currentGroups;
+    await saveCustomGroupsToDb();
+  }
+
+  if (!silent) {
+    alert('Đã đồng bộ thông minh tất cả thẻ thống kê từ Chuyên đề (bảo tồn 100% màu sắc và định dạng đã thiết lập)!');
+  }
+};
+
+const syncAllTopicDashboardsToWidgets = async () => {
+  await reconcileGroupsWithTopics(false);
 };
 
 // Group CRUD
@@ -2741,6 +2816,7 @@ onMounted(async () => {
   await loadDashboardSettings();
   await loadTopicDashboards();
   await loadCustomGroups();
+  await reconcileGroupsWithTopics(true);
 });
 </script>
 
