@@ -738,7 +738,7 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
     : (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []);
   const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
 
-  const logicOp = (card.logicOp || 'OR').toUpperCase();
+  const logicOp = (card.logicOp || 'AND').toUpperCase();
   if (activeConds.length > 1 && (logicOp === 'OR' || logicOp === 'SUM')) {
     let totalOccurrences = 0;
     const baseSource = (isFirst || shouldInheritBaseline) ? baselineList : sourceList;
