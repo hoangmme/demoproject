@@ -55,8 +55,8 @@
         </template>
 
         <!-- Khối Chuyến đi nước ngoài của Cán bộ (Nằm trực tiếp bên trong Tab Cá nhân) -->
-        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-top: 0.5rem;">
-          <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+        <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 10px; padding: 14px 16px; margin-top: 1rem; box-shadow: 0 1px 3px rgba(2, 132, 199, 0.06);">
+          <h4 style="font-size: 0.92rem; font-weight: 700; color: #0369a1; margin-bottom: 0.75rem; border-bottom: 1px solid #bae6fd; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
             <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
             <span>Chuyến đi nước ngoài của Cán bộ ({{ form.trips?.length || 0 }} chuyến)</span>
           </h4>

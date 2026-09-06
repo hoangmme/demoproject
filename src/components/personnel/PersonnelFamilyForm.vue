@@ -38,15 +38,15 @@
       :key="rel.id || idx"
       :id="`relative-card-${rel.code || ('TN-' + String(idx + 1).padStart(5, '0'))}`"
       class="relative-card-box"
-      style="margin-bottom: 1.25rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+      style="margin-bottom: 1.25rem; border: 1.5px solid #e9d5ff; border-left: 4px solid #9333ea; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 4px rgba(147, 51, 234, 0.06);"
     >
       <!-- Header of relative card -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #faf5ff; border-bottom: 1px solid #f3e8ff;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="badge-code" style="background: #0284c7; color: #ffffff;">
+          <span class="badge-code" style="background: #9333ea; color: #ffffff;">
             {{ getRelativeCode(rel, idx) }}
           </span>
-          <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: #581c87;">
             {{ rel.relationshipName ? `[${rel.relationshipName}] ` : '' }}{{ rel.relativeName || 'Chưa đặt tên' }} {{ rel.countryName ? `(${rel.countryName})` : '' }}
           </span>
         </div>
@@ -108,9 +108,9 @@
         </template>
 
         <!-- Chuyến đi xuất nhập cảnh của thân nhân này -->
-        <div style="margin-top: 1.25rem; border-top: 1px dashed #cbd5e1; padding-top: 12px;">
-          <div style="font-size: 0.82rem; font-weight: 700; color: #0369a1; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-send"></i>
+        <div style="margin-top: 1.25rem; background: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 8px; padding: 12px 14px;">
+          <div style="font-size: 0.85rem; font-weight: 700; color: #166534; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-send" style="color: #16a34a;"></i>
             <span>Chuyến đi nước ngoài của Thân nhân này ({{ (rel.trips || []).length }} chuyến)</span>
           </div>
           <PersonnelTravelForm :form="rel" :isRelative="true" />

@@ -65,7 +65,19 @@
 - **Hiển thị Bảng & Xuất Excel/Word**:
   - Tự động hiển thị huy hiệu `[Đảng]`, `[Chính quyền]` kèm nội dung text và link mở tệp đính kèm.
 
-### 9. LEDGER STATUS
-- **Status**: Done (Đã hoàn thiện chuẩn UX/UI: click + Thêm mục mới mở dòng lặp, mỗi dòng lặp có inline box kiểm, nhập text và đính kèm tệp chung trên 1 div).
+### 10. PHÂN TẦNG MÀU SẮC POPUP CHI TIẾT & BỘ LỌC HIỆN DIỆN THÂN NHÂN
+- **Phân tầng màu sắc Visual Hierarchy (`PersonnelDialog.vue`, `PersonnelTravelForm.vue`, `PersonnelFamilyForm.vue`)**:
+  - Khối Cố định: Nền trắng `#ffffff`, viền xám `#e2e8f0`.
+  - Chuyến đi của Cán bộ: Container bọc ngoài nền xanh da trời dịu mắt `#f0f9ff`, viền xanh `#bae6fd`; thẻ chuyến đi header xanh `#e0f2fe`, chữ `#0369a1`.
+  - Hồ sơ Thân nhân: Thẻ thân nhân nền tím phấn dịu `#faf5ff`, viền tím `#e9d5ff`, ruy băng bên trái tím `#9333ea`.
+  - Chuyến đi của Thân nhân: Container bọc ngoài xanh ngọc dịu `#f0fdf4`, viền nét đứt `#86efac`, phân tách rõ rệt với thông tin lý lịch thân nhân.
+- **Trạng thái hiện diện Thân nhân & Bộ lọc Thẻ KPI (`resolvePresence`)**:
+  - Động cơ phân giải `resolvePresence`: Tự động tìm chuyến đi mới nhất theo `departureDate` trong `rel.trips` (hoặc `p.trips`) để tính toán trạng thái hiện diện (Đang ở nước ngoài / Trong nước / Quá hạn chưa về). Nếu không có chuyến đi nào gán mặc định `Trong nước`.
+  - Cột ảo `_presenceStatus` (Trạng thái hiện diện): Xuất hiện trong danh mục cột của Thân nhân và Cán bộ trên Chuyên đề; hiển thị badge màu chuẩn (xanh dương cho nước ngoài, xanh lá cho trong nước, đỏ cho quá hạn).
+  - Lọc Thẻ KPI Thân nhân: Khi click vào Thẻ KPI ("Thân nhân đang học tập, sinh sống, làm việc tại nước ngoài"), `matchCardCondition` chạy qua `resolvePresence` giúp lọc bảng chính xác 100%.
+  - Cấu hình Cài đặt (`SettingsImportView.vue`): Thêm `presenceStatus` vào nhóm `⚡ Thuộc tính & Phân loại (Bộ lọc)` với bộ chọn chuyên biệt (Đang ở nước ngoài, Trong nước, Quá hạn chưa về).
+
+### 11. LEDGER STATUS
+- **Status**: Done (Đã hoàn thiện phân tầng màu sắc Visual Hierarchy popup chi tiết và động cơ phân giải trạng thái hiện diện cho Thân nhân & Cán bộ).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã build thành công).

@@ -737,7 +737,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap, formatDate, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const router = useRouter();
@@ -1326,9 +1326,63 @@ const parseDateObj = (str) => {
   return isNaN(parsed.getTime()) ? null : parsed;
 };
 
-// Single Unified Presence Status Calculator (Identical to ChildDashboardView)
-// Sử dụng computeTripPresence từ formatters.js (module dùng chung)
-const getTripPresence = (t) => computeTripPresence(t);
+// Động cơ phân giải trạng thái hiện diện chuẩn cho Chuyến đi, Thân nhân, và Cán bộ (Đồng bộ với ChildDashboardView)
+const resolvePresence = (item) => {
+  if (!item) return { status: 'none', label: '-', shortLabel: '-', isAbroad: false, isOverdue: false, overdueDays: 0 };
+
+  // 1. Nếu item đã có sẵn các trường trạng thái tính toán trước
+  if (item.presenceStatus && item.presenceLabel) {
+    return {
+      status: item.presenceStatus,
+      label: item.presenceLabel,
+      shortLabel: item.presenceLabel,
+      isAbroad: Boolean(item.isAbroad),
+      isOverdue: Boolean(item.isOverdue),
+      overdueDays: item.overdueDays || 0,
+      country: item.countryName || item.country || '',
+    };
+  }
+
+  // 2. Nếu là Hồ sơ Thân nhân hoặc Cán bộ có danh sách trips: [...]
+  if (Array.isArray(item.trips)) {
+    if (item.trips.length === 0) {
+      return {
+        status: 'completed',
+        label: 'Trong nước',
+        shortLabel: 'Trong nước',
+        isAbroad: false,
+        isOverdue: false,
+        overdueDays: 0,
+      };
+    }
+    // Tìm chuyến đi mới nhất theo Ngày xuất cảnh
+    let latestTrip = null;
+    let latestDepTime = -Infinity;
+    for (const t of item.trips) {
+      let custom = {};
+      if (t.custom_data) {
+        try {
+          custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+        } catch (e) {}
+      }
+      const rawDep = t.departureDate || custom.departureDate || t.ngay_xuat_canh || custom.ngay_xuat_canh || t.ngayDi || '';
+      const d = parseDateValue(rawDep);
+      const time = d ? d.getTime() : 0;
+      if (time >= latestDepTime) {
+        latestDepTime = time;
+        latestTrip = { ...custom, ...t };
+      }
+    }
+    if (!latestTrip) latestTrip = item.trips[item.trips.length - 1];
+    return computeTripPresence(latestTrip);
+  }
+
+  // 3. Nếu là 1 bản ghi chuyến đi đơn lẻ
+  return computeTripPresence(item);
+};
+
+// Sử dụng resolvePresence làm chuẩn chung
+const getTripPresence = (t) => resolvePresence(t);
 
 const unifiedTripsList = computed(() => {
   const list = [];
@@ -1653,6 +1707,7 @@ const getSourceList = (source) => {
           rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
         } catch (e) {}
       }
+      const presence = resolvePresence(r);
       return {
         ...rCustom,
         ...r,
@@ -1666,6 +1721,12 @@ const getSourceList = (source) => {
         rawPerson: r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || r,
         rawRelative: r,
         custom_data: rCustom,
+        isAbroad: presence.isAbroad,
+        isOverdue: presence.isOverdue,
+        overdueDays: presence.overdueDays || 0,
+        presenceStatus: presence.status,
+        presenceLabel: presence.label,
+        _presenceStatus: presence.label,
       };
     });
   }
@@ -1679,6 +1740,7 @@ const getSourceList = (source) => {
         pCustom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
       } catch (e) {}
     }
+    const presence = resolvePresence(p);
     return {
       ...pCustom,
       ...p,
@@ -1689,6 +1751,12 @@ const getSourceList = (source) => {
       position: p.positionName || p.position || '',
       rawPerson: p,
       custom_data: pCustom,
+      isAbroad: presence.isAbroad,
+      isOverdue: presence.isOverdue,
+      overdueDays: presence.overdueDays || 0,
+      presenceStatus: presence.status,
+      presenceLabel: presence.label,
+      _presenceStatus: presence.label,
     };
   });
 };
@@ -1781,6 +1849,44 @@ const matchSingleCondition = (item, cond) => {
   if (field === 'di_truoc_khi_co_quyet_dinh') {
     const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
     return res.isWarning;
+  }
+
+  // 1b-2. Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)
+  if (field === 'presenceStatus' || field === '_presenceStatus' || field === 'status' || field === 'tripStatus') {
+    const p = resolvePresence(item);
+    const pLabel = (p.label || '').toLowerCase();
+    const pStatus = (p.status || '').toLowerCase();
+    if (op === 'equals') {
+      if (target === 'abroad' || target.includes('nước ngoài')) return p.status === 'abroad';
+      if (target === 'overdue' || target.includes('quá hạn')) return p.status === 'overdue' || (p.status === 'completed' && p.isOverdue);
+      if (target === 'completed' || target.includes('trong nước') || target.includes('về nước')) return p.status === 'completed' && !p.isOverdue;
+      return pLabel === target || pStatus === target;
+    }
+    if (op === 'not_equals') {
+      if (target === 'abroad' || target.includes('nước ngoài')) return p.status !== 'abroad';
+      if (target === 'overdue' || target.includes('quá hạn')) return !(p.status === 'overdue' || (p.status === 'completed' && p.isOverdue));
+      if (target === 'completed' || target.includes('trong nước') || target.includes('về nước')) return p.status !== 'completed' || p.isOverdue;
+      return pLabel !== target && pStatus !== target;
+    }
+    if (op === 'contains') {
+      if (target.includes('nước ngoài')) return p.status === 'abroad' || pLabel.includes('nước ngoài');
+      if (target.includes('quá hạn')) return p.isOverdue || pLabel.includes('quá hạn');
+      if (target.includes('trong nước') || target.includes('về nước')) return p.status === 'completed' && !p.isOverdue;
+      return pLabel.includes(target) || pStatus.includes(target);
+    }
+    if (op === 'not_contains') {
+      if (target.includes('nước ngoài')) return p.status !== 'abroad' && !pLabel.includes('nước ngoài');
+      if (target.includes('quá hạn')) return !p.isOverdue && !pLabel.includes('quá hạn');
+      if (target.includes('trong nước') || target.includes('về nước')) return p.status !== 'completed' || p.isOverdue;
+      return !pLabel.includes(target) && !pStatus.includes(target);
+    }
+    if (op === 'has_value') {
+      return p.status !== 'none' && pLabel !== '-';
+    }
+    if (op === 'empty') {
+      return p.status === 'none' || pLabel === '-';
+    }
+    return p.status === 'abroad';
   }
 
   // 1c. Dynamic Field Condition (Áp dụng chuẩn toán tử cho TẤT CẢ các cột và công thức)

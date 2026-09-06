@@ -1635,6 +1635,26 @@
                           </select>
                         </div>
                       </template>
+                      <!-- Giao diện chuyên biệt khi chọn Trạng thái hiện diện -->
+                      <template v-else-if="cond.field === 'presenceStatus' || cond.field === '_presenceStatus'">
+                        <div>
+                          <select v-model="cond.operator" class="custom-key-select" style="font-size: 0.7rem; padding: 2px 4px; font-weight: 600;">
+                            <option value="equals">Là</option>
+                            <option value="not_equals">Không phải là (Khác)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <select
+                            v-model="cond.value"
+                            class="custom-key-select"
+                            style="font-size: 0.72rem; padding: 2px 4px; width: 100%; font-weight: 700; color: #0284c7; background: #f0f9ff; border-color: #7dd3fc;"
+                          >
+                            <option value="Đang ở nước ngoài">🌍 Đang ở nước ngoài</option>
+                            <option value="Trong nước">🇻🇳 Trong nước (Đã về nước)</option>
+                            <option value="Quá hạn chưa về">⚠️ Quá hạn chưa về</option>
+                          </select>
+                        </div>
+                      </template>
                       <!-- Giao diện chuẩn cho các cột thông thường khác -->
                       <template v-else>
                         <div>
@@ -2978,6 +2998,14 @@ const getCardConditions = (card) => {
         cond.value = 'Cán bộ';
       }
     }
+    if (cond.field === 'presenceStatus' || cond.field === '_presenceStatus') {
+      if (!cond.operator || cond.operator === 'has_value') {
+        cond.operator = 'equals';
+      }
+      if (!cond.value || cond.value === '') {
+        cond.value = 'Đang ở nước ngoài';
+      }
+    }
   });
   if (!card.logicOp) card.logicOp = 'AND';
   return card.conditions;
@@ -2989,6 +3017,11 @@ const onCardConditionFieldChange = (cond) => {
     cond.operator = 'equals';
     if (!cond.value || cond.value === '') {
       cond.value = 'Cán bộ';
+    }
+  } else if (cond.field === 'presenceStatus' || cond.field === '_presenceStatus') {
+    cond.operator = 'equals';
+    if (!cond.value || cond.value === '') {
+      cond.value = 'Đang ở nước ngoài';
     }
   } else if (!cond.operator) {
     cond.operator = 'has_value';
@@ -3039,6 +3072,7 @@ const categorizedDashboardCols = computed(() => {
     category: '⚡ Thuộc tính & Phân loại (Bộ lọc)',
     options: [
       { id: 'isRelative', label: 'Đối tượng: Cán bộ / Thân nhân', displayLabel: '⚡ Đối tượng (Cán bộ hay Thân nhân) - isRelative' },
+      { id: 'presenceStatus', label: 'Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)', displayLabel: '⚡ Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn) - presenceStatus' },
     ],
   });
 

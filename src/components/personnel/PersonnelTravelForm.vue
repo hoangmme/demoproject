@@ -18,11 +18,41 @@
       Chưa có chuyến đi nước ngoài nào được ghi nhận. Nhấp <b>"Thêm Chuyến đi"</b> để bổ sung.
     </div>
 
-    <div v-for="(trip, idx) in trips" :key="idx" style="margin-bottom: 1.25rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+    <div
+      v-for="(trip, idx) in trips"
+      :key="idx"
+      :style="{
+        marginBottom: '1.25rem',
+        border: isRelative ? '1.5px solid #bbf7d0' : '1.5px solid #bae6fd',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        background: '#ffffff',
+        boxShadow: isRelative ? '0 1px 3px rgba(22, 101, 52, 0.05)' : '0 1px 3px rgba(2, 132, 199, 0.06)'
+      }"
+    >
       <!-- Header of trip card -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-        <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">
-          Chuyến {{ idx + 1 }}: {{ trip.countryName || 'Chưa đặt quốc gia' }} {{ trip.departureDate ? `(${trip.departureDate})` : '' }}
+      <div
+        :style="{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '0.6rem 1rem',
+          background: isRelative ? '#f0fdf4' : '#e0f2fe',
+          borderBottom: isRelative ? '1px solid #bbf7d0' : '1px solid #bae6fd'
+        }"
+      >
+        <span
+          :style="{
+            fontSize: '0.85rem',
+            fontWeight: '700',
+            color: isRelative ? '#15803d' : '#0369a1',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }"
+        >
+          <i class="pi pi-send" :style="{ fontSize: '0.8rem', color: isRelative ? '#16a34a' : '#0284c7' }"></i>
+          <span>Chuyến {{ idx + 1 }}: {{ trip.countryName || 'Chưa đặt quốc gia' }} {{ trip.departureDate ? `(${trip.departureDate})` : '' }}</span>
         </span>
         <Button
           label="Xóa chuyến này"
