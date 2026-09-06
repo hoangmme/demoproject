@@ -212,15 +212,27 @@ export const checkConditionMatch = (val, op, target) => {
     return true;
   }
 
-  // Số học
-  const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
-  const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
-  if (!isNaN(numVal) && !isNaN(numTarget)) {
-    if (op === 'gt' || op === 'count_gt') return numVal > numTarget;
-    if (op === 'gte' || op === 'count_gte') return numVal >= numTarget;
-    if (op === 'lt' || op === 'count_lt') return numVal < numTarget;
-    if (op === 'lte' || op === 'count_lte') return numVal <= numTarget;
-    if (op === 'count_eq') return numVal === numTarget;
+  // Ngày tháng
+  if (op === 'before' || op === 'after') {
+    const dVal = parseDateValue(val)?.getTime();
+    const dTarget = parseDateValue(target)?.getTime();
+    if (!dVal || !dTarget) return false;
+    return op === 'before' ? dVal < dTarget : dVal > dTarget;
+  }
+
+  // Số học & Điều kiện đếm
+  const isNumericOp = ['gt', 'gte', 'lt', 'lte', 'count_gt', 'count_gte', 'count_lt', 'count_lte', 'count_eq'].includes(op);
+  if (isNumericOp) {
+    const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
+    if (isNaN(numTarget)) return true;
+    const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
+    const effectiveNum = isNaN(numVal) ? 0 : numVal;
+    if (op === 'gt' || op === 'count_gt') return effectiveNum > numTarget;
+    if (op === 'gte' || op === 'count_gte') return effectiveNum >= numTarget;
+    if (op === 'lt' || op === 'count_lt') return effectiveNum < numTarget;
+    if (op === 'lte' || op === 'count_lte') return effectiveNum <= numTarget;
+    if (op === 'count_eq') return effectiveNum === numTarget;
+    return false;
   }
 
   return true;
@@ -232,7 +244,7 @@ export const checkConditionMatch = (val, op, target) => {
 export const extractRowFieldValue = (item, field, personnelStore) => {
   if (!item || !field) return '';
 
-  // Virtual columns
+  // 1. Virtual columns
   const virt = resolveVirtualColumnValue(item, field);
   if (virt !== undefined && virt !== null && virt !== '') return virt;
 
@@ -243,24 +255,35 @@ export const extractRowFieldValue = (item, field, personnelStore) => {
     return item.isRelative ? 'Thân nhân' : 'Cán bộ';
   }
 
-  let val = item[field];
-  if (val === undefined || val === null || val === '') {
-    if (item.custom_data) {
-      val = item.custom_data[field];
-    }
-  }
-
-  // Nếu là formula column
+  // 2. Nếu là formula column trong bất kỳ mapping nào (Personnel, Relative, Trips)
   if (personnelStore) {
     const allColDefs = [
       ...(personnelStore.importMappingPersonnel || []),
       ...(personnelStore.importMappingRelative || []),
       ...(personnelStore.importMappingTrips || []),
     ].flatMap((g) => g.columns || []);
-    const colDef = allColDefs.find((c) => c.id === field);
+    const colDef = allColDefs.find((c) => c && c.id === field);
     if (colDef && colDef.format === 'formula') {
+      if (colDef.formulaType === 'presence_status') {
+        const p = resolvePresence(item);
+        return p.shortLabel || p.label || '';
+      }
       const res = evaluateFormula(item, colDef);
-      return res?.label || res?.shortLabel || '';
+      return res?.label || res?.shortLabel || (res?.count !== undefined ? `${res.count} lần` : '');
+    }
+  }
+
+  // 3. Trực tiếp hoặc trong custom_data
+  let val = item[field];
+  if (val === undefined || val === null || val === '') {
+    if (item.custom_data) {
+      let cd = item.custom_data;
+      if (typeof cd === 'string') {
+        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+      }
+      if (cd && typeof cd === 'object') {
+        val = cd[field];
+      }
     }
   }
 
@@ -277,7 +300,7 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
   const target = cond.value || '';
 
   // 1. Đối tượng Cán bộ / Thân nhân (isRelative)
-  if (field === 'isRelative' || field === 'doi_tuong') {
+  if (field === 'isRelative' || field === '_doiTuong' || field === 'doi_tuong') {
     const isRel = Boolean(item.isRelative || item.rawRelative);
     const tLower = String(target).toLowerCase().trim();
     if (op === 'equals') {
@@ -295,6 +318,11 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
       if (tLower.includes('cán bộ')) return isRel === false;
       return false;
     }
+    if (op === 'not_contains') {
+      if (tLower.includes('thân nhân')) return isRel === false;
+      if (tLower.includes('cán bộ')) return isRel === true;
+      return true;
+    }
     return isRel;
   }
 
@@ -304,21 +332,76 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
     return res.isWarning;
   }
 
-  // 3. Cột Chuyến đi đối chiếu với Thân nhân hoặc Cán bộ
+  // 3. Special Formula Fields & Điều kiện đếm (Tần suất / Số lần xuất cảnh trong năm)
+  let colDef = null;
+  if (personnelStore) {
+    const allColDefs = [
+      ...(personnelStore.importMappingPersonnel || []),
+      ...(personnelStore.importMappingRelative || []),
+      ...(personnelStore.importMappingTrips || []),
+    ].flatMap((g) => g.columns || []);
+    colDef = allColDefs.find((c) => c && c.id === field);
+  }
+
+  const isCountFormula = colDef && colDef.format === 'formula' && colDef.formulaType === 'trips_count_in_year';
+  const isCountOp = op.startsWith('count_');
+  const isCountField = field === 'dieu_kien_dem' || field === '_tripCount' || field.includes('so_lan') || field.includes('trips_count') || isCountFormula;
+
+  if (isCountOp || isCountField) {
+    let count = NaN;
+
+    // Ưu tiên 1: Đánh giá qua formula trips_count_in_year trực tiếp trên đối tượng (item)
+    if (isCountFormula) {
+      const fRes = evaluateFormula(item, colDef);
+      if (fRes && fRes.count !== undefined && !isNaN(fRes.count)) {
+        count = fRes.count;
+      }
+    }
+
+    // Ưu tiên 2: Trích xuất từ giá trị hiển thị của trường
+    if (isNaN(count)) {
+      const rawVal = extractRowFieldValue(item, field, personnelStore);
+      if (rawVal !== undefined && rawVal !== null && rawVal !== '' && rawVal !== '-') {
+        const parsedNum = parseFloat(String(rawVal).replace(/[^0-9.-]+/g, ''));
+        if (!isNaN(parsedNum)) count = parsedNum;
+      }
+    }
+
+    // Ưu tiên 3: Đếm trực tiếp từ mảng trips của đối tượng
+    if (isNaN(count)) {
+      const personTrips = Array.isArray(item.trips)
+        ? item.trips
+        : (Array.isArray(item.rawPerson?.trips) ? item.rawPerson.trips : []);
+      count = personTrips.length;
+    }
+
+    const numTarget = parseFloat(String(target || '').replace(/[^0-9.-]+/g, ''));
+    if (isNaN(numTarget)) return true;
+
+    if (op === 'count_gt' || op === 'gt') return count > numTarget;
+    if (op === 'count_gte' || op === 'gte') return count >= numTarget;
+    if (op === 'count_lt' || op === 'lt') return count < numTarget;
+    if (op === 'count_lte' || op === 'lte') return count <= numTarget;
+    if (op === 'count_eq' || op === 'equals') return count === numTarget;
+    if (op === 'not_equals') return count !== numTarget;
+    return count >= numTarget;
+  }
+
+  // 4. Cột Chuyến đi đối chiếu với Thân nhân hoặc Cán bộ
   const tripColIds = personnelStore ? (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id)) : [];
   const isTripField = isPresenceField(field) || tripColIds.includes(field);
   const isRelativesRecord = item.isRelative || !!item.rawRelative;
   const isPersonnelRecord = !item.isRelative && (item.personnelId || item.code);
 
   if (isTripField && (isRelativesRecord || isPersonnelRecord)) {
-    // Kiểm tra trực tiếp trên bản ghi
+    // 4a. Kiểm tra trực tiếp trên bản ghi
     if (isPresenceField(field)) {
       const pVal = resolveVirtualColumnValue(item, field) || item.presenceStatus || item._presenceStatus || '';
       if (checkConditionMatch(pVal, op, target)) return true;
       if (item.presenceLabel && checkConditionMatch(item.presenceLabel, op, target)) return true;
     }
 
-    // Kiểm tra trong danh sách trips
+    // 4b. Kiểm tra trong danh sách trips
     const trips = Array.isArray(item.trips) ? item.trips : [];
     if (trips.length > 0) {
       return trips.some((t) => {
@@ -340,7 +423,7 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
     return checkConditionMatch('', op, target);
   }
 
-  // 4. Cột thông thường
+  // 5. Cột thông thường
   const rawVal = extractRowFieldValue(item, field, personnelStore);
   return checkConditionMatch(rawVal, op, target);
 };

@@ -137,9 +137,25 @@
   - Khối 2: Tiêu đề phần mềm (`DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN` & `VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI`) — `gap: 2px`, 2 dòng gắn kết chặt chẽ thành một câu trọn vẹn.
   - Khoảng cách phân cách giữa Khối 1 và Khối 2 là `12px` (`margin-top: 12px`), tạo tỷ lệ chênh lệch thị giác 6:1 rõ rệt giữa nội bộ khối và liên khối.
 
-### 18. LEDGER STATUS
-- **Status**: Done (Đã siết chặt line-height 1.15, khoảng cách nội bộ 2px, giữa 2 khối 12px; Đã build và cập nhật bản mới nhất).
+### 19. KHÔI PHỤC & CHUẨN HÓA ĐIỀU KIỆN ĐẾM SỐ LẦN XUẤT CẢNH TRONG NĂM (dashboardMetrics.js & formatters.js)
+- **Nguyên nhân cốt lõi**:
+  - Khi hợp nhất logic sang `dashboardMetrics.js`, nhánh điều kiện đếm số lần (`op.startsWith('count_')` hoặc công thức `trips_count_in_year`) vô tình bị xử lý sau bước đối chiếu cột chuyến đi (`isTripField`). Do đó, hệ thống duyệt `trips.some(t => ...)` kiểm tra trên từng chuyến đi đơn lẻ (mỗi chuyến chỉ đếm được 1 lần), khiến điều kiện `>= 2` luôn trả về `false`.
+  - Hàm `computeTripsCountInYear` (`src/utils/formatters.js`) khi đánh giá trên bản ghi Cán bộ chủ quản (không có `departureDate` trực tiếp trên cán bộ) trước đó fallback về năm hiện tại (`new Date().getFullYear()`), trong khi dữ liệu chuyến đi thực tế có thể ở năm công tác gần nhất hoặc trong `custom_data.trips`.
+- **Giải pháp xử lý triệt để**:
+  1. **Ưu tiên điều kiện đếm & công thức tần suất (`matchSingleCondition`)**:
+     - Tách riêng nhánh đếm số lần (`isCountOp` / `isCountField` / `trips_count_in_year`) xử lý TRƯỚC bước duyệt chuyến đi `isTripField`.
+     - Đánh giá trực tiếp trên đối tượng Cán bộ/Thân nhân (`item`), đọc toàn bộ danh sách chuyến đi của người đó để tính chính xác tổng số lần xuất cảnh trong năm.
+     - So khớp chuẩn xác với giá trị ngưỡng (`target`) qua các toán tử: `count_gte`, `count_gt`, `count_lte`, `count_lt`, `count_eq`, `equals`, `not_equals`.
+  2. **Tối ưu hóa `computeTripsCountInYear` (`formatters.js`)**:
+     - Hỗ trợ lấy danh sách chuyến đi đa tầng: `record.rawPerson.trips`, `record.trips`, `p.trips`, và parse JSON từ `custom_data.trips`.
+     - Tự động nhận diện năm đối chiếu: nếu bản ghi là Cán bộ (không có ngày đi trên cán bộ), tự động quét các năm có chuyến đi và lấy năm gần nhất (hoặc năm hiện tại nếu có chuyến đi trong năm nay).
+  3. **Đồng bộ hóa 100%**:
+     - Dọn dẹp hàm `matchSingleCondition` trùng lặp trong `ChildDashboardView.vue`, đưa toàn bộ về gọi `matchSharedCardCondition` từ `dashboardMetrics.js`.
+     - Số lượng trên thẻ KPI và danh sách bản ghi hiển thị trên bảng khớp nhau 100%.
+
+### 20. LEDGER STATUS
+- **Status**: Done (Đã khôi phục và kiểm thử điều kiện đếm số lần xuất cảnh trong năm, build `dist` và sync sang `WINDOWS_OFFLINE_APP/frontend` thành công 100%).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công 100%).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` hoàn tất không lỗi).
 
 

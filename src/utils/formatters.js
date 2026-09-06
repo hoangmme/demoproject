@@ -667,13 +667,49 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   } else if (Array.isArray(p.trips) && p.trips.length > 0) {
     personTrips = p.trips;
   } else {
-    personTrips = [record];
+    // Kiểm tra custom_data của p và record
+    let cdTrips = null;
+    try {
+      const cd = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+      if (cd && Array.isArray(cd.trips)) cdTrips = cd.trips;
+    } catch (e) {}
+    if (!cdTrips) {
+      try {
+        const rcd = typeof record.custom_data === 'string' ? JSON.parse(record.custom_data) : record.custom_data;
+        if (rcd && Array.isArray(rcd.trips)) cdTrips = rcd.trips;
+      } catch (e) {}
+    }
+    if (cdTrips && cdTrips.length > 0) {
+      personTrips = cdTrips;
+    } else {
+      personTrips = [record];
+    }
   }
 
-  // 2. Xác định năm đối chiếu: Ưu tiên năm của chuyến đi hiện tại, nếu không có lấy năm hiện tại
+  // 2. Xác định năm đối chiếu: Ưu tiên năm của chuyến đi hiện tại
   const rawCurrentDep = getRecordFieldValue(record, depCol) || record.departureDate || record.approvedDepartureDate || record.ngay_xuat_canh || record.ngayDi;
   const currentDepDate = parseDateValue(rawCurrentDep);
-  const targetYear = currentDepDate ? currentDepDate.getFullYear() : new Date().getFullYear();
+  let targetYear = currentDepDate ? currentDepDate.getFullYear() : null;
+
+  if (!targetYear) {
+    // Nếu record là Cán bộ / Thân nhân (không có departureDate trực tiếp trên bản ghi chính):
+    // Thu thập tất cả các năm có chuyến đi
+    const yearsWithTrips = [];
+    for (const t of personTrips) {
+      const rawD = getRecordFieldValue(t, depCol) || t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngayDi;
+      const d = parseDateValue(rawD);
+      if (d) yearsWithTrips.push(d.getFullYear());
+    }
+    const currentYear = new Date().getFullYear();
+    if (yearsWithTrips.includes(currentYear)) {
+      targetYear = currentYear;
+    } else if (yearsWithTrips.length > 0) {
+      // Ưu tiên năm gần đây nhất có chuyến đi
+      targetYear = Math.max(...yearsWithTrips);
+    } else {
+      targetYear = currentYear;
+    }
+  }
 
   // 3. Đếm số chuyến đi trong năm targetYear của Cán bộ
   let count = 0;
