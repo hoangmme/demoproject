@@ -592,50 +592,127 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
  *   - formulaColDep: Cột Ngày đi / xuất cảnh (mặc định: 'departureDate')
  *   - formulaColDecDate: Cột Ngày ban hành QĐ (mặc định: 'decisionDate')
  *   - formulaLabelWarning: Nhãn cảnh báo (mặc định: 'Đi trước khi có quyết định')
+/**
+ * Công thức: Đi khi chưa có cấp thẩm quyền quyết định
+ * formulaConfig:
+ *   - formulaColDep: Cột Ngày xuất cảnh (mặc định: 'ngay_xuat_canh' / 'departureDate')
+ *   - formulaColApprovedDep: Cột Ngày duyệt đi (mặc định: 'thoi_gian_duyet_di' / 'ngay_ban_hanh')
+ *   - formulaColDecision: Cột Quyết định / Số QĐ (mặc định: 'so_quyet_dinh' / 'decisionNumber')
+ *   - formulaLabelWarning: Nhãn khi Đi trước khi có QĐ (mặc định: 'Đi trước khi có quyết định')
+ *   - formulaLabelMissing: Nhãn khi Chưa đủ dữ liệu (mặc định: '- (Chưa đủ dữ liệu)')
+ *   - formulaLabelOnTime: Nhãn khi Đi đúng quyết định (mặc định: 'Đi đúng quyết định')
+ *   - formulaLabelDefault: Nhãn mặc định khác (mặc định: '-')
  *
- * Logic: Nếu Ngày Đi < Ngày Ban Hành Quyết Định -> hiển thị nhãn cảnh báo.
- *        Ngược lại hoặc thiếu ngày -> trả về '-' / không hiển thị.
+ * Logic:
+ * 1. Nếu Ngày xuất cảnh > Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi trước khi có quyết định'
+ * 2. Nếu Ngày xuất cảnh > Ngày duyệt đi & Chưa có quyết định (Trống) -> '- (Chưa đủ dữ liệu)'
+ * 3. Nếu Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi đúng quyết định'
+ * 4. Nếu Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định không có dữ liệu -> '-'
  */
 export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
-  const defaultResult = { status: 'none', label: '-', shortLabel: '-', isWarning: false, cssClass: '' };
+  const labelWarning = formulaConfig.formulaLabelWarning || 'Đi trước khi có quyết định';
+  const labelMissing = formulaConfig.formulaLabelMissing || '- (Chưa đủ dữ liệu)';
+  const labelOnTime = formulaConfig.formulaLabelOnTime || 'Đi đúng quyết định';
+  const labelDefault = formulaConfig.formulaLabelDefault || '-';
+
+  const defaultResult = { status: 'none', label: labelDefault, shortLabel: labelDefault, isWarning: false, cssClass: '' };
   if (!record) return defaultResult;
 
-  const colDep = formulaConfig.formulaColDep || formulaConfig.formulaColA || 'ngay_xuat_canh';
-  const colDecDate = formulaConfig.formulaColDecDate || formulaConfig.formulaColB || 'ngay_ban_hanh';
-  const labelWarning = formulaConfig.formulaLabelWarning || 'Đi trước khi có quyết định';
+  const colDep = formulaConfig.formulaColDep || formulaConfig.formulaColA;
+  const colApprovedDep = formulaConfig.formulaColApprovedDep || formulaConfig.formulaColDecDate || formulaConfig.formulaColB;
+  const colDecision = formulaConfig.formulaColDecision;
 
   // If single trip item, evaluate ONLY this trip!
   let trips = [];
   if (record.departureDate || record.ngay_xuat_canh || record.rawTrip || !Array.isArray(record.trips)) {
     trips = [record];
   } else {
-    trips = record.trips || [];
+    trips = [...(record.trips || [])].sort((a, b) => {
+      const depA = (colDep ? getRecordFieldValue(a, colDep) : null) || a.departureDate || a.ngay_xuat_canh;
+      const depB = (colDep ? getRecordFieldValue(b, colDep) : null) || b.departureDate || b.ngay_xuat_canh;
+      const da = parseDateValue(depA) || 0;
+      const db = parseDateValue(depB) || 0;
+      return db - da;
+    });
   }
 
   for (const t of trips) {
-    const rawDep = getRecordFieldValue(t, colDep);
-    const rawDec = getRecordFieldValue(t, colDecDate);
+    const rawDep = (colDep ? getRecordFieldValue(t, colDep) : null) ||
+      getRecordFieldValue(t, 'ngay_xuat_canh') ||
+      getRecordFieldValue(t, 'departureDate') ||
+      getRecordFieldValue(t, 'ngayDi') ||
+      getRecordFieldValue(t, 'thoi_gian_di') ||
+      t.departureDate || t.ngay_xuat_canh;
+
+    const rawApproved = (colApprovedDep ? getRecordFieldValue(t, colApprovedDep) : null) ||
+      getRecordFieldValue(t, 'thoi_gian_duyet_di') ||
+      getRecordFieldValue(t, 'approvedDepartureDate') ||
+      getRecordFieldValue(t, 'ngay_ban_hanh') ||
+      getRecordFieldValue(t, 'decisionDate') ||
+      t.approvedDepartureDate || t.decisionDate;
+
+    const rawDec = (colDecision ? getRecordFieldValue(t, colDecision) : null) ||
+      getRecordFieldValue(t, 'so_quyet_dinh') ||
+      getRecordFieldValue(t, 'decisionNumber') ||
+      getRecordFieldValue(t, 'so_qd') ||
+      t.decisionNumber || t.so_quyet_dinh;
 
     const dateDep = parseDateValue(rawDep);
-    const dateDec = parseDateValue(rawDec);
+    const dateApproved = parseDateValue(rawApproved);
 
-    if (!dateDep || !dateDec) continue;
+    if (!dateDep || !dateApproved) continue;
 
     const normDep = new Date(dateDep);
     normDep.setHours(0, 0, 0, 0);
-    const normDec = new Date(dateDec);
-    normDec.setHours(0, 0, 0, 0);
+    const normApproved = new Date(dateApproved);
+    normApproved.setHours(0, 0, 0, 0);
 
-    // Đi trước ngày ban hành quyết định (normDep < normDec)
-    if (normDep < normDec) {
-      const days = Math.round((normDec.getTime() - normDep.getTime()) / (1000 * 60 * 60 * 24));
+    const hasDecision = rawDec !== undefined && rawDec !== null && String(rawDec).trim() !== '' && String(rawDec).trim() !== '-' && String(rawDec).trim().toLowerCase() !== 'chưa rõ';
+
+    // 1. Ngày xuất cảnh > Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi trước khi có quyết định'
+    if (normDep > normApproved && hasDecision) {
       return {
         status: 'warning',
         isWarning: true,
         label: labelWarning,
         shortLabel: labelWarning,
-        daysEarly: days,
         cssClass: 'formula-warning',
+        trip: t,
+      };
+    }
+
+    // 2. Ngày xuất cảnh > Ngày duyệt đi & Chưa có quyết định (Trống) -> '- (Chưa đủ dữ liệu)'
+    if (normDep > normApproved && !hasDecision) {
+      return {
+        status: 'missing_data',
+        isWarning: false,
+        label: labelMissing,
+        shortLabel: labelMissing,
+        cssClass: 'formula-muted',
+        trip: t,
+      };
+    }
+
+    // 3. Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi đúng quyết định'
+    if (normDep <= normApproved && hasDecision) {
+      return {
+        status: 'ontime',
+        isWarning: false,
+        label: labelOnTime,
+        shortLabel: labelOnTime,
+        cssClass: 'formula-success',
+        trip: t,
+      };
+    }
+
+    // 4. Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định không có dữ liệu -> '-'
+    if (normDep <= normApproved && !hasDecision) {
+      return {
+        status: 'none',
+        isWarning: false,
+        label: labelDefault,
+        shortLabel: labelDefault,
+        cssClass: 'formula-muted',
         trip: t,
       };
     }

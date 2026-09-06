@@ -1117,6 +1117,7 @@ const toggleMetricCardFilter = (card, cIdx) => {
   if (cIdx === 0) {
     activeMetricCardIdx.value = -1;
     statusFilter.value = 'all';
+    triggerAutoSaveFilter();
     return;
   }
 
@@ -1126,6 +1127,7 @@ const toggleMetricCardFilter = (card, cIdx) => {
   } else {
     activeMetricCardIdx.value = cIdx;
   }
+  triggerAutoSaveFilter();
 };
 
 const activeMetricCard = computed(() => {
@@ -2507,13 +2509,17 @@ const hasActiveFilters = computed(() => {
 });
 
 const resetFilters = () => {
+  activeMetricCardIdx.value = -1;
   statusFilter.value = 'all';
   timeFilterYear.value = 'all';
   selectedCountry.value = '';
   selectedDepartment.value = '';
   selectedFunding.value = '';
+  customFilterField.value = '';
+  customFilterValue.value = '';
   searchQuery.value = '';
   currentPage.value = 1;
+  triggerAutoSaveFilter();
 };
 
 // Column Picker
@@ -2868,7 +2874,7 @@ const initTopicColumns = async () => {
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
 
   const finalizeColumns = () => {
-    // Đảm bảo cho bảng Thân nhân: luôn có họ tên thân nhân, mối quan hệ và trạng thái hiện diện
+    // Đảm bảo cho bảng Thân nhân mặc định: có họ tên thân nhân, mối quan hệ và trạng thái hiện diện
     if (currentDashboardConfig.value?.source === 'relatives') {
       const essential = ['relativeName', 'relationshipName', '_presenceStatus', '_parentPersonnelName', 'countryName', 'departureDate', 'arrivalDate'];
       const missing = essential.filter((c) => !selectedColIds.value.includes(c));
@@ -2878,30 +2884,29 @@ const initTopicColumns = async () => {
     }
   };
 
-  // 1. Kiểm tra cache local trước để 0ms hiển thị chính xác ngay lập tức
-  try {
-    const localCols = localStorage.getItem(currentKey) || (topicId.value === 'trips' ? localStorage.getItem('trips_dashboard_columns') : null);
-    if (localCols) {
-      const parsed = JSON.parse(localCols);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        selectedColIds.value = parsed.filter((id) => id !== 'status' && id !== 'tripStatus');
-        finalizeColumns();
-        return;
-      }
-    }
-  } catch (e) {}
-
-  // 2. Kiểm tra cấu hình riêng đã lưu trong DB
+  // 1. Kiểm tra cấu hình riêng đã lưu trong DB TRƯỚC TIÊN (Ưu tiên tuyệt đối DB hệ thống)
   try {
     const dbCols = (await getAppSettings(currentKey, null)) || (topicId.value === 'trips' ? await getAppSettings('trips_dashboard_columns', null) : null);
     if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
       const valid = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus');
       if (valid.length > 0) {
         selectedColIds.value = valid;
-        finalizeColumns();
+        // Đã lưu cấu hình người dùng mong muốn -> KHÔNG override bằng finalizeColumns
         try {
           localStorage.setItem(currentKey, JSON.stringify(valid));
         } catch (e) {}
+        return;
+      }
+    }
+  } catch (e) {}
+
+  // 2. Kiểm tra cache local nếu DB chưa kịp trả về
+  try {
+    const localCols = localStorage.getItem(currentKey) || (topicId.value === 'trips' ? localStorage.getItem('trips_dashboard_columns') : null);
+    if (localCols) {
+      const parsed = JSON.parse(localCols);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        selectedColIds.value = parsed.filter((id) => id !== 'status' && id !== 'tripStatus');
         return;
       }
     }
@@ -2912,7 +2917,6 @@ const initTopicColumns = async () => {
     const validCfg = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
     if (validCfg.length > 0) {
       selectedColIds.value = validCfg;
-      finalizeColumns();
       return;
     }
   }
@@ -2924,6 +2928,83 @@ const initTopicColumns = async () => {
     finalizeColumns();
   }
 };
+
+// ==================== LƯU VÀ TẢI BỘ LỌC VÀO DATABASE ====================
+let filterSaveDebounceTimer = null;
+const saveTopicFilterState = async () => {
+  const tid = topicId.value;
+  if (!tid) return;
+  const filterKey = `child_dashboard_filter_${tid}`;
+  const filterData = {
+    activeMetricCardIdx: activeMetricCardIdx.value,
+    statusFilter: statusFilter.value,
+    searchQuery: searchQuery.value,
+    timeFilterYear: timeFilterYear.value,
+    selectedCountry: selectedCountry.value,
+    selectedDepartment: selectedDepartment.value,
+    selectedFunding: selectedFunding.value,
+    customFilterField: customFilterField.value,
+    customFilterValue: customFilterValue.value,
+  };
+  try {
+    localStorage.setItem(filterKey, JSON.stringify(filterData));
+    await saveAppSettings(filterKey, filterData);
+  } catch (e) {
+    console.warn('Lỗi khi lưu bộ lọc chuyên đề vào DB:', e);
+  }
+};
+
+const triggerAutoSaveFilter = () => {
+  if (filterSaveDebounceTimer) clearTimeout(filterSaveDebounceTimer);
+  filterSaveDebounceTimer = setTimeout(() => {
+    saveTopicFilterState();
+  }, 400);
+};
+
+const loadTopicFilterState = async () => {
+  const tid = topicId.value;
+  if (!tid) return;
+  const filterKey = `child_dashboard_filter_${tid}`;
+  try {
+    let saved = await getAppSettings(filterKey, null);
+    if (!saved) {
+      const local = localStorage.getItem(filterKey);
+      if (local) {
+        try { saved = JSON.parse(local); } catch (e) {}
+      }
+    }
+    if (saved && typeof saved === 'object') {
+      if (saved.activeMetricCardIdx !== undefined) activeMetricCardIdx.value = saved.activeMetricCardIdx;
+      if (saved.statusFilter !== undefined) statusFilter.value = saved.statusFilter;
+      if (saved.searchQuery !== undefined) searchQuery.value = saved.searchQuery;
+      if (saved.timeFilterYear !== undefined) timeFilterYear.value = saved.timeFilterYear;
+      if (saved.selectedCountry !== undefined) selectedCountry.value = saved.selectedCountry;
+      if (saved.selectedDepartment !== undefined) selectedDepartment.value = saved.selectedDepartment;
+      if (saved.selectedFunding !== undefined) selectedFunding.value = saved.selectedFunding;
+      if (saved.customFilterField !== undefined) customFilterField.value = saved.customFilterField;
+      if (saved.customFilterValue !== undefined) customFilterValue.value = saved.customFilterValue;
+    } else {
+      activeMetricCardIdx.value = -1;
+      statusFilter.value = 'all';
+      searchQuery.value = '';
+      timeFilterYear.value = 'all';
+      selectedCountry.value = '';
+      selectedDepartment.value = '';
+      selectedFunding.value = '';
+      customFilterField.value = '';
+      customFilterValue.value = '';
+    }
+  } catch (e) {
+    console.warn('Lỗi khi tải bộ lọc chuyên đề từ DB:', e);
+  }
+};
+
+watch(
+  [activeMetricCardIdx, statusFilter, searchQuery, timeFilterYear, selectedCountry, selectedDepartment, selectedFunding, customFilterField, customFilterValue],
+  () => {
+    triggerAutoSaveFilter();
+  }
+);
 
 const handleRouteQueryChange = () => {
   if (route.query?.card) {
@@ -2951,15 +3032,7 @@ watch(
   () => topicId.value,
   async () => {
     await initTopicColumns();
-    activeMetricCardId.value = 'all';
-    statusFilter.value = 'all';
-    searchQuery.value = '';
-    timeFilterYear.value = 'all';
-    selectedCountry.value = '';
-    selectedDepartment.value = '';
-    selectedFunding.value = '';
-    customFilterField.value = '';
-    customFilterValue.value = '';
+    await loadTopicFilterState();
     currentPage.value = 1;
     handleRouteQueryChange();
   }
@@ -2988,6 +3061,7 @@ onMounted(async () => {
   }
   await loadCustomDashboards();
   await initTopicColumns();
+  await loadTopicFilterState();
   handleRouteQueryChange();
   loadNameColConfig();
 });

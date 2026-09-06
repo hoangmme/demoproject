@@ -850,7 +850,27 @@ const getRelativeFieldValue = (r, f) => {
     raw = cd?.[f];
   }
 
-  // Check aliases for standard or known fields
+  // 1. Check against importMappingRelative columns (by ID, label, or column index)
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    const relGroups = personnelStore.importMappingRelative || [];
+    const cleanF = String(f).toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (const g of relGroups) {
+      for (const c of (g.columns || [])) {
+        const cId = String(c.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cLabel = String(c.label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cId === cleanF || cLabel === cleanF || c.id === f || c.label === f) {
+          const val = r[c.id] ?? cd?.[c.id] ?? r[c.label] ?? cd?.[c.label];
+          if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') {
+            raw = val;
+            break;
+          }
+        }
+      }
+      if (raw !== undefined && raw !== null && String(raw).trim() !== '' && String(raw).trim() !== '-') break;
+    }
+  }
+
+  // 2. Check aliases for standard or known fields
   if (raw === undefined || raw === null || raw === '' || raw === '-') {
     if (f === 'relativeName' || f === 'ho_va_ten' || f === 'ho_ten') {
       raw = r.relativeName || r.name || r.fullName || cd?.relativeName || cd?.name;
@@ -866,8 +886,42 @@ const getRelativeFieldValue = (r, f) => {
       raw = r.currentAddress || cd?.currentAddress || cd?.hktt;
     } else if (f === 'occupation' || f === 'nghe_nghiep') {
       raw = r.occupation || cd?.occupation;
-    } else if (f === 'hien_dang_lam_viec_tai_co_quan_nha_nuoc' || f === 'hien_dang_lam_viec_o_co_quan_nha_nuoc' || f === 'co_quan_nha_nuoc') {
-      raw = r.hien_dang_lam_viec_o_co_quan_nha_nuoc || cd?.hien_dang_lam_viec_o_co_quan_nha_nuoc || r.hien_dang_lam_viec_tai_co_quan_nha_nuoc || cd?.hien_dang_lam_viec_tai_co_quan_nha_nuoc || r.co_quan_nha_nuoc || cd?.co_quan_nha_nuoc;
+    } else if (
+      f === 'hien_dang_lam_viec_tai_co_quan_nha_nuoc' ||
+      f === 'hien_dang_lam_viec_o_co_quan_nha_nuoc' ||
+      f === 'co_quan_nha_nuoc' ||
+      f === 'co_quan' ||
+      f.includes('co_quan_nha_nuoc') ||
+      f.includes('co_quan')
+    ) {
+      raw = r.hien_dang_lam_viec_o_co_quan_nha_nuoc || cd?.hien_dang_lam_viec_o_co_quan_nha_nuoc ||
+        r.hien_dang_lam_viec_tai_co_quan_nha_nuoc || cd?.hien_dang_lam_viec_tai_co_quan_nha_nuoc ||
+        r.co_quan_nha_nuoc || cd?.co_quan_nha_nuoc ||
+        r.co_quan || cd?.co_quan ||
+        r.coQuanNhaNuoc || cd?.coQuanNhaNuoc;
+    }
+  }
+
+  // 3. Generic fallback: check any key in r or cd that loosely matches f
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    const cleanF = String(f).toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (const [k, v] of Object.entries(r)) {
+      if (String(k).toLowerCase().replace(/[^a-z0-9]/g, '') === cleanF) {
+        if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
+          raw = v;
+          break;
+        }
+      }
+    }
+    if ((raw === undefined || raw === null || raw === '' || raw === '-') && cd) {
+      for (const [k, v] of Object.entries(cd)) {
+        if (String(k).toLowerCase().replace(/[^a-z0-9]/g, '') === cleanF) {
+          if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
+            raw = v;
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -1132,6 +1186,18 @@ const testCondition = (item, crit) => {
   return { matches: true, reason: '' };
 };
 
+const saveCurrentState = async () => {
+  const state = {
+    criteria: JSON.parse(JSON.stringify(criteria.value)),
+    logicOperator: logicOperator.value,
+    activePresetId: activePresetId.value,
+  };
+  try {
+    localStorage.setItem('advanced_search_current_filter', JSON.stringify(state));
+    await saveAppSettings('advanced_search_current_filter', state);
+  } catch (e) {}
+};
+
 const executeSearch = () => {
   const dataset = buildDataset();
   const matched = [];
@@ -1167,6 +1233,7 @@ const executeSearch = () => {
   });
 
   searchResults.value = matched;
+  saveCurrentState();
 };
 
 const applyPreset = (preset) => {
@@ -1206,6 +1273,7 @@ const saveCurrentPreset = async () => {
   // Persist
   localStorage.setItem('advanced_search_presets', JSON.stringify(savedPresets.value));
   try {
+    await saveAppSettings('advanced_search_presets', savedPresets.value);
     await saveAppSettings('advanced_search_shared_presets', savedPresets.value.filter((p) => p.isShared));
   } catch (e) {}
 
@@ -1217,12 +1285,18 @@ const deletePreset = async (preset, idx) => {
   savedPresets.value.splice(idx, 1);
   localStorage.setItem('advanced_search_presets', JSON.stringify(savedPresets.value));
   try {
+    await saveAppSettings('advanced_search_presets', savedPresets.value);
     await saveAppSettings('advanced_search_shared_presets', savedPresets.value.filter((p) => p.isShared));
   } catch (e) {}
 };
 
 const loadPresets = async () => {
   try {
+    const dbPresets = await getAppSettings('advanced_search_presets', null);
+    if (dbPresets && Array.isArray(dbPresets) && dbPresets.length > 0) {
+      savedPresets.value = dbPresets;
+      return;
+    }
     const shared = await getAppSettings('advanced_search_shared_presets', null);
     if (shared && Array.isArray(shared) && shared.length > 0) {
       savedPresets.value = shared;
@@ -1252,8 +1326,25 @@ onMounted(async () => {
     personnelStore.fetchDepartments(),
     loadPresets(),
   ]);
-  if (savedPresets.value.length > 0) {
-    applyPreset(savedPresets.value[0]);
+
+  let restored = false;
+  try {
+    const savedState = (await getAppSettings('advanced_search_current_filter', null)) ||
+      (localStorage.getItem('advanced_search_current_filter') ? JSON.parse(localStorage.getItem('advanced_search_current_filter')) : null);
+    if (savedState && savedState.criteria && Array.isArray(savedState.criteria) && savedState.criteria.length > 0) {
+      criteria.value = savedState.criteria;
+      if (savedState.logicOperator) logicOperator.value = savedState.logicOperator;
+      if (savedState.activePresetId) activePresetId.value = savedState.activePresetId;
+      restored = true;
+    }
+  } catch (e) {}
+
+  if (!restored) {
+    if (savedPresets.value.length > 0) {
+      applyPreset(savedPresets.value[0]);
+    } else {
+      executeSearch();
+    }
   } else {
     executeSearch();
   }

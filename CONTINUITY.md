@@ -278,10 +278,37 @@
      - Xây dựng hàm `getRelativeFieldValue` và `testRelativeCondition`: Khi điều kiện tìm kiếm thuộc nhóm Thân nhân, hệ thống tự động duyệt qua toàn bộ thân nhân của Cán bộ (`pRelatives`), đánh giá chính xác theo đúng toán tử (`contains`, `equals`, `has_value`, `empty`, `not_contains`, `before_date`, `after_date`, `gte`, `lte`), đồng thời hiển thị lý do khớp chi tiết rõ ràng: `[Cột 20] Cơ quan nhà nước (Tên thân nhân): Giá trị`.
   2. Đã build và sync bản phân phối mới nhất vào `dist` và `WINDOWS_OFFLINE_APP/frontend`.
 
-### 34. LEDGER STATUS
-- **Status**: Done (Đã đồng bộ 100% Cột 20 Thân nhân và tìm kiếm nâng cao đa đối tượng, build & sync offline app thành công).
+### 34. TỰ ĐỘNG LƯU BỘ LỌC VÀ CỘT VÀO DATABASE & CÔNG THỨC "ĐI KHI CHƯA CÓ CẤP THẨM QUYỀN QUYẾT ĐỊNH"
+- **Yêu cầu người dùng**:
+  1. Lọc và cột phải tự động lưu trực tiếp vào Database (bảng settings qua `saveAppSettings`), không chỉ dựa vào LocalStorage để khi load lại trang hoặc nhiều người dùng chung 1 tài khoản trên các thiết bị khác nhau thì dữ liệu vẫn được bảo lưu 100%.
+  2. Tạo thêm công thức "Đi khi chưa có cấp thẩm quyền quyết định" cho phép người dùng tự gán 3 cột: Cột Ngày xuất cảnh, Cột Ngày duyệt đi, và Cột Quyết định:
+     - Ngày xuất cảnh > Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi trước khi có quyết định' (Cảnh báo).
+     - Ngày xuất cảnh > Ngày duyệt đi & Chưa có quyết định (trống) -> '- (Chưa đủ dữ liệu)'.
+     - Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi đúng quyết định' (Thành công).
+     - Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định không có dữ liệu -> '-'.
+- **Thực hiện**:
+  1. `src/utils/formatters.js`:
+     - Cập nhật hàm `computeDepartBeforeDecision`: Nhận cấu hình `formulaColDep`, `formulaColApprovedDep`, `formulaColDecision` và các nhãn tùy biến; tự động fallback linh hoạt nếu người dùng không chọn cột thủ công.
+     - Triển khai chuẩn xác 4 nhánh logic so sánh ngày và sự hiện diện của quyết định.
+  2. `src/views/SettingsImportView.vue`:
+     - Bổ sung tên hiển thị công thức: `"Đi khi chưa có cấp thẩm quyền quyết định"`.
+     - Xây dựng giao diện cấu hình trực quan với 3 bộ chọn cột: Cột Ngày xuất cảnh, Cột Ngày duyệt đi, Cột Quyết định/Số QĐ, kèm các ô nhập nhãn hiển thị tùy biến.
+  3. `src/views/ChildDashboardView.vue`:
+     - Cập nhật `initTopicColumns`: Ưu tiên tuyệt đối nạp từ DB (`getAppSettings(child_dashboard_cols_${topicId})`) trước tiên. Ngăn chặn triệt để việc `finalizeColumns` tự ý chèn đè lại các cột mặc định khi người dùng đã lưu cấu hình cột tùy chỉnh của mình.
+     - Xây dựng `saveTopicFilterState` và `loadTopicFilterState` kết nối trực tiếp với DB qua `saveAppSettings` / `getAppSettings`: Tự động lưu và khôi phục trạng thái thẻ thống kê đang active (`activeMetricCardIdx`), trạng thái hiện diện (`statusFilter`), từ khóa tìm kiếm (`searchQuery`), năm lọc (`timeFilterYear`), đơn vị (`selectedDepartment`), quốc gia (`selectedCountry`), nguồn kinh phí (`selectedFunding`).
+     - Tự động debounce lưu vào DB khi có bất kỳ thay đổi nào trên bộ lọc, click thẻ, hoặc bấm đặt lại bộ lọc.
+  4. `src/views/PersonnelView.vue`:
+     - Cập nhật `onColumnsChange` và `onRelativeColumnsChange` để lưu trực tiếp vào DB (`vue_visible_columns` và `vue_visible_relative_columns` qua `saveAppSettings`).
+     - Xây dựng `savePersonnelFilterState` và `loadPersonnelFilterState` tự động lưu/khôi phục `mainTab`, `searchQuery`, `relativeSearchQuery`, `smartFilter`, `smartFilterField` vào DB.
+  5. `src/views/AdvancedSearchView.vue`:
+     - Cải tiến `getRelativeFieldValue` để phân giải sâu và toàn diện toàn bộ các cột Thân nhân (bao gồm Cột 20 - Cơ quan nhà nước) theo ID, Label, ColIndex và các bí danh chuẩn.
+     - Tự động lưu trạng thái tìm kiếm hiện tại (`criteria`, `logicOperator`, `activePresetId`) và đồng bộ toàn bộ presets vào DB. Khôi phục chính xác điều kiện tìm kiếm khi tải lại trang.
+
+### 35. LEDGER STATUS
+- **Status**: Done (Đã hoàn thiện lưu DB cho toàn bộ Cột & Bộ lọc trên hệ thống, hoàn thiện công thức Đi khi chưa có cấp thẩm quyền quyết định, build dự án thành công).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công trong 529ms).
+
 
 
 

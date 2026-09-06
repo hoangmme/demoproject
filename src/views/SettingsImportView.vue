@@ -536,7 +536,7 @@
                     <option value="overdue_status">Quá hạn chưa về</option>
                     <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
                     <option value="conditional_check">Kiểm tra điều kiện (Cảnh báo khi thiếu dữ liệu)</option>
-                    <option value="depart_before_decision">Đi trước khi có quyết định</option>
+                    <option value="depart_before_decision">Đi khi chưa có cấp thẩm quyền quyết định</option>
                     <option value="trips_count_in_year">Số lần xuất cảnh trong năm</option>
                   </select>
                 </div>
@@ -761,35 +761,66 @@
                   </div>
                 </div>
 
-                <!-- 5. Đi trước khi có quyết định -->
+                <!-- 5. Đi khi chưa có cấp thẩm quyền quyết định -->
                 <div v-else-if="col.formulaType === 'depart_before_decision'" style="display: flex; flex-direction: column; gap: 6px;">
                   <div style="font-size: 0.72rem; color: #b45309; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày Đi (Xuất cảnh)</strong> với <strong>Ngày Ban Hành (Quyết định)</strong>. Nếu Ngày Đi &lt; Ngày Ban Hành → hiển thị <strong>"Đi trước khi có quyết định"</strong>. Ngược lại hoặc thiếu ngày → để trống.
+                    💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày xuất cảnh</strong> với <strong>Ngày duyệt đi</strong> kết hợp <strong>Cột quyết định</strong>:
+                    <ul style="margin: 2px 0 0 16px; padding: 0;">
+                      <li>Nếu Ngày xuất cảnh &gt; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi trước khi có quyết định"</strong>.</li>
+                      <li>Nếu Ngày xuất cảnh &gt; Ngày duyệt đi &amp; Chưa có quyết định &rarr; <strong>"- (Chưa đủ dữ liệu)"</strong>.</li>
+                      <li>Nếu Ngày xuất cảnh &le; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi đúng quyết định"</strong>.</li>
+                      <li>Nếu Ngày xuất cảnh &le; Ngày duyệt đi &amp; Không có quyết định &rarr; <strong>"-"</strong>.</li>
+                    </ul>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
                     <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Đi (Xuất cảnh):</span>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày xuất cảnh:</span>
                       <select v-model="col.formulaColDep" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (departureDate) --</option>
+                        <option value="">-- Mặc định (ngay_xuat_canh / departureDate) --</option>
                         <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
                           Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
                         </option>
                       </select>
                     </div>
                     <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Ban Hành (Quyết định):</span>
-                      <select v-model="col.formulaColDecDate" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (decisionDate) --</option>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày duyệt đi:</span>
+                      <select v-model="col.formulaColApprovedDep" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định (thoi_gian_duyet_di / ngay_ban_hanh) --</option>
                         <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
                           Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
                         </option>
                       </select>
                     </div>
                     <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn hiển thị (Tùy chọn):</span>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Quyết định / Số QĐ:</span>
+                      <select v-model="col.formulaColDecision" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định (so_quyet_dinh / decisionNumber) --</option>
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
+                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đi trước QĐ:</span>
                       <input
                         v-model="col.formulaLabelWarning"
                         placeholder="Mặc định: Đi trước khi có quyết định"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Chưa đủ dữ liệu:</span>
+                      <input
+                        v-model="col.formulaLabelMissing"
+                        placeholder="Mặc định: - (Chưa đủ dữ liệu)"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đi đúng QĐ:</span>
+                      <input
+                        v-model="col.formulaLabelOnTime"
+                        placeholder="Mặc định: Đi đúng quyết định"
                         style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
                       />
                     </div>

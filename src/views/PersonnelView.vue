@@ -1054,6 +1054,7 @@ import Dialog from 'primevue/dialog';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
+import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
 import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
@@ -1337,6 +1338,7 @@ onMounted(async () => {
   if (personnelStore.personnelList.length === 0) {
     await personnelStore.init();
   }
+  await loadPersonnelFilterState();
   handleRouteAction();
 });
 
@@ -1866,13 +1868,76 @@ const getDisplayValue = (person, colId) => {
   return formatGenericCellValue(val, colDef);
 };
 
-const onColumnsChange = () => {
-  localStorage.setItem('vue_visible_columns', JSON.stringify(personnelStore.visibleColumns));
+const onColumnsChange = async () => {
+  try {
+    localStorage.setItem('vue_visible_columns', JSON.stringify(personnelStore.visibleColumns));
+    await saveAppSettings('vue_visible_columns', personnelStore.visibleColumns);
+  } catch (e) {
+    console.error('Lỗi khi lưu cấu hình cột cán bộ vào DB:', e);
+  }
 };
 
-const onRelativeColumnsChange = () => {
-  localStorage.setItem('vue_visible_relative_columns', JSON.stringify(personnelStore.visibleRelativeColumns));
+const onRelativeColumnsChange = async () => {
+  try {
+    localStorage.setItem('vue_visible_relative_columns', JSON.stringify(personnelStore.visibleRelativeColumns));
+    await saveAppSettings('vue_visible_relative_columns', personnelStore.visibleRelativeColumns);
+  } catch (e) {
+    console.error('Lỗi khi lưu cấu hình cột thân nhân vào DB:', e);
+  }
 };
+
+// ==================== LƯU VÀ TẢI BỘ LỌC VÀO DATABASE ====================
+let pFilterDebounceTimer = null;
+const savePersonnelFilterState = async () => {
+  const filterData = {
+    mainTab: mainTab.value,
+    searchQuery: searchQuery.value,
+    relativeSearchQuery: relativeSearchQuery.value,
+    smartFilter: smartFilter.value,
+    smartFilterField: smartFilterField.value,
+  };
+  try {
+    localStorage.setItem('personnel_view_filters', JSON.stringify(filterData));
+    await saveAppSettings('personnel_view_filters', filterData);
+  } catch (e) {
+    console.warn('Lỗi khi lưu bộ lọc cán bộ vào DB:', e);
+  }
+};
+
+const triggerAutoSavePersonnelFilter = () => {
+  if (pFilterDebounceTimer) clearTimeout(pFilterDebounceTimer);
+  pFilterDebounceTimer = setTimeout(() => {
+    savePersonnelFilterState();
+  }, 400);
+};
+
+const loadPersonnelFilterState = async () => {
+  try {
+    let saved = await getAppSettings('personnel_view_filters', null);
+    if (!saved) {
+      const local = localStorage.getItem('personnel_view_filters');
+      if (local) {
+        try { saved = JSON.parse(local); } catch (e) {}
+      }
+    }
+    if (saved && typeof saved === 'object') {
+      if (saved.mainTab !== undefined) mainTab.value = saved.mainTab;
+      if (saved.searchQuery !== undefined) searchQuery.value = saved.searchQuery;
+      if (saved.relativeSearchQuery !== undefined) relativeSearchQuery.value = saved.relativeSearchQuery;
+      if (saved.smartFilter !== undefined) smartFilter.value = saved.smartFilter;
+      if (saved.smartFilterField !== undefined) smartFilterField.value = saved.smartFilterField;
+    }
+  } catch (e) {
+    console.warn('Lỗi khi tải bộ lọc cán bộ từ DB:', e);
+  }
+};
+
+watch(
+  [mainTab, searchQuery, relativeSearchQuery, smartFilter, smartFilterField],
+  () => {
+    triggerAutoSavePersonnelFilter();
+  }
+);
 
 const openCreateDialog = () => {
   selectedPerson.value = null;
