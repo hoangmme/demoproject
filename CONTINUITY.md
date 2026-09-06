@@ -564,10 +564,42 @@
      - Khởi tạo `customDashboards` ngay lập tức từ `localStorage` khi khởi tạo view, giúp hiển thị danh sách Chuyên đề trong 0ms không phải chờ mạng.
      - Chuyển toàn bộ 4 hàm tải Directus DB sang `Promise.allSettled`, tải ngầm đồng thời không gây đứng/lag trang.
 
-### 53. LEDGER STATUS
-- **Status**: Done (Đã hoàn thiện nâng cấp màu sắc, fix triệt để toggle ẩn hiện, loại bỏ tag mở rộng title, tối ưu tải Chuyên đề 0ms).
+### 54. TỐI ƯU GIAO DIỆN KHỐI THỐNG KÊ, CHO PHÉP SỬA TITLE KHI ẨN, MẶC ĐỊNH THỐNG KÊ ĐẦU KHI CHUYỂN CHUYÊN ĐỀ & FIX TRIỆT ĐỂ BUG 0 BẢN GHI KHI CÓ THẺ ẨN (2026-09-07)
+- **Vấn đề người dùng phản hồi**:
+  1. Nút màu sắc thẻ ở hàng trên chiếm nhiều diện tích, làm hẹp ô tiêu đề.
+  2. Khi ẩn thẻ thống kê (0%), ô tiêu đề bị gạch ngang và mờ, khó thao tác chỉnh sửa.
+  3. Khi bấm chuyển giữa các chuyên đề, hệ thống không mặc định hiển thị thống kê đầu tiên (Tổng cộng) mà giữ thẻ cũ hoặc khôi phục thẻ từ phiên trước.
+  4. Lỗi nghiêm trọng: Ở những chuyên đề có thẻ/khối ẩn (0%), số lượng trên thẻ hiển thị đúng (ví dụ: 19) nhưng bảng dữ liệu bên dưới lại hiển thị "Hiển thị 0 đến 0 của 0 bản ghi".
+
+- **Nguyên nhân cốt lõi**:
+  1. `SettingsImportView.vue`: Dropdown màu sắc nằm chung hàng tiêu đề với ô input tên thẻ và 4 nút di chuyển/ẩn/xóa làm hàng bị chật.
+  2. `textDecoration: line-through` và độ mờ khi ẩn làm input trông như bị vô hiệu hóa.
+  3. `loadTopicFilterState` khôi phục `activeMetricCardIdx` từ DB/localStorage thay vì đặt lại về mặc định khi chuyển chuyên đề.
+  4. Trong `ChildDashboardView.vue`:
+     - Khi người dùng ẩn thẻ đầu tiên (Index 0), thẻ hiển thị đầu tiên trên giao diện thực tế là Thẻ 1. Nhưng `topicBaselineList` và `filteredList` vẫn tiếp tục sử dụng Thẻ 0 (thẻ đã bị ẩn) làm cơ sở lọc baseline $\rightarrow$ xung đột điều kiện hoặc lọc sai dẫn đến danh sách rỗng 0 bản ghi.
+     - `filteredList` tồn tại các bộ lọc ngầm (`statusFilter`, `timeFilterYear`, `selectedCountry`, `selectedDepartment`, `selectedFunding`, `customFilterField`) được khôi phục từ DB/localStorage từ các lần click trước đó mặc dù giao diện hiện tại không còn các ô dropdown bộ lọc này $\rightarrow$ lọc ngầm triệt tiêu dữ liệu.
+
+- **Giải pháp & Triển khai**:
+  1. **Tái cấu trúc giao diện khối thẻ trong Cài đặt (`SettingsImportView.vue`)**:
+     - Đưa dropdown "Màu sắc thẻ" xuống hàng thứ hai, đặt song song với "Độ rộng khối" theo lưới 2 cột gọn gàng (`grid-template-columns: 1.2fr 1fr`).
+     - Hàng đầu tiên dành trọn 100% diện tích cho ô nhập "Tên thẻ" và 4 nút thao tác (Trái, Phải, Ẩn/Hiện, Xóa).
+  2. **Cho phép sửa tiêu đề mượt mà khi ẩn**:
+     - Gỡ bỏ hoàn toàn gạch ngang `textDecoration: line-through`.
+     - Điều chỉnh theme khi ẩn (`cardOpacity: 0.92`, `titleColor: #1e293b`) giúp tiêu đề luôn rõ nét, dễ đọc và cho phép người dùng click chỉnh sửa tự do mọi lúc.
+  3. **Mặc định thống kê đầu tiên (Tổng cộng / Baseline) khi chuyển Chuyên đề**:
+     - Trong `watch(() => topicId.value)` và `onMounted` của `ChildDashboardView.vue`: Luôn gán `activeMetricCardIdx.value = -1` (về thẻ hiển thị đầu tiên / Tổng cộng).
+     - Đặt lại phân trang về trang 1 (`currentPage = 1`, `dtFirst = 0`) và dọn sạch ô tìm kiếm.
+  4. **Khắc phục triệt để lỗi 0 bản ghi khi có thẻ ẩn (`ChildDashboardView.vue` & `DashboardView.vue`)**:
+     - Bổ sung computed `firstVisibleCardIdx` và `firstVisibleCard` tự động bỏ qua các thẻ bị ẩn (`widthPercent === 0` hoặc `hidden === true`) để chọn đúng thẻ đang hiển thị đầu tiên làm baseline chuẩn.
+     - `topicBaselineList` và `computeMetricCardCount` luôn dùng `firstVisibleCard` làm mốc so sánh, đảm bảo số liệu thẻ và số dòng trong bảng khớp nhau 100%.
+     - Trong `filteredList`: Không lọc lặp lại khi đang ở thẻ baseline; chỉ lọc các trường `status`, `country`, `funding`, `year` khi có tham số truyền trực tiếp từ URL query (`route.query`), loại bỏ hoàn toàn việc lọc ngầm từ state cũ.
+     - Đồng bộ logic chọn `firstCard` không bị ẩn trong `DashboardView.vue`.
+
+### 55. LEDGER STATUS
+- **Status**: Done (Đã build thành công dist và sync sang WINDOWS_OFFLINE_APP, giải quyết triệt để 4 yêu cầu của người dùng).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
+
 
 
 

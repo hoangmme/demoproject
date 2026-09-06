@@ -1097,10 +1097,22 @@ const getCardMinWidthStyle = (card) => {
 const matchCardCondition = (item, card) => matchSharedCardCondition(item, card, personnelStore);
 const isCardAllType = (card) => isSharedCardAllType(card);
 
-// Tập dữ liệu cơ sở của Chuyên đề (Baseline List dựa trên thẻ đầu tiên)
+// Thẻ đầu tiên đang hiển thị (bỏ qua các thẻ bị ẩn 0%)
+const firstVisibleCardIdx = computed(() => {
+  const cards = activeMetricCards.value || [];
+  const idx = cards.findIndex((c) => !isCardHidden(c));
+  return idx >= 0 ? idx : 0;
+});
+
+const firstVisibleCard = computed(() => {
+  const cards = activeMetricCards.value || [];
+  return cards[firstVisibleCardIdx.value] || cards[0] || null;
+});
+
+// Tập dữ liệu cơ sở của Chuyên đề (Baseline List dựa trên thẻ hiển thị đầu tiên)
 const topicBaselineList = computed(() => {
   const fullList = currentSourceList.value || [];
-  const firstCard = activeMetricCards.value[0];
+  const firstCard = firstVisibleCard.value;
   if (firstCard && !isSharedCardAllType(firstCard)) {
     return fullList.filter((item) => matchSharedCardCondition(item, firstCard, personnelStore));
   }
@@ -1108,14 +1120,14 @@ const topicBaselineList = computed(() => {
 });
 
 const getCardMetricValue = (card) => {
-  return computeMetricCardCount(card, currentSourceList.value, activeMetricCards.value[0], personnelStore);
+  return computeMetricCardCount(card, currentSourceList.value, firstVisibleCard.value, personnelStore);
 };
 
-const activeMetricCardIdx = ref(-1); // -1: xem toàn bộ cơ sở chuyên đề (Thẻ 0 active)
+const activeMetricCardIdx = ref(-1); // -1: xem toàn bộ cơ sở chuyên đề (Thẻ hiển thị đầu tiên)
 
 const activeMetricCardId = computed({
   get: () => {
-    if (activeMetricCardIdx.value <= 0) return 'all';
+    if (activeMetricCardIdx.value === -1 || activeMetricCardIdx.value === firstVisibleCardIdx.value) return 'all';
     const c = activeMetricCards.value[activeMetricCardIdx.value];
     return c?.id && c.id !== 'all' ? c.id : `card_${activeMetricCardIdx.value}`;
   },
@@ -1125,28 +1137,28 @@ const activeMetricCardId = computed({
       return;
     }
     const idx = activeMetricCards.value.findIndex((c, i) => (c.id === val && c.id !== 'all') || c.label === val || `card_${i}` === val);
-    activeMetricCardIdx.value = idx > 0 ? idx : -1;
+    activeMetricCardIdx.value = idx >= 0 ? idx : -1;
   },
 });
 
 const isCardActive = (card, cIdx) => {
-  if (!card) return false;
+  if (!card || isCardHidden(card)) return false;
   if (activeMetricCardIdx.value <= 0) {
-    return cIdx === 0;
+    return cIdx === firstVisibleCardIdx.value;
   }
   return activeMetricCardIdx.value === cIdx;
 };
 
 const toggleMetricCardFilter = (card, cIdx) => {
-  // Thẻ 0 là baseline của chuyên đề: click vào sẽ đưa về trạng thái xem toàn bộ baseline
-  if (cIdx === 0) {
+  // Thẻ hiển thị đầu tiên là baseline của chuyên đề: click vào sẽ đưa về trạng thái xem toàn bộ baseline (-1)
+  if (cIdx === firstVisibleCardIdx.value || cIdx === 0) {
     activeMetricCardIdx.value = -1;
     statusFilter.value = 'all';
     triggerAutoSaveFilter();
     return;
   }
 
-  // Thẻ con (cIdx > 0): toggle bật / tắt theo đúng vị trí của thẻ
+  // Thẻ con khác: toggle bật / tắt theo đúng vị trí của thẻ
   if (activeMetricCardIdx.value === cIdx) {
     activeMetricCardIdx.value = -1;
   } else {
@@ -1156,9 +1168,11 @@ const toggleMetricCardFilter = (card, cIdx) => {
 };
 
 const activeMetricCard = computed(() => {
-  if (activeMetricCardIdx.value <= 0) return null;
+  const currentIdx = (activeMetricCardIdx.value === -1 || activeMetricCardIdx.value === 0)
+    ? firstVisibleCardIdx.value
+    : activeMetricCardIdx.value;
   const cards = activeMetricCards.value || [];
-  return cards[activeMetricCardIdx.value] || null;
+  return cards[currentIdx] || null;
 });
 
 const activeCardColLabel = computed(() => {
@@ -1924,73 +1938,100 @@ const filteredList = computed(() => {
   let list = [...topicBaselineList.value];
 
   // 0. Active Metric Card Filter (Top KPI Pill)
-  if (activeMetricCardIdx.value > 0) {
-    const targetCard = activeMetricCards.value[activeMetricCardIdx.value];
+  const currentIdx = (activeMetricCardIdx.value === -1 || activeMetricCardIdx.value === 0)
+    ? firstVisibleCardIdx.value
+    : activeMetricCardIdx.value;
 
-    if (targetCard && !isCardAllType(targetCard)) {
-      list = list.filter((t) => matchCardCondition(t, targetCard));
-      if (targetCard.isUnique) {
-        const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-        const seenKeys = new Set();
-        list = list.filter((item) => {
-          const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? item.personnelId ?? item.id;
-          if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
-            const strKey = String(keyVal).trim();
-            if (seenKeys.has(strKey)) return false;
-            seenKeys.add(strKey);
-            return true;
-          }
+  const targetCard = activeMetricCards.value?.[currentIdx];
+  const baselineCard = firstVisibleCard.value;
+
+  // Nếu người dùng chọn một thẻ khác với thẻ baseline đầu tiên:
+  if (targetCard && targetCard !== baselineCard && !isCardAllType(targetCard)) {
+    list = list.filter((t) => matchCardCondition(t, targetCard));
+    if (targetCard.isUnique) {
+      const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+      const seenKeys = new Set();
+      list = list.filter((item) => {
+        const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? item.personnelId ?? item.id;
+        if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
+          const strKey = String(keyVal).trim();
+          if (seenKeys.has(strKey)) return false;
+          seenKeys.add(strKey);
           return true;
-        });
+        }
+        return true;
+      });
+    }
+  } else if (targetCard && targetCard === baselineCard && baselineCard?.isUnique) {
+    const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+    const seenKeys = new Set();
+    list = list.filter((item) => {
+      const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? item.personnelId ?? item.id;
+      if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
+        const strKey = String(keyVal).trim();
+        if (seenKeys.has(strKey)) return false;
+        seenKeys.add(strKey);
+        return true;
       }
+      return true;
+    });
+  }
+
+  // 1. Status Filter (for trips) - Chỉ áp dụng nếu có chỉ định rõ ràng từ URL query
+  if (route.query?.status) {
+    const s = String(route.query.status);
+    if (s === 'completed') {
+      list = list.filter((t) => !t.isAbroad && !t.isOverdue);
+    } else if (s === 'abroad') {
+      list = list.filter((t) => t.isAbroad && !t.isOverdue);
+    } else if (s === 'overdue') {
+      list = list.filter((t) => t.isOverdue);
     }
   }
 
-  // 1. Status Filter (for trips)
-  if (statusFilter.value === 'completed') {
-    list = list.filter((t) => !t.isAbroad && !t.isOverdue);
-  } else if (statusFilter.value === 'abroad') {
-    list = list.filter((t) => t.isAbroad && !t.isOverdue);
-  } else if (statusFilter.value === 'overdue') {
-    list = list.filter((t) => t.isOverdue);
-  }
-
-  // 2. Year Filter (for trips)
-  if (timeFilterYear.value !== 'all') {
-    const targetY = Number(timeFilterYear.value);
+  // 2. Year Filter (for trips) - chỉ áp dụng nếu có từ URL Query
+  if (route.query?.year && route.query.year !== 'all') {
+    const targetY = Number(route.query.year);
     list = list.filter((t) => {
       const d = parseDateObj(t.departureDate);
       return d && d.getFullYear() === targetY;
     });
   }
 
-  // 3. Country Filter
-  if (selectedCountry.value) {
-    list = list.filter((t) => (t.countryName || t.country || '') === selectedCountry.value);
+  // 3. Country Filter - chỉ áp dụng nếu có từ URL Query
+  if (route.query?.country) {
+    const cTarget = String(route.query.country).trim().toLowerCase();
+    list = list.filter((t) => {
+      const cVal = String(t.countryName || t.country || t.countryNameTN || '').trim().toLowerCase();
+      return cVal === cTarget;
+    });
   }
 
-  // 4. Department Filter
-  if (selectedDepartment.value) {
-    list = list.filter((t) => t.departmentName === selectedDepartment.value);
+  // 4. Department Filter - chỉ áp dụng nếu có từ URL Query
+  if (route.query?.department) {
+    const dTarget = String(route.query.department).trim().toLowerCase();
+    list = list.filter((t) => String(t.departmentName || '').trim().toLowerCase() === dTarget);
   }
 
-  // 5. Funding Filter
-  if (selectedFunding.value) {
-    list = list.filter((t) => (t.fundingName || t.funding || '') === selectedFunding.value);
+  // 5. Funding Filter - chỉ áp dụng nếu có từ URL Query
+  if (route.query?.funding) {
+    const fTarget = String(route.query.funding).trim().toLowerCase();
+    list = list.filter((t) => String(t.fundingName || t.funding || '').trim().toLowerCase() === fTarget);
   }
 
-  // 5.5. Custom Field Filter from URL Query (chỉ lọc nếu không có thẻ KPI card đang chọn)
-  if ((!activeMetricCardId.value || activeMetricCardId.value === 'all') && customFilterField.value && customFilterValue.value) {
-    const targetVal = customFilterValue.value.toLowerCase().trim();
+  // 5.5. Custom Field Filter from URL Query (chỉ áp dụng nếu có từ URL Query)
+  if (route.query?.filterField && route.query?.filterValue) {
+    const targetField = String(route.query.filterField);
+    const targetVal = String(route.query.filterValue).toLowerCase().trim();
     list = list.filter((t) => {
       const isPresence = (
-        customFilterField.value === 'presenceStatus' ||
-        customFilterField.value === '_presenceStatus' ||
-        customFilterField.value === 'status' ||
-        customFilterField.value === 'tripStatus' ||
-        customFilterField.value.includes('presence') ||
-        customFilterField.value.includes('hien_dien') ||
-        customFilterField.value.includes('hiendien')
+        targetField === 'presenceStatus' ||
+        targetField === '_presenceStatus' ||
+        targetField === 'status' ||
+        targetField === 'tripStatus' ||
+        targetField.includes('presence') ||
+        targetField.includes('hien_dien') ||
+        targetField.includes('hiendien')
       );
       if (isPresence) {
         const p = resolvePresence(t);
@@ -2000,7 +2041,7 @@ const filteredList = computed(() => {
         if (targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') return (p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue);
         return pLabel.includes(targetVal);
       }
-      const cellVal = getCellValue(t, customFilterField.value);
+      const cellVal = getCellValue(t, targetField);
       const strCellVal = String(cellVal || '').toLowerCase().trim();
       if (strCellVal === targetVal) return true;
       if ((targetVal.includes('nước ngoài') || targetVal === 'abroad') && strCellVal.includes('nước ngoài')) return true;
@@ -3092,15 +3133,7 @@ const saveTopicFilterState = async () => {
   if (!tid) return;
   const filterKey = `child_dashboard_filter_${tid}`;
   const filterData = {
-    activeMetricCardIdx: activeMetricCardIdx.value,
-    statusFilter: statusFilter.value,
     searchQuery: searchQuery.value,
-    timeFilterYear: timeFilterYear.value,
-    selectedCountry: selectedCountry.value,
-    selectedDepartment: selectedDepartment.value,
-    selectedFunding: selectedFunding.value,
-    customFilterField: customFilterField.value,
-    customFilterValue: customFilterValue.value,
   };
   try {
     localStorage.setItem(filterKey, JSON.stringify(filterData));
@@ -3120,43 +3153,19 @@ const triggerAutoSaveFilter = () => {
 const loadTopicFilterState = async () => {
   const tid = topicId.value;
   if (!tid) return;
-  const filterKey = `child_dashboard_filter_${tid}`;
-  try {
-    let saved = await getAppSettings(filterKey, null);
-    if (!saved) {
-      const local = localStorage.getItem(filterKey);
-      if (local) {
-        try { saved = JSON.parse(local); } catch (e) {}
-      }
-    }
-    if (saved && typeof saved === 'object') {
-      if (saved.activeMetricCardIdx !== undefined) activeMetricCardIdx.value = saved.activeMetricCardIdx;
-      if (saved.statusFilter !== undefined) statusFilter.value = saved.statusFilter;
-      if (saved.searchQuery !== undefined) searchQuery.value = saved.searchQuery;
-      if (saved.timeFilterYear !== undefined) timeFilterYear.value = saved.timeFilterYear;
-      if (saved.selectedCountry !== undefined) selectedCountry.value = saved.selectedCountry;
-      if (saved.selectedDepartment !== undefined) selectedDepartment.value = saved.selectedDepartment;
-      if (saved.selectedFunding !== undefined) selectedFunding.value = saved.selectedFunding;
-      if (saved.customFilterField !== undefined) customFilterField.value = saved.customFilterField;
-      if (saved.customFilterValue !== undefined) customFilterValue.value = saved.customFilterValue;
-    } else {
-      activeMetricCardIdx.value = -1;
-      statusFilter.value = 'all';
-      searchQuery.value = '';
-      timeFilterYear.value = 'all';
-      selectedCountry.value = '';
-      selectedDepartment.value = '';
-      selectedFunding.value = '';
-      customFilterField.value = '';
-      customFilterValue.value = '';
-    }
-  } catch (e) {
-    console.warn('Lỗi khi tải bộ lọc chuyên đề từ DB:', e);
-  }
+  // Mặc định luôn hiện thống kê đầu tiên (Tổng cộng / Baseline) và dọn sạch các bộ lọc cũ
+  activeMetricCardIdx.value = -1;
+  statusFilter.value = 'all';
+  timeFilterYear.value = 'all';
+  selectedCountry.value = '';
+  selectedDepartment.value = '';
+  selectedFunding.value = '';
+  customFilterField.value = '';
+  customFilterValue.value = '';
 };
 
 watch(
-  [activeMetricCardIdx, statusFilter, searchQuery, timeFilterYear, selectedCountry, selectedDepartment, selectedFunding, customFilterField, customFilterValue],
+  [searchQuery],
   () => {
     triggerAutoSaveFilter();
   }
@@ -3196,6 +3205,18 @@ const handleRouteQueryChange = () => {
 watch(
   () => topicId.value,
   async () => {
+    // Chuyển chuyên đề: luôn mặc định hiện thống kê đầu tiên (Tổng cộng)
+    activeMetricCardIdx.value = -1;
+    dtFirst.value = 0;
+    currentPage.value = 1;
+    searchQuery.value = '';
+    statusFilter.value = 'all';
+    timeFilterYear.value = 'all';
+    selectedCountry.value = '';
+    selectedDepartment.value = '';
+    selectedFunding.value = '';
+    customFilterField.value = '';
+    customFilterValue.value = '';
     await loadTopicFilterState();
     await loadColumnsForCurrentCard();
     currentPage.value = 1;

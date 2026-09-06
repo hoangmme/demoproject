@@ -1387,20 +1387,12 @@
                       placeholder="Tên thẻ (VD: Có vấn đề chính trị, Đi Nhật...)"
                       style="font-size: 0.84rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; width: 100%; transition: all 0.2s ease; outline: none;"
                       :style="{
-                        backgroundColor: getCardColorTheme(card.color, isCardHidden(card)).titleBg,
-                        color: getCardColorTheme(card.color, isCardHidden(card)).titleColor,
-                        border: `1px solid ${getCardColorTheme(card.color, isCardHidden(card)).titleBorder}`,
-                        textDecoration: isCardHidden(card) ? 'line-through' : 'none'
+                        backgroundColor: isCardHidden(card) ? '#f8fafc' : getCardColorTheme(card.color).titleBg,
+                        color: isCardHidden(card) ? '#334155' : getCardColorTheme(card.color).titleColor,
+                        border: `1px solid ${isCardHidden(card) ? '#cbd5e1' : getCardColorTheme(card.color).titleBorder}`,
                       }"
                     />
                   </div>
-                  <select v-model="card.color" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; width: 95px; flex-shrink: 0;">
-                    <option value="blue">🔵 Xanh</option>
-                    <option value="green">🟢 Lá</option>
-                    <option value="amber">🟠 Cam</option>
-                    <option value="red">🔴 Đỏ</option>
-                    <option value="purple">🟣 Tím</option>
-                  </select>
                   <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0;">
                     <button
                       type="button"
@@ -1443,24 +1435,40 @@
                   </div>
                 </div>
 
-                <!-- Độ rộng khối (% Width) -->
-                <div style="display: flex; flex-direction: column; gap: 3px;">
-                  <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Độ rộng khối:</label>
-                  <select
-                    :value="isCardHidden(card) ? 0 : (card.widthPercent ?? '')"
-                    @change="e => onCardWidthChange(card, e.target.value)"
-                    class="custom-key-select"
-                    style="font-size: 0.75rem; padding: 4px 6px;"
-                  >
-                    <option value="">Tự động co giãn (Mặc định)</option>
-                    <option :value="0">Ẩn thống kê (0% - Không hiển thị)</option>
-                    <option :value="16.66">16.66% (1/6 hàng - 6 khối/dòng)</option>
-                    <option :value="20">20% (1/5 hàng - 5 khối/dòng)</option>
-                    <option :value="25">25% (1/4 hàng - 4 khối/dòng)</option>
-                    <option :value="33">33% (1/3 hàng - 3 khối/dòng)</option>
-                    <option :value="50">50% (1/2 hàng - 2 khối/dòng)</option>
-                    <option :value="100">100% (Toàn hàng - 1 khối/dòng)</option>
-                  </select>
+                <!-- Cùng hàng: Độ rộng khối (% Width) và Màu sắc thẻ -->
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px;">
+                  <div style="display: flex; flex-direction: column; gap: 3px;">
+                    <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Độ rộng khối:</label>
+                    <select
+                      :value="isCardHidden(card) ? 0 : (card.widthPercent ?? '')"
+                      @change="e => onCardWidthChange(card, e.target.value)"
+                      class="custom-key-select"
+                      style="font-size: 0.75rem; padding: 4px 6px; width: 100%;"
+                    >
+                      <option value="">Tự động co giãn (Mặc định)</option>
+                      <option :value="0">Ẩn thống kê (0% - Không hiển thị)</option>
+                      <option :value="16.66">16.66% (1/6 hàng - 6 khối/dòng)</option>
+                      <option :value="20">20% (1/5 hàng - 5 khối/dòng)</option>
+                      <option :value="25">25% (1/4 hàng - 4 khối/dòng)</option>
+                      <option :value="33">33% (1/3 hàng - 3 khối/dòng)</option>
+                      <option :value="50">50% (1/2 hàng - 2 khối/dòng)</option>
+                      <option :value="100">100% (Toàn hàng - 1 khối/dòng)</option>
+                    </select>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 3px;">
+                    <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Màu sắc thẻ:</label>
+                    <select
+                      v-model="card.color"
+                      class="custom-key-select"
+                      style="font-size: 0.75rem; padding: 4px 6px; width: 100%;"
+                    >
+                      <option value="blue">🔵 Xanh dương</option>
+                      <option value="green">🟢 Xanh lá</option>
+                      <option value="amber">🟠 Cam hổ phách</option>
+                      <option value="red">🔴 Đỏ</option>
+                      <option value="purple">🟣 Tím</option>
+                    </select>
+                  </div>
                 </div>
 
                 <!-- Đếm giá trị duy nhất (Unique) -->
@@ -3149,13 +3157,13 @@ const onCardWidthChange = (card, val) => {
 const getCardColorTheme = (color, isHidden = false) => {
   if (isHidden) {
     return {
-      cardBg: '#fafafa',
-      cardBorder: '#e2e8f0',
+      cardBg: '#f8fafc',
+      cardBorder: '#cbd5e1',
       titleBg: '#f1f5f9',
-      titleColor: '#94a3b8',
+      titleColor: '#1e293b',
       titleBorder: '#cbd5e1',
-      dot: '#cbd5e1',
-      cardOpacity: '0.68',
+      dot: '#94a3b8',
+      cardOpacity: '0.92',
     };
   }
   switch (color) {

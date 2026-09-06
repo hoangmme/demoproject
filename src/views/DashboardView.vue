@@ -2056,7 +2056,7 @@ const getCardMetricValueForTopic = (card, topic) => {
     else src = 'trips';
   }
   const fullList = getSourceList(src);
-  const firstCard = topicCards[0];
+  const firstCard = topicCards.find((c) => !c.hidden && Number(c.widthPercent) !== 0 && c.widthPercent !== '0') || topicCards[0];
   return computeMetricCardCount(actualCard, fullList, firstCard, personnelStore);
 };
 
