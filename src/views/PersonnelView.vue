@@ -271,6 +271,44 @@
             <span class="badge-code">{{ data.code || formatPersonnelCode(data.id) }}</span>
           </template>
         </Column>
+
+        <!-- Cột ưu tiên từ Thống kê / Widget -->
+        <Column
+          v-if="routeFilterField"
+          :header="`🎯 ${getRouteFilterFieldLabel()}`"
+          headerClass="col-active-filter-header"
+          bodyClass="col-active-filter-body"
+          :headerStyle="{ minWidth: '190px', color: '#0369a1', fontWeight: '700', background: '#f0f9ff' }"
+          :bodyStyle="{ minWidth: '190px', background: '#f0f9ff' }"
+        >
+          <template #body="{ data }">
+            <template v-if="isPresenceField(routeFilterField)">
+              <span
+                :style="{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '3px 8px',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  background: getPresenceBadge(data).bg,
+                  color: getPresenceBadge(data).color,
+                  border: getPresenceBadge(data).border,
+                }"
+              >
+                <i :class="getPresenceBadge(data).icon"></i>
+                {{ getPresenceBadge(data).text }}
+              </span>
+            </template>
+            <template v-else>
+              <span style="font-weight: 700; color: #0369a1; font-size: 0.8rem;">
+                {{ resolveVirtualColumnValue(data, routeFilterField) ?? (data[routeFilterField] !== undefined ? data[routeFilterField] : (data.custom_data?.[routeFilterField] ?? '-')) }}
+              </span>
+            </template>
+          </template>
+        </Column>
+
         <Column
           v-for="col in activeColumns"
           :key="col.id"
@@ -606,6 +644,43 @@
             <div v-else style="padding-left: 10px; color: #94a3b8; font-size: 0.74rem; display: flex; align-items: center; gap: 4px;">
               <span style="color: #cbd5e1;">↳</span> <span style="font-style: italic; color: #94a3b8;">(cùng cán bộ)</span>
             </div>
+          </template>
+        </Column>
+
+        <!-- Cột ưu tiên từ Thống kê / Widget -->
+        <Column
+          v-if="routeFilterField"
+          :header="`🎯 ${getRouteFilterFieldLabel()}`"
+          headerClass="col-active-filter-header"
+          bodyClass="col-active-filter-body"
+          :headerStyle="{ minWidth: '190px', color: '#7e22ce', fontWeight: '700', background: '#faf5ff' }"
+          :bodyStyle="{ minWidth: '190px', background: '#faf5ff' }"
+        >
+          <template #body="{ data }">
+            <template v-if="isPresenceField(routeFilterField)">
+              <span
+                :style="{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '3px 8px',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  background: getPresenceBadge(data).bg,
+                  color: getPresenceBadge(data).color,
+                  border: getPresenceBadge(data).border,
+                }"
+              >
+                <i :class="getPresenceBadge(data).icon"></i>
+                {{ getPresenceBadge(data).text }}
+              </span>
+            </template>
+            <template v-else>
+              <span style="font-weight: 700; color: #7e22ce; font-size: 0.8rem;">
+                {{ resolveVirtualColumnValue(data, routeFilterField) ?? (data[routeFilterField] !== undefined ? data[routeFilterField] : (data.custom_data?.[routeFilterField] ?? '-')) }}
+              </span>
+            </template>
           </template>
         </Column>
 
@@ -962,7 +1037,7 @@ import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, formatGenericCellValue, resolvePresence } from '@/utils/formatters';
+import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
@@ -1170,10 +1245,11 @@ const clearRouteFilter = () => {
 const getRouteFilterFieldLabel = () => {
   if (!routeFilterField.value) return '';
   const f = routeFilterField.value;
-  if (f === 'presenceStatus' || f === '_presenceStatus' || f === 'status' || f === 'tripStatus' || f === 'trang_thai_hien_dien') {
+  if (isPresenceField(f)) {
     return 'Trạng thái hiện diện';
   }
-  if (f === 'isRelative') return 'Đối tượng';
+  if (f === 'isRelative' || f === '_doiTuong' || f === 'doi_tuong') return 'Đối tượng';
+  if (f === '_parentPersonnelName') return 'Cán bộ liên quan';
   const def = allColumnDefsMap.value?.[f];
   return def?.label || f;
 };
@@ -1401,27 +1477,16 @@ const filteredPersonnel = computed(() => {
   if (routeFilterField.value && routeFilterValue.value) {
     const field = routeFilterField.value;
     const targetVal = routeFilterValue.value.toLowerCase().trim();
-    const isPresence = (
-      field === 'presenceStatus' ||
-      field === '_presenceStatus' ||
-      field === 'status' ||
-      field === 'tripStatus' ||
-      field === 'trang_thai_hien_dien' ||
-      field === 'trangThaiHienDien' ||
-      field.includes('presence') ||
-      field.includes('hien_dien') ||
-      field.includes('hiendien') ||
-      (allColumnDefsMap.value?.[field]?.formulaType === 'presence_status')
-    );
 
     list = list.filter((p) => {
-      if (isPresence) {
-        const pres = resolvePresence(p);
-        const pLabel = (pres.label || '').toLowerCase();
-        if (targetVal.includes('nước ngoài') || targetVal === 'abroad') return pres.status === 'abroad' || pres.isAbroad || pLabel.includes('nước ngoài');
-        if (targetVal.includes('quá hạn') || targetVal === 'overdue') return pres.isOverdue || pres.status === 'overdue' || pLabel.includes('quá hạn');
-        if (targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') return (pres.status === 'completed' && !pres.isOverdue) || (!pres.isAbroad && !pres.isOverdue);
-        return pLabel.includes(targetVal);
+      const vVal = resolveVirtualColumnValue(p, field);
+      if (vVal !== undefined) {
+        const strVVal = String(vVal).toLowerCase().trim();
+        if (strVVal === targetVal) return true;
+        if ((targetVal.includes('nước ngoài') || targetVal === 'abroad') && strVVal.includes('nước ngoài')) return true;
+        if ((targetVal.includes('quá hạn') || targetVal === 'overdue') && strVVal.includes('quá hạn')) return true;
+        if ((targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') && (strVVal.includes('trong nước') || strVVal.includes('đã về'))) return true;
+        return strVVal.includes(targetVal);
       }
       let cd = p.custom_data;
       if (typeof cd === 'string') {
@@ -1527,6 +1592,8 @@ const flattenedRelatives = computed(() => {
       ? r.code
       : `TN-${String(idx + 1).padStart(5, '0')}`;
 
+    const presence = resolvePresence(r);
+
     return {
       stt: stt++,
       ...r,
@@ -1535,6 +1602,12 @@ const flattenedRelatives = computed(() => {
       parentName: parent?.name || r.personnelName || 'Chưa liên kết',
       parentDepartment: parent ? (parent.departmentName || personnelStore.getDepartmentName(parent.departmentId)) : (r.departmentName || '-'),
       parentPosition: parent ? (parent.positionName || parent.position || '') : (r.parentPosition || ''),
+      isAbroad: presence.isAbroad,
+      isOverdue: presence.isOverdue,
+      overdueDays: presence.overdueDays || 0,
+      presenceStatus: presence.shortLabel,
+      presenceLabel: presence.label,
+      _presenceStatus: presence.shortLabel,
     };
   });
 });
@@ -1546,27 +1619,16 @@ const filteredRelatives = computed(() => {
   if (routeFilterField.value && routeFilterValue.value) {
     const field = routeFilterField.value;
     const targetVal = routeFilterValue.value.toLowerCase().trim();
-    const isPresence = (
-      field === 'presenceStatus' ||
-      field === '_presenceStatus' ||
-      field === 'status' ||
-      field === 'tripStatus' ||
-      field === 'trang_thai_hien_dien' ||
-      field === 'trangThaiHienDien' ||
-      field.includes('presence') ||
-      field.includes('hien_dien') ||
-      field.includes('hiendien') ||
-      (allColumnDefsMap.value?.[field]?.formulaType === 'presence_status')
-    );
 
     list = list.filter((r) => {
-      if (isPresence) {
-        const pres = resolvePresence(r);
-        const pLabel = (pres.label || '').toLowerCase();
-        if (targetVal.includes('nước ngoài') || targetVal === 'abroad') return pres.status === 'abroad' || pres.isAbroad || pLabel.includes('nước ngoài');
-        if (targetVal.includes('quá hạn') || targetVal === 'overdue') return pres.isOverdue || pres.status === 'overdue' || pLabel.includes('quá hạn');
-        if (targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') return (pres.status === 'completed' && !pres.isOverdue) || (!pres.isAbroad && !pres.isOverdue);
-        return pLabel.includes(targetVal);
+      const vVal = resolveVirtualColumnValue(r, field);
+      if (vVal !== undefined) {
+        const strVVal = String(vVal).toLowerCase().trim();
+        if (strVVal === targetVal) return true;
+        if ((targetVal.includes('nước ngoài') || targetVal === 'abroad') && strVVal.includes('nước ngoài')) return true;
+        if ((targetVal.includes('quá hạn') || targetVal === 'overdue') && strVVal.includes('quá hạn')) return true;
+        if ((targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') && (strVVal.includes('trong nước') || strVVal.includes('đã về'))) return true;
+        return strVVal.includes(targetVal);
       }
       let cd = r.custom_data;
       if (typeof cd === 'string') {

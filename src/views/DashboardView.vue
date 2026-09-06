@@ -737,7 +737,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const router = useRouter();
@@ -1326,62 +1326,7 @@ const parseDateObj = (str) => {
   return isNaN(parsed.getTime()) ? null : parsed;
 };
 
-// Động cơ phân giải trạng thái hiện diện chuẩn cho Chuyến đi, Thân nhân, và Cán bộ (Đồng bộ với ChildDashboardView)
-const resolvePresence = (item) => {
-  if (!item) return { status: 'none', label: '-', shortLabel: '-', isAbroad: false, isOverdue: false, overdueDays: 0 };
-
-  // 1. Nếu item đã có sẵn các trường trạng thái tính toán trước
-  if (item.presenceStatus && item.presenceLabel) {
-    return {
-      status: item.presenceStatus,
-      label: item.presenceLabel,
-      shortLabel: item.presenceLabel,
-      isAbroad: Boolean(item.isAbroad),
-      isOverdue: Boolean(item.isOverdue),
-      overdueDays: item.overdueDays || 0,
-      country: item.countryName || item.country || '',
-    };
-  }
-
-  // 2. Nếu là Hồ sơ Thân nhân hoặc Cán bộ có danh sách trips: [...]
-  if (Array.isArray(item.trips)) {
-    if (item.trips.length === 0) {
-      return {
-        status: 'completed',
-        label: 'Trong nước',
-        shortLabel: 'Trong nước',
-        isAbroad: false,
-        isOverdue: false,
-        overdueDays: 0,
-      };
-    }
-    // Tìm chuyến đi mới nhất theo Ngày xuất cảnh
-    let latestTrip = null;
-    let latestDepTime = -Infinity;
-    for (const t of item.trips) {
-      let custom = {};
-      if (t.custom_data) {
-        try {
-          custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
-        } catch (e) {}
-      }
-      const rawDep = t.departureDate || custom.departureDate || t.ngay_xuat_canh || custom.ngay_xuat_canh || t.ngayDi || '';
-      const d = parseDateValue(rawDep);
-      const time = d ? d.getTime() : 0;
-      if (time >= latestDepTime) {
-        latestDepTime = time;
-        latestTrip = { ...custom, ...t };
-      }
-    }
-    if (!latestTrip) latestTrip = item.trips[item.trips.length - 1];
-    return computeTripPresence(latestTrip);
-  }
-
-  // 3. Nếu là 1 bản ghi chuyến đi đơn lẻ
-  return computeTripPresence(item);
-};
-
-// Sử dụng resolvePresence làm chuẩn chung
+// Sử dụng resolvePresence làm chuẩn chung từ formatters.js
 const getTripPresence = (t) => resolvePresence(t);
 
 const unifiedTripsList = computed(() => {
@@ -1479,8 +1424,9 @@ const unifiedTripsList = computed(() => {
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
         overdueDays: presence.overdueDays,
-        presenceStatus: presence.status,
+        presenceStatus: presence.shortLabel,
         presenceLabel: presence.label,
+        _presenceStatus: presence.shortLabel,
         rawTrip: t,
         rawPerson: p,
         custom_data: custom,
@@ -1567,8 +1513,9 @@ const unifiedTripsList = computed(() => {
           isAbroad: presence.isAbroad,
           isOverdue: presence.isOverdue,
           overdueDays: presence.overdueDays,
-          presenceStatus: presence.status,
+          presenceStatus: presence.shortLabel,
           presenceLabel: presence.label,
+          _presenceStatus: presence.shortLabel,
           rawTrip: rt,
           rawRelative: r,
           rawPerson: p,
@@ -1583,6 +1530,12 @@ const unifiedTripsList = computed(() => {
 
 const getRowFieldValue = (row, colId) => {
   if (!row || !colId) return '';
+
+  // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
+  const vVal = resolveVirtualColumnValue(row, colId);
+  if (vVal !== undefined) {
+    return vVal;
+  }
 
   // Xử lý các cột CCCD / Định danh
   const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
@@ -1747,9 +1700,9 @@ const getSourceList = (source) => {
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
         overdueDays: presence.overdueDays || 0,
-        presenceStatus: presence.status,
+        presenceStatus: presence.shortLabel,
         presenceLabel: presence.label,
-        _presenceStatus: presence.label,
+        _presenceStatus: presence.shortLabel,
       };
     });
   }
@@ -1777,9 +1730,9 @@ const getSourceList = (source) => {
       isAbroad: presence.isAbroad,
       isOverdue: presence.isOverdue,
       overdueDays: presence.overdueDays || 0,
-      presenceStatus: presence.status,
+      presenceStatus: presence.shortLabel,
       presenceLabel: presence.label,
-      _presenceStatus: presence.label,
+      _presenceStatus: presence.shortLabel,
     };
   });
 };
@@ -1875,60 +1828,31 @@ const matchSingleCondition = (item, cond) => {
   }
 
   // 1b-2. Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)
-  const isPresenceField = (
-    field === 'presenceStatus' ||
-    field === '_presenceStatus' ||
-    field === 'status' ||
-    field === 'tripStatus' ||
-    field === 'trang_thai_hien_dien' ||
-    field === 'trangThaiHienDien' ||
-    String(field).toLowerCase().includes('presence') ||
-    String(field).toLowerCase().includes('hiendien') ||
-    String(field).toLowerCase().includes('hien_dien') ||
-    (personnelStore.importMappingTrips || []).some(g => (g.columns || []).some(c => c.id === field && c.formulaType === 'presence_status')) ||
-    (personnelStore.importMappingPersonnel || []).some(g => (g.columns || []).some(c => c.id === field && c.formulaType === 'presence_status')) ||
-    (personnelStore.importMappingRelative || []).some(g => (g.columns || []).some(c => c.id === field && c.formulaType === 'presence_status'))
-  );
-
-  if (isPresenceField) {
-    const p = resolvePresence(item);
-    const pLabel = (p.label || '').toLowerCase();
-    const pStatus = (p.status || '').toLowerCase();
-    const isAbroadMatch = target.includes('nước ngoài') || target === 'abroad';
-    const isOverdueMatch = target.includes('quá hạn') || target === 'overdue';
-    const isDomesticMatch = target.includes('trong nước') || target.includes('về nước') || target === 'completed';
-
+  if (isPresenceField(field)) {
+    const pVal = resolveVirtualColumnValue(item, field) || '';
+    const strPVal = String(pVal).toLowerCase().trim();
     if (op === 'equals') {
-      if (isAbroadMatch) return p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài');
-      if (isOverdueMatch) return p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn');
-      if (isDomesticMatch) return (p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về');
-      return pLabel === target || pStatus === target || pLabel.includes(target);
+      if (strPVal === target) return true;
+      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return true;
+      if ((target.includes('quá hạn') || target === 'overdue') && strPVal.includes('quá hạn')) return true;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về'))) return true;
+      return false;
     }
     if (op === 'not_equals') {
-      if (isAbroadMatch) return !(p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài'));
-      if (isOverdueMatch) return !(p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn'));
-      if (isDomesticMatch) return !((p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về'));
-      return pLabel !== target && pStatus !== target && !pLabel.includes(target);
+      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return false;
+      if ((target.includes('quá hạn') || target === 'overdue') && strPVal.includes('quá hạn')) return false;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về'))) return false;
+      return strPVal !== target;
     }
     if (op === 'contains') {
-      if (isAbroadMatch) return p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài');
-      if (isOverdueMatch) return p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn');
-      if (isDomesticMatch) return (p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về');
-      return pLabel.includes(target) || pStatus.includes(target);
+      return strPVal.includes(target);
     }
     if (op === 'not_contains') {
-      if (isAbroadMatch) return !(p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài'));
-      if (isOverdueMatch) return !(p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn'));
-      if (isDomesticMatch) return !((p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về'));
-      return !pLabel.includes(target) && !pStatus.includes(target);
+      return !strPVal.includes(target);
     }
-    if (op === 'has_value') {
-      return p.status !== 'none' && pLabel !== '-';
-    }
-    if (op === 'empty') {
-      return p.status === 'none' || pLabel === '-';
-    }
-    return p.status === 'abroad';
+    if (op === 'has_value') return !!strPVal && strPVal !== '-';
+    if (op === 'empty') return !strPVal || strPVal === '-';
+    return true;
   }
 
   // 1c. Dynamic Field Condition (Áp dụng chuẩn toán tử cho TẤT CẢ các cột và công thức)

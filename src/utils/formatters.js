@@ -765,7 +765,7 @@ export const computeTripPresence = (t, formulaConfig = {}) => {
           isAbroad: false,
           isOverdue: true,
           label: `${labelDomestic} (${labelOverdue} ${overdueDays} ngày)`,
-          shortLabel: `${labelDomestic} (${labelOverdue})`,
+          shortLabel: 'Trong nước',
           overdueDays,
         };
       }
@@ -775,7 +775,7 @@ export const computeTripPresence = (t, formulaConfig = {}) => {
         isAbroad: false,
         isOverdue: false,
         label: labelDomestic,
-        shortLabel: labelDomestic,
+        shortLabel: 'Trong nước',
         overdueDays: 0,
       };
     }
@@ -805,7 +805,7 @@ export const computeTripPresence = (t, formulaConfig = {}) => {
           isAbroad: true,
           isOverdue: true,
           label: `${labelNotReturnedYet}${countrySuffix} (${labelOverdue} ${overdueDays} ngày)`,
-          shortLabel: `${labelNotReturnedYet} (${labelOverdue})`,
+          shortLabel: 'Quá hạn chưa về',
           country,
           overdueDays,
         };
@@ -817,20 +817,20 @@ export const computeTripPresence = (t, formulaConfig = {}) => {
         isAbroad: true,
         isOverdue: false,
         label: `${labelAbroad}${countrySuffix}`,
-        shortLabel: labelAbroad,
+        shortLabel: 'Đang ở nước ngoài',
         country,
         overdueDays: 0,
       };
     }
   }
 
-  // 3. Không có ngày đi/về hoặc chưa đến ngày đi -> '-'
+  // 3. Không có ngày đi/về hoặc chưa đến ngày đi -> 'Trong nước'
   return {
-    status: 'none',
+    status: 'completed',
     isAbroad: false,
     isOverdue: false,
-    label: '-',
-    shortLabel: '-',
+    label: 'Trong nước',
+    shortLabel: 'Trong nước',
     overdueDays: 0,
   };
 };
@@ -846,7 +846,7 @@ export const resolvePresence = (item) => {
     return {
       status: item.presenceStatus,
       label: item.presenceLabel,
-      shortLabel: item.presenceLabel,
+      shortLabel: item.presenceStatus,
       isAbroad: Boolean(item.isAbroad),
       isOverdue: Boolean(item.isOverdue),
       overdueDays: item.overdueDays || 0,
@@ -890,6 +890,93 @@ export const resolvePresence = (item) => {
 
   // 3. Nếu là 1 bản ghi chuyến đi đơn lẻ
   return computeTripPresence(item);
+};
+
+/**
+ * Kiểm tra xem một mã cột có phải thuộc nhóm Trạng thái hiện diện không
+ */
+export const isPresenceField = (colId) => {
+  if (!colId) return false;
+  const c = String(colId).toLowerCase();
+  return (
+    c === 'presencestatus' ||
+    c === '_presencestatus' ||
+    c === 'status' ||
+    c === 'tripstatus' ||
+    c === 'trang_thai_hien_dien' ||
+    c === 'trangthaihiendien' ||
+    c.includes('presence') ||
+    c.includes('hien_dien') ||
+    c.includes('hiendien')
+  );
+};
+
+/**
+ * Phân giải giá trị Cột ảo chuẩn hóa (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
+ */
+export const resolveVirtualColumnValue = (item, colId) => {
+  if (!item || !colId) return undefined;
+  if (isPresenceField(colId)) {
+    const p = resolvePresence(item);
+    return p.shortLabel || (p.isOverdue ? 'Quá hạn chưa về' : (p.isAbroad ? 'Đang ở nước ngoài' : 'Trong nước'));
+  }
+  if (colId === 'isRelative' || colId === '_doiTuong' || colId === 'doi_tuong') {
+    return item.isRelative ? 'Thân nhân' : 'Cán bộ';
+  }
+  if (colId === '_parentPersonnelName' || colId === 'parentPersonnelName' || colId === 'parentName') {
+    return item.rawPerson?.name || item.parentPersonnelName || item.parentName || (!item.isRelative ? (item.personnelName || item.name) : '') || '';
+  }
+  if (colId === '_parentPersonnelCode' || colId === 'parentPersonnelCode') {
+    return item.rawPerson?.code || item.parentPersonnelCode || (!item.isRelative ? (item.personnelCode || item.code) : '') || '';
+  }
+  if (colId === '_parentPosition' || colId === 'parentPosition') {
+    return item.rawPerson?.positionName || item.rawPerson?.position || item.parentPosition || (!item.isRelative ? (item.position) : '') || '';
+  }
+  if (colId === '_parentDepartment' || colId === 'parentDepartment') {
+    return item.rawPerson?.departmentName || item.parentDepartment || (!item.isRelative ? (item.departmentName) : '') || '';
+  }
+  if (colId === '_relativeName' || colId === 'relativeName') {
+    return item.isRelative ? (item.relativeName || item.name || '') : '';
+  }
+  if (colId === '_relationshipName' || colId === 'relationshipName') {
+    return item.isRelative ? (item.relationshipName || item.relationship || '') : '';
+  }
+  return undefined;
+};
+
+/**
+ * Trả về thông tin Huy hiệu Hiện diện (Badge) gồm text, icon, màu sắc
+ */
+export const getPresenceBadge = (item) => {
+  const p = resolvePresence(item);
+  if (p.isOverdue) {
+    return {
+      text: p.label || 'Quá hạn chưa về',
+      shortText: 'Quá hạn',
+      icon: 'pi pi-exclamation-triangle',
+      bg: '#fef2f2',
+      color: '#dc2626',
+      border: '1px solid #fecaca',
+    };
+  }
+  if (p.isAbroad) {
+    return {
+      text: p.label || 'Đang ở nước ngoài',
+      shortText: 'Nước ngoài',
+      icon: 'pi pi-globe',
+      bg: '#fffbeb',
+      color: '#d97706',
+      border: '1px solid #fde68a',
+    };
+  }
+  return {
+    text: p.label && p.label !== '-' ? p.label : 'Trong nước',
+    shortText: 'Trong nước',
+    icon: 'pi pi-check-circle',
+    bg: '#f0fdf4',
+    color: '#16a34a',
+    border: '1px solid #bbf7d0',
+  };
 };
 
 /**
