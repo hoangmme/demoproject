@@ -1468,8 +1468,8 @@
                     <i class="pi pi-sliders-h"></i> Kiểu kết hợp điều kiện:
                   </label>
                   <select v-model="card.logicOp" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; font-weight: 600; color: #1e40af;">
-                    <option value="AND">🔗 VÀ (AND) - Thỏa mãn TẤT CẢ điều kiện</option>
-                    <option value="OR">🔀 HOẶC (OR) - Thỏa mãn MỘT TRONG CÁC điều kiện</option>
+                    <option value="OR">🔀 HOẶC (OR) - Cộng dồn số liệu các cột (Tổng cộng)</option>
+                    <option value="AND">🔗 VÀ (AND) - Thỏa mãn đồng thời tất cả điều kiện</option>
                   </select>
                 </div>
 
@@ -2994,7 +2994,9 @@ const getCardConditions = (card) => {
       }
     }
   });
-  if (!card.logicOp) card.logicOp = 'AND';
+  if (!card.logicOp) {
+    card.logicOp = (card.conditions && card.conditions.length > 1) ? 'OR' : 'AND';
+  }
   return card.conditions;
 };
 

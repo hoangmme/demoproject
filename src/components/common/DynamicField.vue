@@ -165,7 +165,7 @@
                 <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
                   {{ item.file.name || 'Tài liệu đính kèm' }}
                 </span>
-                <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none; margin-left: 4px;">
+                <a v-if="item.file && (item.file.url || item.file.id)" :href="getFileUrl(item.file)" target="_blank" style="text-decoration: none; margin-left: 4px;">
                   <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
                 </a>
                 <i
@@ -285,7 +285,7 @@
                 <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 120px;">
                   {{ item.file.name || 'Tài liệu' }}
                 </span>
-                <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none;">
+                <a v-if="item.file && (item.file.url || item.file.id)" :href="getFileUrl(item.file)" target="_blank" style="text-decoration: none;">
                   <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
                 </a>
                 <i
@@ -468,7 +468,7 @@
             <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
               {{ checkboxFileObject.file.name || 'Tài liệu đính kèm' }}
             </span>
-            <a v-if="checkboxFileObject.file.url" :href="checkboxFileObject.file.url" target="_blank" style="text-decoration: none; margin-left: 4px;">
+            <a v-if="checkboxFileObject.file && (checkboxFileObject.file.url || checkboxFileObject.file.id)" :href="getFileUrl(checkboxFileObject.file)" target="_blank" style="text-decoration: none; margin-left: 4px;">
               <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
             </a>
             <i

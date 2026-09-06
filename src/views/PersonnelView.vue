@@ -376,8 +376,8 @@
                 >
                   <span v-if="it.text" style="color: #1e293b; word-break: break-word;">{{ it.text }}</span>
                   <a
-                    v-if="it.file && it.file.url"
-                    :href="it.file.url"
+                    v-if="it.file && (it.file.url || it.file.id)"
+                    :href="getFileUrl(it.file)"
                     target="_blank"
                     style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
                     title="Mở xem tệp"
@@ -397,8 +397,8 @@
                   {{ getCheckboxFileItem(data, col.id).text }}
                 </span>
                 <a
-                  v-if="getCheckboxFileItem(data, col.id).file?.url"
-                  :href="getCheckboxFileItem(data, col.id).file.url"
+                  v-if="getCheckboxFileItem(data, col.id).file && (getCheckboxFileItem(data, col.id).file.url || getCheckboxFileItem(data, col.id).file.id)"
+                  :href="getFileUrl(getCheckboxFileItem(data, col.id).file)"
                   target="_blank"
                   style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
                   title="Mở xem tệp"
@@ -432,8 +432,8 @@
                     {{ it.text || (it.selectedOptions && it.selectedOptions.length ? '' : '(Chưa nhập tên)') }}
                   </span>
                   <a
-                    v-if="it.file && it.file.url"
-                    :href="it.file.url"
+                    v-if="it.file && (it.file.url || it.file.id)"
+                    :href="getFileUrl(it.file)"
                     target="_blank"
                     style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap; flex-shrink: 0;"
                     title="Mở xem tệp"
@@ -442,6 +442,24 @@
                     <span>{{ it.file.name || 'Tệp' }}</span>
                   </a>
                 </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+
+            <!-- Format File đính kèm tiêu chuẩn -->
+            <template v-else-if="col.format === 'file'">
+              <div v-if="getFileColumnItems(data, col.id).length > 0" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <a
+                  v-for="(f, fIdx) in getFileColumnItems(data, col.id)"
+                  :key="fIdx"
+                  :href="getFileUrl(f)"
+                  target="_blank"
+                  style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                  title="Mở xem tệp"
+                >
+                  <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                  <span>{{ f.name || 'Tệp' }}</span>
+                </a>
               </div>
               <span v-else>-</span>
             </template>
@@ -730,8 +748,8 @@
                     {{ it.text || (it.selectedOptions && it.selectedOptions.length ? '' : '(Chưa nhập tên)') }}
                   </span>
                   <a
-                    v-if="it.file && it.file.url"
-                    :href="it.file.url"
+                    v-if="it.file && (it.file.url || it.file.id)"
+                    :href="getFileUrl(it.file)"
                     target="_blank"
                     style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap; flex-shrink: 0;"
                     title="Mở xem tệp"
@@ -740,6 +758,24 @@
                     <span>{{ it.file.name || 'Tệp' }}</span>
                   </a>
                 </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+
+            <!-- Format File đính kèm tiêu chuẩn (Thân nhân) -->
+            <template v-else-if="col.format === 'file'">
+              <div v-if="getFileColumnItems(data, col.id).length > 0" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <a
+                  v-for="(f, fIdx) in getFileColumnItems(data, col.id)"
+                  :key="fIdx"
+                  :href="getFileUrl(f)"
+                  target="_blank"
+                  style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                  title="Mở xem tệp"
+                >
+                  <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                  <span>{{ f.name || 'Tệp' }}</span>
+                </a>
               </div>
               <span v-else>-</span>
             </template>
@@ -1070,6 +1106,7 @@ import {
   readExcelWorkbook,
 } from '@/utils/excel';
 import { createPersonnel, updatePersonnel } from '@/api/personnel';
+import { getFileUrl } from '@/api/files';
 import { logActivity } from '@/api/audit';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
@@ -1405,6 +1442,25 @@ const activeColumns = computed(() => {
       };
     });
 });
+
+const getFileColumnItems = (data, colId) => {
+  const val = data?.[colId] ?? (data?.custom_data ? data.custom_data[colId] : null);
+  if (!val) return [];
+  let raw = val;
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw);
+    } catch (e) {
+      if (raw.includes('/assets/') || raw.startsWith('http') || raw.length > 20) {
+        raw = [{ name: 'Tệp đính kèm', url: raw }];
+      } else {
+        return [];
+      }
+    }
+  }
+  if (!Array.isArray(raw)) raw = [raw];
+  return raw.filter((x) => x && (x.url || x.id || typeof x === 'string'));
+};
 
 const getTextFileLoopItems = (data, colId) => {
   const val = data?.[colId] ?? (data?.custom_data ? data.custom_data[colId] : null);

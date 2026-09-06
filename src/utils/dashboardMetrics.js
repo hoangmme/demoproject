@@ -709,5 +709,23 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
     return uniqueSet.size;
   }
 
+  // 4. Nếu KHÔNG chọn "Đếm giá trị duy nhất (Unique)":
+  // Khi thẻ có nhiều điều kiện kết hợp (logicOp === 'OR' / các cột đã chọn):
+  // Cộng dồn tổng số lượt dữ liệu thỏa mãn của tất cả các cột / điều kiện đã chọn (Ví dụ: Cột A có 2, Cột B có 3 => tổng = 5)
+  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
+    ? card.conditions
+    : (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []);
+  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
+
+  const logicOp = (card.logicOp || 'OR').toUpperCase();
+  if (activeConds.length > 1 && (logicOp === 'OR' || logicOp === 'SUM')) {
+    let totalOccurrences = 0;
+    activeConds.forEach((cond) => {
+      const countForCond = baselineList.filter((item) => matchSingleCondition(item, cond, personnelStore)).length;
+      totalOccurrences += countForCond;
+    });
+    return totalOccurrences;
+  }
+
   return targetItems.length;
 };

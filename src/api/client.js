@@ -13,7 +13,7 @@ export const getBaseUrl = () => {
 };
 
 export const API_URL = getBaseUrl();
-export const STATIC_TOKEN = import.meta.env.VITE_STATIC_TOKEN || '';
+export const STATIC_TOKEN = import.meta.env.VITE_STATIC_TOKEN || 'CooAJKTu9_NLEgtaq3qULrswZGLFfsAw';
 
 const apiClient = axios.create({
   baseURL: API_URL,
