@@ -610,8 +610,8 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
  * 4. Nếu Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định không có dữ liệu -> '-'
  */
 export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
-  const labelWarning = formulaConfig.formulaLabelWarning || 'Đi trước khi có quyết định';
-  const labelMissing = formulaConfig.formulaLabelMissing || '- (Chưa đủ dữ liệu)';
+  const labelWarning = formulaConfig.formulaLabelWarning || 'Đi khi chưa có cấp thẩm quyền quyết định';
+  const labelMissing = formulaConfig.formulaLabelMissing || '-';
   const labelOnTime = formulaConfig.formulaLabelOnTime || 'Đi đúng quyết định';
   const labelDefault = formulaConfig.formulaLabelDefault || '-';
 
@@ -671,8 +671,8 @@ export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
     const normApproved = new Date(dateApproved);
     normApproved.setHours(0, 0, 0, 0);
 
-    // 1. Ngày xuất cảnh > Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi trước khi có quyết định'
-    if (normDep > normApproved) {
+    // 1. Ngày xuất cảnh < Ngày duyệt đi (Xuất cảnh trước ngày có quyết định duyệt) & có QĐ -> Cảnh báo
+    if (normDep.getTime() < normApproved.getTime()) {
       return {
         status: 'warning',
         isWarning: true,
@@ -683,17 +683,15 @@ export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
       };
     }
 
-    // 2. Ngày xuất cảnh <= Ngày duyệt đi & Cột quyết định có dữ liệu -> 'Đi đúng quyết định'
-    if (normDep <= normApproved) {
-      return {
-        status: 'ontime',
-        isWarning: false,
-        label: labelOnTime,
-        shortLabel: labelOnTime,
-        cssClass: 'formula-success',
-        trip: t,
-      };
-    }
+    // 2. Ngày xuất cảnh >= Ngày duyệt đi & có QĐ -> Đi đúng quyết định
+    return {
+      status: 'ontime',
+      isWarning: false,
+      label: labelOnTime,
+      shortLabel: labelOnTime,
+      cssClass: 'formula-success',
+      trip: t,
+    };
   }
 
   return defaultResult;

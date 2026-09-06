@@ -372,10 +372,27 @@
      - Khởi tạo mặc định `color: '#1e293b'`, `bgColor: '#ffffff'` trong `openAddGroupDialog` và nạp màu trong `openEditGroupDialog`.
      - `unifiedTripsList`: Cập nhật `presenceStatus` bằng `presence.label || presence.shortLabel`.
 
-### 38. LEDGER STATUS
-- **Status**: Done (Đã hoàn thành cấu hình màu sắc Nhóm thống kê & sửa triệt để Trạng thái hiện diện theo đúng cột cấu hình không fallback, `npm run build` thành công trong 528ms).
+### 38. SỬA ĐÚNG CHIỀU SO SÁNH & NHÃN CÔNG THỨC "ĐI KHI CHƯA CÓ CẤP THẨM QUYỀN QUYẾT ĐỊNH"
+- **Vấn đề phát hiện**:
+  - Người dùng nhập dữ liệu kiểm thử: *Ngày xuất cảnh: 05/06/2026*, *Thời gian duyệt đi: 06/06/2026*, *Số quyết định: test*.
+  - Thực tế nghiệp vụ: Người này xuất cảnh ngày 05/06 trước khi có quyết định duyệt vào ngày 06/06. Về mặt thời gian, `05/06 < 06/06` (Ngày xuất cảnh diễn ra TRƯỚC Ngày duyệt đi).
+  - Code trước đó dùng điều kiện `normDep > normApproved` và nhãn cũ `"Đi trước khi có quyết định"`, khiến ca kiểm thử bị đánh giá nhầm thành `"Đi đúng quyết định"` hoặc hiển thị nhãn không khớp kỳ vọng.
+- **Thực hiện**:
+  1. `src/utils/formatters.js`:
+     - Cập nhật `computeDepartBeforeDecision`:
+       - Điều kiện cảnh báo chuẩn xác: `normDep.getTime() < normApproved.getTime()` & có quyết định $\rightarrow$ trả về nhãn cảnh báo `"Đi khi chưa có cấp thẩm quyền quyết định"` (`isWarning: true`).
+       - Nếu `normDep.getTime() >= normApproved.getTime()` & có quyết định $\rightarrow$ trả về `"Đi đúng quyết định"`.
+       - Nếu thiếu 1 trong 3 trường (Ngày xuất cảnh, Ngày duyệt đi, Số quyết định) $\rightarrow$ trả về `"-"`.
+       - Đổi nhãn mặc định `labelWarning` thành `"Đi khi chưa có cấp thẩm quyền quyết định"`.
+  2. `src/views/SettingsImportView.vue`:
+     - Cập nhật mô tả nguyên lý và placeholder cho ô nhập nhãn cảnh báo thành `"Đi khi chưa có cấp thẩm quyền quyết định"`.
+  3. Đã chạy unit test Node kiểm chứng cả 3 trường hợp (Cảnh báo khi đi trước hạn duyệt, Đi đúng quyết định khi đi sau/đúng hạn duyệt, Trả về '-' khi thiếu dữ liệu) $\rightarrow$ Kết quả chính xác 100%.
+
+### 39. LEDGER STATUS
+- **Status**: Done (Đã sửa đúng chiều so sánh và nhãn mặc định cho công thức 'Đi khi chưa có cấp thẩm quyền quyết định', đã kiểm thử và build thành công).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã build kiểm chứng an toàn).
+
 
 
 

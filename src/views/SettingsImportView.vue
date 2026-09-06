@@ -797,9 +797,9 @@
                   <div style="font-size: 0.72rem; color: #b45309; line-height: 1.4;">
                     💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày xuất cảnh</strong> với <strong>Ngày duyệt đi</strong> khi có <strong>Quyết định</strong>:
                     <ul style="margin: 2px 0 0 16px; padding: 0;">
-                      <li>Nếu Ngày xuất cảnh &gt; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi trước khi có quyết định"</strong> (Cảnh báo).</li>
-                      <li>Nếu Ngày xuất cảnh &le; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi đúng quyết định"</strong> (Đúng hạn).</li>
-                      <li>Nếu có ô nào không có dữ liệu (hoặc chưa có quyết định) &rarr; hiển thị <strong>"-"</strong>.</li>
+                      <li>Nếu Ngày xuất cảnh &lt; Ngày duyệt đi (xuất cảnh trước ngày có quyết định duyệt) &amp; Có quyết định &rarr; <strong>"Đi khi chưa có cấp thẩm quyền quyết định"</strong> (Cảnh báo).</li>
+                      <li>Nếu Ngày xuất cảnh &ge; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi đúng quyết định"</strong> (Đúng hạn).</li>
+                      <li>Nếu có ô nào không có dữ liệu &rarr; hiển thị <strong>"-"</strong>.</li>
                     </ul>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
@@ -831,10 +831,10 @@
                       </select>
                     </div>
                     <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đi trước QĐ:</span>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn Cảnh báo:</span>
                       <input
                         v-model="col.formulaLabelWarning"
-                        placeholder="Mặc định: Đi trước khi có quyết định"
+                        placeholder="Mặc định: Đi khi chưa có cấp thẩm quyền quyết định"
                         style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
                       />
                     </div>
