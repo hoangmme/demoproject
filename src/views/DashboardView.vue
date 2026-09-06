@@ -98,9 +98,8 @@
             class="btn-secondary-action"
             @click="openReorderWidgetsDialog(group)"
             title="Sắp xếp thứ tự các khối thống kê trong nhóm này (đưa lên đầu tiên, thứ 2, 3...)"
-            style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #334155; font-weight: 600; cursor: pointer;"
           >
-            <i class="pi pi-sort-alt" style="font-size: 0.75rem; color: #0284c7;"></i> Sắp xếp vị trí
+            <i class="pi pi-sort-alt" style="font-size: 0.78rem; color: #0284c7;"></i> Sắp xếp vị trí
           </button>
           <Button
             icon="pi pi-pencil"
@@ -2981,13 +2980,17 @@ onMounted(async () => {
   color: #ffffff;
   border: none;
   border-radius: 6px;
-  padding: 5px 12px;
-  font-size: 0.75rem;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  white-space: nowrap;
   transition: all 0.15s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -2995,6 +2998,30 @@ onMounted(async () => {
 .btn-add-widget-green:hover {
   background: #1b5e20;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary-action {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary-action:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
 }
 
 .clickable-row {

@@ -458,6 +458,42 @@ html, body {
   line-height: 1.2 !important;
 }
 
+/* Chuẩn hóa nút Icon-Only (chỉ có icon, không text): vuông/tròn 1:1, icon căn giữa tuyệt đối */
+.p-button.p-button-icon-only {
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  min-width: 2.25rem !important;
+  max-width: 2.25rem !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+.p-button.p-button-sm.p-button-icon-only,
+.p-button-sm.p-button-icon-only {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  padding: 0 !important;
+}
+
+.p-button.p-button-rounded {
+  border-radius: 50% !important;
+}
+
+.p-button.p-button-icon-only .p-button-icon {
+  margin: 0 !important;
+  font-size: 0.85rem !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 .p-button-success {
   background-color: #2e7d32 !important;
   color: #ffffff !important;

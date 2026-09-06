@@ -35,8 +35,11 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 const currentTitle = computed(() => {
+  if (route.name === 'DynamicTopicDashboard' || route.name === 'Trips' || route.path?.startsWith('/dashboard-topic') || route.path === '/trips') {
+    return 'Chuyên đề';
+  }
   const title = route.meta?.title || 'Hệ thống Quản lý Cán bộ';
-  return title.replace('Dashboard Chuyên đề', 'Chuyên đề');
+  return title.replace(/Dashboard\s+Chuyên\s+đề/gi, 'Chuyên đề').replace(/Dashboard\s*Chuyên\s*đề/gi, 'Chuyên đề');
 });
 
 const handleLogout = () => {

@@ -60,15 +60,16 @@
           title="Mở công cụ hỗ trợ cán bộ/đơn vị soạn thảo Bảng lặp và List dữ liệu để dán vào Excel"
         />
 
-        <!-- Nút Lưu Cấu hình -->
+        <!-- Nút Lưu Cấu hình Duy nhất -->
         <Button
-          label="Lưu Cấu hình"
+          :label="activeTab === 'dashboard' ? 'Lưu Cấu hình Chuyên đề' : 'Lưu Cấu hình'"
           icon="pi pi-save"
           severity="success"
           size="small"
           :loading="saving"
           @click="saveConfig"
           style="font-size: 0.8rem; font-weight: 700;"
+          :title="activeTab === 'dashboard' ? 'Lưu cấu hình toàn bộ chuyên đề vào cơ sở dữ liệu' : 'Lưu cấu hình hệ thống'"
         />
       </div>
     </div>
@@ -1744,14 +1745,6 @@
                 <i class="pi pi-cloud"></i> Tự động đồng bộ khi sửa
               </span>
             </div>
-            <Button
-              label="Lưu Toàn bộ Cấu hình Dashboard"
-              icon="pi pi-save"
-              severity="success"
-              size="small"
-              @click="saveDashboardsConfig"
-              style="font-size: 0.82rem;"
-            />
           </div>
         </div>
       </div>
@@ -3629,23 +3622,22 @@ const validateUniqueIds = () => {
 };
 
 const saveConfig = async () => {
-  if (activeTab.value === 'dashboard') {
-    await saveDashboardsConfig();
-    return;
-  }
-  if (activeTab.value === 'appendices') {
-    await saveAppendicesConfig();
-    return;
-  }
-
-  const errorMsg = validateUniqueIds();
-  if (errorMsg) {
-    alert('⚠️ KHÔNG THỂ LƯU CẤU HÌNH:\n\n' + errorMsg);
-    return;
-  }
-
   saving.value = true;
   try {
+    if (activeTab.value === 'dashboard') {
+      await saveDashboardsConfig();
+      return;
+    }
+    if (activeTab.value === 'appendices') {
+      await saveAppendicesConfig();
+      return;
+    }
+
+    const errorMsg = validateUniqueIds();
+    if (errorMsg) {
+      alert('⚠️ KHÔNG THỂ LƯU CẤU HÌNH:\n\n' + errorMsg);
+      return;
+    }
     const keyConfig = {
       personnelKeyField: personnelKeyField.value || 'cccdparent',
       personnelNameField: personnelNameField.value || 'name',

@@ -92,8 +92,26 @@
   - Khi điều kiện lọc là cột thuộc Bảng Chuyến đi (`isTripField`), tự động duyệt qua danh sách các chuyến đi (`item.trips`) của thân nhân/cán bộ để so khớp chính xác.
   - Bỏ triệt để logic khóa cứng bảng theo thẻ đầu tiên (`topicBaselineList` trước đây lấy thẻ đầu tiên lọc toàn bộ bảng trước khi click). Giờ đây danh sách bảng hiển thị toàn bộ bản ghi theo mặc định, và khi click vào bất kỳ thẻ thống kê nhanh nào thì bảng sẽ áp dụng bộ lọc tương ứng của thẻ đó (click lại hoặc chọn Tất cả sẽ khôi phục hiển thị toàn bộ).
 
-### 11. LEDGER STATUS
-- **Status**: Done (Đã loại bỏ hoàn toàn việc suy đoán từ khóa fuzzy guessing, khớp chuẩn xác theo toán tử người dùng chọn; Đã sửa dứt điểm lỗi ấn vào thẻ thống kê nhanh không có tác dụng do bảng bị khóa cứng theo thẻ đầu tiên; Đã hỗ trợ liên kết cột chuyến đi vào bảng thân nhân khi lọc).
+### 11. QUY CHUẨN NÚT HÀNH ĐỘNG & HỢP NHẤT NÚT LƯU CẤU HÌNH (BUTTON STANDARDIZATION & UNIFIED SAVE)
+- **Chuẩn hóa Nút Icon-Only (Tỷ lệ 1:1, căn giữa tuyệt đối)** (`src/assets/styles/main.css`):
+  - Khắc phục triệt để lỗi nút icon bị padding đè làm dẹt hình oval/chữ nhật và icon lệch tâm:
+  - Cố định kích thước chuẩn `.p-button-icon-only` (`width: 32px; height: 32px; padding: 0 !important; line-height: 1; flex-shrink: 0;`).
+  - Căn giữa tuyệt đối icon bên trong (`display: inline-flex; align-items: center; justify-content: center; margin: 0 !important`).
+  - Đồng bộ chiều cao chuẩn `32px` cho toàn bộ các nút trong thanh công cụ nhóm trên Dashboard (`.btn-add-widget-green`, `.btn-secondary-action`, nút dời vị trí, sửa, xóa).
+- **Hợp nhất Nút Lưu trong Cấu hình Chuyên đề** (`SettingsImportView.vue`):
+  - Xóa bỏ nút "Lưu Toàn bộ Cấu hình Dashboard" dư thừa ở dưới chân bảng cấu hình.
+  - Sử dụng duy nhất nút "Lưu Cấu hình" / "Lưu Cấu hình Chuyên đề" ở thanh Header trên cùng làm điểm lưu tập trung cho toàn bộ trang (hỗ trợ lưu cả Cán bộ, Thân nhân, Chuyến đi, Chuyên đề, Phụ lục).
+  - Giữ nguyên trạng thái tự động lưu đồng bộ (Auto-save) mượt mà không làm rối mắt người dùng.
+
+### 12. TIÊU ĐỀ HEADER TRANG CHUYÊN ĐỀ (APP HEADER TITLE)
+- **Chuẩn hóa Tiêu đề Header Chuyên đề** (`AppHeader.vue` & `src/router/index.js`):
+  - Tiêu đề route Chuyên đề đã được đặt là `'Chuyên đề'` thay vì `'Dashboard Chuyên đề'`.
+  - Trong `AppHeader.vue`: Đảm bảo khi route là `DynamicTopicDashboard`, `Trips` hoặc các đường dẫn `/dashboard-topic/...`, `/trips`, tiêu đề hiển thị gọn gàng là **`Chuyên đề`** (loại bỏ hoàn toàn chữ `Dashboard`).
+  - Đã đóng gói và cập nhật bản build mới nhất vào cả thư mục `dist` và `WINDOWS_OFFLINE_APP/frontend`.
+
+### 13. LEDGER STATUS
+- **Status**: Done (Đã xóa triệt để chữ Dashboard ở header Chuyên đề, chỉ hiển thị "Chuyên đề"; Đã cập nhật bản build mới nhất).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công 100%).
+
 
