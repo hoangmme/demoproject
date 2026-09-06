@@ -71,14 +71,18 @@
   - Khối Chuyến đi nước ngoài (Đồng bộ nhận diện thống nhất cho CẢ Cán bộ & Thân nhân):
     - Container bọc ngoài: Nền xanh da trời dịu mắt `#f0f9ff`, viền xanh `#bae6fd`, bo góc 10px, tiêu đề `#0369a1` với icon `pi pi-send` `#0284c7`.
     - Từng thẻ chuyến đi bên trong (`PersonnelTravelForm.vue`): Nền `#ffffff`, viền `#bae6fd`; header thẻ màu xanh nhạt `#e0f2fe`, viền dưới `#bae6fd`, tiêu đề chữ `#0369a1`.
-  - Hồ sơ Thân nhân: Thẻ thân nhân nền tím phấn dịu `#faf5ff`, viền tím `#e9d5ff`, ruy băng bên trái tím `#9333ea`. Khối chuyến đi lồng bên trong thân nhân sử dụng chuẩn màu xanh Chuyến đi `#f0f9ff` / `#bae6fd` như của Cán bộ.
-- **Trạng thái hiện diện Thân nhân & Bộ lọc Thẻ KPI (`resolvePresence`)**:
-  - Động cơ phân giải `resolvePresence`: Tự động tìm chuyến đi mới nhất theo `departureDate` trong `rel.trips` (hoặc `p.trips`) để tính toán trạng thái hiện diện (Đang ở nước ngoài / Trong nước / Quá hạn chưa về). Nếu không có chuyến đi nào gán mặc định `Trong nước`.
-  - Cột ảo `_presenceStatus` (Trạng thái hiện diện): Xuất hiện trong danh mục cột của Thân nhân và Cán bộ trên Chuyên đề; hiển thị badge màu chuẩn (xanh dương cho nước ngoài, xanh lá cho trong nước, đỏ cho quá hạn).
-  - Lọc Thẻ KPI Thân nhân: Khi click vào Thẻ KPI ("Thân nhân đang học tập, sinh sống, làm việc tại nước ngoài"), `matchCardCondition` chạy qua `resolvePresence` giúp lọc bảng chính xác 100%.
-  - Cấu hình Cài đặt (`SettingsImportView.vue`): Thêm `presenceStatus` vào nhóm `⚡ Thuộc tính & Phân loại (Bộ lọc)` với bộ chọn chuyên biệt (Đang ở nước ngoài, Trong nước, Quá hạn chưa về).
+  - Hồ sơ Thân nhân (`PersonnelFamilyForm.vue`): Toàn bộ thân thẻ bên trong viền sử dụng nền tím phấn dịu `#faf5ff`, header `#f3e8ff` viền dưới `#e9d5ff`, ruy băng bên trái tím `#9333ea`. Khối Cán bộ liên quan nền `#ffffff` viền tím `#e9d5ff`. Khối chuyến đi lồng bên trong thân nhân sử dụng chuẩn màu xanh Chuyến đi `#f0f9ff` / `#bae6fd` như của Cán bộ.
+- **Trạng thái hiện diện Thân nhân & Bộ lọc Thẻ KPI / Thống kê (`resolvePresence`)**:
+  - Động cơ phân giải `resolvePresence`: Xuất khẩu dùng chung (`src/utils/formatters.js`), tự động tìm chuyến đi mới nhất theo `departureDate` trong `rel.trips` (hoặc `p.trips`) để tính toán trạng thái hiện diện (Đang ở nước ngoài / Trong nước / Quá hạn chưa về). Nếu không có chuyến đi nào gán mặc định `Trong nước`.
+  - Đồng bộ thuật toán so khớp điều kiện (`matchSingleCondition`):
+    - Hỗ trợ toàn diện các mã cột hiện diện: `presenceStatus`, `_presenceStatus`, `status`, `tripStatus`, `trang_thai_hien_dien`, và các cột công thức `formulaType === 'presence_status'`.
+    - So khớp linh hoạt giữa từ khóa người dùng chọn (`Đang ở nước ngoài`, `Trong nước`, `Quá hạn chưa về`) và chuỗi kết quả có hậu tố quốc gia (VD: `Đang ở nước ngoài: Hàn Quốc` khớp hoàn toàn với `Đang ở nước ngoài`).
+    - Bỏ kiểm tra `targetCard !== firstCard` trong `filteredList` (`ChildDashboardView.vue`), đảm bảo click vào bất kỳ Thẻ KPI nào (kể cả thẻ đầu tiên) cũng lọc chính xác danh sách.
+  - Điều hướng và liên kết Thống kê -> Bảng Quản lý (`DashboardView.vue` & `PersonnelView.vue`):
+    - Khi click widget nguồn Thân nhân trên Dashboard: Tự động chuyển tab `thannhan` và lọc theo trường / giá trị tương ứng.
+    - Hiển thị chip huy hiệu lọc `🎯 Lọc: [Tên cột]: [Giá trị]` trên thanh công cụ kèm nút xóa lọc nhanh.
 
 ### 11. LEDGER STATUS
-- **Status**: Done (Đã hoàn thiện phân tầng màu sắc Visual Hierarchy popup chi tiết và động cơ phân giải trạng thái hiện diện cho Thân nhân & Cán bộ).
+- **Status**: Done (Đã hoàn thiện phủ nền tím toàn thẻ thân nhân, đồng bộ cơ chế lọc thẻ KPI/thống kê trạng thái hiện diện thân nhân trên cả Dashboard và Chuyên đề).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã build thành công).

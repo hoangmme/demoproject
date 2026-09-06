@@ -38,10 +38,10 @@
       :key="rel.id || idx"
       :id="`relative-card-${rel.code || ('TN-' + String(idx + 1).padStart(5, '0'))}`"
       class="relative-card-box"
-      style="margin-bottom: 1.25rem; border: 1.5px solid #e9d5ff; border-left: 4px solid #9333ea; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 1px 4px rgba(147, 51, 234, 0.06);"
+      style="margin-bottom: 1.25rem; border: 1.5px solid #e9d5ff; border-left: 4px solid #9333ea; border-radius: 8px; overflow: hidden; background: #faf5ff; box-shadow: 0 1px 4px rgba(147, 51, 234, 0.06);"
     >
       <!-- Header of relative card -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #faf5ff; border-bottom: 1px solid #f3e8ff;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: #f3e8ff; border-bottom: 1px solid #e9d5ff;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span class="badge-code" style="background: #9333ea; color: #ffffff;">
             {{ getRelativeCode(rel, idx) }}
@@ -64,7 +64,7 @@
       <!-- Dynamic Content of relative card based on importMappingRelative -->
       <div style="padding: 1rem;">
         <!-- Thẻ tóm tắt thông tin Cán bộ liên quan -->
-        <div v-if="getParentPersonnelInfo(rel)" style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+        <div v-if="getParentPersonnelInfo(rel)" style="background: #ffffff; border: 1px solid #e9d5ff; border-left: 4px solid #0284c7; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
           <div>
             <div style="font-size: 0.7rem; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
               <i class="pi pi-user"></i>

@@ -836,6 +836,63 @@ export const computeTripPresence = (t, formulaConfig = {}) => {
 };
 
 /**
+ * Phân giải Trạng thái hiện diện chung cho Cán bộ, Thân nhân hoặc Bản ghi Chuyến đi
+ */
+export const resolvePresence = (item) => {
+  if (!item) return { status: 'none', label: '-', shortLabel: '-', isAbroad: false, isOverdue: false, overdueDays: 0 };
+
+  // 1. Nếu item đã có sẵn các trường trạng thái tính toán trước
+  if (item.presenceStatus && item.presenceLabel) {
+    return {
+      status: item.presenceStatus,
+      label: item.presenceLabel,
+      shortLabel: item.presenceLabel,
+      isAbroad: Boolean(item.isAbroad),
+      isOverdue: Boolean(item.isOverdue),
+      overdueDays: item.overdueDays || 0,
+      country: item.countryName || item.country || '',
+    };
+  }
+
+  // 2. Nếu là Hồ sơ Thân nhân hoặc Cán bộ có danh sách trips: [...]
+  if (Array.isArray(item.trips)) {
+    if (item.trips.length === 0) {
+      return {
+        status: 'completed',
+        label: 'Trong nước',
+        shortLabel: 'Trong nước',
+        isAbroad: false,
+        isOverdue: false,
+        overdueDays: 0,
+      };
+    }
+    // Tìm chuyến đi mới nhất theo Ngày xuất cảnh
+    let latestTrip = null;
+    let latestDepTime = -Infinity;
+    for (const t of item.trips) {
+      let custom = {};
+      if (t.custom_data) {
+        try {
+          custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+        } catch (e) {}
+      }
+      const rawDep = t.departureDate || custom.departureDate || t.ngay_xuat_canh || custom.ngay_xuat_canh || t.ngayDi || '';
+      const d = parseDateValue(rawDep);
+      const time = d ? d.getTime() : 0;
+      if (time >= latestDepTime) {
+        latestDepTime = time;
+        latestTrip = { ...custom, ...t };
+      }
+    }
+    if (!latestTrip) latestTrip = item.trips[item.trips.length - 1];
+    return computeTripPresence(latestTrip);
+  }
+
+  // 3. Nếu là 1 bản ghi chuyến đi đơn lẻ
+  return computeTripPresence(item);
+};
+
+/**
  * Giải nén và định dạng chuẩn cho giá trị ô dữ liệu bất kỳ (xử lý sạch mảng JSON, JSON lồng, Checkbox, Date...)
  */
 export const formatGenericCellValue = (val, colDef = {}) => {

@@ -1076,32 +1076,51 @@ const matchSingleCondition = (item, cond) => {
   }
 
   // 1b-2. Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)
-  if (field === 'presenceStatus' || field === '_presenceStatus' || field === 'status' || field === 'tripStatus') {
+  const isPresenceField = (
+    field === 'presenceStatus' ||
+    field === '_presenceStatus' ||
+    field === 'status' ||
+    field === 'tripStatus' ||
+    field === 'trang_thai_hien_dien' ||
+    field === 'trangThaiHienDien' ||
+    String(field).toLowerCase().includes('presence') ||
+    String(field).toLowerCase().includes('hiendien') ||
+    String(field).toLowerCase().includes('hien_dien') ||
+    (personnelStore.importMappingTrips || []).some(g => (g.columns || []).some(c => c.id === field && c.formulaType === 'presence_status')) ||
+    (personnelStore.importMappingPersonnel || []).some(g => (g.columns || []).some(c => c.id === field && c.formulaType === 'presence_status')) ||
+    (personnelStore.importMappingRelative || []).some(g => (g.columns || []).some(c => c.id === field && c.formulaType === 'presence_status'))
+  );
+
+  if (isPresenceField) {
     const p = resolvePresence(item);
     const pLabel = (p.label || '').toLowerCase();
     const pStatus = (p.status || '').toLowerCase();
+    const isAbroadMatch = target.includes('nước ngoài') || target === 'abroad';
+    const isOverdueMatch = target.includes('quá hạn') || target === 'overdue';
+    const isDomesticMatch = target.includes('trong nước') || target.includes('về nước') || target === 'completed';
+
     if (op === 'equals') {
-      if (target === 'abroad' || target.includes('nước ngoài')) return p.status === 'abroad';
-      if (target === 'overdue' || target.includes('quá hạn')) return p.status === 'overdue' || (p.status === 'completed' && p.isOverdue);
-      if (target === 'completed' || target.includes('trong nước') || target.includes('về nước')) return p.status === 'completed' && !p.isOverdue;
-      return pLabel === target || pStatus === target;
+      if (isAbroadMatch) return p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài');
+      if (isOverdueMatch) return p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn');
+      if (isDomesticMatch) return (p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về');
+      return pLabel === target || pStatus === target || pLabel.includes(target);
     }
     if (op === 'not_equals') {
-      if (target === 'abroad' || target.includes('nước ngoài')) return p.status !== 'abroad';
-      if (target === 'overdue' || target.includes('quá hạn')) return !(p.status === 'overdue' || (p.status === 'completed' && p.isOverdue));
-      if (target === 'completed' || target.includes('trong nước') || target.includes('về nước')) return p.status !== 'completed' || p.isOverdue;
-      return pLabel !== target && pStatus !== target;
+      if (isAbroadMatch) return !(p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài'));
+      if (isOverdueMatch) return !(p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn'));
+      if (isDomesticMatch) return !((p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về'));
+      return pLabel !== target && pStatus !== target && !pLabel.includes(target);
     }
     if (op === 'contains') {
-      if (target.includes('nước ngoài')) return p.status === 'abroad' || pLabel.includes('nước ngoài');
-      if (target.includes('quá hạn')) return p.isOverdue || pLabel.includes('quá hạn');
-      if (target.includes('trong nước') || target.includes('về nước')) return p.status === 'completed' && !p.isOverdue;
+      if (isAbroadMatch) return p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài');
+      if (isOverdueMatch) return p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn');
+      if (isDomesticMatch) return (p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về');
       return pLabel.includes(target) || pStatus.includes(target);
     }
     if (op === 'not_contains') {
-      if (target.includes('nước ngoài')) return p.status !== 'abroad' && !pLabel.includes('nước ngoài');
-      if (target.includes('quá hạn')) return !p.isOverdue && !pLabel.includes('quá hạn');
-      if (target.includes('trong nước') || target.includes('về nước')) return p.status !== 'completed' || p.isOverdue;
+      if (isAbroadMatch) return !(p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài'));
+      if (isOverdueMatch) return !(p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn'));
+      if (isDomesticMatch) return !((p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về'));
       return !pLabel.includes(target) && !pStatus.includes(target);
     }
     if (op === 'has_value') {
@@ -1134,11 +1153,17 @@ const matchSingleCondition = (item, cond) => {
     if (strVal === strTarget) return true;
     const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (subKeywords.length > 1) {
-      return subKeywords.some((k) => strVal === k);
+      if (subKeywords.some((k) => strVal === k)) return true;
     }
+    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return true;
+    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return true;
+    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return true;
     return false;
   }
   if (op === 'not_equals') {
+    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return false;
+    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return false;
+    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return false;
     const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (subKeywords.length > 1) {
       return !subKeywords.some((k) => strVal === k) && strVal !== strTarget;
@@ -1147,6 +1172,9 @@ const matchSingleCondition = (item, cond) => {
   }
   if (op === 'contains') {
     if (strVal.includes(strTarget)) return true;
+    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return true;
+    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return true;
+    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return true;
     const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (subKeywords.length > 1) {
       return subKeywords.some((k) => strVal.includes(k));
@@ -1154,6 +1182,9 @@ const matchSingleCondition = (item, cond) => {
     return strVal.includes(strTarget);
   }
   if (op === 'not_contains') {
+    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return false;
+    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return false;
+    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return false;
     const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (subKeywords.length > 1) {
       return !subKeywords.some((k) => strVal.includes(k));
@@ -2041,8 +2072,7 @@ const filteredList = computed(() => {
   // 0. Active Metric Card Filter (Top KPI Pill)
   if (activeMetricCardId.value && activeMetricCardId.value !== 'all') {
     const targetCard = activeMetricCards.value.find((c, idx) => (c.id || c.label || `card_${idx}`) === activeMetricCardId.value);
-    const firstCard = activeMetricCards.value[0];
-    if (targetCard && targetCard !== firstCard && !isCardAllType(targetCard)) {
+    if (targetCard && !isCardAllType(targetCard)) {
       list = list.filter((t) => matchCardCondition(t, targetCard));
     }
   }
@@ -2084,8 +2114,30 @@ const filteredList = computed(() => {
   if (customFilterField.value && customFilterValue.value) {
     const targetVal = customFilterValue.value.toLowerCase().trim();
     list = list.filter((t) => {
+      const isPresence = (
+        customFilterField.value === 'presenceStatus' ||
+        customFilterField.value === '_presenceStatus' ||
+        customFilterField.value === 'status' ||
+        customFilterField.value === 'tripStatus' ||
+        customFilterField.value.includes('presence') ||
+        customFilterField.value.includes('hien_dien') ||
+        customFilterField.value.includes('hiendien')
+      );
+      if (isPresence) {
+        const p = resolvePresence(t);
+        const pLabel = (p.label || '').toLowerCase();
+        if (targetVal.includes('nước ngoài') || targetVal === 'abroad') return p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài');
+        if (targetVal.includes('quá hạn') || targetVal === 'overdue') return p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn');
+        if (targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') return (p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue);
+        return pLabel.includes(targetVal);
+      }
       const cellVal = getCellValue(t, customFilterField.value);
-      return String(cellVal || '').toLowerCase().trim() === targetVal;
+      const strCellVal = String(cellVal || '').toLowerCase().trim();
+      if (strCellVal === targetVal) return true;
+      if ((targetVal.includes('nước ngoài') || targetVal === 'abroad') && strCellVal.includes('nước ngoài')) return true;
+      if ((targetVal.includes('quá hạn') || targetVal === 'overdue') && (strCellVal.includes('quá hạn') || strCellVal.includes('chưa về'))) return true;
+      if ((targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') && (strCellVal.includes('trong nước') || strCellVal.includes('về nước') || strCellVal.includes('đã về'))) return true;
+      return strCellVal.includes(targetVal);
     });
   }
 
@@ -2303,7 +2355,7 @@ const getCellValue = (trip, colId) => {
   if (colId === 'isRelative' || colId === '_doiTuong' || colId === 'doi_tuong') {
     return trip.isRelative ? 'Thân nhân' : 'Cán bộ';
   }
-  if (colId === '_presenceStatus' || colId === 'presenceStatus') {
+  if (colId === '_presenceStatus' || colId === 'presenceStatus' || colId === 'status' || colId === 'tripStatus' || colId === 'trang_thai_hien_dien' || colId === 'trangThaiHienDien') {
     const p = resolvePresence(trip);
     return p.label || '-';
   }
@@ -2350,6 +2402,10 @@ const getCellValue = (trip, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
+    if (colDef.formulaType === 'presence_status') {
+      const p = resolvePresence(trip);
+      return p.label || '-';
+    }
     const result = evaluateFormula(trip, colDef);
     return result?.label || result?.shortLabel || '-';
   }
@@ -2364,15 +2420,22 @@ const getCellValue = (trip, colId) => {
   if (tripColIds.includes(colId)) {
     // Cột thuộc Bảng Chuyến đi
     if (trip.isRelative || currentDashboardConfig.value?.source === 'relatives') {
-      // Đối tượng là Thân nhân -> chỉ đọc trong danh sách chuyến đi thực tế (trip.trips)
+      // Đối tượng là Thân nhân -> đọc từ chuyến đi mới nhất theo departureDate
       const trips = Array.isArray(trip.trips) ? trip.trips : [];
+      let latestTrip = null;
+      let latestDep = -Infinity;
       for (const t of trips) {
         const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-        const v = t[colId] !== undefined ? t[colId] : tCustom[colId];
-        if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
-          rawVal = v;
-          break;
+        const depRaw = t.departureDate || tCustom.departureDate || t.ngay_xuat_canh || tCustom.ngay_xuat_canh || '';
+        const dep = parseDateValue(depRaw);
+        const time = dep ? dep.getTime() : 0;
+        if (time >= latestDep) {
+          latestDep = time;
+          latestTrip = { ...tCustom, ...t };
         }
+      }
+      if (latestTrip) {
+        rawVal = latestTrip[colId];
       }
     } else if (currentDashboardConfig.value?.source === 'personnel') {
       // Đối tượng là Cán bộ -> chỉ đọc trong danh sách chuyến đi thực tế (trip.trips)

@@ -64,6 +64,22 @@
             </button>
           </div>
 
+          <!-- Chip hiển thị bộ lọc từ Dashboard Widget -->
+          <div
+            v-if="routeFilterField && routeFilterValue"
+            style="display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; border: 1px solid #93c5fd; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; color: #1d4ed8; font-weight: 600;"
+          >
+            <span>🎯 Lọc: {{ getRouteFilterFieldLabel() }}: <b>{{ routeFilterValue }}</b></span>
+            <button
+              type="button"
+              @click="clearRouteFilter"
+              style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 0; font-size: 0.75rem; display: flex; align-items: center;"
+              title="Xóa bộ lọc"
+            >
+              <i class="pi pi-times-circle"></i>
+            </button>
+          </div>
+
           <!-- ⚙️ Cài đặt Cột & Bộ Lọc Thông Minh Popover -->
           <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
             <Button
@@ -452,6 +468,22 @@
               title="Xóa tìm kiếm"
             >
               <i class="pi pi-times"></i>
+            </button>
+          </div>
+
+          <!-- Chip hiển thị bộ lọc từ Dashboard Widget -->
+          <div
+            v-if="routeFilterField && routeFilterValue"
+            style="display: inline-flex; align-items: center; gap: 6px; background: #faf5ff; border: 1px solid #d8b4fe; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; color: #7e22ce; font-weight: 600;"
+          >
+            <span>🎯 Lọc: {{ getRouteFilterFieldLabel() }}: <b>{{ routeFilterValue }}</b></span>
+            <button
+              type="button"
+              @click="clearRouteFilter"
+              style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 0; font-size: 0.75rem; display: flex; align-items: center;"
+              title="Xóa bộ lọc"
+            >
+              <i class="pi pi-times-circle"></i>
             </button>
           </div>
 
@@ -930,7 +962,7 @@ import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, formatGenericCellValue } from '@/utils/formatters';
+import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, formatGenericCellValue, resolvePresence } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
@@ -1127,10 +1159,43 @@ const customSort = (event) => {
   });
 };
 
+const routeFilterField = ref('');
+const routeFilterValue = ref('');
+
+const clearRouteFilter = () => {
+  routeFilterField.value = '';
+  routeFilterValue.value = '';
+};
+
+const getRouteFilterFieldLabel = () => {
+  if (!routeFilterField.value) return '';
+  const f = routeFilterField.value;
+  if (f === 'presenceStatus' || f === '_presenceStatus' || f === 'status' || f === 'tripStatus' || f === 'trang_thai_hien_dien') {
+    return 'Trạng thái hiện diện';
+  }
+  if (f === 'isRelative') return 'Đối tượng';
+  const def = allColumnDefsMap.value?.[f];
+  return def?.label || f;
+};
+
 const handleRouteAction = () => {
   const action = route.query.action;
   const targetCccd = route.query.targetCccd;
   const targetRelativeCode = route.query.targetRelativeCode;
+
+  if (route.query.tab === 'thannhan' || route.query.tab === 'relatives') {
+    mainTab.value = 'thannhan';
+  } else if (route.query.tab === 'canbo' || route.query.tab === 'personnel') {
+    mainTab.value = 'canbo';
+  }
+
+  if (route.query.filterField && route.query.filterValue) {
+    routeFilterField.value = String(route.query.filterField);
+    routeFilterValue.value = String(route.query.filterValue);
+  } else {
+    routeFilterField.value = '';
+    routeFilterValue.value = '';
+  }
 
   if (action === 'new_personnel') {
     selectedPerson.value = null;
@@ -1332,6 +1397,46 @@ const activeRelativeColumns = computed(() => {
 const filteredPersonnel = computed(() => {
   let list = personnelStore.personnelList;
 
+  // 0. Lọc theo URL Query Filter từ Dashboard Widget
+  if (routeFilterField.value && routeFilterValue.value) {
+    const field = routeFilterField.value;
+    const targetVal = routeFilterValue.value.toLowerCase().trim();
+    const isPresence = (
+      field === 'presenceStatus' ||
+      field === '_presenceStatus' ||
+      field === 'status' ||
+      field === 'tripStatus' ||
+      field === 'trang_thai_hien_dien' ||
+      field === 'trangThaiHienDien' ||
+      field.includes('presence') ||
+      field.includes('hien_dien') ||
+      field.includes('hiendien') ||
+      (allColumnDefsMap.value?.[field]?.formulaType === 'presence_status')
+    );
+
+    list = list.filter((p) => {
+      if (isPresence) {
+        const pres = resolvePresence(p);
+        const pLabel = (pres.label || '').toLowerCase();
+        if (targetVal.includes('nước ngoài') || targetVal === 'abroad') return pres.status === 'abroad' || pres.isAbroad || pLabel.includes('nước ngoài');
+        if (targetVal.includes('quá hạn') || targetVal === 'overdue') return pres.isOverdue || pres.status === 'overdue' || pLabel.includes('quá hạn');
+        if (targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') return (pres.status === 'completed' && !pres.isOverdue) || (!pres.isAbroad && !pres.isOverdue);
+        return pLabel.includes(targetVal);
+      }
+      let cd = p.custom_data;
+      if (typeof cd === 'string') {
+        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+      }
+      const val = p[field] !== undefined ? p[field] : (cd?.[field] ?? '');
+      const strVal = String(val || '').toLowerCase().trim();
+      if (strVal === targetVal) return true;
+      if ((targetVal.includes('nước ngoài') || targetVal === 'abroad') && strVal.includes('nước ngoài')) return true;
+      if ((targetVal.includes('quá hạn') || targetVal === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return true;
+      if ((targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return true;
+      return strVal.includes(targetVal);
+    });
+  }
+
   // 1. Bộ lọc thông minh (Smart Filter)
   if (smartFilter.value === 'has_decision') {
     list = list.filter((p) => {
@@ -1435,8 +1540,50 @@ const flattenedRelatives = computed(() => {
 });
 
 const filteredRelatives = computed(() => {
+  let list = flattenedRelatives.value;
+
+  // 0. Lọc theo URL Query Filter từ Dashboard Widget
+  if (routeFilterField.value && routeFilterValue.value) {
+    const field = routeFilterField.value;
+    const targetVal = routeFilterValue.value.toLowerCase().trim();
+    const isPresence = (
+      field === 'presenceStatus' ||
+      field === '_presenceStatus' ||
+      field === 'status' ||
+      field === 'tripStatus' ||
+      field === 'trang_thai_hien_dien' ||
+      field === 'trangThaiHienDien' ||
+      field.includes('presence') ||
+      field.includes('hien_dien') ||
+      field.includes('hiendien') ||
+      (allColumnDefsMap.value?.[field]?.formulaType === 'presence_status')
+    );
+
+    list = list.filter((r) => {
+      if (isPresence) {
+        const pres = resolvePresence(r);
+        const pLabel = (pres.label || '').toLowerCase();
+        if (targetVal.includes('nước ngoài') || targetVal === 'abroad') return pres.status === 'abroad' || pres.isAbroad || pLabel.includes('nước ngoài');
+        if (targetVal.includes('quá hạn') || targetVal === 'overdue') return pres.isOverdue || pres.status === 'overdue' || pLabel.includes('quá hạn');
+        if (targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') return (pres.status === 'completed' && !pres.isOverdue) || (!pres.isAbroad && !pres.isOverdue);
+        return pLabel.includes(targetVal);
+      }
+      let cd = r.custom_data;
+      if (typeof cd === 'string') {
+        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+      }
+      const val = r[field] !== undefined ? r[field] : (cd?.[field] ?? '');
+      const strVal = String(val || '').toLowerCase().trim();
+      if (strVal === targetVal) return true;
+      if ((targetVal.includes('nước ngoài') || targetVal === 'abroad') && strVal.includes('nước ngoài')) return true;
+      if ((targetVal.includes('quá hạn') || targetVal === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return true;
+      if ((targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return true;
+      return strVal.includes(targetVal);
+    });
+  }
+
   const q = relativeSearchQuery.value.trim().toLowerCase();
-  if (!q) return flattenedRelatives.value;
+  if (!q) return list;
 
   const pKeyField = personnelStore.getPersonnelKeyField();
   const pNameField = personnelStore.getPersonnelNameField();

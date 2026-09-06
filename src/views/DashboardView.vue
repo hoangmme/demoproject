@@ -1626,8 +1626,17 @@ const getRowFieldValue = (row, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
+    if (colDef.formulaType === 'presence_status') {
+      const p = resolvePresence(row);
+      return p.label || '-';
+    }
     const res = evaluateFormula(row, colDef);
     return res?.label || res?.shortLabel || '';
+  }
+
+  if (colId === '_presenceStatus' || colId === 'presenceStatus' || colId === 'status' || colId === 'tripStatus' || colId === 'trang_thai_hien_dien' || colId === 'trangThaiHienDien') {
+    const p = resolvePresence(row);
+    return p.label || '-';
   }
 
   if (colId === 'isRelative' || colId === '_doiTuong' || colId === 'doi_tuong') {
@@ -1644,25 +1653,39 @@ const getRowFieldValue = (row, colId) => {
   if (tripColIds.includes(colId)) {
     // Cột thuộc Bảng Chuyến đi
     if (row.isRelative || row.rawRelative) {
-      // Đối tượng là Thân nhân -> chỉ đọc trong danh sách chuyến đi thực tế (row.trips)
+      // Đối tượng là Thân nhân -> đọc từ chuyến đi mới nhất theo departureDate
       const trips = Array.isArray(row.trips) ? row.trips : [];
+      let latestTrip = null;
+      let latestDep = -Infinity;
       for (const t of trips) {
         const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-        const v = t[colId] !== undefined ? t[colId] : tCustom[colId];
-        if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
-          raw = v;
-          break;
+        const depRaw = t.departureDate || tCustom.departureDate || t.ngay_xuat_canh || tCustom.ngay_xuat_canh || '';
+        const dep = parseDateValue(depRaw);
+        const time = dep ? dep.getTime() : 0;
+        if (time >= latestDep) {
+          latestDep = time;
+          latestTrip = { ...tCustom, ...t };
         }
       }
+      if (latestTrip) {
+        raw = latestTrip[colId];
+      }
     } else if (row.trips && Array.isArray(row.trips) && !row.departureDate && !row.countryName) {
-      // Đối tượng là Cán bộ có mảng chuyến đi
+      // Đối tượng là Cán bộ có mảng chuyến đi -> đọc từ chuyến đi mới nhất
+      let latestTrip = null;
+      let latestDep = -Infinity;
       for (const t of row.trips) {
         const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-        const v = t[colId] !== undefined ? t[colId] : tCustom[colId];
-        if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
-          raw = v;
-          break;
+        const depRaw = t.departureDate || tCustom.departureDate || t.ngay_xuat_canh || tCustom.ngay_xuat_canh || '';
+        const dep = parseDateValue(depRaw);
+        const time = dep ? dep.getTime() : 0;
+        if (time >= latestDep) {
+          latestDep = time;
+          latestTrip = { ...tCustom, ...t };
         }
+      }
+      if (latestTrip) {
+        raw = latestTrip[colId];
       }
     } else {
       // Bản ghi là Chuyến đi
@@ -1852,32 +1875,51 @@ const matchSingleCondition = (item, cond) => {
   }
 
   // 1b-2. Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)
-  if (field === 'presenceStatus' || field === '_presenceStatus' || field === 'status' || field === 'tripStatus') {
+  const isPresenceField = (
+    field === 'presenceStatus' ||
+    field === '_presenceStatus' ||
+    field === 'status' ||
+    field === 'tripStatus' ||
+    field === 'trang_thai_hien_dien' ||
+    field === 'trangThaiHienDien' ||
+    String(field).toLowerCase().includes('presence') ||
+    String(field).toLowerCase().includes('hiendien') ||
+    String(field).toLowerCase().includes('hien_dien') ||
+    (personnelStore.importMappingTrips || []).some(g => (g.columns || []).some(c => c.id === field && c.formulaType === 'presence_status')) ||
+    (personnelStore.importMappingPersonnel || []).some(g => (g.columns || []).some(c => c.id === field && c.formulaType === 'presence_status')) ||
+    (personnelStore.importMappingRelative || []).some(g => (g.columns || []).some(c => c.id === field && c.formulaType === 'presence_status'))
+  );
+
+  if (isPresenceField) {
     const p = resolvePresence(item);
     const pLabel = (p.label || '').toLowerCase();
     const pStatus = (p.status || '').toLowerCase();
+    const isAbroadMatch = target.includes('nước ngoài') || target === 'abroad';
+    const isOverdueMatch = target.includes('quá hạn') || target === 'overdue';
+    const isDomesticMatch = target.includes('trong nước') || target.includes('về nước') || target === 'completed';
+
     if (op === 'equals') {
-      if (target === 'abroad' || target.includes('nước ngoài')) return p.status === 'abroad';
-      if (target === 'overdue' || target.includes('quá hạn')) return p.status === 'overdue' || (p.status === 'completed' && p.isOverdue);
-      if (target === 'completed' || target.includes('trong nước') || target.includes('về nước')) return p.status === 'completed' && !p.isOverdue;
-      return pLabel === target || pStatus === target;
+      if (isAbroadMatch) return p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài');
+      if (isOverdueMatch) return p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn');
+      if (isDomesticMatch) return (p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về');
+      return pLabel === target || pStatus === target || pLabel.includes(target);
     }
     if (op === 'not_equals') {
-      if (target === 'abroad' || target.includes('nước ngoài')) return p.status !== 'abroad';
-      if (target === 'overdue' || target.includes('quá hạn')) return !(p.status === 'overdue' || (p.status === 'completed' && p.isOverdue));
-      if (target === 'completed' || target.includes('trong nước') || target.includes('về nước')) return p.status !== 'completed' || p.isOverdue;
-      return pLabel !== target && pStatus !== target;
+      if (isAbroadMatch) return !(p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài'));
+      if (isOverdueMatch) return !(p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn'));
+      if (isDomesticMatch) return !((p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về'));
+      return pLabel !== target && pStatus !== target && !pLabel.includes(target);
     }
     if (op === 'contains') {
-      if (target.includes('nước ngoài')) return p.status === 'abroad' || pLabel.includes('nước ngoài');
-      if (target.includes('quá hạn')) return p.isOverdue || pLabel.includes('quá hạn');
-      if (target.includes('trong nước') || target.includes('về nước')) return p.status === 'completed' && !p.isOverdue;
+      if (isAbroadMatch) return p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài');
+      if (isOverdueMatch) return p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn');
+      if (isDomesticMatch) return (p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về');
       return pLabel.includes(target) || pStatus.includes(target);
     }
     if (op === 'not_contains') {
-      if (target.includes('nước ngoài')) return p.status !== 'abroad' && !pLabel.includes('nước ngoài');
-      if (target.includes('quá hạn')) return !p.isOverdue && !pLabel.includes('quá hạn');
-      if (target.includes('trong nước') || target.includes('về nước')) return p.status !== 'completed' || p.isOverdue;
+      if (isAbroadMatch) return !(p.status === 'abroad' || p.isAbroad || pLabel.includes('nước ngoài'));
+      if (isOverdueMatch) return !(p.isOverdue || p.status === 'overdue' || pLabel.includes('quá hạn'));
+      if (isDomesticMatch) return !((p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue) || pLabel.includes('trong nước') || pLabel.includes('đã về'));
       return !pLabel.includes(target) && !pStatus.includes(target);
     }
     if (op === 'has_value') {
@@ -1910,11 +1952,17 @@ const matchSingleCondition = (item, cond) => {
     if (strVal === strTarget) return true;
     const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (subKeywords.length > 1) {
-      return subKeywords.some((k) => strVal === k);
+      if (subKeywords.some((k) => strVal === k)) return true;
     }
+    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return true;
+    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return true;
+    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return true;
     return false;
   }
   if (op === 'not_equals') {
+    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return false;
+    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return false;
+    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return false;
     const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (subKeywords.length > 1) {
       return !subKeywords.some((k) => strVal === k) && strVal !== strTarget;
@@ -1923,6 +1971,9 @@ const matchSingleCondition = (item, cond) => {
   }
   if (op === 'contains') {
     if (strVal.includes(strTarget)) return true;
+    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return true;
+    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return true;
+    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return true;
     const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (subKeywords.length > 1) {
       return subKeywords.some((k) => strVal.includes(k));
@@ -1930,6 +1981,9 @@ const matchSingleCondition = (item, cond) => {
     return strVal.includes(strTarget);
   }
   if (op === 'not_contains') {
+    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return false;
+    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return false;
+    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return false;
     const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (subKeywords.length > 1) {
       return !subKeywords.some((k) => strVal.includes(k));
@@ -2361,15 +2415,18 @@ const handleWidgetClick = (widget) => {
   if (widget.topicId) {
     const targetPath = widget.topicId === 'trips' ? '/trips' : `/dashboard-topic/${widget.topicId}`;
     const cardParam = widget.cardId || widget.cardCondition || widget.id;
-    router.push({ path: targetPath, query: { card: cardParam } });
+    router.push({ path: targetPath, query: { card: cardParam, filterField: widget.columnId || '', filterValue: widget.countValue || '' } });
     return;
   }
-  const targetPath = widget.source === 'personnel' ? '/personnel' : (widget.source === 'relatives' ? '/personnel' : '/trips');
+  const isRel = widget.source === 'relatives';
+  const targetPath = widget.source === 'personnel' ? '/personnel' : (isRel ? '/personnel' : '/trips');
+  const query = {};
+  if (isRel) query.tab = 'thannhan';
   if (widget.columnId) {
-    router.push({ path: targetPath, query: { filterField: widget.columnId, filterValue: widget.countValue || '' } });
-  } else {
-    router.push({ path: targetPath });
+    query.filterField = widget.columnId;
+    query.filterValue = widget.countValue || '';
   }
+  router.push({ path: targetPath, query });
 };
 
 const computeWidgetChartData = (widget) => {
@@ -2430,6 +2487,18 @@ const availableColumnsForWidgetSource = computed(() => {
   const mapping = source === 'relatives' ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel;
   const colMap = computeColumnIndexMap(mapping);
   const list = [];
+
+  // Thêm các cột ảo hệ thống (Trạng thái hiện diện, Đối tượng)
+  list.push({
+    id: 'presenceStatus',
+    rawLabel: 'Trạng thái hiện diện',
+    label: '⚡ [Bộ lọc] Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)',
+  });
+  list.push({
+    id: 'isRelative',
+    rawLabel: 'Đối tượng (Cán bộ / Thân nhân)',
+    label: '⚡ [Bộ lọc] Đối tượng (Cán bộ hay Thân nhân)',
+  });
 
   (mapping || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
