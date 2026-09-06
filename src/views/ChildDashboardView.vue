@@ -32,64 +32,21 @@
           <span>Xóa đã chọn ({{ selectedTripKeys.length }})</span>
         </button>
 
-        <!-- ⚙️ Cài đặt Cột & Bộ Lọc Thông Minh Popover (Đồng bộ module với Hồ sơ cán bộ) -->
+        <!-- ⚙️ Tùy chọn Cột hiển thị Popover -->
         <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
           <Button
-            icon="pi pi-sliders-h"
-            :label="hasActiveFilters ? 'Đang lọc (Bật)' : 'Lọc & Cột'"
-            :severity="hasActiveFilters ? 'primary' : 'secondary'"
+            icon="pi pi-table"
+            label="Tùy chọn Cột hiển thị"
+            severity="secondary"
             outlined
             size="small"
             @click="isFilterMenuOpen = !isFilterMenuOpen"
-            title="Tùy biến cột hiển thị và Bộ lọc dữ liệu thông minh"
+            title="Tùy chọn Cột hiển thị"
             style="font-size: 0.8rem;"
           />
 
           <div v-show="isFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown">
-            <!-- Phần 1: Bộ lọc nhanh thông minh -->
             <div class="filter-section">
-              <div class="filter-section-title">
-                <i class="pi pi-filter" style="color: #2563eb;"></i>
-                <span>Bộ lọc dữ liệu thông minh</span>
-              </div>
-              <div class="smart-chips-grid">
-                <button
-                  type="button"
-                  class="smart-chip"
-                  :class="{ 'chip-active': statusFilter === 'all' && activeMetricCardId === 'all' }"
-                  @click="statusFilter = 'all'; activeMetricCardId = 'all'"
-                >
-                  Tất cả ({{ currentSourceList.length }})
-                </button>
-                <button
-                  type="button"
-                  class="smart-chip"
-                  :class="{ 'chip-active': statusFilter === 'completed' }"
-                  @click="statusFilter = 'completed'; activeMetricCardId = 'all'"
-                >
-                  <i class="pi pi-check-circle" style="color: #16a34a;"></i> Đã về nước
-                </button>
-                <button
-                  type="button"
-                  class="smart-chip"
-                  :class="{ 'chip-active': statusFilter === 'abroad' }"
-                  @click="statusFilter = 'abroad'; activeMetricCardId = 'all'"
-                >
-                  <i class="pi pi-globe" style="color: #d97706;"></i> Đang ở nước ngoài
-                </button>
-                <button
-                  type="button"
-                  class="smart-chip"
-                  :class="{ 'chip-active': statusFilter === 'overdue' }"
-                  @click="statusFilter = 'overdue'; activeMetricCardId = 'all'"
-                >
-                  <i class="pi pi-exclamation-triangle" style="color: #dc2626;"></i> Quá hạn chưa về
-                </button>
-              </div>
-            </div>
-
-            <!-- Phần 2: Tùy chọn Ẩn/Hiện Cột -->
-            <div class="filter-section" style="border-top: 1px solid #e2e8f0; margin-top: 10px; padding-top: 10px;">
               <div class="filter-section-title" style="margin-bottom: 8px;">
                 <i class="pi pi-table" style="color: #7c3aed;"></i>
                 <span>Tùy chọn Cột hiển thị</span>

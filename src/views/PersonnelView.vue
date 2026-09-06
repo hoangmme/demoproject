@@ -80,99 +80,21 @@
             </button>
           </div>
 
-          <!-- ⚙️ Cài đặt Cột & Bộ Lọc Thông Minh Popover -->
+          <!-- ⚙️ Tùy chọn Cột hiển thị Popover -->
           <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
             <Button
-              icon="pi pi-sliders-h"
-              :label="smartFilter !== 'all' ? 'Đang lọc (Bật)' : 'Lọc & Cột'"
-              :severity="smartFilter !== 'all' ? 'primary' : 'secondary'"
+              icon="pi pi-table"
+              label="Tùy chọn Cột hiển thị"
+              severity="secondary"
               outlined
               size="small"
               @click="isFilterMenuOpen = !isFilterMenuOpen; isDataMenuOpen = false;"
-              title="Tùy biến cột hiển thị và Bộ lọc dữ liệu thông minh"
+              title="Tùy chọn Cột hiển thị"
               style="font-size: 0.8rem;"
             />
 
             <div v-show="isFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown">
-              <!-- Phần 1: Bộ lọc thông minh -->
               <div class="filter-section">
-                <div class="filter-section-title">
-                  <i class="pi pi-filter" style="color: #2563eb;"></i>
-                  <span>Bộ lọc dữ liệu thông minh</span>
-                </div>
-                <div class="smart-chips-grid">
-                  <button
-                    type="button"
-                    class="smart-chip"
-                    :class="{ 'chip-active': smartFilter === 'all' }"
-                    @click="smartFilter = 'all'"
-                  >
-                    Tất cả ({{ personnelStore.personnelList.length }})
-                  </button>
-                  <button
-                    type="button"
-                    class="smart-chip"
-                    :class="{ 'chip-active': smartFilter === 'has_decision' }"
-                    @click="smartFilter = 'has_decision'"
-                  >
-                    <i class="pi pi-file"></i> Có Số Quyết định
-                  </button>
-                  <button
-                    type="button"
-                    class="smart-chip"
-                    :class="{ 'chip-active': smartFilter === 'has_trips' }"
-                    @click="smartFilter = 'has_trips'"
-                  >
-                    <i class="pi pi-send"></i> Có Chuyến đi / XNC
-                  </button>
-                  <button
-                    type="button"
-                    class="smart-chip"
-                    :class="{ 'chip-active': smartFilter === 'has_relatives' }"
-                    @click="smartFilter = 'has_relatives'"
-                  >
-                    <i class="pi pi-users"></i> Có Thân nhân
-                  </button>
-                  <button
-                    type="button"
-                    class="smart-chip"
-                    :class="{ 'chip-active': smartFilter === 'has_issues' }"
-                    @click="smartFilter = 'has_issues'"
-                  >
-                    <i class="pi pi-exclamation-triangle"></i> Có Vấn đề lưu ý / TCCT
-                  </button>
-                  <button
-                    type="button"
-                    class="smart-chip"
-                    :class="{ 'chip-active': smartFilter === 'has_passport' }"
-                    @click="smartFilter = 'has_passport'"
-                  >
-                    <i class="pi pi-id-card"></i> Có Hộ chiếu
-                  </button>
-                </div>
-
-                <!-- Lọc nâng cao theo trường cụ thể -->
-                <div style="margin-top: 8px;">
-                  <div style="font-size: 0.72rem; color: #64748b; margin-bottom: 4px; font-weight: 600;">Hoặc lọc dòng CÓ DỮ LIỆU ở trường:</div>
-                  <select
-                    v-model="smartFilterField"
-                    class="custom-field-filter-select"
-                    @change="smartFilter = smartFilterField ? 'field_not_empty' : 'all'"
-                  >
-                    <option value="">-- Chọn trường để chỉ hiện dòng có dữ liệu --</option>
-                    <option
-                      v-for="c in personnelStore.allAvailableColumns"
-                      :key="c.id"
-                      :value="c.id"
-                    >
-                      Chỉ hiện dòng có: {{ c.colIndex && !c.isVirtual ? `[Cột ${c.colIndex}] ` : '' }}{{ c.label }}
-                    </option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Phần 2: Tùy chọn Ẩn/Hiện Cột -->
-              <div class="filter-section" style="border-top: 1px solid #e2e8f0; margin-top: 10px; padding-top: 10px;">
                 <div class="filter-section-title" style="margin-bottom: 8px;">
                   <i class="pi pi-table" style="color: #7c3aed;"></i>
                   <span>Tùy chọn Cột hiển thị</span>
