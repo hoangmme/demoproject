@@ -1360,7 +1360,12 @@ const unifiedTripsList = computed(() => {
         return;
       }
 
-      const isRel = Boolean(t.isRelative || t.relativeName || t.cccdthannhan);
+      const isRel = Boolean(
+        t.isRelative === true ||
+        t.isRelative === 'true' ||
+        (t.relativeName && String(t.relativeName).trim() !== '' && String(t.relativeName).trim() !== '-' && String(t.relativeName).trim() !== 'Chưa rõ') ||
+        (t.cccdthannhan && String(t.cccdthannhan).trim() !== '' && String(t.cccdthannhan).trim() !== '-' && !String(t.cccdthannhan).startsWith('cd_'))
+      );
       const presence = getTripPresence({
         departureDate: depDate,
         arrivalDate: arrDate,
@@ -1699,8 +1704,6 @@ const matchSingleCondition = (item, cond) => {
   if (field === 'isRelative' || field === '_doiTuong' || field === 'doi_tuong') {
     const isRel = !!item.isRelative;
     const objType = isRel ? 'thân nhân' : 'cán bộ';
-    if (op === 'has_value') return true;
-    if (op === 'empty') return false;
     if (op === 'equals') {
       if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === true;
       if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === false;
@@ -1720,6 +1723,13 @@ const matchSingleCondition = (item, cond) => {
       if (target.includes('thân nhân')) return isRel === false;
       if (target.includes('cán bộ')) return isRel === true;
       return !objType.includes(target);
+    }
+    if (op === 'has_value') {
+      if (target.includes('thân nhân')) return isRel === true;
+      return isRel === false;
+    }
+    if (op === 'empty') {
+      return isRel === true;
     }
     return isRel;
   }

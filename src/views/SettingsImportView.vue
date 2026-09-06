@@ -1573,7 +1573,7 @@
 
                     <!-- Chọn Cột để đếm -->
                     <div style="display: flex; flex-direction: column; gap: 2px;">
-                      <select v-model="cond.field" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px;">
+                      <select v-model="cond.field" @change="onCardConditionFieldChange(cond)" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px;">
                         <option value="">-- Toàn bộ danh sách (Không lọc cột) --</option>
                         <optgroup v-for="grp in categorizedDashboardCols" :key="grp.category" :label="grp.category">
                           <option v-for="col in grp.options" :key="col.id" :value="col.id">
@@ -1585,49 +1585,60 @@
 
                     <!-- Toán tử & Giá trị so sánh -->
                     <div v-if="cond.field" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                      <div>
-                        <select v-model="cond.operator" class="custom-key-select" style="font-size: 0.7rem; padding: 2px 4px;">
-                          <optgroup label="-- So sánh giá trị cột --">
-                            <option value="has_value">Có dữ liệu (khác rỗng)</option>
-                            <option value="empty">Để trống (chưa có)</option>
-                            <option value="equals">Là (khớp chính xác)</option>
-                            <option value="not_equals">Khác</option>
-                            <option value="contains">Chứa từ khóa</option>
-                            <option value="not_contains">Không chứa từ khóa</option>
-                            <option value="gt">Giá trị lớn hơn (&gt;)</option>
-                            <option value="gte">Giá trị lớn hơn hoặc bằng (&gt;=)</option>
-                            <option value="lt">Giá trị nhỏ hơn (&lt;)</option>
-                            <option value="lte">Giá trị nhỏ hơn hoặc bằng (&lt;=)</option>
-                            <option value="before">Trước ngày</option>
-                            <option value="after">Sau ngày</option>
-                          </optgroup>
-                          <optgroup label="-- Điều kiện đếm (Tần suất / Số lần) --">
-                            <option value="count_gt">Điều kiện đếm: Lớn hơn (&gt;)</option>
-                            <option value="count_gte">Điều kiện đếm: Lớn hơn hoặc bằng (&gt;=)</option>
-                            <option value="count_lt">Điều kiện đếm: Nhỏ hơn (&lt;)</option>
-                            <option value="count_lte">Điều kiện đếm: Nhỏ hơn hoặc bằng (&lt;=)</option>
-                            <option value="count_eq">Điều kiện đếm: Bằng (=)</option>
-                          </optgroup>
-                        </select>
-                      </div>
-                      <div v-if="cond.operator !== 'has_value' && cond.operator !== 'empty'">
-                        <select
-                          v-if="cond.field === 'isRelative' || cond.field === '_doiTuong' || cond.field === 'doi_tuong'"
-                          v-model="cond.value"
-                          class="custom-key-select"
-                          style="font-size: 0.72rem; padding: 2px 4px; width: 100%; font-weight: 600; color: #1e40af;"
-                        >
-                          <option value="">-- Chọn đối tượng --</option>
-                          <option value="Cán bộ">Cán bộ</option>
-                          <option value="Thân nhân">Thân nhân</option>
-                        </select>
-                        <input
-                          v-else
-                          v-model="cond.value"
-                          placeholder="Nhập giá trị..."
-                          style="font-size: 0.72rem; border: 1px solid #cbd5e1; background: #fff; padding: 2px 4px; border-radius: 4px; width: 100%;"
-                        />
-                      </div>
+                      <!-- Giao diện chuyên biệt khi chọn Đối tượng (Cán bộ / Thân nhân) -->
+                      <template v-if="cond.field === 'isRelative' || cond.field === '_doiTuong' || cond.field === 'doi_tuong'">
+                        <div>
+                          <select v-model="cond.operator" class="custom-key-select" style="font-size: 0.7rem; padding: 2px 4px; font-weight: 600;">
+                            <option value="equals">Là</option>
+                            <option value="not_equals">Không phải là (Khác)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <select
+                            v-model="cond.value"
+                            class="custom-key-select"
+                            style="font-size: 0.72rem; padding: 2px 4px; width: 100%; font-weight: 700; color: #1e40af; background: #eff6ff; border-color: #93c5fd;"
+                          >
+                            <option value="Cán bộ">👤 Cán bộ</option>
+                            <option value="Thân nhân">👨‍👩‍👧 Thân nhân</option>
+                          </select>
+                        </div>
+                      </template>
+                      <!-- Giao diện chuẩn cho các cột thông thường khác -->
+                      <template v-else>
+                        <div>
+                          <select v-model="cond.operator" class="custom-key-select" style="font-size: 0.7rem; padding: 2px 4px;">
+                            <optgroup label="-- So sánh giá trị cột --">
+                              <option value="has_value">Có dữ liệu (khác rỗng)</option>
+                              <option value="empty">Để trống (chưa có)</option>
+                              <option value="equals">Là (khớp chính xác)</option>
+                              <option value="not_equals">Khác</option>
+                              <option value="contains">Chứa từ khóa</option>
+                              <option value="not_contains">Không chứa từ khóa</option>
+                              <option value="gt">Giá trị lớn hơn (&gt;)</option>
+                              <option value="gte">Giá trị lớn hơn hoặc bằng (&gt;=)</option>
+                              <option value="lt">Giá trị nhỏ hơn (&lt;)</option>
+                              <option value="lte">Giá trị nhỏ hơn hoặc bằng (&lt;=)</option>
+                              <option value="before">Trước ngày</option>
+                              <option value="after">Sau ngày</option>
+                            </optgroup>
+                            <optgroup label="-- Điều kiện đếm (Tần suất / Số lần) --">
+                              <option value="count_gt">Điều kiện đếm: Lớn hơn (&gt;)</option>
+                              <option value="count_gte">Điều kiện đếm: Lớn hơn hoặc bằng (&gt;=)</option>
+                              <option value="count_lt">Điều kiện đếm: Nhỏ hơn (&lt;)</option>
+                              <option value="count_lte">Điều kiện đếm: Nhỏ hơn hoặc bằng (&lt;=)</option>
+                              <option value="count_eq">Điều kiện đếm: Bằng (=)</option>
+                            </optgroup>
+                          </select>
+                        </div>
+                        <div v-if="cond.operator !== 'has_value' && cond.operator !== 'empty'">
+                          <input
+                            v-model="cond.value"
+                            placeholder="Nhập giá trị..."
+                            style="font-size: 0.72rem; border: 1px solid #cbd5e1; background: #fff; padding: 2px 4px; border-radius: 4px; width: 100%;"
+                          />
+                        </div>
+                      </template>
                     </div>
                   </div>
 
@@ -2925,8 +2936,31 @@ const getCardConditions = (card) => {
       ];
     }
   }
+  // Tự động chuẩn hoá điều kiện đối tượng (isRelative) sang operator 'equals' và value 'Cán bộ'
+  card.conditions.forEach((cond) => {
+    if (cond.field === 'isRelative' || cond.field === '_doiTuong' || cond.field === 'doi_tuong') {
+      if (!cond.operator || cond.operator === 'has_value') {
+        cond.operator = 'equals';
+      }
+      if (!cond.value || cond.value === '') {
+        cond.value = 'Cán bộ';
+      }
+    }
+  });
   if (!card.logicOp) card.logicOp = 'AND';
   return card.conditions;
+};
+
+const onCardConditionFieldChange = (cond) => {
+  if (!cond) return;
+  if (cond.field === 'isRelative' || cond.field === '_doiTuong' || cond.field === 'doi_tuong') {
+    cond.operator = 'equals';
+    if (!cond.value || cond.value === '') {
+      cond.value = 'Cán bộ';
+    }
+  } else if (!cond.operator) {
+    cond.operator = 'has_value';
+  }
 };
 
 const addConditionToCard = (card) => {
