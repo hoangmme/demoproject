@@ -408,7 +408,7 @@
 
         <!-- Dynamic Filtered Column according to active Metric Card -->
         <Column
-          v-if="activeMetricCard"
+          v-if="activeMetricCard && (activeMetricCard.showCompareCol === true || activeMetricCard.showConditionCol === true)"
           :header="`🎯 ${activeCardColLabel}`"
           headerClass="col-active-filter-header"
           bodyClass="col-active-filter-body"
@@ -1059,25 +1059,32 @@ const matchSingleCondition = (item, cond) => {
 
   // 1b-2. Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)
   if (isPresenceField(field)) {
-    const pVal = resolveVirtualColumnValue(item, field) || '';
+    const pVal = resolveVirtualColumnValue(item, field) || item.presenceStatus || item._presenceStatus || '';
     const strPVal = String(pVal).toLowerCase().trim();
     if (op === 'equals') {
       if (strPVal === target) return true;
       if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return true;
-      if ((target.includes('quá hạn') || target === 'overdue') && strPVal.includes('quá hạn')) return true;
-      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về'))) return true;
+      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return true;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return true;
       return false;
     }
     if (op === 'not_equals') {
       if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return false;
-      if ((target.includes('quá hạn') || target === 'overdue') && strPVal.includes('quá hạn')) return false;
-      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về'))) return false;
+      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return false;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return false;
       return strPVal !== target;
     }
     if (op === 'contains') {
-      return strPVal.includes(target);
+      if (strPVal.includes(target) || target.includes(strPVal)) return true;
+      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return true;
+      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return true;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return true;
+      return false;
     }
     if (op === 'not_contains') {
+      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return false;
+      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return false;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return false;
       return !strPVal.includes(target);
     }
     if (op === 'has_value') return !!strPVal && strPVal !== '-';
@@ -1947,14 +1954,43 @@ const currentSourceList = computed(() => {
           rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
         } catch (e) {}
       }
-      const parentPerson = r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || null;
-      const presence = resolvePresence(r);
+      const parentPerson = r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || (r.personnelId ? (personnelStore.personnelList || []).find(p => p.id === r.personnelId) : null) || null;
+      
+      const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
+      const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+      const rCccd = String(r[rKeyField] ?? r.cccdthannhan ?? r.cccd ?? rCustom[rKeyField] ?? '').trim().toLowerCase();
+      const rName = String(r.relativeName || r.name || '').trim().toLowerCase();
+
+      let relTrips = Array.isArray(r.trips) ? [...r.trips] : (Array.isArray(rCustom.trips) ? [...rCustom.trips] : []);
+
+      if (parentPerson && Array.isArray(parentPerson.trips)) {
+        parentPerson.trips.forEach((t) => {
+          let tCustom = {};
+          if (t.custom_data) {
+            try { tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data; } catch (e) {}
+          }
+          const tRelCccd = String(t[rKeyField] ?? t.cccdthannhan ?? tCustom[rKeyField] ?? tCustom.cccdthannhan ?? (t.isRelative ? (t.cccd ?? tCustom.cccd) : '') ?? '').trim().toLowerCase();
+          const tRelName = String(t.relativeName || tCustom.relativeName || '').trim().toLowerCase();
+          const isMatch = (rCccd && tRelCccd && !isInternalId(tRelCccd) && rCccd === tRelCccd) ||
+                          (rName && tRelName && rName === tRelName && (t.isRelative === true || t.isRelative === 'true'));
+          if (isMatch) {
+            const alreadyIn = relTrips.some(existing => (existing.id && existing.id === t.id) || (existing.uniqueKey && existing.uniqueKey === t.uniqueKey));
+            if (!alreadyIn) {
+              relTrips.push({ ...t, isRelative: true });
+            }
+          }
+        });
+      }
+
+      const presence = resolvePresence({ ...r, trips: relTrips });
+      const latestTrip = relTrips.length > 0 ? relTrips[relTrips.length - 1] : null;
+
       return {
         ...rCustom,
         ...r,
         uniqueKey: r.id || `rel_${idx}`,
         isRelative: true,
-        trips: Array.isArray(r.trips) ? r.trips : [],
+        trips: relTrips,
         personnelName: r.relativeName || r.name || 'Thân nhân',
         personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
         relativeName: r.relativeName || r.name || 'Thân nhân',
@@ -1965,6 +2001,9 @@ const currentSourceList = computed(() => {
         cccdparent: r.cccdparent || parentPerson?.cccd || parentPerson?.cccdparent || '',
         cccdthannhan: r.cccdthannhan || r.cccd || '',
         departmentName: parentPerson?.departmentName || (parentPerson?.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || '',
+        countryName: presence.country || latestTrip?.countryName || latestTrip?.country || '',
+        departureDate: latestTrip?.departureDate || latestTrip?.ngay_xuat_canh || '',
+        arrivalDate: latestTrip?.arrivalDate || latestTrip?.ngay_nhap_canh || '',
         rawPerson: parentPerson || r,
         rawRelative: r,
         custom_data: rCustom,

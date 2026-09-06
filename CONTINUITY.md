@@ -82,8 +82,16 @@
     - `ChildDashboardView.vue`: Khi chọn Thẻ KPI / bộ lọc chuyên đề, cột ưu tiên tự động render huy hiệu Trạng thái hiện diện hoặc giá trị tương ứng.
     - `PersonnelView.vue`: Khi nhận điều hướng lọc từ Widget trên Dashboard (`routeFilterField`), tự động bổ sung cột ưu tiên `🎯 [Tên cột]` ngay sau các cột cố định ở cả Bảng Thân nhân và Bảng Cán bộ.
 
+- **Tùy chọn Ẩn/Hiện Cột Đối Chiếu (showCompareCol)**:
+  - Bổ sung hộp kiểm `Hiện cột đối chiếu khi ấn vào thống kê (🎯)` trong Cấu hình Chuyên đề (`SettingsImportView.vue`).
+  - Khi tick chọn: Bảng dữ liệu tự động hiển thị thêm cột đối chiếu `🎯 [Tên cột]`. Khi không tick: Bảng giữ nguyên các cột hiện có, không bị nở thêm cột đối chiếu.
+- **Lọc Trạng Thái Hiện Diện Chuyên Đề Thân Nhân (`source === 'relatives'`)**:
+  - Tự động liên kết và thu thập đầy đủ toàn bộ chuyến đi của Thân nhân từ cả hồ sơ thân nhân (`r.trips`) và chuyến đi nằm trong hồ sơ Cán bộ chủ quản (`p.trips` có `isRelative: true` hoặc khớp CCCD thân nhân).
+  - Phân giải trạng thái hiện diện (`resolvePresence`) chính xác cho từng thân nhân (Đang ở nước ngoài / Trong nước / Quá hạn).
+  - Khớp chuẩn xác điều kiện lọc trạng thái hiện diện (hỗ trợ đầy đủ các toán tử `contains`, `equals` với các cụm từ "Đang ở nước ngoài", "ở nước ngoài", "quá hạn", "trong nước").
+
 ### 11. LEDGER STATUS
-- **Status**: Done (Loại bỏ loading overlay trùng lặp ở góc trên bên trái ChildDashboardView; Chuyển khai báo biến scoping `isInternalId`, `pKeyField`, `tKeyField`, `rKeyField` lên đầu hàm `unifiedTripsList` ở cả ChildDashboardView.vue và DashboardView.vue triệt tiêu hoàn toàn lỗi `ReferenceError: rKeyField is not defined`).
+- **Status**: Done (Đã thêm nút tick ẩn/hiện cột đối chiếu trong cấu hình chuyên đề; Đã kết nối dữ liệu chuyến đi và sửa triệt để bộ lọc trạng thái hiện diện ở chuyên đề thân nhân).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã build thành công).
 

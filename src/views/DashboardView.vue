@@ -1827,26 +1827,34 @@ const matchSingleCondition = (item, cond) => {
   }
 
   // 1b-2. Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)
+  // 1b-2. Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)
   if (isPresenceField(field)) {
-    const pVal = resolveVirtualColumnValue(item, field) || '';
+    const pVal = resolveVirtualColumnValue(item, field) || item.presenceStatus || item._presenceStatus || '';
     const strPVal = String(pVal).toLowerCase().trim();
     if (op === 'equals') {
       if (strPVal === target) return true;
       if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return true;
-      if ((target.includes('quá hạn') || target === 'overdue') && strPVal.includes('quá hạn')) return true;
-      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về'))) return true;
+      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return true;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return true;
       return false;
     }
     if (op === 'not_equals') {
       if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return false;
-      if ((target.includes('quá hạn') || target === 'overdue') && strPVal.includes('quá hạn')) return false;
-      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về'))) return false;
+      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return false;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return false;
       return strPVal !== target;
     }
     if (op === 'contains') {
-      return strPVal.includes(target);
+      if (strPVal.includes(target) || target.includes(strPVal)) return true;
+      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return true;
+      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return true;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return true;
+      return false;
     }
     if (op === 'not_contains') {
+      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return false;
+      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return false;
+      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return false;
       return !strPVal.includes(target);
     }
     if (op === 'has_value') return !!strPVal && strPVal !== '-';

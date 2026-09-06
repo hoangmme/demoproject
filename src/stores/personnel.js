@@ -305,9 +305,51 @@ export const usePersonnelStore = defineStore('personnel', {
 
           // Collect relatives
           if (Array.isArray(matchedRelatives)) {
+            const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
+            const rKeyField = this.systemKeyConfig?.relativeKeyField || 'cccdthannhan';
+
             matchedRelatives.forEach((r, rIdx) => {
+              let rCustom = {};
+              if (r.custom_data) {
+                try {
+                  rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
+                } catch (e) {}
+              }
+
+              const rCccd = String(r[rKeyField] ?? r.cccdthannhan ?? r.cccd ?? rCustom[rKeyField] ?? '').trim().toLowerCase();
+              const rName = String(r.relativeName || r.name || '').trim().toLowerCase();
+
+              // Gather trips directly associated with relative
+              const relTrips = Array.isArray(r.trips) ? [...r.trips] : (Array.isArray(rCustom.trips) ? [...rCustom.trips] : []);
+
+              // Also gather trips from matchedTrips (p.trips) belonging to this relative
+              if (Array.isArray(matchedTrips)) {
+                matchedTrips.forEach((t) => {
+                  let tCustom = {};
+                  if (t.custom_data) {
+                    try {
+                      tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
+                    } catch (e) {}
+                  }
+                  const tRelCccd = String(t[rKeyField] ?? t.cccdthannhan ?? tCustom[rKeyField] ?? tCustom.cccdthannhan ?? (t.isRelative ? (t.cccd ?? tCustom.cccd) : '') ?? '').trim().toLowerCase();
+                  const tRelName = String(t.relativeName || tCustom.relativeName || '').trim().toLowerCase();
+
+                  const isMatch = (rCccd && tRelCccd && !isInternalId(tRelCccd) && rCccd === tRelCccd) ||
+                                  (rName && tRelName && rName === tRelName && (t.isRelative === true || t.isRelative === 'true'));
+
+                  if (isMatch) {
+                    const alreadyIn = relTrips.some(existing => (existing.id && existing.id === t.id) || (existing.uniqueKey && existing.uniqueKey === t.uniqueKey));
+                    if (!alreadyIn) {
+                      relTrips.push({ ...t, isRelative: true });
+                    }
+                  }
+                });
+              }
+
               allRelatives.push({
+                ...rCustom,
                 ...r,
+                trips: relTrips,
                 personnelId: p.id,
                 personnelCode: p.code || '',
                 parentName: p.name,

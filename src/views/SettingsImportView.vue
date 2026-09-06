@@ -1568,6 +1568,22 @@
                   </label>
                 </div>
 
+                <!-- Ẩn/Hiện cột đối chiếu khi ấn vào thống kê -->
+                <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
+                  <input
+                    type="checkbox"
+                    v-model="card.showCompareCol"
+                    :id="'showCompareCol_' + (card.id || cIdx)"
+                    style="margin: 0; cursor: pointer;"
+                  />
+                  <label
+                    :for="'showCompareCol_' + (card.id || cIdx)"
+                    style="font-size: 0.72rem; font-weight: 600; color: #334155; cursor: pointer;"
+                  >
+                    Hiện cột đối chiếu khi ấn vào thống kê (🎯)
+                  </label>
+                </div>
+
                 <!-- Kiểu kết hợp (Khi có từ 2 điều kiện trở lên) -->
                 <div v-if="getCardConditions(card).length > 1" style="display: flex; flex-direction: column; gap: 3px; background: #eff6ff; padding: 6px 8px; border-radius: 4px; border: 1px dashed #93c5fd;">
                   <label style="font-size: 0.68rem; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 4px;">
@@ -2968,6 +2984,7 @@ const addMetricCardToDashboard = (dash) => {
     condition: 'all',
     color: 'blue',
     widthPercent: '',
+    showCompareCol: false,
     logicOp: 'AND',
     conditions: [
       { id: 'cond_' + Date.now(), field: '', operator: 'has_value', value: '' }
