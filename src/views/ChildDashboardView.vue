@@ -1086,48 +1086,52 @@ const getCardMetricValue = (card) => {
   return computeMetricCardCount(card, currentSourceList.value, activeMetricCards.value[0], personnelStore);
 };
 
-const activeMetricCardId = ref('all');
+const activeMetricCardIdx = ref(-1); // -1: xem toàn bộ cơ sở chuyên đề (Thẻ 0 active)
+
+const activeMetricCardId = computed({
+  get: () => {
+    if (activeMetricCardIdx.value <= 0) return 'all';
+    const c = activeMetricCards.value[activeMetricCardIdx.value];
+    return c?.id && c.id !== 'all' ? c.id : `card_${activeMetricCardIdx.value}`;
+  },
+  set: (val) => {
+    if (!val || val === 'all') {
+      activeMetricCardIdx.value = -1;
+      return;
+    }
+    const idx = activeMetricCards.value.findIndex((c, i) => (c.id === val && c.id !== 'all') || c.label === val || `card_${i}` === val);
+    activeMetricCardIdx.value = idx > 0 ? idx : -1;
+  },
+});
 
 const isCardActive = (card, cIdx) => {
   if (!card) return false;
-  const cardKey = card.id || card.label || `card_${cIdx}`;
-  const isAll = isCardAllType(card);
-  if (activeMetricCardId.value === 'all') {
-    return cIdx === 0 || isAll;
+  if (activeMetricCardIdx.value <= 0) {
+    return cIdx === 0;
   }
-  return activeMetricCardId.value === cardKey || activeMetricCardId.value === card.id || activeMetricCardId.value === card.label;
+  return activeMetricCardIdx.value === cIdx;
 };
 
 const toggleMetricCardFilter = (card, cIdx) => {
-  const cardKey = card.id || card.label || `card_${cIdx}`;
-  const isAll = isCardAllType(card);
-
-  // Nếu là thẻ Toàn bộ hoặc thẻ đầu tiên (baseline cơ sở của chuyên đề): reset về all
-  if (isAll || cIdx === 0) {
-    activeMetricCardId.value = 'all';
+  // Thẻ 0 là baseline của chuyên đề: click vào sẽ đưa về trạng thái xem toàn bộ baseline
+  if (cIdx === 0) {
+    activeMetricCardIdx.value = -1;
     statusFilter.value = 'all';
     return;
   }
 
-  // Thẻ có điều kiện: toggle bật / tắt
-  const isCurrentActive = activeMetricCardId.value === cardKey || activeMetricCardId.value === card.id || activeMetricCardId.value === card.label;
-  if (isCurrentActive) {
-    activeMetricCardId.value = 'all';
+  // Thẻ con (cIdx > 0): toggle bật / tắt theo đúng vị trí của thẻ
+  if (activeMetricCardIdx.value === cIdx) {
+    activeMetricCardIdx.value = -1;
   } else {
-    activeMetricCardId.value = cardKey;
+    activeMetricCardIdx.value = cIdx;
   }
 };
 
 const activeMetricCard = computed(() => {
-  if (!activeMetricCardId.value || activeMetricCardId.value === 'all') return null;
+  if (activeMetricCardIdx.value <= 0) return null;
   const cards = activeMetricCards.value || [];
-  const firstCard = cards[0];
-  const found = cards.find((c, idx) => {
-    const cardKey = c.id || c.label || `card_${idx}`;
-    return cardKey === activeMetricCardId.value || c.id === activeMetricCardId.value || c.label === activeMetricCardId.value;
-  });
-  if (found === firstCard) return null;
-  return found || null;
+  return cards[activeMetricCardIdx.value] || null;
 });
 
 const activeCardColLabel = computed(() => {
@@ -1868,14 +1872,10 @@ const filteredList = computed(() => {
   let list = [...topicBaselineList.value];
 
   // 0. Active Metric Card Filter (Top KPI Pill)
-  if (activeMetricCardId.value && activeMetricCardId.value !== 'all') {
-    const firstCard = activeMetricCards.value[0];
-    const targetCard = activeMetricCards.value.find((c, idx) => {
-      const cardKey = c.id || c.label || `card_${idx}`;
-      return cardKey === activeMetricCardId.value || c.id === activeMetricCardId.value || c.label === activeMetricCardId.value;
-    });
+  if (activeMetricCardIdx.value > 0) {
+    const targetCard = activeMetricCards.value[activeMetricCardIdx.value];
 
-    if (targetCard && targetCard !== firstCard && !isCardAllType(targetCard)) {
+    if (targetCard && !isCardAllType(targetCard)) {
       list = list.filter((t) => matchCardCondition(t, targetCard));
       if (targetCard.isUnique) {
         const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';

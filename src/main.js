@@ -30,6 +30,11 @@ if (typeof window !== 'undefined') {
 const app = createApp(App);
 const pinia = createPinia();
 
+if (typeof window !== 'undefined') {
+  window.__APP__ = app;
+  window.__PINIA__ = pinia;
+}
+
 app.use(pinia);
 
 // Synchronously initialize auth
