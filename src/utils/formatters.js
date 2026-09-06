@@ -975,8 +975,9 @@ export const resolvePresence = (item, formulaConfig = {}) => {
 
   // 1. Nếu item đã có sẵn các trường trạng thái tính toán trước và không có cấu hình formulaConfig riêng
   if (item.presenceStatus && item.presenceLabel && !formulaConfig.formulaDepartureCol && !formulaConfig.formulaArrivalCol) {
+    const isCompleted = Boolean(item.arrivalDate || item.ngay_nhap_canh || (item.presenceLabel && (item.presenceLabel.toLowerCase().includes('về nước') || item.presenceLabel.toLowerCase().includes('nhập cảnh'))));
     return {
-      status: item.presenceStatus,
+      status: isCompleted ? 'completed' : (item.isAbroad ? (item.isOverdue ? 'overdue' : 'abroad') : (item.isOverdue ? 'overdue' : (item.presenceStatus || 'domestic'))),
       label: item.presenceLabel,
       shortLabel: item.presenceShortLabel || item.presenceStatus,
       isAbroad: Boolean(item.isAbroad),
@@ -1072,7 +1073,7 @@ export const getPresenceBadge = (item) => {
       border: '1px solid #fde68a',
     };
   }
-  const isReturned = p.label && (p.label.toLowerCase().includes('về nước') || p.label.toLowerCase().includes('nhập cảnh'));
+  const isReturned = p.status === 'completed' || (p.label && (p.label.toLowerCase().includes('về nước') || p.label.toLowerCase().includes('nhập cảnh')));
   if (isReturned) {
     return {
       text: p.label || 'Đã về nước',

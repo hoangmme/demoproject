@@ -435,10 +435,27 @@
      - Đổi nút mở popover: `<Button label="Tùy chọn Cột hiển thị" icon="pi pi-table" ... />`.
   3. Đã chạy `npm run build` thành công và đồng bộ sang `WINDOWS_OFFLINE_APP/frontend`.
 
-### 43. LEDGER STATUS
-- **Status**: Done (Đã tinh gọn bộ lọc thành 'Tùy chọn Cột hiển thị', đã build và push git).
+### 43. ĐỒNG BỘ HIỂN THỊ CỘT TRẠNG THÁI HIỆN DIỆN VỚI CỘT ĐỐI CHIẾU 🎯
+- **Hiện tượng**:
+  - Khi xem bảng chuyên đề, cột đối chiếu mục đích lọc `🎯 TRẠNG THÁI HIỆN DIỆN` hiển thị chuẩn xác huy hiệu xanh: `✓ Đã về nước`.
+  - Tuy nhiên, cột thường `TRẠNG THÁI HIỆN DIỆN` lại hiển thị dấu gạch ngang `-` đối với các dòng đã về nước đúng hạn, trong khi các dòng quá hạn vẫn hiện màu đỏ `⚠️ Đã về nước (quá hạn ... ngày)`.
+- **Nguyên nhân cốt lõi**:
+  - Trong template của `ChildDashboardView.vue`, tồn tại một khối template cũ (`lines 230-254`) đứng trước khối chuẩn `isPresenceField(col.id)`.
+  - Khối cũ này bắt `col.id === '_presenceStatus' || col.id === 'presenceStatus'` và kiểm tra điều kiện cứng `resolvePresence(data).status === 'completed'`.
+  - Khi các chuyến đi được nạp vào bảng, trường `presenceStatus` mang nhãn tiếng Việt (`"Đã về nước"`), khiến biểu thức so sánh chuỗi mã `'completed'` bị sai (`false`), dẫn đến việc bảng rơi vào nhánh fallback `<span v-else>-</span>`.
+  - Trong khi đó, cột đối chiếu `🎯` và khối chuẩn `isPresenceField(col.id)` dùng hàm `getPresenceBadge(data)` đã được thiết kế sẵn logic nhận diện chuỗi `"về nước"` / `"nhập cảnh"` để vẽ huy hiệu chuẩn.
+- **Giải pháp xử lý**:
+  1. `src/views/ChildDashboardView.vue`: Loại bỏ khối template cũ bị lỗi, chuyển toàn bộ việc render cột hiện diện thường về khối dùng chung `isPresenceField(col.id)` với `getPresenceBadge(data)`.
+  2. `src/utils/formatters.js`:
+     - Cập nhật `resolvePresence`: Chuẩn hóa gán `status = 'completed'` nếu bản ghi đã có ngày nhập cảnh hoặc nhãn chứa `"về nước"`.
+     - Cập nhật `getPresenceBadge`: Đồng thời kiểm tra cả `p.status === 'completed'` lẫn nhãn chứa từ khóa về nước.
+  3. `src/views/PersonnelView.vue`: Bổ sung template `isPresenceField(col.id)` và phân giải cột ảo `resolveVirtualColumnValue` cho cả bảng Cán bộ & Thân nhân để đảm bảo mọi bảng đều đồng nhất 100%.
+
+### 44. LEDGER STATUS
+- **Status**: Done (Đã đồng bộ hiển thị cột Trạng thái hiện diện khớp hoàn toàn với cột đối chiếu 🎯, đã build và deploy).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã test và build thành công).
+
 
 
 

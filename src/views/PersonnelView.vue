@@ -266,6 +266,27 @@
               <strong style="color: #1f2937; cursor: pointer;">{{ getDisplayValue(data, col.id) !== '-' ? getDisplayValue(data, col.id) : (data.name || '-') }}</strong>
             </template>
 
+            <!-- Presence Status Column -->
+            <template v-else-if="isPresenceField(col.id)">
+              <span
+                :style="{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '3px 8px',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  background: getPresenceBadge(data).bg,
+                  color: getPresenceBadge(data).color,
+                  border: getPresenceBadge(data).border,
+                }"
+              >
+                <i :class="getPresenceBadge(data).icon"></i>
+                {{ getPresenceBadge(data).text }}
+              </span>
+            </template>
+
             <!-- Formula column -->
             <template v-else-if="isFormulaCol(col.id)">
               <div
@@ -700,6 +721,27 @@
                 </a>
               </div>
               <span v-else>-</span>
+            </template>
+
+            <!-- Presence Status Column -->
+            <template v-else-if="isPresenceField(col.id)">
+              <span
+                :style="{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '3px 8px',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  background: getPresenceBadge(data).bg,
+                  color: getPresenceBadge(data).color,
+                  border: getPresenceBadge(data).border,
+                }"
+              >
+                <i :class="getPresenceBadge(data).icon"></i>
+                {{ getPresenceBadge(data).text }}
+              </span>
             </template>
             <div
               v-else-if="String(getDisplayValue(data, col.id)).includes('\n')"
@@ -1794,6 +1836,10 @@ const isDepartmentCol = (col) => {
 
 const getDisplayValue = (person, colId) => {
   if (!person) return '-';
+
+  // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
+  const vVal = resolveVirtualColumnValue(person, colId);
+  if (vVal !== undefined) return vVal || '-';
 
   if (isFormulaCol(colId)) {
     return getFormulaStatus(person, allColumnDefsMap.value[colId] || {});

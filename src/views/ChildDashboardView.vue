@@ -227,31 +227,6 @@
               <strong style="color: #0f172a; font-weight: 700;">{{ data[col.id] || data.personnelName || data.name || '-' }}</strong>
             </template>
 
-            <!-- Trạng thái hiện diện (Huy hiệu chuẩn: Nước ngoài / Trong nước / Quá hạn) -->
-            <template v-else-if="col.id === '_presenceStatus' || col.id === 'presenceStatus'">
-              <span
-                v-if="resolvePresence(data).isOverdue"
-                style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;"
-              >
-                <i class="pi pi-exclamation-triangle" style="font-size: 0.7rem;"></i>
-                {{ resolvePresence(data).label }}
-              </span>
-              <span
-                v-else-if="resolvePresence(data).isAbroad"
-                style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;"
-              >
-                <i class="pi pi-send" style="font-size: 0.7rem;"></i>
-                {{ resolvePresence(data).label }}
-              </span>
-              <span
-                v-else-if="resolvePresence(data).status === 'completed'"
-                style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;"
-              >
-                <i class="pi pi-check-circle" style="font-size: 0.7rem;"></i>
-                {{ resolvePresence(data).label }}
-              </span>
-              <span v-else style="color: #94a3b8;">-</span>
-            </template>
 
             <!-- 2. Đơn vị công tác -->
             <template v-else-if="col.id === 'departmentName' || col.id === 'departmentId' || col.id === 'don_vi_cong_tac' || col.id === 'don_vi'">
