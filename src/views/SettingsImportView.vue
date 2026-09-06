@@ -1503,6 +1503,24 @@
                   </label>
                 </div>
 
+                <!-- Ràng buộc theo Thẻ đầu tiên (Tổng cộng) (Hiển thị từ thẻ thứ 2 trở đi) -->
+                <div v-if="cIdx > 0" style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
+                  <input
+                    type="checkbox"
+                    :checked="card.inheritBaseline !== false"
+                    @change="card.inheritBaseline = $event.target.checked"
+                    :id="'inheritBaseline_' + (card.id || cIdx)"
+                    style="margin: 0; cursor: pointer;"
+                  />
+                  <label
+                    :for="'inheritBaseline_' + (card.id || cIdx)"
+                    style="font-size: 0.72rem; font-weight: 600; color: #334155; cursor: pointer;"
+                    title="Ràng buộc thẻ này luôn lọc trong phạm vi dữ liệu và kế thừa cách đếm của Thẻ đầu tiên (Tổng cộng)"
+                  >
+                    Ràng buộc theo Thẻ đầu tiên (Tổng cộng)
+                  </label>
+                </div>
+
                 <!-- Kiểu kết hợp (Khi có từ 2 điều kiện trở lên) -->
                 <div v-if="getCardConditions(card).length > 1" style="display: flex; flex-direction: column; gap: 3px; background: #eff6ff; padding: 6px 8px; border-radius: 4px; border: 1px dashed #93c5fd;">
                   <label style="font-size: 0.68rem; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 4px;">

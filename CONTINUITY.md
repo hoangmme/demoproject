@@ -672,9 +672,14 @@
   2. **Đơn giản hóa hành vi click Biểu đồ & Sửa lỗi `router is not defined`**:
      - **Sửa lỗi `ReferenceError: router is not defined`**: Import đầy đủ `useRouter` trong `ChildDashboardView.vue` (`const router = useRouter()`), khắc phục triệt để lỗi runtime khi gọi router.
      - **Đồng nhất mở Chuyên đề nguyên bản (Số tổng của khối)**: Theo yêu cầu của người dùng, không bóc tách lọc lẻ từng phân loại con ("Việc riêng", "Công tác"...) gây rối logic. Khi click vào bất kỳ thanh biểu đồ (cột dọc/ngang) nào, hệ thống gọi trực tiếp `handleWidgetClick(widget)` mở thẳng Chuyên đề tương ứng và hiển thị đầy đủ toàn bộ số tổng của khối chuyên đề đó (ví dụ 21 bản ghi) một cách đồng nhất, mạch lạc và sạch sẽ, không tạo query params phụ.
+  3. **Bổ sung tùy chọn `Ràng buộc theo Thẻ đầu tiên (Tổng cộng)` & Kế thừa Đếm Unique**:
+     - **Tùy chọn trong Cài đặt (`SettingsImportView.vue`)**: Bổ sung checkbox `☑ Ràng buộc theo Thẻ đầu tiên (Tổng cộng)` (`card.inheritBaseline`, mặc định `true`) cho các thẻ con (từ thẻ thứ 2 trở đi).
+     - **Cơ chế kế thừa đếm Unique (`computeMetricCardCount` & `ChildDashboardView.vue`)**:
+       - Khi bật: Thẻ con luôn lọc trong phạm vi dữ liệu của Thẻ đầu tiên. Nếu Thẻ đầu tiên tick `Đếm giá trị duy nhất (Unique)` (19 cán bộ), thẻ con tự động kế thừa đếm unique (không bao giờ vượt quá số tổng 19 của thẻ đầu tiên). Cả số đếm trên thẻ và số dòng trong bảng dữ liệu đều khớp 100%.
+       - Khi bỏ tick: Thẻ con tính toán độc lập trên toàn bộ nguồn dữ liệu của hệ thống.
 
 ### 58. LEDGER STATUS
-- **Status**: Done (Đã sửa dứt điểm lỗi router is not defined, đồng nhất click biểu đồ mở thẳng số tổng khối chuyên đề theo đúng yêu cầu người dùng, tốc độ Dashboard 0ms).
+- **Status**: Done (Đã thêm nút tick Ràng buộc theo Thẻ đầu tiên Tổng cộng, tự động kế thừa đếm Unique chống vượt số tổng, sửa lỗi router is not defined, đồng nhất click biểu đồ mở số tổng khối chuyên đề).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
 

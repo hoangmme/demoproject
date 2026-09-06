@@ -685,19 +685,25 @@ export const matchCardCondition = (item, card, personnelStore) => {
 export const computeMetricCardCount = (card, sourceList, firstCard, personnelStore) => {
   if (!card || !Array.isArray(sourceList)) return 0;
 
-  // 1. Áp dụng baseline filter nếu thẻ đầu tiên không phải là "Toàn bộ"
+  // Kiểm tra ràng buộc theo Thẻ đầu tiên (Tổng cộng / Baseline)
+  // Mặc định là true trừ khi card.inheritBaseline === false hoặc card là firstCard
+  const shouldInheritBaseline = card !== firstCard && card.inheritBaseline !== false;
+
+  // 1. Áp dụng baseline filter nếu thẻ đầu tiên không phải là "Toàn bộ" và thẻ này có ràng buộc theo baseline
   let baselineList = sourceList;
-  if (firstCard && !isCardAllType(firstCard)) {
+  if (shouldInheritBaseline && firstCard && !isCardAllType(firstCard)) {
     baselineList = sourceList.filter((item) => matchCardCondition(item, firstCard, personnelStore));
   }
 
   // 2. Lọc danh sách thỏa mãn thẻ này
-  const targetItems = (card === firstCard || isCardAllType(card))
+  const targetItems = (card === firstCard || (shouldInheritBaseline && isCardAllType(card)))
     ? baselineList
-    : baselineList.filter((item) => matchCardCondition(item, card, personnelStore));
+    : (shouldInheritBaseline ? baselineList : sourceList).filter((item) => matchCardCondition(item, card, personnelStore));
 
-  // 3. Đếm Unique (Cán bộ / CCCD) nếu thẻ được cấu hình isUnique
-  if (card.isUnique) {
+  // 3. Đếm Unique (Cán bộ / CCCD) nếu thẻ được cấu hình isUnique HOẶC kế thừa tính unique từ Thẻ đầu tiên (để không vượt quá số tổng)
+  const isUniqueCount = card.isUnique || (shouldInheritBaseline && !!firstCard?.isUnique);
+
+  if (isUniqueCount) {
     const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
     const uniqueSet = new Set();
     targetItems.forEach((item) => {
@@ -720,8 +726,9 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
   const logicOp = (card.logicOp || 'OR').toUpperCase();
   if (activeConds.length > 1 && (logicOp === 'OR' || logicOp === 'SUM')) {
     let totalOccurrences = 0;
+    const baseSource = shouldInheritBaseline ? baselineList : sourceList;
     activeConds.forEach((cond) => {
-      const countForCond = baselineList.filter((item) => matchSingleCondition(item, cond, personnelStore)).length;
+      const countForCond = baseSource.filter((item) => matchSingleCondition(item, cond, personnelStore)).length;
       totalOccurrences += countForCond;
     });
     return totalOccurrences;

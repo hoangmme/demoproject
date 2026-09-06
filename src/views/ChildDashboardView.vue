@@ -2000,8 +2000,6 @@ const availableFundings = computed(() => {
 
 // Filtered List
 const filteredList = computed(() => {
-  let list = [...topicBaselineList.value];
-
   // 0. Active Metric Card Filter (Top KPI Pill)
   const currentIdx = (activeMetricCardIdx.value === -1 || activeMetricCardIdx.value === 0)
     ? firstVisibleCardIdx.value
@@ -2009,25 +2007,18 @@ const filteredList = computed(() => {
 
   const targetCard = activeMetricCards.value?.[currentIdx];
   const baselineCard = firstVisibleCard.value;
+  const shouldInheritBaseline = targetCard !== baselineCard && targetCard?.inheritBaseline !== false;
+
+  let list = shouldInheritBaseline ? [...topicBaselineList.value] : [...currentSourceList.value];
 
   // Nếu người dùng chọn một thẻ khác với thẻ baseline đầu tiên:
   if (targetCard && targetCard !== baselineCard && !isCardAllType(targetCard)) {
     list = list.filter((t) => matchCardCondition(t, targetCard));
-    if (targetCard.isUnique) {
-      const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-      const seenKeys = new Set();
-      list = list.filter((item) => {
-        const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? item.personnelId ?? item.id;
-        if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
-          const strKey = String(keyVal).trim();
-          if (seenKeys.has(strKey)) return false;
-          seenKeys.add(strKey);
-          return true;
-        }
-        return true;
-      });
-    }
-  } else if (targetCard && targetCard === baselineCard && baselineCard?.isUnique) {
+  }
+
+  // Đếm / Hiển thị Unique (kế thừa tính unique từ thẻ baseline nếu có ràng buộc)
+  const isUniqueCount = targetCard?.isUnique || (shouldInheritBaseline && !!baselineCard?.isUnique) || (targetCard === baselineCard && !!baselineCard?.isUnique);
+  if (isUniqueCount) {
     const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
     const seenKeys = new Set();
     list = list.filter((item) => {
