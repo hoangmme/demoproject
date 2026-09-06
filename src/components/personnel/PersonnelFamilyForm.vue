@@ -108,9 +108,9 @@
         </template>
 
         <!-- Chuyến đi xuất nhập cảnh của thân nhân này -->
-        <div style="margin-top: 1.25rem; background: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 8px; padding: 12px 14px;">
-          <div style="font-size: 0.85rem; font-weight: 700; color: #166534; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-send" style="color: #16a34a;"></i>
+        <div style="margin-top: 1.25rem; background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(2, 132, 199, 0.06);">
+          <div style="font-size: 0.92rem; font-weight: 700; color: #0369a1; margin-bottom: 0.75rem; border-bottom: 1px solid #bae6fd; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
             <span>Chuyến đi nước ngoài của Thân nhân này ({{ (rel.trips || []).length }} chuyến)</span>
           </div>
           <PersonnelTravelForm :form="rel" :isRelative="true" />

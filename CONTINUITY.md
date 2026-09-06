@@ -68,9 +68,10 @@
 ### 10. PHÂN TẦNG MÀU SẮC POPUP CHI TIẾT & BỘ LỌC HIỆN DIỆN THÂN NHÂN
 - **Phân tầng màu sắc Visual Hierarchy (`PersonnelDialog.vue`, `PersonnelTravelForm.vue`, `PersonnelFamilyForm.vue`)**:
   - Khối Cố định: Nền trắng `#ffffff`, viền xám `#e2e8f0`.
-  - Chuyến đi của Cán bộ: Container bọc ngoài nền xanh da trời dịu mắt `#f0f9ff`, viền xanh `#bae6fd`; thẻ chuyến đi header xanh `#e0f2fe`, chữ `#0369a1`.
-  - Hồ sơ Thân nhân: Thẻ thân nhân nền tím phấn dịu `#faf5ff`, viền tím `#e9d5ff`, ruy băng bên trái tím `#9333ea`.
-  - Chuyến đi của Thân nhân: Container bọc ngoài xanh ngọc dịu `#f0fdf4`, viền nét đứt `#86efac`, phân tách rõ rệt với thông tin lý lịch thân nhân.
+  - Khối Chuyến đi nước ngoài (Đồng bộ nhận diện thống nhất cho CẢ Cán bộ & Thân nhân):
+    - Container bọc ngoài: Nền xanh da trời dịu mắt `#f0f9ff`, viền xanh `#bae6fd`, bo góc 10px, tiêu đề `#0369a1` với icon `pi pi-send` `#0284c7`.
+    - Từng thẻ chuyến đi bên trong (`PersonnelTravelForm.vue`): Nền `#ffffff`, viền `#bae6fd`; header thẻ màu xanh nhạt `#e0f2fe`, viền dưới `#bae6fd`, tiêu đề chữ `#0369a1`.
+  - Hồ sơ Thân nhân: Thẻ thân nhân nền tím phấn dịu `#faf5ff`, viền tím `#e9d5ff`, ruy băng bên trái tím `#9333ea`. Khối chuyến đi lồng bên trong thân nhân sử dụng chuẩn màu xanh Chuyến đi `#f0f9ff` / `#bae6fd` như của Cán bộ.
 - **Trạng thái hiện diện Thân nhân & Bộ lọc Thẻ KPI (`resolvePresence`)**:
   - Động cơ phân giải `resolvePresence`: Tự động tìm chuyến đi mới nhất theo `departureDate` trong `rel.trips` (hoặc `p.trips`) để tính toán trạng thái hiện diện (Đang ở nước ngoài / Trong nước / Quá hạn chưa về). Nếu không có chuyến đi nào gán mặc định `Trong nước`.
   - Cột ảo `_presenceStatus` (Trạng thái hiện diện): Xuất hiện trong danh mục cột của Thân nhân và Cán bộ trên Chuyên đề; hiển thị badge màu chuẩn (xanh dương cho nước ngoài, xanh lá cho trong nước, đỏ cho quá hạn).
