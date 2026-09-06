@@ -419,10 +419,27 @@
      - Bổ sung computed `activeCardSingleCol` nhận diện chính xác cấu hình và format cột của thẻ thống kê đang kích hoạt.
      - Nâng cấp template cột `🎯`: Nếu cột là `checkbox_file_loop`, `text_file_loop`, `checkbox_file`, `file`... sẽ render giao diện tương tác hoàn chỉnh (icon hộp kiểm xanh, thẻ pill màu, nội dung và nút xem tệp đính kèm).
 
-### 42. LEDGER STATUS
-- **Status**: Done (Đã sửa triệt để hiển thị cột đối chiếu 🎯 cho format checkbox_file_loop và các format đính kèm lặp, đã build và deploy git).
+### 42. TINH GỌN BỘ LỌC - CHUYỂN THÀNH 'TÙY CHỌN CỘT HIỂN THỊ' (COLUMN SELECTOR)
+- **Yêu cầu người dùng**:
+  - Bỏ phần "Bộ lọc dữ liệu thông minh" (smart chips/lọc nhanh) trong popover bộ lọc.
+  - Chỉ giữ lại duy nhất tính năng "Tùy chọn Cột hiển thị" (`ColumnSelector`) để người dùng dễ dàng bật/tắt các cột muốn xem trong bảng.
+  - Đổi tên nút hành động thành **"Tùy chọn Cột hiển thị"** với icon `pi pi-table`.
+- **Thực hiện (`Commit 99d9841`)**:
+  1. `src/views/ChildDashboardView.vue`:
+     - Bỏ toàn bộ khối giao diện "Phần 1: Bộ lọc nhanh thông minh" (các chip lọc nhanh và nút xóa lọc).
+     - Thu gọn popover chỉ còn phần "Tùy chọn cột hiển thị" (`ColumnSelector`).
+     - Đổi nút mở popover: `<Button label="Tùy chọn Cột hiển thị" icon="pi pi-table" ... />`.
+  2. `src/views/PersonnelView.vue`:
+     - Bỏ toàn bộ khối "Phần 1: Bộ lọc thông minh" (chips trạng thái công tác, giới tính, đoàn thể, chọn trường lọc).
+     - Thu gọn popover chỉ còn phần "Tùy chọn cột hiển thị" (`ColumnSelector`).
+     - Đổi nút mở popover: `<Button label="Tùy chọn Cột hiển thị" icon="pi pi-table" ... />`.
+  3. Đã chạy `npm run build` thành công và đồng bộ sang `WINDOWS_OFFLINE_APP/frontend`.
+
+### 43. LEDGER STATUS
+- **Status**: Done (Đã tinh gọn bộ lọc thành 'Tùy chọn Cột hiển thị', đã build và push git).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã test và build thành công).
+
 
 
 
