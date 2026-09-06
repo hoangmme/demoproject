@@ -128,6 +128,19 @@
   - Thêm nút **`Đồng bộ tất cả Chuyên đề`** trên thanh công cụ Dashboard.
   - Người dùng có thể 1-click tự động tạo các nhóm thống kê đại diện cho toàn bộ Chuyên đề với đầy đủ 100% các thẻ thống kê con (gọi trực tiếp toàn bộ các thẻ của từng chuyên đề thay vì phải thêm thủ công từng thẻ).
 
+### 16. BỘ LỌC THẺ THỐNG KÊ VỊ TRÍ TUYỆT ĐỐI (POSITION-BASED KPI CARD FILTERING)
+- **Nguyên nhân gốc rễ lỗi click thẻ không lọc**:
+  - Khi người dùng chỉnh sửa các thẻ mặc định trong Chuyên đề (đổi tên, thêm điều kiện lọc), thẻ số 2 vẫn giữ nguyên thuộc tính `id: 'all'`.
+  - Khi người dùng click vào thẻ số 2, code dùng `card.id` làm khóa lọc (`activeMetricCardId = 'all'`).
+  - Trong `filteredList`, điều kiện `if (activeMetricCardId !== 'all')` kiểm tra thấy chuỗi `'all'` nên lầm tưởng là trạng thái "Xem toàn bộ / Không lọc", dẫn đến việc bỏ qua hoàn toàn bộ lọc của thẻ và giữ nguyên toàn bộ 28 dòng!
+- **Giải pháp dứt điểm (`activeMetricCardIdx`)**:
+  - Quản lý trạng thái thẻ active bằng vị trí số nguyên index (`activeMetricCardIdx = ref(-1)`):
+    - `-1`: Trạng thái mặc định / Toàn bộ cơ sở chuyên đề. Thẻ 0 sáng (`active`).
+    - `0`: Thẻ cơ sở baseline (Tổng số thân nhân). Click vào sẽ reset về `-1` hiển thị 100% người cơ sở.
+    - `cIdx > 0`: Thẻ con thứ `cIdx`. Click vào sẽ đặt `activeMetricCardIdx = cIdx`, kích hoạt lọc trực tiếp thẻ tại vị trí đó bất kể `id` của thẻ trong database là gì (kể cả khi `id` là `'all'` hay chuỗi bất kỳ).
+    - Thẻ nào được click sẽ sáng duy nhất (`stat-active`), bảng hiển thị chính xác các dòng thỏa mãn điều kiện của thẻ đó (VD: 2 người).
+    - Click lại lần nữa sẽ tắt lọc (`activeMetricCardIdx = -1`) và quay về 28 người cơ sở.
+
 ### 17. TÙY CHỈNH MÀU RIÊNG TIÊU ĐỀ SIDEBAR & CẢI TIẾN FORMAT CHECKBOX_FILE_LOOP
 - **Định dạng Hộp kiểm + Tệp đính kèm (Loop) (`DynamicField.vue`)**:
   - Tách riêng ô nhập nội dung text lên trên 1 hàng độc lập (full-width 100%, cao 32px, font 0.82rem) kèm STT `#idx` và nút Xóa.
