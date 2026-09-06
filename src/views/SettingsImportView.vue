@@ -1854,18 +1854,18 @@
               <!-- Mock sidebar content -->
               <div style="position: relative; z-index: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; height: 100%;">
                 <div style="text-align: center; border-bottom: 1px solid rgba(0,0,0,0.15); padding-bottom: 8px;">
-                  <div style="font-size: 0.7rem; font-weight: 800; color: #000000; text-transform: uppercase;">CÔNG AN TP. HỒ CHÍ MINH</div>
+                  <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase;" :style="{ color: sidebarCustomTextColor || '#000000' }">CÔNG AN TP. HỒ CHÍ MINH</div>
                   <div style="font-size: 0.65rem; font-weight: 800; color: #fde047; text-shadow: 0 1px 2px rgba(0,0,0,0.4); margin-top: 2px;">DỮ LIỆU CÁN BỘ & THÂN NHÂN</div>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-                  <div style="padding: 6px 10px; background: rgba(0,0,0,0.15); border-radius: 6px; font-size: 0.78rem; font-weight: bold; color: #000000; display: flex; align-items: center; gap: 6px;">
-                    <i class="pi pi-chart-pie" style="font-size: 0.85rem;"></i> Thống kê
+                  <div style="padding: 6px 10px; background: rgba(0,0,0,0.15); border-radius: 6px; font-size: 0.78rem; font-weight: bold; display: flex; align-items: center; gap: 6px;" :style="{ color: sidebarCustomTextColor || '#000000' }">
+                    <i class="pi pi-chart-pie" style="font-size: 0.85rem;" :style="{ color: sidebarCustomTextColor || '#000000' }"></i> Thống kê
                   </div>
-                  <div style="padding: 6px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: bold; color: #000000; display: flex; align-items: center; gap: 6px;">
-                    <i class="pi pi-users" style="font-size: 0.85rem;"></i> Hồ sơ Cán bộ
+                  <div style="padding: 6px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: bold; display: flex; align-items: center; gap: 6px;" :style="{ color: sidebarCustomTextColor || '#000000' }">
+                    <i class="pi pi-users" style="font-size: 0.85rem;" :style="{ color: sidebarCustomTextColor || '#000000' }"></i> Hồ sơ Cán bộ
                   </div>
                 </div>
-                <div style="margin-top: auto; font-size: 0.68rem; color: #000000; text-align: center; background: rgba(255,255,255,0.6); border-radius: 4px; padding: 2px 4px; font-weight: 600;">
+                <div style="margin-top: auto; font-size: 0.68rem; text-align: center; background: rgba(255,255,255,0.6); border-radius: 4px; padding: 2px 4px; font-weight: 600; color: #0f172a;">
                   {{ currentSidebarBg ? `Độ trong suốt: ${sidebarBgOpacity}%` : `Màu nền: ${sidebarCustomColor || '#889962'}` }}
                 </div>
               </div>
@@ -1915,6 +1915,55 @@
                   :key="p.color"
                   type="button"
                   @click="saveSidebarCustomColor(p.color)"
+                  style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155;"
+                >
+                  <span :style="{ background: p.color }" style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; border: 1px solid rgba(0,0,0,0.15);"></span>
+                  {{ p.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Chọn Màu chữ Menu (Sidebar Text Color) -->
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
+              <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+                Tùy chỉnh Màu chữ Menu (Sidebar Text Color):
+              </div>
+              <div style="font-size: 0.74rem; color: #64748b; line-height: 1.4; margin-bottom: 8px;">
+                Chọn màu chữ hiển thị cho các mục menu (tiêu đề, tên mục, icon).
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <input
+                  type="color"
+                  v-model="sidebarCustomTextColor"
+                  @input="saveSidebarCustomTextColor(sidebarCustomTextColor)"
+                  style="width: 40px; height: 32px; padding: 1px; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; background: #fff;"
+                  title="Bấm để chọn màu chữ"
+                />
+                <input
+                  type="text"
+                  v-model="sidebarCustomTextColor"
+                  @change="saveSidebarCustomTextColor(sidebarCustomTextColor)"
+                  placeholder="#000000"
+                  style="width: 100px; height: 32px; padding: 3px 8px; font-size: 0.8rem; font-weight: 700; font-family: monospace; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a;"
+                />
+                <Button
+                  label="Lưu màu chữ"
+                  icon="pi pi-check"
+                  size="small"
+                  severity="success"
+                  @click="saveSidebarCustomTextColor(sidebarCustomTextColor)"
+                  style="font-size: 0.76rem; height: 32px;"
+                />
+              </div>
+
+              <!-- Gợi ý các gam màu chữ chuẩn -->
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Gợi ý:</span>
+                <button
+                  v-for="p in sidebarTextColorPresets"
+                  :key="p.color"
+                  type="button"
+                  @click="saveSidebarCustomTextColor(p.color)"
                   style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155;"
                 >
                   <span :style="{ background: p.color }" style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; border: 1px solid rgba(0,0,0,0.15);"></span>
@@ -2574,6 +2623,15 @@ const sidebarColorPresets = [
   { color: '#1f2937', label: 'Xám đen' },
 ];
 
+const sidebarCustomTextColor = ref('');
+const sidebarTextColorPresets = [
+  { color: '#000000', label: 'Đen mặc định' },
+  { color: '#ffffff', label: 'Trắng sáng' },
+  { color: '#fef08a', label: 'Vàng nhạt' },
+  { color: '#334155', label: 'Xám đậm' },
+  { color: '#14532d', label: 'Xanh lục đậm' },
+];
+
 const loadSidebarBgSettings = async () => {
   try {
     const bgData = await getAppSettings('sidebar_custom_bg', null);
@@ -2591,6 +2649,12 @@ const loadSidebarBgSettings = async () => {
     } else {
       sidebarCustomColor.value = '#889962';
     }
+    const txtColorData = await getAppSettings('sidebar_custom_text_color', null);
+    if (txtColorData) {
+      sidebarCustomTextColor.value = typeof txtColorData === 'string' ? txtColorData : (txtColorData.value || '');
+    } else {
+      sidebarCustomTextColor.value = '';
+    }
   } catch (err) {
     console.warn('Failed to load sidebar bg:', err);
   }
@@ -2600,6 +2664,14 @@ const saveSidebarCustomColor = async (color) => {
   if (color) sidebarCustomColor.value = color;
   try {
     await saveAppSettings('sidebar_custom_color', sidebarCustomColor.value);
+    window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
+  } catch (e) {}
+};
+
+const saveSidebarCustomTextColor = async (color) => {
+  if (color !== undefined) sidebarCustomTextColor.value = color;
+  try {
+    await saveAppSettings('sidebar_custom_text_color', sidebarCustomTextColor.value);
     window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
   } catch (e) {}
 };
@@ -2648,9 +2720,11 @@ const resetDefaultSidebarBg = async () => {
   currentSidebarBg.value = '';
   sidebarBgOpacity.value = 40;
   sidebarCustomColor.value = '#889962';
+  sidebarCustomTextColor.value = '';
   await saveAppSettings('sidebar_custom_bg', null);
   await saveAppSettings('sidebar_bg_opacity', 40);
   await saveAppSettings('sidebar_custom_color', '#889962');
+  await saveAppSettings('sidebar_custom_text_color', '');
   window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
   alert('Đã khôi phục nền Menu mặc định!');
 };

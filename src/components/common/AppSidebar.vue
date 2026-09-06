@@ -1,5 +1,12 @@
 <template>
-  <aside class="app-sidebar" style="position: relative; overflow: hidden;" :style="{ backgroundColor: sidebarCustomColor || '#889962' }">
+  <aside
+    class="app-sidebar"
+    style="position: relative; overflow: hidden;"
+    :style="{
+      backgroundColor: sidebarCustomColor || '#889962',
+      '--sidebar-text-color': sidebarCustomTextColor || '#000000',
+    }"
+  >
     <!-- Lớp phủ ảnh nền tùy biến cover với độ trong suốt tùy chỉnh -->
     <div
       v-if="sidebarCustomBg"
@@ -16,10 +23,16 @@
         alt="Bộ Công An"
         style="width: 85px; height: 85px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"
       />
-      <div style="font-size: 0.76rem; font-weight: 800; color: #000000; text-transform: uppercase; line-height: 1.3; white-space: nowrap;">
+      <div
+        style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; line-height: 1.3; white-space: nowrap;"
+        :style="{ color: sidebarCustomTextColor || '#000000' }"
+      >
         CÔNG AN THÀNH PHỐ HỒ CHÍ MINH
       </div>
-      <div style="font-size: 0.76rem; font-weight: 800; color: #000000; margin-top: 4px; line-height: 1.3; white-space: nowrap;">
+      <div
+        style="font-size: 0.76rem; font-weight: 800; margin-top: 4px; line-height: 1.3; white-space: nowrap;"
+        :style="{ color: sidebarCustomTextColor || '#000000' }"
+      >
         PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
       </div>
       <div style="font-size: 0.71rem; font-weight: 800; color: #fde047; margin: 8px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
@@ -384,6 +397,7 @@ const confirmQuickTripNavigate = () => {
 const sidebarCustomBg = ref('');
 const sidebarBgOpacity = ref(40);
 const sidebarCustomColor = ref('#889962');
+const sidebarCustomTextColor = ref('');
 
 const loadSidebarBg = async () => {
   try {
@@ -404,9 +418,17 @@ const loadSidebarBg = async () => {
     } else {
       sidebarCustomColor.value = '#889962';
     }
+
+    const txtCol = await getAppSettings('sidebar_custom_text_color');
+    if (txtCol) {
+      sidebarCustomTextColor.value = typeof txtCol === 'string' ? txtCol : (txtCol.value || '');
+    } else {
+      sidebarCustomTextColor.value = '';
+    }
   } catch (e) {
     sidebarCustomBg.value = '';
     sidebarCustomColor.value = '#889962';
+    sidebarCustomTextColor.value = '';
   }
 };
 
@@ -482,5 +504,17 @@ onUnmounted(() => {
 
 .flyout-item:hover {
   background: #f1f5f9;
+}
+
+:deep(.app-nav-item) {
+  color: var(--sidebar-text-color, #000000) !important;
+}
+
+:deep(.app-nav-item i) {
+  color: var(--sidebar-text-color, #000000) !important;
+}
+
+:deep(.app-nav-heading) {
+  color: var(--sidebar-text-color, #1a2e05) !important;
 }
 </style>

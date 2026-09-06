@@ -780,6 +780,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
+import { buildTopicSourceList, computeMetricCardCount, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType } from '@/utils/dashboardMetrics';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
@@ -1156,85 +1157,21 @@ const matchSingleCondition = (item, cond) => {
   return checkConditionMatch(rawVal, op, target);
 };
 
-const matchCardCondition = (item, card) => {
-  if (!card) return true;
-
-  // 1. Kiểm tra danh sách điều kiện (hỗ trợ cả conditions[] mới và card.field cũ)
-  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
-    ? card.conditions
-    : (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []);
-
-  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
-
-  if (activeConds.length > 0) {
-    const logicOp = (card.logicOp || 'AND').toUpperCase();
-    if (logicOp === 'OR') {
-      return activeConds.some((cond) => matchSingleCondition(item, cond));
-    }
-    return activeConds.every((cond) => matchSingleCondition(item, cond));
-  }
-
-  // 2. Không có card.field / conditions -> Kiểm tra Preset condition
-  const cond = card.condition || card.id || '';
-  if (cond === 'completed') {
-    const presence = getTripPresence(item);
-    return presence.status === 'completed' && !presence.isOverdue;
-  }
-  if (cond === 'abroad') {
-    const presence = getTripPresence(item);
-    return presence.status === 'abroad';
-  }
-  if (cond === 'overdue') {
-    const presence = getTripPresence(item);
-    return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
-  }
-
-  // 3. Mặc định không chọn cột lọc gì -> Toàn bộ danh sách của bảng
-  return true;
-};
-
-const isCardAllType = (card) => {
-  if (!card) return false;
-  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
-    ? card.conditions
-    : (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []);
-  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
-  if (activeConds.length > 0) return false;
-  if (card.condition && card.condition !== 'all') return false;
-  return true;
-};
+const matchCardCondition = (item, card) => matchSharedCardCondition(item, card, personnelStore);
+const isCardAllType = (card) => isSharedCardAllType(card);
 
 // Tập dữ liệu cơ sở của Chuyên đề (Baseline List dựa trên thẻ đầu tiên)
 const topicBaselineList = computed(() => {
   const fullList = currentSourceList.value || [];
   const firstCard = activeMetricCards.value[0];
-  if (firstCard && !isCardAllType(firstCard)) {
-    return fullList.filter((item) => matchCardCondition(item, firstCard));
+  if (firstCard && !isSharedCardAllType(firstCard)) {
+    return fullList.filter((item) => matchSharedCardCondition(item, firstCard, personnelStore));
   }
   return fullList;
 });
 
 const getCardMetricValue = (card) => {
-  if (!card) return 0;
-  const firstCard = activeMetricCards.value[0];
-  let items = (card === firstCard || isCardAllType(card))
-    ? topicBaselineList.value
-    : topicBaselineList.value.filter((item) => matchCardCondition(item, card));
-
-  // Đếm giá trị duy nhất (Unique)
-  if (card.isUnique) {
-    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-    const uniqueSet = new Set();
-    items.forEach((item) => {
-      const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? item.personnelId ?? item.id;
-      if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
-        uniqueSet.add(String(keyVal).trim());
-      }
-    });
-    return uniqueSet.size;
-  }
-
-  return items.length;
+  return computeMetricCardCount(card, currentSourceList.value, activeMetricCards.value[0], personnelStore);
 };
 
 const activeMetricCardId = ref('all');
@@ -1947,117 +1884,7 @@ const unifiedTripsList = computed(() => {
 // Dynamic Data List based on configured source
 const currentSourceList = computed(() => {
   const src = currentDashboardConfig.value?.source || 'trips';
-  if (src === 'personnel') {
-    return (personnelStore.personnelList || []).map((p) => {
-      const presence = resolvePresence(p);
-      return {
-        ...p,
-        uniqueKey: p.id || p.code,
-        personnelName: p.name,
-        personnelCode: p.code,
-        departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-        position: p.positionName || p.position || '',
-        rawPerson: p,
-        isAbroad: presence.isAbroad,
-        isOverdue: presence.isOverdue,
-        overdueDays: presence.overdueDays || 0,
-        presenceStatus: presence.shortLabel,
-        presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel,
-      };
-    });
-  }
-  if (src === 'relatives') {
-    return (personnelStore.relativesList || []).map((r, idx) => {
-      let rCustom = {};
-      if (r.custom_data) {
-        try {
-          rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
-        } catch (e) {}
-      }
-      const parentPerson = r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || (r.personnelId ? (personnelStore.personnelList || []).find(p => p.id === r.personnelId) : null) || null;
-      
-      const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-      const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
-      const rCccd = String(r[rKeyField] ?? r.cccdthannhan ?? r.cccd ?? rCustom[rKeyField] ?? '').trim().toLowerCase();
-      const rName = String(r.relativeName || r.name || '').trim().toLowerCase();
-
-      let relTrips = Array.isArray(r.trips) ? [...r.trips] : (Array.isArray(rCustom.trips) ? [...rCustom.trips] : []);
-
-      if (parentPerson && Array.isArray(parentPerson.trips)) {
-        parentPerson.trips.forEach((t) => {
-          let tCustom = {};
-          if (t.custom_data) {
-            try { tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data; } catch (e) {}
-          }
-          const tRelCccd = String(t[rKeyField] ?? t.cccdthannhan ?? tCustom[rKeyField] ?? tCustom.cccdthannhan ?? (t.isRelative ? (t.cccd ?? tCustom.cccd) : '') ?? '').trim().toLowerCase();
-          const tRelName = String(t.relativeName || tCustom.relativeName || '').trim().toLowerCase();
-          const isMatch = (rCccd && tRelCccd && !isInternalId(tRelCccd) && rCccd === tRelCccd) ||
-                          (rName && tRelName && rName === tRelName && (t.isRelative === true || t.isRelative === 'true'));
-          if (isMatch) {
-            const alreadyIn = relTrips.some(existing => (existing.id && existing.id === t.id) || (existing.uniqueKey && existing.uniqueKey === t.uniqueKey));
-            if (!alreadyIn) {
-              relTrips.push({ ...t, isRelative: true });
-            }
-          }
-        });
-      }
-
-      const presence = resolvePresence({ ...r, trips: relTrips });
-
-      // Tìm chuyến đi đang hoạt động (đang ở nước ngoài hoặc quá hạn) hoặc chuyến đi gần nhất
-      let activeTrip = null;
-      if (relTrips.length > 0) {
-        activeTrip = relTrips.find((t) => {
-          const tp = resolvePresence(t);
-          return tp.isAbroad || tp.isOverdue;
-        });
-        if (!activeTrip) {
-          activeTrip = [...relTrips].sort((a, b) => {
-            const da = parseDateValue(a.departureDate || a.ngay_xuat_canh)?.getTime() || 0;
-            const db = parseDateValue(b.departureDate || b.ngay_xuat_canh)?.getTime() || 0;
-            return db - da;
-          })[0];
-        }
-      }
-
-      const latestTrip = relTrips.length > 0 ? relTrips[relTrips.length - 1] : null;
-
-      return {
-        ...rCustom,
-        ...r,
-        uniqueKey: r.id || `rel_${idx}`,
-        isRelative: true,
-        trips: relTrips,
-        activeTrip: activeTrip || latestTrip,
-        personnelName: r.relativeName || r.name || 'Thân nhân',
-        personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
-        relativeName: r.relativeName || r.name || 'Thân nhân',
-        relationshipName: r.relationshipName || r.relationship || '',
-        parentName: parentPerson?.name || '',
-        parentPersonnelName: parentPerson?.name || '',
-        parentPosition: parentPerson?.positionName || parentPerson?.position || '',
-        cccdparent: r.cccdparent || parentPerson?.cccd || parentPerson?.cccdparent || '',
-        cccdthannhan: r.cccdthannhan || r.cccd || '',
-        departmentName: parentPerson?.departmentName || (parentPerson?.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || '',
-        countryName: activeTrip?.countryName || activeTrip?.country || presence.country || latestTrip?.countryName || latestTrip?.country || r.countryName || rCustom.countryName || '',
-        departureDate: activeTrip?.departureDate || activeTrip?.ngay_xuat_canh || latestTrip?.departureDate || latestTrip?.ngay_xuat_canh || '',
-        arrivalDate: activeTrip?.arrivalDate || activeTrip?.ngay_nhap_canh || activeTrip?.approvedArrivalDate || latestTrip?.arrivalDate || latestTrip?.ngay_nhap_canh || '',
-        purpose: activeTrip?.purpose || activeTrip?.muc_dich || latestTrip?.purpose || latestTrip?.muc_dich || '',
-        decisionNumber: activeTrip?.decisionNumber || activeTrip?.so_quyet_dinh || latestTrip?.decisionNumber || latestTrip?.so_quyet_dinh || '',
-        rawPerson: parentPerson || r,
-        rawRelative: r,
-        custom_data: rCustom,
-        isAbroad: presence.isAbroad,
-        isOverdue: presence.isOverdue,
-        overdueDays: presence.overdueDays || 0,
-        presenceStatus: presence.shortLabel,
-        presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel,
-      };
-    });
-  }
-  return unifiedTripsList.value;
+  return buildTopicSourceList(src, personnelStore);
 });
 
 // Aggregated Quick Stats

@@ -24,6 +24,18 @@
           style="font-size: 0.8rem;"
         />
 
+        <!-- Sync All Topic Dashboards Button -->
+        <Button
+          icon="pi pi-sync"
+          label="Đồng bộ tất cả Chuyên đề"
+          severity="info"
+          size="small"
+          outlined
+          @click="syncAllTopicDashboardsToWidgets(false)"
+          v-tooltip.top="'Tự động gọi 100% tất cả các thẻ thống kê con của từng Chuyên đề ra Dashboard'"
+          style="font-size: 0.8rem;"
+        />
+
         <!-- Dashboard Settings Button -->
         <Button
           icon="pi pi-cog"
@@ -733,6 +745,7 @@ import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDial
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
 import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
+import { buildTopicSourceList, computeMetricCardCount, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType } from '@/utils/dashboardMetrics';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const router = useRouter();
@@ -1187,6 +1200,77 @@ const saveCustomGroupsToDb = async () => {
   } catch (e) {
     console.error('Error saving custom groups to DB:', e);
   }
+};
+
+const syncAllTopicDashboardsToWidgets = async (replaceExisting = false) => {
+  if (!availableTopicDashboards.value || availableTopicDashboards.value.length === 0) {
+    alert('Không tìm thấy cấu hình Chuyên đề nào!');
+    return;
+  }
+  const confirmMsg = replaceExisting
+    ? 'Bạn có chắc chắn muốn làm mới toàn bộ bảng thống kê và nạp 100% tất cả các thẻ của từng Chuyên đề?'
+    : 'Thao tác này sẽ tự động tạo các nhóm thống kê tương ứng với từng Chuyên đề và nạp đầy đủ 100% tất cả các thẻ con. Bạn có muốn tiếp tục?';
+  if (!confirm(confirmMsg)) return;
+
+  const colorMap = {
+    blue: '#0284c7',
+    green: '#2e7d32',
+    amber: '#ea580c',
+    red: '#dc2626',
+    purple: '#7c3aed',
+    teal: '#0d9488',
+  };
+
+  const newGroups = replaceExisting ? [] : [...customGroups.value];
+
+  availableTopicDashboards.value.forEach((topic, tIdx) => {
+    const existingGroupIdx = newGroups.findIndex(g => g.topicId === topic.id || g.title === topic.title);
+    const cards = topic.metricCards || [];
+    const widthPerCard = cards.length <= 2 ? 50 : (cards.length === 3 ? 33 : 25);
+
+    const widgets = cards.map((card, cIdx) => {
+      const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
+      const primaryField = cardConds.length > 0 ? cardConds[0].field : '';
+      return {
+        id: `w_topic_${topic.id}_${card.id || cIdx}_${Date.now()}_${cIdx}`,
+        title: card.label || `Thẻ ${cIdx + 1}`,
+        topicId: topic.id,
+        topicTitle: topic.title,
+        cardId: card.id || card.label,
+        cardCondition: card.condition || card.id,
+        field: primaryField,
+        columnId: primaryField,
+        conditions: card.conditions || (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []),
+        operator: card.operator || 'has_value',
+        value: card.value || '',
+        source: topic.source || 'trips',
+        displayType: 'count',
+        widthPercent: widthPerCard,
+        color: colorMap[card.color] || card.color || '#2e7d32',
+        icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
+        isUnique: !!card.isUnique,
+      };
+    });
+
+    const groupPayload = {
+      id: existingGroupIdx !== -1 ? newGroups[existingGroupIdx].id : `grp_topic_${topic.id || tIdx}_${Date.now()}`,
+      topicId: topic.id,
+      title: topic.title,
+      description: `Đồng bộ 100% số liệu từ Chuyên đề: ${topic.title} (${cards.length} chỉ số)`,
+      icon: topic.icon ? `pi ${topic.icon}` : 'pi-folder',
+      widgets,
+    };
+
+    if (existingGroupIdx !== -1) {
+      newGroups[existingGroupIdx] = groupPayload;
+    } else {
+      newGroups.push(groupPayload);
+    }
+  });
+
+  customGroups.value = newGroups;
+  await saveCustomGroupsToDb();
+  alert('Đã đồng bộ thành công 100% tất cả thống kê từ các Chuyên đề con ra Dashboard chính!');
 };
 
 // Group CRUD
@@ -1669,66 +1753,7 @@ const getRowFieldValue = (row, colId) => {
 };
 
 const getSourceList = (source) => {
-  if (source === 'relatives' || source === 'relative') {
-    return (personnelStore.relativesList || []).map((r, idx) => {
-      let rCustom = {};
-      if (r.custom_data) {
-        try {
-          rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data;
-        } catch (e) {}
-      }
-      const presence = resolvePresence(r);
-      return {
-        ...rCustom,
-        ...r,
-        uniqueKey: r.id || `rel_${idx}`,
-        isRelative: true,
-        trips: Array.isArray(r.trips) ? r.trips : [],
-        personnelName: r.relativeName || r.name || 'Thân nhân',
-        personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
-        relativeName: r.relativeName || r.name || 'Thân nhân',
-        relationshipName: r.relationshipName || r.relationship || '',
-        rawPerson: r.parentPersonnel || (r.cccdparent ? personnelStore.findPersonByCccd(r.cccdparent) : null) || r,
-        rawRelative: r,
-        custom_data: rCustom,
-        isAbroad: presence.isAbroad,
-        isOverdue: presence.isOverdue,
-        overdueDays: presence.overdueDays || 0,
-        presenceStatus: presence.shortLabel,
-        presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel,
-      };
-    });
-  }
-  if (source === 'trips' || source === 'trip') {
-    return unifiedTripsList.value || [];
-  }
-  return (personnelStore.personnelList || []).map((p) => {
-    let pCustom = {};
-    if (p.custom_data) {
-      try {
-        pCustom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
-      } catch (e) {}
-    }
-    const presence = resolvePresence(p);
-    return {
-      ...pCustom,
-      ...p,
-      uniqueKey: p.id || p.code,
-      personnelName: p.name,
-      personnelCode: p.code,
-      departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-      position: p.positionName || p.position || '',
-      rawPerson: p,
-      custom_data: pCustom,
-      isAbroad: presence.isAbroad,
-      isOverdue: presence.isOverdue,
-      overdueDays: presence.overdueDays || 0,
-      presenceStatus: presence.shortLabel,
-      presenceLabel: presence.label,
-      _presenceStatus: presence.shortLabel,
-    };
-  });
+  return buildTopicSourceList(source, personnelStore);
 };
 
 const checkConditionMatch = (val, op, target) => {
@@ -1911,53 +1936,8 @@ const matchSingleCondition = (item, cond) => {
   return checkConditionMatch(rawVal, op, target);
 };
 
-const matchCardCondition = (item, card) => {
-  if (!card) return true;
-
-  // 1. Kiểm tra danh sách điều kiện (hỗ trợ cả conditions[] mới và card.field cũ)
-  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
-    ? card.conditions
-    : (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []);
-
-  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
-
-  if (activeConds.length > 0) {
-    const logicOp = (card.logicOp || 'AND').toUpperCase();
-    if (logicOp === 'OR') {
-      return activeConds.some((cond) => matchSingleCondition(item, cond));
-    }
-    return activeConds.every((cond) => matchSingleCondition(item, cond));
-  }
-
-  // 2. Không có card.field / conditions -> Kiểm tra Preset condition
-  const cond = card.condition || card.id || '';
-  if (cond === 'completed') {
-    const presence = getTripPresence(item);
-    return presence.status === 'completed' && !presence.isOverdue;
-  }
-  if (cond === 'abroad') {
-    const presence = getTripPresence(item);
-    return presence.status === 'abroad';
-  }
-  if (cond === 'overdue') {
-    const presence = getTripPresence(item);
-    return presence.status === 'overdue' || (presence.status === 'completed' && presence.isOverdue);
-  }
-
-  // 3. Mặc định không chọn cột lọc gì -> Toàn bộ danh sách của bảng
-  return true;
-};
-
-const isCardAllType = (card) => {
-  if (!card) return false;
-  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
-    ? card.conditions
-    : (card.field ? [{ field: card.field, operator: card.operator || 'has_value', value: card.value || '' }] : []);
-  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
-  if (activeConds.length > 0) return false;
-  if (card.condition && card.condition !== 'all') return false;
-  return true;
-};
+const matchCardCondition = (item, card) => matchSharedCardCondition(item, card, personnelStore);
+const isCardAllType = (card) => isSharedCardAllType(card);
 
 const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
@@ -1979,32 +1959,8 @@ const getCardMetricValueForTopic = (card, topic) => {
     else src = 'trips';
   }
   const fullList = getSourceList(src);
-
-  // Xác định tập dữ liệu cơ sở của Chuyên đề (Baseline List dựa trên thẻ đầu tiên)
   const firstCard = topicCards[0];
-  let baselineList = fullList;
-  if (firstCard && !isCardAllType(firstCard)) {
-    baselineList = fullList.filter((item) => matchCardCondition(item, firstCard));
-  }
-
-  const isUnique = !!(actualCard.isUnique || card.isUnique);
-  const targetItems = (actualCard === firstCard || isCardAllType(actualCard))
-    ? baselineList
-    : baselineList.filter((item) => matchCardCondition(item, actualCard));
-
-  if (isUnique) {
-    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-    const uniqueSet = new Set();
-    targetItems.forEach((item) => {
-      const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? item.personnelId ?? item.id;
-      if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
-        uniqueSet.add(String(keyVal).trim());
-      }
-    });
-    return uniqueSet.size;
-  }
-
-  return targetItems.length;
+  return computeMetricCardCount(actualCard, fullList, firstCard, personnelStore);
 };
 
 const onTopicCardSelectChange = () => {
