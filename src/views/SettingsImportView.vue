@@ -1674,11 +1674,6 @@
                     <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; line-height: 1.15;" :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }">CÔNG AN TP. HỒ CHÍ MINH</div>
                     <div style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; line-height: 1.15;" :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }">PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ</div>
                   </div>
-                  <!-- Khối 2: Tiêu đề phần mềm (cách khối trên 12px, cách nhau 2px, line-height 1.15) -->
-                  <div style="font-size: 0.65rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.4); margin-top: 12px; display: flex; flex-direction: column; gap: 2px; line-height: 1.15;" :style="{ color: sidebarSubtitleTextColor || '#fde047' }">
-                    <div style="line-height: 1.15;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
-                    <div style="line-height: 1.15;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
-                  </div>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                   <div style="padding: 6px 10px; background: rgba(0,0,0,0.15); border-radius: 6px; font-size: 0.78rem; font-weight: bold; display: flex; align-items: center; gap: 6px;" :style="{ color: sidebarCustomTextColor || '#000000' }">
@@ -1836,55 +1831,6 @@
                   :key="p.color"
                   type="button"
                   @click="saveSidebarOrgTextColor(p.color)"
-                  style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155;"
-                >
-                  <span :style="{ background: p.color }" style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; border: 1px solid rgba(0,0,0,0.15);"></span>
-                  {{ p.label }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Chọn Màu chữ Tiêu đề Dữ liệu (2 dòng chữ vàng dưới: DỮ LIỆU QUẢN LÝ CÁN BỘ...) -->
-            <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
-              <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
-                Tùy chỉnh Màu chữ Tiêu đề Dữ liệu (DỮ LIỆU QUẢN LÝ CÁN BỘ...):
-              </div>
-              <div style="font-size: 0.74rem; color: #64748b; line-height: 1.4; margin-bottom: 8px;">
-                Chọn màu chữ riêng cho 2 dòng tiêu đề phần mềm màu vàng ở đầu Menu.
-              </div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                <input
-                  type="color"
-                  v-model="sidebarSubtitleTextColor"
-                  @input="saveSidebarSubtitleTextColor(sidebarSubtitleTextColor)"
-                  style="width: 40px; height: 32px; padding: 1px; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; background: #fff;"
-                  title="Bấm để chọn màu"
-                />
-                <input
-                  type="text"
-                  v-model="sidebarSubtitleTextColor"
-                  @change="saveSidebarSubtitleTextColor(sidebarSubtitleTextColor)"
-                  placeholder="#fde047"
-                  style="width: 100px; height: 32px; padding: 3px 8px; font-size: 0.8rem; font-weight: 700; font-family: monospace; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a;"
-                />
-                <Button
-                  label="Lưu màu"
-                  icon="pi pi-check"
-                  size="small"
-                  severity="success"
-                  @click="saveSidebarSubtitleTextColor(sidebarSubtitleTextColor)"
-                  style="font-size: 0.76rem; height: 32px;"
-                />
-              </div>
-
-              <!-- Gợi ý màu -->
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Gợi ý:</span>
-                <button
-                  v-for="p in sidebarSubtitleColorPresets"
-                  :key="p.color"
-                  type="button"
-                  @click="saveSidebarSubtitleTextColor(p.color)"
                   style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155;"
                 >
                   <span :style="{ background: p.color }" style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; border: 1px solid rgba(0,0,0,0.15);"></span>

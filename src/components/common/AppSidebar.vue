@@ -38,16 +38,6 @@
           PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
         </div>
       </div>
-
-      <!-- Khối 2: Tiêu đề phần mềm (Cách khối trên 12px, 2 dòng bên trong gắn kết chặt chẽ) -->
-      <div
-        class="sidebar-header-title"
-        style="font-size: 0.71rem; font-weight: 800; margin-top: 12px; line-height: 1.15; text-transform: uppercase; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 2px;"
-        :style="{ color: sidebarSubtitleTextColor || '#fde047' }"
-      >
-        <div style="white-space: nowrap; line-height: 1.15; margin: 0; padding: 0;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
-        <div style="white-space: nowrap; line-height: 1.15; margin: 0; padding: 0;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
-      </div>
     </div>
 
     <nav class="app-sidebar-nav" style="position: relative; z-index: 1;">

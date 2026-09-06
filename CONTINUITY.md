@@ -167,9 +167,23 @@
      - Gỡ bỏ tab Quản lý Phụ lục cũ và mảng `DEFAULT_APPENDICES_CONFIG` trong `SettingsImportView.vue`. Toàn bộ Phụ lục nay được quản lý thống nhất, linh hoạt tại tab "Quản lý Chuyên đề".
      - Xóa lệnh ghi vào bảng `appendix1` cũ trong `PersonnelView.vue`.
 
-### 22. LEDGER STATUS
-- **Status**: Done (Đã xóa toàn bộ 3 bảng phụ lục cũ, loại bỏ 100% cơ chế fallback, build `dist` và sync sang `WINDOWS_OFFLINE_APP/frontend` thành công).
+### 23. CHUYỂN TIÊU ĐỀ HỆ THỐNG SANG APP HEADER & TỐI ƯU MENU SIDEBAR (AppHeader.vue, AppSidebar.vue, main.css)
+- **Yêu cầu**:
+  - Dời dòng tiêu đề phần mềm: `DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI` từ menu sidebar sang khu vực Header của ứng dụng (`AppHeader.vue`).
+  - Hiển thị thành 2 hàng tại `AppHeader.vue`:
+    - **Hàng 1**: Tiêu đề hệ thống (chữ in hoa, đậm, màu xanh đậm trang trọng).
+    - **Hàng 2**: Cỡ chữ nhỏ hơn hiển thị tên trang hiện tại (ví dụ: `Thống kê`, `Hồ sơ cán bộ`, `Chuyên đề`...).
+  - Tại Menu Sidebar (`AppSidebar.vue`): Gỡ bỏ Khối 2, giữ lại Logo Bộ Công An và 2 dòng phiên hiệu đơn vị (`CÔNG AN THÀNH PHỐ HỒ CHÍ MINH` / `PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ`), giúp Menu thanh thoát, gọn gàng và chuẩn chỉ.
+- **Thực hiện**:
+  1. `src/components/common/AppSidebar.vue`: Gỡ bỏ khối `.sidebar-header-title`.
+  2. `src/components/common/AppHeader.vue`: Cấu trúc lại `.app-header-title` thành 2 dòng (`.app-header-main-title` và `.app-header-sub-title`).
+  3. `src/assets/styles/main.css`: Cập nhật `.app-header` `min-height: 60px; height: auto; padding: 8px 1.5rem;` và định dạng font, khoảng cách cân đối cho 2 dòng tiêu đề.
+  4. `src/views/SettingsImportView.vue`: Đồng bộ khung xem trước (preview) menu sidebar và gỡ bỏ mục cấu hình màu chữ tiêu đề sidebar không còn sử dụng.
+
+### 24. LEDGER STATUS
+- **Status**: Done (Đã di chuyển tiêu đề phần mềm sang AppHeader hiển thị 2 dòng, tinh giản Header sidebar, build và sync `WINDOWS_OFFLINE_APP` thành công).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` hoàn tất không lỗi).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` hoàn tất sạch sẽ).
+
 
 

@@ -136,22 +136,40 @@ html, body {
 }
 
 .app-header {
-  height: 60px;
+  min-height: 60px;
+  height: auto;
   background-color: var(--header-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
+  padding: 8px 1.5rem;
   z-index: 10;
   flex-shrink: 0;
 }
 
 .app-header-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.app-header-main-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1.25;
+}
+
+.app-header-sub-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  line-height: 1.2;
 }
 
 .app-header-actions {

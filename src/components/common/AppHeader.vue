@@ -1,7 +1,12 @@
 <template>
   <header class="app-header">
     <div class="app-header-title">
-      {{ currentTitle }}
+      <div class="app-header-main-title">
+        DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI
+      </div>
+      <div class="app-header-sub-title">
+        {{ currentTitle }}
+      </div>
     </div>
 
     <div class="app-header-actions">
