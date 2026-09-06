@@ -403,10 +403,26 @@
     - Cập nhật toàn bộ liên kết mở tệp trong `ChildDashboardView.vue`, `PersonnelView.vue`, `DynamicField.vue` chạy qua `getFileUrl`.
     - Hỗ trợ thêm hiển thị template cho định dạng cột file tiêu chuẩn (`col.format === 'file'`) trên các bảng dữ liệu.
 
-### 41. LEDGER STATUS
-- **Status**: Done (Đã sửa lỗi link đính kèm, hỗ trợ cộng dồn số liệu nhiều cột trên thẻ thống kê, đã build và deploy git).
+### 41. HIỂN THỊ RICH FORMAT (CHECKBOX, TAGS, TỆP) TRONG CỘT ĐỐI CHIẾU 🎯 & MỞ GÓI DỮ LIỆU LOOP
+- **Hiện tượng**:
+  - Người dùng cấu hình Thẻ thống kê bật tùy chọn: "Hiện cột đối chiếu khi ấn vào thống kê (🎯)".
+  - Cột đối chiếu là "KỶ LUẬT" có định dạng `checkbox_file_loop` (Hộp kiểm + Tệp đính kèm).
+  - Khi ấn vào thẻ, cột `🎯 KỶ LUẬT` hiện ra nhưng hiển thị nguyên chuỗi JSON thô:
+    `{"isSingle":false,"items":[{"id":"cfl_...","selectedOptions":["Đảng"],"text":"Năm 2010...","checked":true}]}`.
+  - Người dùng phản hồi: "lúc bình thường lúc lỗi, cột này là format tệp đính kèm hộp kiểm loop ấy" (bình thường trong bảng hiển thị đẹp, nhưng khi bấm thẻ KPI thì cột đối chiếu 🎯 bị lỗi JSON).
+- **Nguyên nhân**:
+  1. Cột đối chiếu `🎯 ${activeCardColLabel}` trong `ChildDashboardView.vue` trước đây chỉ gọi `getActiveCardCellValue(data)` (in chuỗi text đơn thuần) mà không phân giải theo `format` của cột điều kiện.
+  2. Hàm `formatGenericCellValue` trong `formatters.js` chỉ xử lý mảng trực tiếp, chưa mở gói đối tượng dạng bọc `{ isSingle: false, items: [...] }`, dẫn đến việc fallback sang `JSON.stringify(parsed)`.
+- **Giải pháp xử lý triệt để**:
+  1. `src/utils/formatters.js`: Bổ sung bước mở gói `if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) parsed = parsed.items;` và format các trường `selectedOptions`, `selected`, `fullText`, `text`, `file`. Đảm bảo không bao giờ xuất chuỗi JSON thô ra màn hình.
+  2. `src/views/ChildDashboardView.vue`:
+     - Bổ sung computed `activeCardSingleCol` nhận diện chính xác cấu hình và format cột của thẻ thống kê đang kích hoạt.
+     - Nâng cấp template cột `🎯`: Nếu cột là `checkbox_file_loop`, `text_file_loop`, `checkbox_file`, `file`... sẽ render giao diện tương tác hoàn chỉnh (icon hộp kiểm xanh, thẻ pill màu, nội dung và nút xem tệp đính kèm).
+
+### 42. LEDGER STATUS
+- **Status**: Done (Đã sửa triệt để hiển thị cột đối chiếu 🎯 cho format checkbox_file_loop và các format đính kèm lặp, đã build và deploy git).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], kiểm thử unit test và build thành công).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã test và build thành công).
 
 
 
