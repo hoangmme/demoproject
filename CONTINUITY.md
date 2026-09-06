@@ -710,8 +710,19 @@
   5. **Tương thích điều hướng thẻ `activeMetricCardId` trong `ChildDashboardView.vue`**:
      - Cho phép click widget từ Dashboard mở thẳng đúng thẻ chỉ số tương ứng ở Chuyên đề con mà không bị kẹt hay thiếu bản ghi.
 
-### 60. LEDGER STATUS
-- **Status**: Done (Đã sửa triệt để lỗi lệch số liệu giữa Dashboard và Chuyên đề, khôi phục hoạt động đồng bộ chuẩn xác 100%).
+### 60. SỬA LỖI ĐẾM VÀ HIỂN THỊ CẢ DÒNG RỖNG KHI THẺ SỐ 1 CÓ ĐIỀU KIỆN (2026-09-07)
+- **Vấn đề phản hồi**:
+  - Người dùng cấu hình Thẻ số 1 (Baseline) có điều kiện (ví dụ: `Quốc gia` -> `Có dữ liệu (khác rỗng)`), nhưng hệ thống vẫn đếm cả những bản ghi có quốc gia rỗng (`-`), và bảng dữ liệu khi bấm vào Thẻ 1 vẫn hiển thị các dòng rỗng (`-`).
+- **Nguyên nhân phát hiện**:
+  1. Trong `computeMetricCardCount`: Đoạn kiểm tra điều kiện của `firstCard` (`if (!isCardAllType(firstCard))`) bị bọc bên trong điều kiện `if (shouldInheritBaseline && ...)`. Vì `isSameCard(card, firstCard)` khiến `shouldInheritBaseline` thành `false`, `baselineList` không hề được lọc qua `firstCard`, khiến Thẻ 1 đếm luôn danh sách thô (gồm cả dòng rỗng).
+  2. Trong `filteredList` (`ChildDashboardView.vue`): Khi `targetCard === baselineCard`, code gán `list = [...currentSourceList.value]` (danh sách thô) và câu lệnh lọc `if (targetCard !== baselineCard)` bị bỏ qua, dẫn đến toàn bộ danh sách gồm cả dòng rỗng `-` được đẩy ra bảng.
+- **Giải pháp đã triển khai**:
+  1. **Chuẩn hóa `computeMetricCardCount`**: Luôn lọc `baselineList = sourceList.filter(item => matchCardCondition(item, firstCard))` nếu `firstCard` có điều kiện (`!isCardAllType(firstCard)`). Khi tính cho Thẻ 1 (`isFirst`), trả về chính `baselineList` đã lọc sạch sẽ.
+  2. **Chuẩn hóa `filteredList`**: Khi đang xem Thẻ 1 (`isTargetBaseline`), bảng hiển thị trực tiếp `topicBaselineList.value` (đã được lọc theo điều kiện của Thẻ 1), loại bỏ hoàn toàn các bản ghi rỗng khỏi bảng.
+  3. **Kế thừa chính xác cho các thẻ con**: Các thẻ con có `inheritBaseline: true` lọc trực tiếp bên trong `topicBaselineList.value`.
+
+### 61. LEDGER STATUS
+- **Status**: Done (Đã sửa triệt để điều kiện lọc của Thẻ số 1 cho cả số đếm lẫn bảng hiển thị, không còn đếm hay hiện dòng rỗng).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
 

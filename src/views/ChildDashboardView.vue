@@ -874,7 +874,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
-import { buildTopicSourceList, computeMetricCardCount, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
+import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
 import { getFileUrl } from '@/api/files';
 import * as XLSX from 'xlsx';
 
@@ -2007,13 +2007,16 @@ const filteredList = computed(() => {
 
   const targetCard = activeMetricCards.value?.[currentIdx];
   const baselineCard = firstVisibleCard.value;
-  const shouldInheritBaseline = targetCard !== baselineCard && targetCard?.inheritBaseline !== false;
+  const isTargetBaseline = !targetCard || targetCard === baselineCard || isSameCard(targetCard, baselineCard);
+  const shouldInheritBaseline = !isTargetBaseline && targetCard?.inheritBaseline !== false;
 
-  let list = shouldInheritBaseline ? [...topicBaselineList.value] : [...currentSourceList.value];
-
-  // Nếu người dùng chọn một thẻ khác với thẻ baseline đầu tiên:
-  if (targetCard && targetCard !== baselineCard && !isCardAllType(targetCard)) {
-    list = list.filter((t) => matchCardCondition(t, targetCard));
+  // Nếu là Thẻ đầu tiên (Baseline): Bảng luôn hiển thị đúng tập dữ liệu cơ sở đã lọc theo Thẻ đầu tiên!
+  let list = [];
+  if (isTargetBaseline) {
+    list = [...topicBaselineList.value];
+  } else {
+    const baseSource = shouldInheritBaseline ? topicBaselineList.value : currentSourceList.value;
+    list = isCardAllType(targetCard) ? [...baseSource] : baseSource.filter((t) => matchCardCondition(t, targetCard));
   }
 
   // Đếm / Hiển thị Unique (kế thừa tính unique từ thẻ baseline nếu có ràng buộc)

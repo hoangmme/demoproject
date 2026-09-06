@@ -693,23 +693,30 @@ export const isSameCard = (a, b) => {
 export const computeMetricCardCount = (card, sourceList, firstCard, personnelStore) => {
   if (!card || !Array.isArray(sourceList)) return 0;
 
-  // Kiểm tra ràng buộc theo Thẻ đầu tiên (Tổng cộng / Baseline)
-  // Mặc định là true trừ khi card.inheritBaseline === false hoặc card là firstCard
-  const shouldInheritBaseline = !isSameCard(card, firstCard) && card.inheritBaseline !== false;
-
-  // 1. Áp dụng baseline filter nếu thẻ đầu tiên không phải là "Toàn bộ" và thẻ này có ràng buộc theo baseline
+  // 1. Tập cơ sở Baseline của Chuyên đề (định nghĩa bởi Thẻ đầu tiên):
+  // Nếu Thẻ đầu tiên có điều kiện lọc (không phải là thẻ Toàn bộ rỗng điều kiện), tập cơ sở baselineList PHẢI được lọc theo firstCard!
   let baselineList = sourceList;
-  if (shouldInheritBaseline && firstCard && !isCardAllType(firstCard)) {
+  if (firstCard && !isCardAllType(firstCard)) {
     baselineList = sourceList.filter((item) => matchCardCondition(item, firstCard, personnelStore));
   }
 
-  // 2. Lọc danh sách thỏa mãn thẻ này
-  const targetItems = (isSameCard(card, firstCard) || (shouldInheritBaseline && isCardAllType(card)))
-    ? baselineList
-    : (shouldInheritBaseline ? baselineList : sourceList).filter((item) => matchCardCondition(item, card, personnelStore));
+  // 2. Xác định Thẻ hiện tại có phải là Thẻ đầu tiên không:
+  const isFirst = isSameCard(card, firstCard);
+  const shouldInheritBaseline = !isFirst && card.inheritBaseline !== false;
 
-  // 3. Đếm Unique (Cán bộ / CCCD) nếu thẻ được cấu hình isUnique HOẶC kế thừa tính unique từ Thẻ đầu tiên (để không vượt quá số tổng)
-  const isUniqueCount = card.isUnique || (shouldInheritBaseline && !!firstCard?.isUnique);
+  // 3. Lọc danh sách thỏa mãn thẻ này:
+  let targetItems;
+  if (isFirst) {
+    targetItems = baselineList;
+  } else if (isCardAllType(card)) {
+    targetItems = shouldInheritBaseline ? baselineList : sourceList;
+  } else {
+    const baseSource = shouldInheritBaseline ? baselineList : sourceList;
+    targetItems = baseSource.filter((item) => matchCardCondition(item, card, personnelStore));
+  }
+
+  // 4. Đếm Unique (Cán bộ / CCCD) nếu thẻ được cấu hình isUnique HOẶC kế thừa tính unique từ Thẻ đầu tiên (để không vượt quá số tổng)
+  const isUniqueCount = card.isUnique || (shouldInheritBaseline && !!firstCard?.isUnique) || (isFirst && !!firstCard?.isUnique);
 
   if (isUniqueCount) {
     const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
@@ -734,7 +741,7 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
   const logicOp = (card.logicOp || 'OR').toUpperCase();
   if (activeConds.length > 1 && (logicOp === 'OR' || logicOp === 'SUM')) {
     let totalOccurrences = 0;
-    const baseSource = shouldInheritBaseline ? baselineList : sourceList;
+    const baseSource = (isFirst || shouldInheritBaseline) ? baselineList : sourceList;
     activeConds.forEach((cond) => {
       const countForCond = baseSource.filter((item) => matchSingleCondition(item, cond, personnelStore)).length;
       totalOccurrences += countForCond;
