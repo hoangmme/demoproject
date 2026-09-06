@@ -1,5 +1,5 @@
 <template>
-  <aside class="app-sidebar" style="position: relative; overflow: hidden;">
+  <aside class="app-sidebar" style="position: relative; overflow: hidden;" :style="{ backgroundColor: sidebarCustomColor || '#889962' }">
     <!-- Lớp phủ ảnh nền tùy biến cover với độ trong suốt tùy chỉnh -->
     <div
       v-if="sidebarCustomBg"
@@ -383,6 +383,7 @@ const confirmQuickTripNavigate = () => {
 
 const sidebarCustomBg = ref('');
 const sidebarBgOpacity = ref(40);
+const sidebarCustomColor = ref('#889962');
 
 const loadSidebarBg = async () => {
   try {
@@ -396,8 +397,16 @@ const loadSidebarBg = async () => {
     } else {
       sidebarBgOpacity.value = 40;
     }
+
+    const col = await getAppSettings('sidebar_custom_color');
+    if (col) {
+      sidebarCustomColor.value = typeof col === 'string' ? col : (col.value || '#889962');
+    } else {
+      sidebarCustomColor.value = '#889962';
+    }
   } catch (e) {
     sidebarCustomBg.value = '';
+    sidebarCustomColor.value = '#889962';
   }
 };
 

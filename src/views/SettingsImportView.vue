@@ -1851,7 +1851,7 @@
             <div style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 8px;">
               Xem trước Menu với Ảnh nền & Độ trong suốt:
             </div>
-            <div style="width: 275px; height: 260px; border-radius: 12px; overflow: hidden; border: 2px solid #889962; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; background: #889962;">
+            <div style="width: 275px; height: 260px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; border: 2px solid;" :style="{ background: sidebarCustomColor || '#889962', borderColor: sidebarCustomColor || '#889962' }">
               <!-- Background layer -->
               <div
                 v-if="currentSidebarBg"
@@ -1872,16 +1872,66 @@
                     <i class="pi pi-users" style="font-size: 0.85rem;"></i> Hồ sơ Cán bộ
                   </div>
                 </div>
-                <div style="margin-top: auto; font-size: 0.68rem; color: #000000; text-align: center; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 4px;">
-                  {{ currentSidebarBg ? `Độ trong suốt: ${sidebarBgOpacity}%` : 'Nền xanh rêu mặc định (#889962)' }}
+                <div style="margin-top: auto; font-size: 0.68rem; color: #000000; text-align: center; background: rgba(255,255,255,0.6); border-radius: 4px; padding: 2px 4px; font-weight: 600;">
+                  {{ currentSidebarBg ? `Độ trong suốt: ${sidebarBgOpacity}%` : `Màu nền: ${sidebarCustomColor || '#889962'}` }}
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Cột 2: Upload, Slider, Reset -->
+          <!-- Cột 2: Color, Upload, Slider, Reset -->
           <div style="display: flex; flex-direction: column; gap: 14px; background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <!-- Chọn Màu nền Menu (Sidebar Background Color) -->
             <div>
+              <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+                Tùy chỉnh Màu nền Menu (Sidebar Color):
+              </div>
+              <div style="font-size: 0.74rem; color: #64748b; line-height: 1.4; margin-bottom: 8px;">
+                Chọn màu tùy ý cho thanh Menu bên trái (mặc định là xanh rêu #889962).
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <input
+                  type="color"
+                  v-model="sidebarCustomColor"
+                  @input="saveSidebarCustomColor(sidebarCustomColor)"
+                  style="width: 40px; height: 32px; padding: 1px; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; background: #fff;"
+                  title="Bấm để chọn màu"
+                />
+                <input
+                  type="text"
+                  v-model="sidebarCustomColor"
+                  @change="saveSidebarCustomColor(sidebarCustomColor)"
+                  placeholder="#889962"
+                  style="width: 100px; height: 32px; padding: 3px 8px; font-size: 0.8rem; font-weight: 700; font-family: monospace; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a;"
+                />
+                <Button
+                  label="Lưu màu"
+                  icon="pi pi-check"
+                  size="small"
+                  severity="success"
+                  @click="saveSidebarCustomColor(sidebarCustomColor)"
+                  style="font-size: 0.76rem; height: 32px;"
+                />
+              </div>
+
+              <!-- Gợi ý các gam màu chuẩn -->
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Gợi ý:</span>
+                <button
+                  v-for="p in sidebarColorPresets"
+                  :key="p.color"
+                  type="button"
+                  @click="saveSidebarCustomColor(p.color)"
+                  style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155;"
+                >
+                  <span :style="{ background: p.color }" style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; border: 1px solid rgba(0,0,0,0.15);"></span>
+                  {{ p.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Tải lên ảnh nền -->
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
               <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
                 Tải lên Ảnh nền Menu Mới:
               </div>
@@ -2519,6 +2569,17 @@ const resetDefaultLoginBg = async () => {
 const sidebarBgFileInputRef = ref(null);
 const currentSidebarBg = ref('');
 const sidebarBgOpacity = ref(40);
+const sidebarCustomColor = ref('#889962');
+
+const sidebarColorPresets = [
+  { color: '#889962', label: 'Xanh rêu' },
+  { color: '#1e3a8a', label: 'Xanh dương' },
+  { color: '#0f172a', label: 'Xanh đen' },
+  { color: '#14532d', label: 'Xanh lá' },
+  { color: '#7f1d1d', label: 'Đỏ đô' },
+  { color: '#312e81', label: 'Tím than' },
+  { color: '#1f2937', label: 'Xám đen' },
+];
 
 const loadSidebarBgSettings = async () => {
   try {
@@ -2531,9 +2592,23 @@ const loadSidebarBgSettings = async () => {
     } else {
       sidebarBgOpacity.value = 40;
     }
+    const colorData = await getAppSettings('sidebar_custom_color', null);
+    if (colorData) {
+      sidebarCustomColor.value = typeof colorData === 'string' ? colorData : (colorData.value || '#889962');
+    } else {
+      sidebarCustomColor.value = '#889962';
+    }
   } catch (err) {
     console.warn('Failed to load sidebar bg:', err);
   }
+};
+
+const saveSidebarCustomColor = async (color) => {
+  if (color) sidebarCustomColor.value = color;
+  try {
+    await saveAppSettings('sidebar_custom_color', sidebarCustomColor.value);
+    window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
+  } catch (e) {}
 };
 
 const triggerUploadSidebarBg = () => sidebarBgFileInputRef.value?.click();
@@ -2579,8 +2654,10 @@ const resetDefaultSidebarBg = async () => {
   if (!confirm('Bạn có chắc muốn khôi phục lại nền Menu mặc định (xanh rêu #889962)?')) return;
   currentSidebarBg.value = '';
   sidebarBgOpacity.value = 40;
+  sidebarCustomColor.value = '#889962';
   await saveAppSettings('sidebar_custom_bg', null);
   await saveAppSettings('sidebar_bg_opacity', 40);
+  await saveAppSettings('sidebar_custom_color', '#889962');
   window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
   alert('Đã khôi phục nền Menu mặc định!');
 };
