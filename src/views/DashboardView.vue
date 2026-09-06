@@ -112,6 +112,16 @@
             <i class="pi pi-plus" style="font-size: 0.75rem;"></i> Thêm Khối Thống kê
           </button>
           <button
+            v-if="group.topicId || (group.description && group.description.includes('Chuyên đề')) || availableTopicDashboards.some(t => t.title === group.title)"
+            type="button"
+            class="btn-secondary-action"
+            @click="syncSingleGroupFromTopic(group)"
+            title="Đồng bộ lại toàn bộ thẻ thống kê từ Chuyên đề vào nhóm này"
+            style="color: #0284c7;"
+          >
+            <i class="pi pi-sync" style="font-size: 0.78rem;"></i> Đồng bộ từ Chuyên đề
+          </button>
+          <button
             v-if="group.widgets && group.widgets.length > 1"
             type="button"
             class="btn-secondary-action"
@@ -1230,9 +1240,19 @@ const widgetForm = ref({
 
 const loadCustomGroups = async () => {
   try {
+    const local = localStorage.getItem('dashboard_custom_groups');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        customGroups.value = parsed;
+      }
+    }
     const dbGroups = await getAppSettings('dashboard_custom_groups');
-    if (dbGroups && Array.isArray(dbGroups)) {
+    if (dbGroups && Array.isArray(dbGroups) && dbGroups.length > 0) {
       customGroups.value = dbGroups;
+      try {
+        localStorage.setItem('dashboard_custom_groups', JSON.stringify(dbGroups));
+      } catch (e) {}
     }
   } catch (e) {
     console.error('Error loading custom groups:', e);
@@ -1241,13 +1261,16 @@ const loadCustomGroups = async () => {
 
 const saveCustomGroupsToDb = async () => {
   try {
+    localStorage.setItem('dashboard_custom_groups', JSON.stringify(customGroups.value));
+  } catch (e) {}
+  try {
     await saveAppSettings('dashboard_custom_groups', customGroups.value);
   } catch (e) {
     console.error('Error saving custom groups to DB:', e);
   }
 };
 
-const reconcileGroupsWithTopics = async (silent = true) => {
+const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = null) => {
   if (!availableTopicDashboards.value || availableTopicDashboards.value.length === 0) {
     if (!silent) alert('Không tìm thấy cấu hình Chuyên đề nào!');
     return;
@@ -1266,15 +1289,28 @@ const reconcileGroupsWithTopics = async (silent = true) => {
   const currentGroups = JSON.parse(JSON.stringify(customGroups.value || []));
 
   availableTopicDashboards.value.forEach((topic, tIdx) => {
-    let existingGroup = currentGroups.find((g) => g.topicId === topic.id || g.title === topic.title);
+    let existingGroup = currentGroups.find((g) => (topic.id && g.topicId === topic.id) || g.title === topic.title);
+    
+    // Nếu gọi đồng bộ cho một nhóm cụ thể mà không khớp nhóm này thì bỏ qua
+    if (targetGroupIdentifier && existingGroup && existingGroup.id !== targetGroupIdentifier && existingGroup.title !== targetGroupIdentifier && existingGroup.topicId !== targetGroupIdentifier) {
+      return;
+    }
+
     const cards = topic.metricCards || [];
-    const widthPerCard = cards.length <= 2 ? 50 : (cards.length === 3 ? 33 : 25);
+    const visibleCards = cards.filter((c) => {
+      if (c.hidden === true) return false;
+      if (c.widthPercent === 0 || c.widthPercent === '0') return false;
+      return true;
+    });
+    const widthPerCard = visibleCards.length <= 2 ? 50 : (visibleCards.length === 3 ? 33 : 25);
 
     if (!existingGroup) {
       // Nếu nhóm này chưa có trên Dashboard chính -> Tạo nhóm mới với các thẻ tương ứng
       const widgets = cards.map((card, cIdx) => {
         const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
         const primaryField = cardConds.length > 0 ? cardConds[0].field : '';
+        const isCardHidden = !!card.hidden || (card.widthPercent !== '' && card.widthPercent !== undefined && card.widthPercent !== null && (Number(card.widthPercent) === 0 || card.widthPercent === '0'));
+
         return {
           id: `w_topic_${topic.id}_${card.id || cIdx}_${Date.now()}_${cIdx}`,
           title: card.label || `Thẻ ${cIdx + 1}`,
@@ -1289,7 +1325,8 @@ const reconcileGroupsWithTopics = async (silent = true) => {
           value: card.value || '',
           source: topic.source || 'trips',
           displayType: 'count',
-          widthPercent: widthPerCard,
+          widthPercent: isCardHidden ? 0 : ((card.widthPercent !== '' && card.widthPercent !== undefined && card.widthPercent !== null && Number(card.widthPercent) > 0) ? Number(card.widthPercent) : widthPerCard),
+          hidden: isCardHidden,
           color: colorMap[card.color] || card.color || '#2e7d32',
           icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
           isUnique: !!card.isUnique,
@@ -1300,12 +1337,18 @@ const reconcileGroupsWithTopics = async (silent = true) => {
         id: `grp_topic_${topic.id || tIdx}_${Date.now()}`,
         topicId: topic.id,
         title: topic.title,
-        description: `Đồng bộ số liệu từ Chuyên đề: ${topic.title}`,
+        description: `Đồng bộ số liệu từ Chuyên đề: ${topic.title} (${visibleCards.length} chỉ số)`,
         icon: topic.icon ? `pi ${topic.icon}` : 'pi-folder',
         widgets,
       });
       hasChanges = true;
       return;
+    }
+
+    // Luôn liên kết chuẩn topicId cho nhóm
+    if (!existingGroup.topicId && topic.id) {
+      existingGroup.topicId = topic.id;
+      hasChanges = true;
     }
 
     // Nhóm đã tồn tại -> Smart Reconcile từng thẻ widget (BẢO TỒN 100% STYLE CỦA NGƯỜI DÙNG)
@@ -1317,19 +1360,28 @@ const reconcileGroupsWithTopics = async (silent = true) => {
       const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
       const primaryField = cardConds.length > 0 ? cardConds[0].field : '';
 
-      // Tìm widget tương ứng đã có trong nhóm
+      // Tìm widget tương ứng đã có trong nhóm (chưa được match với thẻ khác)
       const existingWidget = existingWidgets.find(
-        (w) => (w.cardId && (w.cardId === card.id || w.cardId === card.label)) ||
-               w.title === card.label ||
-               (card.id && w.id && w.id.includes(card.id))
+        (w) => !matchedWidgetIds.has(w.id) && (
+          (w.cardId && (w.cardId === card.id || w.cardId === card.label)) ||
+          w.title === card.label ||
+          (card.id && w.id && w.id.includes(card.id))
+        )
       );
 
-      const isCardHidden = !!card.hidden || Number(card.widthPercent) === 0 || card.widthPercent === '0';
+      // SỬA LỖI CỐT LÕI: Chỉ ẩn khi explicit hidden === true hoặc widthPercent === 0 / '0'. Tuyệt đối không Number('') === 0!
+      const isCardHidden = !!card.hidden || (card.widthPercent !== '' && card.widthPercent !== undefined && card.widthPercent !== null && (Number(card.widthPercent) === 0 || card.widthPercent === '0'));
 
       if (existingWidget) {
         matchedWidgetIds.add(existingWidget.id);
-        // Giữ nguyên 100% style người dùng đã setup (color, widthPercent, icon, displayType, chartType, bgColor, etc.)
-        // Nếu thẻ bị ẩn từ Cấu hình Chuyên đề, đồng bộ trạng thái ẩn
+        // Giữ nguyên 100% style người dùng đã setup (color, icon, displayType, chartType, bgColor, etc.)
+        // Nếu thẻ không bị ẩn từ Cấu hình Chuyên đề, giải phóng trạng thái ẩn (hidden: false) và khôi phục độ rộng hợp lệ
+        const targetWp = isCardHidden
+          ? 0
+          : ((card.widthPercent !== '' && card.widthPercent !== undefined && card.widthPercent !== null && Number(card.widthPercent) > 0)
+              ? Number(card.widthPercent)
+              : (existingWidget.widthPercent && Number(existingWidget.widthPercent) > 0 ? Number(existingWidget.widthPercent) : widthPerCard));
+
         updatedWidgets.push({
           ...existingWidget,
           title: card.label || existingWidget.title,
@@ -1344,13 +1396,15 @@ const reconcileGroupsWithTopics = async (silent = true) => {
           value: card.value || '',
           source: topic.source || 'trips',
           isUnique: !!card.isUnique,
-          hidden: isCardHidden ? true : (existingWidget.hidden || false),
-          widthPercent: isCardHidden ? 0 : (existingWidget.widthPercent !== undefined ? existingWidget.widthPercent : (card.widthPercent ? Number(card.widthPercent) : widthPerCard)),
+          hidden: isCardHidden,
+          widthPercent: targetWp,
         });
       } else {
         // Thẻ mới được thêm ở Child Dashboard -> Tạo widget mới trong nhóm
+        const newWidgetId = `w_topic_${topic.id}_${card.id || cIdx}_${Date.now()}_${cIdx}`;
+        matchedWidgetIds.add(newWidgetId);
         updatedWidgets.push({
-          id: `w_topic_${topic.id}_${card.id || cIdx}_${Date.now()}_${cIdx}`,
+          id: newWidgetId,
           title: card.label || `Thẻ ${cIdx + 1}`,
           topicId: topic.id,
           topicTitle: topic.title,
@@ -1363,7 +1417,7 @@ const reconcileGroupsWithTopics = async (silent = true) => {
           value: card.value || '',
           source: topic.source || 'trips',
           displayType: 'count',
-          widthPercent: isCardHidden ? 0 : (card.widthPercent ? Number(card.widthPercent) : widthPerCard),
+          widthPercent: isCardHidden ? 0 : ((card.widthPercent !== '' && card.widthPercent !== undefined && card.widthPercent !== null && Number(card.widthPercent) > 0) ? Number(card.widthPercent) : widthPerCard),
           hidden: isCardHidden,
           color: colorMap[card.color] || card.color || '#2e7d32',
           icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
@@ -1373,12 +1427,19 @@ const reconcileGroupsWithTopics = async (silent = true) => {
       }
     });
 
-    // Giữ lại các widget tùy biến không thuộc thẻ của topic này
+    // Cập nhật phụ đề của nhóm phản ánh đúng số lượng chỉ số đang hiển thị
+    const expectedDesc = `Đồng bộ số liệu từ Chuyên đề: ${topic.title} (${visibleCards.length} chỉ số)`;
+    if (existingGroup.description !== expectedDesc) {
+      existingGroup.description = expectedDesc;
+      hasChanges = true;
+    }
+
+    // Giữ lại các widget tùy biến thủ công không thuộc thẻ của topic này
     const nonTopicWidgets = existingWidgets.filter((w) => !w.topicId && !w.cardId);
     nonTopicWidgets.forEach((w) => updatedWidgets.push(w));
 
-    // Kiểm tra xem có widget nào bị xóa hoặc thay đổi không
-    if (JSON.stringify(existingWidgets.map((w) => w.id)) !== JSON.stringify(updatedWidgets.map((w) => w.id))) {
+    // Kiểm tra xem có widget nào thay đổi thuộc tính quan trọng không
+    if (JSON.stringify(existingWidgets.map((w) => ({ id: w.id, h: w.hidden, wp: w.widthPercent, t: w.title }))) !== JSON.stringify(updatedWidgets.map((w) => ({ id: w.id, h: w.hidden, wp: w.widthPercent, t: w.title })))) {
       hasChanges = true;
     }
 
@@ -1395,7 +1456,20 @@ const reconcileGroupsWithTopics = async (silent = true) => {
   }
 };
 
+const syncSingleGroupFromTopic = async (group) => {
+  await loadTopicDashboards();
+  await loadCustomGroups();
+  const topic = availableTopicDashboards.value.find((t) => (group.topicId && t.id === group.topicId) || t.title === group.title);
+  if (!topic) {
+    alert('Không tìm thấy cấu hình Chuyên đề tương ứng với nhóm này để đồng bộ!');
+    return;
+  }
+  await reconcileGroupsWithTopics(false, group.id || group.title);
+};
+
 const syncAllTopicDashboardsToWidgets = async () => {
+  await loadTopicDashboards();
+  await loadCustomGroups();
   await reconcileGroupsWithTopics(false);
 };
 
@@ -1491,14 +1565,34 @@ const DEFAULT_TOPIC_DASHBOARDS = [
 
 const loadTopicDashboards = async () => {
   try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        availableTopicDashboards.value = parsed;
+      }
+    }
     const saved = await getAppSettings('custom_dashboards_config', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
       availableTopicDashboards.value = saved;
-    } else {
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(saved));
+      } catch (e) {}
+    } else if (!availableTopicDashboards.value || availableTopicDashboards.value.length === 0) {
       availableTopicDashboards.value = DEFAULT_TOPIC_DASHBOARDS;
     }
+    // Đảm bảo các thẻ con không bị rỗng ID hoặc trùng id: 'all'
+    availableTopicDashboards.value.forEach((dash) => {
+      (dash.metricCards || []).forEach((c, idx) => {
+        if (idx > 0 && (!c.id || c.id === 'all')) {
+          c.id = 'card_' + (dash.id || 'dash') + '_' + idx;
+        }
+      });
+    });
   } catch (e) {
-    availableTopicDashboards.value = DEFAULT_TOPIC_DASHBOARDS;
+    if (!availableTopicDashboards.value || availableTopicDashboards.value.length === 0) {
+      availableTopicDashboards.value = DEFAULT_TOPIC_DASHBOARDS;
+    }
   }
 };
 

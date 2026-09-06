@@ -622,8 +622,38 @@
      - Chạy đồng bộ ngầm song song bằng `Promise.allSettled` không block UI, loại bỏ hoàn toàn hiện tượng chớp nháy/nhảy layout khi tải trang.
      - Đồng bộ lưu cache tức thì trong `SettingsImportView.vue` và phát sự kiện `custom-dashboards-updated`, `sidebar-bg-updated` phản hồi tức thời.
 
-### 56. LEDGER STATUS
-- **Status**: Done (Đã loại bỏ hoàn toàn !important, tối ưu kiến trúc CSS sidebar và áp dụng cơ chế instant hydration 0ms).
+### 56. SỬA LỖI ĐỒNG BỘ THẺ THỐNG KÊ TỪ CHUYÊN ĐỀ RA DASHBOARD CHÍNH (2026-09-07)
+- **Vấn đề người dùng phản hồi**:
+  - Người dùng gửi 2 ảnh: Chuyên đề "Vấn đề chính trị" có 6 thẻ thống kê hiển thị đầy đủ (17, 6, 2, 3, 1, 1), nhưng trên Dashboard chính, nhóm "Vấn đề chính trị" ghi: *"Đồng bộ 100% số liệu từ Chuyên đề: Vấn đề chính trị (7 chỉ số)"* mà bên dưới CHỈ HIỆN DUY NHẤT 1 THẺ (*"Xử lý kỷ luật 6"*), toàn bộ 5 thẻ còn lại biến mất.
+  - Phản hồi: `"- đồng bộ cột ko hoạt động?"`.
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. **Lỗi Type Coercion `Number('') === 0` trong JavaScript**:
+     - Trong `reconcileGroupsWithTopics` (`DashboardView.vue`): Kiểm tra ẩn thẻ bằng biểu thức:
+       `const isCardHidden = !!card.hidden || Number(card.widthPercent) === 0 || card.widthPercent === '0';`
+     - Trong `SettingsImportView.vue`, các thẻ thống kê thông thường mặc định có `widthPercent: ''` (độ rộng tự động co giãn).
+     - Trong JavaScript, `Number('') === 0` trả về **`true`**! Hệ quả: toàn bộ các thẻ có `widthPercent: ''` đều bị hệ thống coi là "thẻ bị ẩn", bị gán `hidden: true` và `widthPercent: 0`.
+  2. **Trạng thái nhiễm độc (Poisoned State) trong Directus DB / LocalStorage**:
+     - Khi chạy reconcile, `hidden: isCardHidden ? true : (existingWidget.hidden || false)` kế thừa `existingWidget.hidden = true` đã bị lưu sai từ trước, dẫn tới các thẻ không bao giờ được giải phóng để hiển thị lại.
+     - Hàm `isWidgetHidden(widget)` kiểm tra `widget.hidden === true || widget.widthPercent === 0` và ẩn toàn bộ các thẻ (`display: none`).
+  3. **Không reload dữ liệu trước khi bấm nút đồng bộ**:
+     - Hàm `syncAllTopicDashboardsToWidgets` trước đây dùng `availableTopicDashboards.value` cũ trong bộ nhớ mà không gọi lại `loadTopicDashboards()` và `loadCustomGroups()`.
+  4. **Thiếu nút đồng bộ trực tiếp tại từng Nhóm**:
+     - Trên Header của từng nhóm chuyên đề không có nút đồng bộ nhanh, khiến người dùng phải tìm nút tổng ở trên đầu trang.
+- **Giải pháp & Triển khai**:
+  1. **Sửa dứt điểm logic `isCardHidden`**:
+     - `const isCardHidden = !!card.hidden || (card.widthPercent !== '' && card.widthPercent !== undefined && card.widthPercent !== null && (Number(card.widthPercent) === 0 || card.widthPercent === '0'));`
+     - Chỉ ẩn khi người dùng chủ động tích ẩn (`hidden: true`) hoặc gán độ rộng `0%` (`0` hoặc `'0'`). Tuyệt đối không để chuỗi rỗng `''` bị ép kiểu thành `0`.
+  2. **Giải phóng trạng thái ẩn và khôi phục độ rộng chuẩn**:
+     - Gán trực tiếp `hidden: isCardHidden` khi reconcile. Nếu thẻ không bị ẩn, `hidden` lập tức trở về `false`.
+     - Nếu `existingWidget.widthPercent === 0` do nhiễm độc từ trước, tự động phục hồi về `widthPerCard` chuẩn.
+     - Bổ sung kiểm tra `!matchedWidgetIds.has(w.id)` chống trùng lặp widget.
+  3. **Bổ sung nút `Đồng bộ từ Chuyên đề` (`syncSingleGroupFromTopic`) trực tiếp tại Header nhóm**:
+     - Nhóm nào gắn với Chuyên đề sẽ có nút icon `pi pi-sync` "Đồng bộ từ Chuyên đề" ngay trên header nhóm. Bấm vào sẽ nạp lại dữ liệu mới nhất từ DB/LocalStorage và đồng bộ chuẩn 100% tất cả thẻ con.
+  4. **Nạp đa tầng LocalStorage + Directus DB (0ms)**:
+     - Cả `loadTopicDashboards` và `loadCustomGroups` đều nạp từ `localStorage` trước (0ms) rồi đối soát với Directus DB.
+
+### 57. LEDGER STATUS
+- **Status**: Done (Đã sửa triệt để lỗi type coercion Number('') === 0, khôi phục toàn bộ thẻ thống kê đồng bộ ra Dashboard chính và thêm nút đồng bộ trực tiếp tại nhóm).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
 
