@@ -137,6 +137,31 @@ export function formatFieldValueForDocx(val, col = {}) {
     return String(val).trim();
   }
 
+  // 3c. Format: Hộp kiểm + Tệp đính kèm (Loop)
+  if (format === 'checkbox_file_loop') {
+    let items = val;
+    if (typeof items === 'string' && (items.startsWith('[') || items.startsWith('{'))) {
+      try { items = JSON.parse(items); } catch (e) {}
+    }
+    const list = Array.isArray(items) ? items : (items && typeof items === 'object' && Array.isArray(items.items) ? items.items : []);
+    if (list.length > 0) {
+      return list
+        .map((it, idx) => {
+          if (typeof it === 'object' && it !== null) {
+            const mark = it.checked ? '☑ ' : '☐ ';
+            const t = it.text ? String(it.text).trim() : '';
+            const fName = it.file?.name || (it.file?.url ? 'Tài liệu' : '');
+            const f = fName ? `[Tệp: ${fName}]` : '';
+            const combined = [t, f].filter(Boolean).join(' ');
+            return `${mark}${combined}`.trim();
+          }
+          return `${idx + 1}. ${it}`;
+        })
+        .join('\n');
+    }
+    return String(val).trim();
+  }
+
   // 3c. Format: Hộp kiểm + Tệp đính kèm (Không loop)
   if (format === 'checkbox_file') {
     let obj = val;

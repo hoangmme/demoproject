@@ -462,6 +462,27 @@ export const formatCellForExcel = (val, colDef) => {
           return `${idx + 1}. ${it}`;
         })
         .join('\n');
+    } else if (colDef && colDef.format === 'checkbox_file_loop') {
+      let list = Array.isArray(val) ? val : (val && typeof val === 'object' && Array.isArray(val.items) ? val.items : []);
+      if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+        try {
+          const p = JSON.parse(val);
+          list = Array.isArray(p) ? p : (p?.items || []);
+        } catch (e) {}
+      }
+      result = list
+        .map((it, idx) => {
+          if (typeof it === 'object' && it !== null) {
+            const mark = it.checked ? '☑ ' : '☐ ';
+            const t = it.text ? String(it.text).trim() : '';
+            const fName = it.file?.name || (it.file?.url ? 'Tài liệu' : '');
+            const f = fName ? `[Đính kèm: ${fName}]` : '';
+            const combined = [t, f].filter(Boolean).join(' ');
+            return `${mark}${combined}`.trim();
+          }
+          return `${idx + 1}. ${it}`;
+        })
+        .join('\n');
     } else if (colDef && colDef.format === 'text_loop') {
       // Mảng text_loop (xuống dòng mỗi mục)
       result = val.join('\n');

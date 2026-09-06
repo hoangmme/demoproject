@@ -319,6 +319,41 @@
               <span v-else>-</span>
             </template>
 
+            <!-- Checkbox + File Loop column -->
+            <template v-else-if="col.format === 'checkbox_file_loop'">
+              <div v-if="getCheckboxFileLoopItems(data, col.id).length > 0" style="display: flex; flex-direction: column; gap: 4px;">
+                <div
+                  v-for="(it, iIdx) in getCheckboxFileLoopItems(data, col.id)"
+                  :key="iIdx"
+                  style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.76rem; line-height: 1.35;"
+                >
+                  <span
+                    :style="{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      color: it.checked ? '#166534' : '#64748b',
+                      fontWeight: it.checked ? '600' : 'normal',
+                    }"
+                  >
+                    <i :class="it.checked ? 'pi pi-check-circle' : 'pi pi-circle'" :style="{ fontSize: '0.72rem', color: it.checked ? '#16a34a' : '#94a3b8' }"></i>
+                    {{ it.text || '(Chưa nhập tên)' }}
+                  </span>
+                  <a
+                    v-if="it.file && it.file.url"
+                    :href="it.file.url"
+                    target="_blank"
+                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                    title="Mở xem tệp"
+                  >
+                    <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                    <span>{{ it.file.name || 'Tệp' }}</span>
+                  </a>
+                </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+
             <!-- Default value -->
             <template v-else>
               <span style="word-break: break-word; line-height: 1.45;">{{ getCellValue(data, col.id) }}</span>
@@ -2079,6 +2114,24 @@ const getCheckboxFileItem = (data, colId) => {
     return { hasValue: val, text: val ? 'Có' : '', file: null };
   }
   return { hasValue: false, text: '', file: null };
+};
+
+const getCheckboxFileLoopItems = (data, colId) => {
+  const val = data?.[colId] ?? (data?.custom_data ? data.custom_data[colId] : null);
+  if (!val) return [];
+  let list = [];
+  if (Array.isArray(val)) {
+    list = val;
+  } else if (typeof val === 'object' && val !== null) {
+    list = Array.isArray(val.items) ? val.items : [];
+  } else if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+    try {
+      const p = JSON.parse(val);
+      if (Array.isArray(p)) list = p;
+      else if (p && typeof p === 'object' && Array.isArray(p.items)) list = p.items;
+    } catch (e) {}
+  }
+  return list;
 };
 
 const getCellValue = (trip, colId) => {

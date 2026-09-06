@@ -471,19 +471,32 @@
                 </div>
               </div>
 
-              <!-- Options Config (for Checkbox, Checkbox_Text, Checkbox_File, Dropdown, Table Loop) -->
+              <!-- Options Config (for Checkbox, Checkbox_Text, Checkbox_File, Checkbox_File_Loop, Dropdown, Table Loop) -->
               <div
-                v-if="col.format === 'checkbox' || col.format === 'checkbox_text' || col.format === 'checkbox_file' || col.format === 'dropdown' || col.format === 'table_2col' || col.format === 'table_loop'"
+                v-if="col.format === 'checkbox' || col.format === 'checkbox_text' || col.format === 'checkbox_file' || col.format === 'checkbox_file_loop' || col.format === 'dropdown' || col.format === 'table_2col' || col.format === 'table_loop'"
                 style="padding-left: 104px; display: flex; flex-direction: column; gap: 4px;"
               >
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <i class="pi pi-list" style="font-size: 0.75rem; color: #6b7280;"></i>
                   <InputText
                     v-model="col.options"
-                    :placeholder="(col.format === 'table_2col' || col.format === 'table_loop') ? 'Cấu hình các tiêu đề cột (cách nhau bởi dấu phẩy, VD: Từ ngày, Đến ngày, Đơn vị, Chức vụ)' : 'Danh sách tùy chọn (cách nhau bởi dấu phẩy, VD: Ngân sách, Tự túc, Học bổng, Tài trợ)'"
+                    :placeholder="col.format === 'checkbox_file_loop' ? 'Tùy chọn: Danh sách mục mẫu ban đầu (cách nhau dấu phẩy, VD: Đơn xin phép, Hộ chiếu, Công văn cử đi)' : (col.format === 'table_2col' || col.format === 'table_loop') ? 'Cấu hình các tiêu đề cột (cách nhau bởi dấu phẩy, VD: Từ ngày, Đến ngày, Đơn vị, Chức vụ)' : 'Danh sách tùy chọn (cách nhau bởi dấu phẩy, VD: Ngân sách, Tự túc, Học bổng, Tài trợ)'"
                     size="small"
                     style="font-size: 0.75rem; width: 100%;"
                   />
+                </div>
+
+                <!-- Checkbox_file_loop: Tùy chọn mặc định Chọn duy nhất hoặc Cho phép chọn nhiều -->
+                <div v-if="col.format === 'checkbox_file_loop'" style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                  <input
+                    type="checkbox"
+                    v-model="col.isSingleSelect"
+                    :id="'single_sel_' + (col.id || cIdx)"
+                    style="accent-color: #2563eb; cursor: pointer; width: 14px; height: 14px;"
+                  />
+                  <label :for="'single_sel_' + (col.id || cIdx)" style="font-size: 0.72rem; color: #1e40af; font-weight: 600; cursor: pointer;">
+                    Mặc định chọn duy nhất 1 mục (Nếu không tích: cho phép chọn cả 2 hoặc nhiều mục)
+                  </label>
                 </div>
                 
                 <!-- Sub-columns Excel breakdown preview (Only for checkbox_text) -->
@@ -2708,6 +2721,7 @@ const formatOptions = [
   { label: 'Cột Công thức (Formula / Trạng thái)', value: 'formula' },
   { label: 'Tệp đính kèm (File/Ảnh/PDF)', value: 'file' },
   { label: 'Văn bản + Tệp đính kèm (Loop)', value: 'text_file_loop' },
+  { label: 'Hộp kiểm + Tệp đính kèm (Loop)', value: 'checkbox_file_loop' },
 ];
 
 const widthOptions = [
