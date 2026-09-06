@@ -131,13 +131,13 @@
 - **Chuẩn hóa chữ hoa / chữ thường**:
   - Menu Sidebar: Sửa "Hồ sơ Cán bộ" thành "Hồ sơ cán bộ" (`AppSidebar.vue`).
   - Tab trang Hồ sơ cán bộ: Chỉ viết hoa chữ đầu `1. Quản lý cán bộ (cá nhân)` và `2. Quản lý thân nhân` (`PersonnelView.vue`).
-- **Tùy biến Màu riêng cho Tiêu đề Menu Sidebar (`AppSidebar.vue`, `SettingsImportView.vue`)**:
-  - Bổ sung tùy chọn màu riêng cho 2 dòng Tên Đơn vị (`sidebar_org_text_color`): "CÔNG AN THÀNH PHỐ HỒ CHÍ MINH" & "PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ".
-  - Bổ sung tùy chọn màu riêng cho 2 dòng Tiêu đề Dữ liệu (`sidebar_subtitle_text_color`): "DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN" & "VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI".
-  - Tích hợp đầy đủ bảng màu, ô nhập hex, gợi ý gam màu chuẩn, và đồng bộ tự động vào bản xem trước lẫn menu thực tế.
+- **Chuẩn hóa Khoảng cách 2 Khối Tiêu đề Menu Sidebar (`AppSidebar.vue`, `SettingsImportView.vue`)**:
+  - Khối 1: Phiên hiệu đơn vị (`CÔNG AN THÀNH PHỐ HỒ CHÍ MINH` & `PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ`) — khoảng cách nội bộ giữa 2 dòng là `4px`.
+  - Khối 2: Tiêu đề phần mềm (`DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN` & `VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI`) — khoảng cách nội bộ giữa 2 dòng là `4px`.
+  - Khoảng cách phân cách giữa Khối 1 và Khối 2 là `10px`, tạo cấu trúc thị giác rõ ràng, tách bạch giữa cơ quan chủ quản và tên hệ thống dữ liệu.
 
 ### 18. LEDGER STATUS
-- **Status**: Done (Đã nâng cấp hàng text riêng cho checkbox_file_loop; Đã chuẩn hóa chữ hoa/thường menu & tab; Đã hoàn thành tùy chỉnh màu riêng cho 2 dòng tên cơ quan và 2 dòng tiêu đề dữ liệu).
+- **Status**: Done (Đã áp dụng chuẩn khoảng cách: nội bộ khối 4px, giữa 2 khối 10px; Đã cập nhật bản build mới nhất).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công 100%).
 

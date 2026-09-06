@@ -23,24 +23,30 @@
         alt="Bộ Công An"
         style="width: 85px; height: 85px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"
       />
-      <div
-        style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; line-height: 1.3; white-space: nowrap;"
-        :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }"
-      >
-        CÔNG AN THÀNH PHỐ HỒ CHÍ MINH
+      <!-- Khối 1: Phiên hiệu đơn vị (2 dòng cách nhau 4px) -->
+      <div class="sidebar-header-org" style="display: flex; flex-direction: column; gap: 4px;">
+        <div
+          style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; line-height: 1.3; white-space: nowrap;"
+          :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }"
+        >
+          CÔNG AN THÀNH PHỐ HỒ CHÍ MINH
+        </div>
+        <div
+          style="font-size: 0.76rem; font-weight: 800; line-height: 1.3; white-space: nowrap;"
+          :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }"
+        >
+          PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
+        </div>
       </div>
+
+      <!-- Khối 2: Tiêu đề phần mềm (Cách khối trên 10px, 2 dòng cách nhau 4px) -->
       <div
-        style="font-size: 0.76rem; font-weight: 800; margin-top: 4px; line-height: 1.3; white-space: nowrap;"
-        :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }"
-      >
-        PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
-      </div>
-      <div
-        style="font-size: 0.71rem; font-weight: 800; margin: 8px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4);"
+        class="sidebar-header-title"
+        style="font-size: 0.71rem; font-weight: 800; margin-top: 10px; line-height: 1.35; text-transform: uppercase; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 4px;"
         :style="{ color: sidebarSubtitleTextColor || '#fde047' }"
       >
         <div style="white-space: nowrap;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
-        <div style="margin-top: 2px; white-space: nowrap;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
+        <div style="white-space: nowrap;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
       </div>
     </div>
 
