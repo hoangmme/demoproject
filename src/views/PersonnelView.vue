@@ -1463,7 +1463,17 @@ const getCheckboxFileLoopItems = (data, colId) => {
       else if (p && typeof p === 'object' && Array.isArray(p.items)) list = p.items;
     } catch (e) {}
   }
-  return list.filter((it) => it && (it.checked || it.file || (it.details && it.details.trim())));
+  return list.filter((it) => {
+    if (!it) return false;
+    if (typeof it === 'string') return it.trim() !== '' && it.trim() !== '-';
+    const hasOpts = (Array.isArray(it.selectedOptions) && it.selectedOptions.length > 0) ||
+                    (Array.isArray(it.selected) && it.selected.length > 0) ||
+                    (typeof it.selectedOptions === 'string' && it.selectedOptions.trim() !== '') ||
+                    Boolean(it.name?.trim());
+    const hasText = Boolean((it.text || it.details || it.fullText || '').trim());
+    const hasFile = Boolean(it.file && (it.file.url || it.file.name || it.file.fileName));
+    return hasOpts || hasText || hasFile;
+  });
 };
 
 const activeRelativeColumns = computed(() => {

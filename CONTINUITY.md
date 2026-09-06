@@ -325,8 +325,24 @@
      - Tôn trọng thuộc tính `c.hidden` (ẩn khi người dùng tick Ẩn ở Cán bộ/Thân nhân).
      - Trong `PersonnelTravelForm.vue`: Nếu là chuyến đi của Cán bộ thì ẩn nếu `c.hideForPersonnel`, nếu là chuyến đi của Thân nhân thì ẩn nếu `c.hideForRelative`.
 
-### 36. LEDGER STATUS
-- **Status**: Done (Đã tinh gọn công thức và chuẩn hóa nút ẩn hiển thị form chi tiết, build thành công).
+### 36. CHUẨN HÓA ĐÁNH GIÁ DỮ LIỆU ĐỊNH DẠNG "HỘP KIỂM + ĐÍNH KÈM (LOOP)" & ĐỐI TƯỢNG PHỨC HỢP TRONG BỘ LỌC
+- **Nguyên nhân cốt lõi**:
+  - Dữ liệu của cột định dạng `checkbox_file_loop` (hoặc các định dạng lặp) được lưu trữ dưới dạng object `{ isSingle: false, items: [] }` hoặc mảng `[]` hoặc chuỗi JSON.
+  - Khi một bản ghi không có mục nào (`items: []` hoặc chỉ có mục trống không có lựa chọn/text/file), hàm kiểm tra điều kiện cũ thực hiện ép kiểu `String(val)` dẫn đến giá trị `"[object Object]"` hoặc chuỗi JSON `'{"isSingle":false,"items":[]}'`.
+  - Giá trị này khác rỗng nên toán tử `has_value` (có dữ liệu) hoặc `contains` (chứa) sai lầm đánh giá là CÓ DỮ LIỆU và đưa vào danh sách đếm / lọc, dù trên bảng hiển thị là `-`.
+- **Thực hiện**:
+  1. `src/utils/dashboardMetrics.js`:
+     - Xây dựng và export hàm `normalizeFieldValueToText(val)`: Phân giải sâu và toàn diện mọi kiểu dữ liệu (chuỗi JSON, Object, Array `checkbox_file_loop`, `table_loop`, `checkbox_file`...).
+     - Chỉ trả về chuỗi khi thực sự có dữ liệu (có ít nhất 1 hộp kiểm được tick, có nội dung văn bản, hoặc có tệp đính kèm). Trả về rỗng `""` tuyệt đối nếu `items` rỗng hoặc các mục chỉ là placeholder trống.
+     - Cập nhật `checkConditionMatch(val, op, target)` sử dụng `normalizeFieldValueToText(val)`. Đồng thời khi toán tử là `contains` mà không nhập giá trị tìm kiếm (hoặc để trống), hệ thống tự động hiểu là kiểm tra "CÓ DỮ LIỆU" (`has_value`).
+  2. `src/views/ChildDashboardView.vue` & `src/views/PersonnelView.vue`:
+     - Đồng bộ hàm `getCheckboxFileLoopItems`: Lọc chặt chẽ chỉ giữ lại các mục có dữ liệu thực tế (`hasOpts || hasText || hasFile`), loại bỏ các item rỗng.
+     - `ChildDashboardView.vue` & `DashboardView.vue`: Tái sử dụng trực tiếp `checkConditionMatch` và `normalizeFieldValueToText` từ `dashboardMetrics.js`.
+  3. `src/views/AdvancedSearchView.vue`:
+     - Áp dụng `normalizeFieldValueToText` cho cả `getRelativeFieldValue` và `getItemFieldValue` để đồng bộ 100% logic lọc tìm kiếm nâng cao với KPI cards.
+
+### 37. LEDGER STATUS
+- **Status**: Done (Đã khắc phục triệt để lỗi đếm/lọc dữ liệu rỗng của định dạng checkbox_file_loop, build thành công 511ms).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công trong 511ms).
 

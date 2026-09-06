@@ -800,7 +800,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
-import { buildTopicSourceList, computeMetricCardCount, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType } from '@/utils/dashboardMetrics';
+import { buildTopicSourceList, computeMetricCardCount, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
 import * as XLSX from 'xlsx';
 
 const route = useRoute();
@@ -1020,54 +1020,6 @@ const getCardMinWidthStyle = (card) => {
   return '160px';
 };
 
-const checkConditionMatch = (val, op, target) => {
-  const strVal = String(val !== undefined && val !== null && val !== '-' ? val : '').toLowerCase().trim();
-  const strTarget = String(target || '').toLowerCase().trim();
-
-  if (op === 'has_value') return !!strVal && strVal !== 'chưa rõ' && strVal !== '-';
-  if (op === 'empty') return !strVal || strVal === 'chưa rõ' || strVal === '-';
-
-  if (op === 'equals') {
-    if (strVal === strTarget) return true;
-    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (sub.length > 1) return sub.some((k) => strVal === k);
-    return false;
-  }
-  if (op === 'not_equals') {
-    if (strVal === strTarget) return false;
-    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (sub.length > 1) return !sub.some((k) => strVal === k);
-    return true;
-  }
-  if (op === 'contains') {
-    if (strVal.includes(strTarget)) return true;
-    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (sub.length > 1) return sub.some((k) => strVal.includes(k));
-    return false;
-  }
-  if (op === 'not_contains') {
-    if (strVal.includes(strTarget)) return false;
-    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (sub.length > 1) return !sub.some((k) => strVal.includes(k));
-    return true;
-  }
-  if (op === 'before' || op === 'after') {
-    const dVal = new Date(val).getTime();
-    const dTarget = new Date(target).getTime();
-    if (isNaN(dVal) || isNaN(dTarget)) return false;
-    return op === 'before' ? dVal < dTarget : dVal > dTarget;
-  }
-  if (op === 'gt' || op === 'gte' || op === 'lt' || op === 'lte') {
-    const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
-    const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
-    if (isNaN(numVal) || isNaN(numTarget)) return false;
-    if (op === 'gt') return numVal > numTarget;
-    if (op === 'gte') return numVal >= numTarget;
-    if (op === 'lt') return numVal < numTarget;
-    if (op === 'lte') return numVal <= numTarget;
-  }
-  return true;
-};
 
 const matchCardCondition = (item, card) => matchSharedCardCondition(item, card, personnelStore);
 const isCardAllType = (card) => isSharedCardAllType(card);
@@ -2146,7 +2098,17 @@ const getCheckboxFileLoopItems = (data, colId) => {
       else if (p && typeof p === 'object' && Array.isArray(p.items)) list = p.items;
     } catch (e) {}
   }
-  return list.filter((it) => it && (it.checked || it.file || (it.details && it.details.trim())));
+  return list.filter((it) => {
+    if (!it) return false;
+    if (typeof it === 'string') return it.trim() !== '' && it.trim() !== '-';
+    const hasOpts = (Array.isArray(it.selectedOptions) && it.selectedOptions.length > 0) ||
+                    (Array.isArray(it.selected) && it.selected.length > 0) ||
+                    (typeof it.selectedOptions === 'string' && it.selectedOptions.trim() !== '') ||
+                    Boolean(it.name?.trim());
+    const hasText = Boolean((it.text || it.details || it.fullText || '').trim());
+    const hasFile = Boolean(it.file && (it.file.url || it.file.name || it.file.fileName));
+    return hasOpts || hasText || hasFile;
+  });
 };
 
 const getCellValue = (trip, colId) => {

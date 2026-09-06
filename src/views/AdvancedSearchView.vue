@@ -390,6 +390,7 @@ import { ref, computed, onMounted } from 'vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { parseDateObj, formatDate, computePresenceStatus, computeTripPresence, computeColumnIndexMap } from '@/utils/formatters';
+import { normalizeFieldValueToText } from '@/utils/dashboardMetrics';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 
@@ -925,12 +926,7 @@ const getRelativeFieldValue = (r, f) => {
     }
   }
 
-  if (raw === undefined || raw === null || raw === '-') return '';
-  if (typeof raw === 'object') {
-    if (Array.isArray(raw)) return raw.map((x) => (typeof x === 'object' ? JSON.stringify(x) : x)).join(', ');
-    return JSON.stringify(raw);
-  }
-  return String(raw).trim();
+  return normalizeFieldValueToText(raw);
 };
 
 const testRelativeCondition = (relatives, crit, fieldLabel, f) => {
@@ -1093,12 +1089,7 @@ const getItemFieldValue = (item, f) => {
     }
   }
 
-  if (raw === undefined || raw === null || raw === '-') return '';
-  if (typeof raw === 'object') {
-    if (Array.isArray(raw)) return raw.map((x) => (typeof x === 'object' ? JSON.stringify(x) : x)).join(', ');
-    return JSON.stringify(raw);
-  }
-  return String(raw).trim();
+  return normalizeFieldValueToText(raw);
 };
 
 const testCondition = (item, crit) => {

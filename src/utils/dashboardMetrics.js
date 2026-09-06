@@ -180,10 +180,115 @@ export const buildTopicSourceList = (source, personnelStore) => {
 };
 
 /**
+ * Chuẩn hóa giá trị của mọi trường (kể cả complex JSON / checkbox_file_loop / table_loop) thành chuỗi văn bản sạch.
+ * Trả về rỗng '' nếu trường thực sự không có dữ liệu.
+ */
+export const normalizeFieldValueToText = (val) => {
+  if (val === undefined || val === null || val === '') return '';
+
+  let parsed = val;
+  if (typeof parsed === 'string') {
+    const trimmed = parsed.trim();
+    if (
+      trimmed === '' ||
+      trimmed === '-' ||
+      trimmed.toLowerCase() === 'chưa rõ' ||
+      trimmed === 'null' ||
+      trimmed === 'undefined' ||
+      trimmed === '[]' ||
+      trimmed === '{}'
+    ) {
+      return '';
+    }
+    if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch (e) {
+        return trimmed;
+      }
+    } else {
+      return trimmed;
+    }
+  }
+
+  // Nếu là Date
+  if (parsed instanceof Date) {
+    return isNaN(parsed.getTime()) ? '' : parsed.toISOString().split('T')[0];
+  }
+
+  // Nếu là wrapper object chứa items (như checkbox_file_loop: { isSingle: false, items: [...] })
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
+    parsed = parsed.items;
+  }
+
+  // Nếu là Mảng (checkbox_file_loop items, text_loop, multi-select...)
+  if (Array.isArray(parsed)) {
+    if (parsed.length === 0) return '';
+    const validParts = [];
+    for (const it of parsed) {
+      if (!it) continue;
+      if (typeof it === 'string') {
+        const s = it.trim();
+        if (s && s !== '-' && s.toLowerCase() !== 'chưa rõ' && s !== 'null' && s !== 'undefined') {
+          validParts.push(s);
+        }
+        continue;
+      }
+      if (typeof it === 'number') {
+        validParts.push(String(it));
+        continue;
+      }
+      if (typeof it === 'object') {
+        const opts = Array.isArray(it.selectedOptions)
+          ? it.selectedOptions.filter(Boolean)
+          : (it.selectedOptions ? [it.selectedOptions] : (Array.isArray(it.selected) ? it.selected.filter(Boolean) : (it.name ? [it.name] : [])));
+        const text = (it.text || it.details || it.fullText || it.value || '').trim();
+        const file = it.file?.name || it.file?.fileName || (it.file?.url ? 'Tài liệu' : '');
+
+        // Bỏ qua item nếu không có bất kỳ tùy chọn, văn bản hoặc tệp đính kèm nào
+        if (opts.length === 0 && !text && !file) continue;
+
+        const optStr = opts.length > 0 ? `[${opts.join(', ')}]` : '';
+        const combined = [optStr, text, file ? `📎 ${file}` : ''].filter(Boolean).join(' ');
+        if (combined) validParts.push(combined);
+      }
+    }
+    return validParts.join('\n');
+  }
+
+  // Nếu là Object đơn lẻ (checkbox_file, table_row, hoặc key-value map)
+  if (typeof parsed === 'object' && parsed !== null) {
+    const opts = Array.isArray(parsed.selectedOptions)
+      ? parsed.selectedOptions.filter(Boolean)
+      : (parsed.selectedOptions ? [parsed.selectedOptions] : (Array.isArray(parsed.selected) ? parsed.selected.filter(Boolean) : (parsed.name ? [parsed.name] : [])));
+    const text = (parsed.text || parsed.details || parsed.fullText || parsed.value || '').trim();
+    const file = parsed.file?.name || parsed.file?.fileName || (parsed.file?.url ? 'Tài liệu' : '');
+
+    if (opts.length > 0 || text || file) {
+      const optStr = opts.length > 0 ? `[${opts.join(', ')}]` : '';
+      return [optStr, text, file ? `📎 ${file}` : ''].filter(Boolean).join(' ');
+    }
+
+    // Trường hợp là table row hoặc map ngẫu nhiên: kiểm tra các giá trị bên trong
+    const values = Object.values(parsed)
+      .filter((v) => v !== undefined && v !== null && v !== '')
+      .map((v) => (typeof v === 'object' ? normalizeFieldValueToText(v) : String(v).trim()))
+      .filter((s) => s && s !== '-' && s.toLowerCase() !== 'chưa rõ');
+
+    return values.join(' ');
+  }
+
+  const str = String(parsed).trim();
+  if (str === '-' || str.toLowerCase() === 'chưa rõ' || str === 'null' || str === 'undefined' || str === '[]' || str === '{}') return '';
+  return str;
+};
+
+/**
  * So khớp điều kiện toán tử chuẩn
  */
 export const checkConditionMatch = (val, op, target) => {
-  const strVal = String(val !== undefined && val !== null && val !== '-' ? val : '').toLowerCase().trim();
+  const cleanVal = normalizeFieldValueToText(val);
+  const strVal = cleanVal.toLowerCase().trim();
   const strTarget = String(target || '').toLowerCase().trim();
 
   if (op === 'has_value') return !!strVal && strVal !== 'chưa rõ' && strVal !== '-';
@@ -202,7 +307,10 @@ export const checkConditionMatch = (val, op, target) => {
     return true;
   }
   if (op === 'contains') {
-    if (!strTarget) return true;
+    if (!strTarget) {
+      // Khi toán tử là contains nhưng giá trị tìm kiếm để trống -> người dùng muốn lọc bản ghi CÓ DỮ LIỆU
+      return !!strVal && strVal !== 'chưa rõ' && strVal !== '-';
+    }
     if (strVal.includes(strTarget)) return true;
     const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (sub.length > 1) return sub.some((k) => strVal.includes(k));
@@ -210,6 +318,7 @@ export const checkConditionMatch = (val, op, target) => {
   }
   if (op === 'not_contains') {
     if (!strTarget) return false;
+    if (!strVal) return true;
     if (strVal.includes(strTarget)) return false;
     const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
     if (sub.length > 1) return !sub.some((k) => strVal.includes(k));

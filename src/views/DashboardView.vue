@@ -745,7 +745,7 @@ import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDial
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
 import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
-import { buildTopicSourceList, computeMetricCardCount, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType } from '@/utils/dashboardMetrics';
+import { buildTopicSourceList, computeMetricCardCount, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const router = useRouter();
@@ -1758,54 +1758,6 @@ const getSourceList = (source) => {
   return buildTopicSourceList(source, personnelStore);
 };
 
-const checkConditionMatch = (val, op, target) => {
-  const strVal = String(val !== undefined && val !== null && val !== '-' ? val : '').toLowerCase().trim();
-  const strTarget = String(target || '').toLowerCase().trim();
-
-  if (op === 'has_value') return !!strVal && strVal !== 'chưa rõ' && strVal !== '-';
-  if (op === 'empty') return !strVal || strVal === 'chưa rõ' || strVal === '-';
-
-  if (op === 'equals') {
-    if (strVal === strTarget) return true;
-    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (sub.length > 1) return sub.some((k) => strVal === k);
-    return false;
-  }
-  if (op === 'not_equals') {
-    if (strVal === strTarget) return false;
-    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (sub.length > 1) return !sub.some((k) => strVal === k);
-    return true;
-  }
-  if (op === 'contains') {
-    if (strVal.includes(strTarget)) return true;
-    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (sub.length > 1) return sub.some((k) => strVal.includes(k));
-    return false;
-  }
-  if (op === 'not_contains') {
-    if (strVal.includes(strTarget)) return false;
-    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (sub.length > 1) return !sub.some((k) => strVal.includes(k));
-    return true;
-  }
-  if (op === 'before' || op === 'after') {
-    const dVal = new Date(val).getTime();
-    const dTarget = new Date(target).getTime();
-    if (isNaN(dVal) || isNaN(dTarget)) return false;
-    return op === 'before' ? dVal < dTarget : dVal > dTarget;
-  }
-  if (op === 'gt' || op === 'gte' || op === 'lt' || op === 'lte') {
-    const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
-    const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
-    if (isNaN(numVal) || isNaN(numTarget)) return false;
-    if (op === 'gt') return numVal > numTarget;
-    if (op === 'gte') return numVal >= numTarget;
-    if (op === 'lt') return numVal < numTarget;
-    if (op === 'lte') return numVal <= numTarget;
-  }
-  return true;
-};
 
 const matchSingleCondition = (item, cond) => {
   if (!cond || !cond.field || String(cond.field).trim() === '') return true;
