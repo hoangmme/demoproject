@@ -25,6 +25,7 @@ export const buildTopicSourceList = (source, personnelStore) => {
       return {
         ...pCustom,
         ...p,
+        _recordType: 'personnel',
         uniqueKey: p.id || p.code || `p_${idx}`,
         personnelName: p.name,
         personnelCode: p.code,
@@ -32,6 +33,7 @@ export const buildTopicSourceList = (source, personnelStore) => {
         position: p.positionName || p.position || '',
         rawPerson: p,
         custom_data: pCustom,
+        trips: Array.isArray(p.trips) ? p.trips : (Array.isArray(pCustom.trips) ? pCustom.trips : []),
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
         overdueDays: presence.overdueDays || 0,
@@ -102,6 +104,7 @@ export const buildTopicSourceList = (source, personnelStore) => {
       return {
         ...rCustom,
         ...r,
+        _recordType: 'relative',
         uniqueKey: r.id || `rel_${idx}`,
         isRelative: true,
         trips: relTrips,
@@ -152,6 +155,7 @@ export const buildTopicSourceList = (source, personnelStore) => {
       trips.push({
         ...tCustom,
         ...t,
+        _recordType: 'trip',
         uniqueKey: t.id || `${p.id}_t_${tIdx}`,
         isRelative: isRel,
         personnelName: isRel ? (t.relativeName || tCustom.relativeName || 'Thân nhân') : p.name,
@@ -287,6 +291,21 @@ export const extractRowFieldValue = (item, field, personnelStore) => {
     }
   }
 
+  // 4. Aliases tương thích chuẩn giữa tên tiếng Việt và tiếng Anh của chuyến đi
+  if (val === undefined || val === null || val === '') {
+    if (field === 'ngay_xuat_canh' || field === 'departureDate') {
+      val = item.ngay_xuat_canh ?? item.departureDate ?? item.ngayDi ?? item.approvedDepartureDate ?? item.custom_data?.departureDate ?? item.custom_data?.ngay_xuat_canh;
+    } else if (field === 'ngay_nhap_canh' || field === 'arrivalDate') {
+      val = item.ngay_nhap_canh ?? item.arrivalDate ?? item.ngayVe ?? item.approvedArrivalDate ?? item.custom_data?.arrivalDate ?? item.custom_data?.ngay_nhap_canh;
+    } else if (field === 'so_quyet_dinh' || field === 'decisionNumber') {
+      val = item.so_quyet_dinh ?? item.decisionNumber ?? item.decision ?? item.custom_data?.decisionNumber ?? item.custom_data?.so_quyet_dinh;
+    } else if (field === 'countryName' || field === 'quoc_gia' || field === 'quoc_gia_xuat_canh') {
+      val = item.countryName ?? item.country ?? item.quoc_gia ?? item.quoc_gia_xuat_canh ?? item.custom_data?.countryName;
+    } else if (field === 'purpose' || field === 'muc_dich') {
+      val = item.purpose ?? item.muc_dich ?? item.custom_data?.purpose;
+    }
+  }
+
   return val !== undefined && val !== null ? val : '';
 };
 
@@ -388,12 +407,13 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
   }
 
   // 4. Cột Chuyến đi đối chiếu với Thân nhân hoặc Cán bộ
+  const isTripRecord = item._recordType === 'trip' || (!Array.isArray(item.trips) && (item.departureDate || item.ngay_xuat_canh || item.countryName || item.destination || item.uniqueKey?.includes('_t_') || item.rawTrip));
   const tripColIds = personnelStore ? (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id)) : [];
   const isTripField = isPresenceField(field) || tripColIds.includes(field);
   const isRelativesRecord = item.isRelative || !!item.rawRelative;
-  const isPersonnelRecord = !item.isRelative && (item.personnelId || item.code);
+  const isPersonnelRecord = !isTripRecord && !item.isRelative && (item.personnelId || item.code || Array.isArray(item.trips));
 
-  if (isTripField && (isRelativesRecord || isPersonnelRecord)) {
+  if (!isTripRecord && isTripField && (isRelativesRecord || isPersonnelRecord)) {
     // 4a. Kiểm tra trực tiếp trên bản ghi
     if (isPresenceField(field)) {
       const pVal = resolveVirtualColumnValue(item, field) || item.presenceStatus || item._presenceStatus || '';
@@ -456,10 +476,57 @@ export const matchCardCondition = (item, card, personnelStore) => {
 
   if (activeConds.length > 0) {
     const logicOp = (card.logicOp || 'AND').toUpperCase();
+    const isTripRecord = item._recordType === 'trip' || (!Array.isArray(item.trips) && (item.departureDate || item.ngay_xuat_canh || item.countryName || item.destination || item.uniqueKey?.includes('_t_') || item.rawTrip));
+
     if (logicOp === 'OR') {
       return activeConds.some((cond) => matchSingleCondition(item, cond, personnelStore));
     }
-    return activeConds.every((cond) => matchSingleCondition(item, cond, personnelStore));
+
+    // logicOp === 'AND'
+    if (isTripRecord) {
+      // Đối với bản ghi chuyến đi: tất cả điều kiện phải khớp trực tiếp trên chuyến đi này
+      return activeConds.every((cond) => matchSingleCondition(item, cond, personnelStore));
+    }
+
+    // Khi item là Cán bộ hoặc Thân nhân (có mảng trips)
+    const tripColIds = personnelStore ? (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id)) : [];
+    const tripConds = activeConds.filter((c) => {
+      if (c.operator?.startsWith('count_') || c.field === 'dieu_kien_dem' || c.field === '_tripCount') return false;
+      return isPresenceField(c.field) || tripColIds.includes(c.field);
+    });
+    const generalConds = activeConds.filter((c) => !tripConds.includes(c));
+
+    // Điều kiện chung phải thỏa mãn trên Cán bộ / Thân nhân
+    const generalOk = generalConds.every((cond) => matchSingleCondition(item, cond, personnelStore));
+    if (!generalOk) return false;
+
+    // Điều kiện chuyến đi: phải có ÍT NHẤT 1 chuyến đi thỏa mãn ĐỒNG THỜI tất cả tripConds
+    if (tripConds.length > 0) {
+      const trips = Array.isArray(item.trips) ? item.trips : [];
+      if (trips.length === 0) {
+        return tripConds.every((c) => {
+          if (isPresenceField(c.field)) {
+            return checkConditionMatch('Trong nước', c.operator, c.value);
+          }
+          return checkConditionMatch('', c.operator, c.value);
+        });
+      }
+      return trips.some((t) => {
+        return tripConds.every((c) => {
+          if (isPresenceField(c.field)) {
+            const tp = resolvePresence(t);
+            const tVal = tp.shortLabel || tp.label || '';
+            if (checkConditionMatch(tVal, c.operator, c.value)) return true;
+            if (tp.label && checkConditionMatch(tp.label, c.operator, c.value)) return true;
+            return false;
+          }
+          const tVal = extractRowFieldValue(t, c.field, personnelStore);
+          return checkConditionMatch(tVal, c.operator, c.value);
+        });
+      });
+    }
+
+    return true;
   }
 
   // Preset condition

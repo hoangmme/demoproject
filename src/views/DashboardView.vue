@@ -1470,6 +1470,7 @@ const unifiedTripsList = computed(() => {
       list.push({
         ...custom,
         ...t,
+        _recordType: 'trip',
         uniqueKey,
         isRelative: isRel,
         personnelId: p.id,
@@ -1558,6 +1559,7 @@ const unifiedTripsList = computed(() => {
         list.push({
           ...custom,
           ...rt,
+          _recordType: 'trip',
           uniqueKey,
           isRelative: true,
           personnelId: p.id,

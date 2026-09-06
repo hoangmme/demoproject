@@ -180,10 +180,27 @@
   3. `src/assets/styles/main.css`: Cập nhật `.app-header` `min-height: 60px; height: auto; padding: 8px 1.5rem;` và định dạng font, khoảng cách cân đối cho 2 dòng tiêu đề.
   4. `src/views/SettingsImportView.vue`: Đồng bộ khung xem trước (preview) menu sidebar và gỡ bỏ mục cấu hình màu chữ tiêu đề sidebar không còn sử dụng.
 
-### 24. LEDGER STATUS
-- **Status**: Done (Đã di chuyển tiêu đề phần mềm sang AppHeader hiển thị 2 dòng, tinh giản Header sidebar, build và sync `WINDOWS_OFFLINE_APP` thành công).
+### 25. KHẮC PHỤC TRIỆT ĐỂ SO KHỚP ĐIỀU KIỆN CHUYẾN ĐI & LỌC ĐA ĐIỀU KIỆN (dashboardMetrics.js)
+- **Bản chất nguyên nhân**:
+  - Khi hợp nhất hàm `matchSingleCondition` vào `dashboardMetrics.js`, điều kiện kiểm tra bản ghi Cán bộ `const isPersonnelRecord = !item.isRelative && (item.personnelId || item.code)` đã vô tình nhận diện cả **bản ghi Chuyến đi (`trip`)** thành hồ sơ Cán bộ (vì mỗi chuyến đi đều mang theo `personnelId` / `code` của Cán bộ chủ quản).
+  - Do bị nhận diện nhầm thành Cán bộ, hệ thống nhảy vào nhánh duyệt `item.trips.some(...)`. Nhưng bản thân `item` đã là một chuyến đi đơn lẻ nên không có thuộc tính `item.trips` (mảng rỗng `[]`), dẫn đến việc trả về `checkConditionMatch('', op, target)`.
+  - Với điều kiện `ngay_xuat_canh` - `has_value` (có dữ liệu), giá trị rỗng `''` luôn trả về `false`, khiến thẻ KPI hoặc bộ lọc luôn ra kết quả 0.
+- **Giải pháp xử lý chuẩn xác 100%**:
+  1. **Định danh chuẩn xác loại bản ghi (`_recordType`)**:
+     - Gán cờ rõ ràng `_recordType: 'trip'` trong `buildTopicSourceList('trips')`, `unifiedTripsList` của cả `ChildDashboardView.vue` và `DashboardView.vue`.
+     - Nhận diện an toàn `isTripRecord = item._recordType === 'trip' || (!Array.isArray(item.trips) && ...)`.
+     - Nếu `isTripRecord` là `true`, tuyệt đối không duyệt mảng con `item.trips`, mà so khớp trực tiếp giá trị trên chính chuyến đi đó.
+  2. **Bổ sung Aliases tương thích chuẩn giữa các trường chuyến đi**:
+     - Trong `extractRowFieldValue`: tự động hỗ trợ đối chiếu thông minh giữa tên tiếng Việt và tiếng Anh (`ngay_xuat_canh` <-> `departureDate`, `so_quyet_dinh` <-> `decisionNumber`, `ngay_nhap_canh` <-> `arrivalDate`, `quoc_gia` <-> `countryName`).
+  3. **Chuẩn hóa logic kết hợp VÀ (AND) trên hồ sơ Cán bộ**:
+     - Khi `item` là Cán bộ có mảng `item.trips`: tách riêng điều kiện thuộc tính Cán bộ và điều kiện Chuyến đi.
+     - Với các điều kiện Chuyến đi kết hợp `AND` (ví dụ: `Ngày xuất cảnh có dữ liệu` VÀ `Số QĐ để trống`), hệ thống kiểm tra tồn tại ít nhất 1 chuyến đi thỏa mãn **ĐỒNG THỜI** tất cả các điều kiện đó trên cùng 1 chuyến đi, đảm bảo tính chặt chẽ về mặt nghiệp vụ.
+
+### 26. LEDGER STATUS
+- **Status**: Done (Đã sửa triệt để logic nhận diện bản ghi chuyến đi và so khớp đa điều kiện AND trong `dashboardMetrics.js`, `npm run build` thành công, sync sang offline app thành công).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` hoàn tất sạch sẽ).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
+
 
 
 
