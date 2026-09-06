@@ -131,13 +131,14 @@
 - **Chuẩn hóa chữ hoa / chữ thường**:
   - Menu Sidebar: Sửa "Hồ sơ Cán bộ" thành "Hồ sơ cán bộ" (`AppSidebar.vue`).
   - Tab trang Hồ sơ cán bộ: Chỉ viết hoa chữ đầu `1. Quản lý cán bộ (cá nhân)` và `2. Quản lý thân nhân` (`PersonnelView.vue`).
-- **Chuẩn hóa Khoảng cách 2 Khối Tiêu đề Menu Sidebar (`AppSidebar.vue`, `SettingsImportView.vue`)**:
-  - Khối 1: Phiên hiệu đơn vị (`CÔNG AN THÀNH PHỐ HỒ CHÍ MINH` & `PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ`) — khoảng cách nội bộ giữa 2 dòng là `4px`.
-  - Khối 2: Tiêu đề phần mềm (`DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN` & `VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI`) — khoảng cách nội bộ giữa 2 dòng là `4px`.
-  - Khoảng cách phân cách giữa Khối 1 và Khối 2 là `10px`, tạo cấu trúc thị giác rõ ràng, tách bạch giữa cơ quan chủ quản và tên hệ thống dữ liệu.
+- **Chuẩn hóa Khoảng cách & Line-Height 2 Khối Tiêu đề Menu Sidebar (`AppSidebar.vue`, `SettingsImportView.vue`)**:
+  - Triệt tiêu hoàn toàn khoảng đệm thừa do vertical leading (`line-height` giảm từ 1.35 xuống `1.15`).
+  - Khối 1: Phiên hiệu đơn vị (`CÔNG AN THÀNH PHỐ HỒ CHÍ MINH` & `PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ`) — `gap: 2px`, 2 dòng gắn kết chặt chẽ thành một khối thống nhất.
+  - Khối 2: Tiêu đề phần mềm (`DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN` & `VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI`) — `gap: 2px`, 2 dòng gắn kết chặt chẽ thành một câu trọn vẹn.
+  - Khoảng cách phân cách giữa Khối 1 và Khối 2 là `12px` (`margin-top: 12px`), tạo tỷ lệ chênh lệch thị giác 6:1 rõ rệt giữa nội bộ khối và liên khối.
 
 ### 18. LEDGER STATUS
-- **Status**: Done (Đã áp dụng chuẩn khoảng cách: nội bộ khối 4px, giữa 2 khối 10px; Đã cập nhật bản build mới nhất).
+- **Status**: Done (Đã siết chặt line-height 1.15, khoảng cách nội bộ 2px, giữa 2 khối 12px; Đã build và cập nhật bản mới nhất).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công 100%).
 

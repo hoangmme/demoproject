@@ -23,30 +23,30 @@
         alt="Bộ Công An"
         style="width: 85px; height: 85px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"
       />
-      <!-- Khối 1: Phiên hiệu đơn vị (2 dòng cách nhau 4px) -->
-      <div class="sidebar-header-org" style="display: flex; flex-direction: column; gap: 4px;">
+      <!-- Khối 1: Phiên hiệu đơn vị (2 dòng gắn kết chặt chẽ thành 1 khối) -->
+      <div class="sidebar-header-org" style="display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0;">
         <div
-          style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; line-height: 1.3; white-space: nowrap;"
+          style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; line-height: 1.15; white-space: nowrap; margin: 0; padding: 0;"
           :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }"
         >
           CÔNG AN THÀNH PHỐ HỒ CHÍ MINH
         </div>
         <div
-          style="font-size: 0.76rem; font-weight: 800; line-height: 1.3; white-space: nowrap;"
+          style="font-size: 0.76rem; font-weight: 800; line-height: 1.15; white-space: nowrap; margin: 0; padding: 0;"
           :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }"
         >
           PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
         </div>
       </div>
 
-      <!-- Khối 2: Tiêu đề phần mềm (Cách khối trên 10px, 2 dòng cách nhau 4px) -->
+      <!-- Khối 2: Tiêu đề phần mềm (Cách khối trên 12px, 2 dòng bên trong gắn kết chặt chẽ) -->
       <div
         class="sidebar-header-title"
-        style="font-size: 0.71rem; font-weight: 800; margin-top: 10px; line-height: 1.35; text-transform: uppercase; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 4px;"
+        style="font-size: 0.71rem; font-weight: 800; margin-top: 12px; line-height: 1.15; text-transform: uppercase; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 2px;"
         :style="{ color: sidebarSubtitleTextColor || '#fde047' }"
       >
-        <div style="white-space: nowrap;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
-        <div style="white-space: nowrap;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
+        <div style="white-space: nowrap; line-height: 1.15; margin: 0; padding: 0;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
+        <div style="white-space: nowrap; line-height: 1.15; margin: 0; padding: 0;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
       </div>
     </div>
 

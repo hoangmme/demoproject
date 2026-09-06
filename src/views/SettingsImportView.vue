@@ -1854,15 +1854,15 @@
               <!-- Mock sidebar content -->
               <div style="position: relative; z-index: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; height: 100%;">
                 <div style="text-align: center; border-bottom: 1px solid rgba(0,0,0,0.15); padding-bottom: 8px;">
-                  <!-- Khối 1: Phiên hiệu đơn vị (cách nhau 4px) -->
-                  <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase;" :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }">CÔNG AN TP. HỒ CHÍ MINH</div>
-                    <div style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase;" :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }">PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ</div>
+                  <!-- Khối 1: Phiên hiệu đơn vị (cách nhau 2px, line-height 1.15) -->
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; line-height: 1.15;" :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }">CÔNG AN TP. HỒ CHÍ MINH</div>
+                    <div style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; line-height: 1.15;" :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }">PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ</div>
                   </div>
-                  <!-- Khối 2: Tiêu đề phần mềm (cách khối trên 10px, cách nhau 4px) -->
-                  <div style="font-size: 0.65rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.4); margin-top: 10px; display: flex; flex-direction: column; gap: 4px;" :style="{ color: sidebarSubtitleTextColor || '#fde047' }">
-                    <div>DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
-                    <div>VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
+                  <!-- Khối 2: Tiêu đề phần mềm (cách khối trên 12px, cách nhau 2px, line-height 1.15) -->
+                  <div style="font-size: 0.65rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.4); margin-top: 12px; display: flex; flex-direction: column; gap: 2px; line-height: 1.15;" :style="{ color: sidebarSubtitleTextColor || '#fde047' }">
+                    <div style="line-height: 1.15;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
+                    <div style="line-height: 1.15;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
                   </div>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
