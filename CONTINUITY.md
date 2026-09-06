@@ -544,10 +544,31 @@
      - Hàm `getWidgetStyle` trả về `{ display: 'none' }` và template gắn `v-show` ẩn các khối có `widthPercent === 0` hoặc `hidden === true`.
      - Bộ Smart Reconciler tự động đồng bộ trạng thái ẩn/hiện từ cấu hình Chuyên đề sang Dashboard chính.
 
-### 51. LEDGER STATUS
-- **Status**: Done (Đã hoàn thiện tính năng ẩn thẻ thống kê 0%, nút bấm toggle ẩn/hiện, build và deploy thành công).
+### 52. NÂNG CẤP ĐỔI MÀU NỀN TITLE THEO TÔNG MÀU, SỬA LỖI TOGGLE ẨN/HIỆN VÀ TỐI ƯU TỐC ĐỘ LOAD QUẢN LÝ CHUYÊN ĐỀ (2026-09-07)
+- **Vấn đề & Nguyên nhân**:
+  1. **Lỗi `Number('') === 0` trong JavaScript**: Khi tạo thẻ mặc định có `widthPercent: ''`, phép kiểm tra `Number('') === 0` trả về `true`. Dẫn đến thẻ mặc định bị nhận nhầm là thẻ ẩn, click vào icon mắt không toggle được trạng thái.
+  2. **Tag "ĐÃ ẨN" chiếm diện tích**: Tag khiến ô nhập Title bị co hẹp chỉ còn hiển thị vài ký tự ("Lịch...").
+  3. **Màu sắc thẻ đơn điệu**: Dropdown màu chưa làm thay đổi màu nền và màu chữ của tiêu đề thẻ thống kê.
+  4. **Tải "Quản lý Chuyên đề" bị chậm**: `onMounted` trong `SettingsImportView.vue` chạy 4 `await` tuần tự (`loadDocxTemplates`, `loadLoginBg`, `loadSidebarBgSettings`, `loadCustomDashboards`). Đặc biệt ảnh nền base64 nặng kéo dài độ trễ trước khi chuyên đề được tải; ngoài ra `customDashboards` chưa được hydrate ngay từ `localStorage`.
+
+- **Giải pháp & Triển khai**:
+  1. **Hàm chuẩn hóa `isCardHidden` & `toggleCardHidden`**:
+     - Định nghĩa `isCardHidden(card)` kiểm tra chặt chẽ `card.hidden === true || card.widthPercent === 0 || card.widthPercent === '0'`, không bị ép kiểu sai với `''`.
+     - `toggleCardHidden(card)` chuyển đổi mượt mà giữa trạng thái ẩn (`hidden: true, widthPercent: 0`) và hiện (`hidden: false, widthPercent: ''`).
+  2. **Gỡ bỏ tag `ĐÃ ẨN` & Mở rộng ô Title**:
+     - Gỡ bỏ hoàn toàn huy hiệu `ĐÃ ẨN`.
+     - Dành trọn vẹn 100% không gian cho ô nhập Tiêu đề thẻ, kèm hiệu ứng gạch ngang (`line-through`) và mờ nhẹ khi ẩn thẻ.
+  3. **Nâng cấp giao diện màu sắc động theo Theme (`getCardColorTheme`)**:
+     - Khi người dùng chọn Xanh / Lá / Cam / Đỏ / Tím, toàn bộ khung thẻ, ô tiêu đề, màu chữ và chấm tròn định vị (`dot indicator`) lập tức đổi màu pastel tương ứng theo đúng nhận diện của thẻ KPI.
+  4. **Tối ưu tốc độ tải Chuyên đề (Instant 0ms Hydration + Parallel Background Load)**:
+     - Khởi tạo `customDashboards` ngay lập tức từ `localStorage` khi khởi tạo view, giúp hiển thị danh sách Chuyên đề trong 0ms không phải chờ mạng.
+     - Chuyển toàn bộ 4 hàm tải Directus DB sang `Promise.allSettled`, tải ngầm đồng thời không gây đứng/lag trang.
+
+### 53. LEDGER STATUS
+- **Status**: Done (Đã hoàn thiện nâng cấp màu sắc, fix triệt để toggle ẩn hiện, loại bỏ tag mở rộng title, tối ưu tải Chuyên đề 0ms).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
+
 
 
 

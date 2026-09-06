@@ -1368,32 +1368,40 @@
               <div
                 v-for="(card, cIdx) in currentSelectedDashboard.metricCards"
                 :key="card.id || cIdx"
-                style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #fafafa; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
-                :style="(Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? 'background: #fef2f2; border-color: #fecaca;' : ''"
+                style="border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease;"
+                :style="{
+                  backgroundColor: getCardColorTheme(card.color, isCardHidden(card)).cardBg,
+                  border: `1.5px solid ${getCardColorTheme(card.color, isCardHidden(card)).cardBorder}`,
+                  opacity: getCardColorTheme(card.color, isCardHidden(card)).cardOpacity,
+                }"
               >
                 <!-- Tiêu đề thẻ & Các nút thao tác di chuyển/ẩn/xóa -->
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-                  <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
+                    <span
+                      style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0;"
+                      :style="{ backgroundColor: getCardColorTheme(card.color, isCardHidden(card)).dot }"
+                    ></span>
                     <input
                       v-model="card.label"
                       placeholder="Tên thẻ (VD: Có vấn đề chính trị, Đi Nhật...)"
-                      style="font-size: 0.82rem; font-weight: 700; color: #1e293b; border: 1px solid #cbd5e1; background: #fff; padding: 3px 6px; border-radius: 4px; width: 100%;"
+                      style="font-size: 0.84rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; width: 100%; transition: all 0.2s ease; outline: none;"
+                      :style="{
+                        backgroundColor: getCardColorTheme(card.color, isCardHidden(card)).titleBg,
+                        color: getCardColorTheme(card.color, isCardHidden(card)).titleColor,
+                        border: `1px solid ${getCardColorTheme(card.color, isCardHidden(card)).titleBorder}`,
+                        textDecoration: isCardHidden(card) ? 'line-through' : 'none'
+                      }"
                     />
-                    <span
-                      v-if="Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden"
-                      style="font-size: 0.65rem; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 2px 5px; border-radius: 4px; font-weight: 700; white-space: nowrap;"
-                    >
-                      ĐÃ ẨN
-                    </span>
                   </div>
-                  <select v-model="card.color" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; width: 95px;">
+                  <select v-model="card.color" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; width: 95px; flex-shrink: 0;">
                     <option value="blue">🔵 Xanh</option>
                     <option value="green">🟢 Lá</option>
                     <option value="amber">🟠 Cam</option>
                     <option value="red">🔴 Đỏ</option>
                     <option value="purple">🟣 Tím</option>
                   </select>
-                  <div style="display: flex; align-items: center; gap: 2px;">
+                  <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0;">
                     <button
                       type="button"
                       :disabled="cIdx === 0"
@@ -1417,12 +1425,12 @@
                     <!-- Nút Ẩn / Hiện Thống kê -->
                     <button
                       type="button"
-                      @click="card.widthPercent = (Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? '' : 0; card.hidden = (Number(card.widthPercent) === 0 || card.widthPercent === '0');"
-                      style="background: transparent; border: none; cursor: pointer; padding: 2px 4px;"
-                      :style="{ color: (Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? '#dc2626' : '#64748b' }"
-                      :title="(Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? 'Thẻ đang bị ẩn (Bấm để hiển thị lại)' : 'Ẩn thẻ thống kê này (0%)'"
+                      @click="toggleCardHidden(card)"
+                      style="background: transparent; border: none; cursor: pointer; padding: 2px 4px; display: flex; align-items: center;"
+                      :style="{ color: isCardHidden(card) ? '#dc2626' : '#94a3b8' }"
+                      :title="isCardHidden(card) ? 'Thẻ đang bị ẩn (Bấm để hiển thị lại)' : 'Bấm để ẩn thẻ thống kê này (0%)'"
                     >
-                      <i :class="(Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) ? 'pi pi-eye-slash' : 'pi pi-eye'" style="font-size: 0.75rem;"></i>
+                      <i :class="isCardHidden(card) ? 'pi pi-eye-slash' : 'pi pi-eye'" style="font-size: 0.85rem;"></i>
                     </button>
                     <button
                       type="button"
@@ -1438,7 +1446,12 @@
                 <!-- Độ rộng khối (% Width) -->
                 <div style="display: flex; flex-direction: column; gap: 3px;">
                   <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Độ rộng khối:</label>
-                  <select v-model="card.widthPercent" class="custom-key-select" style="font-size: 0.75rem; padding: 4px 6px;">
+                  <select
+                    :value="isCardHidden(card) ? 0 : (card.widthPercent ?? '')"
+                    @change="e => onCardWidthChange(card, e.target.value)"
+                    class="custom-key-select"
+                    style="font-size: 0.75rem; padding: 4px 6px;"
+                  >
                     <option value="">Tự động co giãn (Mặc định)</option>
                     <option :value="0">Ẩn thống kê (0% - Không hiển thị)</option>
                     <option :value="16.66">16.66% (1/6 hàng - 6 khối/dòng)</option>
@@ -2832,7 +2845,18 @@ const DEFAULT_TOPIC_DASHBOARDS_CONFIG = [
   },
 ];
 
-const customDashboards = ref([...DEFAULT_TOPIC_DASHBOARDS_CONFIG]);
+const getInitialCustomDashboards = () => {
+  try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return [...DEFAULT_TOPIC_DASHBOARDS_CONFIG];
+};
+
+const customDashboards = ref(getInitialCustomDashboards());
 const selectedDashboardIdx = ref(0);
 const dashboardSaveStatus = ref(''); // '', 'saving', 'saved'
 let isDashboardLoaded = false;
@@ -2851,7 +2875,9 @@ const loadCustomDashboards = async () => {
       localStorage.setItem('custom_dashboards_config', JSON.stringify(saved));
     } else {
       const local = localStorage.getItem('custom_dashboards_config');
-      if (local) customDashboards.value = JSON.parse(local);
+      if (local && (!customDashboards.value || customDashboards.value.length === 0)) {
+        customDashboards.value = JSON.parse(local);
+      }
     }
     // Sanitize card IDs: đảm bảo các thẻ con không bị trùng id: 'all' với thẻ gốc
     customDashboards.value.forEach((dash) => {
@@ -3089,6 +3115,104 @@ const moveMetricCard = (dash, cIdx, direction) => {
   debouncedAutoSaveDashboards();
 };
 
+const isCardHidden = (card) => {
+  if (!card) return false;
+  if (card.hidden === true) return true;
+  if (card.widthPercent === 0 || card.widthPercent === '0') return true;
+  return false;
+};
+
+const toggleCardHidden = (card) => {
+  if (!card) return;
+  if (isCardHidden(card)) {
+    card.hidden = false;
+    card.widthPercent = '';
+  } else {
+    card.hidden = true;
+    card.widthPercent = 0;
+  }
+  debouncedAutoSaveDashboards();
+};
+
+const onCardWidthChange = (card, val) => {
+  if (!card) return;
+  if (val === '0' || val === 0 || Number(val) === 0) {
+    card.widthPercent = 0;
+    card.hidden = true;
+  } else {
+    card.hidden = false;
+    card.widthPercent = val === '' ? '' : Number(val);
+  }
+  debouncedAutoSaveDashboards();
+};
+
+const getCardColorTheme = (color, isHidden = false) => {
+  if (isHidden) {
+    return {
+      cardBg: '#fafafa',
+      cardBorder: '#e2e8f0',
+      titleBg: '#f1f5f9',
+      titleColor: '#94a3b8',
+      titleBorder: '#cbd5e1',
+      dot: '#cbd5e1',
+      cardOpacity: '0.68',
+    };
+  }
+  switch (color) {
+    case 'green':
+      return {
+        cardBg: '#fafffd',
+        cardBorder: '#bbf7d0',
+        titleBg: '#dcfce7',
+        titleColor: '#166534',
+        titleBorder: '#86efac',
+        dot: '#16a34a',
+        cardOpacity: '1',
+      };
+    case 'amber':
+      return {
+        cardBg: '#fffdfa',
+        cardBorder: '#fde68a',
+        titleBg: '#fef3c7',
+        titleColor: '#92400e',
+        titleBorder: '#fcd34d',
+        dot: '#d97706',
+        cardOpacity: '1',
+      };
+    case 'red':
+      return {
+        cardBg: '#fffafa',
+        cardBorder: '#fecaca',
+        titleBg: '#fee2e2',
+        titleColor: '#991b1b',
+        titleBorder: '#fca5a5',
+        dot: '#dc2626',
+        cardOpacity: '1',
+      };
+    case 'purple':
+      return {
+        cardBg: '#fdfaff',
+        cardBorder: '#e9d5ff',
+        titleBg: '#f3e8ff',
+        titleColor: '#6b21a8',
+        titleBorder: '#d8b4fe',
+        dot: '#9333ea',
+        cardOpacity: '1',
+      };
+    case 'blue':
+    default:
+      return {
+        cardBg: '#faffff',
+        cardBorder: '#bae6fd',
+        titleBg: '#e0f2fe',
+        titleColor: '#075985',
+        titleBorder: '#7dd3fc',
+        dot: '#0284c7',
+        cardOpacity: '1',
+      };
+  }
+};
+
 const categorizedDashboardCols = computed(() => {
   const groups = [];
 
@@ -3167,10 +3291,13 @@ onMounted(async () => {
   relativeParentKeyField.value = personnelStore.getRelativeParentKeyField();
   relativeKeyField.value = personnelStore.getRelativeKeyField();
   tripKeyField.value = personnelStore.getTripKeyField();
-  await loadDocxTemplates();
-  await loadLoginBg();
-  await loadSidebarBgSettings();
-  await loadCustomDashboards();
+  // Nạp song song đồng thời các tài nguyên nền, không gây đứng/lag giao diện Chuyên đề
+  Promise.allSettled([
+    loadCustomDashboards(),
+    loadDocxTemplates(),
+    loadLoginBg(),
+    loadSidebarBgSettings(),
+  ]);
 });
 
 const currentGroups = computed(() => {

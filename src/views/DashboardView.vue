@@ -152,7 +152,7 @@
         <div
           v-for="(widget, wIdx) in group.widgets"
           :key="widget.id"
-          v-show="!widget.hidden && Number(widget.widthPercent) !== 0 && widget.widthPercent !== '0'"
+          v-show="!isWidgetHidden(widget)"
           :style="getWidgetStyle(widget)"
         >
           <!-- 1. Dạng Đếm Số Lượng (Count Metric Card) -->
@@ -2256,8 +2256,15 @@ const setWidgetPosition = async (group, widget, targetPos1Based) => {
   await saveCustomGroupsToDb();
 };
 
+const isWidgetHidden = (widget) => {
+  if (!widget) return false;
+  if (widget.hidden === true) return true;
+  if (widget.widthPercent === 0 || widget.widthPercent === '0') return true;
+  return false;
+};
+
 const getWidgetStyle = (widget) => {
-  if (widget.hidden === true || Number(widget.widthPercent) === 0 || widget.widthPercent === '0') {
+  if (isWidgetHidden(widget)) {
     return {
       display: 'none',
     };

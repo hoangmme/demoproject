@@ -89,7 +89,7 @@
     <div v-if="currentDashboardConfig.displayMode !== 'appendix'" style="display: flex; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap;">
       <template v-for="(card, cIdx) in activeMetricCards" :key="card.id || cIdx">
         <div
-          v-if="Number(card.widthPercent) !== 0 && card.widthPercent !== '0' && !card.hidden"
+          v-if="!isCardHidden(card)"
           class="quick-stat-card"
           :class="{ 'stat-active': isCardActive(card, cIdx) }"
           :style="{
@@ -1049,8 +1049,15 @@ const getFundingValue = (item) => {
   return (val && String(val).trim() !== '' && String(val).trim() !== '-') ? String(val).trim() : '-';
 };
 
+const isCardHidden = (card) => {
+  if (!card) return false;
+  if (card.hidden === true) return true;
+  if (card.widthPercent === 0 || card.widthPercent === '0') return true;
+  return false;
+};
+
 const getCardWidthStyle = (card) => {
-  if (Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) return '0px';
+  if (isCardHidden(card)) return '0px';
   const wp = Number(card.widthPercent);
   if (!wp || isNaN(wp)) return 'auto';
   if (wp === 100) return '100%';
@@ -1063,7 +1070,7 @@ const getCardWidthStyle = (card) => {
 };
 
 const getCardFlexStyle = (card) => {
-  if (Number(card.widthPercent) === 0 || card.widthPercent === '0' || card.hidden) return '0 0 0px';
+  if (isCardHidden(card)) return '0 0 0px';
   const wp = Number(card.widthPercent);
   if (!wp || isNaN(wp)) return '1 1 auto';
   if (wp === 100) return '1 1 100%';
