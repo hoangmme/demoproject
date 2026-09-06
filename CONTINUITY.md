@@ -341,10 +341,42 @@
   3. `src/views/AdvancedSearchView.vue`:
      - Áp dụng `normalizeFieldValueToText` cho cả `getRelativeFieldValue` và `getItemFieldValue` để đồng bộ 100% logic lọc tìm kiếm nâng cao với KPI cards.
 
-### 37. LEDGER STATUS
-- **Status**: Done (Đã khắc phục triệt để lỗi đếm/lọc dữ liệu rỗng của định dạng checkbox_file_loop, build thành công 511ms).
+### 37. TÙY CHỈNH MÀU SẮC NHÓM THỐNG KÊ & SỬA TRIỆT ĐỂ CÔNG THỨC TRẠNG THÁI HIỆN DIỆN (KHÔNG FALLBACK)
+- **Yêu cầu người dùng**:
+  1. "Nhóm thống kê cho phép chỉnh màu nền và màu title giống khối thống kê đc ko?"
+     - Thêm tùy chọn tùy chỉnh màu nền (Pastel Background Color) và màu tiêu đề/icon (Title Color) cho Nhóm thống kê trong DashboardView, đồng bộ với bảng màu của Khối thống kê.
+  2. "không cần bí danh vì tôi chọn cột mà? tôi cấu hình là đúng rồi đó sai tôi tự chịu đừng có fallback lung tung" & "Check lại công thức trạng thái hiện diện xem, tại sao lại lỗi (ví dụ có dữ liệu đã về nước mà không hiện), ban đầu đúng mà":
+     - Tuân thủ nghiêm ngặt Quy tắc Người dùng: Khi người dùng đã cấu hình cột đích danh (`formulaDepartureCol`, `formulaArrivalCol`, `formulaApprovedArrivalCol`, `formulaCountryCol`), hệ thống CHỈ ĐỌC từ đúng ID cột đó thông qua `getRecordFieldValue(t, colId)`. TUYỆT ĐỐI KHÔNG đoán mò hay fallback sang cột khác.
+     - Sửa lỗi Trạng thái Hiện diện:
+       - Khi đã có ngày về thực tế (`arrDate`), bản ghi PHẢI được đánh giá là "Đã về nước" (hoặc "Đã về nước (quá hạn X ngày)" nếu ngày về vượt quá deadline duyệt).
+       - Loại bỏ hoàn toàn điều kiện so sánh `today >= arrNorm` gây nghẽn khiến các bản ghi đã về nước bị nhảy sang "Đang ở nước ngoài" hoặc "Trong nước".
+       - Sửa `shortLabel` trả về `"Đã về nước"`, không gán nhầm thành `"Trong nước"`.
+       - Loại bỏ đoạn code chặn cứng `resolvePresence(trip)` trong `ChildDashboardView.vue` `getCellValue` để `evaluateFormula(trip, colDef)` chạy với đầy đủ cấu hình cột do người dùng chỉ định.
+       - Cập nhật `getPresenceBadge`: hiển thị huy hiệu xanh lá "Đã về nước" khi bản ghi đã hoàn thành chuyến đi về nước.
+
+- **Thực hiện**:
+  1. `src/utils/formatters.js`:
+     - `computeTripPresence`: Trích xuất nghiêm ngặt theo đúng ID cột người dùng cấu hình bằng `getRecordFieldValue(t, colId)`. Khi có `arrDate`, trả về ngay trạng thái `"Đã về nước"` (kèm số ngày quá hạn nếu có), với `shortLabel` là `"Đã về nước"`.
+     - `resolvePresence`: Nhận `formulaConfig`, phân giải chính xác cho cả bản ghi đơn lẻ, hồ sơ có mảng trips, và bản ghi đã tính trước.
+     - `resolveVirtualColumnValue`: Trả về `p.label || p.shortLabel`.
+     - `getPresenceBadge`: Phân biệt rõ giữa "Đã về nước" (badge xanh lá với icon check) và "Trong nước" chưa từng đi (badge xám với icon home).
+     - `evaluateFormula`: Gọi trực tiếp `computePresenceStatus` (cho hồ sơ có mảng trips) hoặc `computeTripPresence` (cho bản ghi chuyến đi).
+  2. `src/utils/dashboardMetrics.js`:
+     - `buildTopicSourceList`: Đồng bộ `presenceStatus` bằng `presence.label || presence.shortLabel`.
+  3. `src/views/ChildDashboardView.vue`:
+     - `getCellValue`: Loại bỏ đoạn chặn `resolvePresence(trip)` không kèm cấu hình cột, chuyển sang gọi `evaluateFormula(trip, colDef)`.
+     - `unifiedTripsList`: Cập nhật `presenceStatus` bằng `presence.label || presence.shortLabel`.
+  4. `src/views/DashboardView.vue`:
+     - Dialog "Chỉnh sửa Nhóm Thống kê": Bổ sung 2 trường chọn `groupForm.color` (Màu tiêu đề & Icon) và `groupForm.bgColor` (Màu nền Pastel Khung nhóm).
+     - Template nhóm: Áp dụng `group.bgColor` cho khung nền `app-card`, `group.color` cho icon và tiêu đề `h3`.
+     - Khởi tạo mặc định `color: '#1e293b'`, `bgColor: '#ffffff'` trong `openAddGroupDialog` và nạp màu trong `openEditGroupDialog`.
+     - `unifiedTripsList`: Cập nhật `presenceStatus` bằng `presence.label || presence.shortLabel`.
+
+### 38. LEDGER STATUS
+- **Status**: Done (Đã hoàn thành cấu hình màu sắc Nhóm thống kê & sửa triệt để Trạng thái hiện diện theo đúng cột cấu hình không fallback, `npm run build` thành công trong 528ms).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công trong 511ms).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã build kiểm chứng an toàn).
+
 
 
 

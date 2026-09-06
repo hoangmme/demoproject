@@ -37,9 +37,9 @@ export const buildTopicSourceList = (source, personnelStore) => {
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
         overdueDays: presence.overdueDays || 0,
-        presenceStatus: presence.shortLabel,
+        presenceStatus: presence.label || presence.shortLabel,
         presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel,
+        _presenceStatus: presence.shortLabel || presence.label,
       };
     });
   }
@@ -130,9 +130,9 @@ export const buildTopicSourceList = (source, personnelStore) => {
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
         overdueDays: presence.overdueDays || 0,
-        presenceStatus: presence.shortLabel,
+        presenceStatus: presence.label || presence.shortLabel,
         presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel,
+        _presenceStatus: presence.shortLabel || presence.label,
       };
     });
   }
@@ -169,9 +169,9 @@ export const buildTopicSourceList = (source, personnelStore) => {
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
         overdueDays: presence.overdueDays || 0,
-        presenceStatus: presence.shortLabel,
+        presenceStatus: presence.label || presence.shortLabel,
         presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel,
+        _presenceStatus: presence.shortLabel || presence.label,
       });
     });
   });

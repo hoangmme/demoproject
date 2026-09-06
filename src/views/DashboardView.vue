@@ -64,13 +64,22 @@
     <!-- ========================================================= -->
     <!-- 1. CUSTOM DASHBOARD GROUPS (USER CONFIGURED - AT TOP)     -->
     <!-- ========================================================= -->
-    <div v-for="(group, gIdx) in customGroups" :key="group.id || gIdx" class="app-card" style="margin-bottom: 1.5rem;">
+    <div
+      v-for="(group, gIdx) in customGroups"
+      :key="group.id || gIdx"
+      class="app-card"
+      :style="{
+        marginBottom: '1.5rem',
+        backgroundColor: group.bgColor || '#ffffff',
+        borderColor: group.color && group.color !== '#1e293b' ? (group.color + '40') : undefined
+      }"
+    >
       <!-- Group Header (Inside App Card) -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <i :class="['pi', group.icon || 'pi-folder']" style="color: #2e7d32; font-size: 1.1rem;"></i>
+          <i :class="['pi', group.icon || 'pi-folder']" :style="{ color: group.color || '#2e7d32', fontSize: '1.1rem' }"></i>
           <div>
-            <h3 style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0;">{{ group.title }}</h3>
+            <h3 :style="{ fontSize: '0.92rem', fontWeight: '700', color: group.color || '#1e293b', margin: 0 }">{{ group.title }}</h3>
             <span v-if="group.description" style="font-size: 0.74rem; color: #64748b;">{{ group.description }}</span>
           </div>
         </div>
@@ -448,6 +457,38 @@
             <option value="pi-shield">🛡️ An ninh / Thẩm tra (pi-shield)</option>
             <option value="pi-chart-pie">📊 Biểu đồ (pi-chart-pie)</option>
           </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="field-item">
+            <label class="field-label" style="font-weight: 700; color: #1e293b;">Màu tiêu đề & Icon</label>
+            <select v-model="groupForm.color" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option value="#1e293b">Mặc định (Đen Slate - #1e293b)</option>
+              <option value="#2e7d32">Xanh lá (Green - #2e7d32)</option>
+              <option value="#0284c7">Xanh dương (Blue - #0284c7)</option>
+              <option value="#7c3aed">Tím (Purple - #7c3aed)</option>
+              <option value="#ea580c">Cam (Orange - #ea580c)</option>
+              <option value="#dc2626">Đỏ (Red - #dc2626)</option>
+              <option value="#0d9488">Xanh Teal (#0d9488)</option>
+              <option value="#e11d48">Hồng Đỏ (#e11d48)</option>
+              <option value="#d97706">Vàng Hổ Phách (#d97706)</option>
+              <option value="#475569">Xám Slate (#475569)</option>
+            </select>
+          </div>
+          <div class="field-item">
+            <label class="field-label" style="font-weight: 700; color: #1e293b;">Màu nền Pastel</label>
+            <select v-model="groupForm.bgColor" class="settings-select" style="width: 100%; max-width: 100%;">
+              <option value="#ffffff">Trắng tiêu chuẩn (Mặc định)</option>
+              <option value="#f0fdf4">Pastel Xanh Lá nhạt</option>
+              <option value="#f0f9ff">Pastel Xanh Dương nhạt</option>
+              <option value="#faf5ff">Pastel Tím nhạt</option>
+              <option value="#fff7ed">Pastel Cam nhạt</option>
+              <option value="#fef2f2">Pastel Đỏ nhạt</option>
+              <option value="#f0fdfa">Pastel Teal nhạt</option>
+              <option value="#fffbeb">Pastel Vàng nhạt</option>
+              <option value="#fdf2f8">Pastel Hồng nhạt</option>
+              <option value="#f8fafc">Pastel Xám nhạt</option>
+            </select>
+          </div>
         </div>
       </div>
       <template #footer>
@@ -1160,6 +1201,8 @@ const groupForm = ref({
   title: '',
   description: '',
   icon: 'pi-folder',
+  color: '#1e293b',
+  bgColor: '#ffffff',
   widgets: [],
 });
 
@@ -1281,6 +1324,8 @@ const openAddGroupDialog = () => {
     title: '',
     description: '',
     icon: 'pi-folder',
+    color: '#1e293b',
+    bgColor: '#ffffff',
     widgets: [],
   };
   isGroupDialogOpen.value = true;
@@ -1288,7 +1333,11 @@ const openAddGroupDialog = () => {
 
 const openEditGroupDialog = (group) => {
   editingGroup.value = group;
-  groupForm.value = JSON.parse(JSON.stringify(group));
+  groupForm.value = {
+    color: '#1e293b',
+    bgColor: '#ffffff',
+    ...JSON.parse(JSON.stringify(group)),
+  };
   isGroupDialogOpen.value = true;
 };
 
@@ -1504,9 +1553,9 @@ const unifiedTripsList = computed(() => {
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
         overdueDays: presence.overdueDays,
-        presenceStatus: presence.shortLabel,
+        presenceStatus: presence.label || presence.shortLabel,
         presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel,
+        _presenceStatus: presence.shortLabel || presence.label,
         rawTrip: t,
         rawPerson: p,
         custom_data: custom,
@@ -1593,9 +1642,9 @@ const unifiedTripsList = computed(() => {
           isAbroad: presence.isAbroad,
           isOverdue: presence.isOverdue,
           overdueDays: presence.overdueDays,
-          presenceStatus: presence.shortLabel,
+          presenceStatus: presence.label || presence.shortLabel,
           presenceLabel: presence.label,
-          _presenceStatus: presence.shortLabel,
+          _presenceStatus: presence.shortLabel || presence.label,
           rawTrip: rt,
           rawRelative: r,
           rawPerson: p,

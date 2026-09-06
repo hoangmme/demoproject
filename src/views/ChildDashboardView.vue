@@ -1656,9 +1656,9 @@ const unifiedTripsList = computed(() => {
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
         overdueDays: presence.overdueDays,
-        presenceStatus: presence.shortLabel,
+        presenceStatus: presence.label || presence.shortLabel,
         presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel,
+        _presenceStatus: presence.shortLabel || presence.label,
         rawTrip: t,
         rawPerson: p,
         custom_data: custom,
@@ -1745,9 +1745,9 @@ const unifiedTripsList = computed(() => {
           isAbroad: presence.isAbroad,
           isOverdue: presence.isOverdue,
           overdueDays: presence.overdueDays,
-          presenceStatus: presence.shortLabel,
+          presenceStatus: presence.label || presence.shortLabel,
           presenceLabel: presence.label,
-          _presenceStatus: presence.shortLabel,
+          _presenceStatus: presence.shortLabel || presence.label,
           rawTrip: rt,
           rawRelative: r,
           rawPerson: p,
@@ -2162,10 +2162,6 @@ const getCellValue = (trip, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
-    if (colDef.formulaType === 'presence_status') {
-      const p = resolvePresence(trip);
-      return p.label || '-';
-    }
     const result = evaluateFormula(trip, colDef);
     return result?.label || result?.shortLabel || '-';
   }
