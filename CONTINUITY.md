@@ -467,8 +467,43 @@
   2. `src/views/SettingsImportView.vue` & `src/views/ChildDashboardView.vue`:
      - Bổ sung cơ chế tự động làm sạch (sanitize) mã ID thẻ lúc đọc (`loadCustomDashboards`) và lúc ghi (`saveDashboardsConfig`). Đảm bảo mọi thẻ con (`idx > 0`) đều có `card.id` riêng biệt.
 
-### 45. LEDGER STATUS
-- **Status**: Done (Đã sửa lỗi trùng id: 'all' gây lệch số liệu giữa Dashboard và Child Dashboard, đã build và deploy).
+### 45. SỬA LỖI GHÉP CHUỖI VĂN BẢN CŨ TRONG CỘT HỘP KIỂM + TỆP (CHECKBOX_FILE)
+- **Hiện tượng**:
+  - Tại cột "KẾT QUẢ XÁC MINH VỀ TIÊU CHUẨN CHÍNH TRỊ" (`kl_chung`), bảng hiển thị chuỗi văn bản ghép sai lệch: `"Có vấn đề chính trị nhưng không vi phạm; Không vi phạm"`, `"Vi phạm tieu culn chính trị; Có vi phạm"`.
+  - Khi mở form chỉnh sửa hồ sơ Cán bộ, người dùng chỉ tick chọn đúng 1 ô `[✓] Không vi phạm` và đính kèm tệp PDF.
+- **Nguyên nhân cốt lõi**:
+  - Cột này ban đầu là trường văn bản tự do (`format: 'text'`). Trước đây người dùng đã nhập các đoạn text tự do.
+  - Khi người dùng đổi format cột sang `checkbox_file` với các lựa chọn cấu hình là `"Có vi phạm, Không vi phạm"`:
+    - Trong `DynamicField.vue`, hàm `initCheckboxFile` tách chuỗi cũ bằng dấu `;` rồi đưa trực tiếp vào `selected` mà không lọc đối chiếu với `parsedOptions` hợp lệ.
+    - Khi người dùng tick thêm `Không vi phạm`, hàm `syncCheckboxFileModel` gộp cả chuỗi cũ lẫn giá trị mới thành mảng 2 phần tử và nối chuỗi lưu vào DB.
+    - Khi hiển thị ra bảng (`ChildDashboardView.vue` và `PersonnelView.vue`), hàm `getCheckboxFileItem` đọc trường `val.text` hoặc `val.selected.join('; ')` nên xuất hiện chuỗi bẩn bị ghép.
+- **Giải pháp xử lý**:
+  1. `src/components/common/DynamicField.vue`: Cập nhật `initCheckboxFile` chỉ chấp nhận các giá trị nằm trong danh mục `parsedOptions` hợp lệ của cột. Loại bỏ hoàn toàn text lạ không thuộc cấu hình cột.
+  2. `src/views/ChildDashboardView.vue` & `src/views/PersonnelView.vue`: Cập nhật `getCheckboxFileItem` lấy danh sách options hợp lệ từ cấu hình cột (`colDef.options.split(/[,;]/)`), lọc sạch mảng `selected` và chuỗi `text` chỉ hiển thị các giá trị nằm trong danh mục options chuẩn.
+  3. Dọn dẹp cơ sở dữ liệu Directus: Đã chạy script chuẩn hóa qua API Directus, làm sạch trường `kl_chung` cho toàn bộ 5 hồ sơ cán bộ bị lưu chuỗi ghép bẩn (Nguyễn Hoàng Thông Minh, Trần Tuấn Tú, Nguyễn Minh Tâm, Tôn Quang Anh, Đoàn Hùng Vũ).
+
+### 46. NÂNG CẤP TÙY CHỌN CỘT HIỂN THỊ ĐỘC LẬP THEO TỪNG THẺ THỐNG KÊ TRÊN CHILD DASHBOARD
+- **Yêu cầu người dùng**:
+  - Trước đây: 1 dashboard chuyên đề chia sẻ chung 1 bộ cột hiển thị cho tất cả các thẻ KPI.
+  - Bây giờ: Mỗi thẻ thống kê (ví dụ: "Tất cả cán bộ", "Xử lý kỷ luật", "Lịch sử chính trị", "Quan hệ gia đình",...) có một bộ tùy chọn cột hiển thị riêng biệt. Khi bấm chuyển thẻ nào, bảng và bộ chọn cột sẽ tự động chuyển sang cấu hình cột tương ứng của thẻ đó.
+- **Giải pháp kỹ thuật**:
+  1. **Định danh khóa lưu trữ độc lập (`getCurrentCardColKey`)**:
+     - Thẻ cơ sở (Thẻ 0 / Toàn bộ chuyên đề): Lưu dưới khóa `child_dashboard_cols_${topicId}`.
+     - Thẻ thống kê con (`activeMetricCardIdx > 0`): Lưu dưới khóa `child_dashboard_cols_${topicId}_${cardId}`.
+  2. **Lưu trữ đa tầng (Multi-tier Persistence)**:
+     - **0ms Local Cache**: `localStorage.setItem(currentKey, ...)`.
+     - **Database Settings**: `saveAppSettings(currentKey, ...)`.
+     - **Cấu hình Chuyên đề gốc**: Lưu trực tiếp vào thuộc tính `card.columns` bên trong mảng `metricCards` của `customDashboards` và đẩy vào `custom_dashboards_config` của Directus để đồng bộ trên mọi thiết bị.
+  3. **Cơ chế nạp cột thông minh & kế thừa an toàn (`loadColumnsForCurrentCard`)**:
+     - Khi chọn thẻ KPI, hệ thống ưu tiên đọc: `card.columns` -> DB settings thẻ -> LocalStorage thẻ.
+     - Nếu thẻ chưa từng tùy biến cột: Tự động kế thừa bộ cột cơ sở của chuyên đề (tránh việc bảng bị trống hoặc lỗi hiển thị).
+  4. **Phản ứng tức thì (Reactivity)**:
+     - Gắn `watch(() => activeMetricCardIdx.value)` tự động nạp cột của thẻ được kích hoạt.
+     - Thêm `:key="activeMetricCardIdx"` vào `<ColumnSelector>` để reset trạng thái và hiển thị chính xác danh sách cột đã chọn của thẻ đó.
+     - Hiển thị huy hiệu trực quan `🎯 [Tên thẻ đang chọn]` trong tiêu đề popover và modal "Tùy chọn Cột hiển thị" giúp người dùng luôn nhận biết rõ đang cấu hình cho thẻ nào.
+
+### 47. LEDGER STATUS
+- **Status**: Done (Đã sửa triệt để lỗi chuỗi bẩn `checkbox_file`, đã dọn dẹp DB Directus, đã hoàn thiện tính năng Tùy chọn cột độc lập theo từng thẻ thống kê, đã build và deploy).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã test và build thành công).
 

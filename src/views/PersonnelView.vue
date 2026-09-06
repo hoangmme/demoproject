@@ -1442,8 +1442,23 @@ const getTextFileLoopItems = (data, colId) => {
 const getCheckboxFileItem = (data, colId) => {
   const val = data?.[colId] ?? (data?.custom_data ? data.custom_data[colId] : null);
   if (!val) return { hasValue: false, text: '', file: null };
-  if (typeof val === 'object') {
-    const text = val.text || (val.selected ? val.selected.join('; ') : (val.checked ? 'Có' : ''));
+
+  const colDef = allColumnDefsMap.value?.[colId];
+  const validOpts = colDef?.options ? String(colDef.options).split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
+
+  const resolveItemText = (rawObj) => {
+    let sel = Array.isArray(rawObj.selected) ? rawObj.selected : (typeof rawObj.selected === 'string' ? [rawObj.selected] : []);
+    if (validOpts.length > 0) {
+      const matched = sel.filter((s) => validOpts.includes(s));
+      if (matched.length > 0) return matched.join('; ');
+      const matchedFromText = validOpts.filter((opt) => String(rawObj.text || '').toLowerCase().includes(opt.toLowerCase()));
+      if (matchedFromText.length > 0) return matchedFromText.join('; ');
+    }
+    return sel.length > 0 ? sel.join('; ') : (rawObj.text || (rawObj.checked ? (colDef?.options || 'Có') : ''));
+  };
+
+  if (typeof val === 'object' && val !== null) {
+    const text = resolveItemText(val);
     const file = val.file || null;
     return {
       hasValue: Boolean(text || file),
@@ -1455,15 +1470,19 @@ const getCheckboxFileItem = (data, colId) => {
     try {
       const p = JSON.parse(val);
       if (typeof p === 'object' && p !== null) {
-        const text = p.text || (p.selected ? p.selected.join('; ') : (p.checked ? 'Có' : ''));
+        const text = resolveItemText(p);
         const file = p.file || null;
         return { hasValue: Boolean(text || file), text, file };
       }
     } catch {}
+    if (validOpts.length > 0) {
+      const matched = validOpts.filter((opt) => val.toLowerCase().includes(opt.toLowerCase()));
+      if (matched.length > 0) return { hasValue: true, text: matched.join('; '), file: null };
+    }
     return { hasValue: true, text: val, file: null };
   }
   if (typeof val === 'boolean') {
-    return { hasValue: val, text: val ? 'Có' : '', file: null };
+    return { hasValue: val, text: val ? (colDef?.options || 'Có') : '', file: null };
   }
   return { hasValue: false, text: '', file: null };
 };

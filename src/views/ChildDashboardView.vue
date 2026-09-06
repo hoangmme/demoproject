@@ -47,11 +47,23 @@
 
           <div v-show="isFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown">
             <div class="filter-section">
-              <div class="filter-section-title" style="margin-bottom: 8px;">
-                <i class="pi pi-table" style="color: #7c3aed;"></i>
-                <span>Tùy chọn Cột hiển thị</span>
+              <div class="filter-section-title" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <i class="pi pi-table" style="color: #7c3aed;"></i>
+                  <span>Tùy chọn Cột hiển thị</span>
+                </div>
+                <span
+                  style="font-size: 0.68rem; font-weight: 700; color: #0284c7; background: #f0f9ff; padding: 2px 8px; border-radius: 9999px; border: 1px solid #bae6fd; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                  :title="activeMetricCardIdx <= 0 ? 'Toàn bộ chuyên đề' : (activeMetricCard?.label || 'Thẻ đang chọn')"
+                >
+                  🎯 {{ activeMetricCardIdx <= 0 ? 'Toàn bộ chuyên đề' : (activeMetricCard?.label || 'Thẻ đang chọn') }}
+                </span>
+              </div>
+              <div style="font-size: 0.7rem; color: #64748b; margin-bottom: 8px; line-height: 1.3;">
+                Đang cấu hình cột riêng cho: <strong style="color: #1e293b;">{{ activeMetricCardIdx <= 0 ? 'Toàn bộ chuyên đề' : (activeMetricCard?.label || 'Thẻ đang chọn') }}</strong>
               </div>
               <ColumnSelector
+                :key="activeMetricCardIdx"
                 v-model="selectedColIds"
                 :options="allAvailableColumnsList"
                 @change="onColumnsChange"
@@ -567,12 +579,12 @@
     <Dialog
       v-model:visible="isColumnPickerOpen"
       modal
-      :header="`Chọn cột hiển thị (${selectedColIds.length} / ${allAvailableColumnsList.length} cột)`"
+      :header="`Chọn cột hiển thị - ${activeMetricCardIdx <= 0 ? 'Toàn bộ chuyên đề' : (activeMetricCard?.label || 'Thẻ đang chọn')} (${selectedColIds.length} / ${allAvailableColumnsList.length} cột)`"
       :style="{ width: '680px' }"
     >
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 8px; flex-wrap: wrap;">
         <span style="font-size: 0.8rem; color: #64748b;">
-          Đánh dấu chọn các cột thông tin từ toàn bộ <b>{{ allAvailableColumnsList.length }} cột</b> để xuất hiện trên bảng dữ liệu:
+          Đánh dấu chọn các cột hiển thị cho <b>{{ activeMetricCardIdx <= 0 ? 'Toàn bộ chuyên đề' : (activeMetricCard?.label || 'Thẻ đang chọn') }}</b> từ toàn bộ <b>{{ allAvailableColumnsList.length }} cột</b>:
         </span>
         <div style="display: flex; gap: 6px;">
           <Button label="Chọn tất cả" size="small" text severity="primary" @click="selectedColIds = allAvailableColumnsList.map(c => c.id)" style="font-size: 0.75rem; padding: 2px 6px;" />
@@ -1584,22 +1596,44 @@ const getInitialSelectedCols = () => {
 };
 const selectedColIds = ref(getInitialSelectedCols());
 
+const getCurrentCardColKey = () => {
+  const tid = topicId.value || 'default';
+  if (activeMetricCardIdx.value <= 0) {
+    return `child_dashboard_cols_${tid}`;
+  }
+  const targetCard = activeMetricCards.value?.[activeMetricCardIdx.value];
+  const cid = (targetCard && targetCard.id) ? targetCard.id : `card_${activeMetricCardIdx.value}`;
+  return `child_dashboard_cols_${tid}_${cid}`;
+};
+
 const onColumnsChange = async (newCols) => {
   selectedColIds.value = [...newCols];
-  const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
+  const currentKey = getCurrentCardColKey();
+  const isBaseline = activeMetricCardIdx.value <= 0;
 
   try {
     localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
-    if (topicId.value === 'trips') {
+    if (isBaseline && topicId.value === 'trips') {
       localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
     }
     await saveAppSettings(currentKey, selectedColIds.value);
-    await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
+    if (isBaseline && topicId.value === 'trips') {
+      await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
+    }
   } catch (e) {}
 
   const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
   if (idx !== -1) {
-    customDashboards.value[idx].columns = [...selectedColIds.value];
+    if (isBaseline) {
+      customDashboards.value[idx].columns = [...selectedColIds.value];
+    } else {
+      if (!customDashboards.value[idx].metricCards) {
+        customDashboards.value[idx].metricCards = [];
+      }
+      if (customDashboards.value[idx].metricCards[activeMetricCardIdx.value]) {
+        customDashboards.value[idx].metricCards[activeMetricCardIdx.value].columns = [...selectedColIds.value];
+      }
+    }
     try {
       localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
       await saveAppSettings('custom_dashboards_config', customDashboards.value);
@@ -2139,8 +2173,23 @@ const getTextFileLoopItems = (data, colId) => {
 const getCheckboxFileItem = (data, colId) => {
   const val = data?.[colId] ?? (data?.custom_data ? data.custom_data[colId] : null);
   if (!val) return { hasValue: false, text: '', file: null };
-  if (typeof val === 'object') {
-    const text = val.text || (val.selected ? val.selected.join('; ') : (val.checked ? 'Có' : ''));
+
+  const colDef = allAvailableColumnsList.value?.find((c) => c.id === colId);
+  const validOpts = colDef?.options ? String(colDef.options).split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
+
+  const resolveItemText = (rawObj) => {
+    let sel = Array.isArray(rawObj.selected) ? rawObj.selected : (typeof rawObj.selected === 'string' ? [rawObj.selected] : []);
+    if (validOpts.length > 0) {
+      const matched = sel.filter((s) => validOpts.includes(s));
+      if (matched.length > 0) return matched.join('; ');
+      const matchedFromText = validOpts.filter((opt) => String(rawObj.text || '').toLowerCase().includes(opt.toLowerCase()));
+      if (matchedFromText.length > 0) return matchedFromText.join('; ');
+    }
+    return sel.length > 0 ? sel.join('; ') : (rawObj.text || (rawObj.checked ? (colDef?.options || 'Có') : ''));
+  };
+
+  if (typeof val === 'object' && val !== null) {
+    const text = resolveItemText(val);
     const file = val.file || null;
     return {
       hasValue: Boolean(text || file),
@@ -2152,15 +2201,19 @@ const getCheckboxFileItem = (data, colId) => {
     try {
       const p = JSON.parse(val);
       if (typeof p === 'object' && p !== null) {
-        const text = p.text || (p.selected ? p.selected.join('; ') : (p.checked ? 'Có' : ''));
+        const text = resolveItemText(p);
         const file = p.file || null;
         return { hasValue: Boolean(text || file), text, file };
       }
     } catch {}
+    if (validOpts.length > 0) {
+      const matched = validOpts.filter((opt) => val.toLowerCase().includes(opt.toLowerCase()));
+      if (matched.length > 0) return { hasValue: true, text: matched.join('; '), file: null };
+    }
     return { hasValue: true, text: val, file: null };
   }
   if (typeof val === 'boolean') {
-    return { hasValue: val, text: val ? 'Có' : '', file: null };
+    return { hasValue: val, text: val ? (colDef?.options || 'Có') : '', file: null };
   }
   return { hasValue: false, text: '', file: null };
 };
@@ -2564,6 +2617,13 @@ const resetFilters = () => {
 
 // Column Picker
 const resetDefaultColumns = () => {
+  if (activeMetricCardIdx.value > 0) {
+    const card = activeMetricCards.value?.[activeMetricCardIdx.value];
+    if (card?.columns && card.columns.length > 0) {
+      selectedColIds.value = [...card.columns];
+      return;
+    }
+  }
   if (currentDashboardConfig.value.columns && currentDashboardConfig.value.columns.length > 0) {
     selectedColIds.value = [...currentDashboardConfig.value.columns];
   } else {
@@ -2590,29 +2650,7 @@ const removeSelectedCol = (idx) => {
 };
 
 const saveColumnSelection = async () => {
-  const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
-
-  try {
-    localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
-    if (topicId.value === 'trips') {
-      localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
-    }
-  } catch (e) {}
-
-  // Also persist into customDashboards in DB
-  const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
-  if (idx !== -1) {
-    customDashboards.value[idx].columns = [...selectedColIds.value];
-    try {
-      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
-      await saveAppSettings('custom_dashboards_config', customDashboards.value);
-    } catch (e) {}
-  }
-
-  try {
-    await saveAppSettings(currentKey, selectedColIds.value);
-    await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
-  } catch (e) {}
+  await onColumnsChange(selectedColIds.value);
   isColumnPickerOpen.value = false;
 };
 
@@ -2977,6 +3015,58 @@ const initTopicColumns = async () => {
   }
 };
 
+const loadColumnsForCurrentCard = async () => {
+  const isBaseline = activeMetricCardIdx.value <= 0;
+  const currentKey = getCurrentCardColKey();
+
+  if (!isBaseline) {
+    const card = activeMetricCards.value?.[activeMetricCardIdx.value];
+    // 1. Kiểm tra columns riêng của thẻ trong cấu hình chuyên đề (customDashboards)
+    if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
+      const valid = card.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
+      if (valid.length > 0) {
+        selectedColIds.value = valid;
+        return;
+      }
+    }
+
+    // 2. Kiểm tra cache localStorage riêng của thẻ
+    try {
+      const local = localStorage.getItem(currentKey);
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const valid = parsed.filter((id) => id !== 'status' && id !== 'tripStatus');
+          if (valid.length > 0) {
+            selectedColIds.value = valid;
+            return;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. Kiểm tra Directus DB settings riêng của thẻ
+    try {
+      const dbCols = await getAppSettings(currentKey, null);
+      if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
+        const valid = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus');
+        if (valid.length > 0) {
+          selectedColIds.value = valid;
+          try {
+            localStorage.setItem(currentKey, JSON.stringify(valid));
+          } catch (e) {}
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // 4. Nếu thẻ này chưa từng tùy biến cột riêng -> kế thừa bộ cột cơ sở của chuyên đề
+  }
+
+  // Nạp cấu hình cột cơ sở của toàn bộ chuyên đề
+  await initTopicColumns();
+};
+
 // ==================== LƯU VÀ TẢI BỘ LỌC VÀO DATABASE ====================
 let filterSaveDebounceTimer = null;
 const saveTopicFilterState = async () => {
@@ -3054,6 +3144,15 @@ watch(
   }
 );
 
+// Đồng bộ chuyển đổi cột khi người dùng bấm chọn thẻ thống kê KPI khác nhau
+watch(
+  () => activeMetricCardIdx.value,
+  async (newVal, oldVal) => {
+    if (newVal === oldVal) return;
+    await loadColumnsForCurrentCard();
+  }
+);
+
 const handleRouteQueryChange = () => {
   if (route.query?.card) {
     activeMetricCardId.value = String(route.query.card);
@@ -3079,8 +3178,8 @@ const handleRouteQueryChange = () => {
 watch(
   () => topicId.value,
   async () => {
-    await initTopicColumns();
     await loadTopicFilterState();
+    await loadColumnsForCurrentCard();
     currentPage.value = 1;
     handleRouteQueryChange();
   }
@@ -3098,7 +3197,7 @@ watch(
   () => allAvailableColumnsList.value.length,
   (newLen, oldLen) => {
     if (newLen > (oldLen || 0) && selectedColIds.value.length <= 2) {
-      initTopicColumns();
+      loadColumnsForCurrentCard();
     }
   }
 );
@@ -3108,8 +3207,8 @@ onMounted(async () => {
     await personnelStore.loadSettings();
   }
   await loadCustomDashboards();
-  await initTopicColumns();
   await loadTopicFilterState();
+  await loadColumnsForCurrentCard();
   handleRouteQueryChange();
   loadNameColConfig();
 });

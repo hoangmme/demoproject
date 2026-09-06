@@ -1151,8 +1151,13 @@ const initCheckboxFile = (val) => {
       if (val === 'Có' || val === 'true' || val === true) {
         checkboxFileSingleChecked.value = true;
       } else {
-        checkboxFileActiveOpts.value = val.split(/[,;]/).map(s => s.trim()).filter(Boolean);
-        if (checkboxFileActiveOpts.value.length === 0) checkboxFileSingleChecked.value = true;
+        const rawList = val.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+        if (parsedOptions.value.length > 0) {
+          checkboxFileActiveOpts.value = rawList.filter(s => parsedOptions.value.includes(s));
+        } else {
+          checkboxFileActiveOpts.value = rawList;
+        }
+        if (checkboxFileActiveOpts.value.length === 0 && (val === 'Có' || val === 'true')) checkboxFileSingleChecked.value = true;
       }
       checkboxFileObject.value = { file: null };
       return;
@@ -1161,7 +1166,13 @@ const initCheckboxFile = (val) => {
 
   if (typeof obj === 'object' && obj !== null) {
     checkboxFileSingleChecked.value = Boolean(obj.checked);
-    checkboxFileActiveOpts.value = Array.isArray(obj.selected) ? [...obj.selected] : [];
+    const rawSelected = Array.isArray(obj.selected) ? obj.selected : [];
+    if (parsedOptions.value.length > 0) {
+      // Chỉ giữ các lựa chọn hợp lệ nằm trong parsedOptions của cột, loại bỏ rác/text cũ
+      checkboxFileActiveOpts.value = rawSelected.filter(s => parsedOptions.value.includes(s));
+    } else {
+      checkboxFileActiveOpts.value = rawSelected;
+    }
     checkboxFileObject.value.file = obj.file || null;
   }
 };
