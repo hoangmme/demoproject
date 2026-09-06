@@ -214,6 +214,7 @@
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
                 <!-- Tên cán bộ -->
                 <div v-if="nameColFields.name">
+                  <span v-if="data.isRelative || currentDashboardConfig.source === 'relatives'" style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Cán bộ: </span>
                   <strong style="color: #0f172a; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
                     {{ getPersonInfo(data).name }}
                   </strong>
@@ -231,6 +232,37 @@
                   {{ getPersonInfo(data).department }}
                 </div>
               </div>
+            </template>
+
+            <!-- 1c. Cột Họ và tên Thân nhân -->
+            <template v-else-if="col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'">
+              <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <strong style="color: #0f172a; font-weight: 700; font-size: 0.85rem;">
+                    {{ data.relativeName || data.name || '-' }}
+                  </strong>
+                  <span
+                    v-if="data.relationshipName || data.relationship"
+                    style="font-size: 0.7rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"
+                  >
+                    {{ data.relationshipName || data.relationship }}
+                  </span>
+                </div>
+                <div v-if="data.cccdthannhan || data.cccd" style="font-size: 0.72rem; color: #64748b;">
+                  CCCD TN: {{ data.cccdthannhan || data.cccd }}
+                </div>
+              </div>
+            </template>
+
+            <!-- 1d. Cột Mối quan hệ riêng -->
+            <template v-else-if="col.id === 'relationshipName' || col.id === 'relationship'">
+              <span
+                v-if="data.relationshipName || data.relationship"
+                style="display: inline-flex; align-items: center; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;"
+              >
+                {{ data.relationshipName || data.relationship }}
+              </span>
+              <span v-else style="color: #94a3b8;">-</span>
             </template>
 
             <!-- 1b. Cột Họ và tên gốc (chỉ hiện tên thuần túy) -->
@@ -269,9 +301,9 @@
               <span>{{ getDepartmentValue(data) !== '-' ? getDepartmentValue(data) : (getCellValue(data, col.id) !== '-' ? getCellValue(data, col.id) : '-') }}</span>
             </template>
 
-            <!-- 3. Ngày xuất cảnh -->
-            <template v-else-if="col.id === 'departureDate' || col.id === 'approvedDepartureDate'">
-              <span>{{ formatDisplayDate(data[col.id] || data.departureDate) }}</span>
+            <!-- 3. Ngày xuất cảnh & Ngày nhập cảnh / về -->
+            <template v-else-if="col.id === 'departureDate' || col.id === 'approvedDepartureDate' || col.id === 'arrivalDate' || col.id === 'approvedArrivalDate'">
+              <span>{{ formatDisplayDate(data[col.id] || getCellValue(data, col.id)) }}</span>
             </template>
 
             <!-- 5. Số quyết định -->
@@ -1172,17 +1204,22 @@ const isCardAllType = (card) => {
   return true;
 };
 
-// Tập dữ liệu cơ sở của Chuyên đề (trả về toàn bộ danh sách nguồn của chuyên đề)
+// Tập dữ liệu cơ sở của Chuyên đề (Baseline List dựa trên thẻ đầu tiên)
 const topicBaselineList = computed(() => {
-  return currentSourceList.value || [];
+  const fullList = currentSourceList.value || [];
+  const firstCard = activeMetricCards.value[0];
+  if (firstCard && !isCardAllType(firstCard)) {
+    return fullList.filter((item) => matchCardCondition(item, firstCard));
+  }
+  return fullList;
 });
 
 const getCardMetricValue = (card) => {
   if (!card) return 0;
-  const fullList = currentSourceList.value || [];
-  let items = isCardAllType(card)
-    ? fullList
-    : fullList.filter((item) => matchCardCondition(item, card));
+  const firstCard = activeMetricCards.value[0];
+  let items = (card === firstCard || isCardAllType(card))
+    ? topicBaselineList.value
+    : topicBaselineList.value.filter((item) => matchCardCondition(item, card));
 
   // Đếm giá trị duy nhất (Unique)
   if (card.isUnique) {
@@ -1207,7 +1244,7 @@ const isCardActive = (card, cIdx) => {
   const cardKey = card.id || card.label || `card_${cIdx}`;
   const isAll = isCardAllType(card);
   if (activeMetricCardId.value === 'all') {
-    return isAll;
+    return cIdx === 0 || isAll;
   }
   return activeMetricCardId.value === cardKey;
 };
@@ -1216,7 +1253,7 @@ const toggleMetricCardFilter = (card, cIdx) => {
   const cardKey = card.id || card.label || `card_${cIdx}`;
   const isAll = isCardAllType(card);
 
-  if (isAll) {
+  if (isAll || cIdx === 0) {
     activeMetricCardId.value = 'all';
     statusFilter.value = 'all';
     return;
@@ -1549,23 +1586,64 @@ const allAvailableColumnsList = computed(() => {
       });
     });
 
-    // Các cột ảo: Mã cán bộ, Thông tin cán bộ, Trạng thái hiện diện
+    // Thêm các cột quan trọng của chuyến đi nếu chưa có trong mapping thân nhân
+    const tripColsForRel = [
+      { id: 'departureDate', label: 'Ngày xuất cảnh', width: '130px', format: 'date' },
+      { id: 'arrivalDate', label: 'Ngày nhập cảnh / về', width: '140px', format: 'date' },
+      { id: 'purpose', label: 'Mục đích chuyến đi', width: '160px', format: 'text' },
+      { id: 'decisionNumber', label: 'Số quyết định', width: '140px', format: 'text' },
+    ];
+    tripColsForRel.forEach((tc) => {
+      if (!seen.has(tc.id)) {
+        seen.add(tc.id);
+        rawList.push({
+          ...tc,
+          colIndex: null,
+          isVirtual: true,
+          tableWidth: null,
+        });
+      }
+    });
+
+    // Các cột ảo: Cán bộ liên quan, Trạng thái hiện diện, Mã cán bộ
     const virtualRelativeCols = [
-      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
-      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
+      { id: '_parentPersonnelName', label: 'Cán bộ liên quan', width: '180px' },
       { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px' },
+      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
     ];
 
     virtualRelativeCols.forEach((vc) => {
       if (!seen.has(vc.id)) {
         seen.add(vc.id);
-        rawList.unshift({
+        rawList.push({
           ...vc,
           colIndex: null,
           isVirtual: true,
           tableWidth: null,
         });
       }
+    });
+
+    // Ưu tiên thứ tự cột hiển thị chuẩn cho thân nhân
+    const prioritizedRelCols = [
+      'relativeName',
+      'relationshipName',
+      '_presenceStatus',
+      '_parentPersonnelName',
+      'countryName',
+      'departureDate',
+      'arrivalDate',
+      'purpose',
+      'decisionNumber',
+      '_parentPersonnelCode',
+    ];
+    rawList.sort((a, b) => {
+      const idxA = prioritizedRelCols.indexOf(a.id);
+      const idxB = prioritizedRelCols.indexOf(b.id);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return 0;
     });
   } else {
     // personnel
@@ -1926,6 +2004,23 @@ const currentSourceList = computed(() => {
       }
 
       const presence = resolvePresence({ ...r, trips: relTrips });
+
+      // Tìm chuyến đi đang hoạt động (đang ở nước ngoài hoặc quá hạn) hoặc chuyến đi gần nhất
+      let activeTrip = null;
+      if (relTrips.length > 0) {
+        activeTrip = relTrips.find((t) => {
+          const tp = resolvePresence(t);
+          return tp.isAbroad || tp.isOverdue;
+        });
+        if (!activeTrip) {
+          activeTrip = [...relTrips].sort((a, b) => {
+            const da = parseDateValue(a.departureDate || a.ngay_xuat_canh)?.getTime() || 0;
+            const db = parseDateValue(b.departureDate || b.ngay_xuat_canh)?.getTime() || 0;
+            return db - da;
+          })[0];
+        }
+      }
+
       const latestTrip = relTrips.length > 0 ? relTrips[relTrips.length - 1] : null;
 
       return {
@@ -1934,6 +2029,7 @@ const currentSourceList = computed(() => {
         uniqueKey: r.id || `rel_${idx}`,
         isRelative: true,
         trips: relTrips,
+        activeTrip: activeTrip || latestTrip,
         personnelName: r.relativeName || r.name || 'Thân nhân',
         personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
         relativeName: r.relativeName || r.name || 'Thân nhân',
@@ -1944,9 +2040,11 @@ const currentSourceList = computed(() => {
         cccdparent: r.cccdparent || parentPerson?.cccd || parentPerson?.cccdparent || '',
         cccdthannhan: r.cccdthannhan || r.cccd || '',
         departmentName: parentPerson?.departmentName || (parentPerson?.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || '',
-        countryName: presence.country || latestTrip?.countryName || latestTrip?.country || '',
-        departureDate: latestTrip?.departureDate || latestTrip?.ngay_xuat_canh || '',
-        arrivalDate: latestTrip?.arrivalDate || latestTrip?.ngay_nhap_canh || '',
+        countryName: activeTrip?.countryName || activeTrip?.country || presence.country || latestTrip?.countryName || latestTrip?.country || r.countryName || rCustom.countryName || '',
+        departureDate: activeTrip?.departureDate || activeTrip?.ngay_xuat_canh || latestTrip?.departureDate || latestTrip?.ngay_xuat_canh || '',
+        arrivalDate: activeTrip?.arrivalDate || activeTrip?.ngay_nhap_canh || activeTrip?.approvedArrivalDate || latestTrip?.arrivalDate || latestTrip?.ngay_nhap_canh || '',
+        purpose: activeTrip?.purpose || activeTrip?.muc_dich || latestTrip?.purpose || latestTrip?.muc_dich || '',
+        decisionNumber: activeTrip?.decisionNumber || activeTrip?.so_quyet_dinh || latestTrip?.decisionNumber || latestTrip?.so_quyet_dinh || '',
         rawPerson: parentPerson || r,
         rawRelative: r,
         custom_data: rCustom,
@@ -2024,7 +2122,8 @@ const filteredList = computed(() => {
   // 0. Active Metric Card Filter (Top KPI Pill)
   if (activeMetricCardId.value && activeMetricCardId.value !== 'all') {
     const targetCard = activeMetricCards.value.find((c, idx) => (c.id || c.label || `card_${idx}`) === activeMetricCardId.value);
-    if (targetCard && !isCardAllType(targetCard)) {
+    const firstCard = activeMetricCards.value[0];
+    if (targetCard && targetCard !== firstCard && !isCardAllType(targetCard)) {
       list = list.filter((t) => matchCardCondition(t, targetCard));
     }
   }
@@ -2062,8 +2161,8 @@ const filteredList = computed(() => {
     list = list.filter((t) => (t.fundingName || t.funding || '') === selectedFunding.value);
   }
 
-  // 5.5. Custom Field Filter from URL Query
-  if (customFilterField.value && customFilterValue.value) {
+  // 5.5. Custom Field Filter from URL Query (chỉ lọc nếu không có thẻ KPI card đang chọn)
+  if ((!activeMetricCardId.value || activeMetricCardId.value === 'all') && customFilterField.value && customFilterValue.value) {
     const targetVal = customFilterValue.value.toLowerCase().trim();
     list = list.filter((t) => {
       const isPresence = (
@@ -3002,6 +3101,17 @@ const loadCustomDashboards = async () => {
 const initTopicColumns = async () => {
   const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
 
+  const finalizeColumns = () => {
+    // Đảm bảo cho bảng Thân nhân: luôn có họ tên thân nhân, mối quan hệ và trạng thái hiện diện
+    if (currentDashboardConfig.value?.source === 'relatives') {
+      const essential = ['relativeName', 'relationshipName', '_presenceStatus', '_parentPersonnelName', 'countryName', 'departureDate', 'arrivalDate'];
+      const missing = essential.filter((c) => !selectedColIds.value.includes(c));
+      if (missing.length > 0) {
+        selectedColIds.value = [...missing, ...selectedColIds.value];
+      }
+    }
+  };
+
   // 1. Kiểm tra cache local trước để 0ms hiển thị chính xác ngay lập tức
   try {
     const localCols = localStorage.getItem(currentKey) || (topicId.value === 'trips' ? localStorage.getItem('trips_dashboard_columns') : null);
@@ -3009,6 +3119,7 @@ const initTopicColumns = async () => {
       const parsed = JSON.parse(localCols);
       if (Array.isArray(parsed) && parsed.length > 0) {
         selectedColIds.value = parsed.filter((id) => id !== 'status' && id !== 'tripStatus');
+        finalizeColumns();
         return;
       }
     }
@@ -3021,6 +3132,7 @@ const initTopicColumns = async () => {
       const valid = dbCols.filter((id) => id !== 'status' && id !== 'tripStatus');
       if (valid.length > 0) {
         selectedColIds.value = valid;
+        finalizeColumns();
         try {
           localStorage.setItem(currentKey, JSON.stringify(valid));
         } catch (e) {}
@@ -3034,6 +3146,7 @@ const initTopicColumns = async () => {
     const validCfg = currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus');
     if (validCfg.length > 0) {
       selectedColIds.value = validCfg;
+      finalizeColumns();
       return;
     }
   }
@@ -3042,6 +3155,7 @@ const initTopicColumns = async () => {
   const allIds = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
   if (allIds.length > 0) {
     selectedColIds.value = allIds;
+    finalizeColumns();
   }
 };
 

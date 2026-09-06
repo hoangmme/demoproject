@@ -1985,10 +1985,17 @@ const getCardMetricValueForTopic = (card, topic) => {
   }
   const fullList = getSourceList(src);
 
+  // Xác định tập dữ liệu cơ sở của Chuyên đề (Baseline List dựa trên thẻ đầu tiên)
+  const firstCard = topicCards[0];
+  let baselineList = fullList;
+  if (firstCard && !isCardAllType(firstCard)) {
+    baselineList = fullList.filter((item) => matchCardCondition(item, firstCard));
+  }
+
   const isUnique = !!(actualCard.isUnique || card.isUnique);
-  const targetItems = isCardAllType(actualCard)
-    ? fullList
-    : fullList.filter((item) => matchCardCondition(item, actualCard));
+  const targetItems = (actualCard === firstCard || isCardAllType(actualCard))
+    ? baselineList
+    : baselineList.filter((item) => matchCardCondition(item, actualCard));
 
   if (isUnique) {
     const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
@@ -2308,7 +2315,7 @@ const handleWidgetClick = (widget) => {
   if (widget.topicId) {
     const targetPath = widget.topicId === 'trips' ? '/trips' : `/dashboard-topic/${widget.topicId}`;
     const cardParam = widget.cardId || widget.cardCondition || widget.id;
-    router.push({ path: targetPath, query: { card: cardParam, filterField: widget.columnId || '', filterValue: widget.countValue || '' } });
+    router.push({ path: targetPath, query: { card: cardParam } });
     return;
   }
   const isRel = widget.source === 'relatives';
