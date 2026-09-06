@@ -525,7 +525,8 @@ export const matchCardCondition = (item, card, personnelStore) => {
       if (trips.length === 0) {
         return tripConds.every((c) => {
           if (isPresenceField(c.field)) {
-            return checkConditionMatch('Trong nước', c.operator, c.value);
+            const p = resolvePresence(item);
+            return checkConditionMatch(p.shortLabel, c.operator, c.value) || checkConditionMatch(p.label, c.operator, c.value) || checkConditionMatch('Trong nước', c.operator, c.value);
           }
           return checkConditionMatch('', c.operator, c.value);
         });
@@ -537,6 +538,9 @@ export const matchCardCondition = (item, card, personnelStore) => {
             const tVal = tp.shortLabel || tp.label || '';
             if (checkConditionMatch(tVal, c.operator, c.value)) return true;
             if (tp.label && checkConditionMatch(tp.label, c.operator, c.value)) return true;
+            const ip = resolvePresence(item);
+            if (checkConditionMatch(ip.shortLabel, c.operator, c.value)) return true;
+            if (ip.label && checkConditionMatch(ip.label, c.operator, c.value)) return true;
             return false;
           }
           const tVal = extractRowFieldValue(t, c.field, personnelStore);

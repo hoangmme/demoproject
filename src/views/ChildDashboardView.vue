@@ -1093,24 +1093,24 @@ const isCardActive = (card, cIdx) => {
   const cardKey = card.id || card.label || `card_${cIdx}`;
   const isAll = isCardAllType(card);
   if (activeMetricCardId.value === 'all') {
-    return isAll;
+    return cIdx === 0 || isAll;
   }
-  return activeMetricCardId.value === cardKey || activeMetricCardId.value === card.id || activeMetricCardId.value === card.label || activeMetricCardId.value === `card_${cIdx}`;
+  return activeMetricCardId.value === cardKey || activeMetricCardId.value === card.id || activeMetricCardId.value === card.label;
 };
 
 const toggleMetricCardFilter = (card, cIdx) => {
   const cardKey = card.id || card.label || `card_${cIdx}`;
   const isAll = isCardAllType(card);
 
-  // Nếu là thẻ Toàn bộ: reset về all
-  if (isAll) {
+  // Nếu là thẻ Toàn bộ hoặc thẻ đầu tiên (baseline cơ sở của chuyên đề): reset về all
+  if (isAll || cIdx === 0) {
     activeMetricCardId.value = 'all';
     statusFilter.value = 'all';
     return;
   }
 
   // Thẻ có điều kiện: toggle bật / tắt
-  const isCurrentActive = activeMetricCardId.value === cardKey || activeMetricCardId.value === card.id || activeMetricCardId.value === card.label || activeMetricCardId.value === `card_${cIdx}`;
+  const isCurrentActive = activeMetricCardId.value === cardKey || activeMetricCardId.value === card.id || activeMetricCardId.value === card.label;
   if (isCurrentActive) {
     activeMetricCardId.value = 'all';
   } else {
@@ -1121,10 +1121,13 @@ const toggleMetricCardFilter = (card, cIdx) => {
 const activeMetricCard = computed(() => {
   if (!activeMetricCardId.value || activeMetricCardId.value === 'all') return null;
   const cards = activeMetricCards.value || [];
-  return cards.find((c, idx) => {
+  const firstCard = cards[0];
+  const found = cards.find((c, idx) => {
     const cardKey = c.id || c.label || `card_${idx}`;
-    return cardKey === activeMetricCardId.value || c.id === activeMetricCardId.value || c.label === activeMetricCardId.value || c.condition === activeMetricCardId.value;
-  }) || null;
+    return cardKey === activeMetricCardId.value || c.id === activeMetricCardId.value || c.label === activeMetricCardId.value;
+  });
+  if (found === firstCard) return null;
+  return found || null;
 });
 
 const activeCardColLabel = computed(() => {
@@ -1440,6 +1443,7 @@ const allAvailableColumnsList = computed(() => {
 
     // Thêm các cột quan trọng của chuyến đi nếu chưa có trong mapping thân nhân
     const tripColsForRel = [
+      { id: 'countryName', label: 'Quốc gia / Nơi đến', width: '150px', format: 'text' },
       { id: 'departureDate', label: 'Ngày xuất cảnh', width: '130px', format: 'date' },
       { id: 'arrivalDate', label: 'Ngày nhập cảnh / về', width: '140px', format: 'date' },
       { id: 'purpose', label: 'Mục đích chuyến đi', width: '160px', format: 'text' },
@@ -1861,16 +1865,17 @@ const availableFundings = computed(() => {
 
 // Filtered List
 const filteredList = computed(() => {
-  let list = [...currentSourceList.value];
+  let list = [...topicBaselineList.value];
 
   // 0. Active Metric Card Filter (Top KPI Pill)
   if (activeMetricCardId.value && activeMetricCardId.value !== 'all') {
+    const firstCard = activeMetricCards.value[0];
     const targetCard = activeMetricCards.value.find((c, idx) => {
       const cardKey = c.id || c.label || `card_${idx}`;
-      return cardKey === activeMetricCardId.value || c.id === activeMetricCardId.value || c.label === activeMetricCardId.value || c.condition === activeMetricCardId.value;
+      return cardKey === activeMetricCardId.value || c.id === activeMetricCardId.value || c.label === activeMetricCardId.value;
     });
 
-    if (targetCard && !isCardAllType(targetCard)) {
+    if (targetCard && targetCard !== firstCard && !isCardAllType(targetCard)) {
       list = list.filter((t) => matchCardCondition(t, targetCard));
       if (targetCard.isUnique) {
         const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';

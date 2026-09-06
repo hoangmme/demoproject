@@ -89,8 +89,12 @@
   - Tự động liên kết và thu thập đầy đủ toàn bộ chuyến đi của Thân nhân từ cả hồ sơ thân nhân (`r.trips`) và chuyến đi nằm trong hồ sơ Cán bộ chủ quản (`p.trips` có `isRelative: true` hoặc khớp CCCD thân nhân).
   - Phân giải trạng thái hiện diện (`resolvePresence`) chính xác cho từng thân nhân (Đang ở nước ngoài / Trong nước / Quá hạn).
   - Khớp chuẩn xác điều kiện theo đúng toán tử và từ khóa do người dùng nhập/chọn trong Cài đặt (`equals`, `contains`, `not_equals`, `not_contains`...), **tuyệt đối không dùng fuzzy guessing tự suy đoán từ khóa**.
-  - Khi điều kiện lọc là cột thuộc Bảng Chuyến đi (`isTripField`), tự động duyệt qua danh sách các chuyến đi (`item.trips`) của thân nhân/cán bộ để so khớp chính xác.
-  - Bỏ triệt để logic khóa cứng bảng theo thẻ đầu tiên (`topicBaselineList` trước đây lấy thẻ đầu tiên lọc toàn bộ bảng trước khi click). Giờ đây danh sách bảng hiển thị toàn bộ bản ghi theo mặc định, và khi click vào bất kỳ thẻ thống kê nhanh nào thì bảng sẽ áp dụng bộ lọc tương ứng của thẻ đó (click lại hoặc chọn Tất cả sẽ khôi phục hiển thị toàn bộ).
+  - **Phạm vi cơ sở Chuyên đề (Topic Baseline Scope)**:
+    - Thẻ đầu tiên (`firstCard`, vị trí số 0) xác định Baseline / Phạm vi cơ sở của Chuyên đề (`topicBaselineList`, ví dụ lọc ra 100 người trong 1.000 người của toàn hệ thống).
+    - Bảng dữ liệu chuyên đề BẮT BUỘC chỉ hiển thị trong phạm vi cơ sở `topicBaselineList` (100 người), tuyệt đối không hiển thị ngoài phạm vi chuyên đề.
+    - Khi ở trạng thái xem toàn bộ chuyên đề (`activeMetricCardId === 'all'`) hoặc khi click Thẻ đầu tiên (`cIdx === 0`): Thẻ đầu tiên sáng (`active`), bảng hiển thị toàn bộ 100 người của Chuyên đề.
+    - Khi click các Thẻ tiếp theo (`cIdx > 0`): Hệ thống lọc trực tiếp trong 100 người cơ sở theo điều kiện của thẻ đó (ví dụ thẻ lọc chuyến đi ra 2 người thì bảng hiển thị đúng 2 người). Click lại sẽ tắt lọc và quay về 100 người cơ sở.
+    - Khi thẻ con gọi dữ liệu từ Bảng Chuyến đi hoặc Cột ảo Hiện diện (`presenceStatus`): Tự động đối chiếu thông qua mảng chuyến đi `item.trips`, chuyến đi hoạt động `item.activeTrip` và trạng thái hiện diện tổng thể `resolvePresence(item)`.
 
 ### 11. QUY CHUẨN NÚT HÀNH ĐỘNG & HỢP NHẤT NÚT LƯU CẤU HÌNH (BUTTON STANDARDIZATION & UNIFIED SAVE)
 - **Chuẩn hóa Nút Icon-Only (Vuông bo nhẹ 6px đồng bộ hoàn hảo với nút text)** (`src/views/DashboardView.vue` & `src/assets/styles/main.css`):
