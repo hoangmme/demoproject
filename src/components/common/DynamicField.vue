@@ -220,98 +220,101 @@
             :key="item.id || idx"
             :style="{
               display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '8px',
-              padding: '6px 10px',
+              flexDirection: 'column',
+              gap: '6px',
+              padding: '8px 10px',
               background: '#f8fafc',
               border: '1.5px solid #cbd5e1',
               borderRadius: '8px',
               transition: 'all 0.2s',
             }"
           >
-            <!-- STT -->
-            <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; flex-shrink: 0; min-width: 20px; text-align: center;">
-              #{{ idx + 1 }}
-            </span>
-
-            <!-- Chọn inline box kiểm (từ col.options) -->
-            <div
-              v-if="availableCheckboxFileLoopOptions.length > 0"
-              style="display: inline-flex; align-items: center; gap: 8px; background: #ffffff; padding: 3px 8px; border-radius: 6px; border: 1px solid #cbd5e1; flex-shrink: 0;"
-            >
-              <label
-                v-for="opt in availableCheckboxFileLoopOptions"
-                :key="opt"
-                style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.78rem; font-weight: 600; color: #334155; user-select: none;"
-              >
-                <input
-                  :type="isSingleSelectMode ? 'radio' : 'checkbox'"
-                  :name="'opt_grp_' + item.id"
-                  :checked="isOptionSelected(item, opt)"
-                  @change="toggleItemOption(item, opt)"
-                  style="accent-color: #16a34a; cursor: pointer; width: 15px; height: 15px; margin: 0;"
-                />
-                <span>{{ opt }}</span>
-              </label>
-            </div>
-
-            <!-- Nhập text nội dung -->
-            <InputText
-              v-model="item.text"
-              size="small"
-              style="flex: 1; min-width: 140px; font-size: 0.8rem; height: 30px;"
-              placeholder="Nhập nội dung / hình thức / ghi chú..."
-              @input="syncCheckboxFileLoopModel"
-            />
-
-            <!-- Đính kèm tệp (nằm CHUNG vào div này) -->
-            <div v-if="item.file" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; max-width: 200px; flex-shrink: 0;">
-              <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.75rem; flex-shrink: 0;"></i>
-              <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 110px;">
-                {{ item.file.name || 'Tài liệu' }}
+            <!-- Hàng 1 (Trên): STT + Ô text nhập nội dung rộng rãi + Nút xóa -->
+            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; flex-shrink: 0; min-width: 24px; text-align: center;">
+                #{{ idx + 1 }}
               </span>
-              <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none;">
-                <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
-              </a>
-              <i
-                class="pi pi-times"
-                style="color: #ef4444; font-size: 0.68rem; cursor: pointer;"
-                title="Xóa tệp đính kèm này"
-                @click.stop="removeCheckboxFileLoopItemFile(idx)"
-              ></i>
-            </div>
-            <div v-else style="flex-shrink: 0;">
-              <input
-                type="file"
-                :ref="el => setCheckboxFileLoopInputRef(el, idx)"
-                style="display: none;"
-                @change="e => handleCheckboxFileLoopUpload(e, idx)"
+
+              <InputText
+                v-model="item.text"
+                size="small"
+                style="flex: 1; width: 100%; font-size: 0.82rem; height: 32px;"
+                placeholder="Nhập nội dung / hình thức / ghi chú..."
+                @input="syncCheckboxFileLoopModel"
               />
+
+              <!-- Nút xóa mục -->
               <Button
                 type="button"
-                :label="uploadingCheckboxFileLoopIdx === idx ? 'Đang tải lên...' : 'Đính kèm tệp'"
-                :icon="uploadingCheckboxFileLoopIdx === idx ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
+                icon="pi pi-trash"
+                severity="danger"
+                text
                 size="small"
-                outlined
-                severity="secondary"
-                :disabled="uploadingCheckboxFileLoopIdx === idx"
-                @click.stop="triggerCheckboxFileLoopFileInput(idx)"
-                style="font-size: 0.72rem; padding: 2px 8px; height: 28px; white-space: nowrap;"
+                @click.stop="removeCheckboxFileLoopItem(idx)"
+                title="Xóa mục này"
+                style="padding: 2px 6px; flex-shrink: 0;"
               />
             </div>
 
-            <!-- Nút xóa mục -->
-            <Button
-              type="button"
-              icon="pi pi-trash"
-              severity="danger"
-              text
-              size="small"
-              @click.stop="removeCheckboxFileLoopItem(idx)"
-              title="Xóa mục này"
-              style="padding: 2px 6px; flex-shrink: 0;"
-            />
+            <!-- Hàng 2 (Dưới): Hộp kiểm lựa chọn + Đính kèm tệp -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-left: 32px;">
+              <!-- Chọn inline box kiểm (từ col.options) -->
+              <div
+                v-if="availableCheckboxFileLoopOptions.length > 0"
+                style="display: inline-flex; align-items: center; gap: 8px; background: #ffffff; padding: 3px 8px; border-radius: 6px; border: 1px solid #cbd5e1; flex-shrink: 0;"
+              >
+                <label
+                  v-for="opt in availableCheckboxFileLoopOptions"
+                  :key="opt"
+                  style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.78rem; font-weight: 600; color: #334155; user-select: none;"
+                >
+                  <input
+                    :type="isSingleSelectMode ? 'radio' : 'checkbox'"
+                    :name="'opt_grp_' + item.id"
+                    :checked="isOptionSelected(item, opt)"
+                    @change="toggleItemOption(item, opt)"
+                    style="accent-color: #16a34a; cursor: pointer; width: 15px; height: 15px; margin: 0;"
+                  />
+                  <span>{{ opt }}</span>
+                </label>
+              </div>
+
+              <!-- Đính kèm tệp -->
+              <div v-if="item.file" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; max-width: 220px; flex-shrink: 0;">
+                <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.75rem; flex-shrink: 0;"></i>
+                <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 120px;">
+                  {{ item.file.name || 'Tài liệu' }}
+                </span>
+                <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none;">
+                  <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
+                </a>
+                <i
+                  class="pi pi-times"
+                  style="color: #ef4444; font-size: 0.68rem; cursor: pointer;"
+                  title="Xóa tệp đính kèm này"
+                  @click.stop="removeCheckboxFileLoopItemFile(idx)"
+                ></i>
+              </div>
+              <div v-else style="flex-shrink: 0;">
+                <input
+                  type="file"
+                  :ref="el => setCheckboxFileLoopInputRef(el, idx)"
+                  style="display: none;"
+                  @change="e => handleCheckboxFileLoopUpload(e, idx)"
+                />
+                <Button
+                  type="button"
+                  :label="uploadingCheckboxFileLoopIdx === idx ? 'Đang tải lên...' : 'Đính kèm tệp'"
+                  :icon="uploadingCheckboxFileLoopIdx === idx ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
+                  size="small"
+                  outlined
+                  severity="secondary"
+                  :disabled="uploadingCheckboxFileLoopIdx === idx"
+                  @click.stop="triggerCheckboxFileLoopFileInput(idx)"
+                  style="font-size: 0.72rem; padding: 2px 8px; height: 28px; white-space: nowrap;"
+                />
+              </div>
+            </div>
           </div>
         </div>
 

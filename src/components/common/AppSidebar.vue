@@ -25,17 +25,20 @@
       />
       <div
         style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; line-height: 1.3; white-space: nowrap;"
-        :style="{ color: sidebarCustomTextColor || '#000000' }"
+        :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }"
       >
         CÔNG AN THÀNH PHỐ HỒ CHÍ MINH
       </div>
       <div
         style="font-size: 0.76rem; font-weight: 800; margin-top: 4px; line-height: 1.3; white-space: nowrap;"
-        :style="{ color: sidebarCustomTextColor || '#000000' }"
+        :style="{ color: sidebarOrgTextColor || sidebarCustomTextColor || '#000000' }"
       >
         PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
       </div>
-      <div style="font-size: 0.71rem; font-weight: 800; color: #fde047; margin: 8px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
+      <div
+        style="font-size: 0.71rem; font-weight: 800; margin: 8px 0 0 0; line-height: 1.35; text-transform: uppercase; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4);"
+        :style="{ color: sidebarSubtitleTextColor || '#fde047' }"
+      >
         <div style="white-space: nowrap;">DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN</div>
         <div style="margin-top: 2px; white-space: nowrap;">VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</div>
       </div>
@@ -49,7 +52,7 @@
 
       <router-link to="/personnel" class="app-nav-item">
         <i class="pi pi-users"></i>
-        <span>Hồ sơ Cán bộ</span>
+        <span>Hồ sơ cán bộ</span>
       </router-link>
 
       <div class="app-nav-heading" v-if="topicDashboards.length > 0">Chuyên đề</div>
@@ -398,6 +401,8 @@ const sidebarCustomBg = ref('');
 const sidebarBgOpacity = ref(40);
 const sidebarCustomColor = ref('#889962');
 const sidebarCustomTextColor = ref('');
+const sidebarOrgTextColor = ref('');
+const sidebarSubtitleTextColor = ref('');
 
 const loadSidebarBg = async () => {
   try {
@@ -425,10 +430,26 @@ const loadSidebarBg = async () => {
     } else {
       sidebarCustomTextColor.value = '';
     }
+
+    const orgTxtCol = await getAppSettings('sidebar_org_text_color');
+    if (orgTxtCol) {
+      sidebarOrgTextColor.value = typeof orgTxtCol === 'string' ? orgTxtCol : (orgTxtCol.value || '');
+    } else {
+      sidebarOrgTextColor.value = '';
+    }
+
+    const subTxtCol = await getAppSettings('sidebar_subtitle_text_color');
+    if (subTxtCol) {
+      sidebarSubtitleTextColor.value = typeof subTxtCol === 'string' ? subTxtCol : (subTxtCol.value || '');
+    } else {
+      sidebarSubtitleTextColor.value = '';
+    }
   } catch (e) {
     sidebarCustomBg.value = '';
     sidebarCustomColor.value = '#889962';
     sidebarCustomTextColor.value = '';
+    sidebarOrgTextColor.value = '';
+    sidebarSubtitleTextColor.value = '';
   }
 };
 

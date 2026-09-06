@@ -124,8 +124,20 @@
   - Thêm nút **`Đồng bộ tất cả Chuyên đề`** trên thanh công cụ Dashboard.
   - Người dùng có thể 1-click tự động tạo các nhóm thống kê đại diện cho toàn bộ Chuyên đề với đầy đủ 100% các thẻ thống kê con (gọi trực tiếp toàn bộ các thẻ của từng chuyên đề thay vì phải thêm thủ công từng thẻ).
 
-### 16. LEDGER STATUS
-- **Status**: Done (Đã hoàn thành tùy chỉnh màu chữ Sidebar; Đã khắc phục triệt để lệch số bằng Single Source of Truth `dashboardMetrics.js`; Đã thêm nút Đồng bộ tất cả Chuyên đề 1-click).
+### 17. TÙY CHỈNH MÀU RIÊNG TIÊU ĐỀ SIDEBAR & CẢI TIẾN FORMAT CHECKBOX_FILE_LOOP
+- **Định dạng Hộp kiểm + Tệp đính kèm (Loop) (`DynamicField.vue`)**:
+  - Tách riêng ô nhập nội dung text lên trên 1 hàng độc lập (full-width 100%, cao 32px, font 0.82rem) kèm STT `#idx` và nút Xóa.
+  - Hàng dưới hiển thị các hộp kiểm lựa chọn (`[Đảng]`, `[Chính quyền]`, `[Không bị kỷ luật]`...) cùng nút đính kèm tệp / huy hiệu xem tệp tải lên, khắc phục triệt để tình trạng ô text bị co rúm nhỏ hẹp.
+- **Chuẩn hóa chữ hoa / chữ thường**:
+  - Menu Sidebar: Sửa "Hồ sơ Cán bộ" thành "Hồ sơ cán bộ" (`AppSidebar.vue`).
+  - Tab trang Hồ sơ cán bộ: Chỉ viết hoa chữ đầu `1. Quản lý cán bộ (cá nhân)` và `2. Quản lý thân nhân` (`PersonnelView.vue`).
+- **Tùy biến Màu riêng cho Tiêu đề Menu Sidebar (`AppSidebar.vue`, `SettingsImportView.vue`)**:
+  - Bổ sung tùy chọn màu riêng cho 2 dòng Tên Đơn vị (`sidebar_org_text_color`): "CÔNG AN THÀNH PHỐ HỒ CHÍ MINH" & "PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ".
+  - Bổ sung tùy chọn màu riêng cho 2 dòng Tiêu đề Dữ liệu (`sidebar_subtitle_text_color`): "DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN" & "VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI".
+  - Tích hợp đầy đủ bảng màu, ô nhập hex, gợi ý gam màu chuẩn, và đồng bộ tự động vào bản xem trước lẫn menu thực tế.
+
+### 18. LEDGER STATUS
+- **Status**: Done (Đã nâng cấp hàng text riêng cho checkbox_file_loop; Đã chuẩn hóa chữ hoa/thường menu & tab; Đã hoàn thành tùy chỉnh màu riêng cho 2 dòng tên cơ quan và 2 dòng tiêu đề dữ liệu).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công 100%).
 

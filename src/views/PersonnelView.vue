@@ -9,7 +9,7 @@
         @click="mainTab = 'canhan'"
       >
         <i class="pi pi-user"></i>
-        <span>1. Quản lý Cán bộ (Cá nhân) ({{ personnelStore.personnelList.length }})</span>
+        <span>1. Quản lý cán bộ (cá nhân) ({{ personnelStore.personnelList.length }})</span>
       </button>
       <button
         type="button"
@@ -18,7 +18,7 @@
         @click="mainTab = 'thannhan'"
       >
         <i class="pi pi-users"></i>
-        <span>2. Quản lý Thân nhân ({{ personnelStore.relativesList.length }})</span>
+        <span>2. Quản lý thân nhân ({{ personnelStore.relativesList.length }})</span>
       </button>
     </div>
 
