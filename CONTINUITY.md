@@ -262,8 +262,24 @@
   3. `src/utils/dashboardMetrics.js`:
      - Cập nhật `extractRowFieldValue`: khi trường không có trực tiếp trên bản ghi, tự động kiểm tra trên `item.rawPerson` (hồ sơ cán bộ liên quan), `item.activeTrip` / `item.rawTrip` (chuyến đi liên quan), hoặc `item.rawRelative` (thân nhân liên quan). Giúp việc so khớp điều kiện xuyên bảng diễn ra mượt mà, đúng dữ liệu 100%.
 
-### 32. LEDGER STATUS
-- **Status**: Done (Đã sửa triệt để lỗi click lọc thẻ KPI chuyên đề, hỗ trợ gọi trường xuyên bảng trực tiếp, build và sync `WINDOWS_OFFLINE_APP` thành công).
+### 33. ĐỒNG BỘ 100% CẤU HÌNH CỘT THÂN NHÂN & TÌM KIẾM NÂNG CAO (AdvancedSearchView.vue)
+- **Yêu cầu người dùng**:
+  - Tìm kiếm nâng cao lỗi cột (ở Cấu hình cột, Thân nhân Cột 20 là Cơ quan nhà nước chưa đồng bộ với Tìm kiếm nâng cao).
+- **Bản chất nguyên nhân**:
+  1. `AdvancedSearchView.vue` trong `onMounted` trước đó chỉ gọi `loadPresets()`, hoàn toàn không gọi `personnelStore.loadSettings()`. Do đó, toàn bộ cấu hình 20 cột Thân nhân do người dùng thiết lập không được nạp vào Pinia store khi vào Tìm kiếm nâng cao (store chỉ giữ 11 cột mặc định).
+  2. Trong `allSearchableGroups`: Nhóm 3 (Thân nhân) và Nhóm 2 (Cán bộ) tự chèn các cột cứng lên đầu mà không dùng `computeColumnIndexMap`. Ngoài ra, template trước đó sử dụng fallback `cIdx + 1` làm sai lệch và xáo trộn toàn bộ số thứ tự cột trong dropdown.
+  3. `buildDataset()` và `testCondition()`: `buildDataset()` không gán `pRelatives` vào `dataset`. Khi người dùng chọn điều kiện tìm kiếm theo cột của Thân nhân (như Cột 20), `getItemFieldValue` chỉ kiểm tra trên cán bộ / chuyến đi nên luôn trả về rỗng `""`, dẫn tới việc tìm kiếm không trả về kết quả nào.
+- **Thực hiện**:
+  1. `AdvancedSearchView.vue`:
+     - Bổ sung `computeColumnIndexMap` vào import từ `@/utils/formatters`.
+     - Gọi `await Promise.all([personnelStore.loadSettings(), personnelStore.fetchPersonnel(), personnelStore.fetchDepartments(), loadPresets()])` ngay trong `onMounted` để luôn đảm bảo cấu hình cột mới nhất được đồng bộ tức thì.
+     - Áp dụng `computeColumnIndexMap` cho cả 3 nhóm (Chuyến đi, Cán bộ, Thân nhân), gán nhãn chuẩn xác `Cột [colIndex]: [Tên cột] ([id])` trong dropdown. Cột 20 của Thân nhân (`hien_dang_lam_viec_o_co_quan_nha_nuoc`) hiển thị chuẩn 100% là `Cột 20: Cơ quan nhà nước (...)`.
+     - Bổ sung `pRelatives` vào từng bản ghi của `dataset` trong `buildDataset()`.
+     - Xây dựng hàm `getRelativeFieldValue` và `testRelativeCondition`: Khi điều kiện tìm kiếm thuộc nhóm Thân nhân, hệ thống tự động duyệt qua toàn bộ thân nhân của Cán bộ (`pRelatives`), đánh giá chính xác theo đúng toán tử (`contains`, `equals`, `has_value`, `empty`, `not_contains`, `before_date`, `after_date`, `gte`, `lte`), đồng thời hiển thị lý do khớp chi tiết rõ ràng: `[Cột 20] Cơ quan nhà nước (Tên thân nhân): Giá trị`.
+  2. Đã build và sync bản phân phối mới nhất vào `dist` và `WINDOWS_OFFLINE_APP/frontend`.
+
+### 34. LEDGER STATUS
+- **Status**: Done (Đã đồng bộ 100% Cột 20 Thân nhân và tìm kiếm nâng cao đa đối tượng, build & sync offline app thành công).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công).
 

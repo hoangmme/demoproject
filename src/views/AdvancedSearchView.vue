@@ -126,11 +126,11 @@
                   :label="`── ${group.name} ──`"
                 >
                   <option
-                    v-for="(col, cIdx) in group.columns"
+                    v-for="col in group.columns"
                     :key="col.id"
                     :value="col.id"
                   >
-                    Cột {{ col.colIndex || (cIdx + 1) }}: {{ col.label }}
+                    {{ col.colIndex ? `Cột ${col.colIndex}: ` : (col.isVirtual ? '✨ ' : '') }}{{ col.label }}{{ !col.isVirtual && (col.rawId || col.id) ? ` (${col.rawId || col.id})` : '' }}
                   </option>
                 </optgroup>
               </select>
@@ -389,7 +389,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
-import { parseDateObj, formatDate, computePresenceStatus, computeTripPresence } from '@/utils/formatters';
+import { parseDateObj, formatDate, computePresenceStatus, computeTripPresence, computeColumnIndexMap } from '@/utils/formatters';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 
@@ -490,18 +490,27 @@ const allSearchableGroups = computed(() => {
   const tripCols = [];
   const seenTrip = new Set();
 
-  tripCols.push({ id: 'trang_thai_hien_dien', label: 'Trạng thái hiện diện (Trong nước / Nước ngoài)' });
-  tripCols.push({ id: 'isOverdue', label: 'Trạng thái Quá hạn chưa về' });
-  tripCols.push({ id: 'trip_count_year', label: 'Số lần xuất cảnh trong năm' });
+  tripCols.push({ id: 'trang_thai_hien_dien', label: 'Trạng thái hiện diện (Trong nước / Nước ngoài)', isVirtual: true });
+  tripCols.push({ id: 'isOverdue', label: 'Trạng thái Quá hạn chưa về', isVirtual: true });
+  tripCols.push({ id: 'trip_count_year', label: 'Số lần xuất cảnh trong năm', isVirtual: true });
   seenTrip.add('trang_thai_hien_dien');
   seenTrip.add('isOverdue');
   seenTrip.add('trip_count_year');
 
+  const tripColMap = computeColumnIndexMap(personnelStore.importMappingTrips || []);
   (personnelStore.importMappingTrips || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (c.id && c.id !== 'stt' && !seenTrip.has(c.id)) {
         seenTrip.add(c.id);
-        tripCols.push({ id: c.id, label: c.label || c.id });
+        const rawIdx = tripColMap[c.id];
+        const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
+        tripCols.push({
+          id: c.id,
+          rawId: c.id,
+          label: c.label || c.id,
+          colIndex: idxText,
+          isVirtual: false,
+        });
       }
     });
   });
@@ -514,26 +523,39 @@ const allSearchableGroups = computed(() => {
   // Group 2: Khối A - Cán bộ (From importMappingPersonnel)
   const pCols = [];
   const seenP = new Set();
-  pCols.push({ id: 'name', label: 'Họ và tên Cán bộ' });
-  pCols.push({ id: 'code', label: 'Mã Cán bộ' });
-  pCols.push({ id: 'cccd', label: 'Số CCCD Cán bộ' });
-  pCols.push({ id: 'departmentName', label: 'Đơn vị công tác' });
-  pCols.push({ id: 'position', label: 'Chức vụ' });
-  pCols.push({ id: 'hasRelatives', label: 'Có thân nhân ở nước ngoài' });
-  seenP.add('name');
-  seenP.add('code');
-  seenP.add('cccd');
-  seenP.add('departmentName');
-  seenP.add('position');
+  pCols.push({ id: 'hasRelatives', label: 'Có thân nhân ở nước ngoài', isVirtual: true });
   seenP.add('hasRelatives');
 
+  const pColMap = computeColumnIndexMap(personnelStore.importMappingPersonnel || []);
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (c.id && c.id !== 'stt' && !seenP.has(c.id)) {
         seenP.add(c.id);
-        pCols.push({ id: c.id, label: c.label || c.id });
+        const rawIdx = pColMap[c.id];
+        const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
+        pCols.push({
+          id: c.id,
+          rawId: c.id,
+          label: c.label || c.id,
+          colIndex: idxText,
+          isVirtual: false,
+        });
       }
     });
+  });
+
+  const commonPersonnelFields = [
+    { id: 'name', label: 'Họ và tên Cán bộ' },
+    { id: 'code', label: 'Mã Cán bộ' },
+    { id: 'cccd', label: 'Số CCCD Cán bộ' },
+    { id: 'departmentName', label: 'Đơn vị công tác' },
+    { id: 'position', label: 'Chức vụ' },
+  ];
+  commonPersonnelFields.forEach((cf) => {
+    if (!seenP.has(cf.id)) {
+      seenP.add(cf.id);
+      pCols.push({ id: cf.id, rawId: cf.id, label: cf.label, colIndex: null, isVirtual: true });
+    }
   });
 
   groups.push({
@@ -544,20 +566,41 @@ const allSearchableGroups = computed(() => {
   // Group 3: Khối C - Thân nhân (From importMappingRelative)
   const relCols = [];
   const seenRel = new Set();
-  relCols.push({ id: 'relativeName', label: 'Họ tên Thân nhân' });
-  relCols.push({ id: 'relationshipName', label: 'Mối quan hệ thân nhân' });
-  relCols.push({ id: 'relCountryName', label: 'Quốc gia thân nhân cư trú' });
-  seenRel.add('relativeName');
-  seenRel.add('relationshipName');
-  seenRel.add('relCountryName');
+  const relColMap = computeColumnIndexMap(personnelStore.importMappingRelative || []);
 
   (personnelStore.importMappingRelative || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (c.id && c.id !== 'stt' && !seenRel.has(c.id)) {
         seenRel.add(c.id);
-        relCols.push({ id: c.id, label: c.label || c.id });
+        const rawIdx = relColMap[c.id];
+        const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
+        relCols.push({
+          id: `rel_${c.id}`,
+          rawId: c.id,
+          label: c.label || c.id,
+          colIndex: idxText,
+          isVirtual: false,
+        });
       }
     });
+  });
+
+  const commonRelativeFields = [
+    { id: 'relativeName', label: 'Họ tên Thân nhân' },
+    { id: 'relationshipName', label: 'Mối quan hệ thân nhân' },
+    { id: 'relCountryName', label: 'Quốc gia thân nhân cư trú' },
+  ];
+  commonRelativeFields.forEach((cf) => {
+    if (!seenRel.has(cf.id)) {
+      seenRel.add(cf.id);
+      relCols.push({
+        id: `rel_${cf.id}`,
+        rawId: cf.id,
+        label: cf.label,
+        colIndex: null,
+        isVirtual: true,
+      });
+    }
   });
 
   groups.push({
@@ -566,6 +609,18 @@ const allSearchableGroups = computed(() => {
   });
 
   return groups;
+});
+
+const relativeFieldIdsSet = computed(() => {
+  const set = new Set();
+  const relGroup = allSearchableGroups.value.find((g) => g.name.includes('Khối C') || g.name.includes('Thân nhân'));
+  if (relGroup && relGroup.columns) {
+    relGroup.columns.forEach((c) => {
+      set.add(c.id);
+      if (c.rawId) set.add(c.rawId);
+    });
+  }
+  return set;
 });
 
 const resolvePersonFromSearchItem = (item) => {
@@ -658,7 +713,17 @@ const buildDataset = () => {
     }
 
     const pTrips = Array.isArray(p.trips || custom.trips) ? (p.trips || custom.trips) : [];
-    const pRelatives = Array.isArray(p.relatives || custom.relatives) ? (p.relatives || custom.relatives) : [];
+    let pRelatives = [];
+    if (Array.isArray(p.relatives)) {
+      pRelatives = p.relatives;
+    } else if (Array.isArray(custom.relatives)) {
+      pRelatives = custom.relatives;
+    } else if (typeof p.relatives === 'string') {
+      try { pRelatives = JSON.parse(p.relatives); } catch (e) {}
+    } else if (typeof custom.relatives === 'string') {
+      try { pRelatives = JSON.parse(custom.relatives); } catch (e) {}
+    }
+    if (!Array.isArray(pRelatives)) pRelatives = [];
 
     const tripCount2026 = pTrips.filter((t) => {
       const d = parseDateObj(t.ngay_xuat_canh || t.departureDate || t.custom_data?.departureDate);
@@ -705,6 +770,7 @@ const buildDataset = () => {
         uniqueKey: t.id || `trip_${p.id}_${tIdx}`,
         rawPerson: p,
         rawTrip: t,
+        pRelatives: pRelatives,
         personnelId: p.id,
         personnelCode: p.code || '',
         personnelName: p.name || 'Cán bộ',
@@ -741,6 +807,7 @@ const buildDataset = () => {
         ...p,
         uniqueKey: `person_${p.id}`,
         rawPerson: p,
+        pRelatives: pRelatives,
         personnelId: p.id,
         personnelCode: p.code || '',
         personnelName: p.name || 'Cán bộ',
@@ -765,6 +832,149 @@ const buildDataset = () => {
   });
 
   return dataset;
+};
+
+const getRelativeFieldValue = (r, f) => {
+  if (!r || !f) return '';
+  let cd = r.custom_data;
+  if (typeof cd === 'string') {
+    try {
+      cd = JSON.parse(cd);
+    } catch (e) {
+      cd = {};
+    }
+  }
+
+  let raw = r[f];
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    raw = cd?.[f];
+  }
+
+  // Check aliases for standard or known fields
+  if (raw === undefined || raw === null || raw === '' || raw === '-') {
+    if (f === 'relativeName' || f === 'ho_va_ten' || f === 'ho_ten') {
+      raw = r.relativeName || r.name || r.fullName || cd?.relativeName || cd?.name;
+    } else if (f === 'relationshipName' || f === 'moi_quan_he') {
+      raw = r.relationshipName || r.relationship || cd?.relationshipName;
+    } else if (f === 'relCountryName' || f === 'countryName' || f === 'quoc_gia') {
+      raw = r.countryName || r.country || cd?.countryName || cd?.countryNameTN || cd?.relCountryName;
+    } else if (f === 'birthYear' || f === 'nam_sinh') {
+      raw = r.birthYear || cd?.birthYear || cd?.birthYearTN;
+    } else if (f === 'cccdthannhan' || f === 'so_cccd') {
+      raw = r.cccdthannhan || r.cccd || cd?.cccdthannhan;
+    } else if (f === 'currentAddress' || f === 'noi_o_hien_nay') {
+      raw = r.currentAddress || cd?.currentAddress || cd?.hktt;
+    } else if (f === 'occupation' || f === 'nghe_nghiep') {
+      raw = r.occupation || cd?.occupation;
+    } else if (f === 'hien_dang_lam_viec_tai_co_quan_nha_nuoc' || f === 'hien_dang_lam_viec_o_co_quan_nha_nuoc' || f === 'co_quan_nha_nuoc') {
+      raw = r.hien_dang_lam_viec_o_co_quan_nha_nuoc || cd?.hien_dang_lam_viec_o_co_quan_nha_nuoc || r.hien_dang_lam_viec_tai_co_quan_nha_nuoc || cd?.hien_dang_lam_viec_tai_co_quan_nha_nuoc || r.co_quan_nha_nuoc || cd?.co_quan_nha_nuoc;
+    }
+  }
+
+  if (raw === undefined || raw === null || raw === '-') return '';
+  if (typeof raw === 'object') {
+    if (Array.isArray(raw)) return raw.map((x) => (typeof x === 'object' ? JSON.stringify(x) : x)).join(', ');
+    return JSON.stringify(raw);
+  }
+  return String(raw).trim();
+};
+
+const testRelativeCondition = (relatives, crit, fieldLabel, f) => {
+  const op = crit.operator;
+  const val = String(crit.value || '').trim().toLowerCase();
+
+  if (!relatives || relatives.length === 0) {
+    if (op === 'empty') {
+      return { matches: true, reason: `${fieldLabel}: Cán bộ không có thân nhân` };
+    }
+    if (op === 'not_contains') {
+      return { matches: true, reason: `${fieldLabel}: Cán bộ không có thân nhân` };
+    }
+    return { matches: false, reason: '' };
+  }
+
+  if (op === 'empty') {
+    for (const r of relatives) {
+      const rVal = getRelativeFieldValue(r, f);
+      const rName = r.relativeName || r.name || 'Thân nhân';
+      if (!rVal || rVal === '-' || rVal === 'Chưa rõ') {
+        return { matches: true, reason: `${fieldLabel} (${rName}): để trống` };
+      }
+    }
+    return { matches: false, reason: '' };
+  }
+
+  if (op === 'has_value') {
+    for (const r of relatives) {
+      const rVal = getRelativeFieldValue(r, f);
+      const rName = r.relativeName || r.name || 'Thân nhân';
+      if (rVal && rVal !== '-' && rVal !== 'Chưa rõ') {
+        return { matches: true, reason: `${fieldLabel} (${rName}): ${rVal}` };
+      }
+    }
+    return { matches: false, reason: '' };
+  }
+
+  const strTarget = String(val).toLowerCase().trim().replace(/\s+/g, ' ');
+  const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+
+  if (op === 'not_contains') {
+    for (const r of relatives) {
+      const rVal = getRelativeFieldValue(r, f);
+      const strVal = String(rVal).toLowerCase().trim().replace(/\s+/g, ' ');
+      const containsTarget = subKeywords.length > 1
+        ? subKeywords.some((k) => strVal.includes(k))
+        : strVal.includes(strTarget);
+      if (containsTarget) {
+        return { matches: false, reason: '' };
+      }
+    }
+    return { matches: true, reason: `${fieldLabel}: Không thân nhân nào chứa "${val}"` };
+  }
+
+  for (const r of relatives) {
+    const rVal = getRelativeFieldValue(r, f);
+    const rName = r.relativeName || r.name || 'Thân nhân';
+    const strVal = String(rVal).toLowerCase().trim().replace(/\s+/g, ' ');
+
+    if (op === 'equals') {
+      const eq = subKeywords.length > 1
+        ? (subKeywords.some((k) => strVal === k) || strVal === strTarget)
+        : strVal === strTarget;
+      if (eq) {
+        return { matches: true, reason: `${fieldLabel} (${rName}): ${rVal}` };
+      }
+    } else if (op === 'contains') {
+      const cnt = subKeywords.length > 1
+        ? (subKeywords.some((k) => strVal.includes(k)) || strVal.includes(strTarget))
+        : strVal.includes(strTarget);
+      if (cnt) {
+        return { matches: true, reason: `${fieldLabel} (${rName}): ${rVal}` };
+      }
+    } else if (op === 'before_date') {
+      const dItem = parseDateObj(rVal);
+      const dTarget = parseDateObj(val);
+      if (dItem && dTarget && dItem < dTarget) {
+        return { matches: true, reason: `${fieldLabel} (${rName}): ${rVal} trước ${val}` };
+      }
+    } else if (op === 'after_date') {
+      const dItem = parseDateObj(rVal);
+      const dTarget = parseDateObj(val);
+      if (dItem && dTarget && dItem > dTarget) {
+        return { matches: true, reason: `${fieldLabel} (${rName}): ${rVal} sau ${val}` };
+      }
+    } else if (op === 'gte') {
+      if (Number(rVal) >= Number(val)) {
+        return { matches: true, reason: `${fieldLabel} (${rName}): ${rVal} >= ${val}` };
+      }
+    } else if (op === 'lte') {
+      if (Number(rVal) <= Number(val)) {
+        return { matches: true, reason: `${fieldLabel} (${rName}): ${rVal} <= ${val}` };
+      }
+    }
+  }
+
+  return { matches: false, reason: '' };
 };
 
 // Check if a single item matches a single criterion
@@ -838,30 +1048,40 @@ const getItemFieldValue = (item, f) => {
 };
 
 const testCondition = (item, crit) => {
-  const f = crit.field;
+  const rawField = crit.field;
+  const isRel = rawField.startsWith('rel_') || relativeFieldIdsSet.value.has(rawField);
+  const f = rawField.startsWith('rel_') ? rawField.slice(4) : rawField;
   const op = crit.operator;
   const val = String(crit.value || '').trim().toLowerCase();
 
-  const itemVal = getItemFieldValue(item, f);
-
   // Get field label for clear reason badge
   let fieldLabel = f;
+  let fieldColIndex = null;
   for (const g of allSearchableGroups.value) {
-    const found = g.columns.find((c) => c.id === f);
+    const found = g.columns.find((c) => c.id === rawField || c.rawId === f || c.id === f);
     if (found) {
       fieldLabel = found.label;
+      fieldColIndex = found.colIndex;
       break;
     }
   }
+  const labelWithCol = fieldColIndex ? `[Cột ${fieldColIndex}] ${fieldLabel}` : fieldLabel;
+
+  if (isRel) {
+    const relatives = item.pRelatives || item.rawPerson?.relatives || [];
+    return testRelativeCondition(relatives, crit, labelWithCol, f);
+  }
+
+  const itemVal = getItemFieldValue(item, f);
 
   // Evaluate Operator
   if (op === 'empty') {
     const isEmp = !itemVal || itemVal === '-' || itemVal === 'Chưa rõ';
-    return { matches: isEmp, reason: `${fieldLabel}: để trống` };
+    return { matches: isEmp, reason: `${labelWithCol}: để trống` };
   }
   if (op === 'has_value') {
     const hasV = !!itemVal && itemVal !== '-' && itemVal !== 'Chưa rõ';
-    return { matches: hasV, reason: `${fieldLabel}: ${itemVal}` };
+    return { matches: hasV, reason: `${labelWithCol}: ${itemVal}` };
   }
   const strVal = String(itemVal).toLowerCase().trim().replace(/\s+/g, ' ');
   const strTarget = String(val).toLowerCase().trim().replace(/\s+/g, ' ');
@@ -871,7 +1091,7 @@ const testCondition = (item, crit) => {
     const eq = subKeywords.length > 1
       ? (subKeywords.some((k) => strVal === k) || strVal === strTarget)
       : strVal === strTarget;
-    let reasonText = `${fieldLabel}: ${itemVal}`;
+    let reasonText = `${labelWithCol}: ${itemVal}`;
     if (f === 'hasRelatives') reasonText = 'Có thân nhân ở nước ngoài';
     if (f === 'isOverdue') reasonText = 'Quá hạn chưa về';
     return { matches: eq, reason: reasonText };
@@ -880,33 +1100,33 @@ const testCondition = (item, crit) => {
     const cnt = subKeywords.length > 1
       ? (subKeywords.some((k) => strVal.includes(k)) || strVal.includes(strTarget))
       : strVal.includes(strTarget);
-    return { matches: cnt, reason: `${fieldLabel}: ${itemVal}` };
+    return { matches: cnt, reason: `${labelWithCol}: ${itemVal}` };
   }
   if (op === 'not_contains') {
     const ncnt = subKeywords.length > 1
       ? !subKeywords.some((k) => strVal.includes(k))
       : !strVal.includes(strTarget);
-    return { matches: ncnt, reason: `${fieldLabel} không chứa "${val}"` };
+    return { matches: ncnt, reason: `${labelWithCol} không chứa "${val}"` };
   }
   if (op === 'before_date') {
     const dItem = parseDateObj(itemVal);
     const dTarget = parseDateObj(val);
     const bef = dItem && dTarget ? dItem < dTarget : false;
-    return { matches: bef, reason: `${itemVal} trước ${val}` };
+    return { matches: bef, reason: `${labelWithCol}: ${itemVal} trước ${val}` };
   }
   if (op === 'after_date') {
     const dItem = parseDateObj(itemVal);
     const dTarget = parseDateObj(val);
     const aft = dItem && dTarget ? dItem > dTarget : false;
-    return { matches: aft, reason: `${itemVal} sau ${val}` };
+    return { matches: aft, reason: `${labelWithCol}: ${itemVal} sau ${val}` };
   }
   if (op === 'gte') {
     const g = Number(itemVal) >= Number(val);
-    return { matches: g, reason: `${fieldLabel}: ${itemVal} (>= ${val})` };
+    return { matches: g, reason: `${labelWithCol}: ${itemVal} (>= ${val})` };
   }
   if (op === 'lte') {
     const l = Number(itemVal) <= Number(val);
-    return { matches: l, reason: `${fieldLabel}: ${itemVal} (<= ${val})` };
+    return { matches: l, reason: `${labelWithCol}: ${itemVal} (<= ${val})` };
   }
 
   return { matches: true, reason: '' };
@@ -1026,7 +1246,12 @@ const handlePersonnelSaved = async () => {
 };
 
 onMounted(async () => {
-  await loadPresets();
+  await Promise.all([
+    personnelStore.loadSettings(),
+    personnelStore.fetchPersonnel(),
+    personnelStore.fetchDepartments(),
+    loadPresets(),
+  ]);
   if (savedPresets.value.length > 0) {
     applyPreset(savedPresets.value[0]);
   } else {
