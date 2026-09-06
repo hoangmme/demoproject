@@ -220,78 +220,75 @@
             :key="item.id"
             :style="{
               display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-              padding: '8px 12px',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px',
+              padding: '6px 12px',
               background: item.checked ? '#f0fdf4' : '#ffffff',
               border: item.checked ? '1.5px solid #86efac' : '1px solid #e2e8f0',
               borderRadius: '8px',
               transition: 'all 0.2s',
             }"
           >
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-              <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; flex: 1;">
-                <input
-                  :type="isSingleSelectMode ? 'radio' : 'checkbox'"
-                  :checked="item.checked"
-                  :name="'cfl_grp_' + (col.id || 'field')"
-                  @change="togglePredefinedLoopOption(item)"
-                  style="accent-color: #16a34a; width: 17px; height: 17px; cursor: pointer; flex-shrink: 0;"
-                />
-                <span :style="{ fontSize: '0.84rem', fontWeight: item.checked ? '700' : '500', color: item.checked ? '#166534' : '#1e293b' }">
-                  {{ item.name }}
-                </span>
-              </label>
-
-              <!-- Huy hiệu tệp đính kèm (nếu đã có tệp) -->
-              <div v-if="item.file && item.checked" style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; max-width: 50%; overflow: hidden;">
-                <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.75rem; flex-shrink: 0;"></i>
-                <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-                  {{ item.file.name }}
-                </span>
-                <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none; margin-left: 2px;">
-                  <span style="color: #0284c7; cursor: pointer; text-decoration: underline;">Xem</span>
-                </a>
-                <i
-                  class="pi pi-times"
-                  style="color: #ef4444; font-size: 0.68rem; cursor: pointer; margin-left: 4px;"
-                  title="Xóa tệp đính kèm"
-                  @click.stop="removePredefinedFile(item)"
-                ></i>
-              </div>
-            </div>
-
-            <!-- Khi mục được chọn: Cho phép nhập ghi chú/diễn giải và đính kèm tệp -->
-            <div
-              v-if="item.checked"
-              style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-left: 25px; padding-top: 6px; border-top: 1px dashed #bbf7d0; margin-top: 2px;"
-            >
-              <InputText
-                v-model="item.details"
-                size="small"
-                style="flex: 1; min-width: 140px; font-size: 0.78rem; height: 28px;"
-                :placeholder="'Nhập ghi chú / chi tiết cho ' + item.name + ' (nếu có)...'"
-                @input="syncFullCheckboxFileLoopModel"
+            <!-- Mục tick chọn + Tên mục -->
+            <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; flex-shrink: 0;">
+              <input
+                :type="isSingleSelectMode ? 'radio' : 'checkbox'"
+                :checked="item.checked"
+                :name="'cfl_grp_' + (col.id || 'field')"
+                @change="togglePredefinedLoopOption(item)"
+                style="accent-color: #16a34a; width: 17px; height: 17px; cursor: pointer; flex-shrink: 0;"
               />
-              <div v-if="!item.file">
-                <input
-                  type="file"
-                  :ref="el => setPredefinedFileInputRef(el, item.id)"
-                  style="display: none;"
-                  @change="e => handlePredefinedFileUpload(e, item)"
-                />
-                <Button
-                  type="button"
-                  :label="uploadingPredefinedId === item.id ? 'Đang tải...' : 'Đính kèm tệp'"
-                  :icon="uploadingPredefinedId === item.id ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
-                  size="small"
-                  outlined
-                  severity="secondary"
-                  :disabled="uploadingPredefinedId === item.id"
-                  @click.stop="triggerPredefinedFileInput(item.id)"
-                  style="font-size: 0.72rem; padding: 2px 8px; height: 28px;"
-                />
-              </div>
+              <span :style="{ fontSize: '0.82rem', fontWeight: item.checked ? '700' : '500', color: item.checked ? '#166534' : '#1e293b' }">
+                {{ item.name }}
+              </span>
+            </label>
+
+            <!-- Ô nhập chi tiết khi được chọn -->
+            <InputText
+              v-if="item.checked"
+              v-model="item.details"
+              size="small"
+              style="flex: 1; min-width: 140px; font-size: 0.78rem; height: 28px;"
+              :placeholder="'Nhập ghi chú / chi tiết cho ' + item.name + ' (nếu có)...'"
+              @input="syncFullCheckboxFileLoopModel"
+            />
+            <div v-else style="flex: 1;"></div>
+
+            <!-- Tệp đính kèm nằm CHUNG trong div này -->
+            <div v-if="item.file && item.checked" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; max-width: 200px; flex-shrink: 0;">
+              <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.75rem; flex-shrink: 0;"></i>
+              <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 110px;">
+                {{ item.file.name }}
+              </span>
+              <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none;">
+                <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
+              </a>
+              <i
+                class="pi pi-times"
+                style="color: #ef4444; font-size: 0.68rem; cursor: pointer;"
+                title="Xóa tệp đính kèm"
+                @click.stop="removePredefinedFile(item)"
+              ></i>
+            </div>
+            <div v-else-if="item.checked" style="flex-shrink: 0;">
+              <input
+                type="file"
+                :ref="el => setPredefinedFileInputRef(el, item.id)"
+                style="display: none;"
+                @change="e => handlePredefinedFileUpload(e, item)"
+              />
+              <Button
+                type="button"
+                :label="uploadingPredefinedId === item.id ? 'Đang tải...' : 'Đính kèm tệp'"
+                :icon="uploadingPredefinedId === item.id ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
+                size="small"
+                outlined
+                severity="secondary"
+                :disabled="uploadingPredefinedId === item.id"
+                @click.stop="triggerPredefinedFileInput(item.id)"
+                style="font-size: 0.72rem; padding: 2px 8px; height: 28px; white-space: nowrap;"
+              />
             </div>
           </div>
         </div>
@@ -303,82 +300,87 @@
             :key="item.id || idx"
             :style="{
               display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-              padding: '8px 10px',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px',
+              padding: '6px 10px',
               background: item.checked ? '#f0fdf4' : '#f8fafc',
               border: item.checked ? '1.5px solid #86efac' : '1px solid #e2e8f0',
               borderRadius: '8px',
               transition: 'all 0.2s',
             }"
           >
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <input
-                :type="isSingleSelectMode ? 'radio' : 'checkbox'"
-                :checked="item.checked"
-                :name="'cfl_grp_' + (col.id || 'field')"
-                @change="toggleCustomLoopItem(idx)"
-                style="accent-color: #16a34a; width: 17px; height: 17px; cursor: pointer; flex-shrink: 0;"
-              />
-              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; width: 22px; text-align: center;">
-                #{{ idx + 1 }}
+            <!-- Hộp kiểm tick chọn -->
+            <input
+              :type="isSingleSelectMode ? 'radio' : 'checkbox'"
+              :checked="item.checked"
+              :name="'cfl_grp_' + (col.id || 'field')"
+              @change="toggleCustomLoopItem(idx)"
+              style="accent-color: #16a34a; width: 17px; height: 17px; cursor: pointer; flex-shrink: 0;"
+              :title="isSingleSelectMode ? 'Chọn duy nhất mục này' : 'Tick chọn mục này'"
+            />
+
+            <!-- STT -->
+            <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; flex-shrink: 0; min-width: 20px; text-align: center;">
+              #{{ idx + 1 }}
+            </span>
+
+            <!-- Tên mục / nội dung phát sinh -->
+            <InputText
+              v-model="item.text"
+              size="small"
+              style="flex: 1; min-width: 140px; font-size: 0.8rem; height: 30px;"
+              :placeholder="'Nhập tên mục / nội dung phát sinh #' + (idx + 1)"
+              @input="syncFullCheckboxFileLoopModel"
+            />
+
+            <!-- Tệp đính kèm (NẰM CHUNG VÀO TRONG DIV NÀY) -->
+            <div v-if="item.file" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; background: #ffffff; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; max-width: 200px; flex-shrink: 0;">
+              <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.75rem; flex-shrink: 0;"></i>
+              <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 110px;">
+                {{ item.file.name || 'Tài liệu' }}
               </span>
-              <InputText
-                v-model="item.text"
-                size="small"
-                style="flex: 1; font-size: 0.8rem; height: 30px;"
-                :placeholder="'Nhập tên mục / nội dung phát sinh #' + (idx + 1)"
-                @input="syncFullCheckboxFileLoopModel"
+              <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none;">
+                <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
+              </a>
+              <i
+                class="pi pi-times"
+                style="color: #ef4444; font-size: 0.68rem; cursor: pointer;"
+                title="Xóa tệp đính kèm này"
+                @click.stop="removeCustomLoopItemFile(idx)"
+              ></i>
+            </div>
+            <div v-else style="flex-shrink: 0;">
+              <input
+                type="file"
+                :ref="el => setCustomLoopFileInputRef(el, idx)"
+                style="display: none;"
+                @change="e => handleCustomLoopFileUpload(e, idx)"
               />
               <Button
                 type="button"
-                icon="pi pi-trash"
-                severity="danger"
-                text
+                :label="uploadingCustomLoopIdx === idx ? 'Đang tải lên...' : 'Đính kèm tệp'"
+                :icon="uploadingCustomLoopIdx === idx ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
                 size="small"
-                @click.stop="removeCustomLoopItem(idx)"
-                title="Xóa mục này"
-                style="padding: 2px 6px;"
+                outlined
+                severity="secondary"
+                :disabled="uploadingCustomLoopIdx === idx"
+                @click.stop="triggerCustomLoopFileInput(idx)"
+                style="font-size: 0.72rem; padding: 2px 8px; height: 28px; white-space: nowrap;"
               />
             </div>
 
-            <!-- Tệp đính kèm cho mục tự thêm -->
-            <div style="display: flex; align-items: center; justify-content: space-between; padding-left: 47px; gap: 8px;">
-              <div v-if="item.file" style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #ffffff; padding: 3px 8px; border-radius: 6px; border: 1px solid #cbd5e1; max-width: 85%; overflow: hidden;">
-                <i class="pi pi-paperclip" style="color: #0284c7; font-size: 0.8rem; flex-shrink: 0;"></i>
-                <span style="color: #1e293b; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-                  {{ item.file.name || 'Tài liệu đính kèm' }}
-                </span>
-                <a v-if="item.file.url" :href="item.file.url" target="_blank" style="text-decoration: none; margin-left: 4px;">
-                  <span style="color: #0284c7; font-size: 0.72rem; cursor: pointer; text-decoration: underline;">Xem</span>
-                </a>
-                <i
-                  class="pi pi-times"
-                  style="color: #ef4444; font-size: 0.7rem; cursor: pointer; margin-left: 6px;"
-                  title="Xóa tệp đính kèm này"
-                  @click.stop="removeCustomLoopItemFile(idx)"
-                ></i>
-              </div>
-              <div v-else style="display: flex; align-items: center; gap: 6px;">
-                <input
-                  type="file"
-                  :ref="el => setCustomLoopFileInputRef(el, idx)"
-                  style="display: none;"
-                  @change="e => handleCustomLoopFileUpload(e, idx)"
-                />
-                <Button
-                  type="button"
-                  :label="uploadingCustomLoopIdx === idx ? 'Đang tải lên...' : 'Đính kèm tệp'"
-                  :icon="uploadingCustomLoopIdx === idx ? 'pi pi-spin pi-spinner' : 'pi pi-paperclip'"
-                  size="small"
-                  outlined
-                  severity="secondary"
-                  :disabled="uploadingCustomLoopIdx === idx"
-                  @click.stop="triggerCustomLoopFileInput(idx)"
-                  style="font-size: 0.72rem; padding: 2px 8px; height: 26px;"
-                />
-              </div>
-            </div>
+            <!-- Nút xóa mục -->
+            <Button
+              type="button"
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              size="small"
+              @click.stop="removeCustomLoopItem(idx)"
+              title="Xóa mục này"
+              style="padding: 2px 6px; flex-shrink: 0;"
+            />
           </div>
         </div>
 
