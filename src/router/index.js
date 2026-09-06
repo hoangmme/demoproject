@@ -85,7 +85,7 @@ const routes = [
     path: '/dashboard-topic/:id',
     name: 'DynamicTopicDashboard',
     component: ChildDashboardView,
-    meta: { title: '', requiresAuth: true },
+    meta: { title: 'Chuyên đề', requiresAuth: true },
   },
   {
     path: '/settings-import',

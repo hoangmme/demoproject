@@ -1,9 +1,8 @@
 <template>
   <header class="app-header">
-    <div v-if="showTitle" class="app-header-title">
+    <div class="app-header-title">
       {{ currentTitle }}
     </div>
-    <div v-else></div>
 
     <div class="app-header-actions">
       <div v-if="authStore.isLoggedIn" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; border-right: 1px solid var(--border-color); padding-right: 12px;">
@@ -35,22 +34,9 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 
-const showTitle = computed(() => {
-  // Ẩn tiêu đề ở các trang chuyên đề vì đã có tiêu đề riêng ở trang chuyên đề
-  if (
-    route.name === 'DynamicTopicDashboard' ||
-    route.path.startsWith('/dashboard-topic') ||
-    route.name === 'TripsDashboard' ||
-    route.path === '/trips' ||
-    route.meta?.title === 'Dashboard Chuyên đề'
-  ) {
-    return false;
-  }
-  return !!currentTitle.value;
-});
-
 const currentTitle = computed(() => {
-  return route.meta?.title || 'Hệ thống Quản lý Cán bộ';
+  const title = route.meta?.title || 'Hệ thống Quản lý Cán bộ';
+  return title.replace('Dashboard Chuyên đề', 'Chuyên đề');
 });
 
 const handleLogout = () => {
