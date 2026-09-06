@@ -679,6 +679,14 @@ export const matchCardCondition = (item, card, personnelStore) => {
   return true;
 };
 
+export const isSameCard = (a, b) => {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.id && b.id && a.id === b.id) return true;
+  if (a.label && b.label && a.label === b.label) return true;
+  return false;
+};
+
 /**
  * HÀM TÍNH SỐ LƯỢNG CHUẨN XÁC DÙNG CHUNG DUY NHẤT (Single Source of Truth)
  */
@@ -687,7 +695,7 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
 
   // Kiểm tra ràng buộc theo Thẻ đầu tiên (Tổng cộng / Baseline)
   // Mặc định là true trừ khi card.inheritBaseline === false hoặc card là firstCard
-  const shouldInheritBaseline = card !== firstCard && card.inheritBaseline !== false;
+  const shouldInheritBaseline = !isSameCard(card, firstCard) && card.inheritBaseline !== false;
 
   // 1. Áp dụng baseline filter nếu thẻ đầu tiên không phải là "Toàn bộ" và thẻ này có ràng buộc theo baseline
   let baselineList = sourceList;
@@ -696,7 +704,7 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
   }
 
   // 2. Lọc danh sách thỏa mãn thẻ này
-  const targetItems = (card === firstCard || (shouldInheritBaseline && isCardAllType(card)))
+  const targetItems = (isSameCard(card, firstCard) || (shouldInheritBaseline && isCardAllType(card)))
     ? baselineList
     : (shouldInheritBaseline ? baselineList : sourceList).filter((item) => matchCardCondition(item, card, personnelStore));
 

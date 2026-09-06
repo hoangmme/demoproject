@@ -799,7 +799,7 @@ import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDial
 import { usePersonnelStore } from '@/stores/personnel';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
 import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
-import { buildTopicSourceList, computeMetricCardCount, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
+import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const router = useRouter();
@@ -1293,8 +1293,10 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
     let existingGroup = currentGroups.find((g) => (topic.id && g.topicId === topic.id) || g.title === topic.title);
     
     // Nếu gọi đồng bộ cho một nhóm cụ thể mà không khớp nhóm này thì bỏ qua
-    if (targetGroupIdentifier && existingGroup && existingGroup.id !== targetGroupIdentifier && existingGroup.title !== targetGroupIdentifier && existingGroup.topicId !== targetGroupIdentifier) {
-      return;
+    if (targetGroupIdentifier) {
+      const matchExisting = existingGroup && (existingGroup.id === targetGroupIdentifier || existingGroup.title === targetGroupIdentifier || existingGroup.topicId === targetGroupIdentifier);
+      const matchTopic = topic.id === targetGroupIdentifier || topic.title === targetGroupIdentifier;
+      if (!matchExisting && !matchTopic) return;
     }
 
     const cards = topic.metricCards || [];
@@ -1314,10 +1316,11 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
 
         return {
           id: `w_topic_${topic.id}_${card.id || cIdx}_${Date.now()}_${cIdx}`,
+          cardIndex: cIdx,
           title: card.label || `Thẻ ${cIdx + 1}`,
           topicId: topic.id,
           topicTitle: topic.title,
-          cardId: card.id || card.label,
+          cardId: card.id || card.label || `card_${cIdx}`,
           cardCondition: card.condition || card.id,
           field: primaryField,
           columnId: primaryField,
@@ -1331,6 +1334,7 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
           color: colorMap[card.color] || card.color || '#2e7d32',
           icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
           isUnique: !!card.isUnique,
+          inheritBaseline: card.inheritBaseline !== false,
         };
       });
 
@@ -1362,13 +1366,17 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
       const primaryField = cardConds.length > 0 ? cardConds[0].field : '';
 
       // Tìm widget tương ứng đã có trong nhóm (chưa được match với thẻ khác)
-      const existingWidget = existingWidgets.find(
+      let existingWidget = existingWidgets.find(
         (w) => !matchedWidgetIds.has(w.id) && (
-          (w.cardId && (w.cardId === card.id || w.cardId === card.label)) ||
+          (w.cardIndex !== undefined && w.cardIndex === cIdx) ||
+          (w.cardId && (w.cardId === card.id || w.cardId === card.label || w.cardId === `card_${cIdx}` || w.cardId === `card_${topic.id}_${cIdx}`)) ||
           w.title === card.label ||
           (card.id && w.id && w.id.includes(card.id))
         )
       );
+      if (!existingWidget && existingWidgets[cIdx] && !matchedWidgetIds.has(existingWidgets[cIdx].id)) {
+        existingWidget = existingWidgets[cIdx];
+      }
 
       // SỬA LỖI CỐT LÕI: Chỉ ẩn khi explicit hidden === true hoặc widthPercent === 0 / '0'. Tuyệt đối không Number('') === 0!
       const isCardHidden = !!card.hidden || (card.widthPercent !== '' && card.widthPercent !== undefined && card.widthPercent !== null && (Number(card.widthPercent) === 0 || card.widthPercent === '0'));
@@ -1385,10 +1393,11 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
 
         updatedWidgets.push({
           ...existingWidget,
+          cardIndex: cIdx,
           title: card.label || existingWidget.title,
           topicId: topic.id,
           topicTitle: topic.title,
-          cardId: card.id || card.label,
+          cardId: card.id || card.label || `card_${cIdx}`,
           cardCondition: card.condition || card.id,
           field: primaryField,
           columnId: primaryField,
@@ -1397,6 +1406,7 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
           value: card.value || '',
           source: topic.source || 'trips',
           isUnique: !!card.isUnique,
+          inheritBaseline: card.inheritBaseline !== false,
           hidden: isCardHidden,
           widthPercent: targetWp,
         });
@@ -1406,10 +1416,11 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
         matchedWidgetIds.add(newWidgetId);
         updatedWidgets.push({
           id: newWidgetId,
+          cardIndex: cIdx,
           title: card.label || `Thẻ ${cIdx + 1}`,
           topicId: topic.id,
           topicTitle: topic.title,
-          cardId: card.id || card.label,
+          cardId: card.id || card.label || `card_${cIdx}`,
           cardCondition: card.condition || card.id,
           field: primaryField,
           columnId: primaryField,
@@ -1423,6 +1434,7 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
           color: colorMap[card.color] || card.color || '#2e7d32',
           icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
           isUnique: !!card.isUnique,
+          inheritBaseline: card.inheritBaseline !== false,
         });
         hasChanges = true;
       }
@@ -1605,10 +1617,12 @@ const availableCardsForSelectedTopic = computed(() => {
   const t = selectedTopicObject.value;
   const rawCards = (t && t.metricCards && t.metricCards.length > 0) ? t.metricCards : DEFAULT_TOPIC_DASHBOARDS[0].metricCards;
   return rawCards.map((c, idx) => {
-    if (idx > 0 && (!c.id || c.id === 'all')) {
-      return { ...c, id: `card_${t?.id || 't'}_${idx}` };
-    }
-    return c;
+    return {
+      ...c,
+      _rawIndex: idx,
+      cardIndex: idx,
+      id: c.id || (idx === 0 ? 'all' : `card_${t?.id || 't'}_${idx}`),
+    };
   });
 });
 
@@ -2133,19 +2147,23 @@ const getCardMetricValueForTopic = (card, topic) => {
   if (!card) return 0;
   const topicCards = topic?.metricCards || [];
 
-  // Nếu card truyền vào đã là đối tượng thẻ trực tiếp từ topicCards hoặc có đầy đủ label/conditions
+  // Nếu card truyền vào đã là đối tượng thẻ trực tiếp từ topicCards hoặc có index/id/label
   let actualCard = card;
   const cardIndexInTopic = topicCards.indexOf(card);
-  if (cardIndexInTopic === -1 && (card.cardId || card.cardCondition || card.id)) {
+  if (cardIndexInTopic >= 0) {
+    actualCard = topicCards[cardIndexInTopic];
+  } else if (card._rawIndex !== undefined && topicCards[card._rawIndex]) {
+    actualCard = topicCards[card._rawIndex];
+  } else if (card.cardIndex !== undefined && topicCards[card.cardIndex]) {
+    actualCard = topicCards[card.cardIndex];
+  } else if (card.cardId || card.cardCondition || card.id || card.label || card.title) {
     const cardIdToMatch = card.cardId || card.id || card.cardCondition || card.condition;
     const cardLabelToMatch = card.cardLabel || card.label || card.title;
     actualCard = topicCards.find((c, idx) => {
-      if (cardIdToMatch === 'all' && idx > 0 && cardLabelToMatch && c.label !== cardLabelToMatch) return false;
-      return (
-        (cardLabelToMatch && c.label === cardLabelToMatch) ||
-        (c.id && c.id !== 'all' && (c.id === cardIdToMatch || c.condition === cardIdToMatch)) ||
-        `card_${idx}` === cardIdToMatch
-      );
+      if (cardLabelToMatch && c.label === cardLabelToMatch) return true;
+      if (cardIdToMatch && c.id && c.id !== 'all' && (c.id === cardIdToMatch || c.condition === cardIdToMatch)) return true;
+      if (cardIdToMatch === `card_${idx}` || cardIdToMatch === `card_${topic?.id}_${idx}`) return true;
+      return false;
     }) || card;
   }
 
@@ -2157,7 +2175,13 @@ const getCardMetricValueForTopic = (card, topic) => {
     else src = 'trips';
   }
   const fullList = getSourceList(src);
-  const firstCard = topicCards.find((c) => !c.hidden && Number(c.widthPercent) !== 0 && c.widthPercent !== '0') || topicCards[0];
+  const isTopicCardHidden = (c) => {
+    if (!c) return false;
+    if (c.hidden === true) return true;
+    if (c.widthPercent === 0 || c.widthPercent === '0') return true;
+    return false;
+  };
+  const firstCard = topicCards.find((c) => !isTopicCardHidden(c)) || topicCards[0];
   return computeMetricCardCount(actualCard, fullList, firstCard, personnelStore);
 };
 
@@ -2475,7 +2499,7 @@ const computeWidgetCount = (widget) => {
 const handleWidgetClick = (widget) => {
   if (widget.topicId) {
     const targetPath = widget.topicId === 'trips' ? '/trips' : `/dashboard-topic/${widget.topicId}`;
-    const cardParam = widget.cardId || widget.cardCondition || widget.id;
+    const cardParam = widget.cardId || widget.cardCondition || widget.title || widget.id;
     router.push({ path: targetPath, query: { card: cardParam } });
     return;
   }
@@ -2496,10 +2520,25 @@ const computeWidgetChartData = (widget) => {
   const list = getSourceList(source);
 
   // Tìm Metric Card tương ứng trong Chuyên đề
-  const card = (topic?.metricCards || []).find((c) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title) || widget;
+  const topicCards = topic?.metricCards || [];
+  let card = widget;
+  if (widget.cardIndex !== undefined && topicCards[widget.cardIndex]) {
+    card = topicCards[widget.cardIndex];
+  } else if (widget.cardId || widget.title) {
+    card = topicCards.find((c, idx) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title || `card_${idx}` === widget.cardId) || widget;
+  }
 
-  // Lọc danh sách bản ghi theo điều kiện của Metric Card
-  const matchedList = list.filter((row) => matchCardCondition(row, card));
+  const isTopicCardHidden = (c) => !c || c.hidden === true || c.widthPercent === 0 || c.widthPercent === '0';
+  const firstCard = topicCards.find((c) => !isTopicCardHidden(c)) || topicCards[0];
+  const shouldInheritBaseline = !isSameCard(card, firstCard) && card.inheritBaseline !== false;
+
+  let baselineList = list;
+  if (shouldInheritBaseline && firstCard && !isCardAllType(firstCard)) {
+    baselineList = list.filter((row) => matchCardCondition(row, firstCard));
+  }
+  const matchedList = (isSameCard(card, firstCard) || (shouldInheritBaseline && isCardAllType(card)))
+    ? baselineList
+    : (shouldInheritBaseline ? baselineList : list).filter((row) => matchCardCondition(row, card));
 
   // Xác định Cột cần Gom nhóm (Group by Field)
   const cardConds = (card.conditions && card.conditions.length > 0)

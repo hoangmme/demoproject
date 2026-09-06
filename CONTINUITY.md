@@ -678,8 +678,40 @@
        - Khi bật: Thẻ con luôn lọc trong phạm vi dữ liệu của Thẻ đầu tiên. Nếu Thẻ đầu tiên tick `Đếm giá trị duy nhất (Unique)` (19 cán bộ), thẻ con tự động kế thừa đếm unique (không bao giờ vượt quá số tổng 19 của thẻ đầu tiên). Cả số đếm trên thẻ và số dòng trong bảng dữ liệu đều khớp 100%.
        - Khi bỏ tick: Thẻ con tính toán độc lập trên toàn bộ nguồn dữ liệu của hệ thống.
 
-### 58. LEDGER STATUS
-- **Status**: Done (Đã thêm nút tick Ràng buộc theo Thẻ đầu tiên Tổng cộng, tự động kế thừa đếm Unique chống vượt số tổng, sửa lỗi router is not defined, đồng nhất click biểu đồ mở số tổng khối chuyên đề).
+### 59. KHẮC PHỤC TRIỆT ĐỂ LỖI LỆCH SỐ LIỆU & NÚT ĐỒNG BỘ GIỮA DASHBOARD VÀ CHUYÊN ĐỀ (2026-09-07)
+- **Vấn đề phản hồi**:
+  - Người dùng bấm `[Đồng bộ từ Chuyên đề]` trên Dashboard chính nhưng số liệu bị lệch hoàn toàn so với Chuyên đề:
+    - Trong Chuyên đề: Thẻ 1 ("Tổng số cán bộ") = **30**; Thẻ 2 ("trực thuộc sở, ban, ngành") = **4**; Thẻ 3 ("trực thuộc xã, phường, đặc khu") = **26** (4 + 26 = 30).
+    - Trên Dashboard & Dropdown cấu hình khối: Thẻ 1 = **4**; Thẻ 2 = **30**; Thẻ 3 = **0**!
+- **Nguyên nhân cốt lõi phát hiện (Root Cause)**:
+  1. **Lỗi Ép kiểu tai hại trong `DashboardView.vue` (dòng 2160)**:
+     - `const firstCard = topicCards.find((c) => !c.hidden && Number(c.widthPercent) !== 0 && c.widthPercent !== '0') || topicCards[0];`
+     - Trong Javascript: Với thẻ mặc định có `widthPercent: ''` (chuỗi rỗng), `Number('') === 0` là `true`!
+     - Do đó `Number(c.widthPercent) !== 0` trả về `false` đối với Thẻ 1 ("Tổng số cán bộ")!
+     - Thẻ 1 bị coi là ẩn (0%), hàm `find` bỏ qua Thẻ 1 và **chọn nhầm Thẻ 2 ("sở, ban, ngành", có `widthPercent: 33`) làm `firstCard`**!
+     - Khi Thẻ 2 (4 bản ghi) bị hiểu lầm là `firstCard` (Baseline):
+       - Thẻ 1 kế thừa Thẻ 2 -> ra đúng **4** bản ghi!
+       - Thẻ 2 tự so với chính nó -> ra **30** bản ghi!
+       - Thẻ 3 ("xã, phường, đặc khu", 26 bản ghi) bị lọc bên trong 4 bản ghi của Thẻ 2 ("sở, ban, ngành") -> ra **0** bản ghi!
+  2. **So sánh tham chiếu đối tượng (`card !== firstCard`) trong `computeMetricCardCount`**:
+     - Khi `availableCardsForSelectedTopic` tạo các đối tượng clone `{ ...c }`, phép so sánh tham chiếu `card !== firstCard` bị tính là `true` ngay cả với Thẻ 1. Cần dùng hàm so khớp định danh `isSameCard(a, b)` theo `id` và `label`.
+  3. **Đồng bộ nhóm (`syncSingleGroupFromTopic` & `reconcileGroupsWithTopics`)**:
+     - Cần ánh xạ bền vững thẻ widget theo cả `cardIndex` và `cardId`, lưu `inheritBaseline`, đảm bảo sau khi ấn `[Đồng bộ từ Chuyên đề]` số liệu phản ánh 100% chính xác.
+- **Giải pháp đã triển khai**:
+  1. **Chuẩn hóa `isTopicCardHidden` và `firstCard` trong `DashboardView.vue`**:
+     - Định nghĩa hàm kiểm tra ẩn đồng bộ với `ChildDashboardView.vue`: Chỉ ẩn khi `hidden === true` hoặc `widthPercent === 0 || widthPercent === '0'`. Chuỗi rỗng `''` không bị ép thành `0`.
+     - `firstCard` luôn chọn chính xác Thẻ 1 ("Tổng số cán bộ").
+  2. **Đồng bộ `isSameCard` trong `src/utils/dashboardMetrics.js`**:
+     - Sử dụng `!isSameCard(card, firstCard)` trong `computeMetricCardCount`, đảm bảo kiểm tra logic thẻ cơ sở chuẩn xác dù đối tượng bị clone hay render trong dropdown.
+  3. **Tối ưu hóa `reconcileGroupsWithTopics`**:
+     - Lưu `cardIndex` và `inheritBaseline` trên từng widget. Hỗ trợ fallback matching theo thứ tự index `cIdx` khi tên thẻ trong chuyên đề bị đổi.
+  4. **Đồng bộ dữ liệu Biểu đồ `computeWidgetChartData`**:
+     - Kế thừa baseline của `firstCard` đồng nhất với `computeMetricCardCount`, đảm bảo số liệu trên biểu đồ khớp 100% với số đếm trên thẻ.
+  5. **Tương thích điều hướng thẻ `activeMetricCardId` trong `ChildDashboardView.vue`**:
+     - Cho phép click widget từ Dashboard mở thẳng đúng thẻ chỉ số tương ứng ở Chuyên đề con mà không bị kẹt hay thiếu bản ghi.
+
+### 60. LEDGER STATUS
+- **Status**: Done (Đã sửa triệt để lỗi lệch số liệu giữa Dashboard và Chuyên đề, khôi phục hoạt động đồng bộ chuẩn xác 100%).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
 

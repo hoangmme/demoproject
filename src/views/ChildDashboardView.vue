@@ -1158,7 +1158,7 @@ const activeMetricCardId = computed({
       activeMetricCardIdx.value = -1;
       return;
     }
-    const idx = activeMetricCards.value.findIndex((c, i) => (c.id === val && c.id !== 'all') || c.label === val || `card_${i}` === val);
+    const idx = activeMetricCards.value.findIndex((c, i) => (c.id === val && c.id !== 'all') || c.label === val || `card_${i}` === val || (typeof val === 'string' && (val.endsWith(`_${i}`) || val === `card_${topicId.value}_${i}`)));
     activeMetricCardIdx.value = idx >= 0 ? idx : -1;
   },
 });
