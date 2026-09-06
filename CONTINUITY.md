@@ -40,15 +40,16 @@
 - Chuyến đi (`trips`) và Thân nhân (`relatives`) không tồn tại độc lập mà luôn liên kết chặt chẽ với Cán bộ chủ quản (`personnel`).
 - Khi xuất PDF từ bất kỳ giao diện nào (Hồ sơ Cán bộ, Tab Thân nhân, Bảng Chuyên đề hay Tìm kiếm nâng cao), hệ thống luôn tự động phân giải (`resolvePersonFromItem`) về đúng hồ sơ Cán bộ chủ quản để xuất đầy đủ và chính xác 100%.
 
-### 6. BỘ LỌC ĐA TỪ KHÓA (MULTI-KEYWORD FILTER ENGINE)
+### 6. BỘ LỌC ĐA TỪ KHÓA & ĐỐI TƯỢNG (MULTI-KEYWORD & TARGET OBJECT ENGINE)
 - **Toán tử `contains` & `equals`**: Hỗ trợ danh sách từ khóa phân tách bằng dấu phẩy `,` hoặc chấm phẩy `;` (ví dụ: `Sở, Ban, Ngành` hoặc `Xã, Phường, Đặc khu`).
-  - `contains`: Khớp nếu giá trị ô chứa BẤT KỲ từ khóa nào trong danh sách.
-  - `equals`: Khớp nếu giá trị ô bằng BẤT KỲ từ khóa nào trong danh sách.
-  - Tự động chuẩn hóa khoảng trắng thừa (`\s+`) và viết thường không phân biệt hoa/thường.
-- **Phân giải an toàn `custom_data`**: Luôn an toàn parse chuỗi JSON sang object nếu `custom_data` được lưu dưới dạng chuỗi (Directus stringified JSON).
-- Đồng bộ nhất quán trên cả 3 view: `ChildDashboardView.vue`, `DashboardView.vue`, và `AdvancedSearchView.vue`.
+- **Phân giải an toàn `custom_data`**: Luôn an toàn parse chuỗi JSON sang object nếu `custom_data` được lưu dưới dạng chuỗi.
+- **Cột ảo Đối tượng (`isRelative`)**: Hiển thị trong nhóm bộ lọc để dễ dàng cấu hình Thẻ KPI / Thẻ cơ sở chuyên đề lọc riêng Chuyến đi Cán bộ hoặc Chuyến đi Thân nhân. Không hiển thị thừa ra bảng.
 
-### 7. LEDGER STATUS
-- **Status**: Done (Đã sửa lỗi bộ lọc chứa từ khóa đa giá trị, parse custom_data an toàn và push lên git main `dd4d1c2`).
+### 7. QUY TẮC HIỆN DIỆN GỘP & CÔNG THỨC ĐẾM CHUYẾN ĐI TRONG NĂM
+- **Trạng thái hiện diện khi gộp hồ sơ**: Lấy chuyến đi mới nhất theo `Ngày xuất cảnh` (`departureDate` / `ngay_xuat_canh`) để tính toán trạng thái hiện diện hiện tại của Cán bộ (không lạm dụng độ ưu tiên giả định). Từng dòng chuyến đi đơn lẻ vẫn hiển thị đúng trạng thái của chuyến đó.
+- **Công thức `trips_count_in_year` (Số lần xuất cảnh trong năm)**: Tự động đếm số chuyến đi của Cán bộ trong cùng năm với chuyến đi đó (dựa vào cột ngày xuất cảnh do người dùng cấu hình). Có cấu hình ngưỡng cảnh báo (mặc định > 2 lần) và nhãn hiển thị tùy biến.
+
+### 8. LEDGER STATUS
+- **Status**: Done (Triển khai cột ảo isRelative cho bộ lọc, tối ưu hiện diện gộp theo ngày xuất cảnh mới nhất, thêm công thức đếm số chuyến đi trong năm).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã qua kiểm thử build thành công).

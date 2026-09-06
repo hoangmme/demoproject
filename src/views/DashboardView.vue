@@ -1571,6 +1571,10 @@ const getRowFieldValue = (row, colId) => {
     return res?.label || res?.shortLabel || '';
   }
 
+  if (colId === 'isRelative' || colId === '_doiTuong' || colId === 'doi_tuong') {
+    return row.isRelative ? 'Thân nhân' : 'Cán bộ';
+  }
+
   // 2. Identify column origin strictly from import mappings
   const tripColIds = (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id));
   const relColIds = (personnelStore.importMappingRelative || []).flatMap((g) => (g.columns || []).map((c) => c.id));
@@ -1692,17 +1696,30 @@ const matchSingleCondition = (item, cond) => {
   const target = String(cond.value || '').trim().toLowerCase();
 
   // 1a. Đối tượng Thân nhân / Cán bộ
-  if (field === 'isRelative') {
+  if (field === 'isRelative' || field === '_doiTuong' || field === 'doi_tuong') {
     const isRel = !!item.isRelative;
-    if (op === 'has_value') return isRel;
-    if (op === 'empty') return !isRel;
+    const objType = isRel ? 'thân nhân' : 'cán bộ';
+    if (op === 'has_value') return true;
+    if (op === 'empty') return false;
     if (op === 'equals') {
       if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === true;
       if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === false;
+      return objType === target;
     }
     if (op === 'not_equals') {
       if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === false;
       if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === true;
+      return objType !== target;
+    }
+    if (op === 'contains') {
+      if (target.includes('thân nhân')) return isRel === true;
+      if (target.includes('cán bộ')) return isRel === false;
+      return objType.includes(target);
+    }
+    if (op === 'not_contains') {
+      if (target.includes('thân nhân')) return isRel === false;
+      if (target.includes('cán bộ')) return isRel === true;
+      return !objType.includes(target);
     }
     return isRel;
   }

@@ -515,6 +515,7 @@
                     <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
                     <option value="conditional_check">Kiểm tra điều kiện (Cảnh báo khi thiếu dữ liệu)</option>
                     <option value="depart_before_decision">Đi trước khi có quyết định</option>
+                    <option value="trips_count_in_year">Số lần xuất cảnh trong năm (Quá quy định)</option>
                   </select>
                 </div>
 
@@ -767,6 +768,51 @@
                       <input
                         v-model="col.formulaLabelWarning"
                         placeholder="Mặc định: Đi trước khi có quyết định"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 6. Số lần xuất cảnh trong năm -->
+                <div v-else-if="col.formulaType === 'trips_count_in_year'" style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="font-size: 0.72rem; color: #7c2d12; line-height: 1.4;">
+                    💡 <strong>Nguyên lý:</strong> Tự động tính <strong>tổng số chuyến đi trong cùng 1 năm</strong> của Cán bộ (dựa theo năm của Cột Ngày xuất cảnh). Nếu số lần vượt quá <strong>Ngưỡng quy định</strong> (ví dụ: &gt; 2 lần) → hiển thị <strong>Cảnh báo</strong> kèm số lần và năm.
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Xuất cảnh (Đi):</span>
+                      <select v-model="col.formulaDepartureCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định (ngay_xuat_canh) --</option>
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
+                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Ngưỡng số lần tối đa cho phép:</span>
+                      <input
+                        v-model.number="col.formulaCountThreshold"
+                        type="number"
+                        min="1"
+                        max="10"
+                        placeholder="Mặc định: 2"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Quá quy định (Tùy chọn):</span>
+                      <input
+                        v-model="col.formulaLabelWarning"
+                        placeholder="Mặc định: ⚠️ Quá {threshold} lần ({count} lần/{year})"
+                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
+                      />
+                    </div>
+                    <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đúng quy định (Tùy chọn):</span>
+                      <input
+                        v-model="col.formulaLabelNormal"
+                        placeholder="Mặc định: {count} lần"
                         style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
                       />
                     </div>
@@ -1584,7 +1630,18 @@
                         </select>
                       </div>
                       <div v-if="cond.operator !== 'has_value' && cond.operator !== 'empty'">
+                        <select
+                          v-if="cond.field === 'isRelative' || cond.field === '_doiTuong' || cond.field === 'doi_tuong'"
+                          v-model="cond.value"
+                          class="custom-key-select"
+                          style="font-size: 0.72rem; padding: 2px 4px; width: 100%; font-weight: 600; color: #1e40af;"
+                        >
+                          <option value="">-- Chọn đối tượng --</option>
+                          <option value="Cán bộ">Cán bộ</option>
+                          <option value="Thân nhân">Thân nhân</option>
+                        </select>
                         <input
+                          v-else
                           v-model="cond.value"
                           placeholder="Nhập giá trị..."
                           style="font-size: 0.72rem; border: 1px solid #cbd5e1; background: #fff; padding: 2px 4px; border-radius: 4px; width: 100%;"
@@ -2929,6 +2986,14 @@ const moveMetricCard = (dash, cIdx, direction) => {
 
 const categorizedDashboardCols = computed(() => {
   const groups = [];
+
+  // 0. Nhóm Thuộc tính hệ thống & Phân loại (Dùng cho Thẻ KPI & Bộ lọc cơ sở)
+  groups.push({
+    category: '⚡ Thuộc tính & Phân loại (Bộ lọc)',
+    options: [
+      { id: 'isRelative', label: 'Đối tượng: Cán bộ / Thân nhân', displayLabel: '⚡ Đối tượng (Cán bộ hay Thân nhân) - isRelative' },
+    ],
+  });
 
   // 1. Nhóm Chuyến đi (Trips)
   const tripCols = (availableTripCols.value || []).map((c, idx) => ({

@@ -180,42 +180,30 @@ export const computePresenceStatus = (record, formulaConfig = {}) => {
     trips = [record];
   }
 
-  let activeOverdueAbroad = null;
-  let activeAbroadTrip = null;
-  let latestCompletedTrip = null;
+  if (trips.length === 0) {
+    return { status: 'none', label: '-', shortLabel: '-', isAbroad: false, isOverdue: false };
+  }
+
+  // Khi gộp: Lấy chuyến đi mới nhất theo Ngày xuất cảnh
+  const depCol = formulaConfig.formulaDepartureCol || formulaConfig.departureCol || 'departureDate';
+  let latestTrip = null;
+  let latestDepTime = -Infinity;
 
   for (const t of trips) {
-    const res = computeTripPresence(t, formulaConfig);
-    if (res.status === 'overdue') {
-      activeOverdueAbroad = res;
-      break;
-    } else if (res.status === 'abroad') {
-      if (!activeAbroadTrip) activeAbroadTrip = res;
-    } else if (res.status === 'completed') {
-      if (!latestCompletedTrip) latestCompletedTrip = res;
-      else if (res.isOverdue && !latestCompletedTrip.isOverdue) latestCompletedTrip = res;
+    const rawDep = getRecordFieldValue(t, depCol) || t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngayDi;
+    const d = parseDateValue(rawDep);
+    const time = d ? d.getTime() : 0;
+    if (time >= latestDepTime) {
+      latestDepTime = time;
+      latestTrip = t;
     }
   }
 
-  if (activeOverdueAbroad) {
-    return activeOverdueAbroad;
+  if (!latestTrip) {
+    latestTrip = trips[trips.length - 1];
   }
 
-  if (activeAbroadTrip) {
-    return activeAbroadTrip;
-  }
-
-  if (latestCompletedTrip) {
-    return latestCompletedTrip;
-  }
-
-  return {
-    status: 'none',
-    isAbroad: false,
-    isOverdue: false,
-    label: '-',
-    shortLabel: '-',
-  };
+  return computeTripPresence(latestTrip, formulaConfig);
 };
 
 
@@ -591,6 +579,8 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
       return computeConditionalCheck(record, formulaConfig);
     case 'depart_before_decision':
       return computeDepartBeforeDecision(record, formulaConfig);
+    case 'trips_count_in_year':
+      return computeTripsCountInYear(record, formulaConfig);
     default:
       return { status: 'unknown', label: '', shortLabel: '' };
   }
@@ -652,6 +642,78 @@ export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
   }
 
   return defaultResult;
+};
+
+/**
+ * Công thức: Đếm số lần xuất cảnh trong năm (Kiểm tra đi quá quy định)
+ * formulaConfig:
+ *   - formulaDepartureCol: Cột Ngày xuất cảnh (mặc định: 'ngay_xuat_canh' / 'departureDate')
+ *   - formulaCountThreshold: Ngưỡng số lần (mặc định: 2)
+ *   - formulaLabelWarning: Nhãn khi vượt quá ngưỡng (mặc định: '⚠️ Quá {threshold} lần ({count} lần/{year})')
+ *   - formulaLabelNormal: Nhãn khi trong hạn (mặc định: '{count} lần')
+ */
+export const computeTripsCountInYear = (record, formulaConfig = {}) => {
+  const defaultResult = { status: 'none', label: '-', shortLabel: '-', isWarning: false, value: 0, year: null, count: 0, cssClass: '' };
+  if (!record) return defaultResult;
+
+  const depCol = formulaConfig.formulaDepartureCol || formulaConfig.departureCol || 'ngay_xuat_canh';
+  const threshold = Number(formulaConfig.formulaCountThreshold) > 0 ? Number(formulaConfig.formulaCountThreshold) : 2;
+  const labelWarningTpl = formulaConfig.formulaLabelWarning || '⚠️ Quá {threshold} lần ({count} lần/{year})';
+  const labelNormalTpl = formulaConfig.formulaLabelNormal || '{count} lần';
+
+  // 1. Xác định Cán bộ & danh sách chuyến đi của Cán bộ này
+  const p = record.rawPerson || record;
+  let personTrips = [];
+  if (Array.isArray(record.rawPerson?.trips) && record.rawPerson.trips.length > 0) {
+    personTrips = record.rawPerson.trips;
+  } else if (Array.isArray(record.trips) && record.trips.length > 0) {
+    personTrips = record.trips;
+  } else if (Array.isArray(p.trips) && p.trips.length > 0) {
+    personTrips = p.trips;
+  } else {
+    personTrips = [record];
+  }
+
+  // 2. Xác định năm đối chiếu: Ưu tiên năm của chuyến đi hiện tại, nếu không có lấy năm hiện tại
+  const rawCurrentDep = getRecordFieldValue(record, depCol) || record.departureDate || record.approvedDepartureDate || record.ngay_xuat_canh || record.ngayDi;
+  const currentDepDate = parseDateValue(rawCurrentDep);
+  const targetYear = currentDepDate ? currentDepDate.getFullYear() : new Date().getFullYear();
+
+  // 3. Đếm số chuyến đi trong năm targetYear của Cán bộ
+  let count = 0;
+  for (const t of personTrips) {
+    const rawDep = getRecordFieldValue(t, depCol) || t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngayDi;
+    const d = parseDateValue(rawDep);
+    if (d && d.getFullYear() === targetYear) {
+      count++;
+    }
+  }
+
+  // Nếu bản ghi hiện tại là 1 chuyến đi nhưng personTrips rỗng hoặc chỉ có 1
+  if (count === 0 && currentDepDate) {
+    count = 1;
+  }
+
+  const isWarning = count > threshold;
+  const formatLabel = (tpl) => {
+    return tpl
+      .replace(/{count}/g, String(count))
+      .replace(/{year}/g, String(targetYear))
+      .replace(/{threshold}/g, String(threshold));
+  };
+
+  const label = isWarning ? formatLabel(labelWarningTpl) : formatLabel(labelNormalTpl);
+
+  return {
+    status: isWarning ? 'warning' : 'normal',
+    isWarning,
+    count,
+    value: count,
+    year: targetYear,
+    label,
+    shortLabel: `${count} lần`,
+    cssClass: isWarning ? 'formula-warning' : '',
+  };
 };
 
 /**
