@@ -726,8 +726,17 @@
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
 
+### 62. BUG: logicOp default mismatch gây lệch số thẻ vs bảng (2026-09-07)
+- **Vấn đề chẩn đoán**:
+  1. **Bug #1 (ĐÃ SỬA)**: `computeMetricCardCount` (dashboardMetrics.js:741) dùng default `logicOp = 'OR'`, trong khi `matchCardCondition` (dashboardMetrics.js:606) dùng default `logicOp = 'AND'`. Khi thẻ có ≥ 2 điều kiện mà không set logicOp → số trên thẻ cộng dồn OR, bảng lọc AND → lệch.
+  2. **Bug #2 (GHI NHẬN)**: `filteredList` áp dụng thêm 6 tầng lọc phụ (status, year, country, department, filterField, search từ URL query) mà `getCardMetricValue` không áp dụng. Điều này là by design khi navigate từ Dashboard, nhưng gây lệch nếu URL có query params.
+- **Fix Applied**: Đổi `(card.logicOp || 'OR')` → `(card.logicOp || 'AND')` tại dashboardMetrics.js:741.
+- **Commit**: `5b4a17c`
 
-
+### 62. LEDGER STATUS
+- **Status**: Done (Bug #1 đã sửa; Bug #2 ghi nhận là thiết kế có chủ đích — URL filters chỉ ảnh hưởng bảng, không ảnh hưởng số đếm thẻ).
+- **Flags**: None.
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
 
 
 
