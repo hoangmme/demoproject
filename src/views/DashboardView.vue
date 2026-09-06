@@ -64,26 +64,24 @@
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
           <!-- Move Group Up / Down -->
-          <Button
-            icon="pi pi-arrow-up"
-            size="small"
-            severity="secondary"
-            text
-            rounded
+          <button
+            type="button"
+            class="btn-icon-square"
             :disabled="gIdx === 0"
             @click="moveCustomGroup(gIdx, -1)"
-            v-tooltip.top="'Dời nhóm lên trên'"
-          />
-          <Button
-            icon="pi pi-arrow-down"
-            size="small"
-            severity="secondary"
-            text
-            rounded
+            title="Dời nhóm lên trên"
+          >
+            <i class="pi pi-arrow-up"></i>
+          </button>
+          <button
+            type="button"
+            class="btn-icon-square"
             :disabled="gIdx === customGroups.length - 1"
             @click="moveCustomGroup(gIdx, 1)"
-            v-tooltip.top="'Dời nhóm xuống dưới'"
-          />
+            title="Dời nhóm xuống dưới"
+          >
+            <i class="pi pi-arrow-down"></i>
+          </button>
           <button
             type="button"
             class="btn-add-widget-green"
@@ -101,24 +99,22 @@
           >
             <i class="pi pi-sort-alt" style="font-size: 0.78rem; color: #0284c7;"></i> Sắp xếp vị trí
           </button>
-          <Button
-            icon="pi pi-pencil"
-            size="small"
-            severity="secondary"
-            text
-            rounded
+          <button
+            type="button"
+            class="btn-icon-square"
             @click="openEditGroupDialog(group)"
-            v-tooltip.top="'Chỉnh sửa nhóm này'"
-          />
-          <Button
-            icon="pi pi-trash"
-            size="small"
-            severity="danger"
-            text
-            rounded
+            title="Chỉnh sửa nhóm này"
+          >
+            <i class="pi pi-pencil"></i>
+          </button>
+          <button
+            type="button"
+            class="btn-icon-square btn-danger"
             @click="deleteGroup(group)"
-            v-tooltip.top="'Xóa nhóm này'"
-          />
+            title="Xóa nhóm này"
+          >
+            <i class="pi pi-trash"></i>
+          </button>
         </div>
       </div>
 
@@ -3022,6 +3018,66 @@ onMounted(async () => {
 .btn-secondary-action:hover {
   background: #f8fafc;
   border-color: #94a3b8;
+}
+
+/* Nút icon vuông bo góc nhẹ đồng bộ chuẩn 32px x 32px */
+.btn-icon-square {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-icon-square:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.btn-icon-square:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.btn-icon-square.btn-danger {
+  border-color: #fecaca;
+  background: #ffffff;
+  color: #dc2626;
+}
+
+.btn-icon-square.btn-danger:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+.btn-icon-square i {
+  font-size: 0.85rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  text-align: center;
 }
 
 .clickable-row {

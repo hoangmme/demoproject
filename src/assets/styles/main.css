@@ -458,13 +458,14 @@ html, body {
   line-height: 1.2 !important;
 }
 
-/* Chuẩn hóa nút Icon-Only (chỉ có icon, không text): vuông/tròn 1:1, icon căn giữa tuyệt đối */
+/* Chuẩn hóa nút Icon-Only: Vuông bo nhẹ 6px giống style nút có text, icon căn giữa tuyệt đối */
 .p-button.p-button-icon-only {
-  width: 2.25rem !important;
-  height: 2.25rem !important;
-  min-width: 2.25rem !important;
-  max-width: 2.25rem !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
   padding: 0 !important;
+  border-radius: 6px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -479,19 +480,20 @@ html, body {
   min-width: 32px !important;
   max-width: 32px !important;
   padding: 0 !important;
-}
-
-.p-button.p-button-rounded {
-  border-radius: 50% !important;
+  border-radius: 6px !important;
 }
 
 .p-button.p-button-icon-only .p-button-icon {
   margin: 0 !important;
+  padding: 0 !important;
   font-size: 0.85rem !important;
   line-height: 1 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  text-align: center !important;
 }
 
 .p-button-success {
@@ -502,9 +504,19 @@ html, body {
   background-color: #1b5e20 !important;
 }
 
-.p-button-danger {
+.p-button-danger:not(.p-button-text):not(.p-button-outlined) {
   background-color: #dc2626 !important;
   color: #ffffff !important;
+}
+
+.p-button-danger.p-button-text {
+  background-color: transparent !important;
+  color: #dc2626 !important;
+}
+
+.p-button-danger.p-button-text:hover {
+  background-color: #fee2e2 !important;
+  color: #b91c1c !important;
 }
 
 .p-button-secondary {

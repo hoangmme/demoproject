@@ -93,11 +93,11 @@
   - Bỏ triệt để logic khóa cứng bảng theo thẻ đầu tiên (`topicBaselineList` trước đây lấy thẻ đầu tiên lọc toàn bộ bảng trước khi click). Giờ đây danh sách bảng hiển thị toàn bộ bản ghi theo mặc định, và khi click vào bất kỳ thẻ thống kê nhanh nào thì bảng sẽ áp dụng bộ lọc tương ứng của thẻ đó (click lại hoặc chọn Tất cả sẽ khôi phục hiển thị toàn bộ).
 
 ### 11. QUY CHUẨN NÚT HÀNH ĐỘNG & HỢP NHẤT NÚT LƯU CẤU HÌNH (BUTTON STANDARDIZATION & UNIFIED SAVE)
-- **Chuẩn hóa Nút Icon-Only (Tỷ lệ 1:1, căn giữa tuyệt đối)** (`src/assets/styles/main.css`):
-  - Khắc phục triệt để lỗi nút icon bị padding đè làm dẹt hình oval/chữ nhật và icon lệch tâm:
-  - Cố định kích thước chuẩn `.p-button-icon-only` (`width: 32px; height: 32px; padding: 0 !important; line-height: 1; flex-shrink: 0;`).
-  - Căn giữa tuyệt đối icon bên trong (`display: inline-flex; align-items: center; justify-content: center; margin: 0 !important`).
-  - Đồng bộ chiều cao chuẩn `32px` cho toàn bộ các nút trong thanh công cụ nhóm trên Dashboard (`.btn-add-widget-green`, `.btn-secondary-action`, nút dời vị trí, sửa, xóa).
+- **Chuẩn hóa Nút Icon-Only (Vuông bo nhẹ 6px đồng bộ hoàn hảo với nút text)** (`src/views/DashboardView.vue` & `src/assets/styles/main.css`):
+  - Khắc phục triệt để lỗi nút icon bị bo tròn (circle 50%) không đồng bộ với nút text và icon lệch tâm:
+  - Cố định kích thước `.btn-icon-square` và `.p-button-icon-only` chuẩn `width: 32px; height: 32px; border-radius: 6px;` (bo góc nhẹ 6px vuông vắn, giống hoàn toàn style của nút `+ Thêm Khối Thống kê` và `Sắp xếp vị trí`).
+  - Căn giữa tuyệt đối icon bên trong bằng flex container `16px x 16px` (`line-height: 1; margin: 0; padding: 0; text-align: center`).
+  - Đồng bộ màu sắc viền nhã nhặn (`1px solid #cbd5e1`, nút xóa viền `#fecaca` nền `#ffffff` hover `#fee2e2`), loại bỏ hoàn toàn các mảng tròn đặc đỏ gây gắt mắt và lệch style.
 - **Hợp nhất Nút Lưu trong Cấu hình Chuyên đề** (`SettingsImportView.vue`):
   - Xóa bỏ nút "Lưu Toàn bộ Cấu hình Dashboard" dư thừa ở dưới chân bảng cấu hình.
   - Sử dụng duy nhất nút "Lưu Cấu hình" / "Lưu Cấu hình Chuyên đề" ở thanh Header trên cùng làm điểm lưu tập trung cho toàn bộ trang (hỗ trợ lưu cả Cán bộ, Thân nhân, Chuyến đi, Chuyên đề, Phụ lục).
