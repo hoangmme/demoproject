@@ -904,24 +904,35 @@ const matchSingleCondition = (item, cond) => {
 
   // 1b. Special Formula Fields & Điều kiện đếm
   if (op.startsWith('count_') || field === 'dieu_kien_dem' || field === '_tripCount') {
-    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-    const canBoCccd = String(item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? '').trim();
-    const p = canBoCccd ? (personnelStore.personnelList || []).find((x) => String(x[pKeyField] ?? x.custom_data?.[pKeyField] ?? x.cccdparent ?? '').trim() === canBoCccd) : null;
-    const personTrips = Array.isArray(item.rawPerson?.trips) ? item.rawPerson.trips : (Array.isArray(item.trips) ? item.trips : (Array.isArray(p?.trips) ? p.trips : []));
-    
-    let count = 0;
-    if (field && !['cccdparent', 'parentCccd', 'personnelId', 'name', 'dieu_kien_dem', '_tripCount'].includes(field)) {
-      const targetVal = String(item[field] ?? item.custom_data?.[field] ?? '').trim().toLowerCase();
-      if (targetVal && targetVal !== '-') {
-        const sameFieldTrips = personTrips.filter(t => String(t[field] ?? t.custom_data?.[field] ?? '').trim().toLowerCase() === targetVal);
-        count = sameFieldTrips.length > 0 ? sameFieldTrips.length : personTrips.length;
+    // Ưu tiên đọc giá trị trực tiếp từ cột nếu đã có (như cột công thức đếm số lần xuất cảnh)
+    const rawVal = getCellValue(item, field);
+    let count = NaN;
+    if (rawVal !== undefined && rawVal !== null && rawVal !== '' && rawVal !== '-') {
+      const parsedNum = parseFloat(String(rawVal).replace(/[^0-9.-]+/g, ''));
+      if (!isNaN(parsedNum)) {
+        count = parsedNum;
+      }
+    }
+
+    if (isNaN(count)) {
+      const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+      const canBoCccd = String(item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? '').trim();
+      const p = canBoCccd ? (personnelStore.personnelList || []).find((x) => String(x[pKeyField] ?? x.custom_data?.[pKeyField] ?? x.cccdparent ?? '').trim() === canBoCccd) : null;
+      const personTrips = Array.isArray(item.rawPerson?.trips) ? item.rawPerson.trips : (Array.isArray(item.trips) ? item.trips : (Array.isArray(p?.trips) ? p.trips : []));
+      
+      if (field && !['cccdparent', 'parentCccd', 'personnelId', 'name', 'dieu_kien_dem', '_tripCount'].includes(field)) {
+        const targetVal = String(item[field] ?? item.custom_data?.[field] ?? '').trim().toLowerCase();
+        if (targetVal && targetVal !== '-') {
+          const sameFieldTrips = personTrips.filter(t => String(t[field] ?? t.custom_data?.[field] ?? '').trim().toLowerCase() === targetVal);
+          count = sameFieldTrips.length > 0 ? sameFieldTrips.length : personTrips.length;
+        } else {
+          count = personTrips.length;
+        }
       } else {
         count = personTrips.length;
       }
-    } else {
-      count = personTrips.length;
+      if (count === 0 && personTrips.length === 0) count = 1;
     }
-    if (count === 0 && personTrips.length === 0) count = 1;
 
     const numTarget = parseFloat(target.replace(/[^0-9.-]+/g, ''));
     if (isNaN(numTarget)) return true;

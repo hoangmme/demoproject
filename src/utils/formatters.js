@@ -645,21 +645,17 @@ export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
 };
 
 /**
- * Công thức: Đếm số lần xuất cảnh trong năm (Kiểm tra đi quá quy định)
+ * Công thức: Đếm số lần xuất cảnh trong năm
  * formulaConfig:
  *   - formulaDepartureCol: Cột Ngày xuất cảnh (mặc định: 'ngay_xuat_canh' / 'departureDate')
- *   - formulaCountThreshold: Ngưỡng số lần (mặc định: 2)
- *   - formulaLabelWarning: Nhãn khi vượt quá ngưỡng (mặc định: '⚠️ Quá {threshold} lần ({count} lần/{year})')
- *   - formulaLabelNormal: Nhãn khi trong hạn (mặc định: '{count} lần')
+ *   - formulaLabelFormat: Định dạng nhãn (mặc định: '{count} lần')
  */
 export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   const defaultResult = { status: 'none', label: '-', shortLabel: '-', isWarning: false, value: 0, year: null, count: 0, cssClass: '' };
   if (!record) return defaultResult;
 
   const depCol = formulaConfig.formulaDepartureCol || formulaConfig.departureCol || 'ngay_xuat_canh';
-  const threshold = Number(formulaConfig.formulaCountThreshold) > 0 ? Number(formulaConfig.formulaCountThreshold) : 2;
-  const labelWarningTpl = formulaConfig.formulaLabelWarning || '⚠️ Quá {threshold} lần ({count} lần/{year})';
-  const labelNormalTpl = formulaConfig.formulaLabelNormal || '{count} lần';
+  const labelTpl = formulaConfig.formulaLabelFormat || formulaConfig.formulaLabelNormal || '{count} lần';
 
   // 1. Xác định Cán bộ & danh sách chuyến đi của Cán bộ này
   const p = record.rawPerson || record;
@@ -694,25 +690,18 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     count = 1;
   }
 
-  const isWarning = count > threshold;
-  const formatLabel = (tpl) => {
-    return tpl
-      .replace(/{count}/g, String(count))
-      .replace(/{year}/g, String(targetYear))
-      .replace(/{threshold}/g, String(threshold));
-  };
-
-  const label = isWarning ? formatLabel(labelWarningTpl) : formatLabel(labelNormalTpl);
+  const label = labelTpl
+    .replace(/{count}/g, String(count))
+    .replace(/{year}/g, String(targetYear));
 
   return {
-    status: isWarning ? 'warning' : 'normal',
-    isWarning,
+    status: 'normal',
     count,
     value: count,
     year: targetYear,
-    label,
+    label: label.trim() ? label : `${count} lần`,
     shortLabel: `${count} lần`,
-    cssClass: isWarning ? 'formula-warning' : '',
+    cssClass: '',
   };
 };
 

@@ -47,9 +47,10 @@
 
 ### 7. QUY TẮC HIỆN DIỆN GỘP & CÔNG THỨC ĐẾM CHUYẾN ĐI TRONG NĂM
 - **Trạng thái hiện diện khi gộp hồ sơ**: Lấy chuyến đi mới nhất theo `Ngày xuất cảnh` (`departureDate` / `ngay_xuat_canh`) để tính toán trạng thái hiện diện hiện tại của Cán bộ (không lạm dụng độ ưu tiên giả định). Từng dòng chuyến đi đơn lẻ vẫn hiển thị đúng trạng thái của chuyến đó.
-- **Công thức `trips_count_in_year` (Số lần xuất cảnh trong năm)**: Tự động đếm số chuyến đi của Cán bộ trong cùng năm với chuyến đi đó (dựa vào cột ngày xuất cảnh do người dùng cấu hình). Có cấu hình ngưỡng cảnh báo (mặc định > 2 lần) và nhãn hiển thị tùy biến.
+- **Công thức `trips_count_in_year` (Số lần xuất cảnh trong năm)**: Đếm thuần túy số lần xuất cảnh trong cùng năm của Cán bộ (dựa vào cột ngày xuất cảnh do người dùng cấu hình), hiển thị kết quả trực tiếp dạng số lần (VD: `1 lần`, `2 lần`, `3 lần`...). Không lạm dụng ngưỡng/cảnh báo cứng trong công thức.
+- **Lọc điều kiện theo Số lần xuất cảnh**: Hỗ trợ đồng bộ cả toán tử `Điều kiện đếm: Lớn hơn hoặc bằng (>=)` (`count_gte` / `count_gt`) và toán tử so sánh số (`gte` / `gt`). Hệ thống tự động bóc tách số lần từ cột để so sánh trực tiếp với giá trị người dùng nhập (ví dụ: `>= 2`).
 
 ### 8. LEDGER STATUS
-- **Status**: Done (Triển khai cột ảo isRelative cho bộ lọc, tối ưu hiện diện gộp theo ngày xuất cảnh mới nhất, thêm công thức đếm số chuyến đi trong năm).
+- **Status**: Done (Đơn giản hóa công thức Số lần xuất cảnh trong năm và hỗ trợ đầy đủ bộ lọc điều kiện đếm / so sánh số trên thẻ KPI).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã qua kiểm thử build thành công).

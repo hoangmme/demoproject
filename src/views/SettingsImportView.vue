@@ -515,7 +515,7 @@
                     <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
                     <option value="conditional_check">Kiểm tra điều kiện (Cảnh báo khi thiếu dữ liệu)</option>
                     <option value="depart_before_decision">Đi trước khi có quyết định</option>
-                    <option value="trips_count_in_year">Số lần xuất cảnh trong năm (Quá quy định)</option>
+                    <option value="trips_count_in_year">Số lần xuất cảnh trong năm</option>
                   </select>
                 </div>
 
@@ -777,9 +777,9 @@
                 <!-- 6. Số lần xuất cảnh trong năm -->
                 <div v-else-if="col.formulaType === 'trips_count_in_year'" style="display: flex; flex-direction: column; gap: 6px;">
                   <div style="font-size: 0.72rem; color: #7c2d12; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> Tự động tính <strong>tổng số chuyến đi trong cùng 1 năm</strong> của Cán bộ (dựa theo năm của Cột Ngày xuất cảnh). Nếu số lần vượt quá <strong>Ngưỡng quy định</strong> (ví dụ: &gt; 2 lần) → hiển thị <strong>Cảnh báo</strong> kèm số lần và năm.
+                    💡 <strong>Nguyên lý:</strong> Tự động tính <strong>tổng số lần xuất cảnh trong cùng 1 năm</strong> của Cán bộ (dựa theo Cột Ngày xuất cảnh). Giá trị hiển thị là số lần (ví dụ: <em>1 lần</em>, <em>2 lần</em>, <em>3 lần</em>...). Sau đó bạn có thể đặt điều kiện lọc trên Thẻ KPI (ví dụ: chọn cột này và toán tử <strong>&gt;= 2</strong> hoặc <strong>&gt; 2</strong>).
                   </div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;">
                     <div>
                       <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Xuất cảnh (Đi):</span>
                       <select v-model="col.formulaDepartureCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
@@ -790,28 +790,9 @@
                       </select>
                     </div>
                     <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Ngưỡng số lần tối đa cho phép:</span>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Định dạng hiển thị (Tùy chọn):</span>
                       <input
-                        v-model.number="col.formulaCountThreshold"
-                        type="number"
-                        min="1"
-                        max="10"
-                        placeholder="Mặc định: 2"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Quá quy định (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelWarning"
-                        placeholder="Mặc định: ⚠️ Quá {threshold} lần ({count} lần/{year})"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đúng quy định (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelNormal"
+                        v-model="col.formulaLabelFormat"
                         placeholder="Mặc định: {count} lần"
                         style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
                       />
