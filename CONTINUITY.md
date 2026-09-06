@@ -388,10 +388,25 @@
      - Cập nhật mô tả nguyên lý và placeholder cho ô nhập nhãn cảnh báo thành `"Đi khi chưa có cấp thẩm quyền quyết định"`.
   3. Đã chạy unit test Node kiểm chứng cả 3 trường hợp (Cảnh báo khi đi trước hạn duyệt, Đi đúng quyết định khi đi sau/đúng hạn duyệt, Trả về '-' khi thiếu dữ liệu) $\rightarrow$ Kết quả chính xác 100%.
 
-### 39. LEDGER STATUS
-- **Status**: Done (Đã sửa đúng chiều so sánh và nhãn mặc định cho công thức 'Đi khi chưa có cấp thẩm quyền quyết định', đã kiểm thử và build thành công).
+### 40. CỘNG TỔNG SỐ LƯỢT DỮ LIỆU CÁC CỘT (MULTI-COLUMN SUM) & KHẮC PHỤC LỖI LINK TỆP ĐÍNH KÈM
+- **Cộng tổng dữ liệu các cột trong Khối thống kê**:
+  - Nghiệp vụ: Khi người dùng chọn nhiều cột/điều kiện (ví dụ Cột A có 2 dữ liệu, Cột B có 3 dữ liệu):
+    - Khi **KHÔNG tick** "Đếm giá trị duy nhất (Unique)": Hệ thống tính tổng số lượt xuất hiện của tất cả các cột đã chọn ($2 + 3 = 5$).
+    - Khi **CÓ tick** "Đếm giá trị duy nhất (Unique)": Hệ thống gộp và đếm số lượng đối tượng duy nhất (theo CCCD Cán bộ).
+  - Thực hiện tại `src/utils/dashboardMetrics.js` (`computeMetricCardCount`): Khi `!card.isUnique` và có nhiều hơn 1 điều kiện với kiểu kết hợp `OR`, cộng dồn số lượt thỏa mãn của từng điều kiện trong danh sách `baselineList`.
+  - Cập nhật `SettingsImportView.vue`: Chú thích rõ tùy chọn `🔀 HOẶC (OR) - Cộng dồn số liệu các cột (Tổng cộng)` và mặc định `logicOp = 'OR'` khi có nhiều điều kiện.
+- **Khắc phục triệt để lỗi link tệp đính kèm (`%20//api.%20hscb.%20online...`)**:
+  - Nguyên nhân: Các template đính kèm `text_file_loop`, `checkbox_file`, `checkbox_file_loop` trước đây gán trực tiếp `:href="it.file.url"`. Khi URL lưu trong DB bị chèn khoảng trắng đầu (`" //..."`), trình duyệt không coi là protocol-relative mà hiểu là relative link trên frontend origin (`https://hscb.online/%20//api.%20hscb.%20online/...#/dashboard`).
+  - Thực hiện:
+    - Nâng cấp `getFileUrl` trong `src/api/files.js`: Tự động giải mã URI, xóa bỏ toàn bộ khoảng trắng thừa, tự động trích xuất mã UUID tài liệu Directus (36 ký tự) để tái tạo URL chuẩn xác tuyệt đối `https://api.hscb.online/assets/{uuid}?access_token={token}`.
+    - Bổ sung fallback `STATIC_TOKEN = 'CooAJKTu9_NLEgtaq3qULrswZGLFfsAw'` trong `src/api/client.js` để link tải tệp luôn có access token hợp lệ kể cả khi Docker build không truyền biến môi trường.
+    - Cập nhật toàn bộ liên kết mở tệp trong `ChildDashboardView.vue`, `PersonnelView.vue`, `DynamicField.vue` chạy qua `getFileUrl`.
+    - Hỗ trợ thêm hiển thị template cho định dạng cột file tiêu chuẩn (`col.format === 'file'`) trên các bảng dữ liệu.
+
+### 41. LEDGER STATUS
+- **Status**: Done (Đã sửa lỗi link đính kèm, hỗ trợ cộng dồn số liệu nhiều cột trên thẻ thống kê, đã build và deploy git).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã build kiểm chứng an toàn).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], kiểm thử unit test và build thành công).
 
 
 
