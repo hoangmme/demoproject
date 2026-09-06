@@ -494,6 +494,96 @@
                 {{ getPresenceBadge(data).text }}
               </span>
             </template>
+            <template v-else-if="activeCardSingleCol && activeCardSingleCol.format === 'checkbox_file_loop'">
+              <div v-if="getCheckboxFileLoopItems(data, activeCardSingleCol.id).length > 0" style="display: flex; flex-direction: column; gap: 6px;">
+                <div
+                  v-for="(it, iIdx) in getCheckboxFileLoopItems(data, activeCardSingleCol.id)"
+                  :key="iIdx"
+                  style="display: flex; align-items: flex-start; gap: 6px; font-size: 0.76rem; line-height: 1.4;"
+                >
+                  <i
+                    :class="it.checked ? 'pi pi-check-circle' : 'pi pi-circle'"
+                    :style="{ fontSize: '0.75rem', color: it.checked ? '#16a34a' : '#94a3b8', flexShrink: 0, marginTop: '3px' }"
+                  ></i>
+                  <span
+                    v-if="it.selectedOptions && it.selectedOptions.length"
+                    style="background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; line-height: 1.3;"
+                  >
+                    {{ Array.isArray(it.selectedOptions) ? it.selectedOptions.join(', ') : it.selectedOptions }}
+                  </span>
+                  <span style="flex: 1; min-width: 0; word-break: break-word; color: #1e293b;">
+                    {{ it.text || (it.selectedOptions && it.selectedOptions.length ? '' : '(Chưa nhập tên)') }}
+                  </span>
+                  <a
+                    v-if="it.file && (it.file.url || it.file.id)"
+                    :href="getFileUrl(it.file)"
+                    target="_blank"
+                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap; flex-shrink: 0;"
+                    title="Mở xem tệp"
+                  >
+                    <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                    <span>{{ it.file.name || 'Tệp' }}</span>
+                  </a>
+                </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+            <template v-else-if="activeCardSingleCol && activeCardSingleCol.format === 'text_file_loop'">
+              <div v-if="getTextFileLoopItems(data, activeCardSingleCol.id).length > 0" style="display: flex; flex-direction: column; gap: 4px;">
+                <div
+                  v-for="(it, iIdx) in getTextFileLoopItems(data, activeCardSingleCol.id)"
+                  :key="iIdx"
+                  style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.76rem; line-height: 1.35;"
+                >
+                  <span v-if="it.text" style="color: #1e293b; word-break: break-word;">{{ it.text }}</span>
+                  <a
+                    v-if="it.file && (it.file.url || it.file.id)"
+                    :href="getFileUrl(it.file)"
+                    target="_blank"
+                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                    title="Mở xem tệp"
+                  >
+                    <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                    <span>{{ it.file.name || 'Tệp' }}</span>
+                  </a>
+                </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+            <template v-else-if="activeCardSingleCol && activeCardSingleCol.format === 'checkbox_file'">
+              <div v-if="getCheckboxFileItem(data, activeCardSingleCol.id).hasValue" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.76rem; line-height: 1.35;">
+                <span v-if="getCheckboxFileItem(data, activeCardSingleCol.id).text" style="color: #1e293b; font-weight: 600;">
+                  {{ getCheckboxFileItem(data, activeCardSingleCol.id).text }}
+                </span>
+                <a
+                  v-if="getCheckboxFileItem(data, activeCardSingleCol.id).file && (getCheckboxFileItem(data, activeCardSingleCol.id).file.url || getCheckboxFileItem(data, activeCardSingleCol.id).file.id)"
+                  :href="getFileUrl(getCheckboxFileItem(data, activeCardSingleCol.id).file)"
+                  target="_blank"
+                  style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                  title="Mở xem tệp"
+                >
+                  <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                  <span>{{ getCheckboxFileItem(data, activeCardSingleCol.id).file.name || 'Tệp' }}</span>
+                </a>
+              </div>
+              <span v-else>-</span>
+            </template>
+            <template v-else-if="activeCardSingleCol && activeCardSingleCol.format === 'file'">
+              <div v-if="getFileColumnItems(data, activeCardSingleCol.id).length > 0" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <a
+                  v-for="(f, fIdx) in getFileColumnItems(data, activeCardSingleCol.id)"
+                  :key="fIdx"
+                  :href="getFileUrl(f)"
+                  target="_blank"
+                  style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                  title="Mở xem tệp"
+                >
+                  <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                  <span>{{ f.name || 'Tệp' }}</span>
+                </a>
+              </div>
+              <span v-else>-</span>
+            </template>
             <template v-else>
               <div
                 v-if="String(getActiveCardCellValue(data)).includes('\n')"
@@ -1135,6 +1225,28 @@ const isActiveCardPresenceCol = computed(() => {
     ? card.conditions
     : (card.field ? [{ field: card.field }] : []);
   return rawConds.some((c) => isPresenceField(c?.field));
+});
+
+const activeCardSingleCol = computed(() => {
+  if (!activeMetricCard.value) return null;
+  const card = activeMetricCard.value;
+  const rawConds = Array.isArray(card.conditions) && card.conditions.length > 0
+    ? card.conditions
+    : (card.field ? [{ field: card.field }] : []);
+  const activeConds = rawConds.filter((c) => c && c.field && String(c.field).trim() !== '');
+  if (activeConds.length === 1) {
+    const fieldId = activeConds[0].field;
+    const found = (allAvailableColumnsList.value || []).find((c) => c.id === fieldId);
+    if (found) return found;
+    const allDefs = [
+      ...(personnelStore.importMappingTrips || []),
+      ...(personnelStore.importMappingPersonnel || []),
+      ...(personnelStore.importMappingRelative || []),
+    ].flatMap((g) => g.columns || []);
+    const def = allDefs.find((c) => c && c.id === fieldId);
+    return def ? { ...def, id: fieldId } : { id: fieldId };
+  }
+  return null;
 });
 
 const getActiveCardCellValue = (row) => {

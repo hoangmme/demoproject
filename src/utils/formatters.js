@@ -1116,6 +1116,11 @@ export const formatGenericCellValue = (val, colDef = {}) => {
     }
   }
 
+  // 1b. Mở gói nếu dữ liệu được bọc trong object có mảng items (như checkbox_file_loop: { isSingle: false, items: [...] })
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
+    parsed = parsed.items;
+  }
+
   // 2. Xử lý mảng (Array)
   if (Array.isArray(parsed)) {
     const tokens = [];
@@ -1125,8 +1130,12 @@ export const formatGenericCellValue = (val, colDef = {}) => {
         if (Array.isArray(item)) {
           extractTokens(item);
         } else if (typeof item === 'object' && item !== null) {
-          if (item.text !== undefined || item.file !== undefined) {
-            const t = item.text ? String(item.text).trim() : '';
+          const optStr = Array.isArray(item.selectedOptions) && item.selectedOptions.length > 0
+            ? `[${item.selectedOptions.join(', ')}] `
+            : (item.selected ? (Array.isArray(item.selected) ? `[${item.selected.join(', ')}] ` : `[${item.selected}] `) : '');
+          const rawText = item.text || item.details || item.fullText || '';
+          if (rawText || item.file || optStr) {
+            const t = optStr ? `${optStr}${rawText}`.trim() : String(rawText).trim();
             const fName = item.file?.name || (item.file?.url ? 'Tài liệu' : '');
             const f = fName ? `📎 ${fName}` : '';
             const combined = [t, f].filter(Boolean).join(' - ');
@@ -1134,7 +1143,8 @@ export const formatGenericCellValue = (val, colDef = {}) => {
           } else if (item.col0 !== undefined || item.col1 !== undefined || item.col2 !== undefined) {
             tokens.push(Object.values(item).filter(Boolean).join(': '));
           } else {
-            tokens.push(item.name || item.label || item.value || JSON.stringify(item));
+            const simpleVal = item.name || item.label || item.value || '';
+            if (simpleVal) tokens.push(simpleVal);
           }
         } else {
           const s = String(item).trim();
