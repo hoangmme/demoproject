@@ -83,6 +83,7 @@
     - `PersonnelView.vue`: Khi nhận điều hướng lọc từ Widget trên Dashboard (`routeFilterField`), tự động bổ sung cột ưu tiên `🎯 [Tên cột]` ngay sau các cột cố định ở cả Bảng Thân nhân và Bảng Cán bộ.
 
 ### 11. LEDGER STATUS
-- **Status**: Done (Chuẩn hóa toàn bộ kiến trúc Cột ảo cho Trạng thái hiện diện & Thông tin liên quan, kích hoạt Cột ưu tiên trên cả Bảng Quản lý và Chuyên đề).
+- **Status**: Done (Loại bỏ loading overlay trùng lặp ở góc trên bên trái ChildDashboardView; Chuyển khai báo biến scoping `isInternalId`, `pKeyField`, `tKeyField`, `rKeyField` lên đầu hàm `unifiedTripsList` ở cả ChildDashboardView.vue và DashboardView.vue triệt tiêu hoàn toàn lỗi `ReferenceError: rKeyField is not defined`).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã build thành công).
+

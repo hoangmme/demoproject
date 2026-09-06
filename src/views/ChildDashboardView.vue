@@ -165,11 +165,6 @@
 
     <!-- Main Data Table Card (Matching PersonnelView exactly) -->
     <div class="app-card" style="padding: 0; overflow: hidden; position: relative;">
-      <!-- Loading Overlay -->
-      <div v-if="personnelStore.loading" class="table-loading-overlay">
-        <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: #2563eb;"></i>
-      </div>
-
       <DataTable
         v-model:selection="selectedTrips"
         :value="filteredList"
@@ -1728,6 +1723,10 @@ const unifiedTripsList = computed(() => {
   const pList = personnelStore.personnelList || [];
   const now = new Date();
   const processedTripKeys = new Set();
+  const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  const tKeyField = personnelStore.getTripKeyField();
+  const rKeyField = personnelStore.getRelativeKeyField();
 
   pList.forEach((p) => {
     // 1. Chuyến đi của Cán bộ (p.trips)
@@ -1771,10 +1770,6 @@ const unifiedTripsList = computed(() => {
       if (processedTripKeys.has(uniqueKey)) return;
       processedTripKeys.add(uniqueKey);
 
-      const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-      const pKeyField = personnelStore.getPersonnelKeyField();
-      const tKeyField = personnelStore.getTripKeyField();
-      const rKeyField = personnelStore.getRelativeKeyField();
       const canBoCccd = String(p[pKeyField] ?? p.custom_data?.[pKeyField] ?? '').trim();
       const relCccd = String(t[rKeyField] ?? (isRel && !isInternalId(t.cccd) ? t.cccd : '')).trim();
       const relName = t.relativeName || (isRel ? 'Thân nhân' : p.name);
@@ -1863,7 +1858,6 @@ const unifiedTripsList = computed(() => {
         if (processedTripKeys.has(uniqueKey)) return;
         processedTripKeys.add(uniqueKey);
 
-        const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
         const rCccd = !isInternalId(r[rKeyField] ?? r.cccdthannhan) ? String(r[rKeyField] ?? r.cccdthannhan).trim() : '';
         const canBoCccd = String(p[pKeyField] ?? p.custom_data?.[pKeyField] ?? '').trim();
         const tripCccd = !isInternalId(rt[tKeyField] ?? rt.cccdchuyendi) ? String(rt[tKeyField] ?? rt.cccdchuyendi).trim() : rCccd;
