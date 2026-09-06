@@ -291,6 +291,39 @@ export const extractRowFieldValue = (item, field, personnelStore) => {
     }
   }
 
+  // 4. Kiểm tra trên rawPerson (nếu bản ghi là Thân nhân / Chuyến đi gọi trường của Cán bộ)
+  if ((val === undefined || val === null || val === '') && item.rawPerson) {
+    val = item.rawPerson[field];
+    if (val === undefined || val === null || val === '') {
+      let pcd = item.rawPerson.custom_data;
+      if (typeof pcd === 'string') { try { pcd = JSON.parse(pcd); } catch (e) {} }
+      if (pcd && typeof pcd === 'object') val = pcd[field];
+    }
+  }
+
+  // 5. Kiểm tra trên activeTrip / rawTrip (nếu bản ghi là Thân nhân / Cán bộ gọi trường của Chuyến đi)
+  if (val === undefined || val === null || val === '') {
+    const t = item.activeTrip || item.rawTrip;
+    if (t) {
+      val = t[field];
+      if (val === undefined || val === null || val === '') {
+        let tcd = t.custom_data;
+        if (typeof tcd === 'string') { try { tcd = JSON.parse(tcd); } catch (e) {} }
+        if (tcd && typeof tcd === 'object') val = tcd[field];
+      }
+    }
+  }
+
+  // 6. Kiểm tra trên rawRelative (nếu bản ghi Chuyến đi gọi trường của Thân nhân)
+  if ((val === undefined || val === null || val === '') && item.rawRelative) {
+    val = item.rawRelative[field];
+    if (val === undefined || val === null || val === '') {
+      let rcd = item.rawRelative.custom_data;
+      if (typeof rcd === 'string') { try { rcd = JSON.parse(rcd); } catch (e) {} }
+      if (rcd && typeof rcd === 'object') val = rcd[field];
+    }
+  }
+
   return val !== undefined && val !== null ? val : '';
 };
 

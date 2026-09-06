@@ -229,10 +229,27 @@
   4. `src/utils/dashboardMetrics.js`:
      - Cập nhật hàm trích xuất số `extractRowFieldValue` / `matchSingleCondition`: nếu giá trị trường là đa dòng, chỉ lấy dòng đầu tiên `split('\n')[0]` để parse số, đảm bảo không bị parse nhầm các con số ngày tháng ở các dòng chi tiết bên dưới.
 
-### 30. LEDGER STATUS
-- **Status**: Done (Đã hoàn thiện hiển thị đa dòng chi tiết cho công thức số lần xuất cảnh trong năm, build và sync `WINDOWS_OFFLINE_APP` thành công).
+### 31. SỬA LỖI LỌC THẺ KPI CHUYÊN ĐỀ & TRUY XUẤT TRƯỜNG DỮ LIỆU XUYÊN BẢNG (ChildDashboardView.vue, dashboardMetrics.js, SettingsImportView.vue)
+- **Yêu cầu người dùng**:
+  1. Thêm ô chọn Cột Quốc gia/Nơi đến cho công thức số lần xuất cảnh trong năm.
+  2. Bảng Thân nhân (hoặc Cán bộ) khi gọi trường dữ liệu của bảng khác (chuyến đi, cán bộ chủ quản): thẻ thống kê đếm đúng số, nhưng click vào thẻ không lọc được danh sách.
+  3. Không can thiệp hoặc thay đổi `PersonnelView.vue`, xử lý trực tiếp tại logic Chuyên đề và trích xuất trường.
+- **Bản chất nguyên nhân**:
+  1. Trong `ChildDashboardView.vue`: hàm `toggleMetricCardFilter` có điều kiện gán cứng `if (isAll || cIdx === 0)`, tự động ép mọi cú click vào thẻ ở vị trí số 0 (`cIdx === 0`) thành `activeMetricCardId = 'all'` (hủy lọc). Đồng thời trong `filteredList` có điều kiện chặn `targetCard !== firstCard`. Do đó, nếu thẻ đầu tiên mang điều kiện lọc (như thẻ của người dùng tạo), click vào sẽ không bao giờ được lọc!
+  2. Trong `dashboardMetrics.js`: hàm `extractRowFieldValue` trước đó chỉ tìm trường trên chính bản ghi `item` hoặc `item.custom_data`. Khi đối tượng là Thân nhân nhưng điều kiện chọn cột ngoài bảng (như cột của Cán bộ chủ quản `rawPerson` hoặc cột Chuyến đi `activeTrip`), hàm trả về rỗng.
+- **Thực hiện**:
+  1. `src/views/SettingsImportView.vue`: Bổ sung ô chọn `formulaCountryCol` ("Cột Quốc gia / Nơi đến") vào cấu hình công thức `trips_count_in_year`.
+  2. `src/views/ChildDashboardView.vue`:
+     - Gỡ bỏ hoàn toàn logic chặn `cIdx === 0` và `targetCard !== firstCard`. Cho phép click lọc bất kỳ thẻ nào (kể cả thẻ đầu tiên).
+     - Trong `filteredList`: lọc trực tiếp từ `currentSourceList.value` theo `matchCardCondition(t, targetCard)`, đồng thời hỗ trợ lọc duy nhất `targetCard.isUnique` chuẩn xác theo đúng số đếm của thẻ.
+  3. `src/utils/dashboardMetrics.js`:
+     - Cập nhật `extractRowFieldValue`: khi trường không có trực tiếp trên bản ghi, tự động kiểm tra trên `item.rawPerson` (hồ sơ cán bộ liên quan), `item.activeTrip` / `item.rawTrip` (chuyến đi liên quan), hoặc `item.rawRelative` (thân nhân liên quan). Giúp việc so khớp điều kiện xuyên bảng diễn ra mượt mà, đúng dữ liệu 100%.
+
+### 32. LEDGER STATUS
+- **Status**: Done (Đã sửa triệt để lỗi click lọc thẻ KPI chuyên đề, hỗ trợ gọi trường xuyên bảng trực tiếp, build và sync `WINDOWS_OFFLINE_APP` thành công).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công).
+
 
 
 

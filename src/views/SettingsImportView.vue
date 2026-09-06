@@ -812,6 +812,15 @@
                       </select>
                     </div>
                     <div>
+                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Quốc gia / Nơi đến:</span>
+                      <select v-model="col.formulaCountryCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
+                        <option value="">-- Mặc định (countryName / quoc_gia) --</option>
+                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
+                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
+                        </option>
+                      </select>
+                    </div>
+                    <div>
                       <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Định dạng hiển thị (Tùy chọn):</span>
                       <input
                         v-model="col.formulaLabelFormat"
