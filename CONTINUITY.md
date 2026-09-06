@@ -669,14 +669,15 @@
      - Caching `getSourceList` bằng 3 `computed` properties (`cachedSourceTrips`, `cachedSourcePersonnel`, `cachedSourceRelatives`), chỉ tính toán đúng 1 lần duy nhất khi dữ liệu thay đổi.
      - Thêm cơ chế Memoization `getWidgetChartData(widget)` lưu cache theo Map, tự động dọn sạch khi store hoặc groups thay đổi; thay thế toàn bộ lệnh gọi trong template `v-for`.
      - Song song hóa tải dữ liệu trong `onMounted` bằng `Promise.all`.
-  2. **Chuẩn hóa điều hướng biểu đồ & Giải phóng kẹt bộ lọc**:
-     - Truyền toàn bộ object `item` (gồm cả `item.field`) vào `handleChartItemClick`, định tuyến chính xác 100% trường dữ liệu sang Chuyên đề con.
-     - Mở rộng bộ lọc `country` trong `filteredList` hỗ trợ kiểm tra tất cả biến thể (`countryNameTN`, `countryName`, `country`, `quoc_gia_xuat_canh`, custom_data, chuyến đi thân nhân).
-     - Trong `toggleMetricCardFilter`: Tự động gọi `clearChartFilter()` xóa sạch các query filter ngoài URL (`router.replace`) và reset state để không bao giờ bị kẹt bảng khi bấm chuyển thẻ.
-     - Thêm Banner thông báo bộ lọc biểu đồ đang áp dụng: `🎯 Đang lọc theo biểu đồ: [Tên trường]: [Giá trị] (X bản ghi)` kèm nút `[✖ Bỏ lọc biểu đồ]` giúp người dùng chủ động kiểm soát và giải phóng bộ lọc bất kỳ lúc nào.
+  2. **Chuẩn hóa điều hướng biểu đồ & Giải phóng kẹt bộ lọc (Tuân thủ triệt để Quy tắc 4 - Không Fallback / Không Đoán Mò)**:
+     - **Xóa bỏ hoàn toàn mảng gom trường fallback**: Loại bỏ triệt để mảng `vals = [t.countryNameTN, t.countryName, t.country, ...]` trong `filteredList`.
+     - **Truyền chính xác 100% mã cột cấu hình**: Trong `DashboardView.vue`, hàm `handleChartItemClick` truyền thẳng `filterField: widget.columnId` (hoặc `item.field`) cùng `filterValue: itemName` sang URL query của Chuyên đề con mà không tự chế biến thành `country`, `funding`, `department`.
+     - **Đối soát 1-1 qua `getCellValue`**: `ChildDashboardView.vue` lọc trực tiếp bằng `getCellValue(t, targetField) === targetVal`, lấy chính xác giá trị của đúng cột `columnId` được người dùng cấu hình, tuyệt đối không đoán mò sang cột khác.
+     - **Tự động giải phóng bộ lọc khi chuyển thẻ**: Trong `toggleMetricCardFilter`: Tự động gọi `clearChartFilter()` xóa sạch các query filter ngoài URL (`router.replace`) và reset state để không bao giờ bị kẹt bảng khi bấm chuyển thẻ.
+     - **Banner trạng thái lọc trực quan**: Thêm Banner thông báo bộ lọc biểu đồ đang áp dụng: `🎯 Đang lọc theo biểu đồ: [Tên trường]: [Giá trị] (X bản ghi)` kèm nút `[✖ Bỏ lọc biểu đồ]` giúp người dùng chủ động kiểm soát và giải phóng bộ lọc bất kỳ lúc nào.
 
 ### 58. LEDGER STATUS
-- **Status**: Done (Đã tối ưu tốc độ tải Dashboard cực nhanh, sửa dứt điểm lỗi 0 bản ghi khi click biểu đồ sang chuyên đề con và giải phóng hoàn toàn hiện tượng kẹt bảng dữ liệu).
+- **Status**: Done (Đã tối ưu tốc độ tải Dashboard cực nhanh, xóa bỏ triệt để mọi mảng fallback/đoán mò theo đúng Quy tắc 4, đối soát 1-1 chính xác 100% cột cấu hình và giải phóng kẹt bộ lọc).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
 

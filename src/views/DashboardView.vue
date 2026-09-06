@@ -2923,17 +2923,14 @@ const handleChartItemClick = (widget, itemOrName) => {
   const card = (topic?.metricCards || []).find((c) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title);
   const cardParam = card?.id || 'all';
   const cardConds = (card && card.conditions && card.conditions.length > 0) ? card.conditions : (card?.field ? [{ field: card.field }] : []);
-  const field = itemField || widget.columnId || (cardConds.length > 0 ? cardConds[0].field : '') || 'countryName';
+  const field = itemField || widget.columnId || (cardConds.length > 0 ? cardConds[0].field : '');
 
-  if (field === 'countryName' || field === 'quoc_gia_xuat_canh' || field === 'country' || field === 'countryNameTN') {
-    router.push({ path: targetPath, query: { card: cardParam, country: itemName } });
-  } else if (field === 'fundingName' || field === 'nguon_kinh_phi' || field === 'funding') {
-    router.push({ path: targetPath, query: { card: cardParam, funding: itemName } });
-  } else if (field === 'departmentId' || field === 'departmentName') {
-    router.push({ path: targetPath, query: { card: cardParam, department: itemName } });
-  } else {
-    router.push({ path: targetPath, query: { card: cardParam, filterField: field, filterValue: itemName } });
+  const query = { card: cardParam };
+  if (field) {
+    query.filterField = field;
+    query.filterValue = itemName;
   }
+  router.push({ path: targetPath, query });
 };
 
 const onDisplayTypeChange = () => {

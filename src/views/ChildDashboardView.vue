@@ -2062,32 +2062,13 @@ const filteredList = computed(() => {
     });
   }
 
-  // 3. Country Filter - chỉ áp dụng nếu có từ URL Query
+  // 3. Country Filter - lấy chính xác theo cột quốc gia cấu hình của nguồn dữ liệu
   if (route.query?.country) {
     const cTarget = String(route.query.country).trim().toLowerCase();
+    const countryField = currentDashboardConfig.value.source === 'relatives' ? 'countryNameTN' : 'countryName';
     list = list.filter((t) => {
-      let cd = t.custom_data;
-      if (typeof cd === 'string') {
-        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
-      }
-      const vals = [
-        t.countryNameTN,
-        t.countryName,
-        t.country,
-        t.quoc_gia_xuat_canh,
-        cd?.countryNameTN,
-        cd?.countryName,
-        cd?.country,
-        t.rawPerson?.countryName,
-        t.activeTrip?.countryName,
-        t.activeTrip?.countryNameTN,
-      ];
-      if (Array.isArray(t.trips)) {
-        t.trips.forEach((trip) => {
-          vals.push(trip.countryName, trip.countryNameTN, trip.country);
-        });
-      }
-      return vals.some((v) => v && String(v).trim().toLowerCase() === cTarget);
+      const cellVal = getCellValue(t, countryField);
+      return String(cellVal || '').toLowerCase().trim() === cTarget;
     });
   }
 
@@ -2105,17 +2086,14 @@ const filteredList = computed(() => {
 
   // 5.5. Custom Field Filter from URL Query (chỉ áp dụng nếu có từ URL Query)
   if (route.query?.filterField && route.query?.filterValue) {
-    const targetField = String(route.query.filterField);
+    const targetField = String(route.query.filterField).trim();
     const targetVal = String(route.query.filterValue).toLowerCase().trim();
     list = list.filter((t) => {
       const isPresence = (
         targetField === 'presenceStatus' ||
         targetField === '_presenceStatus' ||
         targetField === 'status' ||
-        targetField === 'tripStatus' ||
-        targetField.includes('presence') ||
-        targetField.includes('hien_dien') ||
-        targetField.includes('hiendien')
+        targetField === 'tripStatus'
       );
       if (isPresence) {
         const p = resolvePresence(t);
@@ -2125,22 +2103,9 @@ const filteredList = computed(() => {
         if (targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') return (p.status === 'completed' && !p.isOverdue) || (!p.isAbroad && !p.isOverdue);
         return pLabel.includes(targetVal);
       }
+      // Lấy chính xác giá trị từ hàm getCellValue theo đúng columnId cấu hình, tuyệt đối không fallback sang cột khác
       const cellVal = getCellValue(t, targetField);
-      const strCellVal = String(cellVal || '').toLowerCase().trim();
-      if (strCellVal === targetVal) return true;
-      if ((targetVal.includes('nước ngoài') || targetVal === 'abroad') && strCellVal.includes('nước ngoài')) return true;
-      if ((targetVal.includes('quá hạn') || targetVal === 'overdue') && (strCellVal.includes('quá hạn') || strCellVal.includes('chưa về'))) return true;
-      if ((targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') && (strCellVal.includes('trong nước') || strCellVal.includes('về nước') || strCellVal.includes('đã về'))) return true;
-
-      // Cũng kiểm tra trực tiếp trong t, custom_data hoặc rawPerson
-      let cd = t.custom_data;
-      if (typeof cd === 'string') {
-        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
-      }
-      const rawVal = String(t[targetField] ?? cd?.[targetField] ?? t.rawPerson?.[targetField] ?? '').toLowerCase().trim();
-      if (rawVal === targetVal || (rawVal && rawVal.includes(targetVal))) return true;
-
-      return strCellVal.includes(targetVal);
+      return String(cellVal || '').toLowerCase().trim() === targetVal;
     });
   }
 
