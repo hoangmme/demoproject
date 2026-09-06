@@ -366,7 +366,8 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
     if (isNaN(count)) {
       const rawVal = extractRowFieldValue(item, field, personnelStore);
       if (rawVal !== undefined && rawVal !== null && rawVal !== '' && rawVal !== '-') {
-        const parsedNum = parseFloat(String(rawVal).replace(/[^0-9.-]+/g, ''));
+        const firstLine = String(rawVal).split('\n')[0];
+        const parsedNum = parseFloat(firstLine.replace(/[^0-9.-]+/g, ''));
         if (!isNaN(parsedNum)) count = parsedNum;
       }
     }

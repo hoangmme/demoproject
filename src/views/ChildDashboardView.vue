@@ -431,7 +431,18 @@
 
             <!-- Default value -->
             <template v-else>
-              <span style="word-break: break-word; line-height: 1.45;">{{ getCellValue(data, col.id) }}</span>
+              <div
+                v-if="String(getCellValue(data, col.id)).includes('\n')"
+                style="white-space: pre-line; line-height: 1.45; font-size: 0.78rem; color: #1e293b;"
+              >
+                <div style="font-weight: 700; color: #0369a1;">
+                  {{ String(getCellValue(data, col.id)).split('\n')[0] }}
+                </div>
+                <div style="font-size: 0.73rem; color: #475569; margin-top: 2px;">
+                  {{ String(getCellValue(data, col.id)).split('\n').slice(1).join('\n') }}
+                </div>
+              </div>
+              <span v-else style="word-break: break-word; line-height: 1.45;">{{ getCellValue(data, col.id) }}</span>
             </template>
           </template>
         </Column>
@@ -466,7 +477,18 @@
               </span>
             </template>
             <template v-else>
-              <span style="font-weight: 700; color: #b91c1c; font-size: 0.8rem;">
+              <div
+                v-if="String(getActiveCardCellValue(data)).includes('\n')"
+                style="white-space: pre-line; line-height: 1.45; font-size: 0.78rem; text-align: left;"
+              >
+                <div style="font-weight: 700; color: #b91c1c;">
+                  {{ String(getActiveCardCellValue(data)).split('\n')[0] }}
+                </div>
+                <div style="font-size: 0.73rem; color: #475569; margin-top: 2px;">
+                  {{ String(getActiveCardCellValue(data)).split('\n').slice(1).join('\n') }}
+                </div>
+              </div>
+              <span v-else style="font-weight: 700; color: #b91c1c; font-size: 0.8rem;">
                 {{ getActiveCardCellValue(data) }}
               </span>
             </template>

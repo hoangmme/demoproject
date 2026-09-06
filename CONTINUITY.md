@@ -208,10 +208,32 @@
   4. `src/assets/styles/main.css`: Gỡ bỏ `text-transform: uppercase;` khỏi `.app-nav-heading`.
   5. `src/components/common/AppSidebar.vue`: Cập nhật text các mục menu sang kiểu viết hoa chữ đầu tiên (`Thêm cán bộ`, `Thêm thân nhân`, `Thêm chuyến đi`, `Quản lý người dùng`, `Nhật ký hệ thống`, `Cấu hình cột & phụ lục`).
 
-### 28. LEDGER STATUS
-- **Status**: Done (Đã xóa bỏ aliases, sửa giao diện hộp kiểm loop không vỡ dòng, chuẩn hóa viết hoa menu sidebar, build và sync `WINDOWS_OFFLINE_APP` thành công).
+### 29. ĐỊNH DẠNG ĐA DÒNG CHO CÔNG THỨC SỐ LẦN XUẤT CẢNH TRONG NĂM (formatters.js, PersonnelView.vue, ChildDashboardView.vue, dashboardMetrics.js)
+- **Yêu cầu người dùng**:
+  - Cột Công thức "Số lần xuất cảnh trong năm" (`trips_count_in_year`) khi hiển thị trên bảng dữ liệu cần show định dạng đa dòng rõ ràng:
+    ```
+    2 lần
+    - Chuyến 1: Mỹ - 22/02/2024
+    - Chuyến 2: Úc - 10/10/2024
+    ```
+- **Thực hiện**:
+  1. `src/utils/formatters.js`:
+     - Nâng cấp hàm `computeTripsCountInYear`: trong quá trình lọc chuyến đi của Cán bộ theo `targetYear`, đồng thời thu thập danh sách chi tiết các chuyến gồm `date`, `dateStr` (định dạng qua `formatDate`) và `country` (trích xuất từ `countryCol` hoặc các trường quốc gia).
+     - Sắp xếp các chuyến đi theo thứ tự thời gian tăng dần (`date`).
+     - Sinh chuỗi hiển thị `fullLabel`: Dòng 1 là số lần (ví dụ `2 lần`), các dòng tiếp theo là danh sách `- Chuyến X: [Nơi đến] - [Ngày xuất cảnh]` ngăn cách bằng ký tự xuống dòng `\n`.
+     - Vẫn giữ nguyên `count`, `value`, `shortLabel` để các phép so sánh số học và thẻ KPI đếm thống kê hoạt động chuẩn xác 100%.
+  2. `src/views/PersonnelView.vue`:
+     - Tinh chỉnh template hiển thị ô bảng cho công thức `trips_count_in_year` (và các ô có chuỗi đa dòng `\n`) ở cả bảng Cán bộ và bảng Thân nhân: hiển thị dòng đầu tiên in đậm màu xanh (`2 lần`), các dòng chi tiết tiếp theo ở dưới với cỡ chữ nhỏ gọn, line-height 1.45.
+  3. `src/views/ChildDashboardView.vue`:
+     - Tinh chỉnh ô hiển thị mặc định và ô lọc theo Metric Card đang chọn để hỗ trợ hiển thị đa dòng đẹp mắt khi chuỗi có chứa `\n`.
+  4. `src/utils/dashboardMetrics.js`:
+     - Cập nhật hàm trích xuất số `extractRowFieldValue` / `matchSingleCondition`: nếu giá trị trường là đa dòng, chỉ lấy dòng đầu tiên `split('\n')[0]` để parse số, đảm bảo không bị parse nhầm các con số ngày tháng ở các dòng chi tiết bên dưới.
+
+### 30. LEDGER STATUS
+- **Status**: Done (Đã hoàn thiện hiển thị đa dòng chi tiết cho công thức số lần xuất cảnh trong năm, build và sync `WINDOWS_OFFLINE_APP` thành công).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` sạch sẽ).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công).
+
 
 
 

@@ -346,7 +346,19 @@
 
             <!-- Formula column -->
             <template v-else-if="isFormulaCol(col.id)">
+              <div
+                v-if="String(getFormulaStatus(data, allColumnDefsMap[col.id] || {})).includes('\n')"
+                style="white-space: pre-line; font-size: 0.78rem; line-height: 1.45; color: #1e293b;"
+              >
+                <div style="font-weight: 700; color: #0369a1;">
+                  {{ getFormulaStatus(data, allColumnDefsMap[col.id] || {}).split('\n')[0] }}
+                </div>
+                <div style="font-size: 0.73rem; color: #475569; margin-top: 2px;">
+                  {{ getFormulaStatus(data, allColumnDefsMap[col.id] || {}).split('\n').slice(1).join('\n') }}
+                </div>
+              </div>
               <span
+                v-else
                 class="badge-pill badge-green"
                 style="font-size: 0.76rem;"
               >
@@ -731,6 +743,17 @@
               </div>
               <span v-else>-</span>
             </template>
+            <div
+              v-else-if="String(getDisplayValue(data, col.id)).includes('\n')"
+              style="white-space: pre-line; line-height: 1.45; font-size: 0.78rem; color: #1e293b;"
+            >
+              <div style="font-weight: 700; color: #0369a1;">
+                {{ String(getDisplayValue(data, col.id)).split('\n')[0] }}
+              </div>
+              <div style="font-size: 0.73rem; color: #475569; margin-top: 2px;">
+                {{ String(getDisplayValue(data, col.id)).split('\n').slice(1).join('\n') }}
+              </div>
+            </div>
             <span v-else :class="col.id === 'countryName' || col.id === 'country' || col.id === 'content' ? 'badge-pill badge-blue' : ''">
               {{ getDisplayValue(data, col.id) }}
             </span>

@@ -711,32 +711,63 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     }
   }
 
-  // 3. Đếm số chuyến đi trong năm targetYear của Cán bộ
+  // 3. Đếm số chuyến đi trong năm targetYear của Cán bộ và thu thập danh sách chi tiết
   let count = 0;
+  const matchedTrips = [];
+  const countryCol = formulaConfig.formulaCountryCol || formulaConfig.countryCol || 'countryName';
+
   for (const t of personTrips) {
     const rawDep = getRecordFieldValue(t, depCol) || t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngayDi;
     const d = parseDateValue(rawDep);
     if (d && d.getFullYear() === targetYear) {
       count++;
+      const country = getRecordFieldValue(t, countryCol) || getRecordFieldValue(t, 'quoc_gia_xuat_canh') || getRecordFieldValue(t, 'quoc_gia') || getRecordFieldValue(t, 'quoc_gia_den') || getRecordFieldValue(t, 'country') || t.countryName || t.country || '';
+      matchedTrips.push({
+        date: d,
+        dateStr: formatDate(d) || formatDate(rawDep) || '',
+        country: country || 'Chưa rõ nơi đến',
+        trip: t,
+      });
     }
   }
 
   // Nếu bản ghi hiện tại là 1 chuyến đi nhưng personTrips rỗng hoặc chỉ có 1
   if (count === 0 && currentDepDate) {
     count = 1;
+    const country = getRecordFieldValue(record, countryCol) || getRecordFieldValue(record, 'quoc_gia_xuat_canh') || getRecordFieldValue(record, 'quoc_gia') || getRecordFieldValue(record, 'quoc_gia_den') || getRecordFieldValue(record, 'country') || record.countryName || record.country || '';
+    matchedTrips.push({
+      date: currentDepDate,
+      dateStr: formatDate(currentDepDate) || formatDate(rawCurrentDep) || '',
+      country: country || 'Chưa rõ nơi đến',
+      trip: record,
+    });
   }
 
-  const label = labelTpl
+  // Sắp xếp các chuyến đi theo ngày tăng dần
+  matchedTrips.sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0));
+
+  const mainCountStr = labelTpl
     .replace(/{count}/g, String(count))
     .replace(/{year}/g, String(targetYear));
+
+  const shortLabel = count > 0 ? (mainCountStr.trim() ? mainCountStr : `${count} lần`) : '0 lần';
+  let fullLabel = shortLabel;
+
+  if (matchedTrips.length > 0) {
+    const detailLines = matchedTrips.map((t, idx) => `- Chuyến ${idx + 1}: ${t.country} - ${t.dateStr}`);
+    fullLabel = `${shortLabel}\n${detailLines.join('\n')}`;
+  } else if (count === 0) {
+    fullLabel = '-';
+  }
 
   return {
     status: 'normal',
     count,
     value: count,
     year: targetYear,
-    label: label.trim() ? label : `${count} lần`,
-    shortLabel: `${count} lần`,
+    label: fullLabel,
+    shortLabel: shortLabel,
+    details: matchedTrips,
     cssClass: '',
   };
 };
