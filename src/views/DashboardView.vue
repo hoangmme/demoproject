@@ -240,17 +240,9 @@
                   <h4 style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin: 0;">
                     {{ widget.title }} ({{ getWidgetChartData(widget).list.length }} phân loại)
                   </h4>
-                  <span style="font-size: 0.7rem; color: #64748b;">
-                    {{ getSourceLabel(widget.source) }} - Cột: <b>{{ widget.columnLabel || widget.columnId }}</b>
-                  </span>
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;">
-                <InputText
-                  v-model="customChartSearches[widget.id]"
-                  placeholder="Tìm..."
-                  style="font-size: 0.72rem; padding: 2px 6px; width: 100px; height: 26px;"
-                />
                 <button type="button" class="btn-card-setting" @click="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
                   <i class="pi pi-pencil"></i>
                 </button>
@@ -262,7 +254,7 @@
 
             <!-- Vertical Columns Area -->
             <div style="height: 240px; overflow-x: auto; overflow-y: hidden; display: flex; align-items: flex-end; padding: 12px 6px 4px 6px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: 8px;">
-              <div v-if="getFilteredChartList(widget).length === 0" style="width: 100%; text-align: center; color: #94a3b8; padding: 3rem 0; font-size: 0.78rem;">
+              <div v-if="getWidgetChartData(widget).list.length === 0" style="width: 100%; text-align: center; color: #94a3b8; padding: 3rem 0; font-size: 0.78rem;">
                 Không có dữ liệu phân loại phù hợp.
               </div>
               <div
@@ -270,7 +262,7 @@
                 style="display: flex; align-items: flex-end; gap: 14px; min-width: 100%; height: 100%; padding-bottom: 2px;"
               >
                 <div
-                  v-for="(item, cIdx) in getFilteredChartList(widget)"
+                  v-for="(item, cIdx) in getWidgetChartData(widget).list"
                   :key="item.name"
                   class="country-column-item"
                   @click="handleWidgetClick(widget)"
@@ -313,17 +305,9 @@
                   <h4 style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin: 0;">
                     {{ widget.title }} ({{ getWidgetChartData(widget).list.length }} phân loại)
                   </h4>
-                  <span style="font-size: 0.7rem; color: #64748b;">
-                    {{ getSourceLabel(widget.source) }} - Cột: <b>{{ widget.columnLabel || widget.columnId }}</b>
-                  </span>
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;">
-                <InputText
-                  v-model="customChartSearches[widget.id]"
-                  placeholder="Tìm..."
-                  style="font-size: 0.72rem; padding: 2px 6px; width: 100px; height: 26px;"
-                />
                 <button type="button" class="btn-card-setting" @click="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
                   <i class="pi pi-pencil"></i>
                 </button>
@@ -334,11 +318,11 @@
             </div>
 
             <div style="max-height: 240px; overflow-y: auto; padding-right: 4px; flex: 1;">
-              <div v-if="getFilteredChartList(widget).length === 0" style="text-align: center; color: #94a3b8; padding: 1.5rem 0; font-size: 0.78rem;">
+              <div v-if="getWidgetChartData(widget).list.length === 0" style="text-align: center; color: #94a3b8; padding: 1.5rem 0; font-size: 0.78rem;">
                 Không có dữ liệu phân loại phù hợp.
               </div>
               <div
-                v-for="(item, cIdx) in getFilteredChartList(widget)"
+                v-for="(item, cIdx) in getWidgetChartData(widget).list"
                 :key="item.name"
                 class="breakdown-row"
                 @click="handleWidgetClick(widget)"
@@ -1205,7 +1189,7 @@ const openSingleSetting = (type) => {
 // 2. CUSTOM DASHBOARD GROUPS & DYNAMIC WIDGETS
 // =========================================================================
 const customGroups = ref([]);
-const customChartSearches = ref({});
+
 
 const isGroupDialogOpen = ref(false);
 const editingGroup = ref(null);
@@ -2595,12 +2579,7 @@ const getWidgetChartData = (widget) => {
   return res;
 };
 
-const getFilteredChartList = (widget) => {
-  const data = getWidgetChartData(widget).list;
-  const q = (customChartSearches.value[widget.id] || '').toLowerCase().trim();
-  if (!q) return data;
-  return data.filter((item) => item.name.toLowerCase().includes(q));
-};
+
 
 const availableColumnsForWidgetSource = computed(() => {
   const source = widgetForm.value.source;
