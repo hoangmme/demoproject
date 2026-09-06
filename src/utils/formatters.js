@@ -799,12 +799,13 @@ export const computeTripPresence = (t, formulaConfig = {}) => {
       }
 
       if (isOverdue) {
+        const countrySuffix = country ? `: ${country}` : '';
         return {
           status: 'overdue',
           isAbroad: true,
           isOverdue: true,
-          label: `${labelNotReturnedYet} (${overdueDays} ngày)`,
-          shortLabel: labelNotReturnedYet,
+          label: `${labelNotReturnedYet}${countrySuffix} (${labelOverdue} ${overdueDays} ngày)`,
+          shortLabel: `${labelNotReturnedYet} (${labelOverdue})`,
           country,
           overdueDays,
         };
