@@ -6,7 +6,6 @@ import LoginView from '@/views/LoginView.vue';
 import PersonnelView from '@/views/PersonnelView.vue';
 import ChildDashboardView from '@/views/ChildDashboardView.vue';
 import DashboardView from '@/views/DashboardView.vue';
-import AppendixReportView from '@/views/AppendixReportView.vue';
 import SettingsImportView from '@/views/SettingsImportView.vue';
 import UserManagementView from '@/views/UserManagementView.vue';
 import AuditLogView from '@/views/AuditLogView.vue';
@@ -56,30 +55,19 @@ const routes = [
   },
   {
     path: '/pl1',
-    name: 'Appendix1',
-    component: AppendixReportView,
-    props: { defaultId: 'pl1' },
-    meta: { title: 'Báo cáo Phụ lục 1', requiresAuth: true },
+    redirect: '/dashboard',
   },
   {
     path: '/pl2',
-    name: 'Appendix2',
-    component: AppendixReportView,
-    props: { defaultId: 'pl2' },
-    meta: { title: 'Báo cáo Phụ lục 2', requiresAuth: true },
+    redirect: '/dashboard',
   },
   {
     path: '/pl3',
-    name: 'Appendix3',
-    component: AppendixReportView,
-    props: { defaultId: 'pl3' },
-    meta: { title: 'Báo cáo Phụ lục 3', requiresAuth: true },
+    redirect: '/dashboard',
   },
   {
     path: '/appendix/:id',
-    name: 'DynamicAppendix',
-    component: AppendixReportView,
-    meta: { title: 'Báo cáo Phụ lục', requiresAuth: true },
+    redirect: (to) => `/dashboard-topic/${to.params.id}`,
   },
   {
     path: '/dashboard-topic/:id',

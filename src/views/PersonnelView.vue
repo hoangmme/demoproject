@@ -2297,13 +2297,6 @@ const executeImport = async () => {
 
         // Tạo bản ghi chuyến đi nếu có thông tin
         if (Object.keys(currentTrip).length > 0 && targetPersonId) {
-          const tripPayload = {
-            id: 'trip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7),
-            personnelId: targetPersonId,
-            personnelName: rowData.name,
-            ...currentTrip,
-          };
-          await apiClient.post('/items/appendix1', tripPayload).catch(() => {});
         }
 
         count++;

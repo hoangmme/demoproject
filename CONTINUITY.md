@@ -153,8 +153,22 @@
      - Dọn dẹp hàm `matchSingleCondition` trùng lặp trong `ChildDashboardView.vue`, đưa toàn bộ về gọi `matchSharedCardCondition` từ `dashboardMetrics.js`.
      - Số lượng trên thẻ KPI và danh sách bản ghi hiển thị trên bảng khớp nhau 100%.
 
-### 20. LEDGER STATUS
-- **Status**: Done (Đã khôi phục và kiểm thử điều kiện đếm số lần xuất cảnh trong năm, build `dist` và sync sang `WINDOWS_OFFLINE_APP/frontend` thành công 100%).
+### 21. LOẠI BỎ TRIỆT ĐỂ BẢNG PHỤ LỤC CŨ & CƠ CHẾ FALLBACK (AppSidebar.vue, SettingsImportView.vue, router)
+- **Vấn đề trước đây**:
+  - Khi chưa có bất kỳ Chuyên đề nào gắn chọn chế độ Phụ lục (`displayMode: 'appendix'`), hệ thống tự động fallback hiển thị 3 bảng phụ lục cũ cứng (`PL1`, `PL2`, `PL3`) trên Menu Sidebar và trang Cấu hình.
+- **Xử lý dứt điểm theo yêu cầu người dùng**:
+  1. **Triệt tiêu cơ chế Fallback (`AppSidebar.vue`)**:
+     - `appendixDashboards` chỉ lọc duy nhất các Chuyên đề được cấu hình chế độ Phụ lục: `(dynamicDashboards || []).filter(d => d.displayMode === 'appendix')`.
+     - Nếu không có Chuyên đề nào chọn Phụ lục -> `appendixDashboards` rỗng `[]`, thanh Menu Sidebar **hoàn toàn không hiển thị khối "Báo cáo Phụ lục"** (triệt tiêu hoàn toàn fallback cũ).
+     - Khi một Chuyên đề được chọn `displayMode === 'appendix'`, chuyên đề đó hiển thị sạch sẽ trực tiếp dưới danh mục Phụ lục và mở theo đường dẫn `/dashboard-topic/:id`.
+  2. **Xóa bỏ các file view & cấu hình Phụ lục cũ**:
+     - Xóa hoàn toàn 4 file view cũ không còn dùng: `Appendix1View.vue`, `Appendix2View.vue`, `Appendix3View.vue`, `AppendixReportView.vue`.
+     - Điều hướng các route cũ `/pl1`, `/pl2`, `/pl3`, `/appendix/:id` an toàn về Dashboard (`src/router/index.js`).
+     - Gỡ bỏ tab Quản lý Phụ lục cũ và mảng `DEFAULT_APPENDICES_CONFIG` trong `SettingsImportView.vue`. Toàn bộ Phụ lục nay được quản lý thống nhất, linh hoạt tại tab "Quản lý Chuyên đề".
+     - Xóa lệnh ghi vào bảng `appendix1` cũ trong `PersonnelView.vue`.
+
+### 22. LEDGER STATUS
+- **Status**: Done (Đã xóa toàn bộ 3 bảng phụ lục cũ, loại bỏ 100% cơ chế fallback, build `dist` và sync sang `WINDOWS_OFFLINE_APP/frontend` thành công).
 - **Flags**: None.
 - **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` hoàn tất không lỗi).
 

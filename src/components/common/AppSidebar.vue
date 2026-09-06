@@ -261,33 +261,6 @@ const isQuickTripSelectOpen = ref(false);
 const quickTripType = ref('personnel');
 const selectedQuickTripTargetKey = ref('');
 
-const DEFAULT_APPENDICES = [
-  {
-    id: 'pl1',
-    code: 'PL1',
-    title: 'Phụ lục 1: Danh sách Cán bộ đi nước ngoài',
-    description: 'Thống kê chi tiết các lượt cán bộ xuất cảnh, nhập cảnh và công tác/học tập tại nước ngoài',
-    source: 'trips',
-    columns: ['code', 'name', 'departmentName', 'chuc_vu', 'decisionNumber', 'countryName', 'departureDate', 'arrivalDate', 'purpose', 'fundingName'],
-  },
-  {
-    id: 'pl2',
-    code: 'PL2',
-    title: 'Phụ lục 2: Cán bộ có thân nhân ở nước ngoài',
-    description: 'Thống kê chi tiết danh sách thân nhân của cán bộ, đảng viên đang sinh sống, học tập, làm việc tại nước ngoài',
-    source: 'relatives',
-    columns: ['parentName', 'relationshipName', 'relativeName', 'birthYear', 'countryName', 'timeAbroad', 'unitAbroad', 'occupation'],
-  },
-  {
-    id: 'pl3',
-    code: 'PL3',
-    title: 'Phụ lục 3: Cán bộ có vấn đề chính trị & Kỷ luật',
-    description: 'Thống kê cán bộ có lưu ý chính trị, kết luận thẩm tra tiêu chuẩn chính trị hoặc xử lý kỷ luật',
-    source: 'personnel',
-    columns: ['code', 'name', 'departmentName', 'chuc_vu', 'decisionNumber', 'issues', 'discipline', 'politicalVerificationResult'],
-  },
-];
-
 const DEFAULT_DASHBOARDS = [
   {
     id: 'trips',
@@ -298,7 +271,6 @@ const DEFAULT_DASHBOARDS = [
   },
 ];
 
-const dynamicAppendices = ref([...DEFAULT_APPENDICES]);
 const dynamicDashboards = ref([...DEFAULT_DASHBOARDS]);
 
 const topicDashboards = computed(() => {
@@ -306,21 +278,10 @@ const topicDashboards = computed(() => {
 });
 
 const appendixDashboards = computed(() => {
-  const fromDash = (dynamicDashboards.value || []).filter((d) => d.displayMode === 'appendix');
-  if (fromDash.length > 0) return fromDash;
-  return dynamicAppendices.value || [];
+  return (dynamicDashboards.value || []).filter((d) => d.displayMode === 'appendix');
 });
 
 const loadSidebarData = async () => {
-  try {
-    const saved = await getAppSettings('custom_appendices_config', null);
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-      dynamicAppendices.value = saved;
-    }
-  } catch (e) {
-    console.error('Error loading sidebar appendices:', e);
-  }
-
   try {
     const savedDash = await getAppSettings('custom_dashboards_config', null);
     if (savedDash && Array.isArray(savedDash) && savedDash.length > 0) {
@@ -341,13 +302,7 @@ const getDashboardRoute = (dash) => {
 };
 
 const getAppendixRoute = (pl) => {
-  if (pl.displayMode === 'appendix' || pl.id?.startsWith('dash_') || pl.id?.startsWith('DB-')) {
-    return `/dashboard-topic/${pl.id}`;
-  }
-  if (pl.id === 'pl1') return '/pl1';
-  if (pl.id === 'pl2') return '/pl2';
-  if (pl.id === 'pl3') return '/pl3';
-  return `/appendix/${pl.id}`;
+  return `/dashboard-topic/${pl.id}`;
 };
 
 const handleInputClick = (action) => {
