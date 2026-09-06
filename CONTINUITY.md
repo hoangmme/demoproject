@@ -85,13 +85,15 @@
 - **Tùy chọn Ẩn/Hiện Cột Đối Chiếu (showCompareCol)**:
   - Bổ sung hộp kiểm `Hiện cột đối chiếu khi ấn vào thống kê (🎯)` trong Cấu hình Chuyên đề (`SettingsImportView.vue`).
   - Khi tick chọn: Bảng dữ liệu tự động hiển thị thêm cột đối chiếu `🎯 [Tên cột]`. Khi không tick: Bảng giữ nguyên các cột hiện có, không bị nở thêm cột đối chiếu.
-- **Lọc Trạng Thái Hiện Diện Chuyên Đề Thân Nhân (`source === 'relatives'`)**:
+- **Lọc Trạng Thái Hiện Diện & Thẻ Thống Kê Chuyên Đề (`ChildDashboardView.vue` & `DashboardView.vue`)**:
   - Tự động liên kết và thu thập đầy đủ toàn bộ chuyến đi của Thân nhân từ cả hồ sơ thân nhân (`r.trips`) và chuyến đi nằm trong hồ sơ Cán bộ chủ quản (`p.trips` có `isRelative: true` hoặc khớp CCCD thân nhân).
   - Phân giải trạng thái hiện diện (`resolvePresence`) chính xác cho từng thân nhân (Đang ở nước ngoài / Trong nước / Quá hạn).
-  - Khớp chuẩn xác điều kiện lọc trạng thái hiện diện (hỗ trợ đầy đủ các toán tử `contains`, `equals` với các cụm từ "Đang ở nước ngoài", "ở nước ngoài", "quá hạn", "trong nước").
+  - Khớp chuẩn xác điều kiện theo đúng toán tử và từ khóa do người dùng nhập/chọn trong Cài đặt (`equals`, `contains`, `not_equals`, `not_contains`...), **tuyệt đối không dùng fuzzy guessing tự suy đoán từ khóa**.
+  - Khi điều kiện lọc là cột thuộc Bảng Chuyến đi (`isTripField`), tự động duyệt qua danh sách các chuyến đi (`item.trips`) của thân nhân/cán bộ để so khớp chính xác.
+  - Bỏ triệt để logic khóa cứng bảng theo thẻ đầu tiên (`topicBaselineList` trước đây lấy thẻ đầu tiên lọc toàn bộ bảng trước khi click). Giờ đây danh sách bảng hiển thị toàn bộ bản ghi theo mặc định, và khi click vào bất kỳ thẻ thống kê nhanh nào thì bảng sẽ áp dụng bộ lọc tương ứng của thẻ đó (click lại hoặc chọn Tất cả sẽ khôi phục hiển thị toàn bộ).
 
 ### 11. LEDGER STATUS
-- **Status**: Done (Đã thêm nút tick ẩn/hiện cột đối chiếu trong cấu hình chuyên đề; Đã kết nối dữ liệu chuyến đi và sửa triệt để bộ lọc trạng thái hiện diện ở chuyên đề thân nhân).
+- **Status**: Done (Đã loại bỏ hoàn toàn việc suy đoán từ khóa fuzzy guessing, khớp chuẩn xác theo toán tử người dùng chọn; Đã sửa dứt điểm lỗi ấn vào thẻ thống kê nhanh không có tác dụng do bảng bị khóa cứng theo thẻ đầu tiên; Đã hỗ trợ liên kết cột chuyến đi vào bảng thân nhân khi lọc).
 - **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], đã build thành công).
+- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible], `npm run build` thành công 100%).
 

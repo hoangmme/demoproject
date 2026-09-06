@@ -1736,57 +1736,97 @@ const getSourceList = (source) => {
   });
 };
 
+const checkConditionMatch = (val, op, target) => {
+  const strVal = String(val !== undefined && val !== null && val !== '-' ? val : '').toLowerCase().trim();
+  const strTarget = String(target || '').toLowerCase().trim();
+
+  if (op === 'has_value') return !!strVal && strVal !== 'chưa rõ' && strVal !== '-';
+  if (op === 'empty') return !strVal || strVal === 'chưa rõ' || strVal === '-';
+
+  if (op === 'equals') {
+    if (strVal === strTarget) return true;
+    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (sub.length > 1) return sub.some((k) => strVal === k);
+    return false;
+  }
+  if (op === 'not_equals') {
+    if (strVal === strTarget) return false;
+    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (sub.length > 1) return !sub.some((k) => strVal === k);
+    return true;
+  }
+  if (op === 'contains') {
+    if (strVal.includes(strTarget)) return true;
+    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (sub.length > 1) return sub.some((k) => strVal.includes(k));
+    return false;
+  }
+  if (op === 'not_contains') {
+    if (strVal.includes(strTarget)) return false;
+    const sub = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
+    if (sub.length > 1) return !sub.some((k) => strVal.includes(k));
+    return true;
+  }
+  if (op === 'before' || op === 'after') {
+    const dVal = new Date(val).getTime();
+    const dTarget = new Date(target).getTime();
+    if (isNaN(dVal) || isNaN(dTarget)) return false;
+    return op === 'before' ? dVal < dTarget : dVal > dTarget;
+  }
+  if (op === 'gt' || op === 'gte' || op === 'lt' || op === 'lte') {
+    const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
+    const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
+    if (isNaN(numVal) || isNaN(numTarget)) return false;
+    if (op === 'gt') return numVal > numTarget;
+    if (op === 'gte') return numVal >= numTarget;
+    if (op === 'lt') return numVal < numTarget;
+    if (op === 'lte') return numVal <= numTarget;
+  }
+  return true;
+};
+
 const matchSingleCondition = (item, cond) => {
   if (!cond || !cond.field || String(cond.field).trim() === '') return true;
 
   const field = cond.field;
   const op = cond.operator || 'has_value';
-  const target = String(cond.value || '').trim().toLowerCase();
+  const target = String(cond.value || '').trim();
 
   // 1a. Đối tượng Thân nhân / Cán bộ
   if (field === 'isRelative' || field === '_doiTuong' || field === 'doi_tuong') {
     const isRel = !!item.isRelative;
     const objType = isRel ? 'thân nhân' : 'cán bộ';
+    const tLower = target.toLowerCase();
     if (op === 'equals') {
-      if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === true;
-      if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === false;
-      return objType === target;
+      if (tLower === 'true' || tLower.includes('thân nhân') || tLower === '1') return isRel === true;
+      if (tLower === 'false' || tLower.includes('cán bộ') || tLower === '0') return isRel === false;
+      return objType === tLower;
     }
     if (op === 'not_equals') {
-      if (target === 'true' || target.includes('thân nhân') || target === '1') return isRel === false;
-      if (target === 'false' || target.includes('cán bộ') || target === '0') return isRel === true;
-      return objType !== target;
+      if (tLower === 'true' || tLower.includes('thân nhân') || tLower === '1') return isRel === false;
+      if (tLower === 'false' || tLower.includes('cán bộ') || tLower === '0') return isRel === true;
+      return objType !== tLower;
     }
     if (op === 'contains') {
-      if (target.includes('thân nhân')) return isRel === true;
-      if (target.includes('cán bộ')) return isRel === false;
-      return objType.includes(target);
+      if (tLower.includes('thân nhân')) return isRel === true;
+      if (tLower.includes('cán bộ')) return isRel === false;
+      return objType.includes(tLower);
     }
     if (op === 'not_contains') {
-      if (target.includes('thân nhân')) return isRel === false;
-      if (target.includes('cán bộ')) return isRel === true;
-      return !objType.includes(target);
-    }
-    if (op === 'has_value') {
-      if (target.includes('thân nhân')) return isRel === true;
-      return isRel === false;
-    }
-    if (op === 'empty') {
-      return isRel === true;
+      if (tLower.includes('thân nhân')) return isRel === false;
+      if (tLower.includes('cán bộ')) return isRel === true;
+      return !objType.includes(tLower);
     }
     return isRel;
   }
 
   // 1b. Special Formula Fields & Điều kiện đếm
   if (op.startsWith('count_') || field === 'dieu_kien_dem' || field === '_tripCount') {
-    // Ưu tiên đọc giá trị trực tiếp từ cột nếu đã có (như cột công thức đếm số lần xuất cảnh)
     const rawVal = getRowFieldValue(item, field);
     let count = NaN;
     if (rawVal !== undefined && rawVal !== null && rawVal !== '' && rawVal !== '-') {
       const parsedNum = parseFloat(String(rawVal).replace(/[^0-9.-]+/g, ''));
-      if (!isNaN(parsedNum)) {
-        count = parsedNum;
-      }
+      if (!isNaN(parsedNum)) count = parsedNum;
     }
 
     if (isNaN(count)) {
@@ -1826,120 +1866,54 @@ const matchSingleCondition = (item, cond) => {
     return res.isWarning;
   }
 
-  // 1b-2. Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)
-  // 1b-2. Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)
-  if (isPresenceField(field)) {
-    const pVal = resolveVirtualColumnValue(item, field) || item.presenceStatus || item._presenceStatus || '';
-    const strPVal = String(pVal).toLowerCase().trim();
-    if (op === 'equals') {
-      if (strPVal === target) return true;
-      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return true;
-      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return true;
-      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return true;
-      return false;
+  // 1c. NẾU ĐIỀU KIỆN LÀ CỘT CỦA BẢNG CHUYẾN ĐI (BẢNG HIỆN TẠI LÀ THÂN NHÂN HOẶC CÁN BỘ)
+  const tripColIds = (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id));
+  const isTripField = isPresenceField(field) || tripColIds.includes(field);
+
+  const isCurrentRelativesTable = item.isRelative || !!item.rawRelative;
+  const isCurrentPersonnelTable = !item.isRelative && (item.personnelId || item.code);
+
+  if (isTripField && (isCurrentRelativesTable || isCurrentPersonnelTable)) {
+    const colDef = (personnelStore.importMappingTrips || []).flatMap((g) => g.columns || []).find((c) => c.id === field);
+    const isPresenceFormula = colDef && colDef.format === 'formula' && colDef.formulaType === 'presence_status';
+
+    // 1c-1. Kiểm tra trạng thái hiện diện trực tiếp trên bản ghi Thân nhân / Cán bộ
+    if (isPresenceField(field) || isPresenceFormula) {
+      const pVal = resolveVirtualColumnValue(item, field) || item.presenceStatus || item._presenceStatus || '';
+      if (checkConditionMatch(pVal, op, target)) return true;
+      if (item.presenceLabel && checkConditionMatch(item.presenceLabel, op, target)) return true;
     }
-    if (op === 'not_equals') {
-      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return false;
-      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return false;
-      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return false;
-      return strPVal !== target;
+
+    // 1c-2. Kiểm tra trong danh sách các chuyến đi (item.trips)
+    const trips = Array.isArray(item.trips) ? item.trips : [];
+    if (trips.length > 0) {
+      return trips.some((t) => {
+        if (isPresenceField(field) || isPresenceFormula) {
+          const tp = resolvePresence(t);
+          const tVal = tp.shortLabel || tp.label || '';
+          if (checkConditionMatch(tVal, op, target)) return true;
+          if (tp.label && checkConditionMatch(tp.label, op, target)) return true;
+          return false;
+        }
+        let tVal = getRowFieldValue(t, field);
+        if (tVal === '-' || tVal === undefined || tVal === '') {
+          const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
+          tVal = t[field] !== undefined ? t[field] : tCustom[field];
+        }
+        return checkConditionMatch(tVal, op, target);
+      });
     }
-    if (op === 'contains') {
-      if (strPVal.includes(target) || target.includes(strPVal)) return true;
-      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return true;
-      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return true;
-      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return true;
-      return false;
+
+    // Nếu không có chuyến đi nào:
+    if (isPresenceField(field) || isPresenceFormula) {
+      return checkConditionMatch('Trong nước', op, target);
     }
-    if (op === 'not_contains') {
-      if ((target.includes('nước ngoài') || target === 'abroad') && strPVal.includes('nước ngoài')) return false;
-      if ((target.includes('quá hạn') || target === 'overdue') && (strPVal.includes('quá hạn') || strPVal.includes('chưa về'))) return false;
-      if ((target.includes('trong nước') || target.includes('về nước') || target === 'completed') && (strPVal.includes('trong nước') || strPVal.includes('đã về') || strPVal.includes('về nước'))) return false;
-      return !strPVal.includes(target);
-    }
-    if (op === 'has_value') return !!strPVal && strPVal !== '-';
-    if (op === 'empty') return !strPVal || strPVal === '-';
-    return true;
+    return checkConditionMatch('', op, target);
   }
 
-  // 1c. Dynamic Field Condition (Áp dụng chuẩn toán tử cho TẤT CẢ các cột và công thức)
+  // 1d. Cột thông thường: đọc trực tiếp giá trị của bản ghi
   const rawVal = getRowFieldValue(item, field);
-  const fieldVal = (rawVal !== undefined && rawVal !== null && rawVal !== '-')
-    ? String(rawVal).trim()
-    : '';
-
-  if (op === 'has_value') {
-    return !!fieldVal && fieldVal !== 'Chưa rõ' && fieldVal !== '-';
-  }
-  if (op === 'empty') {
-    return !fieldVal || fieldVal === 'Chưa rõ' || fieldVal === '-';
-  }
-
-  const strVal = fieldVal.toLowerCase().replace(/\s+/g, ' ');
-  const rawTarget = String(cond.value || '').trim();
-  const strTarget = rawTarget.toLowerCase().replace(/\s+/g, ' ');
-
-  if (op === 'equals') {
-    if (strVal === strTarget) return true;
-    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (subKeywords.length > 1) {
-      if (subKeywords.some((k) => strVal === k)) return true;
-    }
-    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return true;
-    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return true;
-    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return true;
-    return false;
-  }
-  if (op === 'not_equals') {
-    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return false;
-    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return false;
-    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return false;
-    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (subKeywords.length > 1) {
-      return !subKeywords.some((k) => strVal === k) && strVal !== strTarget;
-    }
-    return strVal !== strTarget;
-  }
-  if (op === 'contains') {
-    if (strVal.includes(strTarget)) return true;
-    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return true;
-    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return true;
-    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return true;
-    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (subKeywords.length > 1) {
-      return subKeywords.some((k) => strVal.includes(k));
-    }
-    return strVal.includes(strTarget);
-  }
-  if (op === 'not_contains') {
-    if ((strTarget.includes('nước ngoài') || strTarget === 'abroad') && strVal.includes('nước ngoài')) return false;
-    if ((strTarget.includes('quá hạn') || strTarget === 'overdue') && (strVal.includes('quá hạn') || strVal.includes('chưa về'))) return false;
-    if ((strTarget.includes('trong nước') || strTarget.includes('về nước') || strTarget === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return false;
-    const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-    if (subKeywords.length > 1) {
-      return !subKeywords.some((k) => strVal.includes(k));
-    }
-    return !strVal.includes(strTarget);
-  }
-
-  if (op === 'before' || op === 'after') {
-    const dVal = new Date(rawVal).getTime();
-    const dTarget = new Date(cond.value).getTime();
-    if (isNaN(dVal) || isNaN(dTarget)) return false;
-    return op === 'before' ? dVal < dTarget : dVal > dTarget;
-  }
-
-  if (op === 'gte' || op === 'lte' || op === 'gt' || op === 'lt') {
-    const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
-    const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
-    if (isNaN(numVal) || isNaN(numTarget)) return false;
-    if (op === 'gt') return numVal > numTarget;
-    if (op === 'gte') return numVal >= numTarget;
-    if (op === 'lt') return numVal < numTarget;
-    if (op === 'lte') return numVal <= numTarget;
-  }
-
-  return true;
+  return checkConditionMatch(rawVal, op, target);
 };
 
 const matchCardCondition = (item, card) => {
@@ -2011,20 +1985,14 @@ const getCardMetricValueForTopic = (card, topic) => {
   }
   const fullList = getSourceList(src);
 
-  // Xác định tập dữ liệu cơ sở của Chuyên đề (Baseline List dựa trên thẻ đầu tiên)
-  const firstCard = topicCards[0];
-  let baselineList = fullList;
-  if (firstCard && !isCardAllType(firstCard)) {
-    baselineList = fullList.filter((item) => matchCardCondition(item, firstCard));
-  }
-
   const isUnique = !!(actualCard.isUnique || card.isUnique);
+  const targetItems = isCardAllType(actualCard)
+    ? fullList
+    : fullList.filter((item) => matchCardCondition(item, actualCard));
+
   if (isUnique) {
     const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
     const uniqueSet = new Set();
-    const targetItems = (actualCard === firstCard || isCardAllType(actualCard))
-      ? baselineList
-      : baselineList.filter((item) => matchCardCondition(item, actualCard));
     targetItems.forEach((item) => {
       const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? item.personnelId ?? item.id;
       if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
@@ -2034,13 +2002,7 @@ const getCardMetricValueForTopic = (card, topic) => {
     return uniqueSet.size;
   }
 
-  // Nếu là thẻ đầu tiên (Toàn bộ) -> trả về độ dài tập cơ sở
-  if (actualCard === firstCard || isCardAllType(actualCard)) {
-    return baselineList.length;
-  }
-
-  // Các thẻ con luôn lọc TRÊN TẬP CƠ SỞ (baselineList)
-  return baselineList.filter((item) => matchCardCondition(item, actualCard)).length;
+  return targetItems.length;
 };
 
 const onTopicCardSelectChange = () => {
