@@ -1344,7 +1344,7 @@
                   {{ currentSelectedDashboard.displayMode === 'appendix' ? '1. Khối Điều kiện Lọc của Phụ lục (Filter Conditions):' : '1. Khối Thống kê ở trên (Top Metric KPI Cards):' }}
                 </span>
                 <span style="font-size: 0.72rem; color: #64748b;">
-                  {{ currentSelectedDashboard.displayMode === 'appendix' ? 'Cấu hình các tiêu chí lọc dữ liệu cho Phụ lục này (kết quả bảng sẽ tự động áp dụng các điều kiện này).' : 'Các thẻ số liệu nhanh ở hàng trên cùng của Dashboard để người dùng lọc nhanh.' }}
+                  {{ currentSelectedDashboard.displayMode === 'appendix' ? 'Cấu hình các tiêu chí lọc dữ liệu cho Phụ lục này (kết quả bảng sẽ tự động áp dụng các điều kiện này).' : '💡 Khối thống kê & biểu đồ phân loại hiện được cấu hình tập trung trực tiếp ngay tại trang Thống kê (Dashboard). Cấu hình ở đây đóng vai trò dự phòng và khởi tạo ban đầu.' }}
                 </span>
               </div>
 

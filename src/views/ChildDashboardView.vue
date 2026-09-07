@@ -85,31 +85,46 @@
       </div>
     </div>
 
-    <!-- Quick Metric Pill Cards (Top Row - Ẩn khi ở chế độ Báo cáo Phụ lục) -->
-    <div v-if="currentDashboardConfig.displayMode !== 'appendix'" style="display: flex; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap;">
-      <template v-for="(card, cIdx) in activeMetricCards" :key="card.id || cIdx">
-        <div
-          v-if="!isCardHidden(card)"
-          class="quick-stat-card"
-          :class="{ 'stat-active': isCardActive(card, cIdx) }"
-          :style="{
-            width: getCardWidthStyle(card),
-            flex: getCardFlexStyle(card),
-            minWidth: getCardMinWidthStyle(card)
-          }"
-          @click="toggleMetricCardFilter(card, cIdx)"
-          style="cursor: pointer;"
-        >
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span :class="['dot-indicator', `dot-${card.color || 'blue'}`]"></span>
-            <span class="stat-name">{{ getCardDisplayLabel(card) }}</span>
-          </div>
-          <span :class="['stat-number', `num-${card.color || 'blue'}`]">{{ getCardMetricValue(card) }}</span>
+    <!-- Lark-Style Drill-down Records Banner -->
+    <div
+      v-if="hasDrillDownFilter"
+      style="margin-bottom: 1rem; padding: 12px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; color: #1e40af; box-shadow: 0 1px 3px rgba(0,0,0,0.03); flex-wrap: wrap; gap: 10px;"
+    >
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: #dbeafe; display: flex; align-items: center; justify-content: center; color: #2563eb; flex-shrink: 0;">
+          <i class="pi pi-filter-fill" style="font-size: 0.95rem;"></i>
         </div>
-      </template>
+        <div>
+          <div style="color: #64748b; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">KẾT QUẢ THỐNG KÊ CHI TIẾT</div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px;">
+            <span style="font-weight: 700; color: #1e3a8a; font-size: 0.95rem;">{{ drillDownFilterLabel }}</span>
+            <span style="font-weight: 700; color: #2563eb; background: #ffffff; padding: 2px 8px; border-radius: 12px; border: 1px solid #bfdbfe; font-size: 0.75rem;">
+              {{ filteredList.length }} bản ghi
+            </span>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button
+          type="button"
+          @click="clearAllDrillDownFilters"
+          style="background: #ffffff; border: 1px solid #93c5fd; color: #1d4ed8; padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s ease;"
+          title="Bỏ lọc để hiển thị lại toàn bộ danh sách"
+        >
+          <i class="pi pi-times"></i> Xem tất cả
+        </button>
+        <button
+          type="button"
+          @click="router.push('/dashboard')"
+          style="background: #2563eb; border: 1px solid #2563eb; color: #ffffff; padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s ease;"
+          title="Quay lại bảng Thống kê"
+        >
+          <i class="pi pi-arrow-left"></i> Quay lại Thống kê
+        </button>
+      </div>
     </div>
 
-    <!-- Filter Bar Container (Chỉ giữ lại ô tìm kiếm) -->
+    <!-- Filter Bar Container (Tìm kiếm nhanh) -->
     <div class="app-card" style="padding: 12px 16px; margin-bottom: 1rem;">
       <div style="display: flex; gap: 10px; align-items: center;">
         <!-- Search -->
@@ -131,27 +146,6 @@
           </button>
         </div>
       </div>
-    </div>
-
-    <!-- Active Chart Filter Banner -->
-    <div
-      v-if="hasActiveChartFilter"
-      style="margin-bottom: 0.85rem; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; color: #1e40af; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
-    >
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <i class="pi pi-filter-fill" style="color: #2563eb; font-size: 0.95rem;"></i>
-        <span>
-          Đang lọc theo biểu đồ: <strong>{{ activeChartFilterLabel }}</strong> ({{ filteredList.length }} bản ghi)
-        </span>
-      </div>
-      <button
-        type="button"
-        @click="clearChartFilter"
-        style="background: #ffffff; border: 1px solid #93c5fd; color: #1d4ed8; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;"
-        title="Bỏ lọc theo biểu đồ này để hiển thị lại toàn bộ"
-      >
-        <i class="pi pi-times"></i> Bỏ lọc biểu đồ
-      </button>
     </div>
 
     <!-- Main Data Table Card (Matching PersonnelView exactly) -->
@@ -874,7 +868,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
-import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
+import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, extractRowFieldValue } from '@/utils/dashboardMetrics';
 import { getFileUrl } from '@/api/files';
 import * as XLSX from 'xlsx';
 
@@ -1190,26 +1184,58 @@ const clearChartFilter = () => {
   customFilterValue.value = '';
 };
 
-const hasActiveChartFilter = computed(() => {
+const hasDrillDownFilter = computed(() => {
   return !!(
+    route.query?.card ||
+    route.query?.title ||
     route.query?.country ||
     route.query?.funding ||
     route.query?.department ||
-    (route.query?.filterField && route.query?.filterValue)
+    (route.query?.filterField && route.query?.filterValue) ||
+    customFilterField.value ||
+    selectedCountry.value ||
+    selectedFunding.value ||
+    selectedDepartment.value
   );
 });
 
-const activeChartFilterLabel = computed(() => {
+const hasActiveChartFilter = hasDrillDownFilter;
+
+const drillDownFilterLabel = computed(() => {
+  if (route.query?.title) return route.query.title;
   const parts = [];
-  if (route.query?.country) parts.push(`Quốc gia: "${route.query.country}"`);
-  if (route.query?.funding) parts.push(`Kinh phí: "${route.query.funding}"`);
-  if (route.query?.department) parts.push(`Đơn vị: "${route.query.department}"`);
-  if (route.query?.filterField && route.query?.filterValue) {
-    const colName = getColumnLabel(route.query.filterField) || route.query.filterField;
-    parts.push(`${colName}: "${route.query.filterValue}"`);
+  if (route.query?.card) {
+    const cardId = String(route.query.card);
+    const foundCard = activeMetricCards.value?.find((c) => c.id === cardId || c.label === cardId);
+    if (foundCard) parts.push(foundCard.label);
+    else parts.push(cardId);
   }
-  return parts.join(', ');
+  if (route.query?.country || selectedCountry.value) {
+    parts.push(`Quốc gia: "${route.query?.country || selectedCountry.value}"`);
+  }
+  if (route.query?.funding || selectedFunding.value) {
+    parts.push(`Kinh phí: "${route.query?.funding || selectedFunding.value}"`);
+  }
+  if (route.query?.department || selectedDepartment.value) {
+    parts.push(`Đơn vị: "${route.query?.department || selectedDepartment.value}"`);
+  }
+  const fField = route.query?.filterField || customFilterField.value;
+  const fVal = route.query?.filterValue || customFilterValue.value;
+  if (fField && fVal) {
+    const colName = getColumnLabel(fField) || fField;
+    parts.push(`${colName}: "${fVal}"`);
+  }
+  return parts.join(', ') || 'Bộ lọc tùy chọn';
 });
+
+const activeChartFilterLabel = drillDownFilterLabel;
+
+const clearAllDrillDownFilters = () => {
+  clearChartFilter();
+  activeMetricCardIdx.value = -1;
+  activeMetricCardId.value = '';
+  router.replace({ path: route.path, query: {} });
+};
 
 const toggleMetricCardFilter = (card, cIdx) => {
   // Luôn giải phóng bộ lọc biểu đồ khi bấm vào thẻ thống kê để không bị kẹt bảng
@@ -2000,26 +2026,32 @@ const availableFundings = computed(() => {
 
 // Filtered List
 const filteredList = computed(() => {
-  // 0. Active Metric Card Filter (Top KPI Pill)
-  const currentIdx = (activeMetricCardIdx.value === -1 || activeMetricCardIdx.value === 0)
-    ? firstVisibleCardIdx.value
-    : activeMetricCardIdx.value;
+  // 1. Xác định thẻ mục tiêu lọc (từ route query hoặc state)
+  let targetCard = null;
+  const qCard = route.query?.card || activeMetricCardId.value;
+  if (qCard) {
+    targetCard = activeMetricCards.value?.find((c) => (c.id && c.id === qCard) || c.label === qCard);
+  }
+  if (!targetCard) {
+    const currentIdx = (activeMetricCardIdx.value === -1 || activeMetricCardIdx.value === 0)
+      ? firstVisibleCardIdx.value
+      : activeMetricCardIdx.value;
+    targetCard = activeMetricCards.value?.[currentIdx];
+  }
 
-  const targetCard = activeMetricCards.value?.[currentIdx];
   const baselineCard = firstVisibleCard.value;
   const isTargetBaseline = !targetCard || targetCard === baselineCard || isSameCard(targetCard, baselineCard);
   const shouldInheritBaseline = !isTargetBaseline && targetCard?.inheritBaseline !== false;
 
-  // Nếu là Thẻ đầu tiên (Baseline): Bảng luôn hiển thị đúng tập dữ liệu cơ sở đã lọc theo Thẻ đầu tiên!
   let list = [];
   if (isTargetBaseline) {
     list = [...topicBaselineList.value];
   } else {
     const baseSource = shouldInheritBaseline ? topicBaselineList.value : currentSourceList.value;
-    list = isCardAllType(targetCard) ? [...baseSource] : baseSource.filter((t) => matchCardCondition(t, targetCard));
+    list = isSharedCardAllType(targetCard) ? [...baseSource] : baseSource.filter((t) => matchSharedCardCondition(t, targetCard, personnelStore));
   }
 
-  // Đếm / Hiển thị Unique (kế thừa tính unique từ thẻ baseline nếu có ràng buộc)
+  // 2. Đếm / Hiển thị Unique (kế thừa tính unique từ thẻ baseline nếu có ràng buộc)
   const isUniqueCount = targetCard?.isUnique || (shouldInheritBaseline && !!baselineCard?.isUnique) || (targetCard === baselineCard && !!baselineCard?.isUnique);
   if (isUniqueCount) {
     const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
@@ -2036,7 +2068,68 @@ const filteredList = computed(() => {
     });
   }
 
+  // 3. Lọc theo Drill-down trường động (filterField & filterValue)
+  const fField = route.query?.filterField || customFilterField.value;
+  const fVal = route.query?.filterValue || customFilterValue.value;
+  if (fField && fVal) {
+    const targetStr = String(fVal).trim().toLowerCase();
+    list = list.filter((row) => {
+      const cellVal = extractRowFieldValue(row, fField, personnelStore);
+      const strVal = String(cellVal || '').trim().toLowerCase();
+      return strVal === targetStr || strVal.includes(targetStr);
+    });
+  }
 
+  // 4. Lọc theo Quốc gia (country / countryName / quoc_gia_xuat_canh)
+  const targetCountry = route.query?.country || selectedCountry.value;
+  if (targetCountry) {
+    const tC = String(targetCountry).trim().toLowerCase();
+    list = list.filter((row) => {
+      const c1 = String(row.countryName || '').trim().toLowerCase();
+      const c2 = String(extractRowFieldValue(row, 'countryName', personnelStore) || '').trim().toLowerCase();
+      const c3 = String(extractRowFieldValue(row, 'quoc_gia_xuat_canh', personnelStore) || '').trim().toLowerCase();
+      return c1 === tC || c2 === tC || c3 === tC || c1.includes(tC) || c2.includes(tC) || c3.includes(tC);
+    });
+  }
+
+  // 5. Lọc theo Kinh phí
+  const targetFunding = route.query?.funding || selectedFunding.value;
+  if (targetFunding) {
+    const tF = String(targetFunding).trim().toLowerCase();
+    list = list.filter((row) => {
+      const f1 = String(row.fundingName || '').trim().toLowerCase();
+      const f2 = String(extractRowFieldValue(row, 'fundingName', personnelStore) || '').trim().toLowerCase();
+      const f3 = String(extractRowFieldValue(row, 'nguon_kinh_phi', personnelStore) || '').trim().toLowerCase();
+      return f1 === tF || f2 === tF || f3 === tF || f1.includes(tF) || f2.includes(tF) || f3.includes(tF);
+    });
+  }
+
+  // 6. Lọc theo Đơn vị
+  const targetDept = route.query?.department || selectedDepartment.value;
+  if (targetDept) {
+    const tD = String(targetDept).trim().toLowerCase();
+    list = list.filter((row) => {
+      const d1 = String(row.departmentName || '').trim().toLowerCase();
+      const d2 = String(extractRowFieldValue(row, 'departmentName', personnelStore) || '').trim().toLowerCase();
+      return d1 === tD || d2 === tD || d1.includes(tD) || d2.includes(tD);
+    });
+  }
+
+  // 7. Lọc theo ô tìm kiếm nhanh (searchQuery)
+  const q = String(searchQuery.value || '').trim().toLowerCase();
+  if (q) {
+    list = list.filter((item) => {
+      const name = String(item.personnelName || item.name || item.relativeName || '').toLowerCase();
+      const code = String(item.personnelCode || item.code || '').toLowerCase();
+      const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+      const cccd = String(item[pKeyField] ?? item.cccd ?? item.cccdparent ?? item.cccdthannhan ?? '').toLowerCase();
+      const dept = String(item.departmentName || '').toLowerCase();
+      const pos = String(item.position || item.positionName || '').toLowerCase();
+      const country = String(item.countryName || item.quoc_gia_xuat_canh || '').toLowerCase();
+      const dec = String(item.decisionNumber || item.so_quyet_dinh || '').toLowerCase();
+      return name.includes(q) || code.includes(q) || cccd.includes(q) || dept.includes(q) || pos.includes(q) || country.includes(q) || dec.includes(q);
+    });
+  }
 
   return list;
 });

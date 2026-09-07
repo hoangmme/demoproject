@@ -787,7 +787,30 @@
      - Bổ sung nút Sửa (`pi pi-pencil`) và Xóa (`pi pi-trash`) trực tiếp trong popup "Sắp xếp vị trí" kèm huy hiệu `[Ẩn (0%)]` hoặc `[X%]`, giúp người dùng dễ dàng bật lại các thẻ đã ẩn.
      - Thêm `.stop` cho các sự kiện click trên biểu đồ cột dọc và thanh ngang để không kích hoạt nhầm mở trang Chuyên đề khi ấn nút Sửa/Xóa.
 - **Status**: Done [Reversible].
-- **Verification**: `npm run build` thành công, đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
+### 67. TÁI CẤU TRÚC HỆ THỐNG THỐNG KÊ & DRILL-DOWN CHUẨN LARK BASE (2026-09-07)
+- **Bối cảnh & Yêu cầu của người dùng**:
+  - Người dùng phản ánh hệ thống bị rối UX và nhiều lỗi do phân tán cấu hình giữa Cài đặt Chuyên đề và Dashboard.
+  - Người dùng định hướng chuẩn:
+    1. **Hồ sơ cán bộ là Data gốc**: 3 bảng chuẩn mực (Cán bộ `personnel`, Chuyến đi `trips`, Thân nhân `relatives`). Chuyên đề thực chất chỉ là các Bảng ảo (Virtual Views) của 3 bảng này.
+    2. **Thống kê (Dashboard) là Trung tâm duy nhất**: Gom toàn bộ việc quản lý, thêm, sửa, xóa, đổi độ rộng khối thống kê trực tiếp tại Dashboard. Không còn cơ chế reconcile tự động từ Settings sang Dashboard (chấm dứt tận gốc lỗi tự hồi sinh thẻ, lỗi mất độ rộng).
+    3. **Trải nghiệm Drill-down tinh gọn (Lark Base style)**: Khi click vào bất kỳ con số/cột biểu đồ nào trên Dashboard (ví dụ bấm cột "Trung Quốc: 10"), Bảng chi tiết mở ra hiển thị đúng danh sách 10 bản ghi đó, gỡ bỏ hoàn toàn dải thẻ KPI pill làm chật và rối mắt.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Chuyên đề (`ChildDashboardView.vue`)**:
+     - Gỡ bỏ hoàn toàn dải thẻ Quick Metric Pill Cards (`quick-stat-card`) ở đầu trang.
+     - Xây dựng **Lark-Style Drill-down Records Banner**: Hiển thị trạng thái lọc tinh gọn (`KẾT QUẢ THỐNG KÊ CHI TIẾT: [Tên điều kiện] (X bản ghi)`) kèm 2 nút thao tác nhanh: `[ ✕ Xem tất cả ]` (bỏ lọc) và `[ ← Quay lại Thống kê ]` (quay về Dashboard).
+     - Cập nhật `filteredList` hỗ trợ lọc chính xác 100%:
+       - Lọc theo `filterField` & `filterValue` thông qua hàm chuẩn `extractRowFieldValue`.
+       - Lọc theo `targetCountry`, `targetFunding`, `targetDepartment`.
+       - Lọc theo thẻ KPI `card` từ query.
+       - Tích hợp tìm kiếm từ khóa nhanh `searchQuery`.
+  2. **Thống kê (`DashboardView.vue`)**:
+     - Ngắt bỏ hoàn toàn việc tự động chạy `reconcileGroupsWithTopics` trong `onMounted` khi đã có cấu hình nhóm (chỉ chạy khởi tạo ban đầu nếu DB hoàn toàn rỗng).
+     - Cập nhật sự kiện click trên biểu đồ cột dọc và thanh ngang: Chuyển sang gọi `handleChartItemClick(widget, item)` truyền đúng thông tin cột và giá trị người dùng vừa bấm (ví dụ `item.name = 'Trung Quốc'`, `item.field = 'countryName'`).
+     - Tối ưu `handleWidgetClick` và `handleChartItemClick` điều hướng sang `/dashboard-topic/...` kèm đầy đủ query params (`title`, `filterField`, `filterValue`, `card`).
+  3. **Cài đặt (`SettingsImportView.vue`)**:
+     - Bổ sung thông báo định hướng cho người dùng: Các khối thống kê và biểu đồ hiện được quản lý trực tiếp tại Dashboard theo phong cách Lark Base, phần Cài đặt chỉ quản lý danh mục Chuyên đề và cột hiển thị.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công (0 errors).
 
 
 

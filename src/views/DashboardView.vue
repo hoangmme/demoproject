@@ -265,8 +265,8 @@
                   v-for="(item, cIdx) in getWidgetChartData(widget).list"
                   :key="item.name"
                   class="country-column-item"
-                  @click="handleWidgetClick(widget)"
-                  :title="`${item.name}: ${item.count} bản ghi\n(Bấm để mở Chuyên đề)`"
+                  @click="handleChartItemClick(widget, item)"
+                  :title="`${item.name}: ${item.count} bản ghi\n(Bấm để xem danh sách chi tiết)`"
                   style="cursor: pointer;"
                 >
                   <span class="column-top-total">{{ item.count }}</span>
@@ -325,8 +325,8 @@
                 v-for="(item, cIdx) in getWidgetChartData(widget).list"
                 :key="item.name"
                 class="breakdown-row"
-                @click="handleWidgetClick(widget)"
-                :title="`${item.name}: ${item.count} bản ghi\n(Bấm để mở Chuyên đề)`"
+                @click="handleChartItemClick(widget, item)"
+                :title="`${item.name}: ${item.count} bản ghi\n(Bấm để xem danh sách chi tiết)`"
                 style="cursor: pointer;"
               >
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -2620,20 +2620,30 @@ const computeWidgetCount = (widget) => {
 };
 
 const handleWidgetClick = (widget) => {
-  if (widget.topicId) {
-    const targetPath = widget.topicId === 'trips' ? '/trips' : `/dashboard-topic/${widget.topicId}`;
-    const cardParam = widget.cardId || widget.cardCondition || widget.title || widget.id;
-    router.push({ path: targetPath, query: { card: cardParam } });
-    return;
+  const targetTopicId = widget.topicId || (widget.source === 'personnel' ? 'personnel' : (widget.source === 'relatives' ? 'relatives' : 'trips'));
+  const targetPath = `/dashboard-topic/${targetTopicId}`;
+  const query = {
+    title: widget.title,
+  };
+  const cardParam = widget.cardId || widget.cardCondition || widget.id || widget.title;
+  if (cardParam) {
+    query.card = cardParam;
   }
-  const isRel = widget.source === 'relatives';
-  const targetPath = widget.source === 'personnel' ? '/personnel' : (isRel ? '/personnel' : '/trips');
-  const query = {};
-  if (isRel) query.tab = 'thannhan';
-  if (widget.columnId) {
+  if (widget.columnId && widget.countValue) {
     query.filterField = widget.columnId;
-    query.filterValue = widget.countValue || '';
+    query.filterValue = widget.countValue;
   }
+  router.push({ path: targetPath, query });
+};
+
+const handleChartItemClick = (widget, item) => {
+  const targetTopicId = widget.topicId || (widget.source === 'personnel' ? 'personnel' : (widget.source === 'relatives' ? 'relatives' : 'trips'));
+  const targetPath = `/dashboard-topic/${targetTopicId}`;
+  const query = {
+    filterField: item?.field || widget.columnId || (widget.source === 'personnel' ? 'departmentName' : 'countryName'),
+    filterValue: item?.name || '',
+    title: `${widget.title}: "${item?.name}"`,
+  };
   router.push({ path: targetPath, query });
 };
 
@@ -3066,12 +3076,7 @@ const filteredFundingList = computed(() => {
   return stats.value.fundingList.filter((item) => item.name.toLowerCase().includes(q));
 });
 
-// =========================================================================
-// 4. CHART ITEM CLICK & NAVIGATION
-// =========================================================================
-const handleChartItemClick = (widget) => {
-  handleWidgetClick(widget);
-};
+
 
 const onDisplayTypeChange = () => {
   if (widgetForm.value.displayType === 'count') {
@@ -3100,7 +3105,10 @@ onMounted(async () => {
     loadCustomGroups(),
     loadDeletedTopicGroupIds(),
   ]);
-  await reconcileGroupsWithTopics(true);
+  // Chỉ tự động khởi tạo nhóm ban đầu nếu chưa từng có cấu hình nào
+  if (!customGroups.value || customGroups.value.length === 0) {
+    await reconcileGroupsWithTopics(true);
+  }
 });
 </script>
 
