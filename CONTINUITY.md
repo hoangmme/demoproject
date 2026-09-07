@@ -1056,3 +1056,23 @@
      - Mục **Nhập liệu**: Cung cấp tùy chọn trực tiếp `+ Thêm Cán bộ` và `+ Thêm Thân nhân`.
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+---
+
+### 78. CHUYỂN ĐỔI MÔ HÌNH BẢNG THUẦN TÚY CHUẨN LARK BASE (TÁCH BIỆT BẢNG DỮ LIỆU & BÁO CÁO THỐNG KÊ)
+- **Strategic Context**:
+  - Người dùng hỏi: "còn cấu hình chuyên đề thì sao, chắc là bỏ nhỉ vì giờ dùng thống kê rồi ?" và duyệt Phương án 1.
+  - Loại bỏ mô hình lai 'Bảng chuyên đề gánh thẻ KPI trên đầu', tách bạch 100% giữa Bảng dữ liệu (Grid thuần túy) và Báo cáo (Dashboard Thống kê).
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Chuẩn hóa Tab Cài đặt Quản lý Bảng (`SettingsImportView.vue`)**:
+     - Đổi tên Tab 4 và tiêu đề thành: `Quản lý Danh sách Bảng Dữ liệu (Tables)`.
+     - Loại bỏ nhãn "x thẻ KPI" và chế độ hiển thị lai, chỉ tập trung vào nghiệp vụ Quản lý Bảng: Tên bảng, Mã Code, Nguồn dữ liệu (Cán bộ / Thân nhân / Chuyến đi), Biểu tượng, Bộ lọc cơ sở (Scope Filter) và Cột hiển thị.
+     - Nút lưu đổi thành `Lưu Danh sách Bảng`.
+  2. **Tối ưu hóa Bảng Dữ liệu Độc lập (`ChildDashboardView.vue`)**:
+     - Breadcrumb chuẩn hóa thành `Bảng dữ liệu / [Tên Bảng]`.
+     - Bảng hiển thị dạng Grid toàn màn hình, sạch sẽ, không còn khối thẻ KPI che khuất dữ liệu.
+     - Vẫn duy trì cơ chế Drill-down Banner thông minh khi người dùng click từ bất kỳ Widget nào trên trang **Thống kê (`/dashboard`)** sang để xem chi tiết bản ghi.
+  3. **Tập trung 100% Thống kê tại Trang Thống Kê (`DashboardView.vue`)**:
+     - Mọi thẻ KPI, biểu đồ, đếm số liệu theo chuyên đề được quản lý tập trung và trực quan tại trang Thống kê.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.

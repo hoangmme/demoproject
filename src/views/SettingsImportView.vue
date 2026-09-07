@@ -62,14 +62,14 @@
 
         <!-- Nút Lưu Cấu hình Duy nhất -->
         <Button
-          :label="activeTab === 'dashboard' ? 'Lưu Cấu hình Chuyên đề' : 'Lưu Cấu hình'"
+          :label="activeTab === 'dashboard' ? 'Lưu Danh sách Bảng' : 'Lưu Cấu hình'"
           icon="pi pi-save"
           severity="success"
           size="small"
           :loading="saving"
           @click="saveConfig"
           style="font-size: 0.8rem; font-weight: 700;"
-          :title="activeTab === 'dashboard' ? 'Lưu cấu hình toàn bộ chuyên đề vào cơ sở dữ liệu' : 'Lưu cấu hình hệ thống'"
+          :title="activeTab === 'dashboard' ? 'Lưu cấu hình toàn bộ các bảng vào cơ sở dữ liệu' : 'Lưu cấu hình hệ thống'"
         />
       </div>
     </div>
@@ -1185,16 +1185,16 @@
     </div>
 
 
-    <!-- Tab: Quản lý Chuyên đề -->
+    <!-- Tab: Quản lý Danh sách Bảng -->
     <div v-else-if="activeTab === 'dashboard'" class="app-card" style="padding: 1.25rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
         <div>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <i class="pi pi-send" style="color: #1e3a8a; font-size: 1.2rem;"></i>
-            <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0;">Quản lý & Cấu hình Chuyên đề (Trang Danh sách & Thống kê)</h3>
+            <i class="pi pi-table" style="color: #1e3a8a; font-size: 1.2rem;"></i>
+            <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0;">Quản lý Danh sách Bảng Dữ liệu (Tables)</h3>
           </div>
           <p style="font-size: 0.75rem; color: #64748b; margin: 4px 0 0 0;">
-            Tạo mới các trang chuyên đề (như Danh sách Chuyến đi), tùy chỉnh các khối thẻ thống kê ở trên và chọn cột hiển thị trên bảng danh sách bên dưới.
+            Quản lý các Bảng dữ liệu trong hệ thống (như Bảng Chuyến đi, các Bảng phân loại dữ liệu). Thiết lập nguồn dữ liệu, biểu tượng, bộ lọc cơ sở và danh sách cột hiển thị cho từng Bảng.
           </p>
         </div>
 
@@ -1209,7 +1209,7 @@
             style="font-size: 0.78rem;"
           />
           <Button
-            label="Thêm Bảng / Chuyên đề Mới"
+            label="Thêm Bảng Mới"
             icon="pi pi-plus"
             severity="success"
             size="small"
@@ -1219,12 +1219,12 @@
         </div>
       </div>
 
-      <!-- Split Layout: Danh sách Dashboard (Trái) & Cấu hình Chi tiết (Phải) -->
+      <!-- Split Layout: Danh sách Bảng (Trái) & Cấu hình Chi tiết (Phải) -->
       <div style="display: grid; grid-template-columns: 280px 1fr; gap: 1.25rem; align-items: start;">
-        <!-- Cột Trái: Danh sách Dashboard -->
+        <!-- Cột Trái: Danh sách Bảng -->
         <div style="display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;">
           <div style="font-size: 0.78rem; font-weight: 700; color: #475569; padding: 4px 6px;">
-            DANH SÁCH DASHBOARD ({{ customDashboards.length }}):
+            DANH SÁCH BẢNG DỮ LIỆU ({{ customDashboards.length }}):
           </div>
 
           <div
@@ -1239,7 +1239,7 @@
                 {{ d.code ? `[${d.code}] ` : '' }}{{ d.title }}
               </strong>
               <span style="font-size: 0.7rem; color: #64748b;">
-                {{ d.source === 'trips' ? '✈️ Chuyến đi' : (d.source === 'relatives' ? '👥 Thân nhân' : '👤 Cán bộ') }} • {{ (d.metricCards || []).length }} thẻ KPI • {{ (d.columns || []).length }} cột
+                {{ d.source === 'trips' ? '✈️ Chuyến đi' : (d.source === 'relatives' ? '👥 Thân nhân' : '👤 Cán bộ') }} • {{ (d.columns && d.columns.length > 0) ? d.columns.length + ' cột' : 'Tất cả cột' }}
               </span>
             </div>
 
@@ -1335,7 +1335,7 @@
             <InputText v-model="currentSelectedDashboard.description" placeholder="VD: Tổng hợp các chuyến đi nước ngoài của cán bộ và thân nhân" size="small" style="width: 100%; font-size: 0.8rem;" />
           </div>
 
-          <!-- 2. Cấu hình Bộ lọc Dữ liệu Cơ sở của Bảng Chuyên đề (Scope Filter) -->
+          <!-- 2. Cấu hình Bộ lọc Dữ liệu Cơ sở của Bảng (Scope Filter) -->
           <div style="border-top: 1px solid #e2e8f0; padding-top: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <div>
@@ -1344,7 +1344,7 @@
                   2. Bộ lọc Dữ liệu Cơ sở của Bảng (Scope Filter):
                 </span>
                 <span style="font-size: 0.72rem; color: #64748b;">
-                  Thiết lập điều kiện để lọc phạm vi bản ghi cho Bảng Chuyên đề này. Để trống = Bảng hiển thị toàn bộ bản ghi nguồn. (Các khối thống kê / thẻ đếm / biểu đồ đã được gom tập trung quản lý tại trang Thống kê Dashboard).
+                  Thiết lập điều kiện để lọc phạm vi bản ghi cho Bảng này. Để trống = Bảng hiển thị toàn bộ bản ghi nguồn. Mọi thống kê và biểu đồ số liệu được quản lý tập trung tại trang Thống kê.
                 </span>
               </div>
 
@@ -1361,7 +1361,7 @@
             <!-- Khung hiển thị các điều kiện lọc -->
             <div v-if="!currentScopeConditions || currentScopeConditions.length === 0" style="padding: 14px; text-align: center; color: #64748b; font-size: 0.78rem; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
               <i class="pi pi-info-circle" style="color: #0284c7; margin-right: 4px;"></i>
-              Chưa thiết lập điều kiện lọc. Bảng Chuyên đề này sẽ <b>hiển thị toàn bộ bản ghi</b> của nguồn <b>{{ currentSelectedDashboard.source === 'trips' ? 'Chuyến đi' : (currentSelectedDashboard.source === 'relatives' ? 'Thân nhân' : 'Cán bộ') }}</b>.
+              Chưa thiết lập điều kiện lọc. Bảng này sẽ <b>hiển thị toàn bộ bản ghi</b> của nguồn <b>{{ currentSelectedDashboard.source === 'trips' ? 'Chuyến đi' : (currentSelectedDashboard.source === 'relatives' ? 'Thân nhân' : 'Cán bộ') }}</b>.
             </div>
 
             <div v-else style="display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -1499,16 +1499,16 @@
             </div>
           </div>
 
-          <!-- 3. Cấu hình Danh sách Cột hiển thị của Bảng Chuyên đề -->
+          <!-- 3. Cấu hình Danh sách Cột hiển thị của Bảng -->
           <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <div>
                 <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
                   <i class="pi pi-table" style="color: #059669;"></i>
-                  3. Danh sách Cột hiển thị của Bảng Chuyên đề:
+                  3. Danh sách Cột hiển thị của Bảng:
                 </span>
                 <span style="font-size: 0.72rem; color: #64748b;">
-                  Chọn các cột hiển thị mặc định trên bảng dữ liệu của chuyên đề này. Để trống = Hiển thị tất cả các cột.
+                  Chọn các cột hiển thị mặc định trên bảng dữ liệu này. Để trống = Hiển thị tất cả các cột.
                 </span>
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
@@ -1556,11 +1556,11 @@
             </div>
           </div>
 
-          <!-- Nút Lưu & Mở xem Dashboard -->
+          <!-- Nút Lưu & Mở xem Bảng -->
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 6px;">
             <div style="display: flex; align-items: center; gap: 8px;">
               <Button
-                label="Mở Xem Dashboard này"
+                label="Mở Xem Bảng này"
                 icon="pi pi-external-link"
                 severity="info"
                 outlined

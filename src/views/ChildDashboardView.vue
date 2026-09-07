@@ -2,7 +2,7 @@
   <div class="app-content">
     <!-- Breadcrumb & Top Bar -->
     <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-      <span>Tra cứu</span>
+      <span>Bảng dữ liệu</span>
       <span>/</span>
       <span style="color: #0f172a; font-weight: 600;">{{ currentDashboardConfig.title || 'Danh sách chuyến đi' }}</span>
     </div>
