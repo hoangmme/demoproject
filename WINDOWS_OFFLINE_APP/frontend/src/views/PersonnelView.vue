@@ -89,6 +89,7 @@
                 v-model="personnelStore.visibleColumns"
                 :options="personnelStore.allAvailableColumns"
                 @change="onColumnsChange"
+                @open-col-menu="handleColMenuFromSelector"
               />
             </div>
           </div>
@@ -584,6 +585,7 @@
                 v-model="personnelStore.visibleRelativeColumns"
                 :options="personnelStore.allAvailableRelativeColumns"
                 @change="onRelativeColumnsChange"
+                @open-col-menu="handleColMenuFromSelector"
               />
             </div>
           </div>
@@ -2219,6 +2221,10 @@ const openColMenu = (event, col) => {
   };
   selectedMenuCol.value = col;
   isColMenuVisible.value = true;
+};
+
+const handleColMenuFromSelector = ({ event, col }) => {
+  openColMenu(event, col);
 };
 
 const getActiveTableMapping = () => {

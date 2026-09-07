@@ -69,6 +69,7 @@
               v-model="selectedColIds"
               :options="allAvailableColumnsList"
               @change="onColumnsChange"
+              @open-col-menu="handleChildColMenuFromSelector"
             />
           </div>
         </div>
@@ -1676,6 +1677,10 @@ const openChildColMenu = (event, col) => {
   isChildColMenuVisible.value = true;
 };
 
+const handleChildColMenuFromSelector = ({ event, col }) => {
+  openChildColMenu(event, col);
+};
+
 const getTargetMappingRef = () => {
   const src = currentDashboardConfig.value?.source || 'trips';
   if (src === 'relatives') return { key: 'import_mapping_relative', mapping: personnelStore.importMappingRelative };
@@ -1865,6 +1870,9 @@ const getChildColDropdownOptions = (col) => {
 // ===== END TEABLE / LARK BASE STATE & METHODS =====
 
 const onRowClick = (event) => {
+  if (currentDashboardConfig.value?.source === 'blank') {
+    return;
+  }
   if (event?.data) {
     openPersonnelDetail(event.data);
   }
@@ -1993,6 +2001,30 @@ const allAvailableColumnsList = computed(() => {
   const src = currentDashboardConfig.value?.source || 'trips';
   const seen = new Set();
   const rawList = [];
+
+  if (src === 'blank') {
+    const rawCustomCols = currentDashboardConfig.value?.customColumns || [];
+    const defaultStarterCols = [
+      { id: 'title', label: 'Tiêu đề / Tên', format: 'text', width: '240px' },
+      { id: 'status', label: 'Trạng thái', format: 'dropdown', options: ['Mới tạo', 'Đang xử lý', 'Hoàn thành'], width: '160px' },
+      { id: 'notes', label: 'Ghi chú', format: 'text', width: '260px' },
+      { id: 'createdAt', label: 'Ngày tạo', format: 'date', width: '140px' },
+    ];
+    const effectiveCols = rawCustomCols.length > 0 ? rawCustomCols : defaultStarterCols;
+    effectiveCols.forEach((c, idx) => {
+      rawList.push({
+        id: c.id,
+        label: c.label || c.id,
+        colIndex: idx + 1,
+        width: c.width || '160px',
+        tableWidth: c.tableWidth || null,
+        format: c.format || 'text',
+        options: c.options || [],
+        isVirtual: false,
+      });
+    });
+    return rawList;
+  }
 
   if (src === 'trips') {
     const colMap = computeColumnIndexMap(personnelStore.importMappingTrips || []);
@@ -2431,10 +2463,56 @@ const unifiedTripsList = computed(() => {
   return list;
 });
 
+// Custom Table Rows for blank/independent custom tables
+const customTableRows = ref([]);
+
+const loadCustomTableRows = async () => {
+  const tid = topicId.value;
+  if (!tid || tid === 'trips' || currentDashboardConfig.value?.source !== 'blank') {
+    customTableRows.value = [];
+    return;
+  }
+  try {
+    const local = localStorage.getItem(`custom_table_rows_${tid}`);
+    if (local) {
+      customTableRows.value = JSON.parse(local).map((r) => ({ ...r, uniqueKey: r.uniqueKey || r.id }));
+    }
+    const db = await getAppSettings(`custom_table_rows_${tid}`, null);
+    if (db && Array.isArray(db)) {
+      customTableRows.value = db.map((r) => ({ ...r, uniqueKey: r.uniqueKey || r.id }));
+      localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(customTableRows.value));
+    }
+  } catch (e) {
+    console.error('Error loading custom table rows:', e);
+  }
+};
+
+const addCustomRow = async () => {
+  const tid = topicId.value;
+  const rowId = 'row_' + Date.now();
+  const newRow = {
+    id: rowId,
+    uniqueKey: rowId,
+    title: 'Bản ghi mới',
+    status: 'Mới tạo',
+    notes: '',
+    createdAt: new Date().toISOString().slice(0, 10),
+  };
+  const list = [...(customTableRows.value || []), newRow];
+  customTableRows.value = list;
+  try {
+    localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(list));
+    await saveAppSettings(`custom_table_rows_${tid}`, list);
+  } catch (e) {}
+};
+
 // Dynamic Data List based on configured source
 const currentSourceList = computed(() => {
   if (currentDashboardConfig.value?.isPending) return [];
   const src = currentDashboardConfig.value?.source || 'trips';
+  if (src === 'blank') {
+    return customTableRows.value || [];
+  }
   return buildTopicSourceList(src, personnelStore);
 });
 
@@ -2774,6 +2852,9 @@ const getCellValue = (trip, colId) => {
   });
   (personnelStore.importMappingRelative || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (currentDashboardConfig.value?.customColumns || []).forEach((c) => {
+    if (c.id) allMap[c.id] = c;
   });
 
   const colDef = allMap[colId];
@@ -3144,6 +3225,18 @@ const isSameTripItem = (t, trip) => {
 
 const handleDeleteItem = async (item) => {
   const src = currentDashboardConfig.value?.source || '';
+  if (src === 'blank') {
+    const title = item.title || item.name || 'bản ghi này';
+    if (!confirm(`Bạn có chắc chắn muốn xóa bản ghi "${title}" không?`)) return;
+    const tid = topicId.value;
+    const list = (customTableRows.value || []).filter((r) => r.id !== item.id);
+    customTableRows.value = list;
+    try {
+      localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(list));
+      await saveAppSettings(`custom_table_rows_${tid}`, list);
+    } catch (e) {}
+    return;
+  }
   const isRelative = src === 'relatives' || src === 'relative' || Boolean(item.relativeName || item.cccdthannhan || item.relationshipName || item.birthYearTN || item.currentAddress || item.relationship);
   const isPersonnel = src === 'personnel' || (Boolean(item.positionName || item.position || item.departmentName) && !item.departureDate && !item.ngay_xuat_canh && !isRelative);
 
@@ -3234,6 +3327,20 @@ const handleBulkDeleteTrips = async () => {
   if (!count) return;
   if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${count} bản ghi đã chọn không?`)) return;
 
+  const src = currentDashboardConfig.value?.source || '';
+  if (src === 'blank') {
+    const tid = topicId.value;
+    const selectedIds = new Set(selectedTrips.value.map((x) => x.id));
+    const list = (customTableRows.value || []).filter((r) => !selectedIds.has(r.id));
+    customTableRows.value = list;
+    try {
+      localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(list));
+      await saveAppSettings(`custom_table_rows_${tid}`, list);
+    } catch (e) {}
+    selectedTrips.value = [];
+    return;
+  }
+
   try {
     for (const item of selectedTrips.value) {
       const src = currentDashboardConfig.value?.source || '';
@@ -3317,6 +3424,10 @@ const onTargetPersonChange = () => {};
 const onTargetRelativeChange = () => {};
 
 const openAddTripDialog = () => {
+  if (currentDashboardConfig.value?.source === 'blank') {
+    addCustomRow();
+    return;
+  }
   editingTripItem.value = null;
   selectedTargetKey.value = (personnelStore.personnelList[0]?.cccd || personnelStore.personnelList[0]?.id) || '';
   tripTargetType.value = 'personnel';
@@ -3685,6 +3796,7 @@ watch(
     selectedFunding.value = '';
     customFilterField.value = '';
     customFilterValue.value = '';
+    await loadCustomTableRows();
     await loadTopicFilterState();
     await loadColumnsForCurrentCard();
     currentPage.value = 1;
@@ -3721,6 +3833,7 @@ onMounted(async () => {
       : Promise.resolve(),
     loadCustomDashboards(),
   ]);
+  await loadCustomTableRows();
   await loadTopicFilterState();
   await loadColumnsForCurrentCard();
   handleRouteQueryChange();

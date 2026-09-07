@@ -1207,3 +1207,31 @@
   - Giữ nguyên vẹn 100% toàn bộ 5 tab chức năng trong [SettingsImportView.vue](file:///Users/hoji/Documents/code/demoproject/src/views/SettingsImportView.vue) (Cấu hình Cột Cán bộ, Thân nhân, Chuyến đi, Mã Thẻ Tag, Ảnh Nền Đăng nhập, Xuất 3 sheet, Khóa liên kết CCCD).
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+---
+
+### 84. KHẮC PHỤC 4 VẤN ĐỀ GIAO DIỆN & ĐA BẢNG (CHIỀU CAO HÀNG 2 DÒNG, TẠO BẢNG TRỐNG CHUẨN LARK BASE, CHEVRON CẤU HÌNH CỘT, BỎ NÚT SIDEBAR)
+- **Strategic Context**:
+  - Người dùng gửi ảnh và phản hồi 4 vấn đề cụ thể:
+    1. Khi tạo Bảng mới: Đáng lẽ chỉ có vài cột tượng trưng và không có dữ liệu, nhưng lại có sẵn toàn bộ dữ liệu cán bộ.
+    2. Chiều cao hàng: Khi chọn chế độ "2 hàng" bị sụp layout, các cột xếp chồng dọc.
+    3. Thêm nút chevron down `<i class="pi pi-chevron-down" style="font-size: 0.65rem;"></i>` trong menu Tùy chọn cột hiển thị để mở nhanh menu cấu hình cột (đổi tên, kiểu, độ rộng, xóa...).
+    4. Bỏ nút `+ Thêm Bảng mới` ở dưới danh sách bảng trên Sidebar.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Fix Lỗi Layout Chiều cao hàng 2 hàng & 3 hàng (`main.css`)**:
+     - Gỡ bỏ hoàn toàn `display: -webkit-box` trên thẻ `<td>` của table vì trong HTML table, `td` bắt buộc phải là `display: table-cell`.
+     - Chỉ áp dụng `-webkit-line-clamp: 2` (hoặc 3) lên các phần tử chứa text con bên trong (`.inline-cell-wrapper`, `span`, `strong`, `p`). Bảng giữ nguyên cấu trúc cột ngang hoàn hảo.
+  2. **Bỏ nút `+ Thêm Bảng mới` ở Sidebar (`AppSidebar.vue`)**:
+     - Gỡ bỏ thẻ `<a class="app-nav-item btn-add-table-inline">` khỏi cuối danh sách bảng. Việc tạo bảng mới được thực hiện chuẩn chỉ qua nút `+` cạnh tiêu đề Bảng dữ liệu với Dialog chuyên nghiệp.
+  3. **Thêm Chevron Down mở Cấu hình Cột trong Tùy chọn Cột (`ColumnSelector.vue`, `PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - Bổ sung nút chevron down `<i class="pi pi-chevron-down" style="font-size: 0.65rem;"></i>` cạnh mỗi dòng cột trong `ColumnSelector.vue`.
+     - Khi bấm, trigger sự kiện `open-col-menu` mở trực tiếp `ColumnHeaderMenu` tương ứng với cột đó (đổi tên cột, kiểu dữ liệu, độ rộng px, %, xóa cột...).
+  4. **Chuẩn hóa Bảng Mới Trống (Blank Table Chuẩn Lark Base / Airtable) (`AppSidebar.vue`, `ChildDashboardView.vue`)**:
+     - `AppSidebar.vue`: Tùy chọn mặc định khi tạo bảng mới là "📋 Bảng trống mới (Chuẩn Lark Base - Vài cột mẫu, không có dữ liệu cũ)" (`source: 'blank'`). Khởi tạo với 4 cột tượng trưng: `Tiêu đề / Tên`, `Trạng thái`, `Ghi chú`, `Ngày tạo`.
+     - `ChildDashboardView.vue`:
+       * Khi `source === 'blank'`, `allAvailableColumnsList` chỉ hiển thị các cột tượng trưng/cột tùy chỉnh của bảng đó, hoàn toàn không kéo 35 cột của cán bộ.
+       * Dữ liệu bảng trống được lưu độc lập theo từng bảng (`custom_table_rows_${topicId}`), ban đầu có 0 dòng.
+       * Nút `+ Thêm Bản Ghi Mới` tự động thêm dòng mới vào bảng trống. Hỗ trợ xóa đơn lẻ và xóa hàng loạt cho bảng trống.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+

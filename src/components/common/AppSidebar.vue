@@ -242,17 +242,6 @@
         </div>
       </div>
 
-      <!-- Nút + Thêm Bảng mới ở cuối danh sách Bảng (Chuẩn Airtable / Lark Base) -->
-      <a
-        class="app-nav-item btn-add-table-inline"
-        href="javascript:void(0)"
-        @click="openAddTableDialog"
-        title="Tạo thêm bảng dữ liệu mới"
-      >
-        <i class="pi pi-plus" style="font-size: 0.85rem; color: #10b981;"></i>
-        <span style="font-size: 0.82rem; color: #059669; font-weight: 600;">+ Thêm Bảng mới</span>
-      </a>
-
       <router-link to="/advanced-search" class="app-nav-item" title="Tra cứu & Tìm kiếm nâng cao">
         <i class="pi pi-search-plus"></i>
         <span>Tìm kiếm nâng cao</span>
@@ -444,15 +433,16 @@
 
         <div class="field-item">
           <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
-            Nguồn dữ liệu cơ sở:
+            Loại Bảng dữ liệu:
           </label>
           <select v-model="newTableForm.source" class="settings-select" style="width: 100%; font-size: 0.82rem; height: 36px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;">
-            <option value="personnel">Bảng Cán bộ ({{ systemBranding.menuLabelPersonnel || 'Cán bộ' }})</option>
-            <option value="trips">Bảng Sự kiện / Hoạt động ({{ systemBranding.menuLabelTrips || 'Chuyến đi' }})</option>
-            <option value="relatives">Bảng Phụ liên quan ({{ systemBranding.menuLabelRelatives || 'Thân nhân' }})</option>
+            <option value="blank">📋 Bảng trống mới (Chuẩn Lark Base - Vài cột mẫu, không có dữ liệu cũ)</option>
+            <option value="personnel">👤 Kế thừa dữ liệu Cán bộ</option>
+            <option value="trips">✈️ Kế thừa dữ liệu Chuyến đi</option>
+            <option value="relatives">👥 Kế thừa dữ liệu Thân nhân</option>
           </select>
           <span style="font-size: 0.72rem; color: #64748b; margin-top: 4px; display: block;">
-            💡 Chọn bảng dữ liệu gốc để Bảng / Chuyên đề này kế thừa các cột và dữ liệu tương ứng.
+            💡 Chọn "Bảng trống mới" để bắt đầu bảng trắng với các cột tượng trưng và tự do thêm dữ liệu riêng.
           </span>
         </div>
 
@@ -1003,7 +993,7 @@ const newTableForm = ref({
 const openAddTableDialog = () => {
   newTableForm.value = {
     title: '',
-    source: 'personnel',
+    source: 'blank',
     icon: 'pi-table',
     description: '',
   };
@@ -1016,18 +1006,24 @@ const saveNewTable = async () => {
     return;
   }
   const newId = 'topic_' + Date.now();
+  const isBlank = (newTableForm.value.source || 'blank') === 'blank';
   const newTable = {
     id: newId,
     code: `TB-${String((dynamicDashboards.value || []).length + 1).padStart(2, '0')}`,
     title: newTableForm.value.title.trim(),
-    source: newTableForm.value.source || 'personnel',
+    source: isBlank ? 'blank' : newTableForm.value.source,
     icon: newTableForm.value.icon || 'pi-table',
     description: newTableForm.value.description || '',
     metricCards: [
       { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' }
     ],
     scopeConditions: [],
-    customColumns: [],
+    customColumns: isBlank ? [
+      { id: 'title', label: 'Tiêu đề / Tên', format: 'text', width: '240px' },
+      { id: 'status', label: 'Trạng thái', format: 'dropdown', options: ['Mới tạo', 'Đang xử lý', 'Hoàn thành'], width: '160px' },
+      { id: 'notes', label: 'Ghi chú', format: 'text', width: '260px' },
+      { id: 'createdAt', label: 'Ngày tạo', format: 'date', width: '140px' },
+    ] : [],
   };
 
   const updatedList = [...(dynamicDashboards.value || []), newTable];

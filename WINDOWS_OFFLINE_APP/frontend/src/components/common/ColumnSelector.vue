@@ -120,6 +120,16 @@
 
           <!-- Up/Down Reorder Actions -->
           <div class="item-reorder-actions">
+            <!-- Nút Tùy chỉnh cột này (Mở menu Đổi tên, Kiểu dữ liệu, Độ rộng, Xóa...) -->
+            <button
+              v-if="!col.isVirtual && col.id !== '_primaryKey' && col.id !== 'stt'"
+              type="button"
+              class="btn-col-action-trigger"
+              @click.stop="$emit('open-col-menu', { event: $event, col })"
+              title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, độ rộng, xóa cột...)"
+            >
+              <i class="pi pi-chevron-down" style="font-size: 0.65rem;"></i>
+            </button>
             <button
               type="button"
               class="btn-reorder"
@@ -167,7 +177,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:modelValue', 'change']);
+const emit = defineEmits(['update:modelValue', 'change', 'open-col-menu']);
 
 const isOpen = ref(false);
 const searchQuery = ref('');
@@ -463,6 +473,28 @@ onUnmounted(() => {
 
 .column-selector-item:hover .item-reorder-actions {
   opacity: 1;
+}
+
+.btn-col-action-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  padding: 0;
+  margin-right: 3px;
+}
+
+.btn-col-action-trigger:hover {
+  background: #f1f5f9;
+  color: #0284c7;
+  border-color: #38bdf8;
 }
 
 .btn-reorder {
