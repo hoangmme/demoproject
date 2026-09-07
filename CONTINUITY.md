@@ -927,6 +927,31 @@
 - **Status**: Done [Reversible].
 - **Verification**: Chạy `npx vite build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ bản build mới vào `WINDOWS_OFFLINE_APP/frontend/`.
 
+---
+
+### 73. HOÀN THIỆN NỀN TẢNG ĐỘNG (DYNAMIC TABLES & COLUMNS), NÚT TẠO BẢNG MỚI TRỰC TIẾP TẠI SIDEBAR & TINH GIẢN MENU
+- **Strategic Context**:
+  - Người dùng thắc mắc về việc triển khai hệ thống cho các bài toán khác (Học sinh, Giáo viên, Nhân sự...) trên VPS mới và phản hồi về:
+    1. Các cột ảo gán cứng nghiệp vụ cũ còn sót lại trong dropdown lọc (`Trạng thái hiện diện`, `Quá hạn chưa về`, `Số lần xuất cảnh`, `Đối tượng cán bộ/thân nhân`).
+    2. Nhu cầu thêm bảng mới trực quan ngay tại Sidebar (nút `+` cạnh Chuyên đề).
+    3. Cơ chế tự động của mục Nhập liệu khi thêm cột cấu hình hoặc thêm bảng mới.
+    4. Nguồn gốc của các menu "Thân nhân" và "Chuyến đi".
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Làm sạch 100% Dropdown Chọn Cột Động (`DashboardView.vue` & `AdvancedSearchView.vue`)**:
+     - Gỡ bỏ hoàn toàn các cột ảo mang tính nghiệp vụ cứng (`trang_thai_hien_dien`, `isOverdue`, `trip_count_year`, `isRelative`, `hasRelatives`).
+     - Tích hợp hàm `getFieldOptionsForWidget(fieldId)` và `getFieldOptions(fieldId)` đọc động 100% từ cấu hình thực tế của từng cột (`col.options`).
+  2. **Thêm nút `+` Tạo Bảng Mới Ngay Tại Header "CHUYÊN ĐỀ" (`AppSidebar.vue`)**:
+     - Thêm icon `+` ngay cạnh tiêu đề nhóm danh sách bảng trên thanh Sidebar.
+     - Modal Dialog `isAddTableDialogOpen` cho phép nhập: Tên Bảng, Nguồn dữ liệu cơ sở (Chính / Phụ / Sự kiện), Icon nhận diện, và Mô tả.
+     - Bảng mới được tạo sẽ lưu trực tiếp vào cơ sở dữ liệu (`custom_dashboards_config`), phát event cập nhật menu và điều hướng ngay lập tức đến giao diện bảng mới (`/dashboard-topic/{newId}`).
+  3. **Tinh Giản Menu Nhập Liệu (`AppSidebar.vue` & `SettingsImportView.vue`)**:
+     - Menu Nhập liệu tự động hiển thị: `+ Thêm [Tên Bảng Chính]` và `+ Thêm Bảng mới`.
+     - Ẩn mặc định các nút "Thêm thân nhân" và "Thêm chuyến đi". Chỉ hiển thị khi người dùng chủ động tick chọn tùy chọn Bảng Phụ trong Cài đặt chung (`showSecondaryInputs`).
+  4. **Cơ chế Nhập Liệu Tự Động 100% theo Cột Cấu Hình (`DynamicField.vue`)**:
+     - Form nhập liệu duyệt tự động qua `group.columns` từ cấu hình bảng (`importMappingPersonnel`, v.v.). Bất kỳ cột nào người dùng thêm vào (văn bản, số, ngày tháng, dropdown, checkbox, tệp đính kèm) đều tự động hiển thị trong Form Nhập liệu mà không cần can thiệp code.
+- **Status**: Done [Reversible].
+- **Verification**: `npx vite build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
 
 
 

@@ -606,25 +606,12 @@
                 <template v-if="crit.operator === 'empty' || crit.operator === 'has_value'">
                   <span style="font-size: 0.72rem; color: #94a3b8; font-style: italic;">(Không cần nhập giá trị)</span>
                 </template>
-                <template v-else-if="crit.field === 'trang_thai_hien_dien' || crit.field === 'presenceStatus' || crit.field === '_presenceStatus'">
+                <template v-else-if="getFieldOptionsForWidget(crit.field).length > 0">
                   <select v-model="crit.value" class="settings-select" style="width: 100%; font-size: 0.75rem; padding: 4px 6px; font-weight: 600; color: #0284c7;">
-                    <option value="Đang ở nước ngoài">🌍 Đang ở nước ngoài</option>
-                    <option value="Trong nước">🇻🇳 Trong nước (Đã về nước)</option>
-                    <option value="Quá hạn chưa về">⚠️ Quá hạn chưa về</option>
-                  </select>
-                </template>
-                <template v-else-if="crit.field === 'isRelative' || crit.field === '_doiTuong' || crit.field === 'doi_tuong'">
-                  <select v-model="crit.value" class="settings-select" style="width: 100%; font-size: 0.75rem; padding: 4px 6px; font-weight: 600; color: #1e40af;">
-                    <option value="Cán bộ">👤 Cán bộ</option>
-                    <option value="Thân nhân">👨‍👩‍👧 Thân nhân</option>
-                  </select>
-                </template>
-                <template v-else-if="crit.field === 'nguon_kinh_phi' || crit.field === 'fundingName' || crit.field === 'funding'">
-                  <select v-model="crit.value" class="settings-select" style="width: 100%; font-size: 0.75rem; padding: 4px 6px;">
-                    <option value="Ngân sách nhà nước">Ngân sách nhà nước</option>
-                    <option value="Tự túc">Tự túc</option>
-                    <option value="Tài trợ">Tài trợ</option>
-                    <option value="Khác">Khác</option>
+                    <option value="">-- Chọn giá trị --</option>
+                    <option v-for="opt in getFieldOptionsForWidget(crit.field)" :key="opt" :value="opt">
+                      {{ opt }}
+                    </option>
                   </select>
                 </template>
                 <template v-else-if="crit.operator === 'before_date' || crit.operator === 'after_date'">
@@ -636,7 +623,7 @@
                     style="width: 100%; font-size: 0.75rem; padding: 4px 8px;"
                   />
                 </template>
-                <template v-else-if="crit.operator === 'gte' || crit.operator === 'lte' || crit.operator?.startsWith('count_') || crit.field === 'trip_count_year'">
+                <template v-else-if="crit.operator === 'gte' || crit.operator === 'lte' || crit.operator?.startsWith('count_') || crit.operator === 'gt' || crit.operator === 'lt'">
                   <input
                     v-model="crit.value"
                     type="number"
@@ -2436,18 +2423,9 @@ const getCardMetricValueForTopic = (card, topic) => {
 const allSearchableGroupsForWidget = computed(() => {
   const groups = [];
 
-  // Group 1: Chuyến đi (Khối B)
+  // Group 1: Bảng Sự kiện / Chuyến đi (From importMappingTrips)
   const tripCols = [];
   const seenTrip = new Set();
-  tripCols.push({ id: 'trang_thai_hien_dien', label: 'Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)', isVirtual: true });
-  tripCols.push({ id: 'isOverdue', label: 'Trạng thái Quá hạn chưa về', isVirtual: true });
-  tripCols.push({ id: 'trip_count_year', label: 'Số lần xuất cảnh trong năm', isVirtual: true });
-  tripCols.push({ id: 'isRelative', label: 'Đối tượng (Cán bộ / Thân nhân)', isVirtual: true });
-  seenTrip.add('trang_thai_hien_dien');
-  seenTrip.add('isOverdue');
-  seenTrip.add('trip_count_year');
-  seenTrip.add('isRelative');
-
   const tripColMap = computeColumnIndexMap(personnelStore.importMappingTrips || []);
   (personnelStore.importMappingTrips || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
@@ -2461,22 +2439,23 @@ const allSearchableGroupsForWidget = computed(() => {
           label: c.label || c.id,
           colIndex: idxText,
           isVirtual: false,
+          format: c.format,
+          options: c.options,
         });
       }
     });
   });
 
-  groups.push({
-    name: '1. Thông tin Chuyến đi (Khối B)',
-    columns: tripCols,
-  });
+  if (tripCols.length > 0) {
+    groups.push({
+      name: '1. Cột Bảng Sự kiện / Chuyến đi',
+      columns: tripCols,
+    });
+  }
 
-  // Group 2: Cán bộ (Khối A)
+  // Group 2: Bảng Chính (From importMappingPersonnel)
   const pCols = [];
   const seenP = new Set();
-  pCols.push({ id: 'hasRelatives', label: 'Có thân nhân ở nước ngoài', isVirtual: true });
-  seenP.add('hasRelatives');
-
   const pColMap = computeColumnIndexMap(personnelStore.importMappingPersonnel || []);
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
@@ -2490,31 +2469,21 @@ const allSearchableGroupsForWidget = computed(() => {
           label: c.label || c.id,
           colIndex: idxText,
           isVirtual: false,
+          format: c.format,
+          options: c.options,
         });
       }
     });
   });
 
-  const commonPersonnelFields = [
-    { id: 'name', label: 'Họ và tên Cán bộ' },
-    { id: 'code', label: 'Mã Cán bộ' },
-    { id: 'cccd', label: 'Số CCCD Cán bộ' },
-    { id: 'departmentName', label: 'Đơn vị công tác' },
-    { id: 'position', label: 'Chức vụ' },
-  ];
-  commonPersonnelFields.forEach((cf) => {
-    if (!seenP.has(cf.id)) {
-      seenP.add(cf.id);
-      pCols.push({ id: cf.id, rawId: cf.id, label: cf.label, colIndex: null, isVirtual: true });
-    }
-  });
+  if (pCols.length > 0) {
+    groups.push({
+      name: '2. Cột Bảng Chính (Hồ sơ)',
+      columns: pCols,
+    });
+  }
 
-  groups.push({
-    name: '2. Thông tin Cán bộ (Khối A)',
-    columns: pCols,
-  });
-
-  // Group 3: Thân nhân (Khối C)
+  // Group 3: Bảng Phụ (From importMappingRelative)
   const relCols = [];
   const seenRel = new Set();
   const relColMap = computeColumnIndexMap(personnelStore.importMappingRelative || []);
@@ -2530,18 +2499,41 @@ const allSearchableGroupsForWidget = computed(() => {
           label: c.label || c.id,
           colIndex: idxText,
           isVirtual: false,
+          format: c.format,
+          options: c.options,
         });
       }
     });
   });
 
-  groups.push({
-    name: '3. Thông tin Thân nhân (Khối C)',
-    columns: relCols,
-  });
+  if (relCols.length > 0) {
+    groups.push({
+      name: '3. Cột Bảng Phụ',
+      columns: relCols,
+    });
+  }
 
   return groups;
 });
+
+const getFieldOptionsForWidget = (fieldId) => {
+  if (!fieldId) return [];
+  for (const grp of allSearchableGroupsForWidget.value) {
+    const col = grp.columns.find((c) => c.id === fieldId || c.rawId === fieldId);
+    if (col) {
+      if (col.format === 'formula' && col.formulaType === 'presence_status') {
+        return ['Trong nước', 'Đang ở nước ngoài', 'Quá hạn chưa về'];
+      }
+      if (col.options) {
+        if (Array.isArray(col.options)) return col.options;
+        if (typeof col.options === 'string') {
+          return col.options.split(',').map((s) => s.trim()).filter(Boolean);
+        }
+      }
+    }
+  }
+  return [];
+};
 
 // Hydrate Widget Conditions from Topic / Field / Card config
 function hydrateWidgetConditions(w, group) {

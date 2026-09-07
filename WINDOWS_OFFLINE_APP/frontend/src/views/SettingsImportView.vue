@@ -1676,35 +1676,58 @@
             <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
               <div style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
                 <i class="pi pi-bars" style="color: #7c3aed;"></i>
-                Tùy biến Tên Menu Các Bảng Dữ liệu & Menu Thao tác:
+                Tùy biến Tên Menu & Tiêu đề Bảng Dữ liệu:
               </div>
-              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
                 <div>
-                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Menu Bảng Chính (Mặc định: Cán bộ):</label>
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+                    Tên Bảng Dữ liệu Chính trên Menu (Mặc định: Hồ sơ cán bộ):
+                  </label>
                   <InputText
                     v-model="systemBranding.menuLabelPersonnel"
-                    placeholder="VD: Hồ sơ cán bộ / Hồ sơ học sinh"
+                    placeholder="VD: Hồ sơ cán bộ / Hồ sơ học sinh / Nhân sự..."
                     size="small"
                     style="width: 100%; font-size: 0.8rem;"
                   />
                 </div>
                 <div>
-                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Menu Bảng Phụ (Mặc định: Thân nhân):</label>
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
+                    Tiêu đề Mục Danh sách Bảng trên Sidebar (Mặc định: Chuyên đề):
+                  </label>
                   <InputText
-                    v-model="systemBranding.menuLabelRelatives"
-                    placeholder="VD: Thân nhân / Phụ huynh"
+                    v-model="systemBranding.sectionLabelTopics"
+                    placeholder="VD: Chuyên đề / Danh sách Bảng / Bảng dữ liệu..."
                     size="small"
                     style="width: 100%; font-size: 0.8rem;"
                   />
                 </div>
-                <div>
-                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Menu Chuyến đi / Sự kiện:</label>
-                  <InputText
-                    v-model="systemBranding.menuLabelTrips"
-                    placeholder="VD: Chuyến đi / Khóa học / Điểm số"
-                    size="small"
-                    style="width: 100%; font-size: 0.8rem;"
-                  />
+              </div>
+
+              <!-- Tùy chọn mở rộng: Quản lý Bảng Phụ & Bảng Sự kiện con -->
+              <div style="margin-top: 6px; padding-top: 8px; border-top: 1px dashed #cbd5e1;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #334155; font-weight: 600; cursor: pointer;">
+                  <input type="checkbox" v-model="systemBranding.showSecondaryInputs" style="accent-color: #7c3aed; cursor: pointer;" />
+                  <span>Bật quản lý Bảng Phụ (Thân nhân / Phụ huynh) và Bảng Sự kiện con (Chuyến đi / Hoạt động) trên menu</span>
+                </label>
+                <div v-if="systemBranding.showSecondaryInputs" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 10px;">
+                  <div>
+                    <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Tên Bảng Phụ liên kết (Mặc định: Thân nhân):</label>
+                    <InputText
+                      v-model="systemBranding.menuLabelRelatives"
+                      placeholder="VD: Thân nhân / Phụ huynh"
+                      size="small"
+                      style="width: 100%; font-size: 0.8rem;"
+                    />
+                  </div>
+                  <div>
+                    <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Tên Bảng Sự kiện / Hoạt động (Mặc định: Chuyến đi):</label>
+                    <InputText
+                      v-model="systemBranding.menuLabelTrips"
+                      placeholder="VD: Chuyến đi / Khóa học / Điểm thi"
+                      size="small"
+                      style="width: 100%; font-size: 0.8rem;"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -2400,14 +2423,15 @@ const tagSearch = ref('');
 const selectedCategory = ref('personnel');
 const copiedTag = ref('');
 
-// Cài đặt Nhận diện Hệ thống & Tên Menu (System Branding)
 const DEFAULT_BRANDING = {
   logoUrl: '',
   orgNameLine1: 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH',
   orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
   menuLabelPersonnel: 'Hồ sơ cán bộ',
+  sectionLabelTopics: 'Chuyên đề',
   menuLabelRelatives: 'Thân nhân',
   menuLabelTrips: 'Chuyến đi',
+  showSecondaryInputs: false,
 };
 
 const getInitialBranding = () => {

@@ -153,28 +153,16 @@
 
             <!-- Value Input (Hidden if operator is empty / has_value) -->
             <div style="flex: 1; min-width: 180px;" v-if="row.operator !== 'empty' && row.operator !== 'has_value'">
-              <!-- Dropdown for funding -->
+              <!-- Dropdown if field has configured options -->
               <select
-                v-if="row.field === 'nguon_kinh_phi' || row.field === 'fundingName' || row.field === 'funding'"
+                v-if="getFieldOptions(row.field).length > 0"
                 v-model="row.value"
                 class="builder-select"
               >
-                <option value="">-- Chọn kinh phí --</option>
-                <option value="Ngân sách nhà nước">Ngân sách nhà nước</option>
-                <option value="Tự túc">Tự túc</option>
-                <option value="Tài trợ">Tài trợ</option>
-                <option value="Khác">Khác</option>
-              </select>
-
-              <!-- Dropdown for presence status -->
-              <select
-                v-else-if="row.field === 'trang_thai_hien_dien' || row.field === 'presenceStatus'"
-                v-model="row.value"
-                class="builder-select"
-              >
-                <option value="Đang ở nước ngoài">Đang ở nước ngoài</option>
-                <option value="Đã về nước">Đã về nước</option>
-                <option value="Chưa khởi hành">Chưa khởi hành</option>
+                <option value="">-- Chọn giá trị --</option>
+                <option v-for="opt in getFieldOptions(row.field)" :key="opt" :value="opt">
+                  {{ opt }}
+                </option>
               </select>
 
               <!-- Date Input -->
@@ -188,7 +176,7 @@
 
               <!-- Number input -->
               <input
-                v-else-if="row.field === 'trip_count_year' || row.operator === 'gte' || row.operator === 'lte'"
+                v-else-if="row.operator === 'gte' || row.operator === 'lte' || row.operator === 'gt' || row.operator === 'lt' || row.operator?.startsWith('count_')"
                 v-model="row.value"
                 type="number"
                 placeholder="Nhập số..."
@@ -488,17 +476,9 @@ const searchResults = ref([]);
 const allSearchableGroups = computed(() => {
   const groups = [];
 
-  // Group 1: Khối B - Chuyến đi (From importMappingTrips)
+  // Group 1: Bảng Sự kiện / Chuyến đi (From importMappingTrips)
   const tripCols = [];
   const seenTrip = new Set();
-
-  tripCols.push({ id: 'trang_thai_hien_dien', label: 'Trạng thái hiện diện (Trong nước / Nước ngoài)', isVirtual: true });
-  tripCols.push({ id: 'isOverdue', label: 'Trạng thái Quá hạn chưa về', isVirtual: true });
-  tripCols.push({ id: 'trip_count_year', label: 'Số lần xuất cảnh trong năm', isVirtual: true });
-  seenTrip.add('trang_thai_hien_dien');
-  seenTrip.add('isOverdue');
-  seenTrip.add('trip_count_year');
-
   const tripColMap = computeColumnIndexMap(personnelStore.importMappingTrips || []);
   (personnelStore.importMappingTrips || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
@@ -512,22 +492,23 @@ const allSearchableGroups = computed(() => {
           label: c.label || c.id,
           colIndex: idxText,
           isVirtual: false,
+          format: c.format,
+          options: c.options,
         });
       }
     });
   });
 
-  groups.push({
-    name: '1. Thông tin Chuyến đi (Khối B)',
-    columns: tripCols,
-  });
+  if (tripCols.length > 0) {
+    groups.push({
+      name: '1. Cột Bảng Sự kiện / Chuyến đi',
+      columns: tripCols,
+    });
+  }
 
-  // Group 2: Khối A - Cán bộ (From importMappingPersonnel)
+  // Group 2: Bảng Chính (From importMappingPersonnel)
   const pCols = [];
   const seenP = new Set();
-  pCols.push({ id: 'hasRelatives', label: 'Có thân nhân ở nước ngoài', isVirtual: true });
-  seenP.add('hasRelatives');
-
   const pColMap = computeColumnIndexMap(personnelStore.importMappingPersonnel || []);
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
@@ -541,35 +522,24 @@ const allSearchableGroups = computed(() => {
           label: c.label || c.id,
           colIndex: idxText,
           isVirtual: false,
+          format: c.format,
+          options: c.options,
         });
       }
     });
   });
 
-  const commonPersonnelFields = [
-    { id: 'name', label: 'Họ và tên Cán bộ' },
-    { id: 'code', label: 'Mã Cán bộ' },
-    { id: 'cccd', label: 'Số CCCD Cán bộ' },
-    { id: 'departmentName', label: 'Đơn vị công tác' },
-    { id: 'position', label: 'Chức vụ' },
-  ];
-  commonPersonnelFields.forEach((cf) => {
-    if (!seenP.has(cf.id)) {
-      seenP.add(cf.id);
-      pCols.push({ id: cf.id, rawId: cf.id, label: cf.label, colIndex: null, isVirtual: true });
-    }
-  });
+  if (pCols.length > 0) {
+    groups.push({
+      name: '2. Cột Bảng Chính (Hồ sơ)',
+      columns: pCols,
+    });
+  }
 
-  groups.push({
-    name: '2. Thông tin Cán bộ (Khối A)',
-    columns: pCols,
-  });
-
-  // Group 3: Khối C - Thân nhân (From importMappingRelative)
+  // Group 3: Bảng Phụ (From importMappingRelative)
   const relCols = [];
   const seenRel = new Set();
   const relColMap = computeColumnIndexMap(personnelStore.importMappingRelative || []);
-
   (personnelStore.importMappingRelative || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (c.id && c.id !== 'stt' && !seenRel.has(c.id)) {
@@ -582,36 +552,41 @@ const allSearchableGroups = computed(() => {
           label: c.label || c.id,
           colIndex: idxText,
           isVirtual: false,
+          format: c.format,
+          options: c.options,
         });
       }
     });
   });
 
-  const commonRelativeFields = [
-    { id: 'relativeName', label: 'Họ tên Thân nhân' },
-    { id: 'relationshipName', label: 'Mối quan hệ thân nhân' },
-    { id: 'relCountryName', label: 'Quốc gia thân nhân cư trú' },
-  ];
-  commonRelativeFields.forEach((cf) => {
-    if (!seenRel.has(cf.id)) {
-      seenRel.add(cf.id);
-      relCols.push({
-        id: `rel_${cf.id}`,
-        rawId: cf.id,
-        label: cf.label,
-        colIndex: null,
-        isVirtual: true,
-      });
-    }
-  });
-
-  groups.push({
-    name: '3. Thông tin Thân nhân (Khối C)',
-    columns: relCols,
-  });
+  if (relCols.length > 0) {
+    groups.push({
+      name: '3. Cột Bảng Phụ',
+      columns: relCols,
+    });
+  }
 
   return groups;
 });
+
+const getFieldOptions = (fieldId) => {
+  if (!fieldId) return [];
+  for (const grp of allSearchableGroups.value) {
+    const col = grp.columns.find((c) => c.id === fieldId || c.rawId === fieldId);
+    if (col) {
+      if (col.format === 'formula' && col.formulaType === 'presence_status') {
+        return ['Trong nước', 'Đang ở nước ngoài', 'Quá hạn chưa về'];
+      }
+      if (col.options) {
+        if (Array.isArray(col.options)) return col.options;
+        if (typeof col.options === 'string') {
+          return col.options.split(',').map((s) => s.trim()).filter(Boolean);
+        }
+      }
+    }
+  }
+  return [];
+};
 
 const relativeFieldIdsSet = computed(() => {
   const set = new Set();

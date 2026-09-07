@@ -53,7 +53,17 @@
         <span>{{ systemBranding.menuLabelPersonnel || 'Hồ sơ cán bộ' }}</span>
       </router-link>
 
-      <div class="app-nav-heading" v-if="topicDashboards.length > 0">Chuyên đề</div>
+      <div class="app-nav-heading" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
+        <span>{{ systemBranding.sectionLabelTopics || 'Chuyên đề' }}</span>
+        <button
+          type="button"
+          @click.stop="openAddTableDialog"
+          title="Thêm Bảng / Chuyên đề Mới"
+          style="background: transparent; border: none; color: inherit; cursor: pointer; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; opacity: 0.85;"
+        >
+          <i class="pi pi-plus" style="font-weight: 800;"></i>
+        </button>
+      </div>
 
       <router-link
         v-for="dash in topicDashboards"
@@ -62,7 +72,7 @@
         class="app-nav-item"
         :title="dash.title"
       >
-        <i :class="dash.icon ? `pi ${dash.icon}` : 'pi pi-send'"></i>
+        <i :class="dash.icon ? `pi ${dash.icon}` : 'pi pi-table'"></i>
         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
           {{ dash.title }}
         </span>
@@ -81,12 +91,19 @@
         <span>Thêm {{ (systemBranding.menuLabelPersonnel ? systemBranding.menuLabelPersonnel.replace(/^Hồ sơ\s*/i, '') : 'cán bộ') }}</span>
       </a>
 
-      <a class="app-nav-item" href="javascript:void(0)" @click="openQuickRelativeDialog" :title="'Thêm ' + (systemBranding.menuLabelRelatives || 'thân nhân')">
+      <!-- Nút Thêm Bảng mới trực tiếp từ Nhập liệu -->
+      <a class="app-nav-item" href="javascript:void(0)" @click="openAddTableDialog" title="Thêm Bảng / Chuyên đề mới">
+        <i class="pi pi-plus-circle" style="color: #34d399;"></i>
+        <span>Thêm Bảng mới</span>
+      </a>
+
+      <!-- Các nút phụ chỉ hiển thị khi có cấu hình sử dụng -->
+      <a v-if="systemBranding.showSecondaryInputs" class="app-nav-item" href="javascript:void(0)" @click="openQuickRelativeDialog" :title="'Thêm ' + (systemBranding.menuLabelRelatives || 'thân nhân')">
         <i class="pi pi-users" style="color: #c084fc;"></i>
         <span>Thêm {{ (systemBranding.menuLabelRelatives || 'thân nhân') }}</span>
       </a>
 
-      <a class="app-nav-item" href="javascript:void(0)" @click="openQuickTripDialog" :title="'Thêm ' + (systemBranding.menuLabelTrips || 'chuyến đi')">
+      <a v-if="systemBranding.showSecondaryInputs" class="app-nav-item" href="javascript:void(0)" @click="openQuickTripDialog" :title="'Thêm ' + (systemBranding.menuLabelTrips || 'chuyến đi')">
         <i class="pi pi-send" style="color: #4ade80;"></i>
         <span>Thêm {{ (systemBranding.menuLabelTrips || 'chuyến đi') }}</span>
       </a>
@@ -228,6 +245,77 @@
         />
       </template>
     </Dialog>
+
+    <!-- Dialog Thêm Bảng / Chuyên đề mới từ Sidebar -->
+    <Dialog
+      v-model:visible="isAddTableDialogOpen"
+      modal
+      header="Thêm Bảng / Chuyên đề Mới"
+      :style="{ width: '480px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 8px 0;">
+        <div class="field-item">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+            Tên Bảng / Chuyên đề <span style="color: #ef4444;">*</span>
+          </label>
+          <InputText
+            v-model="newTableForm.title"
+            placeholder="VD: Danh sách Học sinh giỏi, Giáo viên chủ nhiệm..."
+            style="width: 100%; font-size: 0.85rem;"
+            autofocus
+            @keyup.enter="saveNewTable"
+          />
+        </div>
+
+        <div class="field-item">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+            Nguồn dữ liệu cơ sở:
+          </label>
+          <select v-model="newTableForm.source" class="settings-select" style="width: 100%; font-size: 0.82rem; height: 36px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;">
+            <option value="personnel">Bảng Chính ({{ systemBranding.menuLabelPersonnel || 'Hồ sơ cán bộ' }})</option>
+            <option value="trips">Bảng Sự kiện / Hoạt động ({{ systemBranding.menuLabelTrips || 'Chuyến đi' }})</option>
+            <option value="relatives">Bảng Phụ liên quan ({{ systemBranding.menuLabelRelatives || 'Thân nhân' }})</option>
+          </select>
+          <span style="font-size: 0.72rem; color: #64748b; margin-top: 4px; display: block;">
+            💡 Chọn bảng dữ liệu gốc để Bảng / Chuyên đề này kế thừa các cột và dữ liệu tương ứng.
+          </span>
+        </div>
+
+        <div class="field-item">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+            Biểu tượng (Icon):
+          </label>
+          <select v-model="newTableForm.icon" class="settings-select" style="width: 100%; font-size: 0.82rem; height: 36px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;">
+            <option value="pi-table">📋 Bảng dữ liệu (pi-table)</option>
+            <option value="pi-folder">📁 Thư mục / Chuyên đề (pi-folder)</option>
+            <option value="pi-users">👥 Danh sách người dùng (pi-users)</option>
+            <option value="pi-bookmark">🔖 Dấu trang quan trọng (pi-bookmark)</option>
+            <option value="pi-star">⭐ Danh sách nổi bật (pi-star)</option>
+            <option value="pi-chart-bar">📊 Thống kê / Báo cáo (pi-chart-bar)</option>
+            <option value="pi-tag">🏷️ Phân loại / Thẻ (pi-tag)</option>
+            <option value="pi-send">✈️ Sự kiện / Chuyến đi (pi-send)</option>
+          </select>
+        </div>
+
+        <div class="field-item">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+            Mô tả / Ghi chú (Tùy chọn):
+          </label>
+          <InputText
+            v-model="newTableForm.description"
+            placeholder="Ghi chú về mục đích sử dụng bảng này..."
+            style="width: 100%; font-size: 0.85rem;"
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
+          <Button label="Hủy" severity="secondary" text size="small" @click="isAddTableDialogOpen = false" />
+          <Button label="Tạo Bảng" icon="pi pi-check" severity="success" size="small" @click="saveNewTable" />
+        </div>
+      </template>
+    </Dialog>
   </aside>
 </template>
 
@@ -236,14 +324,72 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
 import { useAuthStore } from '@/stores/auth';
 import { usePersonnelStore } from '@/stores/personnel';
-import { getAppSettings } from '@/api/settings';
+import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const personnelStore = usePersonnelStore();
+
+const isAddTableDialogOpen = ref(false);
+const newTableForm = ref({
+  title: '',
+  source: 'personnel',
+  icon: 'pi-table',
+  description: '',
+});
+
+const openAddTableDialog = () => {
+  newTableForm.value = {
+    title: '',
+    source: 'personnel',
+    icon: 'pi-table',
+    description: '',
+  };
+  isAddTableDialogOpen.value = true;
+};
+
+const saveNewTable = async () => {
+  if (!newTableForm.value.title?.trim()) {
+    alert('Vui lòng nhập Tên Bảng / Chuyên đề!');
+    return;
+  }
+  const newId = 'topic_' + Date.now();
+  const newTable = {
+    id: newId,
+    code: `TB-${String((dynamicDashboards.value || []).length + 1).padStart(2, '0')}`,
+    title: newTableForm.value.title.trim(),
+    source: newTableForm.value.source || 'personnel',
+    icon: newTableForm.value.icon || 'pi-table',
+    description: newTableForm.value.description || '',
+    metricCards: [
+      { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' }
+    ],
+    scopeConditions: [],
+    customColumns: [],
+  };
+
+  const updatedList = [...(dynamicDashboards.value || []), newTable];
+  dynamicDashboards.value = updatedList;
+
+  try {
+    localStorage.setItem('custom_dashboards_config', JSON.stringify(updatedList));
+  } catch (e) {}
+
+  try {
+    await saveAppSettings('custom_dashboards_config', updatedList);
+  } catch (e) {
+    console.error('Error saving new table to DB:', e);
+  }
+
+  window.dispatchEvent(new CustomEvent('custom-dashboards-updated', { detail: updatedList }));
+
+  isAddTableDialogOpen.value = false;
+  router.push(`/dashboard-topic/${newId}`);
+};
 
 const isInputMenuOpen = ref(false);
 const isRelativeSelectOpen = ref(false);
