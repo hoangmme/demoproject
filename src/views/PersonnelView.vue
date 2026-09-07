@@ -1198,10 +1198,10 @@ const mainTableTitle = computed(() => {
     const local = localStorage.getItem('system_branding_config');
     if (local) {
       const p = JSON.parse(local);
-      if (p.menuLabelPersonnel) return p.menuLabelPersonnel;
+      if (p.menuLabelPersonnel && p.menuLabelPersonnel !== 'Bảng dữ liệu chính') return p.menuLabelPersonnel;
     }
   } catch (e) {}
-  return 'Bảng dữ liệu chính';
+  return 'Cán bộ';
 });
 
 

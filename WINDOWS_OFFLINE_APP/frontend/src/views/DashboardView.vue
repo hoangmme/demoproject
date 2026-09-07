@@ -2478,7 +2478,7 @@ const allSearchableGroupsForWidget = computed(() => {
 
   if (pCols.length > 0) {
     groups.push({
-      name: '2. Cột Bảng Chính (Hồ sơ)',
+      name: '2. Cột Bảng Cán bộ (Hồ sơ)',
       columns: pCols,
     });
   }

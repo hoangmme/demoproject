@@ -1008,3 +1008,26 @@
      - 'ChildDashboardView.vue' (Tất cả các Bảng Chuyên đề).
 - **Status**: Done [Reversible].
 - **Verification**: Chạy 'npx vite build' thành công 100% (0 lỗi), đã đồng bộ toàn bộ bản build mới vào 'WINDOWS_OFFLINE_APP/frontend/src/'.
+
+---
+
+### 76. LOẠI BỎ TRIỆT ĐỂ KHÁI NIỆM "BẢNG CHÍNH" - ĐỒNG BỘ 100% THÀNH CÁC TABLES NGANG HÀNG TRONG BASE
+- **Strategic Context**:
+  - Người dùng thắc mắc tại sao trên giao diện vẫn còn xuất hiện dòng mục riêng rẽ 'Bảng dữ liệu chính'.
+  - Trong triết lý thuần Lark Suite Base / Airtable / Teable: Không tồn tại bảng nào là "bảng chính" đứng riêng biệt bên ngoài danh mục Tables. Tất cả các Bảng (kể cả Bảng hồ sơ ban đầu) đều là các Table nằm chung trong mục **BẢNG DỮ LIỆU (TABLES)**.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Tái cấu trúc Sidebar (`AppSidebar.vue`)**:
+     - Gỡ bỏ hoàn toàn thẻ `<router-link to="/personnel">` riêng lẻ nằm lẻ loi ở trên tiêu đề Tables.
+     - Đưa Bảng đầu tiên (`/personnel`, nhãn mặc định `Cán bộ`) vào nằm trực tiếp bên dưới tiêu đề `BẢNG DỮ LIỆU (TABLES) [+]` cùng hàng với `Danh sách Chuyến đi` và các bảng chuyên đề khác.
+     - Tinh giản mục Nhập liệu: Thay nút "Thêm bản ghi vào Bảng dữ liệu chính" thành `+ Thêm bản ghi Cán bộ` và `+ Thêm Bảng mới`.
+  2. **Chuẩn hóa Tiêu đề Bảng (`PersonnelView.vue`)**:
+     - Tiêu đề mặc định hiển thị: `Cán bộ (30 bản ghi)` (hoặc tên tùy biến trong Cài đặt), không còn nhãn lạ `Bảng dữ liệu chính`.
+  3. **Đồng bộ Cấu hình Hệ thống (`SettingsImportView.vue`)**:
+     - Đổi tên Tab 1 từ "Cấu hình Cột Bảng Chính" thành "Cấu hình Cột Cán bộ".
+     - Đổi placeholder và nhãn cài đặt branding từ "Bảng Dữ liệu Chính" thành "Bảng Cán bộ".
+  4. **Cơ chế Tự động Dọn Cache (Migration Guard)**:
+     - Tự động thay thế giá trị cũ `'Bảng dữ liệu chính'` trong LocalStorage/State thành `'Cán bộ'` để người dùng không bị lưu vết chuỗi cũ.
+  5. **Đồng bộ Nhãn trong Bộ lọc nâng cao (`AdvancedSearchView.vue`, `DashboardView.vue`)**:
+     - Đổi nhóm trường `2. Cột Bảng Chính (Hồ sơ)` thành `2. Cột Bảng Cán bộ (Hồ sơ)`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.

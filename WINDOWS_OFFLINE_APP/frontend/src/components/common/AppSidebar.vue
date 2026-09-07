@@ -48,12 +48,6 @@
         <span>Thống kê</span>
       </router-link>
 
-      <!-- Bảng mặc định (Bảng chính chuyển hóa thành Table) -->
-      <router-link to="/personnel" class="app-nav-item">
-        <i class="pi pi-table" style="color: #0284c7;"></i>
-        <span>{{ systemBranding.menuLabelPersonnel || 'Bảng dữ liệu chính' }}</span>
-      </router-link>
-
       <div class="app-nav-heading" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
         <span>{{ systemBranding.sectionLabelTopics || 'Bảng dữ liệu (Tables)' }}</span>
         <button
@@ -65,6 +59,14 @@
           <i class="pi pi-plus" style="font-weight: 800;"></i>
         </button>
       </div>
+
+      <!-- Bảng 1: Cán bộ (Table 1 trong Base) -->
+      <router-link to="/personnel" class="app-nav-item" :title="systemBranding.menuLabelPersonnel || 'Cán bộ'">
+        <i class="pi pi-table" style="color: #0284c7;"></i>
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          {{ systemBranding.menuLabelPersonnel || 'Cán bộ' }}
+        </span>
+      </router-link>
 
       <router-link
         v-for="dash in topicDashboards"
@@ -87,15 +89,15 @@
       <!-- KHỐI NHẬP LIỆU (DANH SÁCH MENU TRỰC TIẾP TRÊN SIDEBAR) -->
       <div class="app-nav-heading">Nhập liệu</div>
 
-      <a class="app-nav-item" href="javascript:void(0)" @click="handleInputClick('new_personnel')" :title="'Thêm bản ghi vào ' + (systemBranding.menuLabelPersonnel || 'Bảng dữ liệu chính')">
-        <i class="pi pi-plus" style="color: #0284c7;"></i>
-        <span>+ Thêm bản ghi</span>
+      <a class="app-nav-item" href="javascript:void(0)" @click="handleInputClick('new_personnel')" :title="'Thêm bản ghi vào ' + (systemBranding.menuLabelPersonnel || 'Cán bộ')">
+        <i class="pi pi-user-plus" style="color: #0284c7;"></i>
+        <span>+ Thêm bản ghi {{ (systemBranding.menuLabelPersonnel || 'Cán bộ') }}</span>
       </a>
 
       <!-- Nút Thêm Bảng mới trực tiếp từ Nhập liệu -->
       <a class="app-nav-item" href="javascript:void(0)" @click="openAddTableDialog" title="Thêm Bảng / Chuyên đề mới">
         <i class="pi pi-plus-circle" style="color: #34d399;"></i>
-        <span>Thêm Bảng mới</span>
+        <span>+ Thêm Bảng mới</span>
       </a>
 
       <!-- Các nút phụ chỉ hiển thị khi có cấu hình sử dụng -->
@@ -273,7 +275,7 @@
             Nguồn dữ liệu cơ sở:
           </label>
           <select v-model="newTableForm.source" class="settings-select" style="width: 100%; font-size: 0.82rem; height: 36px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;">
-            <option value="personnel">Bảng Chính ({{ systemBranding.menuLabelPersonnel || 'Hồ sơ cán bộ' }})</option>
+            <option value="personnel">Bảng Cán bộ ({{ systemBranding.menuLabelPersonnel || 'Cán bộ' }})</option>
             <option value="trips">Bảng Sự kiện / Hoạt động ({{ systemBranding.menuLabelTrips || 'Chuyến đi' }})</option>
             <option value="relatives">Bảng Phụ liên quan ({{ systemBranding.menuLabelRelatives || 'Thân nhân' }})</option>
           </select>
@@ -415,7 +417,7 @@ const DEFAULT_BRANDING = {
   logoUrl: '',
   orgNameLine1: 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH',
   orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
-  menuLabelPersonnel: 'Bảng dữ liệu chính',
+  menuLabelPersonnel: 'Cán bộ',
   menuLabelRelatives: 'Thân nhân',
   menuLabelTrips: 'Chuyến đi',
 };
@@ -425,6 +427,9 @@ const getInitialBranding = () => {
     const local = localStorage.getItem('system_branding_config');
     if (local) {
       const parsed = JSON.parse(local);
+      if (parsed.menuLabelPersonnel === 'Bảng dữ liệu chính') {
+        parsed.menuLabelPersonnel = 'Cán bộ';
+      }
       return { ...DEFAULT_BRANDING, ...parsed };
     }
   } catch (e) {}
@@ -437,6 +442,9 @@ const loadSystemBranding = async () => {
   try {
     const saved = await getAppSettings('system_branding_config', null);
     if (saved && typeof saved === 'object') {
+      if (saved.menuLabelPersonnel === 'Bảng dữ liệu chính') {
+        saved.menuLabelPersonnel = 'Cán bộ';
+      }
       systemBranding.value = { ...DEFAULT_BRANDING, ...saved };
       try { localStorage.setItem('system_branding_config', JSON.stringify(systemBranding.value)); } catch (e) {}
     }

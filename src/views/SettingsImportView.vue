@@ -83,7 +83,7 @@
         @click="activeTab = 'personnel'"
       >
         <i class="pi pi-user"></i>
-        <span>Cấu hình Cột Bảng Chính</span>
+        <span>Cấu hình Cột Cán bộ</span>
       </button>
 
       <button
@@ -1681,11 +1681,11 @@
               <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
                 <div>
                   <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
-                    Tên Bảng Dữ liệu Chính trên Menu (Mặc định: Hồ sơ cán bộ):
+                    Tên Bảng Cán bộ trên Menu (Mặc định: Cán bộ):
                   </label>
                   <InputText
                     v-model="systemBranding.menuLabelPersonnel"
-                    placeholder="VD: Hồ sơ cán bộ / Hồ sơ học sinh / Nhân sự..."
+                    placeholder="VD: Cán bộ / Hồ sơ học sinh / Nhân sự..."
                     size="small"
                     style="width: 100%; font-size: 0.8rem;"
                   />
@@ -2427,7 +2427,7 @@ const DEFAULT_BRANDING = {
   logoUrl: '',
   orgNameLine1: 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH',
   orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
-  menuLabelPersonnel: 'Bảng dữ liệu chính',
+  menuLabelPersonnel: 'Cán bộ',
   sectionLabelTopics: 'Bảng dữ liệu (Tables)',
   menuLabelRelatives: 'Thân nhân',
   menuLabelTrips: 'Chuyến đi',
@@ -2439,6 +2439,9 @@ const getInitialBranding = () => {
     const local = localStorage.getItem('system_branding_config');
     if (local) {
       const parsed = JSON.parse(local);
+      if (parsed.menuLabelPersonnel === 'Bảng dữ liệu chính') {
+        parsed.menuLabelPersonnel = 'Cán bộ';
+      }
       return { ...DEFAULT_BRANDING, ...parsed };
     }
   } catch (e) {}
