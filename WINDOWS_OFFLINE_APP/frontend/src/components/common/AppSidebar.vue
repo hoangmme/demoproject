@@ -55,7 +55,7 @@
       </router-link>
 
       <div class="app-nav-heading" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
-        <span>{{ systemBranding.sectionLabelTopics || 'Chuyên đề' }}</span>
+        <span>{{ systemBranding.sectionLabelTopics || 'Bảng dữ liệu (Tables)' }}</span>
         <button
           type="button"
           @click.stop="openAddTableDialog"

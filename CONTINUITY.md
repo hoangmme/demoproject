@@ -980,3 +980,31 @@
      - Đổi tên tab 'Quản lý Chuyên đề' thành 'Quản lý Danh sách Bảng (Tables)'.
 - **Status**: Done [Reversible].
 - **Verification**: Chạy 'npx vite build' thành công 100% (0 lỗi), đã đồng bộ toàn bộ bản build mới vào 'WINDOWS_OFFLINE_APP/frontend/src/'.
+
+---
+
+### 75. NÂNG CẤP TRẢI NGHIỆM GRID CHUẨN TEABLE / LARK SUITE BASE (SMART COLUMN HEADER, INLINE EDITING, QUICK ADD COLUMN)
+- **Strategic Context**:
+  - Học hỏi các pattern UX tinh hoa từ 'Teable > Baserow > NocoDB' để biến bảng dữ liệu thành Spreadsheet Database mượt mà và trực quan chuẩn Lark Base / Airtable.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Tạo Component Header Cột Thông Minh (ColumnHeaderMenu.vue)**:
+     - Tích hợp nút trigger menu trên từng tiêu đề cột ( và ).
+     - Khi click mở popover:
+       * **Đổi tên hiển thị cột** trực tiếp với nút lưu nhanh.
+       * **Đổi kiểu dữ liệu** (Text, Number, Date, Dropdown, Checkbox, Checkbox+File, File).
+       * **Sửa danh sách options** cho Dropdown/Checkbox ngay tại chỗ.
+       * **Chỉnh sửa độ rộng cột (px)** trực quan.
+       * **Ẩn cột này** ngay lập tức khỏi bảng.
+       * **Lọc nhanh theo cột này** đưa vào ô tìm kiếm.
+  2. **Chỉnh Sửa Nhanh Tại Ô (Inline Cell Editing)**:
+     - Nhấp đúp (Double click) vào bất kỳ ô dữ liệu nào trên bảng để sửa giá trị trực tiếp tại chỗ.
+     - Tự động hiển thị đúng loại input theo kiểu dữ liệu cột (Text input, Number input, Date picker, Dropdown select).
+     - Bấm 'Enter' hoặc click ra ngoài ('blur') để lưu dữ liệu tức thì xuống CSDL; bấm 'Esc' để hủy.
+  3. **Nút '+' Thêm Cột Mới ở Cuối Bảng (End of Table Column Header)**:
+     - Bổ sung nút icon '+' ở cột cuối cùng của bảng dữ liệu (ngay trước cột Thao tác) giống hệt Airtable / Lark Base / Teable.
+     - Bấm '+' sẽ mở ngay hộp thoại Thêm cột dữ liệu mới.
+  4. **Áp dụng đồng bộ cho cả 2 view chính**:
+     - 'PersonnelView.vue' (Bảng dữ liệu chính).
+     - 'ChildDashboardView.vue' (Tất cả các Bảng Chuyên đề).
+- **Status**: Done [Reversible].
+- **Verification**: Chạy 'npx vite build' thành công 100% (0 lỗi), đã đồng bộ toàn bộ bản build mới vào 'WINDOWS_OFFLINE_APP/frontend/src/'.

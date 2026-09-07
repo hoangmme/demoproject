@@ -242,7 +242,17 @@
           :bodyStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
         >
           <template #header>
-            <span class="table-col-header-wrap">{{ col.label }}</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
+              <span class="table-col-header-wrap">{{ col.label }}</span>
+              <button
+                type="button"
+                class="btn-col-menu-trigger"
+                @click.stop="openColMenu($event, col)"
+                title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, ẩn cột...)"
+              >
+                <i class="pi pi-chevron-down" style="font-size: 0.65rem;"></i>
+              </button>
+            </div>
           </template>
           <template #body="{ data }">
             <!-- Cột ảo Thông tin cán bộ -->
@@ -407,10 +417,89 @@
               <span v-else>-</span>
             </template>
 
-            <!-- General columns (Direct value matching Chi tiết 100%) -->
+            <!-- General columns (Direct value matching Chi tiết 100% + Inline Editing) -->
             <template v-else>
-              <span style="word-break: break-word; line-height: 1.45;">{{ getDisplayValue(data, col.id) }}</span>
+              <div
+                class="inline-cell-wrapper"
+                @dblclick.stop="startInlineEdit(data, col)"
+                :title="'Nhấp đúp để chỉnh sửa nhanh ô này'"
+              >
+                <!-- Đang sửa inline -->
+                <div v-if="editingCell?.rowId === data.id && editingCell?.colId === col.id" class="inline-edit-box" @click.stop>
+                  <input
+                    v-if="col.format === 'text' || !col.format"
+                    v-model="editingCell.value"
+                    class="inline-edit-input"
+                    autofocus
+                    @keyup.enter="saveInlineEdit"
+                    @keyup.esc="cancelInlineEdit"
+                    @blur="saveInlineEdit"
+                  />
+                  <input
+                    v-else-if="col.format === 'number'"
+                    type="number"
+                    v-model="editingCell.value"
+                    class="inline-edit-input"
+                    autofocus
+                    @keyup.enter="saveInlineEdit"
+                    @keyup.esc="cancelInlineEdit"
+                    @blur="saveInlineEdit"
+                  />
+                  <input
+                    v-else-if="col.format === 'date'"
+                    type="date"
+                    v-model="editingCell.value"
+                    class="inline-edit-input"
+                    autofocus
+                    @change="saveInlineEdit"
+                    @keyup.esc="cancelInlineEdit"
+                    @blur="saveInlineEdit"
+                  />
+                  <select
+                    v-else-if="col.format === 'dropdown'"
+                    v-model="editingCell.value"
+                    class="inline-edit-select"
+                    autofocus
+                    @change="saveInlineEdit"
+                    @blur="saveInlineEdit"
+                  >
+                    <option value="">-- Trống --</option>
+                    <option v-for="opt in getColDropdownOptions(col)" :key="opt" :value="opt">
+                      {{ opt }}
+                    </option>
+                  </select>
+                  <input
+                    v-else
+                    v-model="editingCell.value"
+                    class="inline-edit-input"
+                    autofocus
+                    @keyup.enter="saveInlineEdit"
+                    @keyup.esc="cancelInlineEdit"
+                    @blur="saveInlineEdit"
+                  />
+                </div>
+
+                <!-- Hiển thị giá trị bình thường -->
+                <span v-else style="word-break: break-word; line-height: 1.45;">{{ getDisplayValue(data, col.id) }}</span>
+              </div>
             </template>
+          </template>
+        </Column>
+
+        <!-- ➕ Nút Thêm Cột Mới chuẩn Airtable / Lark Base / Teable -->
+        <Column :headerStyle="{ width: '48px', minWidth: '48px', padding: '0', textAlign: 'center' }" :bodyStyle="{ width: '48px', minWidth: '48px', padding: '0', textAlign: 'center', background: '#f8fafc' }">
+          <template #header>
+            <button
+              type="button"
+              class="btn-add-col-plus"
+              @click.stop="openAddColumnModal"
+              title="Thêm Cột Dữ Liệu Mới (Airtable / Lark Base style)"
+            >
+              <i class="pi pi-plus"></i>
+            </button>
+          </template>
+          <template #body>
+            <span style="color: #cbd5e1; font-size: 0.8rem;">·</span>
           </template>
         </Column>
 
@@ -667,7 +756,17 @@
           :bodyStyle="{ width: col.tableWidth || col.width || '150px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '150px') }"
         >
           <template #header>
-            <span class="table-col-header-wrap">{{ col.label }}</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
+              <span class="table-col-header-wrap">{{ col.label }}</span>
+              <button
+                type="button"
+                class="btn-col-menu-trigger"
+                @click.stop="openColMenu($event, col)"
+                title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, ẩn cột...)"
+              >
+                <i class="pi pi-chevron-down" style="font-size: 0.65rem;"></i>
+              </button>
+            </div>
           </template>
           <template #body="{ data }">
             <template v-if="col.format === 'checkbox_file_loop'">
@@ -1041,6 +1140,20 @@
       @imported="onWizardImported"
     />
   </div>
+
+    <!-- Header Cột thông minh Context Menu Popover -->
+    <ColumnHeaderMenu
+      v-model:visible="isColMenuVisible"
+      :column="selectedMenuCol"
+      :position="colMenuPosition"
+      @rename-column="onRenameColumn"
+      @change-format="onChangeColumnFormat"
+      @change-options="onChangeColumnOptions"
+      @change-width="onChangeColumnWidth"
+      @hide-column="onHideColumn"
+      @filter-column="onFilterByColumn"
+    />
+
 </template>
 
 <script setup>
@@ -1052,6 +1165,8 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
+import ColumnHeaderMenu from '@/components/common/ColumnHeaderMenu.vue';
+
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
@@ -2068,6 +2183,165 @@ const isFirstRelativeOfParent = (data) => {
   return !curKey || curKey !== prevKey;
 };
 
+
+// ===== TEABLE / LARK BASE INTERACTIVE GRID STATE & METHODS =====
+const isColMenuVisible = ref(false);
+const selectedMenuCol = ref(null);
+const colMenuPosition = ref({ x: 0, y: 0 });
+
+const openColMenu = (event, col) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  colMenuPosition.value = {
+    x: Math.min(rect.left, window.innerWidth - 300),
+    y: rect.bottom + 4,
+  };
+  selectedMenuCol.value = col;
+  isColMenuVisible.value = true;
+};
+
+const onRenameColumn = async ({ colId, newLabel }) => {
+  const mapping = personnelStore.importMappingPersonnel || [];
+  let found = false;
+  for (const g of mapping) {
+    for (const c of g.columns || []) {
+      if (c.id === colId) {
+        c.label = newLabel;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings('importMappingPersonnel', mapping);
+    await saveAppSettings('mapping_config_personnel', mapping);
+  }
+};
+
+const onChangeColumnFormat = async ({ colId, newFormat }) => {
+  const mapping = personnelStore.importMappingPersonnel || [];
+  let found = false;
+  for (const g of mapping) {
+    for (const c of g.columns || []) {
+      if (c.id === colId) {
+        c.format = newFormat;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings('importMappingPersonnel', mapping);
+    await saveAppSettings('mapping_config_personnel', mapping);
+  }
+};
+
+const onChangeColumnOptions = async ({ colId, options }) => {
+  const mapping = personnelStore.importMappingPersonnel || [];
+  let found = false;
+  for (const g of mapping) {
+    for (const c of g.columns || []) {
+      if (c.id === colId) {
+        c.options = options;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings('importMappingPersonnel', mapping);
+    await saveAppSettings('mapping_config_personnel', mapping);
+  }
+};
+
+const onChangeColumnWidth = async ({ colId, width }) => {
+  const mapping = personnelStore.importMappingPersonnel || [];
+  let found = false;
+  for (const g of mapping) {
+    for (const c of g.columns || []) {
+      if (c.id === colId) {
+        c.tableWidth = width;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings('importMappingPersonnel', mapping);
+    await saveAppSettings('mapping_config_personnel', mapping);
+  }
+};
+
+const onHideColumn = async (colId) => {
+  personnelStore.visibleColumns = personnelStore.visibleColumns.filter((id) => id !== colId);
+  try {
+    localStorage.setItem('personnel_visible_columns', JSON.stringify(personnelStore.visibleColumns));
+  } catch (e) {}
+  await saveAppSettings('personnel_visible_columns', personnelStore.visibleColumns);
+};
+
+const onFilterByColumn = (col) => {
+  searchQuery.value = col.label || col.id;
+};
+
+// INLINE EDITING
+const editingCell = ref(null);
+
+const startInlineEdit = (row, col) => {
+  // Không cho sửa trực tiếp các cột tính toán / công thức / tệp qua inline
+  if (col.format === 'formula' || col.format === 'file' || col.format === 'text_file_loop' || col.format === 'checkbox_file_loop') {
+    openEditDialog(row);
+    return;
+  }
+  const currentVal = row[col.id] ?? row.custom_data?.[col.id] ?? '';
+  editingCell.value = {
+    rowId: row.id,
+    colId: col.id,
+    row: row,
+    col: col,
+    value: currentVal !== '-' ? currentVal : '',
+  };
+};
+
+const cancelInlineEdit = () => {
+  editingCell.value = null;
+};
+
+const saveInlineEdit = async () => {
+  if (!editingCell.value) return;
+  const { row, colId, value } = editingCell.value;
+  editingCell.value = null;
+
+  const oldVal = row[colId] ?? row.custom_data?.[colId] ?? '';
+  if (String(oldVal) === String(value)) return;
+
+  try {
+    row[colId] = value;
+    if (!row.custom_data) row.custom_data = {};
+    if (typeof row.custom_data === 'string') {
+      try { row.custom_data = JSON.parse(row.custom_data); } catch (e) { row.custom_data = {}; }
+    }
+    row.custom_data[colId] = value;
+
+    await personnelStore.savePerson(row);
+  } catch (err) {
+    console.error('Lỗi cập nhật nhanh inline:', err);
+  }
+};
+
+const getColDropdownOptions = (col) => {
+  if (!col.options) return [];
+  return String(col.options).split(',').map((s) => s.trim()).filter(Boolean);
+};
+
+const openAddColumnModal = () => {
+  router.push('/settings-import');
+};
+// ===== END TEABLE / LARK BASE STATE & METHODS =====
+
 const onRowClick = (event) => {
   openEditDialog(event.data);
 };
@@ -2873,4 +3147,83 @@ const onPersonDeleted = () => {};
   line-height: 1.35 !important;
   max-width: 100%;
 }
+
+/* Teable / Lark Base Smart Grid Styles */
+.btn-col-menu-trigger {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: all 0.15s ease;
+}
+.btn-col-menu-trigger:hover {
+  background: #e2e8f0;
+  color: #0284c7;
+  opacity: 1;
+}
+
+.btn-add-col-plus {
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+.btn-add-col-plus:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+.inline-cell-wrapper {
+  cursor: pointer;
+  min-height: 22px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+.inline-cell-wrapper:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.inline-edit-box {
+  width: 100%;
+}
+.inline-edit-input {
+  width: 100%;
+  height: 26px;
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  border: 1.5px solid #0284c7;
+  border-radius: 4px;
+  outline: none;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+.inline-edit-select {
+  width: 100%;
+  height: 26px;
+  font-size: 0.78rem;
+  padding: 2px 4px;
+  border: 1.5px solid #0284c7;
+  border-radius: 4px;
+  outline: none;
+  background: #ffffff;
+}
+
 </style>
