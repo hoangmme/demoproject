@@ -952,21 +952,31 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npx vite build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### 74. CHUYỂN DỊCH KIẾN TRÚC ĐA BẢNG ĐỘC LẬP CHUẨN LARK BASE (MULTI-TABLE ENGINE)
+- **Strategic Context**:
+  - Người dùng yêu cầu xóa bỏ mô hình 'Hồ sơ Cán bộ' lồng ghép, chuyển hẳn sang kiến trúc mỗi Bảng/Chuyên đề là 1 Table độc lập chuẩn Lark Suite Base.
+  - Trước khi thực hiện đã hoàn thành sao lưu đầy đủ:
+    * Nhánh Git Remote: 'backup-before-pure-lark-base' (đã push GitHub).
+    * Thư mục sao lưu CSDL: 'BACKUP_DATA/' (toàn bộ 30 cán bộ và 57 cấu hình app_settings).
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Chuyển hóa Nhận diện Menu Sidebar (AppSidebar.vue)**:
+     - Gỡ bỏ hoàn toàn menu nhãn cứng 'Hồ sơ cán bộ'.
+     - Đổi thành 'Bảng dữ liệu chính' (hoặc tên tùy biến người dùng đặt trong Cài đặt).
+     - Mục Chuyên đề đổi thành 'Bảng dữ liệu (Tables)' kèm nút '+' để thêm Bảng mới ngay tại chỗ.
+     - Mục Nhập liệu đổi nút '+ Thêm cán bộ' thành '+ Thêm bản ghi'.
+  2. **Chuyển hóa Giao diện Danh sách Bảng (PersonnelView.vue)**:
+     - Đổi tiêu đề danh sách thành '[Tên Bảng] (x bản ghi)'.
+     - Nút thêm mới đổi thành '+ Thêm Bản Ghi Mới'.
+     - Ẩn hoàn toàn tab chuyển Thân nhân nếu không có dữ liệu thân nhân hoặc khi cấu hình bảng độc lập.
+  3. **Bổ sung Nút Nhập liệu Trực tiếp trên từng Bảng (ChildDashboardView.vue)**:
+     - Thêm nút '+ Thêm Bản Ghi Mới' ngay cạnh nút 'Thêm cột mới' và 'Tùy chọn cột' trên từng Bảng chuyên đề.
+  4. **Chuẩn hóa Form Nhập liệu Động (PersonnelDialog.vue)**:
+     - Header đổi thành 'Thêm bản ghi mới ([Tên Bảng])' hoặc 'Chỉnh sửa: [Tên Bản Ghi]'.
+     - Ẩn các khối chuyến đi/thân nhân lồng ghép nếu bản ghi không sử dụng đến.
+  5. **Cập nhật Tab Cấu hình Cột (SettingsImportView.vue)**:
+     - Đổi tên tab 'Cấu hình Cột Cán bộ' thành 'Cấu hình Cột Bảng Chính'.
+     - Đổi tên tab 'Quản lý Chuyên đề' thành 'Quản lý Danh sách Bảng (Tables)'.
+- **Status**: Done [Reversible].
+- **Verification**: Chạy 'npx vite build' thành công 100% (0 lỗi), đã đồng bộ toàn bộ bản build mới vào 'WINDOWS_OFFLINE_APP/frontend/src/'.

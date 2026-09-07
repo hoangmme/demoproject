@@ -48,9 +48,10 @@
         <span>Thống kê</span>
       </router-link>
 
+      <!-- Bảng mặc định (Bảng chính chuyển hóa thành Table) -->
       <router-link to="/personnel" class="app-nav-item">
-        <i class="pi pi-users"></i>
-        <span>{{ systemBranding.menuLabelPersonnel || 'Hồ sơ cán bộ' }}</span>
+        <i class="pi pi-table" style="color: #0284c7;"></i>
+        <span>{{ systemBranding.menuLabelPersonnel || 'Bảng dữ liệu chính' }}</span>
       </router-link>
 
       <div class="app-nav-heading" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
@@ -86,9 +87,9 @@
       <!-- KHỐI NHẬP LIỆU (DANH SÁCH MENU TRỰC TIẾP TRÊN SIDEBAR) -->
       <div class="app-nav-heading">Nhập liệu</div>
 
-      <a class="app-nav-item" href="javascript:void(0)" @click="handleInputClick('new_personnel')" :title="'Thêm ' + (systemBranding.menuLabelPersonnel || 'cán bộ')">
-        <i class="pi pi-user-plus" style="color: #60a5fa;"></i>
-        <span>Thêm {{ (systemBranding.menuLabelPersonnel ? systemBranding.menuLabelPersonnel.replace(/^Hồ sơ\s*/i, '') : 'cán bộ') }}</span>
+      <a class="app-nav-item" href="javascript:void(0)" @click="handleInputClick('new_personnel')" :title="'Thêm bản ghi vào ' + (systemBranding.menuLabelPersonnel || 'Bảng dữ liệu chính')">
+        <i class="pi pi-plus" style="color: #0284c7;"></i>
+        <span>+ Thêm bản ghi</span>
       </a>
 
       <!-- Nút Thêm Bảng mới trực tiếp từ Nhập liệu -->
@@ -414,7 +415,7 @@ const DEFAULT_BRANDING = {
   logoUrl: '',
   orgNameLine1: 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH',
   orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
-  menuLabelPersonnel: 'Hồ sơ cán bộ',
+  menuLabelPersonnel: 'Bảng dữ liệu chính',
   menuLabelRelatives: 'Thân nhân',
   menuLabelTrips: 'Chuyến đi',
 };

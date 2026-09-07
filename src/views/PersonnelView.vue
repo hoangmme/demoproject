@@ -1,15 +1,15 @@
 <template>
   <div class="app-content">
-    <!-- Top-level Tab Switcher between Cán bộ (Cá nhân) & Thân nhân -->
-    <div style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content; margin-bottom: 1rem;">
+    <!-- Top-level Tab Switcher (chỉ hiển thị khi có dữ liệu bảng phụ liên quan) -->
+    <div v-if="personnelStore.relativesList.length > 0" style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content; margin-bottom: 1rem;">
       <button
         type="button"
         class="segmented-tab-btn"
         :class="{ 'tab-active': mainTab === 'canhan' }"
         @click="mainTab = 'canhan'"
       >
-        <i class="pi pi-user"></i>
-        <span>1. Quản lý cán bộ (cá nhân) ({{ personnelStore.personnelList.length }})</span>
+        <i class="pi pi-table"></i>
+        <span>{{ mainTableTitle }} ({{ personnelStore.personnelList.length }})</span>
       </button>
       <button
         type="button"
@@ -18,7 +18,7 @@
         @click="mainTab = 'thannhan'"
       >
         <i class="pi pi-users"></i>
-        <span>2. Quản lý thân nhân ({{ personnelStore.relativesList.length }})</span>
+        <span>Bảng phụ liên quan ({{ personnelStore.relativesList.length }})</span>
       </button>
     </div>
 
@@ -28,7 +28,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">
-            Danh sách Cán bộ ({{ personnelStore.personnelList.length }} hồ sơ)
+            {{ mainTableTitle }} ({{ personnelStore.personnelList.length }} bản ghi)
           </span>
 
           <!-- Bulk delete button -->
@@ -145,7 +145,7 @@
 
           <!-- Add Button -->
           <Button
-            label="Thêm Cán bộ"
+            label="+ Thêm Bản Ghi Mới"
             icon="pi pi-plus"
             severity="success"
             size="small"
@@ -1078,6 +1078,17 @@ import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDial
 const route = useRoute();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
+const mainTableTitle = computed(() => {
+  try {
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      const p = JSON.parse(local);
+      if (p.menuLabelPersonnel) return p.menuLabelPersonnel;
+    }
+  } catch (e) {}
+  return 'Bảng dữ liệu chính';
+});
+
 
 const isWizardOpen = ref(false);
 const wizardTarget = ref('personnel');

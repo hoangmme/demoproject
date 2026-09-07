@@ -84,6 +84,17 @@
           </div>
         </div>
 
+        <!-- + Thêm Bản Ghi Mới trực tiếp vào Bảng này -->
+        <Button
+          icon="pi pi-plus"
+          label="+ Thêm Bản Ghi Mới"
+          severity="success"
+          size="small"
+          @click="openAddTripDialog"
+          title="Thêm bản ghi mới trực tiếp vào bảng này"
+          style="font-size: 0.8rem;"
+        />
+
         <!-- Export PDF / Word -->
         <button
           type="button"

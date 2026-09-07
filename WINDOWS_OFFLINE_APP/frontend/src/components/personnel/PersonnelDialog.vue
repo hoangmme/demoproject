@@ -6,18 +6,18 @@
     :style="{ width: '85vw', maxWidth: '1100px' }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
-    <!-- 2 Main Tabs: Cá nhân & Thân nhân -->
-    <div style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px;">
+    <!-- Tabs nếu có bảng phụ, nếu không chỉ hiển thị form bảng chính -->
+    <div v-if="hasSecondaryTabs" style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px;">
       <Button
-        :label="'1. Thông tin Cán bộ (Cá nhân)'"
-        icon="pi pi-user"
+        :label="'1. ' + (customTableName || 'Thông tin bản ghi')"
+        icon="pi pi-table"
         :severity="activeTab === 0 ? 'primary' : 'secondary'"
         :text="activeTab !== 0"
         size="small"
         @click="activeTab = 0"
       />
       <Button
-        :label="'2. Danh sách Thân nhân (' + (form.relatives?.length || 0) + ')'"
+        :label="'2. Bảng phụ liên quan (' + (form.relatives?.length || 0) + ')'"
         icon="pi pi-users"
         :severity="activeTab === 1 ? 'primary' : 'secondary'"
         :text="activeTab !== 1"
@@ -54,11 +54,11 @@
           </div>
         </template>
 
-        <!-- Khối Chuyến đi nước ngoài của Cán bộ (Nằm trực tiếp bên trong Tab Cá nhân) -->
-        <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 10px; padding: 14px 16px; margin-top: 1rem; box-shadow: 0 1px 3px rgba(2, 132, 199, 0.06);">
+        <!-- Khối Chuyến đi / Sự kiện (Chỉ hiển thị khi có dữ liệu chuyến đi hoặc bật tùy chọn) -->
+        <div v-if="showTripSection" style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 10px; padding: 14px 16px; margin-top: 1rem; box-shadow: 0 1px 3px rgba(2, 132, 199, 0.06);">
           <h4 style="font-size: 0.92rem; font-weight: 700; color: #0369a1; margin-bottom: 0.75rem; border-bottom: 1px solid #bae6fd; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
             <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
-            <span>Chuyến đi nước ngoài của Cán bộ ({{ form.trips?.length || 0 }} chuyến)</span>
+            <span>Sự kiện / Chuyến đi liên quan ({{ form.trips?.length || 0 }})</span>
           </h4>
           <PersonnelTravelForm :form="form" />
         </div>
@@ -184,13 +184,32 @@ const isNotesGroup = (grp, idx) => {
   return false;
 };
 
+const hasSecondaryTabs = computed(() => {
+  return (form.value.relatives && form.value.relatives.length > 0) || Boolean(props.targetRelativeCode);
+});
+
+const showTripSection = computed(() => {
+  return (form.value.trips && form.value.trips.length > 0);
+});
+
+const customTableName = computed(() => {
+  try {
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      const p = JSON.parse(local);
+      if (p.menuLabelPersonnel) return p.menuLabelPersonnel;
+    }
+  } catch (e) {}
+  return 'Bản ghi';
+});
+
 const dialogHeader = computed(() => {
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
   const nameVal = form.value[pNameField] || form.value.name || '';
   if (props.targetRelativeCode) {
-    return `Chi tiết Thân nhân (${props.targetRelativeCode}) - Cán bộ: ${nameVal || 'Hồ sơ liên quan'}`;
+    return `Chi tiết Bản ghi phụ (${props.targetRelativeCode}) - Gốc: ${nameVal || 'Liên quan'}`;
   }
-  return isEdit.value ? `Chỉnh sửa Hồ sơ: ${nameVal || ''}` : 'Thêm mới Hồ sơ Cán bộ';
+  return isEdit.value ? `Chỉnh sửa: ${nameVal || ''}` : `Thêm bản ghi mới (${customTableName.value})`;
 });
 
 const form = ref({

@@ -1,0 +1,24 @@
+{
+  "data": [
+    {
+      "id": "d1",
+      "name": "Công an TP.HCM"
+    },
+    {
+      "id": "d2",
+      "name": "Sở Tư pháp TP.HCM"
+    },
+    {
+      "id": "d3",
+      "name": "Cục Thuế TP.HCM"
+    },
+    {
+      "id": "d4",
+      "name": "Sở Ngoại vụ TP.HCM"
+    },
+    {
+      "id": "d5",
+      "name": "UBND Quận 1"
+    }
+  ]
+}

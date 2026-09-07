@@ -83,7 +83,7 @@
         @click="activeTab = 'personnel'"
       >
         <i class="pi pi-user"></i>
-        <span>Cấu hình Cột Cán bộ (Cá nhân)</span>
+        <span>Cấu hình Cột Bảng Chính</span>
       </button>
 
       <button
@@ -113,7 +113,7 @@
         @click="activeTab = 'dashboard'"
       >
         <i class="pi pi-send"></i>
-        <span>Quản lý Chuyên đề</span>
+        <span>Quản lý Danh sách Bảng (Tables)</span>
       </button>
 
       <button
@@ -2427,8 +2427,8 @@ const DEFAULT_BRANDING = {
   logoUrl: '',
   orgNameLine1: 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH',
   orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
-  menuLabelPersonnel: 'Hồ sơ cán bộ',
-  sectionLabelTopics: 'Chuyên đề',
+  menuLabelPersonnel: 'Bảng dữ liệu chính',
+  sectionLabelTopics: 'Bảng dữ liệu (Tables)',
   menuLabelRelatives: 'Thân nhân',
   menuLabelTrips: 'Chuyến đi',
   showSecondaryInputs: false,
