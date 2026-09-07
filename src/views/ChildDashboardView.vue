@@ -219,6 +219,7 @@
                     Cột {{ col.colIndex }}:
                   </span>
                   {{ col.label }}
+                  <span v-if="isChildPrimaryKey(col.id)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
                 </span>
                 <i v-if="isNameColumn(col.id)" class="pi pi-cog" style="font-size: 0.7rem; cursor: pointer; color: #94a3b8; margin-left: 2px; flex-shrink: 0;" @click.stop="toggleNameColConfig($event)" title="Tùy chỉnh nội dung cột" />
               </div>
@@ -975,6 +976,7 @@
     <ColumnHeaderMenu
       v-model:visible="isChildColMenuVisible"
       :column="selectedChildMenuCol"
+      :tableSource="currentDashboardConfig.source || 'trips'"
       :position="childColMenuPosition"
       :nameColFields="nameColFields"
       :availableParentFields="availableParentFields"
@@ -1024,6 +1026,14 @@ const isExportDocxDialogOpen = ref(false);
 // ===== Name Column Config (Linh hoạt cho mọi mô hình: Cán bộ, Học sinh, Nhân sự...) =====
 const NAME_COL_IDS = new Set(['_parentPersonnelName']);
 const isNameColumn = (colId) => NAME_COL_IDS.has(colId);
+
+const isChildPrimaryKey = (colId) => {
+  if (!colId) return false;
+  const src = currentDashboardConfig.value?.source;
+  if (src === 'relatives') return personnelStore.getRelativeKeyField() === colId;
+  if (src === 'trips') return personnelStore.getTripKeyField() === colId;
+  return personnelStore.getPersonnelKeyField() === colId;
+};
 
 const availableParentFields = computed(() => {
   const list = [];

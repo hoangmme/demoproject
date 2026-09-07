@@ -172,21 +172,39 @@
         </div>
       </div>
 
-      <!-- 5. Bắt buộc nhập liệu (Required) -->
-      <div>
-        <label style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
-          Quy tắc nhập liệu khi lưu:
-        </label>
-        <button
-          type="button"
-          class="btn-required-toggle"
-          :class="{ 'is-required': form.required }"
-          @click="form.required = !form.required"
-          title="Bắt buộc phải có dữ liệu khi lưu"
-        >
-          <i :class="form.required ? 'pi pi-check-square' : 'pi pi-stop'" style="font-size: 0.95rem;"></i>
-          <span>★ Bắt buộc</span>
-        </button>
+      <!-- 5. Bắt buộc nhập liệu (Required) & Khóa chính (Primary Key) -->
+      <div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;">
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+            Quy tắc nhập liệu khi lưu:
+          </label>
+          <button
+            type="button"
+            class="btn-required-toggle"
+            :class="{ 'is-required': form.required }"
+            @click="form.required = !form.required"
+            title="Bắt buộc phải có dữ liệu khi lưu"
+          >
+            <i :class="form.required ? 'pi pi-check-square' : 'pi pi-stop'" style="font-size: 0.95rem;"></i>
+            <span>★ Bắt buộc</span>
+          </button>
+        </div>
+
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+            Khóa định danh chính (Cột primal):
+          </label>
+          <button
+            type="button"
+            class="btn-primary-key-toggle"
+            :class="{ 'is-primary-key': form.isPrimaryKey }"
+            @click="form.isPrimaryKey = !form.isPrimaryKey"
+            title="Đặt cột mới này làm Khóa chính của bảng"
+          >
+            <i class="pi pi-key" style="font-size: 0.92rem;"></i>
+            <span>{{ form.isPrimaryKey ? '🔑 Khóa chính của bảng' : '🔑 Đặt làm Khóa chính' }}</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -209,6 +227,7 @@ import { ref, computed, watch } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
+import { saveAppSettings } from '@/api/settings';
 import { generateSlug } from '@/utils/formatters';
 
 const props = defineProps({
@@ -246,6 +265,7 @@ const form = ref({
   tableWidth: 160,
   width: '50',
   required: false,
+  isPrimaryKey: false,
   lookupTarget: 'personnel',
   lookupLinkCol: '',
   lookupField: '',
@@ -264,6 +284,7 @@ watch(
         tableWidth: 160,
         width: '50',
         required: false,
+        isPrimaryKey: false,
         lookupTarget: 'personnel',
         lookupLinkCol: '',
         lookupField: '',
@@ -361,6 +382,19 @@ const handleSave = async () => {
       } : {}),
     };
 
+    if (form.value.isPrimaryKey) {
+      const keyConfig = { ...(personnelStore.systemKeyConfig || {}) };
+      if (props.tableSource === 'relatives') {
+        keyConfig.relativeKeyField = form.value.id.trim();
+      } else if (props.tableSource === 'trips') {
+        keyConfig.tripKeyField = form.value.id.trim();
+      } else {
+        keyConfig.personnelKeyField = form.value.id.trim();
+      }
+      personnelStore.systemKeyConfig = keyConfig;
+      await saveAppSettings('system_key_config', keyConfig);
+    }
+
     emit('save', colPayload);
     dialogVisible.value = false;
   } catch (e) {
@@ -431,5 +465,32 @@ const handleSave = async () => {
   border-color: #dc2626;
   background: #fef2f2;
   color: #dc2626;
+}
+
+.btn-primary-key-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-primary-key-toggle:hover {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+.btn-primary-key-toggle.is-primary-key {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #b45309;
 }
 </style>

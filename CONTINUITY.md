@@ -1326,6 +1326,28 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+---
+
+### 89. CHUYỂN TOÀN BỘ TÍNH NĂNG "KHÓA ĐỊNH DANH (CỘT PRIMAL)" LÊN TRỰC TIẾP TRÊN BẢNG (2026-09-07)
+- **Strategic Context**:
+  - Người dùng hỏi: *"Khóa Định danh & Liên kết (CCCD)" trong Cài đặt hệ thống chúng ta đã xóa rồi mà, hiện tại thì bảng có tính năng đó chưa?*.
+  - Người dùng mong muốn triết lý "Dồn hết thao tác vào Bảng", không muốn phải vào Cài đặt để cấu hình cột primal (Khóa chính / Primary Key).
+  - Trước đây: Trên bảng hoàn toàn chưa có nút đặt Khóa chính; cấu hình này vẫn phải vào Cài đặt -> Tab "Khóa Định danh & Liên kết (CCCD)".
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Nút "🔑 Đặt làm Khóa chính (Primary Key)" trong Menu Cột (`ColumnHeaderMenu.vue`)**:
+     - Bổ sung nút công tắc `[🔑 Đặt làm Khóa chính]` ngay trong Menu tiêu đề cột (mở bằng icon mũi tên xuống <i class="pi pi-chevron-down"></i>).
+     - Nếu cột đang là Khóa chính của bảng: Hiển thị trạng thái sáng nổi bật `[🔑 Khóa chính (Đang áp dụng)]`.
+     - Nhấn nút sẽ tự động cập nhật Khóa chính tương ứng (`personnelKeyField`, `relativeKeyField`, hoặc `tripKeyField` tùy theo bảng) vào `systemKeyConfig` và lưu ngay vào `app_settings` / `localStorage`.
+  2. **Huy hiệu trực quan `🔑` trên Tiêu đề Header của Bảng (`ChildDashboardView.vue`, `PersonnelView.vue`)**:
+     - Cột nào được chọn làm Khóa chính (cột primal) sẽ tự động hiển thị biểu tượng `🔑` bên cạnh tên cột trên header của bảng để người dùng nhận diện tức thì.
+  3. **Tùy chọn Khóa chính khi Thêm Cột Mới (`AddColumnDialog.vue`)**:
+     - Bổ sung nút tick `[🔑 Đặt làm Khóa chính]` ngay khi tạo cột mới, cho phép thiết lập cột vừa tạo thành Khóa chính định danh ngay lập tức.
+  4. **Làm rõ tình trạng trong Cài đặt**:
+     - Tab "Khóa Định danh & Liên kết (CCCD)" trong trang Cài đặt thực chất vẫn đang được giữ lại. Nếu người dùng muốn tinh gọn giao diện Cài đặt, có thể gỡ bỏ tab này vì giờ đây người dùng đã có thể cấu hình Khóa chính 100% trực tiếp trên Bảng.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+
 
 
 

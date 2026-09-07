@@ -233,6 +233,7 @@
                   Cột {{ col.colIndex }}:
                 </span>
                 {{ col.label }}
+                <span v-if="isPersonnelPrimaryKey(col.id, false)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
               </span>
               <button
                 type="button"
@@ -747,6 +748,7 @@
                   Cột {{ col.colIndex }}:
                 </span>
                 {{ col.label }}
+                <span v-if="isPersonnelPrimaryKey(col.id, true)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
               </span>
               <button
                 type="button"
@@ -1134,6 +1136,7 @@
     <ColumnHeaderMenu
       v-model:visible="isColMenuVisible"
       :column="selectedMenuCol"
+      :tableSource="targetColSource"
       :position="colMenuPosition"
       :nameColFields="nameColFields"
       :availableParentFields="availableParentFields"
@@ -1525,6 +1528,12 @@ watch(
 );
 
 // ===== Name Column Config (Linh hoạt cho mọi mô hình: Cán bộ, Học sinh, Nhân sự...) =====
+const isPersonnelPrimaryKey = (colId, isRel = false) => {
+  if (!colId) return false;
+  if (isRel) return personnelStore.getRelativeKeyField() === colId;
+  return personnelStore.getPersonnelKeyField() === colId;
+};
+
 const availableParentFields = computed(() => {
   const list = [];
   const seen = new Set();

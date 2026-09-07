@@ -151,6 +151,24 @@
           </button>
         </div>
 
+        <!-- 5b. Đặt làm Khóa chính của bảng (Primary Key / Cột primal) -->
+        <div class="menu-field" style="margin-top: 6px;">
+          <label style="margin-bottom: 5px;">Khóa định danh chính (Cột primal):</label>
+          <button
+            type="button"
+            class="btn-primary-key-toggle"
+            :class="{ 'is-primary-key': isCurrentPrimaryKey }"
+            @click="handleSetPrimaryKey"
+            :title="isCurrentPrimaryKey ? 'Cột này đang là Khóa chính (Primary Key) của bảng' : 'Đặt cột này làm Khóa chính của bảng'"
+          >
+            <i class="pi pi-key" style="font-size: 0.92rem;"></i>
+            <span>{{ isCurrentPrimaryKey ? '🔑 Khóa chính (Đang áp dụng)' : '🔑 Đặt làm Khóa chính' }}</span>
+          </button>
+          <div v-if="isCurrentPrimaryKey" style="font-size: 0.68rem; color: #b45309; margin-top: 4px; line-height: 1.35; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 4px 6px;">
+            ✓ Cột này là "chiếc chìa khóa" định danh duy nhất của bảng và làm căn cứ móc nối tham chiếu với các bảng khác.
+          </div>
+        </div>
+
         <!-- 6. Cấu hình Cột ảo Thông tin Đối tượng / Cán bộ / Học sinh (nếu là _parentPersonnelName) -->
         <div v-if="column?.id === '_parentPersonnelName'" class="menu-field" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-top: 6px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -213,6 +231,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { usePersonnelStore } from "@/stores/personnel";
+import { saveAppSettings } from "@/api/settings";
 
 const props = defineProps({
   visible: {
@@ -222,6 +241,10 @@ const props = defineProps({
   column: {
     type: Object,
     default: null,
+  },
+  tableSource: {
+    type: String,
+    default: "personnel", // 'personnel' | 'relatives' | 'trips'
   },
   position: {
     type: Object,
@@ -381,6 +404,38 @@ const handleToggleRequired = () => {
   emit("change-required", { colId: props.column.id, required: editRequired.value });
 };
 
+const isCurrentPrimaryKey = computed(() => {
+  if (!props.column?.id) return false;
+  const colId = props.column.id;
+  const src = props.tableSource;
+  if (src === 'relatives') {
+    return personnelStore.getRelativeKeyField() === colId;
+  }
+  if (src === 'trips') {
+    return personnelStore.getTripKeyField() === colId;
+  }
+  return personnelStore.getPersonnelKeyField() === colId;
+});
+
+const handleSetPrimaryKey = async () => {
+  if (!props.column?.id) return;
+  const colId = props.column.id;
+  const src = props.tableSource;
+  const keyConfig = {
+    ...(personnelStore.systemKeyConfig || {}),
+  };
+  if (src === 'relatives') {
+    keyConfig.relativeKeyField = colId;
+  } else if (src === 'trips') {
+    keyConfig.tripKeyField = colId;
+  } else {
+    keyConfig.personnelKeyField = colId;
+  }
+  personnelStore.systemKeyConfig = keyConfig;
+  await saveAppSettings('system_key_config', keyConfig);
+  alert(`Đã thiết lập cột "${props.column.label || colId}" làm Khóa chính (Primary Key / Cột primal) của bảng!`);
+};
+
 const handleToggleParentField = (key) => {
   emit("change-name-col-field", key);
 };
@@ -403,6 +458,34 @@ const handleFilterByCol = () => {
 </script>
 
 <style scoped>
+.btn-primary-key-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-primary-key-toggle:hover {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+.btn-primary-key-toggle.is-primary-key {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #b45309;
+}
 .column-header-menu-backdrop {
   position: fixed;
   top: 0;
