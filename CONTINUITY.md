@@ -898,6 +898,35 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npx vite build` thành công tuyệt đối (0 lỗi). Đã đồng bộ toàn bộ bản build mới vào `WINDOWS_OFFLINE_APP/frontend/`.
 
+---
+
+### 72. NÂNG CẤP BẢNG THỐNG KÊ (DASHBOARD): BỘ LỌC ĐIỀU KIỆN QUERY CRITERIA BUILDER (CHUẨN TÌM KIẾM NÂNG CAO), TÍNH TOÁN TRỰC TIẾP & DRILLDOWN SANG TÌM KIẾM NÂNG CAO
+- **Strategic Context**:
+  - Người dùng phản hồi: Bảng Thống kê trước đây vẫn hiển thị nhãn phụ đề "Đồng bộ số liệu từ Chuyên đề: ...", các nút "Đồng bộ từ Chuyên đề" và số liệu tính toán vẫn phụ thuộc vào cấu hình thẻ cũ của Chuyên đề thay vì có bộ lọc điều kiện trực tiếp như Tìm kiếm nâng cao (`AdvancedSearchView.vue`).
+  - Cần nâng cấp toàn diện Dashboard để người dùng có thể cấu hình điều kiện lọc trực tiếp, xem trước số lượng bản ghi khớp ngay khi đang sửa form (Live preview count), tính toán số liệu chính xác 100% không bị lệch, và khi click vào bất kỳ thẻ thống kê nào thì mở ngay trang Tìm kiếm nâng cao (`/advanced-search`) với bộ điều kiện tương ứng để tra cứu danh sách chi tiết.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Tích hợp Trình dựng Điều kiện Lọc (Query Criteria Builder) vào Modal Thêm/Sửa Khối Thống kê (`src/views/DashboardView.vue`)**:
+     - Nguồn dữ liệu: Chọn nguồn Chuyến đi (`trips`), Cán bộ (`personnel`), Thân nhân (`relatives`).
+     - Dạng hiển thị: Số đếm (Metric Card), Biểu đồ Cột dọc (Vertical Bar Chart), Biểu đồ Thanh ngang (Horizontal Bar Chart).
+     - Bộ gom nhóm phân bổ cho biểu đồ (`columnId`): Tự động gom nhóm và đếm xếp hạng theo cột được chọn từ danh mục cột động `allSearchableGroupsForWidget`.
+     - Kiểu kết hợp logic: **VÀ (AND)** hoặc **HOẶC (OR)**.
+     - Danh sách dòng điều kiện: Hỗ trợ đầy đủ chọn Cột (`field`), Toán tử (`equals`, `not_equals`, `contains`, `not_contains`, `has_value`, `empty`, `gte`, `lte`, `gt`, `lt`, `before_date`, `after_date`, `count_gte`, `count_lte`), và Giá trị so sánh (tự động hiển thị dropdown thông minh cho Trạng thái hiện diện, Đối tượng cán bộ/thân nhân, Nguồn kinh phí, hoặc ô nhập số/ngày).
+     - Tùy chọn: "Đếm số cá nhân duy nhất (Unique theo CCCD)".
+     - Live Preview Count: Khung hiển thị ngay số lượng bản ghi thực tế khớp với điều kiện hiện tại (`previewLiveCount`) mỗi khi thay đổi bất kỳ trường lọc nào trên modal.
+  2. **Tính toán Số liệu Thống kê Trực tiếp (`computeWidgetCount` & `computeWidgetChartData`)**:
+     - Loại bỏ việc phụ thuộc vào thẻ metricCards của Chuyên đề.
+     - Hàm `computeWidgetCount` và `computeWidgetChartData` đọc trực tiếp danh sách điều kiện `conditions` của widget và so khớp qua `matchSharedCardCondition` từ `dashboardMetrics.js`.
+     - Hỗ trợ chuẩn hóa tự động (`hydrateWidgetConditions`) cho mọi thẻ cũ có sẵn trên Dashboard để người dùng mở form sửa là thấy ngay các dòng điều kiện rõ ràng.
+  3. **Giao diện Trang Thống kê Tinh giản & Chuyên nghiệp**:
+     - Đã loại bỏ hoàn toàn các nút "Đồng bộ tất cả Chuyên đề" ở header trang và nút "Đồng bộ từ Chuyên đề" ở từng nhóm.
+     - Tiêu đề nhóm hiển thị số lượng khối thống kê trực quan (ví dụ: `4 khối thống kê`).
+     - Đổi nhãn nút chân thẻ từ "Mở Chuyên đề" thành "Xem chi tiết".
+  4. **Điều hướng Drilldown Thông minh sang Tìm kiếm Nâng cao (`/advanced-search`)**:
+     - Khi bấm "Xem chi tiết" trên thẻ thống kê hoặc bấm vào một thanh phân bổ trên biểu đồ, hệ thống tự động đóng gói các điều kiện lọc và lưu vào `advanced_search_current_filter` và chuyển hướng sang `/advanced-search`.
+     - `src/views/AdvancedSearchView.vue` được bổ sung watcher lắng nghe `route.query.fromWidget` để tự động khôi phục bộ lọc và kích hoạt tìm kiếm ngay lập tức, hiển thị danh sách bản ghi và các huy hiệu lý do khớp (match reason pills) cực kỳ trực quan.
+- **Status**: Done [Reversible].
+- **Verification**: Chạy `npx vite build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ bản build mới vào `WINDOWS_OFFLINE_APP/frontend/`.
+
 
 
 
