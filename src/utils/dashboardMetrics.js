@@ -768,3 +768,50 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
 
   return targetItems.length;
 };
+
+/**
+ * Đánh giá điều kiện và trả về kết quả kèm lý do khớp (Dùng chung cho Tìm kiếm nâng cao & Thống kê)
+ */
+export const evaluateConditionWithReason = (item, cond, personnelStore, fieldLabel = '') => {
+  if (!cond || !cond.field) return { matches: true, reason: '' };
+
+  let op = cond.operator || 'has_value';
+  if (op === 'before_date') op = 'before';
+  if (op === 'after_date') op = 'after';
+
+  const normalizedCond = {
+    ...cond,
+    operator: op,
+  };
+
+  const matches = matchSingleCondition(item, normalizedCond, personnelStore);
+
+  const rawVal = extractRowFieldValue(item, cond.field, personnelStore);
+  const displayVal = (rawVal !== undefined && rawVal !== null && rawVal !== '')
+    ? String(rawVal).split('\n')[0]
+    : '';
+
+  const labelPrefix = fieldLabel ? `${fieldLabel}: ` : '';
+  let reason = '';
+
+  if (op === 'empty') {
+    reason = `${labelPrefix}để trống`;
+  } else if (op === 'has_value') {
+    reason = `${labelPrefix}${displayVal || 'có dữ liệu'}`;
+  } else if (op === 'not_contains') {
+    reason = `${fieldLabel ? fieldLabel : cond.field} không chứa "${cond.value}"`;
+  } else if (op === 'before') {
+    reason = `${labelPrefix}${displayVal} trước ${cond.value}`;
+  } else if (op === 'after') {
+    reason = `${labelPrefix}${displayVal} sau ${cond.value}`;
+  } else if (op === 'gte') {
+    reason = `${labelPrefix}${displayVal} (>= ${cond.value})`;
+  } else if (op === 'lte') {
+    reason = `${labelPrefix}${displayVal} (<= ${cond.value})`;
+  } else {
+    reason = `${labelPrefix}${displayVal || cond.value}`;
+  }
+
+  return { matches, reason };
+};
+

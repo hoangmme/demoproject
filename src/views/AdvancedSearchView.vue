@@ -390,7 +390,7 @@ import { ref, computed, onMounted } from 'vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { parseDateObj, formatDate, computePresenceStatus, computeTripPresence, computeColumnIndexMap } from '@/utils/formatters';
-import { normalizeFieldValueToText } from '@/utils/dashboardMetrics';
+import { normalizeFieldValueToText, evaluateConditionWithReason } from '@/utils/dashboardMetrics';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 
@@ -1096,10 +1096,8 @@ const testCondition = (item, crit) => {
   const rawField = crit.field;
   const isRel = rawField.startsWith('rel_') || relativeFieldIdsSet.value.has(rawField);
   const f = rawField.startsWith('rel_') ? rawField.slice(4) : rawField;
-  const op = crit.operator;
-  const val = String(crit.value || '').trim().toLowerCase();
 
-  // Get field label for clear reason badge
+  // Lấy nhãn cột để hiển thị badge lý do rõ ràng
   let fieldLabel = f;
   let fieldColIndex = null;
   for (const g of allSearchableGroups.value) {
@@ -1117,64 +1115,13 @@ const testCondition = (item, crit) => {
     return testRelativeCondition(relatives, crit, labelWithCol, f);
   }
 
-  const itemVal = getItemFieldValue(item, f);
-
-  // Evaluate Operator
-  if (op === 'empty') {
-    const isEmp = !itemVal || itemVal === '-' || itemVal === 'Chưa rõ';
-    return { matches: isEmp, reason: `${labelWithCol}: để trống` };
-  }
-  if (op === 'has_value') {
-    const hasV = !!itemVal && itemVal !== '-' && itemVal !== 'Chưa rõ';
-    return { matches: hasV, reason: `${labelWithCol}: ${itemVal}` };
-  }
-  const strVal = String(itemVal).toLowerCase().trim().replace(/\s+/g, ' ');
-  const strTarget = String(val).toLowerCase().trim().replace(/\s+/g, ' ');
-  const subKeywords = strTarget.split(/[,;\n]/).map((k) => k.trim()).filter(Boolean);
-
-  if (op === 'equals') {
-    const eq = subKeywords.length > 1
-      ? (subKeywords.some((k) => strVal === k) || strVal === strTarget)
-      : strVal === strTarget;
-    let reasonText = `${labelWithCol}: ${itemVal}`;
-    if (f === 'hasRelatives') reasonText = 'Có thân nhân ở nước ngoài';
-    if (f === 'isOverdue') reasonText = 'Quá hạn chưa về';
-    return { matches: eq, reason: reasonText };
-  }
-  if (op === 'contains') {
-    const cnt = subKeywords.length > 1
-      ? (subKeywords.some((k) => strVal.includes(k)) || strVal.includes(strTarget))
-      : strVal.includes(strTarget);
-    return { matches: cnt, reason: `${labelWithCol}: ${itemVal}` };
-  }
-  if (op === 'not_contains') {
-    const ncnt = subKeywords.length > 1
-      ? !subKeywords.some((k) => strVal.includes(k))
-      : !strVal.includes(strTarget);
-    return { matches: ncnt, reason: `${labelWithCol} không chứa "${val}"` };
-  }
-  if (op === 'before_date') {
-    const dItem = parseDateObj(itemVal);
-    const dTarget = parseDateObj(val);
-    const bef = dItem && dTarget ? dItem < dTarget : false;
-    return { matches: bef, reason: `${labelWithCol}: ${itemVal} trước ${val}` };
-  }
-  if (op === 'after_date') {
-    const dItem = parseDateObj(itemVal);
-    const dTarget = parseDateObj(val);
-    const aft = dItem && dTarget ? dItem > dTarget : false;
-    return { matches: aft, reason: `${labelWithCol}: ${itemVal} sau ${val}` };
-  }
-  if (op === 'gte') {
-    const g = Number(itemVal) >= Number(val);
-    return { matches: g, reason: `${labelWithCol}: ${itemVal} (>= ${val})` };
-  }
-  if (op === 'lte') {
-    const l = Number(itemVal) <= Number(val);
-    return { matches: l, reason: `${labelWithCol}: ${itemVal} (<= ${val})` };
-  }
-
-  return { matches: true, reason: '' };
+  // Sử dụng Engine So khớp Dùng chung từ dashboardMetrics.js
+  const condPayload = {
+    field: f,
+    operator: crit.operator,
+    value: crit.value,
+  };
+  return evaluateConditionWithReason(item, condPayload, personnelStore, labelWithCol);
 };
 
 const saveCurrentState = async () => {

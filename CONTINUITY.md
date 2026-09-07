@@ -825,6 +825,23 @@
      - Cho phép chọn bất kỳ cột nào trong Nguồn dữ liệu (ví dụ: *Quốc gia*, *Nguồn kinh phí*, *Mục đích*, *Đơn vị*...).
      - `computeWidgetChartData` gom nhóm và tính tần suất chính xác 100% theo cột đã chọn, click vào cột sẽ drill-down lọc đúng theo giá trị đó.
 - **Status**: Done [Reversible].
+### 69. HỢP NHẤT ENGINE SO KHỚP GIỮA TÌM KIẾM NÂNG CAO VÀ THỐNG KÊ (2026-09-07)
+- **Bối cảnh & Tư duy Kiến trúc**:
+  - Người dùng chỉ ra bản chất: "Thống kê thực ra cũng là Tìm kiếm nâng cao".
+  - Thống kê (Metric Card / Widget) thực chất là đếm kết quả (`COUNT`) hoặc gom nhóm (`GROUP BY`) từ một tập tiêu chí tìm kiếm.
+  - Trước đây, hệ thống bị phân mảnh khi duy trì 2 engine kiểm tra điều kiện song song: `testCondition` trong `AdvancedSearchView.vue` và `matchSingleCondition` trong `dashboardMetrics.js`.
+- **Giải pháp hợp nhất**:
+  1. **Tạo Single Query Engine trong `dashboardMetrics.js`**:
+     - Bổ sung hàm `evaluateConditionWithReason(item, cond, personnelStore, fieldLabel)` làm cổng đánh giá điều kiện tập trung.
+     - Tận dụng sức mạnh toàn diện của `matchSingleCondition`: Hỗ trợ đầy đủ toán tử chuỗi, số, ngày tháng (`before`, `after`), điều kiện đếm, kiểm tra đối tượng (`isRelative`), kiểm tra công thức formula và cross-level matching giữa Cán bộ, Chuyến đi, Thân nhân.
+     - Tự động sinh huy hiệu lý do (Reason Badge) rõ ràng phục vụ giao diện kết quả tìm kiếm.
+  2. **Tối ưu hóa `AdvancedSearchView.vue`**:
+     - Gỡ bỏ toàn bộ code lặp lại kiểm tra toán tử trong `testCondition`.
+     - Chuyển sang ủy quyền trực tiếp cho `evaluateConditionWithReason` từ `@/utils/dashboardMetrics`.
+  3. **Kết quả đạt được**:
+     - Mã nguồn sạch sẽ, không còn duplicate logic kiểm tra điều kiện.
+     - Bảo đảm 100% tính nhất quán: Kết quả lọc trên Tìm kiếm nâng cao và số đếm hiển thị trên Thống kê Dashboard luôn khớp tuyệt đối.
+- **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công, đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
 
 
