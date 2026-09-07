@@ -651,6 +651,34 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   data.so_luong_chuyen_di = processedTrips.length;
   data.total_trips = processedTrips.length;
 
+  // 7b. Các bảng tùy chọn / Bảng mới (Custom Tables)
+  const customTables = (exportOptions && Array.isArray(exportOptions.customTables)) ? exportOptions.customTables : [];
+  customTables.forEach((ct) => {
+    const loopTag = `bang_${ct.id.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+    const rawRows = ct.rows || [];
+    let matchedRows = rawRows;
+    const hasPersonLink = rawRows.some((r) => r.personnelId || r.cccdparent || r.personnelCode);
+    if (hasPersonLink) {
+      matchedRows = rawRows.filter((r) => {
+        const rPId = String(r.personnelId || '').trim();
+        const rCode = String(r.personnelCode || '').trim();
+        const rCccd = String(r.cccdparent || r.cccd || '').trim();
+        return (pId && rPId === pId) || (pCode && rCode === pCode) || (canBoCccd && rCccd === canBoCccd);
+      });
+    }
+    const processedRows = matchedRows.map((row, rIdx) => {
+      const rowObj = { stt: rIdx + 1 };
+      Object.entries(row).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) {
+          rowObj[k] = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : formatFieldValueForDocx(v);
+        }
+      });
+      return rowObj;
+    });
+    data[loopTag] = processedRows;
+    data[`so_luong_${loopTag}`] = processedRows.length;
+  });
+
   // 8. Tự động sinh nội dung toàn bộ các nhóm {formgroup} (Khối A + các Khối bổ sung + Thân nhân)
   const formgroupLines = [];
   const selFields = exportOptions?.selectedFieldIds;
@@ -1227,78 +1255,126 @@ export async function createDynamicDocxTemplateBlob(
     return fallbackIds.some((fId) => selectedFieldIds.includes(fId));
   };
 
-  // 1. Nhóm A: Thông tin cá nhân (Mỗi field 1 hàng, Tiêu đề in đậm, Nội dung không đậm)
-  let group0Content = '';
-  if (isFieldIncluded('name', ['ho_ten', 'full_name'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên${pfx()}: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('otherName', ['ten_khac', 'bi_danh'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tên gọi khác${pfx()}: </w:t></w:r><w:r><w:t>{otherName}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('birthYear', ['nam_sinh', 'ngay_sinh', 'dob'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Ngày, tháng, năm sinh${pfx()}: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('gender', ['gioi_tinh', 'sex'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Giới tính${pfx()}: </w:t></w:r><w:r><w:t>{gender}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('ethnicity', ['dan_toc'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Dân tộc${pfx()}: </w:t></w:r><w:r><w:t>{ethnicity}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('religion', ['ton_giao'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tôn giáo${pfx()}: </w:t></w:r><w:r><w:t>{religion}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('hometown', ['que_quan', 'native_place'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Quê quán${pfx()}: </w:t></w:r><w:r><w:t>{hometown}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('departmentName', ['departmentId', 'don_vi', 'don_vi_cong_tac'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Đơn vị công tác${pfx()}: </w:t></w:r><w:r><w:t>{departmentName}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('chuc_vu', ['position', 'chuc_danh'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Chức vụ${pfx()}: </w:t></w:r><w:r><w:t>{chuc_vu}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('thuongTru', ['permanentAddress', 'ho_khau', 'thuong_tru'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi đăng ký hộ khẩu thường trú${pfx()}: </w:t></w:r><w:r><w:t>{thuongTru}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('tamTru', ['currentAddress', 'noi_o', 'tam_tru'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi ở hiện nay${pfx()}: </w:t></w:r><w:r><w:t>{tamTru}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('cccdparent', ['cccd', 'so_cccd', 'so_cmnd'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Căn cước công dân${pfx()}: </w:t></w:r><w:r><w:t>{cccdparent}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('passportPersonal', ['hcCaNhan', 'ho_chieu_ca_nhan'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu cá nhân${pfx()}: </w:t></w:r><w:r><w:t>{hcCaNhan}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('passportOfficial', ['hcCongVu', 'ho_chieu_cong_vu'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu công vụ${pfx()}: </w:t></w:r><w:r><w:t>{hcCongVu}</w:t></w:r></w:p>`;
-  if (isFieldIncluded('politicalVerificationResult', ['tcctResult', 'ket_qua_tham_tra', 'tcct'])) group0Content += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Kết quả thẩm tra tiêu chuẩn chính trị${pfx()}: </w:t></w:r><w:r><w:t>{tcctResult}</w:t></w:r></w:p>`;
+  const romanNumerals = ['I', 'II', 'III', 'IV', 'V'];
+  let secIdx = 0;
 
-  let dynamicSecNum = 1;
-  if (group0Content) {
-    bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>${dynamicSecNum++}. Thông tin cá nhân</w:t></w:r></w:p>`;
-    bodyContent += group0Content;
+  // 1. BẢNG CÁN BỘ (HỒ SƠ CHÍNH)
+  let personnelTableBody = '';
+  const processedFieldIds = new Set();
+
+  if (isFieldIncluded('name', ['ho_ten', 'full_name'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên${pfx()}: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>`;
+    processedFieldIds.add('name');
+  }
+  if (isFieldIncluded('otherName', ['ten_khac', 'bi_danh'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tên gọi khác${pfx()}: </w:t></w:r><w:r><w:t>{otherName}</w:t></w:r></w:p>`;
+    processedFieldIds.add('otherName');
+  }
+  if (isFieldIncluded('birthYear', ['nam_sinh', 'ngay_sinh', 'dob'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Ngày, tháng, năm sinh${pfx()}: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>`;
+    processedFieldIds.add('birthYear');
+  }
+  if (isFieldIncluded('gender', ['gioi_tinh', 'sex'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Giới tính${pfx()}: </w:t></w:r><w:r><w:t>{gender}</w:t></w:r></w:p>`;
+    processedFieldIds.add('gender');
+  }
+  if (isFieldIncluded('ethnicity', ['dan_toc'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Dân tộc${pfx()}: </w:t></w:r><w:r><w:t>{ethnicity}</w:t></w:r></w:p>`;
+    processedFieldIds.add('ethnicity');
+  }
+  if (isFieldIncluded('religion', ['ton_giao'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tôn giáo${pfx()}: </w:t></w:r><w:r><w:t>{religion}</w:t></w:r></w:p>`;
+    processedFieldIds.add('religion');
+  }
+  if (isFieldIncluded('hometown', ['que_quan', 'native_place'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Quê quán${pfx()}: </w:t></w:r><w:r><w:t>{hometown}</w:t></w:r></w:p>`;
+    processedFieldIds.add('hometown');
+  }
+  if (isFieldIncluded('departmentName', ['departmentId', 'don_vi', 'don_vi_cong_tac'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Đơn vị công tác${pfx()}: </w:t></w:r><w:r><w:t>{departmentName}</w:t></w:r></w:p>`;
+    processedFieldIds.add('departmentName');
+    processedFieldIds.add('departmentId');
+  }
+  if (isFieldIncluded('chuc_vu', ['position', 'chuc_danh'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Chức vụ${pfx()}: </w:t></w:r><w:r><w:t>{chuc_vu}</w:t></w:r></w:p>`;
+    processedFieldIds.add('chuc_vu');
+    processedFieldIds.add('position');
+  }
+  if (isFieldIncluded('thuongTru', ['permanentAddress', 'ho_khau', 'thuong_tru'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi đăng ký hộ khẩu thường trú${pfx()}: </w:t></w:r><w:r><w:t>{thuongTru}</w:t></w:r></w:p>`;
+    processedFieldIds.add('thuongTru');
+  }
+  if (isFieldIncluded('tamTru', ['currentAddress', 'noi_o', 'tam_tru'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi ở hiện nay${pfx()}: </w:t></w:r><w:r><w:t>{tamTru}</w:t></w:r></w:p>`;
+    processedFieldIds.add('tamTru');
+  }
+  if (isFieldIncluded('cccdparent', ['cccd', 'so_cccd', 'so_cmnd'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Căn cước công dân${pfx()}: </w:t></w:r><w:r><w:t>{cccdparent}</w:t></w:r></w:p>`;
+    processedFieldIds.add('cccdparent');
+    processedFieldIds.add('cccd');
+  }
+  if (isFieldIncluded('passportPersonal', ['hcCaNhan', 'ho_chieu_ca_nhan'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu cá nhân${pfx()}: </w:t></w:r><w:r><w:t>{hcCaNhan}</w:t></w:r></w:p>`;
+    processedFieldIds.add('passportPersonal');
+    processedFieldIds.add('hcCaNhan');
+  }
+  if (isFieldIncluded('passportOfficial', ['hcCongVu', 'ho_chieu_cong_vu'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu công vụ${pfx()}: </w:t></w:r><w:r><w:t>{hcCongVu}</w:t></w:r></w:p>`;
+    processedFieldIds.add('passportOfficial');
+    processedFieldIds.add('hcCongVu');
+  }
+  if (isFieldIncluded('politicalVerificationResult', ['tcctResult', 'ket_qua_tham_tra', 'tcct'])) {
+    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Kết quả thẩm tra tiêu chuẩn chính trị${pfx()}: </w:t></w:r><w:r><w:t>{tcctResult}</w:t></w:r></w:p>`;
+    processedFieldIds.add('politicalVerificationResult');
+    processedFieldIds.add('tcctResult');
+  }
+
+  // Bổ sung các cột khác của Bảng Cán bộ phẳng hoàn toàn
+  (personnelGroups || []).forEach((grp) => {
+    (grp.columns || []).forEach((col) => {
+      if (!col.id || col.id === 'stt' || processedFieldIds.has(col.id)) return;
+      if (selectedFieldIds && Array.isArray(selectedFieldIds) && !selectedFieldIds.includes(col.id)) return;
+      processedFieldIds.add(col.id);
+
+      let colLabel = escapeXml(col.label || col.id);
+      if (showColNumbers && !colLabel.includes('(')) {
+        colLabel = `${colLabel}${pfx()}`;
+      }
+      const colId = escapeXml(col.id);
+      if (col.format === 'table_loop') {
+        personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}:</w:t></w:r></w:p>`;
+        personnelTableBody += `<w:p><w:r><w:t>{#${colId}}+ Dòng {stt}: {col0} | {col1} | {col2} | {col3}{/${colId}}</w:t></w:r></w:p>`;
+      } else {
+        personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
+      }
+    });
+  });
+
+  if (personnelTableBody) {
+    const secPrefix = romanNumerals[secIdx++] || 'I';
+    bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. THÔNG TIN CÁN BỘ (HỒ SƠ CHÍNH)</w:t></w:r></w:p>`;
+    bodyContent += personnelTableBody;
     bodyContent += `<w:p/>`;
   }
 
-  // 2. Các Nhóm được chọn bổ sung từ Cấu hình Cột Cán bộ (Group B, Group C...)
-  (personnelGroups || []).forEach((grp, idx) => {
-    if (idx === 0) return;
-    if (selectedGroupIndices.includes(idx)) {
-      const grpTitle = escapeXml((grp.group || 'Thông tin bổ sung').replace(/^[\*\-\d\.\s]+/, '').trim());
-      let grpBody = '';
-      (grp.columns || []).forEach((col) => {
-        if (!col.id || col.id === 'stt') return;
-        if (selectedFieldIds && Array.isArray(selectedFieldIds) && !selectedFieldIds.includes(col.id)) return;
-        let colLabel = escapeXml(col.label || col.id);
-        if (showColNumbers && !colLabel.includes('(')) {
-          colLabel = `${colLabel}${pfx()}`;
-        }
-        const colId = escapeXml(col.id);
-        if (col.format === 'table_loop') {
-          grpBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}:</w:t></w:r></w:p>`;
-          grpBody += `<w:p><w:r><w:t>{#${colId}}+ Dòng {stt}: {col0} | {col1} | {col2} | {col3}{/${colId}}</w:t></w:r></w:p>`;
-        } else {
-          grpBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
-        }
-      });
-
-      if (grpBody) {
-        bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>${dynamicSecNum++}. ${grpTitle}</w:t></w:r></w:p>`;
-        bodyContent += grpBody;
-        bodyContent += `<w:p/>`;
-      }
-    }
-  });
-
-  // 3. Khối Thân nhân nếu được chọn (Hỗ trợ từng nhóm thân nhân từ Tab Thân nhân)
+  // 2. BẢNG THÂN NHÂN LIÊN QUAN
   if (includeRelatives) {
+    const secPrefix = romanNumerals[secIdx++] || 'II';
     bodyContent += `
-      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>${dynamicSecNum++}. Thông tin thân nhân liên quan</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. THÔNG TIN THÂN NHÂN LIÊN QUAN</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#than_nhan}</w:t></w:r></w:p>
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Thân nhân {stt} ({relationshipName}): {name}</w:t></w:r></w:p>
     `;
 
     const activeRelCols = [];
-    (relativeGroups || []).forEach((rGrp, rIdx) => {
-      if (selectedRelativeGroupIndices.length === 0 || selectedRelativeGroupIndices.includes(rIdx)) {
-        (rGrp.columns || []).forEach((col) => {
-          if (col.id && col.id !== 'stt' && !activeRelCols.some((x) => x.id === col.id)) {
+    (relativeGroups || []).forEach((rGrp) => {
+      (rGrp.columns || []).forEach((col) => {
+        if (col.id && col.id !== 'stt' && !activeRelCols.some((x) => x.id === col.id)) {
+          if (!selectedRelativeFieldIds || selectedRelativeFieldIds.includes(col.id)) {
             activeRelCols.push(col);
           }
-        });
-      }
+        }
+      });
     });
 
     if (activeRelCols.length > 0) {
@@ -1330,10 +1406,11 @@ export async function createDynamicDocxTemplateBlob(
     `;
   }
 
-  // 4. Khối Chuyến đi xuất nhập cảnh nếu được chọn
+  // 3. BẢNG CHUYẾN ĐI (XUẤT NHẬP CẢNH)
   if (includeTrips) {
+    const secPrefix = romanNumerals[secIdx++] || 'III';
     bodyContent += `
-      <w:p><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:color w:val="0369A1"/></w:rPr><w:t>${dynamicSecNum++}. Thông tin chuyến đi nước ngoài (xuất nhập cảnh)</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. THÔNG TIN CHUYẾN ĐI (XUẤT NHẬP CẢNH)</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#xuatnhapcanh}</w:t></w:r></w:p>
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Chuyến {stt}: Quốc gia {quoc_gia} (Từ {ngay_xuat_canh} đến {ngay_nhap_canh})</w:t></w:r></w:p>
     `;
@@ -1372,6 +1449,33 @@ export async function createDynamicDocxTemplateBlob(
       <w:p/>
     `;
   }
+
+  // 3b. CÁC BẢNG DỮ LIỆU TÙY CHỌN / BẢNG MỚI (CUSTOM TABLES)
+  const customTables = (options && Array.isArray(options.customTables)) ? options.customTables : [];
+  customTables.forEach((ct) => {
+    if (!ct || !ct.selectedFieldIds || ct.selectedFieldIds.length === 0) return;
+    const secPrefix = romanNumerals[secIdx++] || String(secIdx);
+    const loopTag = `bang_${ct.id.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+    const tableTitle = escapeXml((ct.title || ct.id).toUpperCase());
+    bodyContent += `
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="059669"/></w:rPr><w:t>${secPrefix}. BẢNG ${tableTitle}</w:t></w:r></w:p>
+      <w:p><w:r><w:t>{#${loopTag}}</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="047857"/></w:rPr><w:t>▶ Bản ghi #{stt}</w:t></w:r></w:p>
+    `;
+
+    const activeCols = (ct.columns || []).filter((col) => ct.selectedFieldIds.includes(col.id));
+    activeCols.forEach((col) => {
+      const colLabel = escapeXml(col.label || col.id);
+      const colId = escapeXml(col.id);
+      bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
+    });
+
+    bodyContent += `
+      <w:p/>
+      <w:p><w:r><w:t>{/${loopTag}}</w:t></w:r></w:p>
+      <w:p/>
+    `;
+  });
 
   // 4. FOOTER CHUẨN
   bodyContent += `

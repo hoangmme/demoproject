@@ -128,10 +128,9 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
-      // Cột ảo: CHỈ CÓ Mã cán bộ và Thông tin cán bộ
+      // Cột ảo: Mã đối tượng chính (Code)
       const virtualPersonnelCols = [
-        { id: 'code', label: 'Mã cán bộ', width: '115px', isVirtual: true, colIndex: null },
-        { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
+        { id: 'code', label: 'Mã định danh (Code)', width: '115px', isVirtual: true, colIndex: null },
       ];
       virtualPersonnelCols.forEach((vc) => {
         if (!seen.has(vc.id)) {
@@ -157,8 +156,7 @@ export const usePersonnelStore = defineStore('personnel', {
       if (list.length === 0) {
         return [
           { id: '_primaryKey', label: '🔑 Mã định danh (Khóa chính)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
-          { id: 'code', label: 'Mã CB', width: '115px', isVirtual: true, colIndex: null },
-          { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
+          { id: 'code', label: 'Mã định danh', width: '115px', isVirtual: true, colIndex: null },
           { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false },
           { id: 'birthYear', label: 'Năm sinh', colIndex: '2', width: '120px', isVirtual: false },
           { id: 'departmentId', label: 'Phòng ban', colIndex: '3', width: '160px', isVirtual: false },
@@ -194,10 +192,10 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
-      // Cột ảo Thân nhân: CHỈ CÓ Mã cán bộ và Thông tin cán bộ
+      // Cột ảo Thân nhân: Mã thân nhân và Thông tin đối tượng liên quan (Hồ sơ chính)
       const virtualRelCols = [
-        { id: 'code', label: 'Mã cán bộ', width: '115px', isVirtual: true, colIndex: null },
-        { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
+        { id: 'code', label: 'Mã thân nhân (Mã đối tượng)', width: '110px', isVirtual: true, colIndex: null },
+        { id: '_parentPersonnelName', label: 'Đối tượng liên quan (Hồ sơ chính)', width: '220px', isVirtual: true, colIndex: null },
       ];
       virtualRelCols.forEach((vc) => {
         if (!seen.has(vc.id)) {
@@ -326,13 +324,16 @@ export const usePersonnelStore = defineStore('personnel', {
 
       const getDefaultRelativeColumns = () => {
         return this.allAvailableRelativeColumns
-          .filter((c) => c.id !== '_primaryKey' && c.id !== 'code' && c.id !== '_parentPersonnelName')
+          .filter((c) => c.id !== '_primaryKey')
           .map((c) => c.id);
       };
 
       let savedRel = dbRelCols && Array.isArray(dbRelCols) && dbRelCols.length > 0 ? dbRelCols : null;
       if (savedRel && Array.isArray(savedRel) && savedRel.length > 0) {
         const filtered = savedRel.filter((id) => validRelativeIds.has(id));
+        if (!filtered.includes('code') && !filtered.includes('_parentPersonnelName') && !filtered.includes('parentName')) {
+          filtered.unshift('code', '_parentPersonnelName');
+        }
         if (filtered.length >= 3) {
           this.visibleRelativeColumns = filtered;
         } else {

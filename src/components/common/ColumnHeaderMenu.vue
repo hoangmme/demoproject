@@ -43,15 +43,20 @@
         <!-- 2. Đổi kiểu dữ liệu (Format) -->
         <div class="menu-field">
           <label>Kiểu dữ liệu:</label>
-          <select v-model="editFormat" class="menu-select" @change="handleFormatChange">
-            <option value="text">Văn bản (Text)</option>
+          <div v-if="column?.isPrimaryField" style="font-size: 0.73rem; color: #64748b; padding: 6px 8px; background: #f1f5f9; border-radius: 6px; font-weight: 600;">
+            🔒 Văn bản (Cột định danh chính - Cố định)
+          </div>
+          <select v-else v-model="editFormat" class="menu-select" @change="handleFormatChange">
+            <option value="text">Văn bản (Text) - Mặc định</option>
             <option value="number">Số (Number)</option>
             <option value="date">Ngày tháng (Date)</option>
-            <option value="dropdown">Danh mục lựa chọn (Single Select)</option>
+            <option value="dropdown">Danh mục lựa chọn (Dropdown / Single Select)</option>
             <option value="checkbox">Hộp kiểm đơn (Checkbox)</option>
-            <option value="checkbox_file">Hộp kiểm kèm Tệp (Checkbox + File)</option>
-            <option value="file">Tệp đính kèm (Attachment)</option>
-            <option value="lookup">🔗 Tham chiếu tự động (Lookup)</option>
+            <option value="checkbox_file_loop">Hộp kiểm kèm Tệp (Checkbox + File)</option>
+            <option value="file">Tệp đính kèm (Attachment / File / Ảnh / PDF)</option>
+            <option value="lookup">🔗 Tham chiếu tự động (Lookup - Lấy dữ liệu từ bảng liên kết)</option>
+            <option value="formula">⚡ Công thức tính toán (Formula)</option>
+            <option value="rollup">📊 Tính toán tổng hợp (Rollup)</option>
           </select>
         </div>
 
@@ -61,9 +66,12 @@
             <i class="pi pi-link"></i>
             <span>Cấu hình Tham chiếu (Lookup)</span>
           </div>
+          <div style="font-size: 0.7rem; color: #3b82f6; line-height: 1.35; margin-bottom: 6px;">
+            Tự động tra cứu và hiển thị giá trị của một cột từ bảng khác sang bảng này dựa trên Khóa định danh / Khóa liên kết.
+          </div>
           
           <div style="margin-bottom: 6px;">
-            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Bảng đích:</label>
+            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Bảng đích cần lấy:</label>
             <select v-model="editLookupTarget" class="menu-select" @change="editLookupField = ''; handleSaveLookup()">
               <option value="personnel">Bảng Cán bộ / Hồ sơ chính</option>
               <option value="relatives">Bảng Thân nhân</option>
@@ -72,7 +80,7 @@
           </div>
 
           <div style="margin-bottom: 6px;">
-            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Cột lấy dữ liệu:</label>
+            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Cột lấy dữ liệu từ bảng đích:</label>
             <select v-model="editLookupField" class="menu-select" @change="handleSaveLookup">
               <option value="">-- Chọn cột cần hiển thị --</option>
               <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
@@ -86,14 +94,33 @@
             <input
               v-model="editLookupLinkCol"
               class="menu-input"
-              placeholder="Mặc định: Khóa CCCD"
+              placeholder="Mặc định: Khóa liên kết chuẩn của bảng"
               @blur="handleSaveLookup"
             />
           </div>
         </div>
 
+        <!-- Cấu hình Công thức nếu là formula -->
+        <div v-if="editFormat === 'formula'" class="menu-field" style="background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 8px; padding: 10px; margin-top: 6px;">
+          <div style="font-size: 0.76rem; font-weight: 700; color: #86198f; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
+            <i class="pi pi-bolt"></i>
+            <span>Cấu hình Công thức (Formula)</span>
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: #701a75; font-weight: 600; margin-bottom: 2px;">Loại công thức:</label>
+            <select v-model="editFormulaType" class="menu-select" @change="handleSaveFormulaType">
+              <option value="presence_status">Trạng thái Hiện diện (Trong nước / Nước ngoài)</option>
+              <option value="overdue_status">Quá hạn chưa về (So sánh Ngày về với Deadline/Hôm nay)</option>
+              <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
+              <option value="conditional_check">Kiểm tra điều kiện (Cảnh báo khi thiếu dữ liệu)</option>
+              <option value="depart_before_decision">Đi khi chưa có cấp thẩm quyền quyết định</option>
+              <option value="trips_count_in_year">Số lần xuất cảnh trong năm</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Tùy chọn Options nếu là dropdown -->
-        <div v-if="editFormat === 'dropdown' || editFormat === 'checkbox'" class="menu-field">
+        <div v-if="editFormat === 'dropdown' || editFormat === 'checkbox' || editFormat === 'checkbox_file_loop'" class="menu-field">
           <label>Danh sách tùy chọn (cách nhau bởi dấu phẩy):</label>
           <input
             v-model="editOptions"
@@ -151,21 +178,45 @@
           </button>
         </div>
 
-        <!-- 5b. Đặt làm Khóa chính của bảng (Primary Key / Cột primal) -->
-        <div class="menu-field" style="margin-top: 6px;">
-          <label style="margin-bottom: 5px;">Khóa định danh chính (Cột primal):</label>
-          <button
-            type="button"
-            class="btn-primary-key-toggle"
-            :class="{ 'is-primary-key': isCurrentPrimaryKey }"
-            @click="handleSetPrimaryKey"
-            :title="isCurrentPrimaryKey ? 'Cột này đang là Khóa chính (Primary Key) của bảng' : 'Đặt cột này làm Khóa chính của bảng'"
-          >
-            <i class="pi pi-key" style="font-size: 0.92rem;"></i>
-            <span>{{ isCurrentPrimaryKey ? '🔑 Khóa chính (Đang áp dụng)' : '🔑 Đặt làm Khóa chính' }}</span>
-          </button>
-          <div v-if="isCurrentPrimaryKey" style="font-size: 0.68rem; color: #b45309; margin-top: 4px; line-height: 1.35; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 4px 6px;">
-            ✓ Cột này là "chiếc chìa khóa" định danh duy nhất của bảng và làm căn cứ móc nối tham chiếu với các bảng khác.
+        <!-- 5b. Đặt làm Khóa chính / Khóa liên kết của bảng -->
+        <div class="menu-field" style="margin-top: 6px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 8px;">
+          <label style="margin-bottom: 5px;">Khóa Định danh & Liên kết Bảng:</label>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <!-- Nút Khóa chính (Primary Unique Key) -->
+            <button
+              type="button"
+              class="btn-primary-key-toggle"
+              :class="{ 'is-primary-key': isCurrentPrimaryKey }"
+              @click="handleSetPrimaryKey"
+              :title="isCurrentPrimaryKey ? 'Cột này đang là Khóa chính (Primary Key) của bảng' : 'Đặt cột này làm Khóa chính của bảng'"
+            >
+              <i class="pi pi-key" style="font-size: 0.92rem;"></i>
+              <span>{{ isCurrentPrimaryKey ? '🔑 Khóa chính (Đang áp dụng)' : '🔑 Đặt làm Khóa chính' }}</span>
+            </button>
+
+            <!-- Nút Khóa liên kết (nếu ở bảng Thân nhân hoặc Chuyến đi) -->
+            <button
+              v-if="tableSource === 'relatives' || tableSource === 'trips'"
+              type="button"
+              class="btn-primary-key-toggle"
+              :class="{ 'is-primary-key': isCurrentLinkKey }"
+              @click="handleSetLinkKey"
+              :title="isCurrentLinkKey ? 'Cột này đang là Khóa liên kết của bảng' : 'Đặt cột này làm Khóa liên kết của bảng'"
+            >
+              <i class="pi pi-link" style="font-size: 0.92rem;"></i>
+              <span>{{ isCurrentLinkKey ? '🔗 Khóa liên kết (Đang áp dụng)' : '🔗 Đặt làm Khóa liên kết' }}</span>
+            </button>
+
+            <!-- Nút mở Hộp thoại Toàn diện -->
+            <button
+              type="button"
+              class="btn-open-all-keys"
+              @click="$emit('open-key-config'); closeMenu();"
+              style="display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 5px 8px; border: 1px dashed #cbd5e1; border-radius: 4px; background: #ffffff; font-size: 0.72rem; color: #475569; cursor: pointer;"
+            >
+              <i class="pi pi-sliders-h" style="font-size: 0.75rem; color: #2563eb;"></i>
+              <span>Cấu hình Khóa & Liên kết Bảng...</span>
+            </button>
           </div>
         </div>
 
@@ -200,6 +251,26 @@
 
         <div class="menu-divider"></div>
 
+        <!-- Chèn cột & Nhân bản (Lark Base style) -->
+        <div class="menu-actions" style="margin-bottom: 6px;">
+          <button type="button" class="menu-action-btn" @click="handleInsertLeft">
+            <i class="pi pi-arrow-left" style="color: #0284c7;"></i>
+            <span>← Chèn cột bên trái (Insert Left)</span>
+          </button>
+
+          <button type="button" class="menu-action-btn" @click="handleInsertRight">
+            <i class="pi pi-arrow-right" style="color: #0284c7;"></i>
+            <span>→ Chèn cột bên phải (Insert Right)</span>
+          </button>
+
+          <button type="button" class="menu-action-btn" @click="handleDuplicate">
+            <i class="pi pi-clone" style="color: #10b981;"></i>
+            <span>⧉ Nhân bản cột (Duplicate Column)</span>
+          </button>
+        </div>
+
+        <div class="menu-divider"></div>
+
         <!-- Actions -->
         <div class="menu-actions">
           <button type="button" class="menu-action-btn" @click="handleFilterByCol">
@@ -213,7 +284,7 @@
           </button>
 
           <button
-            v-if="!column?.isVirtual && column?.id !== '_primaryKey' && column?.id !== 'code' && column?.id !== 'stt'"
+            v-if="!column?.isVirtual && !column?.isPrimaryField && column?.id !== '_primaryKey' && column?.id !== 'code' && column?.id !== 'stt'"
             type="button"
             class="menu-action-btn action-danger"
             @click="handleDeleteColumn"
@@ -264,6 +335,7 @@ const emit = defineEmits([
   "update:visible",
   "rename-column",
   "change-format",
+  "change-formula-type",
   "change-options",
   "change-width",
   "change-form-width",
@@ -273,12 +345,17 @@ const emit = defineEmits([
   "delete-column",
   "hide-column",
   "filter-column",
+  "insert-left",
+  "insert-right",
+  "duplicate-column",
+  "open-key-config",
 ]);
 
 const personnelStore = usePersonnelStore();
 
 const editLabel = ref("");
 const editFormat = ref("text");
+const editFormulaType = ref("presence_status");
 const editOptions = ref("");
 const editWidth = ref(160);
 const editFormWidth = ref("50");
@@ -355,6 +432,7 @@ watch(
       editLookupTarget.value = col.lookupTarget || "personnel";
       editLookupLinkCol.value = col.lookupLinkCol || "";
       editLookupField.value = col.lookupField || "";
+      editFormulaType.value = col.formulaType || "presence_status";
     }
   },
   { immediate: true }
@@ -379,10 +457,19 @@ const handleSaveLookup = () => {
   });
 };
 
+const handleSaveFormulaType = () => {
+  emit("change-formula-type", {
+    colId: props.column.id,
+    formulaType: editFormulaType.value,
+  });
+};
+
 const handleFormatChange = () => {
   emit("change-format", { colId: props.column.id, newFormat: editFormat.value });
   if (editFormat.value === 'lookup') {
     handleSaveLookup();
+  } else if (editFormat.value === 'formula') {
+    handleSaveFormulaType();
   }
 };
 
@@ -417,6 +504,19 @@ const isCurrentPrimaryKey = computed(() => {
   return personnelStore.getPersonnelKeyField() === colId;
 });
 
+const isCurrentLinkKey = computed(() => {
+  if (!props.column?.id) return false;
+  const colId = props.column.id;
+  const src = props.tableSource;
+  if (src === 'relatives') {
+    return personnelStore.getRelativeParentKeyField() === colId;
+  }
+  if (src === 'trips') {
+    return personnelStore.getTripKeyField() === colId;
+  }
+  return false;
+});
+
 const handleSetPrimaryKey = async () => {
   if (!props.column?.id) return;
   const colId = props.column.id;
@@ -434,6 +534,38 @@ const handleSetPrimaryKey = async () => {
   personnelStore.systemKeyConfig = keyConfig;
   await saveAppSettings('system_key_config', keyConfig);
   alert(`Đã thiết lập cột "${props.column.label || colId}" làm Khóa chính (Primary Key / Cột primal) của bảng!`);
+};
+
+const handleSetLinkKey = async () => {
+  if (!props.column?.id) return;
+  const colId = props.column.id;
+  const src = props.tableSource;
+  const keyConfig = {
+    ...(personnelStore.systemKeyConfig || {}),
+  };
+  if (src === 'relatives') {
+    keyConfig.relativeParentKeyField = colId;
+  } else if (src === 'trips') {
+    keyConfig.tripKeyField = colId;
+  }
+  personnelStore.systemKeyConfig = keyConfig;
+  await saveAppSettings('system_key_config', keyConfig);
+  alert(`Đã thiết lập cột "${props.column.label || colId}" làm Khóa liên kết (Link Key) của bảng!`);
+};
+
+const handleInsertLeft = () => {
+  emit("insert-left", props.column);
+  closeMenu();
+};
+
+const handleInsertRight = () => {
+  emit("insert-right", props.column);
+  closeMenu();
+};
+
+const handleDuplicate = () => {
+  emit("duplicate-column", props.column);
+  closeMenu();
 };
 
 const handleToggleParentField = (key) => {
@@ -498,12 +630,13 @@ const handleFilterByCol = () => {
 
 .column-header-menu-popover {
   position: absolute;
-  width: 280px;
+  width: 300px;
+  max-height: 85vh;
+  overflow-y: auto;
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   border: 1px solid #e2e8f0;
-  overflow: hidden;
   animation: fadeIn 0.12s ease-out;
 }
 

@@ -1345,7 +1345,73 @@
   4. **Làm rõ tình trạng trong Cài đặt**:
      - Tab "Khóa Định danh & Liên kết (CCCD)" trong trang Cài đặt thực chất vẫn đang được giữ lại. Nếu người dùng muốn tinh gọn giao diện Cài đặt, có thể gỡ bỏ tab này vì giờ đây người dùng đã có thể cấu hình Khóa chính 100% trực tiếp trên Bảng.
 - **Status**: Done [Reversible].
+---
+
+### 90. TÁCH 3 TAB ĐỘC LẬP FORM CHI TIẾT, ĐỒNG BỘ TOOLBAR CÁC BẢNG, XUẤT PDF THEO BẢNG & LINH HOẠT CỘT ẢO THÂN NHÂN (2026-09-07)
+- **Strategic Context**:
+  - Người dùng yêu cầu 4 nội dung quan trọng:
+    1. *Form chi tiết*: Tách riêng biệt, ấn cái nào hiển thị đúng cái đó để tránh cuộn dài, rối mắt.
+    2. *Đồng bộ Toolbar giữa các Bảng*: Bảng Chuyến đi / Bảng tạo mới dùng style cũ, bất đồng bộ với Bảng Cán bộ; sửa nút bị lặp dấu cộng `+ + Thêm Bản Ghi Mới`.
+    3. *Xuất PDF*: Bỏ phân nhóm nhỏ cũ (Khối A, Khối B, Khối C...), xuất phẳng theo đúng 3 Bảng (Cán bộ, Thân nhân, Chuyến đi).
+    4. *Cột ảo Thân nhân*: Khắc phục việc "Mã thân nhân" và "Cán bộ liên quan" không ẩn/đổi tên được; loại bỏ hoàn toàn các chuỗi fix cứng để áp dụng linh hoạt cho mọi trường hợp (học sinh, cán bộ, đối tượng khác).
+- **Các giải pháp đã triển khai**:
+  1. **Tách 3 Tab độc lập trong Form Chi tiết (`PersonnelDialog.vue`)**:
+     - Phân chia thành 3 tab rõ ràng: `[👤 1. Thông tin lý lịch]`, `[✈️ 2. Chuyến đi nước ngoài (X)]`, `[👥 3. Thân nhân liên quan (Y)]`.
+     - Tab 1 chỉ hiển thị thông tin lý lịch cá nhân và kỷ luật; Tab 2 quản lý chuyến đi riêng; Tab 3 quản lý thân nhân riêng.
+     - Bấm tab nào chỉ render nội dung tab đó, không cuộn lồng nhau.
+     - Hỗ trợ phân luồng mở tab tự động (`initialTab: 1` mở Chuyến đi, `initialTab: 2` mở Thân nhân).
+  2. **Đồng bộ 100% Toolbar các Bảng (`ChildDashboardView.vue`, `PersonnelView.vue`)**:
+     - Đưa ô Tìm kiếm nhanh lên thẳng thanh công cụ trên cùng trên cả Bảng Chuyến đi / Bảng trống, xóa bỏ card tìm kiếm rời thừa bên dưới.
+     - Sửa lỗi hiển thị `+ + Thêm Bản Ghi Mới` thành nhãn chuẩn mực (`Thêm Bản Ghi Mới`, `Thêm Cán bộ`, `Thêm Thân nhân`).
+     - Chuẩn hóa nút `Tùy chọn Cột` dùng icon `pi pi-sliders-h` đồng nhất trên tất cả các bảng.
+     - Tích hợp dropdown menu `Xuất / Nhập` (Xuất PDF/Word, Xuất Excel) đồng bộ trên Bảng Chuyến đi.
+  3. **Xuất PDF theo Bảng Dữ Liệu (`AdvancedDocxExportDialog.vue`, `docxExport.js`)**:
+     - Đổi tab sang `Theo Bảng Dữ Liệu`.
+     - Loại bỏ các nhóm con lắt nhắt; gom trường thành 3 danh mục lớn: `I. THÔNG TIN CÁN BỘ (HỒ SƠ CHÍNH)`, `II. THÔNG TIN THÂN NHÂN LIÊN QUAN`, `III. THÔNG TIN CHUYẾN ĐI (XUẤT NHẬP CẢNH)`.
+     - Cho phép chọn nhanh / bỏ chọn từng bảng với danh sách trường dạng chips phẳng.
+  4. **Linh hoạt Cột Mã Thân nhân & Đối tượng Liên quan (`PersonnelView.vue`, `personnel.js`)**:
+     - Thêm `v-if` cho cột `code` và `_parentPersonnelName` trên Bảng Thân nhân, kết nối `ColumnSelector` cho phép ẩn/hiện dễ dàng.
+     - Bổ sung menu tiêu đề `openColMenu` cho phép đổi tên và tùy biến cột trực tiếp từ bảng.
+     - Thêm icon bánh răng ⚙️ trên cột liên quan để tùy chọn linh hoạt các trường con hiển thị (Họ tên, CCCD/Mã, Chức vụ, Đơn vị, hoặc bất kỳ trường nào của đối tượng cha).
+     - Loại bỏ mọi chuỗi fix cứng: thay "Cán bộ" bằng "Đối tượng liên quan / Hồ sơ chính", "(cùng cán bộ)" bằng "(cùng hồ sơ liên quan)", áp dụng chuẩn mực cho học sinh, nhân viên, hoặc bất kỳ thực thể nào.
+### 91. HOÀN THIỆN TOÀN BỘ 8 YÊU CẦU LARK BASE & CẤU HÌNH BẢNG TẬP TRUNG (2026-09-07)
+- **Strategic Context**:
+  - Người dùng yêu cầu triển khai trọn vẹn 8 hạng mục nâng cấp giao diện bảng theo chuẩn Lark Base và thống nhất cấu hình bảng tập trung:
+    1. Cấu hình khóa chính và liên kết trực tiếp trên Bảng (không cần vào Cài đặt).
+    2. Đồng bộ 10/10 kiểu dữ liệu giữa Thêm cột mới và Sửa cột.
+    3. Tự động gọi các Bảng mới / Bảng tùy chọn khi xuất PDF/Word.
+    4. Hiển thị số thứ tự cột (Cột 1, Cột 2...) trong Tùy chọn cột.
+    5. Chèn cột bên trái, chèn cột bên phải và nhân bản cột (Duplicate Column).
+    6. Đổi icon tùy chỉnh cột sang icon bánh răng ⚙️ (`pi pi-cog`).
+    7. Căn chỉnh popup menu cột chuẩn xác thẳng mép trái dưới tiêu đề `<th>`.
+    8. Khóa bảo vệ Cột đầu tiên (Primary Field 🔒) và tùy chọn Độ rộng nhóm thống kê Dashboard (20%, 25%, 33%, 50%, 100%).
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Gom cấu hình Khóa chính & Khóa liên kết trực tiếp vào Bảng (`TableKeyLinkDialog.vue`)**:
+     - Tạo mới component `TableKeyLinkDialog.vue` cho phép cấu hình trực tiếp từ Toolbar (`[🔑 Khóa & Liên kết]`) hoặc từ menu cột (`ColumnHeaderMenu.vue`).
+     - Cho phép chọn Khóa định danh chính (Primary Unique Key) của bảng hiện tại, Khóa liên kết đối tượng cha (Parent Link Key), Khóa thân nhân và Khóa chuyến đi.
+     - Tổng quát hóa nhãn và hướng dẫn, loại bỏ hoàn toàn các chuỗi fix cứng "CCCD" hay "Cán bộ" để mở rộng linh hoạt cho học sinh, bệnh nhân, nhân viên...
+  2. **Đồng bộ 10/10 kiểu dữ liệu giữa Thêm cột mới và Chỉnh sửa cột (`AddColumnDialog.vue`, `ColumnHeaderMenu.vue`)**:
+     - Đồng bộ trọn vẹn 10 định dạng: `text`, `number`, `date`, `dropdown`, `checkbox`, `checkbox_file_loop`, `file`, `lookup`, `formula`, `rollup`.
+     - Bổ sung cấu hình Công thức (`formulaType`: `presence_status`, `overdue_status`, `depart_before_decision`, `date_delta`, `conditional_check`) và cấu hình Tham chiếu Lookup linh hoạt ngay trên `ColumnHeaderMenu.vue`.
+  3. **Xuất PDF tự động gọi các Bảng mới / Bảng tùy chọn (`AdvancedDocxExportDialog.vue`, `docxExport.js`)**:
+     - Tự động phát hiện và nạp danh sách các bảng tùy chỉnh/chuyên đề từ `custom_dashboards_config` (kèm dữ liệu từ `custom_table_rows_${dash.id}`).
+     - Hiển thị danh mục checklist cột động cho từng bảng mới bên cạnh 3 bảng gốc.
+     - Cập nhật `docxExport.js` (`createDynamicDocxTemplateBlob` và `preparePersonnelDocxData`) để tự động sinh khối lặp `{#bang_{id}}` và xuất dữ liệu của các bảng mới vào tài liệu PDF/Word.
+  4. **Hiển thị số thứ tự cột (`Cột 1:`, `Cột 2:`...) trong Bộ chọn cột (`ColumnSelector.vue`)**:
+     - Bổ sung tự động tính toán chỉ số 1-based (`colIndex`) từ danh sách options; mặc định luôn hiển thị số thứ tự cột.
+  5. **Chèn cột bên trái, chèn bên phải và nhân bản cột (Lark Base style)**:
+     - Bổ sung 3 thao tác trong menu cột: `← Chèn cột bên trái`, `→ Chèn cột bên phải`, `⧉ Nhân bản cột`.
+     - Hỗ trợ `targetIndex` trong `AddColumnDialog.vue`, `PersonnelView.vue`, và `ChildDashboardView.vue`.
+  6. **Đổi icon tùy chỉnh cột sang Icon Bánh Răng (`⚙️` / `pi pi-cog`)**:
+     - Thay thế toàn bộ icon mũi tên xuống `pi pi-chevron-down` thành icon bánh răng `pi pi-cog` trên header các bảng và trong bộ chọn cột.
+  7. **Căn chỉnh vị trí Popup Menu Cột chuẩn xác (Anchor Positioning)**:
+     - Sử dụng `event.currentTarget.closest('th').getBoundingClientRect()` để popup menu cột luôn mở căn thẳng mép trái bên dưới tiêu đề cột `<th>`, không bị lệch sang bên phải nút icon.
+  8. **Khóa bảo vệ Cột đầu tiên (Primary Field) & Độ rộng Khối thống kê Dashboard (% Width)**:
+     - Cột đầu tiên của bảng được khóa thành Primary Field (`isPrimaryField: idx === 0`): có huy hiệu `🔒`, không cho đổi định dạng, không cho xóa.
+     - Cho phép tùy chỉnh độ rộng khối thống kê nhóm trên Dashboard chính (`groupForm.widthPercent`: 20%, 25%, 33.33%, 50%, 100%) và bố trí theo `dashboard-groups-flex-container`.
+- **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
 
 
 

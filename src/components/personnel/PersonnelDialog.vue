@@ -6,29 +6,37 @@
     :style="{ width: '85vw', maxWidth: '1100px' }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
-    <!-- Tabs nếu có bảng phụ, nếu không chỉ hiển thị form bảng chính -->
-    <div v-if="hasSecondaryTabs" style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px;">
+    <!-- 3 Tab độc lập riêng biệt: Bấm cái nào chỉ hiển thị đúng cái đó -->
+    <div style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px; flex-wrap: wrap;">
       <Button
         :label="'1. ' + (customTableName || 'Thông tin bản ghi')"
-        icon="pi pi-table"
+        icon="pi pi-user"
         :severity="activeTab === 0 ? 'primary' : 'secondary'"
         :text="activeTab !== 0"
         size="small"
         @click="activeTab = 0"
       />
       <Button
-        :label="'2. Bảng phụ liên quan (' + (form.relatives?.length || 0) + ')'"
-        icon="pi pi-users"
+        :label="'2. Chuyến đi nước ngoài (' + (form.trips?.length || 0) + ')'"
+        icon="pi pi-send"
         :severity="activeTab === 1 ? 'primary' : 'secondary'"
         :text="activeTab !== 1"
         size="small"
         @click="activeTab = 1"
       />
+      <Button
+        :label="'3. Thân nhân liên quan (' + (form.relatives?.length || 0) + ')'"
+        icon="pi pi-users"
+        :severity="activeTab === 2 ? 'primary' : 'secondary'"
+        :text="activeTab !== 2"
+        size="small"
+        @click="activeTab = 2"
+      />
     </div>
 
     <!-- Fixed Height Tab Contents Area to prevent jumping -->
-    <div style="height: 540px; max-height: 65vh; overflow-y: auto; padding-right: 8px;">
-      <!-- TAB 1: CÁN BỘ (Cá nhân + Khối Chuyến đi nước ngoài của Cán bộ) -->
+    <div style="height: 560px; max-height: 68vh; overflow-y: auto; padding-right: 8px;">
+      <!-- TAB 1: CÁN BỘ / HỒ SƠ CHÍNH (Chỉ hiển thị lý lịch cá nhân & kỷ luật, không lồng chuyến đi) -->
       <div v-show="activeTab === 0" style="display: flex; flex-direction: column; gap: 1.5rem;">
         <template v-for="(grp, gIdx) in (personnelStore.importMappingPersonnel || [])" :key="gIdx">
           <!-- Nhóm Kỷ luật & Lưu ý chính trị -->
@@ -53,19 +61,21 @@
             />
           </div>
         </template>
+      </div>
 
-        <!-- Khối Chuyến đi / Sự kiện (Chỉ hiển thị khi có dữ liệu chuyến đi hoặc bật tùy chọn) -->
-        <div v-if="showTripSection" style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 10px; padding: 14px 16px; margin-top: 1rem; box-shadow: 0 1px 3px rgba(2, 132, 199, 0.06);">
+      <!-- TAB 2: CHUYẾN ĐI NƯỚC NGOÀI (Chỉ hiển thị quản lý chuyến đi riêng của đối tượng này) -->
+      <div v-show="activeTab === 1">
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px 16px;">
           <h4 style="font-size: 0.92rem; font-weight: 700; color: #0369a1; margin-bottom: 0.75rem; border-bottom: 1px solid #bae6fd; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
             <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
-            <span>Sự kiện / Chuyến đi liên quan ({{ form.trips?.length || 0 }})</span>
+            <span>Danh sách Chuyến đi nước ngoài ({{ form.trips?.length || 0 }})</span>
           </h4>
           <PersonnelTravelForm :form="form" />
         </div>
       </div>
 
-      <!-- TAB 2: THÂN NHÂN (Danh sách thân nhân + Chuyến đi riêng bên trong từng thân nhân) -->
-      <div v-show="activeTab === 1">
+      <!-- TAB 3: THÂN NHÂN (Danh sách thân nhân + Chuyến đi riêng bên trong từng thân nhân) -->
+      <div v-show="activeTab === 2">
         <PersonnelFamilyForm :form="form" :targetRelativeCode="targetRelativeCode" />
       </div>
     </div>
@@ -158,7 +168,15 @@ const emit = defineEmits(['update:modelValue', 'saved', 'deleted']);
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 
-const activeTab = ref(Number(props.initialTab) === 1 ? 1 : 0);
+const computeInitialTab = (tabVal, targetRelCode) => {
+  if (targetRelCode) return 2; // Tab 3: Thân nhân
+  const n = Number(tabVal);
+  if (n === 2) return 2; // Tab 3: Thân nhân
+  if (n === 1) return 1; // Tab 2: Chuyến đi
+  return 0; // Tab 1: Cán bộ
+};
+
+const activeTab = ref(computeInitialTab(props.initialTab, props.targetRelativeCode));
 const saving = ref(false);
 
 const visible = computed({
@@ -306,10 +324,10 @@ let autoSaveTimer = null;
 let initialJsonSnapshot = '';
 
 watch(
-  () => [props.modelValue, props.initialTab, props.personData],
-  ([isOpen, tab, pData]) => {
+  () => [props.modelValue, props.initialTab, props.targetRelativeCode, props.personData],
+  ([isOpen, tab, relCode, pData]) => {
     if (isOpen) {
-      activeTab.value = Number(tab) === 1 ? 1 : 0;
+      activeTab.value = computeInitialTab(tab, relCode || props.targetRelativeCode);
       initFormData(pData || props.personData);
     } else {
       if (autoSaveTimer) clearTimeout(autoSaveTimer);

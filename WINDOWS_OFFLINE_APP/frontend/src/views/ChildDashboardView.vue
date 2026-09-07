@@ -20,6 +20,26 @@
       </div>
 
        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <!-- Ô Tìm kiếm nhanh trực tiếp trên thanh công cụ -->
+        <div class="search-input-wrapper">
+          <i class="pi pi-search search-icon-left"></i>
+          <InputText
+            v-model="searchQuery"
+            placeholder="Tìm theo tên, CCCD, chức vụ, đơn vị, số QĐ, quốc gia..."
+            size="small"
+            style="width: 260px; font-size: 0.8rem; height: 32px;"
+          />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="search-clear-btn"
+            @click="searchQuery = ''"
+            title="Xóa tìm kiếm"
+          >
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+
         <!-- ➕ Nút Thêm Cột Mới chuẩn Lark Base -->
         <Button
           v-if="authStore.isAdmin"
@@ -35,13 +55,13 @@
         <!-- ⚙️ Tùy chọn Cột hiển thị Popover -->
         <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
           <Button
-            icon="pi pi-table"
-            label="Tùy chọn Cột hiển thị"
+            icon="pi pi-sliders-h"
+            label="Tùy chọn Cột"
             severity="secondary"
             outlined
             size="small"
-            @click="isFilterMenuOpen = !isFilterMenuOpen"
-            title="Tùy chọn Cột hiển thị"
+            @click="isFilterMenuOpen = !isFilterMenuOpen; isDataMenuOpen = false;"
+            title="Tùy chọn Cột"
             style="font-size: 0.8rem;"
           />
 
@@ -49,7 +69,7 @@
             <div style="padding: 8px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
                 <div style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                  <i class="pi pi-table" style="color: #7c3aed;"></i>
+                  <i class="pi pi-sliders-h" style="color: #7c3aed;"></i>
                   <span>Tùy chọn Cột hiển thị</span>
                 </div>
                 <span
@@ -74,6 +94,53 @@
           </div>
         </div>
 
+        <!-- 🔑 Cấu hình Khóa Định danh & Khóa Liên Kết -->
+        <Button
+          label="Khóa & Liên kết"
+          icon="pi pi-key"
+          severity="secondary"
+          outlined
+          size="small"
+          @click="isKeyLinkDialogOpen = true"
+          title="Cấu hình Khóa Định Danh & Khóa Liên Kết giữa các Bảng dữ liệu"
+          style="font-size: 0.8rem;"
+        />
+
+        <!-- 📥 Menu Xuất / Nhập Dropdown chuẩn đồng bộ PersonnelView -->
+        <div class="header-menu-wrapper" @mouseenter="onMouseEnterData" @mouseleave="onMouseLeaveData">
+          <Button
+            label="Xuất / Nhập"
+            icon="pi pi-download"
+            severity="secondary"
+            outlined
+            size="small"
+            @click="isDataMenuOpen = !isDataMenuOpen; isFilterMenuOpen = false;"
+            style="font-size: 0.8rem;"
+          />
+
+          <div v-show="isDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
+            <div class="menu-action-item" @click="openAdvancedDocxExport(); isDataMenuOpen = false;">
+              <div class="action-icon-box" style="background: #fee2e2; color: #dc2626;">
+                <i class="pi pi-file-pdf"></i>
+              </div>
+              <div>
+                <div class="menu-action-title">Xuất Hồ sơ Báo cáo (PDF / Word)</div>
+                <div class="menu-action-sub">Xuất hồ sơ chi tiết theo mẫu chuẩn hoặc tải lên</div>
+              </div>
+            </div>
+
+            <div class="menu-action-item" @click="exportExcel(); isDataMenuOpen = false;">
+              <div class="action-icon-box" style="background: #dcfce7; color: #16a34a;">
+                <i class="pi pi-file-excel"></i>
+              </div>
+              <div>
+                <div class="menu-action-title">Xuất danh sách Excel (.xlsx)</div>
+                <div class="menu-action-sub">Tải bảng dữ liệu hiện tại về máy tính</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Nút Xóa các bản ghi đã chọn (Tick chọn nhiều dòng) -->
         <Button
           v-if="selectedTrips.length > 0"
@@ -85,27 +152,16 @@
           style="font-size: 0.8rem;"
         />
 
-        <!-- + Thêm Bản Ghi Mới trực tiếp vào Bảng này -->
+        <!-- Thêm Bản Ghi Mới trực tiếp vào Bảng này -->
         <Button
           icon="pi pi-plus"
-          label="+ Thêm Bản Ghi Mới"
+          label="Thêm Bản Ghi Mới"
           severity="success"
           size="small"
           @click="openAddTripDialog"
           title="Thêm bản ghi mới trực tiếp vào bảng này"
           style="font-size: 0.8rem;"
         />
-
-        <!-- Export PDF / Word -->
-        <button
-          type="button"
-          class="btn-action-primary"
-          @click="openAdvancedDocxExport"
-          title="Xuất Hồ sơ (PDF / Word)"
-        >
-          <i class="pi pi-file-pdf"></i>
-          <span>Xuất Hồ sơ (PDF / Word)</span>
-        </button>
       </div>
     </div>
 
@@ -148,29 +204,6 @@
       </div>
     </div>
 
-    <!-- Filter Bar Container (Tìm kiếm nhanh) -->
-    <div class="app-card" style="padding: 12px 16px; margin-bottom: 1rem;">
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <!-- Search -->
-        <div class="search-input-wrapper" style="flex: 1;">
-          <i class="pi pi-search search-icon-left"></i>
-          <InputText
-            v-model="searchQuery"
-            placeholder="Tìm theo tên, CCCD, chức vụ, đơn vị, số quyết định, quốc gia..."
-            style="width: 100%; font-size: 0.82rem; height: 34px;"
-          />
-          <button
-            v-if="searchQuery"
-            type="button"
-            class="search-clear-btn"
-            @click="searchQuery = ''"
-            title="Xóa tìm kiếm"
-          >
-            <i class="pi pi-times"></i>
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Main Data Table Card (Matching PersonnelView exactly) -->
     <div class="app-card" style="padding: 0; overflow-x: auto; max-width: 100%; position: relative;">
@@ -219,9 +252,10 @@
                     Cột {{ col.colIndex }}:
                   </span>
                   {{ col.label }}
-                  <span v-if="isChildPrimaryKey(col.id)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
+                  <span v-if="col.isPrimaryField" title="Cột định danh chính (Primary Field - Khóa cố định)" style="font-size: 0.72rem; margin-left: 2px;">🔒</span>
+                  <span v-else-if="isChildPrimaryKey(col.id)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
                 </span>
-                <i v-if="isNameColumn(col.id)" class="pi pi-cog" style="font-size: 0.7rem; cursor: pointer; color: #94a3b8; margin-left: 2px; flex-shrink: 0;" @click.stop="toggleNameColConfig($event)" title="Tùy chỉnh nội dung cột" />
+                <i v-if="isNameColumn(col.id)" class="pi pi-sliders-h" style="font-size: 0.7rem; cursor: pointer; color: #94a3b8; margin-left: 2px; flex-shrink: 0;" @click.stop="toggleNameColConfig($event)" title="Tùy chỉnh nội dung cột" />
               </div>
               <button
                 type="button"
@@ -229,7 +263,7 @@
                 @click.stop="openChildColMenu($event, col)"
                 title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, ẩn cột...)"
               >
-                <i class="pi pi-chevron-down" style="font-size: 0.65rem;"></i>
+                <i class="pi pi-cog" style="font-size: 0.72rem;"></i>
               </button>
             </div>
           </template>
@@ -968,6 +1002,7 @@
     <AddColumnDialog
       v-model:visible="isAddColumnDialogOpen"
       :tableSource="currentDashboardConfig.source || 'trips'"
+      :targetIndex="addChildColTargetIndex"
       @save="saveNewColumn"
     />
   </div>
@@ -982,6 +1017,7 @@
       :availableParentFields="availableParentFields"
       @rename-column="onChildRenameColumn"
       @change-format="onChildChangeColumnFormat"
+      @change-formula-type="onChildChangeFormulaType"
       @change-options="onChildChangeColumnOptions"
       @change-width="onChildChangeColumnWidth"
       @change-form-width="onChildChangeColumnFormWidth"
@@ -991,6 +1027,16 @@
       @delete-column="onChildDeleteColumnFromTable"
       @hide-column="onChildHideColumn"
       @filter-column="onChildFilterByColumn"
+      @insert-left="onInsertChildColLeft"
+      @insert-right="onInsertChildColRight"
+      @duplicate-column="onDuplicateChildCol"
+      @open-key-config="isKeyLinkDialogOpen = true"
+    />
+
+    <!-- Dialog Cấu hình Khóa Định danh & Khóa Liên Kết giữa các Bảng -->
+    <TableKeyLinkDialog
+      v-model:visible="isKeyLinkDialogOpen"
+      :activeSource="currentDashboardConfig.source || 'trips'"
     />
 
 </template>
@@ -1011,6 +1057,7 @@ import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDial
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import ColumnHeaderMenu from '@/components/common/ColumnHeaderMenu.vue';
 import AddColumnDialog from '@/components/common/AddColumnDialog.vue';
+import TableKeyLinkDialog from '@/components/common/TableKeyLinkDialog.vue';
 
 import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug, formatOptions } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, extractRowFieldValue } from '@/utils/dashboardMetrics';
@@ -1260,6 +1307,7 @@ const availableRelativeColsForRollup = computed(() => {
 });
 
 const openAddColumnDialog = () => {
+  addChildColTargetIndex.value = -1;
   isAddColumnDialogOpen.value = true;
 };
 
@@ -1292,14 +1340,22 @@ const saveNewColumn = async (colPayload) => {
           alert(`Mã cột "${colPayload.id.trim()}" đã tồn tại trong bảng này! Vui lòng chọn mã khác.`);
           return;
         }
-        cDash.customColumns.push(colPayload);
+        if (typeof colPayload.targetIndex === 'number' && colPayload.targetIndex >= 0) {
+          cDash.customColumns.splice(colPayload.targetIndex, 0, colPayload);
+        } else {
+          cDash.customColumns.push(colPayload);
+        }
         try {
           localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
           await saveAppSettings('custom_dashboards_config', customDashboards.value);
         } catch (e) {}
       }
       if (!selectedColIds.value.includes(colPayload.id)) {
-        selectedColIds.value.push(colPayload.id);
+        if (typeof colPayload.targetIndex === 'number' && colPayload.targetIndex >= 0) {
+          selectedColIds.value.splice(colPayload.targetIndex, 0, colPayload.id);
+        } else {
+          selectedColIds.value.push(colPayload.id);
+        }
       }
       await onColumnsChange(selectedColIds.value);
       isAddColumnDialogOpen.value = false;
@@ -1332,14 +1388,22 @@ const saveNewColumn = async (colPayload) => {
     }
 
     // Thêm cột vào nhóm đầu tiên của mapping
-    mappingRef[0].columns.push(colPayload);
+    if (typeof colPayload.targetIndex === 'number' && colPayload.targetIndex >= 0) {
+      mappingRef[0].columns.splice(colPayload.targetIndex, 0, colPayload);
+    } else {
+      mappingRef[0].columns.push(colPayload);
+    }
 
     // Lưu cấu hình mapping xuống DB
     await saveAppSettings(mappingKey, mappingRef);
 
     // Tự động kích hoạt hiển thị cột mới trên bảng hiện tại
     if (!selectedColIds.value.includes(colPayload.id)) {
-      selectedColIds.value.push(colPayload.id);
+      if (typeof colPayload.targetIndex === 'number' && colPayload.targetIndex >= 0) {
+        selectedColIds.value.splice(colPayload.targetIndex, 0, colPayload.id);
+      } else {
+        selectedColIds.value.push(colPayload.id);
+      }
     }
     await onColumnsChange(selectedColIds.value);
 
@@ -1847,12 +1911,15 @@ const pageSize = ref(30);
 const isChildColMenuVisible = ref(false);
 const selectedChildMenuCol = ref(null);
 const childColMenuPosition = ref({ x: 0, y: 0 });
+const isKeyLinkDialogOpen = ref(false);
+const addChildColTargetIndex = ref(-1);
 
 const openChildColMenu = (event, col) => {
-  const rect = event.currentTarget.getBoundingClientRect();
+  const thElem = event.currentTarget.closest('th') || event.currentTarget.closest('.table-col-header-wrap') || event.currentTarget;
+  const thRect = thElem.getBoundingClientRect();
   childColMenuPosition.value = {
-    x: Math.min(rect.left, window.innerWidth - 300),
-    y: rect.bottom + 4,
+    x: Math.max(10, Math.min(thRect.left, window.innerWidth - 320)),
+    y: thRect.bottom + 4,
   };
   selectedChildMenuCol.value = col;
   isChildColMenuVisible.value = true;
@@ -2073,6 +2140,117 @@ const onChildFilterByColumn = (col) => {
   searchQuery.value = col.label || col.id;
 };
 
+const onInsertChildColLeft = (col) => {
+  const { isBlank, cDash, mapping } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const idx = (cDash.customColumns || []).findIndex((c) => c.id === col.id);
+    addChildColTargetIndex.value = idx !== -1 ? idx : -1;
+  } else {
+    for (const g of (mapping || [])) {
+      const found = (g.columns || []).findIndex((c) => c.id === col.id);
+      if (found !== -1) {
+        addChildColTargetIndex.value = found;
+        break;
+      }
+    }
+  }
+  isAddColumnDialogOpen.value = true;
+};
+
+const onInsertChildColRight = (col) => {
+  const { isBlank, cDash, mapping } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const idx = (cDash.customColumns || []).findIndex((c) => c.id === col.id);
+    addChildColTargetIndex.value = idx !== -1 ? idx + 1 : -1;
+  } else {
+    for (const g of (mapping || [])) {
+      const found = (g.columns || []).findIndex((c) => c.id === col.id);
+      if (found !== -1) {
+        addChildColTargetIndex.value = found + 1;
+        break;
+      }
+    }
+  }
+  isAddColumnDialogOpen.value = true;
+};
+
+const onDuplicateChildCol = async (col) => {
+  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
+  const copyId = col.id + '_copy_' + Math.random().toString(36).substring(2, 6);
+  const copyCol = {
+    ...col,
+    id: copyId,
+    label: (col.label || col.id) + ' (Bản sao)',
+  };
+  delete copyCol.isVirtual;
+  delete copyCol.isPrimaryField;
+
+  if (isBlank && cDash) {
+    const idx = (cDash.customColumns || []).findIndex((c) => c.id === col.id);
+    if (idx !== -1) {
+      cDash.customColumns.splice(idx + 1, 0, copyCol);
+    } else {
+      cDash.customColumns.push(copyCol);
+    }
+    try {
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+    } catch (e) {}
+  } else {
+    let inserted = false;
+    for (const g of (mapping || [])) {
+      const idx = (g.columns || []).findIndex((c) => c.id === col.id);
+      if (idx !== -1) {
+        g.columns.splice(idx + 1, 0, copyCol);
+        inserted = true;
+        break;
+      }
+    }
+    if (!inserted && mapping && mapping[0]) {
+      mapping[0].columns.push(copyCol);
+    }
+    await saveAppSettings(key, mapping);
+  }
+
+  const curIdx = selectedColIds.value.indexOf(col.id);
+  if (curIdx !== -1) {
+    selectedColIds.value.splice(curIdx + 1, 0, copyId);
+  } else {
+    selectedColIds.value.push(copyId);
+  }
+  await onColumnsChange(selectedColIds.value);
+  alert(`Đã nhân bản cột thành công: "${copyCol.label}"!`);
+};
+
+const onChildChangeFormulaType = async ({ colId, formulaType }) => {
+  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.formulaType = formulaType;
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.formulaType = formulaType;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings(key, mapping);
+  }
+};
+
 // INLINE EDITING FOR CHILD DASHBOARD
 const editingChildCell = ref(null);
 
@@ -2155,6 +2333,20 @@ const onMouseEnterFilter = () => {
 const onMouseLeaveFilter = () => {
   filterMenuTimer = setTimeout(() => {
     isFilterMenuOpen.value = false;
+  }, 250);
+};
+
+const isDataMenuOpen = ref(false);
+let dataMenuTimer = null;
+
+const onMouseEnterData = () => {
+  if (dataMenuTimer) clearTimeout(dataMenuTimer);
+  isDataMenuOpen.value = true;
+};
+
+const onMouseLeaveData = () => {
+  dataMenuTimer = setTimeout(() => {
+    isDataMenuOpen.value = false;
   }, 250);
 };
 
@@ -2525,7 +2717,10 @@ const visibleColumns = computed(() => {
   });
   return selectedColIds.value
     .filter((id) => id !== 'status' && id !== 'tripStatus' && colMap.has(id))
-    .map((id) => colMap.get(id));
+    .map((id, idx) => ({
+      ...colMap.get(id),
+      isPrimaryField: idx === 0,
+    }));
 });
 
 // Build unified list of trips from both Cán bộ and Thân nhân profiles
@@ -3454,10 +3649,10 @@ const openPersonnelDetail = (trip) => {
   if (targetPerson) {
     activePersonData.value = targetPerson;
     if (trip.isRelative) {
-      dialogInitialTab.value = 1;
+      dialogInitialTab.value = 2; // Tab 3: Thân nhân
       dialogTargetRelativeCode.value = trip.relativeCode || trip.code || '';
     } else {
-      dialogInitialTab.value = 0;
+      dialogInitialTab.value = 1; // Tab 2: Chuyến đi
       dialogTargetRelativeCode.value = '';
     }
     isPersonnelDialogOpen.value = true;
@@ -4736,6 +4931,49 @@ onUnmounted(() => {
   border-radius: 4px;
   outline: none;
   background: #ffffff;
+}
+
+.data-menu-dropdown {
+  width: 290px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-action-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.menu-action-item:hover {
+  background: #f1f5f9;
+}
+
+.action-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.menu-action-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.menu-action-sub {
+  font-size: 0.68rem;
+  color: #64748b;
 }
 
 </style>

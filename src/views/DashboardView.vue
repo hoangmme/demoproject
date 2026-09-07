@@ -51,16 +51,21 @@
     <!-- ========================================================= -->
     <!-- 1. CUSTOM DASHBOARD GROUPS (USER CONFIGURED - AT TOP)     -->
     <!-- ========================================================= -->
-    <div
-      v-for="(group, gIdx) in customGroups"
-      :key="group.id || gIdx"
-      class="app-card"
-      :style="{
-        marginBottom: '1.5rem',
-        backgroundColor: group.bgColor || '#ffffff',
-        borderColor: group.color && group.color !== '#1e293b' ? (group.color + '40') : undefined
-      }"
-    >
+    <div class="dashboard-groups-flex-container" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: stretch; width: 100%;">
+      <div
+        v-for="(group, gIdx) in customGroups"
+        :key="group.id || gIdx"
+        class="app-card dashboard-group-card"
+        :style="{
+          flex: `0 0 ${getGroupFlexBasis(group)}`,
+          width: getGroupFlexBasis(group),
+          maxWidth: getGroupFlexBasis(group),
+          marginBottom: '0',
+          boxSizing: 'border-box',
+          backgroundColor: group.bgColor || '#ffffff',
+          borderColor: group.color && group.color !== '#1e293b' ? (group.color + '40') : undefined
+        }"
+      >
       <!-- Group Header (Inside App Card) -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -338,6 +343,7 @@
         </div>
       </div>
     </div>
+    </div>
 
 
 
@@ -463,6 +469,16 @@
               <option value="#f8fafc">Pastel Xám nhạt</option>
             </select>
           </div>
+        </div>
+        <div class="field-item">
+          <label class="field-label" style="font-weight: 700; color: #1e293b;">Độ rộng khối thống kê (Chiều ngang %)</label>
+          <select v-model="groupForm.widthPercent" class="settings-select" style="width: 100%; max-width: 100%;">
+            <option value="100">100% (Toàn hàng - Mặc định)</option>
+            <option value="50">50% (1/2 hàng - 2 nhóm trên 1 hàng)</option>
+            <option value="33.33">33.33% (1/3 hàng - 3 nhóm trên 1 hàng)</option>
+            <option value="25">25% (1/4 hàng - 4 nhóm trên 1 hàng)</option>
+            <option value="20">20% (1/5 hàng - 5 nhóm trên 1 hàng)</option>
+          </select>
         </div>
       </div>
       <template #footer>
@@ -1368,8 +1384,18 @@ const groupForm = ref({
   icon: 'pi-folder',
   color: '#1e293b',
   bgColor: '#ffffff',
+  widthPercent: '100',
   widgets: [],
 });
+
+const getGroupFlexBasis = (group) => {
+  const w = parseFloat(group?.widthPercent) || 100;
+  if (w <= 20) return 'calc(20% - 0.8rem)';
+  if (w <= 25) return 'calc(25% - 0.75rem)';
+  if (w <= 35) return 'calc(33.333% - 0.67rem)';
+  if (w <= 55) return 'calc(50% - 0.5rem)';
+  return '100%';
+};
 
 const isWidgetDialogOpen = ref(false);
 const isReorderWidgetsDialogOpen = ref(false);
@@ -1718,6 +1744,7 @@ const openAddGroupDialog = () => {
     icon: 'pi-folder',
     color: '#1e293b',
     bgColor: '#ffffff',
+    widthPercent: '100',
     widgets: [],
   };
   isGroupDialogOpen.value = true;
@@ -1728,6 +1755,7 @@ const openEditGroupDialog = (group) => {
   groupForm.value = {
     color: '#1e293b',
     bgColor: '#ffffff',
+    widthPercent: '100',
     ...JSON.parse(JSON.stringify(group)),
   };
   isGroupDialogOpen.value = true;

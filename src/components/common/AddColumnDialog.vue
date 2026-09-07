@@ -47,7 +47,7 @@
           <option value="checkbox">Hộp kiểm đơn (Checkbox)</option>
           <option value="checkbox_file_loop">Hộp kiểm kèm Tệp đính kèm</option>
           <option value="file">Tệp đính kèm (File / Ảnh / PDF)</option>
-          <option value="lookup">🔗 Tham chiếu tự động (Lookup từ Bảng khác)</option>
+          <option value="lookup">🔗 Tham chiếu tự động (Lookup - Lấy dữ liệu từ bảng liên kết)</option>
           <option value="formula">⚡ Công thức tính toán (Formula)</option>
           <option value="rollup">📊 Tính toán tổng hợp (Rollup)</option>
         </select>
@@ -75,7 +75,7 @@
           <span>Cấu hình Tham chiếu Tự động (Lookup)</span>
         </div>
         <div style="font-size: 0.72rem; color: #3b82f6; line-height: 1.35;">
-          Tự động tra cứu và lấy dữ liệu từ bảng khác hiển thị lên bảng này thông qua Khóa liên kết / Mã định danh mà không cần nhập trùng lặp.
+          Tự động tra cứu và hiển thị giá trị của một cột từ bảng khác (như Họ tên, Đơn vị, Ngày tháng...) sang bảng này dựa theo Khóa định danh / Khóa liên kết mà không cần nhập trùng lặp.
         </div>
 
         <!-- 1. Bảng đích cần tham chiếu -->
@@ -96,13 +96,13 @@
             2. Cột khóa liên kết trên bảng này (Link Key):
           </label>
           <select v-model="form.lookupLinkCol" class="dialog-select">
-            <option value="">-- Mặc định (Tự động theo Khóa định danh CCCD / Mã liên kết) --</option>
+            <option value="">-- Mặc định (Tự động theo Khóa liên kết chuẩn của bảng) --</option>
             <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
               {{ c.label }} ({{ c.id }})
             </option>
           </select>
           <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
-            Cột trên bảng hiện tại chứa mã để so khớp với bảng đích. Để mặc định nếu bảng đã có liên kết CCCD chuẩn.
+            Cột trên bảng hiện tại chứa mã định danh để so khớp với bảng đích. Để mặc định nếu bảng đã có thiết lập khóa liên kết chuẩn.
           </div>
         </div>
 
@@ -238,6 +238,10 @@ const props = defineProps({
   tableSource: {
     type: String,
     default: 'personnel', // 'personnel' | 'relatives' | 'trips'
+  },
+  targetIndex: {
+    type: Number,
+    default: -1,
   },
 });
 
@@ -380,6 +384,7 @@ const handleSave = async () => {
       ...(form.value.format === 'formula' ? {
         formulaType: form.value.formulaType || 'presence_status',
       } : {}),
+      targetIndex: props.targetIndex,
     };
 
     if (form.value.isPrimaryKey) {

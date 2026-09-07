@@ -138,7 +138,7 @@
               @click.stop="$emit('open-col-menu', { event: $event, col })"
               title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, độ rộng, xóa cột...)"
             >
-              <i class="pi pi-chevron-down" style="font-size: 0.65rem;"></i>
+              <i class="pi pi-cog" style="font-size: 0.72rem; color: #64748b;"></i>
             </button>
             <button
               type="button"
@@ -227,6 +227,9 @@ const selectedLabel = computed(() => {
 const getColIndex = (col) => {
   if (col.isVirtual) return null;
   if (col.colIndex !== undefined && col.colIndex !== null) return col.colIndex;
+  const baseList = (props.options || []).filter((o) => !o.isVirtual && o.id !== 'stt');
+  const foundIdx = baseList.findIndex((o) => o.id === col.id);
+  if (foundIdx !== -1) return foundIdx + 1;
   return null;
 };
 

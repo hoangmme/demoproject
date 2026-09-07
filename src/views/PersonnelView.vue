@@ -73,13 +73,13 @@
           <!-- ⚙️ Tùy chọn Cột hiển thị Popover -->
           <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
             <Button
-              icon="pi pi-table"
-              label="Tùy chọn Cột hiển thị"
+              icon="pi pi-sliders-h"
+              label="Tùy chọn Cột"
               severity="secondary"
               outlined
               size="small"
               @click="isFilterMenuOpen = !isFilterMenuOpen; isDataMenuOpen = false;"
-              title="Tùy chọn Cột hiển thị"
+              title="Tùy chọn Cột"
               style="font-size: 0.8rem;"
             />
 
@@ -93,6 +93,18 @@
               />
             </div>
           </div>
+
+          <!-- 🔑 Cấu hình Khóa Định danh & Khóa Liên Kết -->
+          <Button
+            label="Khóa & Liên kết"
+            icon="pi pi-key"
+            severity="secondary"
+            outlined
+            size="small"
+            @click="isKeyLinkDialogOpen = true"
+            title="Cấu hình Khóa Định Danh & Khóa Liên Kết giữa các Bảng dữ liệu"
+            style="font-size: 0.8rem;"
+          />
 
           <!-- 📥 Gom Import / Xuất Excel / Xuất PDF vào 1 nút Menu -->
           <div class="header-menu-wrapper" @mouseenter="onMouseEnterData" @mouseleave="onMouseLeaveData">
@@ -131,7 +143,7 @@
 
           <!-- Add Button -->
           <Button
-            label="+ Thêm Bản Ghi Mới"
+            label="Thêm Cán bộ"
             icon="pi pi-plus"
             severity="success"
             size="small"
@@ -233,7 +245,8 @@
                   Cột {{ col.colIndex }}:
                 </span>
                 {{ col.label }}
-                <span v-if="isPersonnelPrimaryKey(col.id, false)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
+                <span v-if="col.isPrimaryField" title="Cột định danh chính (Primary Field - Khóa cố định)" style="font-size: 0.72rem; margin-left: 2px;">🔒</span>
+                <span v-else-if="isPersonnelPrimaryKey(col.id, false)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
               </span>
               <button
                 type="button"
@@ -241,7 +254,7 @@
                 @click.stop="openColMenu($event, col)"
                 title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, ẩn cột...)"
               >
-                <i class="pi pi-chevron-down" style="font-size: 0.65rem;"></i>
+                <i class="pi pi-cog" style="font-size: 0.72rem;"></i>
               </button>
             </div>
           </template>
@@ -598,6 +611,18 @@
             </div>
           </div>
 
+          <!-- 🔑 Cấu hình Khóa Định danh & Khóa Liên Kết Thân nhân -->
+          <Button
+            label="Khóa & Liên kết"
+            icon="pi pi-key"
+            severity="secondary"
+            outlined
+            size="small"
+            @click="isKeyLinkDialogOpen = true"
+            title="Cấu hình Khóa Định Danh & Khóa Liên Kết giữa các Bảng dữ liệu"
+            style="font-size: 0.8rem;"
+          />
+
           <!-- 📥 Gom Import / Xuất Excel Thân nhân vào 1 nút Menu -->
           <div class="header-menu-wrapper" @mouseenter="onMouseEnterRelData" @mouseleave="onMouseLeaveRelData">
             <Button
@@ -676,20 +701,86 @@
             <span style="font-weight: 600; color: #4b5563;">{{ dtFirstRel + index + 1 }}</span>
           </template>
         </Column>
-        <Column field="code" header="Mã TN" :headerStyle="{ width: '110px', minWidth: '110px' }">
+        <!-- Cột Mã Thân nhân / Mã Đối tượng (Có thể ẩn/hiện, đổi tên) -->
+        <Column
+          v-if="personnelStore.visibleRelativeColumns.includes('code')"
+          field="code"
+          :headerStyle="{ width: '110px', minWidth: '110px' }"
+        >
+          <template #header>
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
+              <span class="table-col-header-wrap">
+                {{ getCustomColLabel('code', 'Mã thân nhân') }}
+              </span>
+              <button
+                type="button"
+                class="btn-col-menu-trigger"
+                @click.stop="openColMenu($event, { id: 'code', label: getCustomColLabel('code', 'Mã thân nhân'), isVirtual: true })"
+                title="Tùy chỉnh cột này (Đổi tên, ẩn cột...)"
+              >
+                <i class="pi pi-cog" style="font-size: 0.72rem;"></i>
+              </button>
+            </div>
+          </template>
           <template #body="{ data, index }">
             <span class="badge-code">{{ data.code || ('TN-' + String(data.id || (index + 1)).slice(-5).padStart(5, '0')) }}</span>
           </template>
         </Column>
-        <Column field="parentName" header="Cán bộ liên quan" :headerStyle="{ width: '210px', minWidth: '210px' }">
+
+        <!-- Cột Đối tượng liên quan / Hồ sơ chính (Có thể ẩn/hiện, đổi tên, cấu hình trường con) -->
+        <Column
+          v-if="personnelStore.visibleRelativeColumns.includes('_parentPersonnelName') || personnelStore.visibleRelativeColumns.includes('parentName')"
+          field="parentName"
+          :headerStyle="{ width: '220px', minWidth: '220px' }"
+        >
+          <template #header>
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
+              <span class="table-col-header-wrap">
+                {{ getCustomColLabel('_parentPersonnelName', 'Đối tượng liên quan') }}
+              </span>
+              <div style="display: inline-flex; align-items: center; gap: 2px;">
+                <button
+                  type="button"
+                  class="btn-col-menu-trigger"
+                  @click.stop="openNameColModal"
+                  title="Chọn các trường thông tin hiển thị (Họ tên, CCCD/Mã, Chức vụ, Đơn vị...)"
+                  style="opacity: 0.85;"
+                >
+                  <i class="pi pi-sliders-h" style="font-size: 0.72rem; color: #4338ca;"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn-col-menu-trigger"
+                  @click.stop="openColMenu($event, { id: '_parentPersonnelName', label: getCustomColLabel('_parentPersonnelName', 'Đối tượng liên quan'), isVirtual: true })"
+                  title="Tùy chỉnh cột này (Đổi tên, ẩn cột...)"
+                >
+                  <i class="pi pi-cog" style="font-size: 0.72rem;"></i>
+                </button>
+              </div>
+            </div>
+          </template>
           <template #body="{ data }">
             <div v-if="isFirstRelativeOfParent(data)">
-              <strong style="cursor: pointer; color: #1f2937; font-size: 0.82rem;" @click="openEditDialog(data.parentPerson)">{{ data.parentName || data.parentPersonnelName || 'Cán bộ' }}</strong>
-              <div v-if="data.parentPosition" style="font-size: 0.72rem; color: #6b7280;">{{ data.parentPosition }}</div>
-              <div v-if="data.cccdparent" style="font-size: 0.7rem; color: #64748b; font-family: monospace;">CCCD: {{ data.cccdparent }}</div>
+              <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
+                <template v-for="(opt, fIdx) in activeParentFieldsList" :key="opt.key">
+                  <div v-if="getPersonFieldValue(data.parentPerson || data, opt.key)">
+                    <strong
+                      v-if="opt.key === 'name' || (fIdx === 0 && !activeParentFieldsList.some(o => o.key === 'name'))"
+                      style="cursor: pointer; color: #1f2937; font-weight: 700; font-size: 0.85rem;"
+                      @click="data.parentPerson && openEditDialog(data.parentPerson)"
+                    >
+                      {{ getPersonFieldValue(data.parentPerson || data, opt.key) }}
+                    </strong>
+                    <div v-else style="font-size: 0.72rem; color: #4b5563; line-height: 1.3;">
+                      <span style="color: #64748b; font-weight: 600;">{{ opt.label }}: </span>
+                      <span>{{ getPersonFieldValue(data.parentPerson || data, opt.key) }}</span>
+                    </div>
+                  </div>
+                </template>
+              </div>
             </div>
             <div v-else style="padding-left: 10px; color: #94a3b8; font-size: 0.74rem; display: flex; align-items: center; gap: 4px;">
-              <span style="color: #cbd5e1;">↳</span> <span style="font-style: italic; color: #94a3b8;">(cùng cán bộ)</span>
+              <span style="color: #cbd5e1;">↳</span> <span style="font-style: italic; color: #94a3b8;">(cùng hồ sơ liên quan)</span>
             </div>
           </template>
         </Column>
@@ -748,7 +839,8 @@
                   Cột {{ col.colIndex }}:
                 </span>
                 {{ col.label }}
-                <span v-if="isPersonnelPrimaryKey(col.id, true)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
+                <span v-if="col.isPrimaryField" title="Cột định danh chính (Primary Field - Khóa cố định)" style="font-size: 0.72rem; margin-left: 2px;">🔒</span>
+                <span v-else-if="isPersonnelPrimaryKey(col.id, true)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
               </span>
               <button
                 type="button"
@@ -756,7 +848,7 @@
                 @click.stop="openColMenu($event, col)"
                 title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, ẩn cột...)"
               >
-                <i class="pi pi-chevron-down" style="font-size: 0.65rem;"></i>
+                <i class="pi pi-cog" style="font-size: 0.72rem;"></i>
               </button>
             </div>
           </template>
@@ -1142,6 +1234,7 @@
       :availableParentFields="availableParentFields"
       @rename-column="onRenameColumn"
       @change-format="onChangeColumnFormat"
+      @change-formula-type="onChangeColumnFormulaType"
       @change-options="onChangeColumnOptions"
       @change-width="onChangeColumnWidth"
       @change-form-width="onChangeColumnFormWidth"
@@ -1151,13 +1244,24 @@
       @delete-column="onDeleteColumnFromTable"
       @hide-column="onHideColumn"
       @filter-column="onFilterByColumn"
+      @insert-left="onInsertColLeft"
+      @insert-right="onInsertColRight"
+      @duplicate-column="onDuplicateCol"
+      @open-key-config="isKeyLinkDialogOpen = true"
     />
 
     <!-- Dialog Thêm Cột Mới Chuẩn Lark Base -->
     <AddColumnDialog
       v-model:visible="isAddColOpen"
       :tableSource="targetColSource"
+      :targetIndex="addColTargetIndex"
       @save="onSaveNewColumn"
+    />
+
+    <!-- Dialog Cấu hình Khóa Định danh & Khóa Liên Kết giữa các Bảng -->
+    <TableKeyLinkDialog
+      v-model:visible="isKeyLinkDialogOpen"
+      :activeSource="mainTab === 'thannhan' || route.path === '/relatives' ? 'relatives' : 'personnel'"
     />
 
 </template>
@@ -1173,6 +1277,7 @@ import Dialog from 'primevue/dialog';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import ColumnHeaderMenu from '@/components/common/ColumnHeaderMenu.vue';
 import AddColumnDialog from '@/components/common/AddColumnDialog.vue';
+import TableKeyLinkDialog from '@/components/common/TableKeyLinkDialog.vue';
 
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
@@ -1462,7 +1567,7 @@ const handleRouteAction = () => {
     mainTab.value = 'thannhan';
     if (personnelStore.personnelList.length > 0) {
       selectedPerson.value = personnelStore.personnelList[0];
-      dialogInitialTab.value = 1;
+      dialogInitialTab.value = 2; // Tab 3: Thân nhân
       dialogTargetRelativeCode.value = '';
       isDialogOpen.value = true;
     } else {
@@ -1477,17 +1582,17 @@ const handleRouteAction = () => {
       if (person) {
         selectedPerson.value = person;
         if (targetRelativeCode) {
-          dialogInitialTab.value = 1;
+          dialogInitialTab.value = 2; // Tab 3: Thân nhân
           dialogTargetRelativeCode.value = targetRelativeCode;
         } else {
-          dialogInitialTab.value = 0;
+          dialogInitialTab.value = 1; // Tab 2: Chuyến đi
           dialogTargetRelativeCode.value = '';
         }
         isDialogOpen.value = true;
       }
     } else if (personnelStore.personnelList.length > 0) {
       selectedPerson.value = personnelStore.personnelList[0];
-      dialogInitialTab.value = 0;
+      dialogInitialTab.value = 1; // Tab 2: Chuyến đi
       dialogTargetRelativeCode.value = '';
       isDialogOpen.value = true;
     }
@@ -1510,6 +1615,7 @@ onMounted(async () => {
   }
   await loadPersonnelFilterState();
   await loadNameColConfig();
+  await loadCustomColLabels();
   handleRouteAction();
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
   window.addEventListener('table-show-col-index-changed', onColIndexChanged);
@@ -1685,7 +1791,7 @@ const activeColumns = computed(() => {
 
   return personnelStore.visibleColumns
     .filter((id) => map[id])
-    .map((id) => {
+    .map((id, idx) => {
       const cfg = map[id];
       const rawIdx = colMap[cfg.id];
       const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
@@ -1698,6 +1804,7 @@ const activeColumns = computed(() => {
         format: cfg.format || 'text',
         required: Boolean(cfg.required),
         options: cfg.options || '',
+        isPrimaryField: idx === 0,
       };
     });
 });
@@ -1820,8 +1927,8 @@ const activeRelativeColumns = computed(() => {
   });
 
   return (personnelStore.visibleRelativeColumns || [])
-    .filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo')
-    .map((id) => {
+    .filter((id) => id !== '_parentPersonnelName' && id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo')
+    .map((id, idx) => {
       const cfg = map[id];
       const rawIdx = colMap[id];
       const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
@@ -1834,10 +1941,11 @@ const activeRelativeColumns = computed(() => {
           tableWidth: cfg.tableWidth || null,
           required: Boolean(cfg.required),
           options: cfg.options || '',
+          isPrimaryField: idx === 0,
         };
       }
       const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
-      return found ? { ...found, colIndex: idxText } : { id, label: id, width: '160px', colIndex: idxText };
+      return found ? { ...found, colIndex: idxText, isPrimaryField: idx === 0 } : { id, label: id, width: '160px', colIndex: idxText, isPrimaryField: idx === 0 };
     });
 });
 
@@ -2332,16 +2440,16 @@ const handleRelativeDetail = (relData) => {
 
   if (parent) {
     openEditDialog(parent, {
-      tab: 1, // Open Tab 2: Thân nhân
+      tab: 2, // Open Tab 3: Thân nhân
       targetRelativeCode: relCode,
     });
   } else {
     // If not linked to a parent yet, display relative in modal
     openEditDialog({
-      name: relData.parentName || 'Cán bộ liên quan',
+      name: relData.parentName || 'Hồ sơ liên quan',
       relatives: [relData],
     }, {
-      tab: 1,
+      tab: 2,
       targetRelativeCode: relCode,
     });
   }
@@ -2364,11 +2472,32 @@ const isColMenuVisible = ref(false);
 const selectedMenuCol = ref(null);
 const colMenuPosition = ref({ x: 0, y: 0 });
 
+const customColLabels = ref({});
+const getCustomColLabel = (colId, defaultLabel) => {
+  return customColLabels.value[colId] || localStorage.getItem('col_label_' + colId) || defaultLabel;
+};
+
+const loadCustomColLabels = async () => {
+  const keys = ['code', '_parentPersonnelName', 'parentName'];
+  for (const k of keys) {
+    try {
+      const local = localStorage.getItem('col_label_' + k);
+      if (local) customColLabels.value[k] = local;
+      const saved = await getAppSettings('col_label_' + k);
+      if (saved) customColLabels.value[k] = saved;
+    } catch (e) {}
+  }
+};
+
+const isKeyLinkDialogOpen = ref(false);
+const addColTargetIndex = ref(-1);
+
 const openColMenu = (event, col) => {
-  const rect = event.currentTarget.getBoundingClientRect();
+  const thElem = event.currentTarget.closest('th') || event.currentTarget.closest('.table-col-header-wrap') || event.currentTarget;
+  const thRect = thElem.getBoundingClientRect();
   colMenuPosition.value = {
-    x: Math.min(rect.left, window.innerWidth - 300),
-    y: rect.bottom + 4,
+    x: Math.max(10, Math.min(thRect.left, window.innerWidth - 320)),
+    y: thRect.bottom + 4,
   };
   selectedMenuCol.value = col;
   isColMenuVisible.value = true;
@@ -2376,6 +2505,84 @@ const openColMenu = (event, col) => {
 
 const handleColMenuFromSelector = ({ event, col }) => {
   openColMenu(event, col);
+};
+
+const onInsertColLeft = (col) => {
+  const { mapping } = getActiveTableMapping();
+  for (const g of (mapping || [])) {
+    const found = (g.columns || []).findIndex(c => c.id === col.id);
+    if (found !== -1) {
+      addColTargetIndex.value = found;
+      break;
+    }
+  }
+  openAddColumnModal();
+};
+
+const onInsertColRight = (col) => {
+  const { mapping } = getActiveTableMapping();
+  for (const g of (mapping || [])) {
+    const found = (g.columns || []).findIndex(c => c.id === col.id);
+    if (found !== -1) {
+      addColTargetIndex.value = found + 1;
+      break;
+    }
+  }
+  openAddColumnModal();
+};
+
+const onDuplicateCol = async (col) => {
+  const { isRelative, mappingKey, mapping } = getActiveTableMapping();
+  const copyId = col.id + '_copy_' + Math.random().toString(36).substring(2, 6);
+  const copyCol = {
+    ...col,
+    id: copyId,
+    label: (col.label || col.id) + ' (Bản sao)',
+  };
+  delete copyCol.isVirtual;
+  delete copyCol.isPrimaryField;
+
+  let inserted = false;
+  for (const g of (mapping || [])) {
+    const idx = (g.columns || []).findIndex(c => c.id === col.id);
+    if (idx !== -1) {
+      g.columns.splice(idx + 1, 0, copyCol);
+      inserted = true;
+      break;
+    }
+  }
+  if (!inserted && mapping && mapping[0]) {
+    mapping[0].columns.push(copyCol);
+  }
+
+  await saveAppSettings(mappingKey, mapping);
+
+  if (isRelative) {
+    personnelStore.visibleRelativeColumns.push(copyId);
+    await saveAppSettings('relative_visible_columns', personnelStore.visibleRelativeColumns);
+  } else {
+    personnelStore.visibleColumns.push(copyId);
+    await saveAppSettings('personnel_visible_columns', personnelStore.visibleColumns);
+  }
+  alert(`Đã nhân bản cột thành công: "${copyCol.label}"!`);
+};
+
+const onChangeColumnFormulaType = async ({ colId, formulaType }) => {
+  const { mappingKey, mapping } = getActiveTableMapping();
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.formulaType = formulaType;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings(mappingKey, mapping);
+  }
 };
 
 const getActiveTableMapping = () => {
@@ -2409,6 +2616,10 @@ const onRenameColumn = async ({ colId, newLabel }) => {
   }
   if (found) {
     await saveAppSettings(mappingKey, mapping);
+  } else {
+    customColLabels.value[colId] = newLabel;
+    try { localStorage.setItem('col_label_' + colId, newLabel); } catch (e) {}
+    await saveAppSettings('col_label_' + colId, newLabel);
   }
 };
 

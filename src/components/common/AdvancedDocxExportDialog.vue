@@ -66,7 +66,7 @@
             :class="{ 'tpl-src-active': templateSource === 'sample' }"
             @click="setTemplateSource('sample')"
           >
-            <i class="pi pi-th-large"></i> Theo Nhóm Cột (Group)
+            <i class="pi pi-table"></i> Theo Bảng Dữ Liệu
           </button>
           <button
             type="button"
@@ -88,10 +88,10 @@
             @change="handleFileUpload"
           />
 
-          <!-- Nguồn 1: Chọn Cấu trúc Cột & Trường dữ liệu (Dạng Phân Cấp: Cá Nhân > Group > Field Ngang hàng) -->
+          <!-- Nguồn 1: Chọn Cấu trúc Cột & Trường dữ liệu theo 3 BẢNG (Cán bộ, Thân nhân, Chuyến đi) -->
           <div v-if="templateSource === 'sample'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
             <div style="font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-              <span>TÍCH CHỌN CÁC TRƯỜNG DỮ LIỆU MUỐN XUẤT:</span>
+              <span>TÍCH CHỌN CÁC TRƯỜNG DỮ LIỆU THEO BẢNG:</span>
               <div style="display: flex; gap: 8px;">
                 <button type="button" class="btn-tree-action" @click="selectAllFields">Chọn tất cả</button>
                 <button type="button" class="btn-tree-action" @click="deselectAllFields">Bỏ chọn hết</button>
@@ -99,39 +99,22 @@
             </div>
 
             <div class="tree-container">
-              <!-- CẤP 1: CÁ NHÂN -->
-              <div class="tree-root-header tree-header-personnel">
-                <i class="pi pi-user"></i>
-                <span>Cá Nhân</span>
-                <span class="tree-badge-count">({{ selectedFieldIds.length }} trường được chọn)</span>
-              </div>
-
-              <!-- CÁC GROUP TRONG CÁ NHÂN (Thụt lề cấp 1: 12px) -->
-              <div
-                v-for="(grp, gIdx) in personnelGroups"
-                :key="'p_grp_' + gIdx"
-                class="tree-group-box"
-              >
-                <!-- CẤP 2: GROUP HEADER -->
-                <div class="tree-group-header" @click="toggleGroup(grp)">
-                  <input
-                    type="checkbox"
-                    :checked="isGroupAllSelected(grp)"
-                    @click.stop="toggleGroup(grp)"
-                    style="accent-color: #2563eb; cursor: pointer;"
-                  />
-                  <span class="group-title-text">
-                    {{ getCleanGroupName(grp, gIdx) }}
-                  </span>
-                  <span class="group-meta-count">
-                    ({{ getGroupSelectedCount(grp) }}/{{ getGroupTotalCount(grp) }})
-                  </span>
+              <!-- BẢNG 1: CÁN BỘ / HỒ SƠ CHÍNH -->
+              <div class="tree-table-box">
+                <div class="tree-table-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="pi pi-user" style="color: #2563eb; font-size: 0.95rem;"></i>
+                    <span style="font-weight: 700; color: #1e293b; font-size: 0.82rem;">1. Bảng Cán bộ (Hồ sơ chính)</span>
+                    <span class="tree-badge-count">({{ selectedFieldIds.length }}/{{ flatPersonnelCols.length }} trường)</span>
+                  </div>
+                  <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-tree-action" @click="toggleAllPersonnel(true)">Chọn tất cả</button>
+                    <button type="button" class="btn-tree-action" @click="toggleAllPersonnel(false)">Bỏ chọn</button>
+                  </div>
                 </div>
-
-                <!-- CẤP 3: FIELDS TRONG GROUP (Ngang hàng, Thụt lề cấp 2: 18px) -->
-                <div class="tree-fields-inline-wrap">
+                <div class="tree-fields-inline-wrap" style="padding: 10px 12px;">
                   <label
-                    v-for="(col, cIdx) in (grp.columns || []).filter(c => c.id && c.id !== 'stt')"
+                    v-for="col in flatPersonnelCols"
                     :key="col.id"
                     class="tree-field-chip"
                     :class="{ 'chip-selected': selectedFieldIds.includes(col.id) }"
@@ -147,128 +130,139 @@
                 </div>
               </div>
 
-              <!-- CẤP 1: THÂN NHÂN -->
-              <div class="tree-root-header tree-header-relative" style="margin-top: 10px;">
-                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
-                  <input
-                    type="checkbox"
-                    v-model="includeRelatives"
-                    style="accent-color: #7c3aed; width: 15px; height: 15px;"
-                  />
-                  <i class="pi pi-users"></i>
-                  <span>Thân Nhân</span>
-                </label>
-                <span class="tree-badge-count tree-badge-purple" v-if="includeRelatives">
-                  ({{ selectedRelativeFieldIds.length }} trường được chọn)
-                </span>
-                <span v-else style="font-size: 0.72rem; color: #94a3b8; font-weight: normal;">
-                  (Bỏ qua thân nhân)
-                </span>
-              </div>
-
-              <!-- CÁC GROUP TRONG THÂN NHÂN (Nếu includeRelatives = true) -->
-              <template v-if="includeRelatives">
-                <div
-                  v-for="(rGrp, rIdx) in relativeGroups"
-                  :key="'r_grp_' + rIdx"
-                  class="tree-group-box rel-group-box"
-                >
-                  <!-- CẤP 2: GROUP THÂN NHÂN HEADER -->
-                  <div class="tree-group-header rel-group-header" @click="toggleRelGroup(rGrp)">
+              <!-- BẢNG 2: THÂN NHÂN LIÊN QUAN -->
+              <div class="tree-table-box rel-table-box" style="margin-top: 10px;">
+                <div class="tree-table-header rel-table-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
+                      <input
+                        type="checkbox"
+                        v-model="includeRelatives"
+                        style="accent-color: #7c3aed; width: 15px; height: 15px;"
+                      />
+                      <i class="pi pi-users" style="color: #7c3aed; font-size: 0.95rem;"></i>
+                      <span style="font-weight: 700; color: #6b21a8; font-size: 0.82rem;">2. Bảng Thân nhân liên quan</span>
+                    </label>
+                    <span class="tree-badge-count tree-badge-purple" v-if="includeRelatives">
+                      ({{ selectedRelativeFieldIds.length }}/{{ flatRelativeCols.length }} trường)
+                    </span>
+                    <span v-else style="font-size: 0.72rem; color: #94a3b8;">
+                      (Bỏ qua thân nhân)
+                    </span>
+                  </div>
+                  <div v-if="includeRelatives" style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-tree-action" @click="toggleAllRelatives(true)">Chọn tất cả</button>
+                    <button type="button" class="btn-tree-action" @click="toggleAllRelatives(false)">Bỏ chọn</button>
+                  </div>
+                </div>
+                <div v-if="includeRelatives" class="tree-fields-inline-wrap" style="padding: 10px 12px;">
+                  <label
+                    v-for="col in flatRelativeCols"
+                    :key="'r_col_' + col.id"
+                    class="tree-field-chip rel-field-chip"
+                    :class="{ 'rel-chip-selected': selectedRelativeFieldIds.includes(col.id) }"
+                  >
                     <input
                       type="checkbox"
-                      :checked="isRelGroupAllSelected(rGrp)"
-                      @click.stop="toggleRelGroup(rGrp)"
+                      :value="col.id"
+                      v-model="selectedRelativeFieldIds"
                       style="accent-color: #7c3aed; cursor: pointer;"
                     />
-                    <span class="group-title-text" style="color: #6b21a8;">
-                      {{ getCleanRelGroupName(rGrp, rIdx) }}
-                    </span>
-                    <span class="group-meta-count">
-                      ({{ getRelGroupSelectedCount(rGrp) }}/{{ getRelGroupTotalCount(rGrp) }})
-                    </span>
-                  </div>
-
-                  <!-- CẤP 3: FIELDS TRONG GROUP THÂN NHÂN (Ngang hàng, Thụt lề cấp 2) -->
-                  <div class="tree-fields-inline-wrap">
-                    <label
-                      v-for="(col, rcIdx) in (rGrp.columns || []).filter(c => c.id && c.id !== 'stt')"
-                      :key="'r_col_' + col.id"
-                      class="tree-field-chip rel-field-chip"
-                      :class="{ 'rel-chip-selected': selectedRelativeFieldIds.includes(col.id) }"
-                    >
-                      <input
-                        type="checkbox"
-                        :value="col.id"
-                        v-model="selectedRelativeFieldIds"
-                        style="accent-color: #7c3aed; cursor: pointer;"
-                      />
-                      <span>{{ col.label || col.id }}</span>
-                    </label>
-                  </div>
+                    <span>{{ col.label || col.id }}</span>
+                  </label>
                 </div>
-              </template>
-
-              <!-- CẤP 1: CHUYẾN ĐI (XUẤT NHẬP CẢNH) -->
-              <div class="tree-root-header tree-header-trips" style="margin-top: 10px; background: #f0f9ff; border-left-color: #0284c7;">
-                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
-                  <input
-                    type="checkbox"
-                    v-model="includeTrips"
-                    style="accent-color: #0284c7; width: 15px; height: 15px;"
-                  />
-                  <i class="pi pi-send" style="color: #0284c7;"></i>
-                  <span style="color: #0369a1; font-weight: 700;">Chuyến Đi (Xuất Nhập Cảnh)</span>
-                </label>
-                <span class="tree-badge-count" style="background: #e0f2fe; color: #0369a1;" v-if="includeTrips">
-                  ({{ selectedTripFieldIds.length }} trường được chọn)
-                </span>
-                <span v-else style="font-size: 0.72rem; color: #94a3b8; font-weight: normal;">
-                  (Bỏ qua chuyến đi)
-                </span>
               </div>
 
-              <!-- CÁC GROUP TRONG CHUYẾN ĐI (Nếu includeTrips = true) -->
-              <template v-if="includeTrips">
-                <div
-                  v-for="(tGrp, tIdx) in tripsGroups"
-                  :key="'t_grp_' + tIdx"
-                  class="tree-group-box trip-group-box"
-                  style="border-color: #bae6fd;"
-                >
-                  <div class="tree-group-header trip-group-header" @click="toggleTripGroup(tGrp)" style="background: #f8fafc;">
-                    <input
-                      type="checkbox"
-                      :checked="isTripGroupAllSelected(tGrp)"
-                      @click.stop="toggleTripGroup(tGrp)"
-                      style="accent-color: #0284c7; cursor: pointer;"
-                    />
-                    <span class="group-title-text" style="color: #0369a1;">
-                      {{ tGrp.group || 'Thông tin chuyến đi' }}
-                    </span>
-                    <span class="group-meta-count">
-                      ({{ getTripGroupSelectedCount(tGrp) }}/{{ getTripGroupTotalCount(tGrp) }})
-                    </span>
-                  </div>
-
-                  <div class="tree-fields-inline-wrap">
-                    <label
-                      v-for="(col, tcIdx) in (tGrp.columns || []).filter(c => c.id && c.id !== 'stt')"
-                      :key="'t_col_' + col.id"
-                      class="tree-field-chip trip-field-chip"
-                      :class="{ 'chip-selected': selectedTripFieldIds.includes(col.id) }"
-                    >
+              <!-- BẢNG 3: CHUYẾN ĐI (XUẤT NHẬP CẢNH) -->
+              <div class="tree-table-box trip-table-box" style="margin-top: 10px;">
+                <div class="tree-table-header trip-table-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
                       <input
                         type="checkbox"
-                        :value="col.id"
-                        v-model="selectedTripFieldIds"
-                        style="accent-color: #0284c7; cursor: pointer;"
+                        v-model="includeTrips"
+                        style="accent-color: #0284c7; width: 15px; height: 15px;"
                       />
-                      <span>{{ col.label || col.id }}</span>
+                      <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
+                      <span style="font-weight: 700; color: #0369a1; font-size: 0.82rem;">3. Bảng Chuyến đi (Xuất nhập cảnh)</span>
                     </label>
+                    <span class="tree-badge-count" style="background: #e0f2fe; color: #0369a1;" v-if="includeTrips">
+                      ({{ selectedTripFieldIds.length }}/{{ flatTripCols.length }} trường)
+                    </span>
+                    <span v-else style="font-size: 0.72rem; color: #94a3b8;">
+                      (Bỏ qua chuyến đi)
+                    </span>
+                  </div>
+                  <div v-if="includeTrips" style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-tree-action" @click="toggleAllTrips(true)">Chọn tất cả</button>
+                    <button type="button" class="btn-tree-action" @click="toggleAllTrips(false)">Bỏ chọn</button>
                   </div>
                 </div>
-              </template>
+                <div v-if="includeTrips" class="tree-fields-inline-wrap" style="padding: 10px 12px;">
+                  <label
+                    v-for="col in flatTripCols"
+                    :key="'t_col_' + col.id"
+                    class="tree-field-chip trip-field-chip"
+                    :class="{ 'chip-selected': selectedTripFieldIds.includes(col.id) }"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="col.id"
+                      v-model="selectedTripFieldIds"
+                      style="accent-color: #0284c7; cursor: pointer;"
+                    />
+                    <span>{{ col.label || col.id }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- CÁC BẢNG TÙY CHỌN / BẢNG MỚI (DYNAMIC CUSTOM TABLES) -->
+              <div
+                v-for="(ct, cIdx) in customTables"
+                :key="'custom_tbl_' + ct.id"
+                class="tree-table-box custom-table-box"
+                style="margin-top: 10px;"
+              >
+                <div class="tree-table-header" style="background: #f0fdf4; border-bottom: 1px solid #bbf7d0;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
+                      <input
+                        type="checkbox"
+                        v-model="ct.enabled"
+                        style="accent-color: #059669; width: 15px; height: 15px;"
+                      />
+                      <i class="pi pi-table" style="color: #059669; font-size: 0.95rem;"></i>
+                      <span style="font-weight: 700; color: #065f46; font-size: 0.82rem;">{{ 4 + cIdx }}. Bảng {{ ct.title }}</span>
+                    </label>
+                    <span class="tree-badge-count" style="background: #d1fae5; color: #065f46;" v-if="ct.enabled">
+                      ({{ ct.selectedFieldIds.length }}/{{ ct.columns.length }} trường)
+                    </span>
+                    <span v-else style="font-size: 0.72rem; color: #94a3b8;">
+                      (Bỏ qua)
+                    </span>
+                  </div>
+                  <div v-if="ct.enabled" style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-tree-action" @click="toggleAllCustomTableFields(ct, true)">Chọn tất cả</button>
+                    <button type="button" class="btn-tree-action" @click="toggleAllCustomTableFields(ct, false)">Bỏ chọn</button>
+                  </div>
+                </div>
+                <div v-if="ct.enabled" class="tree-fields-inline-wrap" style="padding: 10px 12px;">
+                  <label
+                    v-for="col in ct.columns"
+                    :key="ct.id + '_' + col.id"
+                    class="tree-field-chip"
+                    :class="{ 'chip-selected': ct.selectedFieldIds.includes(col.id) }"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="col.id"
+                      v-model="ct.selectedFieldIds"
+                      style="accent-color: #059669; cursor: pointer;"
+                    />
+                    <span>{{ col.label || col.id }}</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -427,6 +421,65 @@ const selectedFieldIds = ref([]);
 const selectedRelativeFieldIds = ref([]);
 const selectedTripFieldIds = ref([]);
 
+const customTables = ref([]);
+
+const loadCustomTables = async () => {
+  try {
+    let raw = await getAppSettings('custom_dashboards_config');
+    if (!raw) {
+      const local = localStorage.getItem('custom_dashboards_config');
+      if (local) raw = JSON.parse(local);
+    }
+    if (Array.isArray(raw)) {
+      const tables = [];
+      for (const dash of raw) {
+        let cols = [];
+        if (Array.isArray(dash.customColumns) && dash.customColumns.length > 0) {
+          cols = dash.customColumns.map((c) => ({ id: c.id, label: c.label || c.id }));
+        } else if (dash.source === 'blank') {
+          cols = [
+            { id: 'title', label: 'Tiêu đề / Tên' },
+            { id: 'status', label: 'Trạng thái' },
+            { id: 'notes', label: 'Ghi chú' },
+            { id: 'createdAt', label: 'Ngày tạo' },
+          ];
+        } else if (Array.isArray(dash.columns) && dash.columns.length > 0) {
+          cols = dash.columns.map((c) => (typeof c === 'string' ? { id: c, label: c } : { id: c.id, label: c.label || c.id }));
+        }
+        if (cols.length > 0) {
+          let rows = [];
+          if (dash.source === 'blank') {
+            try {
+              const r = await getAppSettings(`custom_table_rows_${dash.id}`);
+              rows = r || JSON.parse(localStorage.getItem(`custom_table_rows_${dash.id}`) || '[]');
+            } catch (e) {}
+          }
+          tables.push({
+            id: dash.id,
+            title: dash.title || dash.name || ('Bảng ' + (dash.code || dash.id)),
+            source: dash.source || 'blank',
+            enabled: true,
+            columns: cols,
+            selectedFieldIds: cols.map((c) => c.id),
+            rows,
+          });
+        }
+      }
+      customTables.value = tables;
+    }
+  } catch (e) {
+    console.error('Failed to load custom tables for export:', e);
+  }
+};
+
+const toggleAllCustomTableFields = (ct, selectAll = true) => {
+  if (selectAll) {
+    ct.selectedFieldIds = ct.columns.map((c) => c.id);
+  } else {
+    ct.selectedFieldIds = [];
+  }
+};
+
 const selectedGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 const includeRelatives = ref(true);
 const includeTrips = ref(true);
@@ -436,6 +489,66 @@ const personnelGroups = computed(() => personnelStore.importMappingPersonnel || 
 const otherPersonnelGroups = computed(() => personnelGroups.value.slice(1));
 const relativeGroups = computed(() => personnelStore.importMappingRelative || []);
 const tripsGroups = computed(() => personnelStore.importMappingTrips || []);
+
+const flatPersonnelCols = computed(() => {
+  const list = [];
+  (personnelGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !list.some((x) => x.id === c.id)) {
+        list.push(c);
+      }
+    });
+  });
+  return list;
+});
+
+const flatRelativeCols = computed(() => {
+  const list = [];
+  (relativeGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !list.some((x) => x.id === c.id)) {
+        list.push(c);
+      }
+    });
+  });
+  return list;
+});
+
+const flatTripCols = computed(() => {
+  const list = [];
+  (tripsGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !list.some((x) => x.id === c.id)) {
+        list.push(c);
+      }
+    });
+  });
+  return list;
+});
+
+const toggleAllPersonnel = (selectAll = true) => {
+  if (selectAll) {
+    selectedFieldIds.value = flatPersonnelCols.value.map((c) => c.id);
+  } else {
+    selectedFieldIds.value = [];
+  }
+};
+
+const toggleAllRelatives = (selectAll = true) => {
+  if (selectAll) {
+    selectedRelativeFieldIds.value = flatRelativeCols.value.map((c) => c.id);
+  } else {
+    selectedRelativeFieldIds.value = [];
+  }
+};
+
+const toggleAllTrips = (selectAll = true) => {
+  if (selectAll) {
+    selectedTripFieldIds.value = flatTripCols.value.map((c) => c.id);
+  } else {
+    selectedTripFieldIds.value = [];
+  }
+};
 
 const initAllFields = () => {
   const pIds = [];
@@ -467,12 +580,20 @@ const selectAllFields = () => {
   initAllFields();
   includeRelatives.value = true;
   includeTrips.value = true;
+  customTables.value.forEach((ct) => {
+    ct.enabled = true;
+    ct.selectedFieldIds = ct.columns.map((c) => c.id);
+  });
 };
 
 const deselectAllFields = () => {
   selectedFieldIds.value = [];
   selectedRelativeFieldIds.value = [];
   selectedTripFieldIds.value = [];
+  customTables.value.forEach((ct) => {
+    ct.enabled = false;
+    ct.selectedFieldIds = [];
+  });
 };
 
 const getGroupTotalCount = (grp) => {
@@ -684,7 +805,10 @@ const loadSampleTemplate = async () => {
       relativeGroups.value,
       selectedFieldIds.value,
       selectedRelativeFieldIds.value,
-      {},
+      {
+        showColumnNumbers: showColumnNumbers.value,
+        customTables: customTables.value.filter((t) => t.enabled && t.selectedFieldIds.length > 0),
+      },
       includeTrips.value,
       selectedTripFieldIds.value,
       tripsGroups.value
@@ -696,7 +820,14 @@ const loadSampleTemplate = async () => {
 };
 
 watch(
-  () => [selectedFieldIds.value, includeRelatives.value, selectedRelativeFieldIds.value, includeTrips.value, selectedTripFieldIds.value],
+  () => [
+    selectedFieldIds.value,
+    includeRelatives.value,
+    selectedRelativeFieldIds.value,
+    includeTrips.value,
+    selectedTripFieldIds.value,
+    customTables.value,
+  ],
   () => {
     loadSampleTemplate();
   },
@@ -712,6 +843,7 @@ watch(() => [props.modelValue], ([isOpen]) => {
     if (selectedFieldIds.value.length === 0) {
       initAllFields();
     }
+    loadCustomTables();
     loadSampleTemplate();
     loadSavedTemplate();
   }
@@ -794,6 +926,14 @@ const handleExport = async () => {
       includeTrips: includeTrips.value,
       selectedTripFieldIds: selectedTripFieldIds.value,
       showColumnNumbers: showColumnNumbers.value,
+      customTables: customTables.value.filter((t) => t.enabled && t.selectedFieldIds.length > 0).map((t) => ({
+        id: t.id,
+        title: t.title,
+        source: t.source,
+        selectedFieldIds: t.selectedFieldIds,
+        columns: t.columns,
+        rows: t.rows,
+      })),
     };
     const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
     const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
@@ -814,6 +954,7 @@ const handleExport = async () => {
 
 onMounted(() => {
   initAllFields();
+  loadCustomTables();
   loadSampleTemplate();
   loadSavedTemplate();
 });
@@ -971,34 +1112,43 @@ onMounted(() => {
 .tree-group-header:hover {
   background: #e2e8f0;
 }
-.rel-group-header {
-  background: #fdf4ff;
+.tree-table-box {
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
 }
-.rel-group-header:hover {
-  background: #fae8ff;
+.rel-table-box {
+  border-color: #e9d5ff;
 }
-
-.group-title-text {
-  flex: 1;
+.trip-table-box {
+  border-color: #bae6fd;
 }
-.group-meta-count {
-  font-size: 0.7rem;
-  color: #64748b;
-  font-weight: normal;
+.tree-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #eff6ff;
+  border-bottom: 1px solid #dbeafe;
+}
+.rel-table-header {
+  background: #faf5ff;
+  border-bottom-color: #f3e8ff;
+}
+.trip-table-header {
+  background: #f0f9ff;
+  border-bottom-color: #e0f2fe;
 }
 
 .tree-fields-inline-wrap {
-  margin-left: 18px; /* Thụt vô Field trong Group */
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 6px;
-  margin-top: 4px;
-  margin-bottom: 6px;
-  padding: 4px 6px;
+  gap: 6px 8px;
+  padding: 8px 10px;
   background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #f1f5f9;
 }
 
 .tree-field-chip {
