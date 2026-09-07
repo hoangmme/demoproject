@@ -900,14 +900,12 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div>
             <label style="font-weight: 700; font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 4px;">
-              Kiểu dữ liệu
+              Kiểu dữ liệu <span style="color: #ef4444;">*</span>
             </label>
             <select v-model="newColForm.format" class="settings-select" style="width: 100%; font-size: 0.8rem;">
-              <option value="text">📝 Văn bản (Text)</option>
-              <option value="number">🔢 Số (Number)</option>
-              <option value="date">📅 Ngày tháng (Date)</option>
-              <option value="select">📋 Danh mục lựa chọn</option>
-              <option value="file">📎 Tệp đính kèm</option>
+              <option v-for="opt in formatOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
             </select>
           </div>
 
@@ -929,19 +927,151 @@
           </div>
         </div>
 
-        <div v-if="newColForm.format === 'select'">
+        <!-- Options Config (cho Checkbox, Checkbox_Text, Checkbox_File, Checkbox_File_Loop, Dropdown, Table Loop) -->
+        <div v-if="newColForm.format === 'checkbox' || newColForm.format === 'checkbox_text' || newColForm.format === 'checkbox_file' || newColForm.format === 'checkbox_file_loop' || newColForm.format === 'dropdown' || newColForm.format === 'table_loop'">
           <label style="font-weight: 700; font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 4px;">
-            Các tùy chọn danh mục (cách nhau bởi dấu phẩy)
+            {{ newColForm.format === 'table_loop' ? 'Cấu hình các tiêu đề cột (cách nhau bởi dấu phẩy)' : 'Danh sách tùy chọn danh mục (cách nhau bởi dấu phẩy)' }}
           </label>
           <InputText
             v-model="newColForm.options"
-            placeholder="Ví dụ: Đã duyệt, Đang chờ, Từ chối"
+            :placeholder="newColForm.format === 'table_loop' ? 'Ví dụ: Từ ngày, Đến ngày, Đơn vị, Chức vụ' : 'Ví dụ: Đã duyệt, Đang chờ, Từ chối'"
             style="width: 100%; font-size: 0.82rem;"
           />
+          <div v-if="newColForm.format === 'checkbox_file_loop'" style="margin-top: 6px; display: flex; align-items: center; gap: 6px;">
+            <input type="checkbox" v-model="newColForm.isSingleSelect" id="dlg_single_sel" style="accent-color: #2563eb; cursor: pointer;" />
+            <label for="dlg_single_sel" style="font-size: 0.74rem; color: #1e40af; font-weight: 700; cursor: pointer;">
+              🔘 Chọn duy nhất 1 mục (Single Choice)
+            </label>
+          </div>
+        </div>
+
+        <!-- Cột Công thức (Formula) -->
+        <div v-if="newColForm.format === 'formula'" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label style="font-size: 0.76rem; font-weight: 700; color: #166534; display: block; margin-bottom: 4px;">
+              <i class="pi pi-calculator"></i> Loại Công thức Tự động:
+            </label>
+            <select v-model="newColForm.formulaType" class="settings-select" style="width: 100%; font-size: 0.78rem;">
+              <option value="presence_status">Trạng thái Hiện diện (Trong nước / Nước ngoài)</option>
+              <option value="overdue_status">Quá hạn chưa về</option>
+              <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
+              <option value="conditional_check">Kiểm tra điều kiện (Cảnh báo khi thiếu dữ liệu)</option>
+              <option value="depart_before_decision">Đi khi chưa có cấp thẩm quyền quyết định</option>
+              <option value="trips_count_in_year">Số lần xuất cảnh trong năm</option>
+            </select>
+          </div>
+
+          <!-- Formula: Trạng thái Hiện diện -->
+          <div v-if="newColForm.formulaType === 'presence_status'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Xuất cảnh (Đi):</span>
+              <select v-model="newColForm.formulaDepartureCol" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Mặc định (departureDate) --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Nhập cảnh (Về):</span>
+              <select v-model="newColForm.formulaArrivalCol" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Mặc định (arrivalDate) --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Duyệt về (Deadline):</span>
+              <select v-model="newColForm.formulaApprovedArrivalCol" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Mặc định (approvedArrivalDate) --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Quốc gia:</span>
+              <select v-model="newColForm.formulaCountryCol" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Mặc định (countryName) --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Formula: Quá hạn chưa về -->
+          <div v-else-if="newColForm.formulaType === 'overdue_status'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Nhập cảnh (Về):</span>
+              <select v-model="newColForm.formulaArrivalCol" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Mặc định (arrivalDate) --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Duyệt về (Deadline):</span>
+              <select v-model="newColForm.formulaApprovedArrivalCol" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Mặc định (approvedArrivalDate) --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Formula: So sánh 2 cột ngày -->
+          <div v-else-if="newColForm.formulaType === 'date_delta'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày A (Thực tế):</span>
+              <select v-model="newColForm.formulaColA" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Chọn cột --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày B (Kế hoạch):</span>
+              <select v-model="newColForm.formulaColB" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Chọn cột --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Formula: Kiểm tra điều kiện -->
+          <div v-else-if="newColForm.formulaType === 'conditional_check'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Điều kiện (Phải có):</span>
+              <select v-model="newColForm.formulaColCondition" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Chọn cột --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Kiểm tra (Nếu rỗng → Báo):</span>
+              <select v-model="newColForm.formulaColCheck" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Chọn cột --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn cảnh báo:</span>
+              <InputText v-model="newColForm.formulaLabelWarning" placeholder="Ví dụ: ⚠️ Chưa có Quyết định" style="width: 100%; font-size: 0.78rem;" />
+            </div>
+          </div>
+
+          <!-- Formula: Đi trước khi có quyết định -->
+          <div v-else-if="newColForm.formulaType === 'depart_before_decision'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Xuất cảnh:</span>
+              <select v-model="newColForm.formulaDepartureCol" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Mặc định (departureDate) --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Quyết định:</span>
+              <select v-model="newColForm.formulaDecisionDateCol" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Mặc định (decisionDate) --</option>
+                <option v-for="c in availableColsForFormula" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div style="font-size: 0.75rem; color: #0284c7; background: #f0f9ff; border: 1px solid #bae6fd; padding: 8px 12px; border-radius: 6px; line-height: 1.4;">
-          💡 Cột mới sẽ được tạo trực tiếp vào Bảng <b>{{ currentDashboardConfig.source === 'trips' ? 'Chuyến đi' : (currentDashboardConfig.source === 'relatives' ? 'Thân nhân' : 'Cán bộ') }}</b> và tự động lưu vào hệ thống.
+          💡 Cột mới sẽ được tạo trực tiếp vào Bảng <b>{{ currentDashboardConfig.source === 'trips' ? 'Chuyến đi' : (currentDashboardConfig.source === 'relatives' ? 'Thân nhân' : 'Cán bộ') }}</b> và tự động đồng bộ vào cấu hình hệ thống.
         </div>
       </div>
       <template #footer>
@@ -968,7 +1098,7 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
-import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug, formatOptions } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, extractRowFieldValue } from '@/utils/dashboardMetrics';
 import { getFileUrl } from '@/api/files';
 import * as XLSX from 'xlsx';
@@ -1029,6 +1159,29 @@ const newColForm = ref({
   format: 'text',
   tableWidth: 160,
   options: '',
+  isSingleSelect: false,
+  formulaType: 'presence_status',
+  formulaDepartureCol: '',
+  formulaArrivalCol: '',
+  formulaApprovedArrivalCol: '',
+  formulaCountryCol: '',
+  formulaColA: '',
+  formulaColB: '',
+  formulaColCondition: '',
+  formulaColCheck: '',
+  formulaDecisionDateCol: '',
+  formulaLabelWarning: '',
+  formulaLabelEarly: '',
+  formulaLabelLate: '',
+  formulaLabelOnTime: '',
+  formulaLabelDomestic: '',
+  formulaLabelAbroad: '',
+  formulaLabelNotReturnedYet: '',
+  formulaLabelOverdue: '',
+});
+
+const availableColsForFormula = computed(() => {
+  return (allAvailableColumnsList.value || []).filter(c => c.id && c.id !== 'stt' && c.format !== 'formula');
 });
 
 const openAddColumnDialog = () => {
@@ -1038,6 +1191,25 @@ const openAddColumnDialog = () => {
     format: 'text',
     tableWidth: 160,
     options: '',
+    isSingleSelect: false,
+    formulaType: 'presence_status',
+    formulaDepartureCol: '',
+    formulaArrivalCol: '',
+    formulaApprovedArrivalCol: '',
+    formulaCountryCol: '',
+    formulaColA: '',
+    formulaColB: '',
+    formulaColCondition: '',
+    formulaColCheck: '',
+    formulaDecisionDateCol: '',
+    formulaLabelWarning: '',
+    formulaLabelEarly: '',
+    formulaLabelLate: '',
+    formulaLabelOnTime: '',
+    formulaLabelDomestic: '',
+    formulaLabelAbroad: '',
+    formulaLabelNotReturnedYet: '',
+    formulaLabelOverdue: '',
   };
   isAddColumnDialogOpen.value = true;
 };
@@ -1092,6 +1264,27 @@ const saveNewColumn = async () => {
       tableWidth: Number(newColForm.value.tableWidth) || 160,
       width: '25',
       options: newColForm.value.options ? newColForm.value.options.trim() : '',
+      ...(newColForm.value.format === 'checkbox_file_loop' ? { isSingleSelect: !!newColForm.value.isSingleSelect } : {}),
+      ...(newColForm.value.format === 'formula' ? {
+        formulaType: newColForm.value.formulaType || 'presence_status',
+        formulaDepartureCol: newColForm.value.formulaDepartureCol || '',
+        formulaArrivalCol: newColForm.value.formulaArrivalCol || '',
+        formulaApprovedArrivalCol: newColForm.value.formulaApprovedArrivalCol || '',
+        formulaCountryCol: newColForm.value.formulaCountryCol || '',
+        formulaColA: newColForm.value.formulaColA || '',
+        formulaColB: newColForm.value.formulaColB || '',
+        formulaColCondition: newColForm.value.formulaColCondition || '',
+        formulaColCheck: newColForm.value.formulaColCheck || '',
+        formulaDecisionDateCol: newColForm.value.formulaDecisionDateCol || '',
+        formulaLabelWarning: newColForm.value.formulaLabelWarning || '',
+        formulaLabelEarly: newColForm.value.formulaLabelEarly || '',
+        formulaLabelLate: newColForm.value.formulaLabelLate || '',
+        formulaLabelOnTime: newColForm.value.formulaLabelOnTime || '',
+        formulaLabelDomestic: newColForm.value.formulaLabelDomestic || '',
+        formulaLabelAbroad: newColForm.value.formulaLabelAbroad || '',
+        formulaLabelNotReturnedYet: newColForm.value.formulaLabelNotReturnedYet || '',
+        formulaLabelOverdue: newColForm.value.formulaLabelOverdue || '',
+      } : {}),
     };
 
     // Thêm cột vào nhóm đầu tiên của mapping

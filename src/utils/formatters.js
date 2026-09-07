@@ -1282,3 +1282,20 @@ export const generateSlug = (str) => {
   return slug || 'cot_' + Date.now();
 };
 
+export const formatOptions = [
+  { label: 'Văn bản (Text)', value: 'text' },
+  { label: 'Số (Number)', value: 'number' },
+  { label: 'Ngày tháng (Date)', value: 'date' },
+  { label: 'List Dữ liệu (Text Loop)', value: 'text_loop' },
+  { label: 'Bảng lặp nhiều cột (Tùy biến tiêu đề)', value: 'table_loop' },
+  { label: 'Hộp kiểm (Nhiều lựa chọn)', value: 'checkbox' },
+  { label: 'Hộp kiểm + Nhập Text (Có điều kiện)', value: 'checkbox_text' },
+  { label: 'Hộp kiểm + Tệp đính kèm', value: 'checkbox_file' },
+  { label: 'Dropdown (Lựa chọn đơn)', value: 'dropdown' },
+  { label: 'Cột Công thức (Formula / Trạng thái)', value: 'formula' },
+  { label: 'Tệp đính kèm (File/Ảnh/PDF)', value: 'file' },
+  { label: 'Văn bản + Tệp đính kèm (Loop)', value: 'text_file_loop' },
+  { label: 'Hộp kiểm + Tệp đính kèm (Loop)', value: 'checkbox_file_loop' },
+];
+
+

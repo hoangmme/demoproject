@@ -1209,7 +1209,7 @@
             style="font-size: 0.78rem;"
           />
           <Button
-            label="Thêm Dashboard Mới"
+            label="Thêm Bảng / Chuyên đề Mới"
             icon="pi pi-plus"
             severity="success"
             size="small"
@@ -1340,11 +1340,11 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <div>
                 <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                  <i :class="currentSelectedDashboard.displayMode === 'appendix' ? 'pi pi-filter' : 'pi pi-th-large'" style="color: #0284c7;"></i>
-                  {{ currentSelectedDashboard.displayMode === 'appendix' ? '1. Khối Điều kiện Lọc của Phụ lục (Filter Conditions):' : '1. Khối Thống kê ở trên (Top Metric KPI Cards):' }}
+                  <i class="pi pi-filter" style="color: #0284c7;"></i>
+                  2. Cấu hình Bộ lọc Dữ liệu Cơ sở (Scope Filter) & Thẻ Thống kê:
                 </span>
                 <span style="font-size: 0.72rem; color: #64748b;">
-                  {{ currentSelectedDashboard.displayMode === 'appendix' ? 'Cấu hình các tiêu chí lọc dữ liệu cho Phụ lục này (kết quả bảng sẽ tự động áp dụng các điều kiện này).' : '💡 Khối thống kê & biểu đồ phân loại hiện được cấu hình tập trung trực tiếp ngay tại trang Thống kê (Dashboard). Cấu hình ở đây đóng vai trò dự phòng và khởi tạo ban đầu.' }}
+                  Thẻ đầu tiên là <b>Bộ lọc Phạm vi Cơ sở (Baseline Scope)</b> của Chuyên đề (bảng dữ liệu sẽ tự động lọc theo điều kiện này). Các thẻ tiếp theo là bộ lọc nhanh / chỉ số thống kê.
                 </span>
               </div>
 
@@ -1656,6 +1656,63 @@
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- 3. Cấu hình Danh sách Cột hiển thị của Bảng Chuyên đề -->
+          <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                  <i class="pi pi-table" style="color: #059669;"></i>
+                  3. Danh sách Cột hiển thị của Bảng Chuyên đề:
+                </span>
+                <span style="font-size: 0.72rem; color: #64748b;">
+                  Chọn các cột hiển thị mặc định trên bảng dữ liệu của chuyên đề này. Để trống = Hiển thị tất cả các cột.
+                </span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <Button
+                  label="Chọn tất cả"
+                  icon="pi pi-check-square"
+                  size="small"
+                  text
+                  severity="primary"
+                  @click="selectAllDashboardColumns"
+                  style="font-size: 0.72rem; padding: 2px 6px;"
+                />
+                <Button
+                  label="Hiện tất cả (Mặc định)"
+                  icon="pi pi-refresh"
+                  size="small"
+                  text
+                  severity="secondary"
+                  @click="resetDashboardColumns"
+                  style="font-size: 0.72rem; padding: 2px 6px;"
+                />
+              </div>
+            </div>
+
+            <!-- Chips / Checkboxes for columns -->
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow-y: auto; padding: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <label
+                v-for="c in currentDashboardSourceCols"
+                :key="c.id"
+                style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; padding: 4px 8px; border-radius: 6px; cursor: pointer; user-select: none; transition: all 0.15s ease; border: 1px solid;"
+                :style="isDashboardColumnSelected(c.id) ? 'background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; font-weight: 600;' : 'background: #ffffff; border-color: #cbd5e1; color: #64748b;'"
+              >
+                <input
+                  type="checkbox"
+                  :checked="isDashboardColumnSelected(c.id)"
+                  @change="toggleDashboardColumn(c.id)"
+                  style="margin: 0; cursor: pointer;"
+                />
+                <span>{{ c.label }}</span>
+                <span style="font-size: 0.65rem; opacity: 0.7;">({{ c.id }})</span>
+              </label>
+            </div>
+            <div style="font-size: 0.7rem; color: #64748b; margin-top: 4px;">
+              Đang chọn: <b>{{ (currentSelectedDashboard.columns && currentSelectedDashboard.columns.length > 0) ? currentSelectedDashboard.columns.length : currentDashboardSourceCols.length }}</b> / {{ currentDashboardSourceCols.length }} cột
             </div>
           </div>
 
@@ -2202,7 +2259,7 @@ import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { syncCollectionFields } from '@/api/fields';
 import { uploadFile, getFileUrl } from '@/api/files';
-import { computeColumnIndexMap } from '@/utils/formatters';
+import { computeColumnIndexMap, formatOptions } from '@/utils/formatters';
 import { createSampleDocxTemplateBlob } from '@/utils/docxExport';
 import {
   exportFullPersonnelExcel,
@@ -2806,21 +2863,6 @@ const DEFAULT_TRIPS_MAPPING = [
   },
 ];
 
-const formatOptions = [
-  { label: 'Văn bản (Text)', value: 'text' },
-  { label: 'Số (Number)', value: 'number' },
-  { label: 'Ngày tháng (Date)', value: 'date' },
-  { label: 'List Dữ liệu (Text Loop)', value: 'text_loop' },
-  { label: 'Bảng lặp nhiều cột (Tùy biến tiêu đề)', value: 'table_loop' },
-  { label: 'Hộp kiểm (Nhiều lựa chọn)', value: 'checkbox' },
-  { label: 'Hộp kiểm + Nhập Text (Có điều kiện)', value: 'checkbox_text' },
-  { label: 'Hộp kiểm + Tệp đính kèm', value: 'checkbox_file' },
-  { label: 'Dropdown (Lựa chọn đơn)', value: 'dropdown' },
-  { label: 'Cột Công thức (Formula / Trạng thái)', value: 'formula' },
-  { label: 'Tệp đính kèm (File/Ảnh/PDF)', value: 'file' },
-  { label: 'Văn bản + Tệp đính kèm (Loop)', value: 'text_file_loop' },
-  { label: 'Hộp kiểm + Tệp đính kèm (Loop)', value: 'checkbox_file_loop' },
-];
 
 const widthOptions = [
   { label: 'Rộng: 25%', value: '25' },
@@ -3303,6 +3345,58 @@ const availableDashboardCols = computed(() => {
   });
   return all;
 });
+
+const currentDashboardSourceCols = computed(() => {
+  if (!currentSelectedDashboard.value) return [];
+  const src = currentSelectedDashboard.value.source || 'trips';
+  if (src === 'personnel') {
+    return availablePersonnelCols.value || [];
+  } else if (src === 'relatives') {
+    return availableRelativeCols.value || [];
+  } else {
+    return [
+      ...(availableTripCols.value || []),
+      { id: '_parentPersonnelName', label: 'CB liên quan (Tên)', colIndex: '★' },
+      { id: '_parentPosition', label: 'CB liên quan (Chức vụ)', colIndex: '★' },
+      { id: '_parentDepartment', label: 'CB liên quan (Đơn vị)', colIndex: '★' },
+    ];
+  }
+});
+
+const isDashboardColumnSelected = (colId) => {
+  if (!currentSelectedDashboard.value) return false;
+  const cols = currentSelectedDashboard.value.columns;
+  if (!cols || !Array.isArray(cols) || cols.length === 0) {
+    return true; // Mặc định không cấu hình = chọn tất cả
+  }
+  return cols.includes(colId);
+};
+
+const toggleDashboardColumn = (colId) => {
+  if (!currentSelectedDashboard.value) return;
+  if (!currentSelectedDashboard.value.columns || !Array.isArray(currentSelectedDashboard.value.columns) || currentSelectedDashboard.value.columns.length === 0) {
+    currentSelectedDashboard.value.columns = currentDashboardSourceCols.value.map((c) => c.id);
+  }
+  const idx = currentSelectedDashboard.value.columns.indexOf(colId);
+  if (idx > -1) {
+    currentSelectedDashboard.value.columns.splice(idx, 1);
+  } else {
+    currentSelectedDashboard.value.columns.push(colId);
+  }
+  debouncedAutoSaveDashboards();
+};
+
+const selectAllDashboardColumns = () => {
+  if (!currentSelectedDashboard.value) return;
+  currentSelectedDashboard.value.columns = currentDashboardSourceCols.value.map((c) => c.id);
+  debouncedAutoSaveDashboards();
+};
+
+const resetDashboardColumns = () => {
+  if (!currentSelectedDashboard.value) return;
+  currentSelectedDashboard.value.columns = []; // Để trống = Mặc định hiển thị toàn bộ
+  debouncedAutoSaveDashboards();
+};
 
 const openTopicDashboard = (id) => {
   if (id === 'trips') router.push('/trips');

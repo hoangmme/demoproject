@@ -842,7 +842,27 @@
      - Mã nguồn sạch sẽ, không còn duplicate logic kiểm tra điều kiện.
      - Bảo đảm 100% tính nhất quán: Kết quả lọc trên Tìm kiếm nâng cao và số đếm hiển thị trên Thống kê Dashboard luôn khớp tuyệt đối.
 - **Status**: Done [Reversible].
-- **Verification**: `npm run build` thành công, đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
+### 70. ĐỒNG BỘ 13 FORMAT KIỂU CỘT DÙNG CHUNG & NÂNG CẤP QUẢN LÝ CHUYÊN ĐỀ THEO CHUẨN LARK BASE (2026-09-07)
+- **Bối cảnh & Yêu cầu của người dùng**:
+  1. *Thêm cột mới phải dùng cấu hình chuẩn và đồng bộ 100% với Cài đặt*: Không để 2 nơi cấu hình rời rạc, dùng chung toàn bộ 13 format kiểu cột đã tạo.
+  2. *Cập nhật tab Quản lý Chuyên đề*: Tinh gọn phần thẻ KPI pill rườm rà, chuyển thành cấu hình Bộ lọc Cơ sở (Baseline Scope Filter) và cấu hình Cột hiển thị của Bảng Chuyên đề.
+  3. *Làm rõ cơ chế Thêm Bảng Mới*: Chuẩn hóa cách tạo Bảng/View mới trên các nguồn dữ liệu cốt lõi (Cán bộ, Chuyến đi, Thân nhân).
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Tập trung hóa 13 Format chuẩn (`src/utils/formatters.js`)**:
+     - Export mảng `formatOptions` dùng chung duy nhất: Văn bản, Số, Ngày tháng, Text Loop, Table Loop, Hộp kiểm, Hộp kiểm + Text, Hộp kiểm + File, Dropdown, Cột Công thức (Formula), Tệp đính kèm, Text File Loop, Checkbox File Loop.
+     - Dùng chung `formatOptions` ở cả `SettingsImportView.vue` và `ChildDashboardView.vue`.
+  2. **Nâng cấp toàn diện Dialog "+ Thêm Cột Mới" tại Bảng (`ChildDashboardView.vue`)**:
+     - Hỗ trợ đầy đủ 13 format kiểu dữ liệu.
+     - Tự động hiển thị các trường cấu hình nâng cao tương ứng:
+       + Hộp kiểm / Dropdown / Table Loop: Ô nhập danh sách lựa chọn / tiêu đề cột (`options`), tùy chọn Chọn duy nhất (`isSingleSelect`).
+       + Cột Công thức (Formula): Chọn 6 loại công thức (`presence_status`, `overdue_status`, `date_delta`, `conditional_check`, `depart_before_decision`, `trips_count_in_year`) kèm các bộ chọn cột tham chiếu từ `availableColsForFormula`.
+     - `saveNewColumn` lưu trọn vẹn các thuộc tính nâng cao xuống Directus DB qua `saveAppSettings` và tự động hiển thị cột mới ngay trên Bảng.
+  3. **Nâng cấp Tab "Quản lý Chuyên đề" (`SettingsImportView.vue`)**:
+     - Đổi tên nút thành `+ Thêm Bảng / Chuyên đề Mới` theo đúng mô hình Lark Suite Base.
+     - Tinh gọn Khối 2: Chuyển thành "2. Cấu hình Bộ lọc Dữ liệu Cơ sở (Scope Filter) & Thẻ Thống kê" (Thẻ đầu tiên đại diện cho phạm vi dữ liệu cơ sở của bảng).
+     - Bổ sung Khối 3: "3. Danh sách Cột hiển thị của Bảng Chuyên đề (Table Columns)" với giao diện chọn cột (Column Picker) đa năng, cho phép bật/tắt cột hiển thị cho từng Bảng Chuyên đề từ nguồn (`trips`, `personnel`, `relatives`).
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công (0 errors), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
 
 
 
