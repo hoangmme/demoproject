@@ -65,7 +65,7 @@
           />
         </div>
 
-        <!-- 3. Độ rộng cột -->
+        <!-- 3. Độ rộng cột trên bảng -->
         <div class="menu-field">
           <label>Độ rộng hiển thị (px):</label>
           <div style="display: flex; align-items: center; gap: 6px;">
@@ -84,6 +84,20 @@
           </div>
         </div>
 
+        <!-- 4. Độ rộng trong Form Chi tiết (%) -->
+        <div class="menu-field">
+          <label>Độ rộng trong Form Chi tiết (%):</label>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <select v-model="editFormWidth" class="menu-select" @change="handleSaveFormWidth">
+              <option value="25">Rộng: 25% (1/4 dòng)</option>
+              <option value="33">Rộng: 33% (1/3 dòng)</option>
+              <option value="50">Rộng: 50% (1/2 dòng)</option>
+              <option value="75">Rộng: 75% (3/4 dòng)</option>
+              <option value="100">Rộng: 100% (Đầy đủ hàng)</option>
+            </select>
+          </div>
+        </div>
+
         <div class="menu-divider"></div>
 
         <!-- Actions -->
@@ -96,6 +110,17 @@
           <button type="button" class="menu-action-btn" @click="handleHideColumn">
             <i class="pi pi-eye-slash" style="color: #f59e0b;"></i>
             <span>Ẩn cột này</span>
+          </button>
+
+          <button
+            v-if="!column?.isVirtual && column?.id !== '_primaryKey' && column?.id !== 'code' && column?.id !== 'stt'"
+            type="button"
+            class="menu-action-btn action-danger"
+            @click="handleDeleteColumn"
+            style="color: #ef4444;"
+          >
+            <i class="pi pi-trash" style="color: #ef4444;"></i>
+            <span style="color: #ef4444; font-weight: 600;">Xóa cột này khỏi bảng</span>
           </button>
         </div>
       </div>
@@ -127,6 +152,8 @@ const emit = defineEmits([
   "change-format",
   "change-options",
   "change-width",
+  "change-form-width",
+  "delete-column",
   "hide-column",
   "filter-column",
 ]);
@@ -135,6 +162,7 @@ const editLabel = ref("");
 const editFormat = ref("text");
 const editOptions = ref("");
 const editWidth = ref(160);
+const editFormWidth = ref("50");
 
 watch(
   () => props.column,
@@ -144,6 +172,7 @@ watch(
       editFormat.value = col.format || "text";
       editOptions.value = col.options || "";
       editWidth.value = parseInt(col.tableWidth || col.width) || 160;
+      editFormWidth.value = String(col.formWidth || col.width || "50").replace("%", "");
     }
   },
   { immediate: true }
@@ -169,6 +198,16 @@ const handleSaveOptions = () => {
 
 const handleSaveWidth = () => {
   emit("change-width", { colId: props.column.id, width: editWidth.value });
+  closeMenu();
+};
+
+const handleSaveFormWidth = () => {
+  emit("change-form-width", { colId: props.column.id, formWidth: editFormWidth.value });
+};
+
+const handleDeleteColumn = () => {
+  if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn cột "${props.column?.label || props.column?.id}" khỏi bảng này không?`)) return;
+  emit("delete-column", props.column.id);
   closeMenu();
 };
 

@@ -58,6 +58,18 @@
             </button>
           </div>
 
+          <!-- ➕ Nút Thêm Cột Mới chuẩn Lark Base -->
+          <Button
+            v-if="authStore.isAdmin"
+            icon="pi pi-plus"
+            label="Thêm cột mới"
+            severity="success"
+            size="small"
+            @click="openAddColumnModal('personnel')"
+            title="Tạo thêm cột dữ liệu mới trực tiếp trên bảng này"
+            style="font-size: 0.8rem;"
+          />
+
           <!-- ⚙️ Tùy chọn Cột hiển thị Popover -->
           <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
             <Button
@@ -149,6 +161,7 @@
         removableSort
         :customSort="customSort"
         class="p-datatable-sm"
+        :class="['table-row-clamp-' + currentRowHeightLimit]"
         :tableStyle="{ minWidth: 'max-content', width: '100%' }"
         @row-click="onRowClick"
         @page="e => dtFirst = e.first"
@@ -545,6 +558,18 @@
             </button>
           </div>
 
+          <!-- ➕ Nút Thêm Cột Mới Thân nhân -->
+          <Button
+            v-if="authStore.isAdmin"
+            icon="pi pi-plus"
+            label="Thêm cột mới"
+            severity="success"
+            size="small"
+            @click="openAddColumnModal('relatives')"
+            title="Tạo thêm cột dữ liệu mới cho bảng Thân nhân"
+            style="font-size: 0.8rem;"
+          />
+
           <!-- ⚙️ Cài đặt Cột Thân nhân Popover -->
           <div class="header-menu-wrapper" @mouseenter="onMouseEnterRelFilter" @mouseleave="onMouseLeaveRelFilter">
             <Button
@@ -633,6 +658,7 @@
         removableSort
         :customSort="customSort"
         class="p-datatable-sm"
+        :class="['table-row-clamp-' + currentRowHeightLimit]"
         :tableStyle="{ minWidth: 'max-content', width: '100%' }"
         @row-click="onRelativeRowClick"
         @page="e => dtFirstRel = e.first"
@@ -824,6 +850,23 @@
             <span v-else :class="col.id === 'countryName' || col.id === 'country' || col.id === 'content' ? 'badge-pill badge-blue' : ''">
               {{ getDisplayValue(data, col.id) }}
             </span>
+          </template>
+        </Column>
+
+        <!-- ➕ Nút Thêm Cột Mới chuẩn Lark Base cho Thân nhân -->
+        <Column :headerStyle="{ width: '48px', minWidth: '48px', padding: '0', textAlign: 'center' }" :bodyStyle="{ width: '48px', minWidth: '48px', padding: '0', textAlign: 'center', background: '#f8fafc' }">
+          <template #header>
+            <button
+              type="button"
+              class="btn-add-col-plus"
+              @click.stop="openAddColumnModal('relatives')"
+              title="Thêm Cột Dữ Liệu Mới cho Thân nhân"
+            >
+              <i class="pi pi-plus"></i>
+            </button>
+          </template>
+          <template #body>
+            <span style="color: #cbd5e1; font-size: 0.8rem;">·</span>
           </template>
         </Column>
       </DataTable>
@@ -1093,14 +1136,23 @@
       @change-format="onChangeColumnFormat"
       @change-options="onChangeColumnOptions"
       @change-width="onChangeColumnWidth"
+      @change-form-width="onChangeColumnFormWidth"
+      @delete-column="onDeleteColumnFromTable"
       @hide-column="onHideColumn"
       @filter-column="onFilterByColumn"
+    />
+
+    <!-- Dialog Thêm Cột Mới Chuẩn Lark Base -->
+    <AddColumnDialog
+      v-model:visible="isAddColOpen"
+      :tableSource="targetColSource"
+      @save="onSaveNewColumn"
     />
 
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -1109,6 +1161,7 @@ import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import ColumnHeaderMenu from '@/components/common/ColumnHeaderMenu.vue';
+import AddColumnDialog from '@/components/common/AddColumnDialog.vue';
 
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
@@ -1430,12 +1483,22 @@ const handleRouteAction = () => {
   }
 };
 
+const currentRowHeightLimit = ref(localStorage.getItem('app_table_row_clamp') || '1');
+const onRowHeightChanged = (e) => {
+  currentRowHeightLimit.value = String(e.detail || '1');
+};
+
 onMounted(async () => {
   if (personnelStore.personnelList.length === 0) {
     await personnelStore.init();
   }
   await loadPersonnelFilterState();
   handleRouteAction();
+  window.addEventListener('table-row-height-changed', onRowHeightChanged);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('table-row-height-changed', onRowHeightChanged);
 });
 
 watch(
@@ -2168,11 +2231,27 @@ const openColMenu = (event, col) => {
   isColMenuVisible.value = true;
 };
 
+const getActiveTableMapping = () => {
+  const isRel = mainTab.value === 'thannhan' || route.path === '/relatives';
+  if (isRel) {
+    return {
+      isRelative: true,
+      mappingKey: 'import_mapping_relative',
+      mapping: personnelStore.importMappingRelative,
+    };
+  }
+  return {
+    isRelative: false,
+    mappingKey: 'import_mapping_personnel',
+    mapping: personnelStore.importMappingPersonnel,
+  };
+};
+
 const onRenameColumn = async ({ colId, newLabel }) => {
-  const mapping = personnelStore.importMappingPersonnel || [];
+  const { mappingKey, mapping } = getActiveTableMapping();
   let found = false;
-  for (const g of mapping) {
-    for (const c of g.columns || []) {
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
       if (c.id === colId) {
         c.label = newLabel;
         found = true;
@@ -2182,16 +2261,15 @@ const onRenameColumn = async ({ colId, newLabel }) => {
     if (found) break;
   }
   if (found) {
-    await saveAppSettings('importMappingPersonnel', mapping);
-    await saveAppSettings('mapping_config_personnel', mapping);
+    await saveAppSettings(mappingKey, mapping);
   }
 };
 
 const onChangeColumnFormat = async ({ colId, newFormat }) => {
-  const mapping = personnelStore.importMappingPersonnel || [];
+  const { mappingKey, mapping } = getActiveTableMapping();
   let found = false;
-  for (const g of mapping) {
-    for (const c of g.columns || []) {
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
       if (c.id === colId) {
         c.format = newFormat;
         found = true;
@@ -2201,16 +2279,15 @@ const onChangeColumnFormat = async ({ colId, newFormat }) => {
     if (found) break;
   }
   if (found) {
-    await saveAppSettings('importMappingPersonnel', mapping);
-    await saveAppSettings('mapping_config_personnel', mapping);
+    await saveAppSettings(mappingKey, mapping);
   }
 };
 
 const onChangeColumnOptions = async ({ colId, options }) => {
-  const mapping = personnelStore.importMappingPersonnel || [];
+  const { mappingKey, mapping } = getActiveTableMapping();
   let found = false;
-  for (const g of mapping) {
-    for (const c of g.columns || []) {
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
       if (c.id === colId) {
         c.options = options;
         found = true;
@@ -2220,16 +2297,15 @@ const onChangeColumnOptions = async ({ colId, options }) => {
     if (found) break;
   }
   if (found) {
-    await saveAppSettings('importMappingPersonnel', mapping);
-    await saveAppSettings('mapping_config_personnel', mapping);
+    await saveAppSettings(mappingKey, mapping);
   }
 };
 
 const onChangeColumnWidth = async ({ colId, width }) => {
-  const mapping = personnelStore.importMappingPersonnel || [];
+  const { mappingKey, mapping } = getActiveTableMapping();
   let found = false;
-  for (const g of mapping) {
-    for (const c of g.columns || []) {
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
       if (c.id === colId) {
         c.tableWidth = width;
         found = true;
@@ -2239,17 +2315,71 @@ const onChangeColumnWidth = async ({ colId, width }) => {
     if (found) break;
   }
   if (found) {
-    await saveAppSettings('importMappingPersonnel', mapping);
-    await saveAppSettings('mapping_config_personnel', mapping);
+    await saveAppSettings(mappingKey, mapping);
+  }
+};
+
+const onChangeColumnFormWidth = async ({ colId, formWidth }) => {
+  const { mappingKey, mapping } = getActiveTableMapping();
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.width = String(formWidth);
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings(mappingKey, mapping);
+    alert('Đã cập nhật độ rộng form chi tiết cho cột này!');
+  }
+};
+
+const onDeleteColumnFromTable = async (colId) => {
+  const { isRelative, mappingKey, mapping } = getActiveTableMapping();
+  let found = false;
+  for (const g of (mapping || [])) {
+    if (Array.isArray(g.columns)) {
+      const initLen = g.columns.length;
+      g.columns = g.columns.filter((c) => c.id !== colId);
+      if (g.columns.length < initLen) {
+        found = true;
+      }
+    }
+  }
+  if (found) {
+    if (isRelative) {
+      personnelStore.visibleRelativeColumns = personnelStore.visibleRelativeColumns.filter((id) => id !== colId);
+      try { localStorage.setItem('relative_visible_columns', JSON.stringify(personnelStore.visibleRelativeColumns)); } catch (e) {}
+      await saveAppSettings('relative_visible_columns', personnelStore.visibleRelativeColumns);
+    } else {
+      personnelStore.visibleColumns = personnelStore.visibleColumns.filter((id) => id !== colId);
+      try { localStorage.setItem('personnel_visible_columns', JSON.stringify(personnelStore.visibleColumns)); } catch (e) {}
+      await saveAppSettings('personnel_visible_columns', personnelStore.visibleColumns);
+    }
+    await saveAppSettings(mappingKey, mapping);
+    alert('Đã xóa cột thành công khỏi bảng!');
   }
 };
 
 const onHideColumn = async (colId) => {
-  personnelStore.visibleColumns = personnelStore.visibleColumns.filter((id) => id !== colId);
-  try {
-    localStorage.setItem('personnel_visible_columns', JSON.stringify(personnelStore.visibleColumns));
-  } catch (e) {}
-  await saveAppSettings('personnel_visible_columns', personnelStore.visibleColumns);
+  const isRel = mainTab.value === 'thannhan' || route.path === '/relatives';
+  if (isRel) {
+    personnelStore.visibleRelativeColumns = personnelStore.visibleRelativeColumns.filter((id) => id !== colId);
+    try {
+      localStorage.setItem('relative_visible_columns', JSON.stringify(personnelStore.visibleRelativeColumns));
+    } catch (e) {}
+    await saveAppSettings('relative_visible_columns', personnelStore.visibleRelativeColumns);
+  } else {
+    personnelStore.visibleColumns = personnelStore.visibleColumns.filter((id) => id !== colId);
+    try {
+      localStorage.setItem('personnel_visible_columns', JSON.stringify(personnelStore.visibleColumns));
+    } catch (e) {}
+    await saveAppSettings('personnel_visible_columns', personnelStore.visibleColumns);
+  }
 };
 
 const onFilterByColumn = (col) => {
@@ -2306,8 +2436,40 @@ const getColDropdownOptions = (col) => {
   return String(col.options).split(',').map((s) => s.trim()).filter(Boolean);
 };
 
-const openAddColumnModal = () => {
-  router.push('/settings-import');
+const isAddColOpen = ref(false);
+const targetColSource = ref('personnel');
+
+const openAddColumnModal = (src) => {
+  targetColSource.value = src === 'relatives' || mainTab.value === 'thannhan' || route.path === '/relatives' ? 'relatives' : 'personnel';
+  isAddColOpen.value = true;
+};
+
+const onSaveNewColumn = async (colPayload) => {
+  const isRel = targetColSource.value === 'relatives';
+  const mappingKey = isRel ? 'import_mapping_relative' : 'import_mapping_personnel';
+  let mapping = isRel ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel;
+  if (!mapping || mapping.length === 0) {
+    mapping = [{ group: 'Thông tin bổ sung', columns: [] }];
+    if (isRel) personnelStore.importMappingRelative = mapping;
+    else personnelStore.importMappingPersonnel = mapping;
+  }
+  mapping[0].columns.push(colPayload);
+  await saveAppSettings(mappingKey, mapping);
+
+  if (isRel) {
+    if (!personnelStore.visibleRelativeColumns.includes(colPayload.id)) {
+      personnelStore.visibleRelativeColumns.push(colPayload.id);
+      try { localStorage.setItem('relative_visible_columns', JSON.stringify(personnelStore.visibleRelativeColumns)); } catch (e) {}
+      await saveAppSettings('relative_visible_columns', personnelStore.visibleRelativeColumns);
+    }
+  } else {
+    if (!personnelStore.visibleColumns.includes(colPayload.id)) {
+      personnelStore.visibleColumns.push(colPayload.id);
+      try { localStorage.setItem('personnel_visible_columns', JSON.stringify(personnelStore.visibleColumns)); } catch (e) {}
+      await saveAppSettings('personnel_visible_columns', personnelStore.visibleColumns);
+    }
+  }
+  alert(`Đã thêm thành công cột "${colPayload.label}" vào bảng!`);
 };
 // ===== END TEABLE / LARK BASE STATE & METHODS =====
 

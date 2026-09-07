@@ -31,6 +31,52 @@
         <button type="button" class="btn-text-link" @click="resetOrder">Thứ tự chuẩn</button>
       </div>
 
+      <!-- Giới hạn chiều cao hàng tối đa (Row Height Limit - Mặc định 1 hàng) -->
+      <div class="row-height-control">
+        <div class="row-height-title">
+          <i class="pi pi-arrows-v" style="font-size: 0.72rem; color: #0284c7;"></i>
+          <span>Chiều cao hàng:</span>
+        </div>
+        <div class="row-height-btns">
+          <button
+            type="button"
+            class="btn-row-height"
+            :class="{ active: rowHeightLimit === 1 }"
+            @click="setRowHeightLimit(1)"
+            title="1 hàng (Mặc định - Cắt ngắn ...)"
+          >
+            1 hàng
+          </button>
+          <button
+            type="button"
+            class="btn-row-height"
+            :class="{ active: rowHeightLimit === 2 }"
+            @click="setRowHeightLimit(2)"
+            title="Tối đa 2 hàng"
+          >
+            2 hàng
+          </button>
+          <button
+            type="button"
+            class="btn-row-height"
+            :class="{ active: rowHeightLimit === 3 }"
+            @click="setRowHeightLimit(3)"
+            title="Tối đa 3 hàng"
+          >
+            3 hàng
+          </button>
+          <button
+            type="button"
+            class="btn-row-height"
+            :class="{ active: rowHeightLimit === 'auto' }"
+            @click="setRowHeightLimit('auto')"
+            title="Tự động (Không giới hạn)"
+          >
+            Tự động
+          </button>
+        </div>
+      </div>
+
       <div class="column-selector-list">
         <div
           v-for="(col, idx) in displayOptions"
@@ -104,6 +150,23 @@ const emit = defineEmits(['update:modelValue', 'change']);
 const isOpen = ref(false);
 const containerRef = ref(null);
 const customOrder = ref([]);
+
+const getStoredRowHeight = () => {
+  const stored = localStorage.getItem('app_table_row_clamp');
+  if (stored === 'auto') return 'auto';
+  const num = Number(stored);
+  return num === 2 || num === 3 ? num : 1; // Mặc định là 1 hàng
+};
+
+const rowHeightLimit = ref(getStoredRowHeight());
+
+const setRowHeightLimit = (val) => {
+  rowHeightLimit.value = val;
+  try {
+    localStorage.setItem('app_table_row_clamp', String(val));
+    window.dispatchEvent(new CustomEvent('table-row-height-changed', { detail: val }));
+  } catch (e) {}
+};
 
 const selectedLabel = computed(() => {
   const count = props.modelValue ? props.modelValue.length : 0;
@@ -354,5 +417,54 @@ onUnmounted(() => {
 .btn-reorder:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+.row-height-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.row-height-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.row-height-btns {
+  display: flex;
+  gap: 2px;
+  background: #e2e8f0;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.btn-row-height {
+  border: none;
+  background: transparent;
+  padding: 2px 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-row-height:hover {
+  color: #0f172a;
+}
+
+.btn-row-height.active {
+  background: #ffffff;
+  color: #0284c7;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 </style>

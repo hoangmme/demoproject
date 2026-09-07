@@ -141,14 +141,24 @@
             {{ systemBranding.menuLabelPersonnel || 'Cán bộ' }} ({{ personnelStore.personnelList.length }})
           </span>
         </router-link>
-        <button
-          type="button"
-          class="sidebar-item-action-btn"
-          @click.stop="openRenameFixedTableDialog('personnel')"
-          title="Đổi tên bảng Cán bộ"
-        >
-          <i class="pi pi-ellipsis-v"></i>
-        </button>
+        <div class="sidebar-item-actions">
+          <button
+            type="button"
+            class="sidebar-item-action-btn"
+            @click.stop="openRenameFixedTableDialog('personnel')"
+            title="Đổi tên bảng Cán bộ"
+          >
+            <i class="pi pi-pencil"></i>
+          </button>
+          <button
+            type="button"
+            class="sidebar-item-action-btn action-btn-danger"
+            @click.stop="confirmDeleteFixedTable('personnel')"
+            title="Xóa toàn bộ dữ liệu Cán bộ"
+          >
+            <i class="pi pi-trash"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Bảng 2: Thân nhân (Table 2 độc lập) -->
@@ -166,14 +176,24 @@
             {{ systemBranding.menuLabelRelatives || 'Thân nhân' }} ({{ personnelStore.relativesList.length }})
           </span>
         </router-link>
-        <button
-          type="button"
-          class="sidebar-item-action-btn"
-          @click.stop="openRenameFixedTableDialog('relatives')"
-          title="Đổi tên bảng Thân nhân"
-        >
-          <i class="pi pi-ellipsis-v"></i>
-        </button>
+        <div class="sidebar-item-actions">
+          <button
+            type="button"
+            class="sidebar-item-action-btn"
+            @click.stop="openRenameFixedTableDialog('relatives')"
+            title="Đổi tên bảng Thân nhân"
+          >
+            <i class="pi pi-pencil"></i>
+          </button>
+          <button
+            type="button"
+            class="sidebar-item-action-btn action-btn-danger"
+            @click.stop="confirmDeleteFixedTable('relatives')"
+            title="Xóa toàn bộ dữ liệu Thân nhân"
+          >
+            <i class="pi pi-trash"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Bảng 3: Chuyến đi (Table 3 độc lập) -->
@@ -188,14 +208,24 @@
             {{ systemBranding.menuLabelTrips || 'Chuyến đi' }} ({{ totalTripsCount }})
           </span>
         </router-link>
-        <button
-          type="button"
-          class="sidebar-item-action-btn"
-          @click.stop="openRenameFixedTableDialog('trips')"
-          title="Đổi tên bảng Chuyến đi"
-        >
-          <i class="pi pi-ellipsis-v"></i>
-        </button>
+        <div class="sidebar-item-actions">
+          <button
+            type="button"
+            class="sidebar-item-action-btn"
+            @click.stop="openRenameFixedTableDialog('trips')"
+            title="Đổi tên bảng Chuyến đi"
+          >
+            <i class="pi pi-pencil"></i>
+          </button>
+          <button
+            type="button"
+            class="sidebar-item-action-btn action-btn-danger"
+            @click.stop="confirmDeleteFixedTable('trips')"
+            title="Xóa toàn bộ dữ liệu Chuyến đi"
+          >
+            <i class="pi pi-trash"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Các Bảng tùy chỉnh (Custom Tables) -->
@@ -290,11 +320,6 @@
         <router-link to="/audit" class="app-nav-item">
           <i class="pi pi-history"></i>
           <span>Nhật ký hệ thống</span>
-        </router-link>
-
-        <router-link to="/settings-import" class="app-nav-item">
-          <i class="pi pi-cog"></i>
-          <span>Cấu hình cột & phụ lục</span>
         </router-link>
       </template>
     </nav>
@@ -495,6 +520,48 @@
       <template #footer>
         <Button label="Hủy" severity="secondary" text size="small" @click="isRenameDialogOpen = false" />
         <Button label="Lưu thay đổi" icon="pi pi-check" severity="primary" size="small" @click="saveRename" />
+      </template>
+    </Dialog>
+
+    <!-- Dialog Cảnh Báo Nguy Hiểm: Xóa Dữ Liệu Bảng Chính -->
+    <Dialog
+      v-model:visible="isDeleteFixedTableDialogOpen"
+      modal
+      header="⚠️ CẢNH BÁO NGUY HIỂM: XÓA TOÀN BỘ BẢNG"
+      :style="{ width: '480px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 6px 0;">
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; display: flex; gap: 10px; align-items: flex-start;">
+          <i class="pi pi-exclamation-triangle" style="color: #dc2626; font-size: 1.25rem; margin-top: 2px;"></i>
+          <div style="font-size: 0.8rem; color: #991b1b; line-height: 1.45;">
+            <strong>Hành động này không thể hoàn tác!</strong><br />
+            Bạn đang chuẩn bị xóa toàn bộ dữ liệu của bảng <strong>"{{ deleteFixedTableTargetName }}"</strong> 
+            (Bao gồm <span style="font-weight: 700; text-decoration: underline;">{{ deleteFixedTableCount }} bản ghi</span>).
+          </div>
+        </div>
+
+        <p style="font-size: 0.8rem; color: #475569; margin: 0;">
+          Để xác nhận, vui lòng gõ chính xác chữ <strong style="color: #dc2626; letter-spacing: 1px;">XOA</strong> vào ô bên dưới:
+        </p>
+
+        <InputText
+          v-model="deleteFixedTableConfirmText"
+          placeholder="Nhập chữ XOA để xác nhận..."
+          style="width: 100%; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;"
+          autofocus
+        />
+      </div>
+      <template #footer>
+        <Button label="Hủy bỏ" severity="secondary" text size="small" @click="isDeleteFixedTableDialogOpen = false" />
+        <Button
+          :disabled="deleteFixedTableConfirmText !== 'XOA' || isDeletingFixedTable"
+          :loading="isDeletingFixedTable"
+          label="Xác nhận XÓA VĨNH VIỄN"
+          icon="pi pi-trash"
+          severity="danger"
+          size="small"
+          @click="executeDeleteFixedTable"
+        />
       </template>
     </Dialog>
 
@@ -779,6 +846,122 @@ const confirmDeleteGroup = async (grp) => {
   try { localStorage.setItem('dashboard_custom_groups', JSON.stringify(list)); } catch (e) {}
   await saveAppSettings('dashboard_custom_groups', list);
   window.dispatchEvent(new CustomEvent('dashboard-groups-updated', { detail: list }));
+};
+
+// Quản lý Xóa 3 Bảng chính (Cán bộ, Thân nhân, Chuyến đi)
+const isDeleteFixedTableDialogOpen = ref(false);
+const deleteFixedTableType = ref('');
+const deleteFixedTableTargetName = ref('');
+const deleteFixedTableCount = ref(0);
+const deleteFixedTableConfirmText = ref('');
+const isDeletingFixedTable = ref(false);
+
+const confirmDeleteFixedTable = (type) => {
+  deleteFixedTableType.value = type;
+  deleteFixedTableConfirmText.value = '';
+
+  if (type === 'personnel') {
+    deleteFixedTableTargetName.value = systemBranding.value.menuLabelPersonnel || 'Cán bộ';
+    deleteFixedTableCount.value = personnelStore.personnelList.length;
+  } else if (type === 'relatives') {
+    deleteFixedTableTargetName.value = systemBranding.value.menuLabelRelatives || 'Thân nhân';
+    deleteFixedTableCount.value = personnelStore.relativesList.length;
+  } else if (type === 'trips') {
+    deleteFixedTableTargetName.value = systemBranding.value.menuLabelTrips || 'Chuyến đi';
+    deleteFixedTableCount.value = totalTripsCount.value;
+  }
+
+  isDeleteFixedTableDialogOpen.value = true;
+};
+
+const executeDeleteFixedTable = async () => {
+  if (deleteFixedTableConfirmText.value !== 'XOA') return;
+  isDeletingFixedTable.value = true;
+
+  try {
+    const type = deleteFixedTableType.value;
+    if (type === 'personnel') {
+      const allIds = (personnelStore.personnelList || []).map((p) => p.id).filter(Boolean);
+      if (allIds.length > 0) {
+        await personnelStore.deleteMultiple(allIds);
+      }
+      alert('Đã xóa toàn bộ dữ liệu Cán bộ thành công!');
+    } else if (type === 'relatives') {
+      const allRelIds = (personnelStore.relativesList || []).map((r) => r.id || r.code).filter(Boolean);
+      if (allRelIds.length > 0) {
+        await personnelStore.deleteMultipleRelatives(allRelIds);
+      }
+      // Dọn sạch mảng relatives trong từng hồ sơ cán bộ nếu còn sót
+      for (const p of personnelStore.personnelList) {
+        if (p.relatives && p.relatives.length > 0) {
+          const up = JSON.parse(JSON.stringify(p));
+          up.relatives = [];
+          if (up.custom_data) {
+            try {
+              const c = typeof up.custom_data === 'string' ? JSON.parse(up.custom_data) : up.custom_data;
+              c.relatives = [];
+              up.custom_data = c;
+            } catch (e) {}
+          }
+          await personnelStore.savePerson(up);
+        }
+      }
+      await personnelStore.fetchPersonnel();
+      alert('Đã xóa toàn bộ dữ liệu Thân nhân thành công!');
+    } else if (type === 'trips') {
+      // Dọn sạch toàn bộ trips của cán bộ và thân nhân
+      for (const p of personnelStore.personnelList) {
+        let hasTrips = (p.trips && p.trips.length > 0);
+        let custom = {};
+        if (p.custom_data) {
+          try {
+            custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+            if (custom.trips && custom.trips.length > 0) hasTrips = true;
+            if (custom['Khối B: Chuyến đi nước ngoài']) hasTrips = true;
+          } catch (e) {}
+        }
+        if (Array.isArray(p.relatives)) {
+          p.relatives.forEach(r => {
+            if (r.trips && r.trips.length > 0) hasTrips = true;
+          });
+        }
+
+        if (hasTrips) {
+          const up = JSON.parse(JSON.stringify(p));
+          up.trips = [];
+          if (Array.isArray(up.relatives)) {
+            up.relatives.forEach(r => {
+              r.trips = [];
+            });
+          }
+          if (up.custom_data) {
+            try {
+              const c = typeof up.custom_data === 'string' ? JSON.parse(up.custom_data) : up.custom_data;
+              c.trips = [];
+              delete c['Khối B: Chuyến đi nước ngoài'];
+              if (Array.isArray(c.relatives)) {
+                c.relatives.forEach(r => { r.trips = []; });
+              }
+              up.custom_data = c;
+            } catch (e) {}
+          }
+          await personnelStore.savePerson(up);
+        }
+      }
+      await personnelStore.fetchPersonnel();
+      alert('Đã xóa toàn bộ dữ liệu Chuyến đi thành công!');
+    }
+
+    isDeleteFixedTableDialogOpen.value = false;
+    if (route.path === `/${type}`) {
+      router.push('/personnel');
+    }
+  } catch (err) {
+    console.error('Lỗi khi xóa bảng chính:', err);
+    alert('Lỗi khi xóa bảng: ' + (err.message || err));
+  } finally {
+    isDeletingFixedTable.value = false;
+  }
 };
 
 const isAddTableDialogOpen = ref(false);

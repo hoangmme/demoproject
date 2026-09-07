@@ -1132,3 +1132,34 @@
      - Nhóm thống kê & Bảng tùy chỉnh: Cung cấp nút sửa (bút chì) và xóa (thùng rác) ngay khi hover trên Sidebar.
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+---
+
+### 81. HOÀN THIỆN NÂNG CẤP BẢNG DỮ LIỆU & QUẢN TRỊ SIDEBAR CHUẨN LARK BASE
+- **Strategic Context**:
+  - Người dùng yêu cầu 5 điểm nâng cấp:
+    1. Bổ sung nút xóa và hộp thoại cảnh báo nguy hiểm khi xóa 3 bảng chính (Cán bộ, Thân nhân, Chuyến đi) trên Sidebar.
+    2. Tùy chọn cột hiển thị có thêm thiết lập giới hạn chiều cao hàng tối đa (mặc định 1 hàng, cắt `...`, hỗ trợ 1 hàng, 2 hàng, 3 hàng, Tự động).
+    3. Tùy chỉnh cột cho phép chỉnh độ rộng % khi xem form chi tiết (25%, 33%, 50%, 75%, 100%).
+    4. Kiểm tra đầy đủ tính năng bảng so với trang "Cấu hình cột" (đổi tên, format, options, độ rộng bảng px, độ rộng form %, xóa cột, ẩn/hiện, lookup CCCD) và gỡ bỏ menu "Cấu hình cột & phụ lục" khỏi Sidebar.
+    5. Sửa lỗi không thêm được cột bằng component chung `AddColumnDialog.vue` tích hợp trực tiếp trên Bảng.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Hộp thoại Cảnh báo Nguy hiểm khi Xóa Bảng Chính (`AppSidebar.vue`)**:
+     - Bổ sung cặp nút thao tác nhanh (✏️ Sửa & 🗑️ Xóa) cho cả 3 bảng chính: Cán bộ, Thân nhân, Chuyến đi.
+     - Hộp thoại cảnh báo màu đỏ nguy hiểm: Hiển thị rõ số lượng bản ghi sẽ bị xóa vĩnh viễn, bắt buộc gõ đúng từ khóa `XOA` mới mở khóa nút xóa.
+     - Hàm `executeDeleteFixedTable`: Xóa sạch tương ứng qua Pinia store (`deleteMultiple`, `deleteMultipleRelatives`, dọn sạch mảng `trips` và custom_data).
+  2. **Giới hạn Chiều Cao Hàng Tối Đa (Row Clamping) (`ColumnSelector.vue`, `main.css`, `PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - Bổ sung nhóm nút chọn chiều cao hàng trong Popover Tùy chọn cột: [1 hàng (Mặc định)] [2 hàng] [3 hàng] [Tự động].
+     - Lưu trạng thái vào `localStorage` (`app_table_row_clamp`) và phát sự kiện `table-row-height-changed`.
+     - Áp dụng các class CSS `.table-row-clamp-1` (nowrap, ellipsis), `.table-row-clamp-2`, `.table-row-clamp-3`, `.table-row-clamp-auto` trên tất cả các DataTable.
+  3. **Độ Rộng Form Chi Tiết (%) Trong Menu Cột (`ColumnHeaderMenu.vue`)**:
+     - Thêm thiết lập độ rộng form chi tiết: 25% (1/4 hàng), 33% (1/3 hàng), 50% (1/2 hàng), 75% (3/4 hàng), 100% (cả hàng).
+     - Lưu trực tiếp vào trường `width` của cấu hình cột và emit `change-form-width` để ghi nhận ngay.
+  4. **Tích hợp Toàn diện Trực tiếp In-Table & Gỡ bỏ Menu Cấu hình Cột**:
+     - Thêm nút xóa cột đỏ `Xóa cột này khỏi bảng` có hộp thoại xác nhận ngay trên `ColumnHeaderMenu`.
+     - Xóa liên kết `/settings-import` ("Cấu hình cột & phụ lục") khỏi danh mục Hệ thống trên Sidebar.
+  5. **Component Thêm Cột Chuẩn Lark Base (`AddColumnDialog.vue`)**:
+     - Tạo component chung `AddColumnDialog.vue` hỗ trợ đầy đủ các kiểu dữ liệu: Text, Number, Date, Dropdown/Single Select, Checkbox, Checkbox + File, File/Attachment, Lookup (tự động liên kết qua CCCD Cán bộ), Formula, Rollup.
+     - Tích hợp vào toolbar và nút `+` cuối bảng trên cả `PersonnelView.vue` (Cán bộ, Thân nhân) và `ChildDashboardView.vue` (Chuyến đi, Bảng chuyên đề).
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
