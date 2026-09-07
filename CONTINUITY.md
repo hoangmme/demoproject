@@ -1258,4 +1258,30 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+---
+
+### 86. SỬA LỖI THÊM CỘT MỚI (TYPEERROR), BỔ SUNG NÚT TICK "★ BẮT BUỘC", CẤU HÌNH CỘT ẢO CÁN BỘ & NÚT TICK "SỐ CỘT" (2026-09-07)
+- **Strategic Context**:
+  - Người dùng báo lỗi console khi thêm cột mới (`TypeError: e is not iterable`) và yêu cầu 3 tính năng bổ sung:
+    1. Thiếu nút tick bắt buộc dữ liệu khi lưu khi bấm chi tiết cột.
+    2. Tùy chọn hiển thị cột chỗ cột ảo thông tin cán bộ thêm setting để chọn cột hiển thị linh hoạt và đổi tên đi.
+    3. Tùy chọn hiển thị cột thêm 1 nút tick hiển thị số cột nữa.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Sửa lỗi `TypeError: e is not iterable` khi thêm cột mới (`ChildDashboardView.vue`)**:
+     - Trong `onColumnsChange`: Chuẩn hóa an toàn `const cols = Array.isArray(newCols) ? newCols : selectedColIds.value; selectedColIds.value = [...cols];`.
+     - Trong `saveNewColumn`: Truyền đúng mảng `selectedColIds.value` vào `onColumnsChange`, đồng thời bổ sung nhánh lưu trực tiếp vào `cDash.customColumns` và `custom_dashboards_config` khi người dùng thêm cột trên Bảng trống (`source === 'blank'`).
+  2. **Nút tick "★ Bắt buộc" khi lưu (`ColumnHeaderMenu.vue`, `AddColumnDialog.vue`, `PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - Bổ sung nút `[✓] ★ Bắt buộc` (`.btn-required-toggle`) với visual badge viền đỏ/pastel theo ảnh mẫu trong cả Popup chi tiết cột (`ColumnHeaderMenu.vue`) và Dialog thêm cột mới (`AddColumnDialog.vue`).
+     - Gắn kết sự kiện `@change-required` trên cả Bảng Cán bộ, Bảng Thân nhân, Bảng Chuyên đề và Bảng trống; tự động lưu thuộc tính `col.required: Boolean` vào cấu hình Directus/LocalStorage.
+  3. **Tùy chỉnh Cột ảo Thông tin Cán bộ (`_parentPersonnelName`) Linh Hoạt & Cho Phép Đổi Tên (`ColumnSelector.vue`, `ColumnHeaderMenu.vue`, `ChildDashboardView.vue`)**:
+     - Cho phép hiển thị nút chevron down trên cột `_parentPersonnelName` trong `ColumnSelector.vue`.
+     - Bổ sung tính năng đổi tên cột `_parentPersonnelName` lưu độc lập theo từng chuyên đề (`parent_col_label_${topicId}`).
+     - Tích hợp 4 checkbox bật/tắt linh hoạt các trường con hiển thị trong cột ảo (Họ tên, CCCD, Chức vụ, Đơn vị công tác) ngay trong `ColumnHeaderMenu.vue`.
+  4. **Nút tick "Số cột" trong Tùy chọn cột hiển thị (`ColumnSelector.vue`, `PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - Bổ sung checkbox `[✓] Số cột` (`showColIndex`) trên thanh thao tác nhanh của `ColumnSelector.vue`.
+     - Tự động ẩn/hiện tiền tố `Cột X:` ở cả danh sách chọn cột và tiêu đề header của bảng dữ liệu.
+     - Lưu trạng thái vào `localStorage` (`app_show_col_index`) và đồng bộ reactive tức thì qua CustomEvent `table-show-col-index-changed`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
 

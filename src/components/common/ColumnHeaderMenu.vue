@@ -98,6 +98,37 @@
           </div>
         </div>
 
+        <!-- 5. Bắt buộc nhập dữ liệu (Required) -->
+        <div class="menu-field" style="margin-top: 6px;">
+          <label style="margin-bottom: 5px;">Quy tắc nhập liệu khi lưu:</label>
+          <button
+            type="button"
+            class="btn-required-toggle"
+            :class="{ 'is-required': editRequired }"
+            @click="handleToggleRequired"
+            title="Bắt buộc phải có dữ liệu trường này khi lưu"
+          >
+            <i :class="editRequired ? 'pi pi-check-square' : 'pi pi-stop'" style="font-size: 0.95rem;"></i>
+            <span>★ Bắt buộc</span>
+          </button>
+        </div>
+
+        <!-- 6. Cấu hình Cột ảo Thông tin Cán bộ (nếu là _parentPersonnelName) -->
+        <div v-if="column?.id === '_parentPersonnelName'" class="menu-field" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-top: 6px;">
+          <label style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">Các trường hiển thị trong cột:</label>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label v-for="opt in parentFieldOptions" :key="opt.key" style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #334155; cursor: pointer;">
+              <input
+                type="checkbox"
+                :checked="nameColFields[opt.key]"
+                @change="handleToggleParentField(opt.key)"
+                style="accent-color: #2563eb; cursor: pointer;"
+              />
+              <span>{{ opt.label }}</span>
+            </label>
+          </div>
+        </div>
+
         <div class="menu-divider"></div>
 
         <!-- Actions -->
@@ -144,6 +175,10 @@ const props = defineProps({
     type: Object,
     default: () => ({ x: 0, y: 0 }),
   },
+  nameColFields: {
+    type: Object,
+    default: () => ({ name: true, cccdCB: true, position: true, department: true }),
+  },
 });
 
 const emit = defineEmits([
@@ -153,6 +188,8 @@ const emit = defineEmits([
   "change-options",
   "change-width",
   "change-form-width",
+  "change-required",
+  "change-name-col-field",
   "delete-column",
   "hide-column",
   "filter-column",
@@ -163,6 +200,14 @@ const editFormat = ref("text");
 const editOptions = ref("");
 const editWidth = ref(160);
 const editFormWidth = ref("50");
+const editRequired = ref(false);
+
+const parentFieldOptions = [
+  { key: 'name', label: 'Họ và tên Cán bộ' },
+  { key: 'cccdCB', label: 'Số CCCD Cán bộ' },
+  { key: 'position', label: 'Chức vụ Cán bộ' },
+  { key: 'department', label: 'Đơn vị công tác' },
+];
 
 watch(
   () => props.column,
@@ -173,6 +218,7 @@ watch(
       editOptions.value = col.options || "";
       editWidth.value = parseInt(col.tableWidth || col.width) || 160;
       editFormWidth.value = String(col.formWidth || col.width || "50").replace("%", "");
+      editRequired.value = Boolean(col.required);
     }
   },
   { immediate: true }
@@ -203,6 +249,15 @@ const handleSaveWidth = () => {
 
 const handleSaveFormWidth = () => {
   emit("change-form-width", { colId: props.column.id, formWidth: editFormWidth.value });
+};
+
+const handleToggleRequired = () => {
+  editRequired.value = !editRequired.value;
+  emit("change-required", { colId: props.column.id, required: editRequired.value });
+};
+
+const handleToggleParentField = (key) => {
+  emit("change-name-col-field", key);
 };
 
 const handleDeleteColumn = () => {
@@ -373,5 +428,32 @@ const handleFilterByCol = () => {
 .menu-action-btn:hover {
   background: #f1f5f9;
   color: #0f172a;
+}
+
+.btn-required-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-required-toggle:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.btn-required-toggle.is-required {
+  border-color: #dc2626;
+  background: #fef2f2;
+  color: #dc2626;
 }
 </style>

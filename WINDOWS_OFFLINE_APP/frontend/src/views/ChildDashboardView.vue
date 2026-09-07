@@ -214,7 +214,12 @@
           <template #header>
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
               <div style="display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0;">
-                <span class="table-col-header-wrap">{{ col.label }}</span>
+                <span class="table-col-header-wrap">
+                  <span v-if="showColIndex && col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
+                    Cột {{ col.colIndex }}:
+                  </span>
+                  {{ col.label }}
+                </span>
                 <i v-if="isNameColumn(col.id)" class="pi pi-cog" style="font-size: 0.7rem; cursor: pointer; color: #94a3b8; margin-left: 2px; flex-shrink: 0;" @click.stop="toggleNameColConfig($event)" title="Tùy chỉnh nội dung cột" />
               </div>
               <button
@@ -958,11 +963,14 @@
       v-model:visible="isChildColMenuVisible"
       :column="selectedChildMenuCol"
       :position="childColMenuPosition"
+      :nameColFields="nameColFields"
       @rename-column="onChildRenameColumn"
       @change-format="onChildChangeColumnFormat"
       @change-options="onChildChangeColumnOptions"
       @change-width="onChildChangeColumnWidth"
       @change-form-width="onChildChangeColumnFormWidth"
+      @change-required="onChildChangeColumnRequired"
+      @change-name-col-field="toggleNameColField"
       @delete-column="onChildDeleteColumnFromTable"
       @hide-column="onChildHideColumn"
       @filter-column="onChildFilterByColumn"
@@ -1036,6 +1044,26 @@ const loadNameColConfig = async () => {
     const saved = await getAppSettings('name_col_display_config');
     if (saved && typeof saved === 'object') {
       nameColFields.value = { ...DEFAULT_NAME_COL_FIELDS, ...saved };
+    }
+  } catch (e) {}
+};
+
+const showColIndex = ref(localStorage.getItem('app_show_col_index') !== 'false');
+const onColIndexChanged = (e) => {
+  showColIndex.value = Boolean(e.detail);
+};
+
+const customParentLabels = ref({});
+const getParentColLabel = (defaultLabel) => {
+  const custom = customParentLabels.value[topicId.value] || localStorage.getItem('parent_col_label_' + topicId.value);
+  return custom || defaultLabel;
+};
+
+const loadCustomParentLabel = async () => {
+  try {
+    const saved = await getAppSettings('parent_col_label_' + topicId.value);
+    if (saved) {
+      customParentLabels.value = { ...customParentLabels.value, [topicId.value]: saved };
     }
   } catch (e) {}
 };
@@ -1123,25 +1151,56 @@ const saveNewColumn = async (colPayload) => {
   }
 
   const src = currentDashboardConfig.value?.source || 'trips';
-  let mappingKey = 'import_mapping_trips';
-  let mappingRef = personnelStore.importMappingTrips;
-  if (src === 'relatives') {
-    mappingKey = 'import_mapping_relative';
-    mappingRef = personnelStore.importMappingRelative;
-  } else if (src === 'personnel') {
-    mappingKey = 'import_mapping_personnel';
-    mappingRef = personnelStore.importMappingPersonnel;
-  }
-
-  // Kiểm tra trùng ID cột
-  const exists = (mappingRef || []).some((g) => (g.columns || []).some((c) => c.id === colPayload.id.trim()));
-  if (exists) {
-    alert(`Mã cột "${colPayload.id.trim()}" đã tồn tại trong bảng này! Vui lòng chọn mã khác.`);
-    return;
-  }
-
   isSavingNewCol.value = true;
   try {
+    if (src === 'blank') {
+      const tid = topicId.value;
+      const cDash = customDashboards.value.find((d) => d.id === tid);
+      if (cDash) {
+        if (!Array.isArray(cDash.customColumns) || cDash.customColumns.length === 0) {
+          cDash.customColumns = [
+            { id: 'title', label: 'Tiêu đề / Tên', format: 'text', width: '240px' },
+            { id: 'status', label: 'Trạng thái', format: 'dropdown', options: ['Mới tạo', 'Đang xử lý', 'Hoàn thành'], width: '160px' },
+            { id: 'notes', label: 'Ghi chú', format: 'text', width: '260px' },
+            { id: 'createdAt', label: 'Ngày tạo', format: 'date', width: '140px' },
+          ];
+        }
+        if (cDash.customColumns.some((c) => c.id === colPayload.id.trim())) {
+          alert(`Mã cột "${colPayload.id.trim()}" đã tồn tại trong bảng này! Vui lòng chọn mã khác.`);
+          return;
+        }
+        cDash.customColumns.push(colPayload);
+        try {
+          localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+          await saveAppSettings('custom_dashboards_config', customDashboards.value);
+        } catch (e) {}
+      }
+      if (!selectedColIds.value.includes(colPayload.id)) {
+        selectedColIds.value.push(colPayload.id);
+      }
+      await onColumnsChange(selectedColIds.value);
+      isAddColumnDialogOpen.value = false;
+      alert(`Đã tạo thành công cột "${colPayload.label}" trên bảng!`);
+      return;
+    }
+
+    let mappingKey = 'import_mapping_trips';
+    let mappingRef = personnelStore.importMappingTrips;
+    if (src === 'relatives') {
+      mappingKey = 'import_mapping_relative';
+      mappingRef = personnelStore.importMappingRelative;
+    } else if (src === 'personnel') {
+      mappingKey = 'import_mapping_personnel';
+      mappingRef = personnelStore.importMappingPersonnel;
+    }
+
+    // Kiểm tra trùng ID cột
+    const exists = (mappingRef || []).some((g) => (g.columns || []).some((c) => c.id === colPayload.id.trim()));
+    if (exists) {
+      alert(`Mã cột "${colPayload.id.trim()}" đã tồn tại trong bảng này! Vui lòng chọn mã khác.`);
+      return;
+    }
+
     if (!mappingRef || mappingRef.length === 0) {
       mappingRef = [{ group: 'Thông tin bổ sung', columns: [] }];
       if (src === 'trips') personnelStore.importMappingTrips = mappingRef;
@@ -1159,7 +1218,7 @@ const saveNewColumn = async (colPayload) => {
     if (!selectedColIds.value.includes(colPayload.id)) {
       selectedColIds.value.push(colPayload.id);
     }
-    await onColumnsChange();
+    await onColumnsChange(selectedColIds.value);
 
     isAddColumnDialogOpen.value = false;
     alert(`Đã tạo thành công cột "${colPayload.label}" trên bảng!`);
@@ -1682,18 +1741,71 @@ const handleChildColMenuFromSelector = ({ event, col }) => {
 
 const getTargetMappingRef = () => {
   const src = currentDashboardConfig.value?.source || 'trips';
+  if (src === 'blank') {
+    const tid = topicId.value;
+    const cDash = customDashboards.value.find((d) => d.id === tid);
+    return { key: 'custom_dashboards_config', mapping: [{ group: 'Cột bảng', columns: cDash?.customColumns || [] }], isBlank: true, cDash };
+  }
   if (src === 'relatives') return { key: 'import_mapping_relative', mapping: personnelStore.importMappingRelative };
   if (src === 'personnel') return { key: 'import_mapping_personnel', mapping: personnelStore.importMappingPersonnel };
   return { key: 'import_mapping_trips', mapping: personnelStore.importMappingTrips };
 };
 
 const onChildRenameColumn = async ({ colId, newLabel }) => {
-  const { key, mapping } = getTargetMappingRef();
+  if (colId === '_parentPersonnelName') {
+    customParentLabels.value = { ...customParentLabels.value, [topicId.value]: newLabel };
+    try {
+      localStorage.setItem('parent_col_label_' + topicId.value, newLabel);
+      await saveAppSettings('parent_col_label_' + topicId.value, newLabel);
+    } catch (e) {}
+    return;
+  }
+  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.label = newLabel;
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
   let found = false;
   for (const g of (mapping || [])) {
     for (const c of (g.columns || [])) {
       if (c.id === colId) {
         c.label = newLabel;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings(key, mapping);
+  }
+};
+
+const onChildChangeColumnRequired = async ({ colId, required }) => {
+  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.required = Boolean(required);
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.required = Boolean(required);
         found = true;
         break;
       }
@@ -2049,7 +2161,7 @@ const allAvailableColumnsList = computed(() => {
     // Các cột ảo: Mã cán bộ, Thông tin cán bộ, Trạng thái hiện diện
     const virtualTripCols = [
       { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
-      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
+      { id: '_parentPersonnelName', label: getParentColLabel('Thông tin cán bộ'), width: '180px' },
       { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px' },
     ];
 
@@ -2087,7 +2199,7 @@ const allAvailableColumnsList = computed(() => {
 
     // Các cột ảo bổ trợ: Cán bộ liên quan, Trạng thái hiện diện, Mã cán bộ
     const virtualRelativeCols = [
-      { id: '_parentPersonnelName', label: 'Cán bộ liên quan', width: '180px' },
+      { id: '_parentPersonnelName', label: getParentColLabel('Cán bộ liên quan'), width: '180px' },
       { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px' },
       { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
     ];
@@ -2150,7 +2262,7 @@ const allAvailableColumnsList = computed(() => {
     // Các cột ảo: Mã cán bộ, Thông tin cán bộ, Trạng thái hiện diện
     const virtualPersonnelCols = [
       { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
-      { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '180px' },
+      { id: '_parentPersonnelName', label: getParentColLabel('Thông tin cán bộ'), width: '180px' },
       { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px' },
     ];
 
@@ -2212,7 +2324,8 @@ const getCurrentCardColKey = () => {
 };
 
 const onColumnsChange = async (newCols) => {
-  selectedColIds.value = [...newCols];
+  const cols = Array.isArray(newCols) ? newCols : selectedColIds.value;
+  selectedColIds.value = [...cols];
   const currentKey = getCurrentCardColKey();
   const isBaseline = activeMetricCardIdx.value <= 0;
 
@@ -3837,11 +3950,14 @@ onMounted(async () => {
   await loadColumnsForCurrentCard();
   handleRouteQueryChange();
   loadNameColConfig();
+  loadCustomParentLabel();
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
+  window.addEventListener('table-show-col-index-changed', onColIndexChanged);
 });
 
 onUnmounted(() => {
   window.removeEventListener('table-row-height-changed', onRowHeightChanged);
+  window.removeEventListener('table-show-col-index-changed', onColIndexChanged);
 });
 </script>
 

@@ -149,6 +149,23 @@
           </select>
         </div>
       </div>
+
+      <!-- 5. Bắt buộc nhập liệu (Required) -->
+      <div>
+        <label style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+          Quy tắc nhập liệu khi lưu:
+        </label>
+        <button
+          type="button"
+          class="btn-required-toggle"
+          :class="{ 'is-required': form.required }"
+          @click="form.required = !form.required"
+          title="Bắt buộc phải có dữ liệu khi lưu"
+        >
+          <i :class="form.required ? 'pi pi-check-square' : 'pi pi-stop'" style="font-size: 0.95rem;"></i>
+          <span>★ Bắt buộc</span>
+        </button>
+      </div>
     </div>
 
     <template #footer>
@@ -206,6 +223,7 @@ const form = ref({
   options: '',
   tableWidth: 160,
   width: '50',
+  required: false,
   lookupTarget: 'personnel',
   lookupField: '',
   formulaType: 'presence_status',
@@ -222,6 +240,7 @@ watch(
         options: '',
         tableWidth: 160,
         width: '50',
+        required: false,
         lookupTarget: 'personnel',
         lookupField: '',
         formulaType: 'presence_status',
@@ -270,6 +289,7 @@ const handleSave = async () => {
       format: form.value.format || 'text',
       tableWidth: Number(form.value.tableWidth) || 160,
       width: String(form.value.width || '50'),
+      required: Boolean(form.value.required),
       options: form.value.options ? form.value.options.trim() : '',
       ...(form.value.format === 'lookup' ? {
         lookupTarget: 'personnel',
@@ -323,5 +343,32 @@ const handleSave = async () => {
 .dialog-select:focus {
   border-color: #0284c7;
   box-shadow: 0 0 0 1px #0284c7;
+}
+
+.btn-required-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-required-toggle:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.btn-required-toggle.is-required {
+  border-color: #dc2626;
+  background: #fef2f2;
+  color: #dc2626;
 }
 </style>

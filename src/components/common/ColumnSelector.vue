@@ -30,6 +30,16 @@
         <button type="button" class="btn-text-link" @click="deselectAll">Bỏ chọn</button>
         <span style="color: #cbd5e1;">|</span>
         <button type="button" class="btn-text-link" @click="resetOrder">Thứ tự chuẩn</button>
+        <span style="color: #cbd5e1;">|</span>
+        <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #475569; cursor: pointer; user-select: none;">
+          <input
+            type="checkbox"
+            v-model="showColIndex"
+            @change="toggleShowColIndex"
+            style="accent-color: #2e7d32; width: 13px; height: 13px; cursor: pointer;"
+          />
+          <span>Số cột</span>
+        </label>
       </div>
 
       <!-- Giới hạn chiều cao hàng tối đa (Row Height Limit - Mặc định 1 hàng) -->
@@ -111,7 +121,7 @@
               style="accent-color: #2e7d32; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;"
             />
             <span class="item-text" :title="col.label || col.id">
-              <span v-if="getColIndex(col)" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.75rem;">
+              <span v-if="showColIndex && getColIndex(col)" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.75rem;">
                 Cột {{ getColIndex(col) }}:
               </span>
               {{ col.label || col.id }}
@@ -122,7 +132,7 @@
           <div class="item-reorder-actions">
             <!-- Nút Tùy chỉnh cột này (Mở menu Đổi tên, Kiểu dữ liệu, Độ rộng, Xóa...) -->
             <button
-              v-if="!col.isVirtual && col.id !== '_primaryKey' && col.id !== 'stt'"
+              v-if="(col.id === '_parentPersonnelName' || !col.isVirtual) && col.id !== '_primaryKey' && col.id !== 'stt'"
               type="button"
               class="btn-col-action-trigger"
               @click.stop="$emit('open-col-menu', { event: $event, col })"
@@ -183,6 +193,14 @@ const isOpen = ref(false);
 const searchQuery = ref('');
 const containerRef = ref(null);
 const customOrder = ref([]);
+const showColIndex = ref(localStorage.getItem('app_show_col_index') !== 'false');
+
+const toggleShowColIndex = () => {
+  try {
+    localStorage.setItem('app_show_col_index', String(showColIndex.value));
+    window.dispatchEvent(new CustomEvent('table-show-col-index-changed', { detail: showColIndex.value }));
+  } catch (e) {}
+};
 
 const getStoredRowHeight = () => {
   const stored = localStorage.getItem('app_table_row_clamp');

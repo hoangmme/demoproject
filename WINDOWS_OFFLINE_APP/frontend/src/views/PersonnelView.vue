@@ -228,7 +228,12 @@
         >
           <template #header>
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
-              <span class="table-col-header-wrap">{{ col.label }}</span>
+              <span class="table-col-header-wrap">
+                <span v-if="showColIndex && col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
+                  Cột {{ col.colIndex }}:
+                </span>
+                {{ col.label }}
+              </span>
               <button
                 type="button"
                 class="btn-col-menu-trigger"
@@ -733,7 +738,12 @@
         >
           <template #header>
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
-              <span class="table-col-header-wrap">{{ col.label }}</span>
+              <span class="table-col-header-wrap">
+                <span v-if="showColIndex && col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
+                  Cột {{ col.colIndex }}:
+                </span>
+                {{ col.label }}
+              </span>
               <button
                 type="button"
                 class="btn-col-menu-trigger"
@@ -1126,6 +1136,7 @@
       @change-options="onChangeColumnOptions"
       @change-width="onChangeColumnWidth"
       @change-form-width="onChangeColumnFormWidth"
+      @change-required="onColChangeRequired"
       @delete-column="onDeleteColumnFromTable"
       @hide-column="onHideColumn"
       @filter-column="onFilterByColumn"
@@ -1157,7 +1168,7 @@ import apiClient from '@/api/client';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, evaluateLookup, evaluateRollup, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
+import { computeColumnIndexMap, formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, evaluateLookup, evaluateRollup, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
@@ -1477,6 +1488,11 @@ const onRowHeightChanged = (e) => {
   currentRowHeightLimit.value = String(e.detail || '1');
 };
 
+const showColIndex = ref(localStorage.getItem('app_show_col_index') !== 'false');
+const onColIndexChanged = (e) => {
+  showColIndex.value = Boolean(e.detail);
+};
+
 onMounted(async () => {
   if (personnelStore.personnelList.length === 0) {
     await personnelStore.init();
@@ -1484,10 +1500,12 @@ onMounted(async () => {
   await loadPersonnelFilterState();
   handleRouteAction();
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
+  window.addEventListener('table-show-col-index-changed', onColIndexChanged);
 });
 
 onUnmounted(() => {
   window.removeEventListener('table-row-height-changed', onRowHeightChanged);
+  window.removeEventListener('table-show-col-index-changed', onColIndexChanged);
 });
 
 watch(
@@ -1523,6 +1541,7 @@ const activeColumns = computed(() => {
   const map = {
     _parentPersonnelName: { id: '_parentPersonnelName', label: 'Thông tin cán bộ', tableWidth: '220px', format: 'text', isVirtual: true },
   };
+  const colMap = computeColumnIndexMap(personnelStore.importMappingPersonnel || []);
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (c.id && c.id !== 'stt' && c.id !== 'code') map[c.id] = c;
@@ -1544,12 +1563,17 @@ const activeColumns = computed(() => {
     .filter((id) => map[id])
     .map((id) => {
       const cfg = map[id];
+      const rawIdx = colMap[cfg.id];
+      const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
       return {
         id: cfg.id,
         label: cfg.label || cfg.id,
+        colIndex: idxText,
         width: cfg.tableWidth || getColWidth(cfg.id),
         tableWidth: cfg.tableWidth || null,
         format: cfg.format || 'text',
+        required: Boolean(cfg.required),
+        options: cfg.options || '',
       };
     });
 });
@@ -1664,6 +1688,7 @@ const getCheckboxFileLoopItems = (data, colId) => {
 
 const activeRelativeColumns = computed(() => {
   const map = {};
+  const colMap = computeColumnIndexMap(personnelStore.importMappingRelative || []);
   (personnelStore.importMappingRelative || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       if (c.id) map[c.id] = c;
@@ -1674,16 +1699,21 @@ const activeRelativeColumns = computed(() => {
     .filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo')
     .map((id) => {
       const cfg = map[id];
+      const rawIdx = colMap[id];
+      const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
       if (cfg && cfg.label) {
         return {
           id: cfg.id,
           label: cfg.label,
+          colIndex: idxText,
           width: cfg.tableWidth || '160px',
           tableWidth: cfg.tableWidth || null,
+          required: Boolean(cfg.required),
+          options: cfg.options || '',
         };
       }
       const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
-      return found || { id, label: id, width: '160px' };
+      return found ? { ...found, colIndex: idxText } : { id, label: id, width: '160px', colIndex: idxText };
     });
 });
 
@@ -2301,6 +2331,24 @@ const onChangeColumnWidth = async ({ colId, width }) => {
     for (const c of (g.columns || [])) {
       if (c.id === colId) {
         c.tableWidth = width;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings(mappingKey, mapping);
+  }
+};
+
+const onColChangeRequired = async ({ colId, required }) => {
+  const { mappingKey, mapping } = getActiveTableMapping();
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.required = Boolean(required);
         found = true;
         break;
       }
