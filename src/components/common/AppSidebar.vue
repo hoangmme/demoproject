@@ -43,56 +43,196 @@
     </div>
 
     <nav class="app-sidebar-nav" style="position: relative; z-index: 1;">
-      <router-link to="/dashboard" class="app-nav-item">
-        <i class="pi pi-chart-pie"></i>
-        <span>Thống kê</span>
-      </router-link>
+      <!-- THỐNG KÊ (DASHBOARDS) -->
+      <div class="sidebar-item-row">
+        <router-link to="/dashboard" class="app-nav-item" :title="systemBranding.menuLabelDashboard || 'Thống kê'">
+          <i class="pi pi-chart-pie"></i>
+          <span>{{ systemBranding.menuLabelDashboard || 'Thống kê' }}</span>
+        </router-link>
+        <button
+          type="button"
+          class="sidebar-item-action-btn"
+          @click.stop="openRenameDashboardDialog"
+          title="Đổi tên menu Thống kê"
+        >
+          <i class="pi pi-ellipsis-v"></i>
+        </button>
+      </div>
 
-      <div class="app-nav-heading" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
+      <!-- Danh sách các nhóm thống kê con (Dashboard Groups) nếu có -->
+      <div v-if="sidebarDashboardGroups.length > 0" class="sidebar-sub-group">
+        <div
+          v-for="grp in sidebarDashboardGroups"
+          :key="grp.id"
+          class="sidebar-item-row sidebar-sub-item"
+        >
+          <a
+            href="javascript:void(0)"
+            class="app-nav-item"
+            @click="navigateToDashboardGroup(grp)"
+            :title="grp.title"
+          >
+            <i class="pi pi-chart-bar" style="font-size: 0.72rem; opacity: 0.8; color: #38bdf8;"></i>
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem;">
+              {{ grp.title }}
+            </span>
+          </a>
+          <div class="sidebar-item-actions">
+            <button
+              type="button"
+              class="sidebar-item-action-btn"
+              @click.stop="openEditGroupDialog(grp)"
+              title="Đổi tên nhóm thống kê"
+            >
+              <i class="pi pi-pencil"></i>
+            </button>
+            <button
+              type="button"
+              class="sidebar-item-action-btn action-btn-danger"
+              @click.stop="confirmDeleteGroup(grp)"
+              title="Xóa nhóm thống kê này"
+            >
+              <i class="pi pi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIÊU ĐỀ BẢNG DỮ LIỆU & NÚT + TÙY CHỌN -->
+      <div class="app-nav-heading" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px; position: relative;">
         <span>{{ systemBranding.sectionLabelTopics || 'Bảng dữ liệu (Tables)' }}</span>
         <button
           type="button"
-          @click.stop="openAddTableDialog"
-          title="Thêm Bảng / Chuyên đề Mới"
+          @click.stop="toggleAddMenu"
+          title="Thêm Bảng mới hoặc Thống kê mới"
           style="background: transparent; border: none; color: inherit; cursor: pointer; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; opacity: 0.85;"
         >
           <i class="pi pi-plus" style="font-weight: 800;"></i>
         </button>
+
+        <!-- Dropdown menu khi ấn nút + -->
+        <template v-if="isAddMenuOpen">
+          <div class="popover-backdrop" @click.stop="isAddMenuOpen = false"></div>
+          <div class="sidebar-add-popover">
+            <div class="add-popover-item" @click="selectAddAction('table')">
+              <i class="pi pi-table" style="color: #10b981; font-size: 0.95rem;"></i>
+              <div>
+                <div style="font-weight: 700; font-size: 0.78rem; color: #1e293b;">+ Thêm Bảng mới (Table)</div>
+                <div style="font-size: 0.68rem; color: #64748b;">Tạo bảng dữ liệu dạng Grid mới</div>
+              </div>
+            </div>
+            <div class="add-popover-divider"></div>
+            <div class="add-popover-item" @click="selectAddAction('dashboard')">
+              <i class="pi pi-chart-pie" style="color: #3b82f6; font-size: 0.95rem;"></i>
+              <div>
+                <div style="font-weight: 700; font-size: 0.78rem; color: #1e293b;">+ Thêm Thống kê mới (Dashboard)</div>
+                <div style="font-size: 0.68rem; color: #64748b;">Tạo khối thống kê / biểu đồ mới</div>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- Bảng 1: Cán bộ (Table 1 trong Base) -->
-      <router-link to="/personnel" class="app-nav-item" :title="systemBranding.menuLabelPersonnel || 'Cán bộ'">
-        <i class="pi pi-table" style="color: #0284c7;"></i>
-        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          {{ systemBranding.menuLabelPersonnel || 'Cán bộ' }} ({{ personnelStore.personnelList.length }})
-        </span>
-      </router-link>
+      <div class="sidebar-item-row">
+        <router-link to="/personnel" class="app-nav-item" :title="systemBranding.menuLabelPersonnel || 'Cán bộ'">
+          <i class="pi pi-table" style="color: #0284c7;"></i>
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ systemBranding.menuLabelPersonnel || 'Cán bộ' }} ({{ personnelStore.personnelList.length }})
+          </span>
+        </router-link>
+        <button
+          type="button"
+          class="sidebar-item-action-btn"
+          @click.stop="openRenameFixedTableDialog('personnel')"
+          title="Đổi tên bảng Cán bộ"
+        >
+          <i class="pi pi-ellipsis-v"></i>
+        </button>
+      </div>
 
       <!-- Bảng 2: Thân nhân (Table 2 độc lập) -->
-      <router-link
+      <div
         v-if="personnelStore.relativesList.length > 0 || systemBranding.showSecondaryInputs"
-        to="/relatives"
-        class="app-nav-item"
-        :title="systemBranding.menuLabelRelatives || 'Thân nhân'"
+        class="sidebar-item-row"
       >
-        <i class="pi pi-users" style="color: #a855f7;"></i>
-        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          {{ systemBranding.menuLabelRelatives || 'Thân nhân' }} ({{ personnelStore.relativesList.length }})
-        </span>
-      </router-link>
+        <router-link
+          to="/relatives"
+          class="app-nav-item"
+          :title="systemBranding.menuLabelRelatives || 'Thân nhân'"
+        >
+          <i class="pi pi-users" style="color: #a855f7;"></i>
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ systemBranding.menuLabelRelatives || 'Thân nhân' }} ({{ personnelStore.relativesList.length }})
+          </span>
+        </router-link>
+        <button
+          type="button"
+          class="sidebar-item-action-btn"
+          @click.stop="openRenameFixedTableDialog('relatives')"
+          title="Đổi tên bảng Thân nhân"
+        >
+          <i class="pi pi-ellipsis-v"></i>
+        </button>
+      </div>
 
-      <router-link
+      <!-- Bảng 3: Chuyến đi (Table 3 độc lập) -->
+      <div class="sidebar-item-row">
+        <router-link
+          to="/trips"
+          class="app-nav-item"
+          :title="systemBranding.menuLabelTrips || 'Chuyến đi'"
+        >
+          <i class="pi pi-send" style="color: #10b981;"></i>
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ systemBranding.menuLabelTrips || 'Chuyến đi' }} ({{ totalTripsCount }})
+          </span>
+        </router-link>
+        <button
+          type="button"
+          class="sidebar-item-action-btn"
+          @click.stop="openRenameFixedTableDialog('trips')"
+          title="Đổi tên bảng Chuyến đi"
+        >
+          <i class="pi pi-ellipsis-v"></i>
+        </button>
+      </div>
+
+      <!-- Các Bảng tùy chỉnh (Custom Tables) -->
+      <div
         v-for="dash in topicDashboards"
         :key="dash.id"
-        :to="getDashboardRoute(dash)"
-        class="app-nav-item"
-        :title="dash.title"
+        class="sidebar-item-row"
       >
-        <i :class="dash.icon ? `pi ${dash.icon}` : 'pi pi-table'"></i>
-        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          {{ dash.title }}
-        </span>
-      </router-link>
+        <router-link
+          :to="getDashboardRoute(dash)"
+          class="app-nav-item"
+          :title="dash.title"
+        >
+          <i :class="dash.icon ? `pi ${dash.icon}` : 'pi pi-table'"></i>
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ dash.title }}
+          </span>
+        </router-link>
+        <div class="sidebar-item-actions">
+          <button
+            type="button"
+            class="sidebar-item-action-btn"
+            @click.stop="openEditTableDialog(dash)"
+            title="Đổi tên bảng"
+          >
+            <i class="pi pi-pencil"></i>
+          </button>
+          <button
+            type="button"
+            class="sidebar-item-action-btn action-btn-danger"
+            @click.stop="confirmDeleteTable(dash)"
+            title="Xóa bảng này"
+          >
+            <i class="pi pi-trash"></i>
+          </button>
+        </div>
+      </div>
 
       <router-link to="/advanced-search" class="app-nav-item" title="Tra cứu & Tìm kiếm nâng cao">
         <i class="pi pi-search-plus"></i>
@@ -332,6 +472,70 @@
         </div>
       </template>
     </Dialog>
+
+    <!-- Dialog Đổi tên Bảng / Thống kê chung -->
+    <Dialog
+      v-model:visible="isRenameDialogOpen"
+      modal
+      :header="getRenameModalTitle()"
+      :style="{ width: '440px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 6px 0;">
+        <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b;">
+          Tên hiển thị mới: <span style="color: red;">*</span>
+        </label>
+        <InputText
+          v-model="renameForm.newTitle"
+          placeholder="Nhập tên mới..."
+          style="width: 100%; font-size: 0.85rem;"
+          autofocus
+          @keyup.enter="saveRename"
+        />
+      </div>
+      <template #footer>
+        <Button label="Hủy" severity="secondary" text size="small" @click="isRenameDialogOpen = false" />
+        <Button label="Lưu thay đổi" icon="pi pi-check" severity="primary" size="small" @click="saveRename" />
+      </template>
+    </Dialog>
+
+    <!-- Dialog Thêm Khối Thống Kê Mới từ Sidebar -->
+    <Dialog
+      v-model:visible="isAddDashboardGroupDialogOpen"
+      modal
+      header="Thêm Khối Thống kê Mới (Dashboard)"
+      :style="{ width: '480px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 8px 0;">
+        <div class="field-item">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+            Tên Khối Thống kê <span style="color: #ef4444;">*</span>
+          </label>
+          <InputText
+            v-model="newDashboardGroupForm.title"
+            placeholder="VD: Thống kê Xuất nhập cảnh, Học sinh giỏi..."
+            style="width: 100%; font-size: 0.85rem;"
+            autofocus
+            @keyup.enter="saveNewDashboardGroup"
+          />
+        </div>
+        <div class="field-item">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
+            Mô tả / Ghi chú (Tùy chọn):
+          </label>
+          <InputText
+            v-model="newDashboardGroupForm.description"
+            placeholder="Mô tả mục đích của khối thống kê..."
+            style="width: 100%; font-size: 0.85rem;"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
+          <Button label="Hủy" severity="secondary" text size="small" @click="isAddDashboardGroupDialogOpen = false" />
+          <Button label="Tạo Khối Thống kê" icon="pi pi-check" severity="primary" size="small" @click="saveNewDashboardGroup" />
+        </div>
+      </template>
+    </Dialog>
   </aside>
 </template>
 
@@ -344,11 +548,238 @@ import InputText from 'primevue/inputtext';
 import { useAuthStore } from '@/stores/auth';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
+import { buildTopicSourceList } from '@/utils/dashboardMetrics';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const personnelStore = usePersonnelStore();
+
+// Popover menu nút +
+const isAddMenuOpen = ref(false);
+const toggleAddMenu = () => {
+  isAddMenuOpen.value = !isAddMenuOpen.value;
+};
+
+const selectAddAction = (action) => {
+  isAddMenuOpen.value = false;
+  if (action === 'table') {
+    openAddTableDialog();
+  } else if (action === 'dashboard') {
+    openAddDashboardGroupDialog();
+  }
+};
+
+// Tổng số chuyến đi hiển thị trên Sidebar
+const totalTripsCount = computed(() => {
+  if (personnelStore.tripsList && personnelStore.tripsList.length > 0) {
+    return personnelStore.tripsList.length;
+  }
+  return buildTopicSourceList('trips', personnelStore).length;
+});
+
+// Quản lý các nhóm Thống kê trên Sidebar
+const sidebarDashboardGroups = ref([]);
+
+const loadDashboardGroups = async () => {
+  try {
+    const local = localStorage.getItem('dashboard_custom_groups');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed)) sidebarDashboardGroups.value = parsed;
+    }
+    const db = await getAppSettings('dashboard_custom_groups', null);
+    if (db && Array.isArray(db)) {
+      sidebarDashboardGroups.value = db;
+      try { localStorage.setItem('dashboard_custom_groups', JSON.stringify(db)); } catch (e) {}
+    }
+  } catch (e) {}
+};
+
+const navigateToDashboardGroup = (grp) => {
+  router.push({ path: '/dashboard', hash: `#group-${grp.id}` });
+};
+
+// Quản lý Tạo khối thống kê mới
+const isAddDashboardGroupDialogOpen = ref(false);
+const newDashboardGroupForm = ref({
+  title: '',
+  description: '',
+});
+
+const openAddDashboardGroupDialog = () => {
+  newDashboardGroupForm.value = {
+    title: '',
+    description: '',
+  };
+  isAddDashboardGroupDialogOpen.value = true;
+};
+
+const saveNewDashboardGroup = async () => {
+  if (!newDashboardGroupForm.value.title?.trim()) {
+    alert('Vui lòng nhập tên Khối Thống kê!');
+    return;
+  }
+  const newGroup = {
+    id: 'g_' + Date.now(),
+    title: newDashboardGroupForm.value.title.trim(),
+    description: newDashboardGroupForm.value.description || '',
+    widgets: [],
+  };
+  const list = [...sidebarDashboardGroups.value, newGroup];
+  sidebarDashboardGroups.value = list;
+  try { localStorage.setItem('dashboard_custom_groups', JSON.stringify(list)); } catch (e) {}
+  await saveAppSettings('dashboard_custom_groups', list);
+  window.dispatchEvent(new CustomEvent('dashboard-groups-updated', { detail: list }));
+  isAddDashboardGroupDialogOpen.value = false;
+  router.push('/dashboard');
+};
+
+// Quản lý Đổi tên & Xóa Bảng / Thống kê
+const isRenameDialogOpen = ref(false);
+const renameForm = ref({
+  type: '',
+  targetId: '',
+  currentTitle: '',
+  newTitle: '',
+});
+
+const getRenameModalTitle = () => {
+  const { type, currentTitle } = renameForm.value;
+  if (type === 'fixed_personnel' || type === 'fixed_relatives' || type === 'fixed_trips' || type === 'custom_table') {
+    return `Đổi tên Bảng "${currentTitle}"`;
+  }
+  if (type === 'fixed_dashboard') {
+    return `Đổi tên Menu Thống kê`;
+  }
+  if (type === 'dashboard_group') {
+    return `Đổi tên Khối Thống kê "${currentTitle}"`;
+  }
+  return 'Đổi tên';
+};
+
+const openRenameFixedTableDialog = (type) => {
+  let title = 'Cán bộ';
+  if (type === 'relatives') title = systemBranding.value.menuLabelRelatives || 'Thân nhân';
+  else if (type === 'trips') title = systemBranding.value.menuLabelTrips || 'Chuyến đi';
+  else if (type === 'personnel') title = systemBranding.value.menuLabelPersonnel || 'Cán bộ';
+
+  renameForm.value = {
+    type: `fixed_${type}`,
+    targetId: type,
+    currentTitle: title,
+    newTitle: title,
+  };
+  isRenameDialogOpen.value = true;
+};
+
+const openRenameDashboardDialog = () => {
+  const title = systemBranding.value.menuLabelDashboard || 'Thống kê';
+  renameForm.value = {
+    type: 'fixed_dashboard',
+    targetId: 'dashboard',
+    currentTitle: title,
+    newTitle: title,
+  };
+  isRenameDialogOpen.value = true;
+};
+
+const openEditTableDialog = (dash) => {
+  renameForm.value = {
+    type: 'custom_table',
+    targetId: dash.id,
+    currentTitle: dash.title,
+    newTitle: dash.title,
+  };
+  isRenameDialogOpen.value = true;
+};
+
+const openEditGroupDialog = (grp) => {
+  renameForm.value = {
+    type: 'dashboard_group',
+    targetId: grp.id,
+    currentTitle: grp.title,
+    newTitle: grp.title,
+  };
+  isRenameDialogOpen.value = true;
+};
+
+const saveRename = async () => {
+  const newName = renameForm.value.newTitle?.trim();
+  if (!newName) {
+    alert('Vui lòng nhập tên mới!');
+    return;
+  }
+  const { type, targetId } = renameForm.value;
+
+  if (type === 'fixed_personnel') {
+    systemBranding.value.menuLabelPersonnel = newName;
+    await saveSystemBranding();
+  } else if (type === 'fixed_relatives') {
+    systemBranding.value.menuLabelRelatives = newName;
+    await saveSystemBranding();
+  } else if (type === 'fixed_trips') {
+    systemBranding.value.menuLabelTrips = newName;
+    await saveSystemBranding();
+  } else if (type === 'fixed_dashboard') {
+    systemBranding.value.menuLabelDashboard = newName;
+    await saveSystemBranding();
+  } else if (type === 'custom_table') {
+    const list = [...dynamicDashboards.value];
+    const idx = list.findIndex((d) => d.id === targetId);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], title: newName };
+      dynamicDashboards.value = list;
+      try { localStorage.setItem('custom_dashboards_config', JSON.stringify(list)); } catch (e) {}
+      await saveAppSettings('custom_dashboards_config', list);
+      window.dispatchEvent(new CustomEvent('custom-dashboards-updated', { detail: list }));
+    }
+  } else if (type === 'dashboard_group') {
+    const list = [...sidebarDashboardGroups.value];
+    const idx = list.findIndex((g) => g.id === targetId);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], title: newName };
+      sidebarDashboardGroups.value = list;
+      try { localStorage.setItem('dashboard_custom_groups', JSON.stringify(list)); } catch (e) {}
+      await saveAppSettings('dashboard_custom_groups', list);
+      window.dispatchEvent(new CustomEvent('dashboard-groups-updated', { detail: list }));
+    }
+  }
+
+  isRenameDialogOpen.value = false;
+};
+
+const saveSystemBranding = async () => {
+  try {
+    localStorage.setItem('system_branding_config', JSON.stringify(systemBranding.value));
+  } catch (e) {}
+  try {
+    await saveAppSettings('system_branding_config', systemBranding.value);
+  } catch (e) {}
+  window.dispatchEvent(new CustomEvent('system-branding-updated', { detail: systemBranding.value }));
+};
+
+const confirmDeleteTable = async (dash) => {
+  if (!confirm(`Bạn có chắc chắn muốn xóa Bảng "${dash.title}" không?`)) return;
+  const list = dynamicDashboards.value.filter((d) => d.id !== dash.id);
+  dynamicDashboards.value = list;
+  try { localStorage.setItem('custom_dashboards_config', JSON.stringify(list)); } catch (e) {}
+  await saveAppSettings('custom_dashboards_config', list);
+  window.dispatchEvent(new CustomEvent('custom-dashboards-updated', { detail: list }));
+
+  if (route.params.id === dash.id) {
+    router.push('/personnel');
+  }
+};
+
+const confirmDeleteGroup = async (grp) => {
+  if (!confirm(`Bạn có chắc chắn muốn xóa khối thống kê "${grp.title}" không?`)) return;
+  const list = sidebarDashboardGroups.value.filter((g) => g.id !== grp.id);
+  sidebarDashboardGroups.value = list;
+  try { localStorage.setItem('dashboard_custom_groups', JSON.stringify(list)); } catch (e) {}
+  await saveAppSettings('dashboard_custom_groups', list);
+  window.dispatchEvent(new CustomEvent('dashboard-groups-updated', { detail: list }));
+};
 
 const isAddTableDialogOpen = ref(false);
 const newTableForm = ref({
@@ -430,6 +861,7 @@ const DEFAULT_BRANDING = {
   logoUrl: '',
   orgNameLine1: 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH',
   orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
+  menuLabelDashboard: 'Thống kê',
   menuLabelPersonnel: 'Cán bộ',
   menuLabelRelatives: 'Thân nhân',
   menuLabelTrips: 'Chuyến đi',
@@ -488,7 +920,7 @@ const getInitialDashboards = () => {
 const dynamicDashboards = ref(getInitialDashboards());
 
 const topicDashboards = computed(() => {
-  return (dynamicDashboards.value || []).filter((d) => d.displayMode !== 'appendix');
+  return (dynamicDashboards.value || []).filter((d) => d.displayMode !== 'appendix' && d.id !== 'trips');
 });
 
 const appendixDashboards = computed(() => {
@@ -628,14 +1060,17 @@ onMounted(() => {
   loadSystemBranding();
   loadSidebarBg();
   loadSidebarData();
+  loadDashboardGroups();
   window.addEventListener('sidebar-bg-updated', loadSidebarBg);
   window.addEventListener('custom-dashboards-updated', loadSidebarData);
+  window.addEventListener('dashboard-groups-updated', loadDashboardGroups);
   window.addEventListener('system-branding-updated', onSystemBrandingUpdated);
 });
 
 onUnmounted(() => {
   window.removeEventListener('sidebar-bg-updated', loadSidebarBg);
   window.removeEventListener('custom-dashboards-updated', loadSidebarData);
+  window.removeEventListener('dashboard-groups-updated', loadDashboardGroups);
   window.removeEventListener('system-branding-updated', onSystemBrandingUpdated);
 });
 </script>
@@ -702,5 +1137,125 @@ onUnmounted(() => {
 
 .flyout-item:hover {
   background: #f1f5f9;
+}
+
+.sidebar-item-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 0.5rem;
+  transition: background-color 0.15s ease;
+}
+
+.sidebar-item-row:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-item-row .app-nav-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar-item-row:hover .sidebar-item-actions {
+  opacity: 1;
+}
+
+.sidebar-item-action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 4px;
+  color: var(--sidebar-text-color, #000000);
+  opacity: 0;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+.sidebar-item-row:hover .sidebar-item-action-btn {
+  opacity: 0.65;
+}
+
+.sidebar-item-action-btn:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.sidebar-item-action-btn.action-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444 !important;
+}
+
+.sidebar-sub-group {
+  margin-left: 0.85rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.sidebar-sub-item .app-nav-item {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.sidebar-add-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 8px;
+  width: 240px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e2e8f0;
+  padding: 6px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.popover-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1040;
+  background: transparent;
+}
+
+.add-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.add-popover-item:hover {
+  background: #f1f5f9;
+}
+
+.add-popover-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 2px 0;
 }
 </style>

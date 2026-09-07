@@ -156,24 +156,61 @@ export const buildTopicSourceList = (source, personnelStore) => {
 
   // trips (hoặc trip)
   const trips = [];
+  const seenTripKeys = new Set();
+
   (personnelStore.personnelList || []).forEach((p) => {
     let pCustom = {};
     if (p.custom_data) {
       try { pCustom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data; } catch (e) {}
     }
-    const allTrips = Array.isArray(p.trips) ? p.trips : (Array.isArray(pCustom.trips) ? pCustom.trips : []);
+    const allTrips = Array.isArray(p.trips)
+      ? [...p.trips]
+      : (Array.isArray(pCustom.trips)
+          ? [...pCustom.trips]
+          : (Array.isArray(pCustom['Khối B: Chuyến đi nước ngoài']) ? [...pCustom['Khối B: Chuyến đi nước ngoài']] : []));
+
+    // Thu thập thêm chuyến đi của thân nhân thuộc cán bộ này (nếu chưa có trong allTrips)
+    const pRelatives = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(pCustom.relatives) ? pCustom.relatives : []);
+    pRelatives.forEach((r) => {
+      let rCustom = {};
+      if (r.custom_data) {
+        try { rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data; } catch (e) {}
+      }
+      const rTrips = Array.isArray(r.trips) ? r.trips : (Array.isArray(rCustom.trips) ? rCustom.trips : []);
+      rTrips.forEach((rt) => {
+        const rtId = rt.id || rt.uniqueKey;
+        const exists = allTrips.some((et) => (rtId && (et.id === rtId || et.uniqueKey === rtId)));
+        if (!exists) {
+          allTrips.push({
+            ...rt,
+            isRelative: true,
+            relativeName: rt.relativeName || r.relativeName || r.name || 'Thân nhân',
+            cccdthannhan: rt.cccdthannhan || rt.cccd || r.cccdthannhan || r.cccd || '',
+            relationshipName: rt.relationshipName || r.relationshipName || r.relationship || '',
+          });
+        }
+      });
+    });
+
     allTrips.forEach((t, tIdx) => {
       let tCustom = {};
       if (t.custom_data) {
         try { tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data; } catch (e) {}
       }
       const isRel = Boolean(t.isRelative || tCustom.isRelative || t.relativeName || tCustom.relativeName);
+      const tripKey = t.id || t.uniqueKey || `${p.id}_t_${tIdx}_${t.departureDate || t.ngay_xuat_canh || ''}`;
+      if (seenTripKeys.has(tripKey)) return;
+      seenTripKeys.add(tripKey);
+
       const presence = resolvePresence(t);
+      const tripPrimaryKey = t.id || t.uniqueKey || t.code || (p.code ? `${p.code}-CD${tIdx + 1}` : `CD-${trips.length + 1}`);
+
       trips.push({
         ...tCustom,
         ...t,
         _recordType: 'trip',
-        uniqueKey: t.id || `${p.id}_t_${tIdx}`,
+        _primaryKey: tripPrimaryKey,
+        uniqueKey: tripKey,
         isRelative: isRel,
         personnelName: isRel ? (t.relativeName || tCustom.relativeName || 'Thân nhân') : p.name,
         personnelCode: isRel ? (t.code || tCustom.code || '') : p.code,

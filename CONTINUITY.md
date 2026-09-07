@@ -1096,3 +1096,39 @@
      - Tab 5: Tùy chỉnh Nhận diện & Ảnh Nền Đăng nhập
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+---
+
+### 80. HOÀN THIỆN TOÀN DIỆN 6 YÊU CẦU ĐA BẢNG CHUẨN LARK BASE / AIRTABLE
+- **Strategic Context**:
+  - Người dùng yêu cầu 6 tính năng cốt lõi:
+    1. Khôi phục Bảng Chuyến đi cố định trên Sidebar & gom đủ dữ liệu (kể cả thân nhân).
+    2. Bảng dữ liệu có scroll ngang (`overflow-x: auto`), mặc định hiển thị tất cả các cột.
+    3. Bỏ cột Thao tác (click hàng mở chi tiết, xóa thì tick chọn và dùng nút xóa hàng loạt trên toolbar).
+    4. Cột Khóa chính (`🔑 Mã định danh`) ở vị trí đầu tiên, mặc định ẩn (gọi ra từ tùy chọn cột & bộ lọc).
+    5. Nút `+` trên Sidebar có menu popover: Thêm Bảng mới (Table) hoặc Thêm Thống kê mới (Dashboard).
+    6. Đổi tên/Xóa bảng và Đổi tên/Xóa thống kê trực tiếp trên menu Sidebar.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Khôi phục Bảng Chuyến đi cố định trên Sidebar (`AppSidebar.vue`, `dashboardMetrics.js`, `personnel.js`)**:
+     - Cố định Bảng 3 `Chuyến đi` (`/trips`) trên Sidebar ngang hàng với Cán bộ (`/personnel`) và Thân nhân (`/relatives`), hiển thị số lượng bản ghi thực tế `({{ totalTripsCount }})`.
+     - Trong `buildTopicSourceList('trips')`: gom đầy đủ tất cả chuyến đi từ `p.trips`, `p.custom_data.trips`, `p.custom_data['Khối B: Chuyến đi nước ngoài']` VÀ chuyến đi của thân nhân `r.trips` / `r.custom_data.trips` (gắn `isRelative: true`, phân tách mối quan hệ, deduplication).
+  2. **Scroll ngang (`overflow-x: auto`) & Mặc định hiện tất cả cột (`PersonnelView.vue`, `ChildDashboardView.vue`, `personnel.js`)**:
+     - Cấu hình `:tableStyle="{ minWidth: 'max-content', width: '100%' }"` kết hợp bọc container `overflow-x: auto` giúp giữ nguyên độ rộng chuẩn của từng cột và cuộn ngang mượt mà.
+     - Cập nhật `getDefaultColumns()` và `visibleRelativeColumns` trong Pinia store: Không còn cắt `.slice(0, 6)`, hiển thị đầy đủ tất cả các cột dữ liệu theo thiết lập.
+  3. **Bỏ Cột Thao Tác & Nâng cấp Xóa Hàng Loạt**:
+     - Loại bỏ hoàn toàn cột `THAO TÁC` ở cuối bảng trong cả 3 view (`PersonnelView.vue`, Bảng Thân nhân, `ChildDashboardView.vue`).
+     - Bấm vào bất kỳ dòng nào trên bảng để mở Dialog Chi tiết / Chỉnh sửa hồ sơ.
+     - Khi tick chọn 1 hoặc nhiều checkbox bên trái, xuất hiện nút `Xóa (${count} đã chọn)` màu đỏ trên toolbar đầu bảng, hỗ trợ xóa hàng loạt an toàn (cả cán bộ, thân nhân và chuyến đi).
+  4. **Cột Khóa Chính `_primaryKey` ở Đầu Bảng (Mặc định Ẩn)**:
+     - Thêm `_primaryKey: '🔑 Mã định danh (Khóa chính)'` ở vị trí index 0 trong danh sách tất cả các cột.
+     - Mặc định lọc bỏ khỏi `visibleColumns`, khi người dùng cần đối soát có thể tích chọn hiển thị từ Tùy chọn cột và Bộ lọc.
+     - Bổ sung template slot hiển thị Badge chìa khóa nổi bật.
+  5. **Nút `+` Trên Sidebar có Popover Lựa Chọn**:
+     - Bấm nút `+` cạnh tiêu đề Bảng dữ liệu hiển thị popover hiện đại:
+       * `+ Thêm Bảng mới (Table)`: Mở dialog tạo Bảng Grid mới.
+       * `+ Thêm Thống kê mới (Dashboard)`: Mở dialog tạo Khối Thống kê / Biểu đồ mới.
+  6. **Menu Thao Tác Nhanh trên Sidebar (Đổi tên, Xóa)**:
+     - Bảng Cán bộ, Thân nhân, Chuyến đi, Thống kê: Nút icon `⋮` đổi tên trực tiếp.
+     - Nhóm thống kê & Bảng tùy chỉnh: Cung cấp nút sửa (bút chì) và xóa (thùng rác) ngay khi hover trên Sidebar.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.

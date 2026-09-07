@@ -1020,6 +1020,9 @@ export const isPresenceField = (colId) => {
  */
 export const resolveVirtualColumnValue = (item, colId) => {
   if (!item || !colId) return undefined;
+  if (colId === '_primaryKey') {
+    return item._primaryKey || item.cccdchuyendi || item.cccdthannhan || item.cccdparent || item.cccd || item.code || item.id || item.uniqueKey || '-';
+  }
   if (isPresenceField(colId)) {
     const p = resolvePresence(item);
     return p.label || p.shortLabel || (p.isOverdue ? 'Quá hạn chưa về' : (p.isAbroad ? 'Đang ở nước ngoài' : 'Trong nước'));

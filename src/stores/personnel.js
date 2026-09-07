@@ -74,8 +74,23 @@ export const usePersonnelStore = defineStore('personnel', {
         }
       });
 
+      // Cột Khóa chính (Unique Key / ID): Luôn đứng đầu tiên, mặc định ẩn nhưng có thể gọi ra ở chọn cột & bộ lọc
+      if (!seen.has('_primaryKey')) {
+        seen.add('_primaryKey');
+        list.unshift({
+          id: '_primaryKey',
+          label: '🔑 Mã định danh (Khóa chính)',
+          width: '160px',
+          tableWidth: '160px',
+          isVirtual: true,
+          isPrimaryKey: true,
+          colIndex: null,
+        });
+      }
+
       if (list.length === 0) {
         return [
+          { id: '_primaryKey', label: '🔑 Mã định danh (Khóa chính)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'code', label: 'Mã CB', width: '115px', isVirtual: true, colIndex: null },
           { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
           { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false },
@@ -125,8 +140,23 @@ export const usePersonnelStore = defineStore('personnel', {
         }
       });
 
+      // Cột Khóa chính (Unique Key / ID): Luôn đứng đầu tiên
+      if (!seen.has('_primaryKey')) {
+        seen.add('_primaryKey');
+        list.unshift({
+          id: '_primaryKey',
+          label: '🔑 Mã định danh (Khóa chính)',
+          width: '160px',
+          tableWidth: '160px',
+          isVirtual: true,
+          isPrimaryKey: true,
+          colIndex: null,
+        });
+      }
+
       if (list.length === 0) {
         return [
+          { id: '_primaryKey', label: '🔑 Mã định danh (Khóa chính)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'code', label: 'Mã CB', width: '115px', isVirtual: true, colIndex: null },
           { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
           { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false },
@@ -176,8 +206,23 @@ export const usePersonnelStore = defineStore('personnel', {
         }
       });
 
+      // Cột Khóa chính Thân nhân (Unique Key / ID)
+      if (!seen.has('_primaryKey')) {
+        seen.add('_primaryKey');
+        list.unshift({
+          id: '_primaryKey',
+          label: '🔑 Mã định danh (Khóa chính)',
+          width: '160px',
+          tableWidth: '160px',
+          isVirtual: true,
+          isPrimaryKey: true,
+          colIndex: null,
+        });
+      }
+
       if (list.length === 0) {
         return [
+          { id: '_primaryKey', label: '🔑 Mã định danh (Khóa chính)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'relationshipName', label: 'Mối quan hệ', colIndex: '1', width: '130px', isVirtual: false },
           { id: 'relativeName', label: 'Họ và tên Thân nhân', colIndex: '2', width: '180px', isVirtual: false },
           { id: 'birthYear', label: 'Năm sinh', colIndex: '3', width: '110px', isVirtual: false },
@@ -208,8 +253,23 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
+      // Cột Khóa chính Chuyến đi (Unique Key / ID)
+      if (!seen.has('_primaryKey')) {
+        seen.add('_primaryKey');
+        list.unshift({
+          id: '_primaryKey',
+          label: '🔑 Mã định danh (Khóa chính)',
+          width: '160px',
+          tableWidth: '160px',
+          isVirtual: true,
+          isPrimaryKey: true,
+          colIndex: null,
+        });
+      }
+
       if (list.length === 0) {
         return [
+          { id: '_primaryKey', label: '🔑 Mã định danh (Khóa chính)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'cccdchuyendi', label: 'CCCD / Định danh người đi (cccdchuyendi)' },
           { id: 'countryName', label: 'Quốc gia / Nơi đến' },
           { id: 'departureDate', label: 'Ngày xuất cảnh' },
@@ -242,8 +302,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
       const getDefaultColumns = () => {
         return this.allAvailableColumns
-          .filter((c) => c.id !== 'code' && c.id !== '_parentPersonnelName')
-          .slice(0, 6)
+          .filter((c) => c.id !== '_primaryKey' && c.id !== 'code' && c.id !== '_parentPersonnelName')
           .map((c) => c.id);
       };
 
@@ -265,16 +324,22 @@ export const usePersonnelStore = defineStore('personnel', {
         dbRelCols = await getAppSettings('vue_visible_relative_columns', null);
       } catch (e) {}
 
+      const getDefaultRelativeColumns = () => {
+        return this.allAvailableRelativeColumns
+          .filter((c) => c.id !== '_primaryKey' && c.id !== 'code' && c.id !== '_parentPersonnelName')
+          .map((c) => c.id);
+      };
+
       let savedRel = dbRelCols && Array.isArray(dbRelCols) && dbRelCols.length > 0 ? dbRelCols : null;
       if (savedRel && Array.isArray(savedRel) && savedRel.length > 0) {
         const filtered = savedRel.filter((id) => validRelativeIds.has(id));
         if (filtered.length >= 3) {
           this.visibleRelativeColumns = filtered;
         } else {
-          this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
+          this.visibleRelativeColumns = getDefaultRelativeColumns();
         }
       } else {
-        this.visibleRelativeColumns = this.allAvailableRelativeColumns.slice(0, 7).map((c) => c.id);
+        this.visibleRelativeColumns = getDefaultRelativeColumns();
       }
 
       await this.fetchPersonnel();
@@ -362,7 +427,7 @@ export const usePersonnelStore = defineStore('personnel', {
             });
           }
 
-          // Collect trips
+          // Collect trips (Cán bộ)
           if (Array.isArray(matchedTrips)) {
             matchedTrips.forEach((t) => {
               allTrips.push({
@@ -370,6 +435,33 @@ export const usePersonnelStore = defineStore('personnel', {
                 personnelId: p.id,
                 personnelCode: p.code || '',
                 personnelName: p.name,
+              });
+            });
+          }
+
+          // Thu thập thêm chuyến đi của thân nhân cán bộ vào allTrips (nếu chưa có)
+          if (Array.isArray(matchedRelatives)) {
+            matchedRelatives.forEach((r) => {
+              let rCustom = {};
+              if (r.custom_data) {
+                try { rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data; } catch (e) {}
+              }
+              const rTrips = Array.isArray(r.trips) ? r.trips : (Array.isArray(rCustom.trips) ? rCustom.trips : []);
+              rTrips.forEach((rt) => {
+                const rtId = rt.id || rt.uniqueKey;
+                const exists = allTrips.some((et) => (rtId && (et.id === rtId || et.uniqueKey === rtId)));
+                if (!exists) {
+                  allTrips.push({
+                    ...rt,
+                    isRelative: true,
+                    personnelId: p.id,
+                    personnelCode: p.code || '',
+                    personnelName: rt.relativeName || r.relativeName || r.name || 'Thân nhân',
+                    relativeName: rt.relativeName || r.relativeName || r.name || 'Thân nhân',
+                    parentName: p.name,
+                    parentPersonnelName: p.name,
+                  });
+                }
               });
             });
           }

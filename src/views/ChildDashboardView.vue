@@ -20,18 +20,6 @@
       </div>
 
        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <!-- Bulk Delete Button (Same as PersonnelView) -->
-        <button
-          v-if="authStore.isAdmin && selectedTripKeys.length > 0"
-          type="button"
-          class="btn-action-danger-solid"
-          @click="handleBulkDeleteTrips"
-          title="Xóa tất cả các bản ghi đã chọn"
-        >
-          <i class="pi pi-trash"></i>
-          <span>Xóa đã chọn ({{ selectedTripKeys.length }})</span>
-        </button>
-
         <!-- ➕ Nút Thêm Cột Mới chuẩn Lark Base -->
         <Button
           v-if="authStore.isAdmin"
@@ -83,6 +71,17 @@
             </div>
           </div>
         </div>
+
+        <!-- Nút Xóa các bản ghi đã chọn (Tick chọn nhiều dòng) -->
+        <Button
+          v-if="selectedTrips.length > 0"
+          :label="`Xóa (${selectedTrips.length} đã chọn)`"
+          icon="pi pi-trash"
+          severity="danger"
+          size="small"
+          @click="handleBulkDeleteTrips"
+          style="font-size: 0.8rem;"
+        />
 
         <!-- + Thêm Bản Ghi Mới trực tiếp vào Bảng này -->
         <Button
@@ -172,7 +171,7 @@
     </div>
 
     <!-- Main Data Table Card (Matching PersonnelView exactly) -->
-    <div class="app-card" style="padding: 0; overflow: hidden; position: relative;">
+    <div class="app-card" style="padding: 0; overflow-x: auto; max-width: 100%; position: relative;">
       <DataTable
         v-model:selection="selectedTrips"
         :value="filteredList"
@@ -188,7 +187,7 @@
         stripedRows
         removableSort
         class="p-datatable-sm custom-datatable"
-        tableStyle="min-width: 60rem; table-layout: fixed;"
+        :tableStyle="{ minWidth: 'max-content', width: '100%' }"
         @row-click="onRowClick"
         @page="e => dtFirst = e.first"
       >
@@ -227,8 +226,16 @@
             </div>
           </template>
           <template #body="{ data }">
+            <!-- 0. Cột Khóa chính (_primaryKey) -->
+            <template v-if="col.id === '_primaryKey'">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-family: monospace; font-size: 0.76rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                <i class="pi pi-key" style="font-size: 0.7rem; color: #d97706;"></i>
+                {{ getCellValue(data, col.id) }}
+              </span>
+            </template>
+
             <!-- 1. Cột ảo Thông tin Cán bộ (configurable rows) -->
-            <template v-if="isNameColumn(col.id)">
+            <template v-else-if="isNameColumn(col.id)">
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
                 <!-- Tên cán bộ -->
                 <div v-if="nameColFields.name">
@@ -672,32 +679,6 @@
           </template>
           <template #body>
             <span style="color: #cbd5e1; font-size: 0.8rem;">·</span>
-          </template>
-        </Column>
-
-        <!-- Actions Column (Centered) -->
-        <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
-          <template #header>
-            <div style="text-align: center; width: 100%; font-weight: 700;">THAO TÁC</div>
-          </template>
-          <template #body="{ data }">
-            <div class="table-actions">
-              <Button
-                label="Chi tiết"
-                size="small"
-                outlined
-                severity="info"
-                @click.stop="openPersonnelDetail(data)"
-              />
-              <Button
-                v-if="authStore.isAdmin"
-                label="Xóa"
-                size="small"
-                outlined
-                severity="danger"
-                @click.stop="handleDeleteItem(data)"
-              />
-            </div>
           </template>
         </Column>
       </DataTable>
@@ -2464,6 +2445,20 @@ const allAvailableColumnsList = computed(() => {
     });
   }
 
+  // Cột Khóa chính (Unique Key / ID): Luôn đứng đầu tiên
+  if (!seen.has('_primaryKey')) {
+    seen.add('_primaryKey');
+    rawList.unshift({
+      id: '_primaryKey',
+      label: '🔑 Mã định danh (Khóa chính)',
+      width: '160px',
+      tableWidth: '160px',
+      colIndex: null,
+      isVirtual: true,
+      isPrimaryKey: true,
+    });
+  }
+
   return rawList;
 });
 
@@ -3351,46 +3346,6 @@ const resolveTargetPersonnel = (trip) => {
   return null;
 };
 
-const handleBulkDeleteTrips = async () => {
-  if (selectedTripKeys.value.length === 0) return;
-  if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedTripKeys.value.length} bản ghi đã chọn?`)) return;
-
-  const selectedKeySet = new Set(selectedTripKeys.value);
-  const selectedItems = filteredList.value.filter((t) => selectedKeySet.has(t.uniqueKey) || selectedKeySet.has(t.id));
-  const affectedPersonnelMap = new Map();
-
-  selectedItems.forEach((trip) => {
-    const person = resolveTargetPersonnel(trip);
-    if (person && !affectedPersonnelMap.has(person.id)) {
-      affectedPersonnelMap.set(person.id, JSON.parse(JSON.stringify(person)));
-    }
-  });
-
-  affectedPersonnelMap.forEach((person) => {
-    if (Array.isArray(person.trips)) {
-      person.trips = person.trips.filter((t) => !selectedKeySet.has(t.id) && !selectedKeySet.has(t.uniqueKey));
-    }
-    if (Array.isArray(person.relatives)) {
-      person.relatives.forEach((r) => {
-        if (Array.isArray(r.trips)) {
-          r.trips = r.trips.filter((t) => !selectedKeySet.has(t.id) && !selectedKeySet.has(t.uniqueKey));
-        }
-      });
-    }
-  });
-
-  try {
-    for (const [_, person] of affectedPersonnelMap) {
-      await personnelStore.savePerson(person);
-    }
-    await personnelStore.fetchPersonnel();
-    selectedTripKeys.value = [];
-    alert('Đã xóa thành công các bản ghi đã chọn!');
-  } catch (e) {
-    alert('Lỗi khi xóa hàng loạt: ' + (e.message || e));
-  }
-};
-
 const hasActiveFilters = computed(() => {
   return (
     statusFilter.value !== 'all' ||
@@ -3580,6 +3535,67 @@ const handleDeleteTrip = async (trip) => {
     alert('Đã xóa chuyến đi thành công!');
   } catch (e) {
     alert('Lỗi xóa chuyến đi: ' + (e.message || e));
+  }
+};
+
+const handleBulkDeleteTrips = async () => {
+  const count = selectedTrips.value.length;
+  if (!count) return;
+  if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${count} bản ghi đã chọn không?`)) return;
+
+  try {
+    for (const item of selectedTrips.value) {
+      const src = currentDashboardConfig.value?.source || '';
+      const isRelative = src === 'relatives' || src === 'relative' || Boolean(item.relativeName || item.cccdthannhan);
+      const isPersonnel = src === 'personnel' || (Boolean(item.positionName || item.position || item.departmentName) && !item.departureDate && !item.ngay_xuat_canh && !isRelative);
+
+      if (isRelative) {
+        await personnelStore.deleteRelative(item);
+      } else if (isPersonnel) {
+        await personnelStore.deletePerson(item);
+      } else {
+        // trip
+        const targetPerson = resolveTargetPersonnel(item);
+        if (targetPerson) {
+          const updatedPerson = JSON.parse(JSON.stringify(targetPerson));
+          if (Array.isArray(updatedPerson.trips)) {
+            updatedPerson.trips = updatedPerson.trips.filter((t) => !isSameTripItem(t, item));
+          }
+          if (Array.isArray(updatedPerson.relatives)) {
+            updatedPerson.relatives.forEach((r) => {
+              if (Array.isArray(r.trips)) {
+                r.trips = r.trips.filter((t) => !isSameTripItem(t, item));
+              }
+            });
+          }
+          let custom = {};
+          if (updatedPerson.custom_data) {
+            try {
+              custom = typeof updatedPerson.custom_data === 'string' ? JSON.parse(updatedPerson.custom_data) : updatedPerson.custom_data;
+            } catch (e) {}
+          }
+          if (Array.isArray(custom.trips)) {
+            custom.trips = custom.trips.filter((t) => !isSameTripItem(t, item));
+          }
+          delete custom['Khối B: Chuyến đi nước ngoài'];
+          if (Array.isArray(custom.relatives)) {
+            custom.relatives.forEach((r) => {
+              if (Array.isArray(r.trips)) {
+                r.trips = r.trips.filter((t) => !isSameTripItem(t, item));
+              }
+            });
+          }
+          updatedPerson.custom_data = custom;
+          await personnelStore.savePerson(updatedPerson);
+        }
+      }
+    }
+    selectedTrips.value = [];
+    await personnelStore.fetchPersonnel();
+    alert(`Đã xóa thành công ${count} bản ghi!`);
+  } catch (e) {
+    console.error('Bulk delete error in ChildDashboardView:', e);
+    alert('Có lỗi xảy ra khi xóa: ' + (e.message || e));
   }
 };
 
@@ -3818,8 +3834,10 @@ const initTopicColumns = async () => {
     }
   }
 
-  // 4. Mặc định: Hiển thị TOÀN BỘ các cột có trong chuyên đề (không bị giấu/bớt cột tạm bợ)
-  const allIds = allAvailableColumnsList.value.map((c) => c.id).filter((id) => id !== 'status' && id !== 'tripStatus');
+  // 4. Mặc định: Hiển thị TOÀN BỘ các cột có trong chuyên đề (cột _primaryKey mặc định ẩn nhưng có trong danh sách chọn)
+  const allIds = allAvailableColumnsList.value
+    .map((c) => c.id)
+    .filter((id) => id !== '_primaryKey' && id !== 'status' && id !== 'tripStatus');
   if (allIds.length > 0) {
     selectedColIds.value = sanitizeRelCols(allIds);
     finalizeColumns();

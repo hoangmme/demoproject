@@ -149,7 +149,7 @@
         removableSort
         :customSort="customSort"
         class="p-datatable-sm"
-        tableStyle="min-width: 60rem; table-layout: fixed;"
+        :tableStyle="{ minWidth: 'max-content', width: '100%' }"
         @row-click="onRowClick"
         @page="e => dtFirst = e.first"
       >
@@ -233,8 +233,16 @@
             </div>
           </template>
           <template #body="{ data }">
+            <!-- Cột Khóa chính (_primaryKey) -->
+            <template v-if="col.id === '_primaryKey'">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-family: monospace; font-size: 0.76rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                <i class="pi pi-key" style="font-size: 0.7rem; color: #d97706;"></i>
+                {{ getDisplayValue(data, col.id) }}
+              </span>
+            </template>
+
             <!-- Cột ảo Thông tin cán bộ -->
-            <template v-if="col.id === '_parentPersonnelName'">
+            <template v-else-if="col.id === '_parentPersonnelName'">
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
                 <strong style="color: #1f2937; font-size: 0.85rem;">{{ getPersonVirtualInfo(data).name }}</strong>
                 <span v-if="getPersonVirtualInfo(data).cccd" style="font-size: 0.72rem; color: #4b5563;">
@@ -480,32 +488,6 @@
             <span style="color: #cbd5e1; font-size: 0.8rem;">·</span>
           </template>
         </Column>
-
-        <!-- Actions column (Centered) -->
-        <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
-          <template #header>
-            <div style="text-align: center; width: 100%; font-weight: 700;">THAO TÁC</div>
-          </template>
-          <template #body="{ data }">
-            <div class="table-actions">
-              <Button
-                label="Chi tiết"
-                size="small"
-                outlined
-                severity="info"
-                @click.stop="openEditDialog(data)"
-              />
-              <Button
-                v-if="authStore.isAdmin"
-                label="Xóa"
-                size="small"
-                outlined
-                severity="danger"
-                @click.stop="handleDeleteOne(data)"
-              />
-            </div>
-          </template>
-        </Column>
       </DataTable>
     </div>
 
@@ -651,7 +633,8 @@
         removableSort
         :customSort="customSort"
         class="p-datatable-sm"
-        tableStyle="min-width: 60rem; table-layout: fixed;"
+        :tableStyle="{ minWidth: 'max-content', width: '100%' }"
+        @row-click="onRelativeRowClick"
         @page="e => dtFirstRel = e.first"
       >
         <Column selectionMode="multiple" :headerStyle="{ width: '45px', minWidth: '45px' }" :bodyStyle="{ width: '45px', minWidth: '45px' }" />
@@ -747,7 +730,14 @@
             </div>
           </template>
           <template #body="{ data }">
-            <template v-if="col.format === 'checkbox_file_loop'">
+            <!-- Cột Khóa chính (_primaryKey) -->
+            <template v-if="col.id === '_primaryKey'">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-family: monospace; font-size: 0.76rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                <i class="pi pi-key" style="font-size: 0.7rem; color: #d97706;"></i>
+                {{ getDisplayValue(data, col.id) }}
+              </span>
+            </template>
+            <template v-else-if="col.format === 'checkbox_file_loop'">
               <div v-if="getCheckboxFileLoopItems(data, col.id).length > 0" style="display: flex; flex-direction: column; gap: 6px;">
                 <div
                   v-for="(it, iIdx) in getCheckboxFileLoopItems(data, col.id)"
@@ -834,31 +824,6 @@
             <span v-else :class="col.id === 'countryName' || col.id === 'country' || col.id === 'content' ? 'badge-pill badge-blue' : ''">
               {{ getDisplayValue(data, col.id) }}
             </span>
-          </template>
-        </Column>
-        
-        <!-- Actions column (Centered with Chi tiết + Xóa) -->
-        <Column headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '150px', minWidth: '150px' }" :bodyStyle="{ width: '150px', minWidth: '150px' }">
-          <template #header>
-            <div style="text-align: center; width: 100%; font-weight: 700;">THAO TÁC</div>
-          </template>
-          <template #body="{ data }">
-            <div class="table-actions">
-              <Button
-                label="Chi tiết"
-                size="small"
-                outlined
-                severity="info"
-                @click="handleRelativeDetail(data)"
-              />
-              <Button
-                label="Xóa"
-                size="small"
-                outlined
-                severity="danger"
-                @click.stop="handleDeleteRelative(data)"
-              />
-            </div>
           </template>
         </Column>
       </DataTable>
@@ -2348,6 +2313,12 @@ const openAddColumnModal = () => {
 
 const onRowClick = (event) => {
   openEditDialog(event.data);
+};
+
+const onRelativeRowClick = (event) => {
+  if (event?.data) {
+    handleRelativeDetail(event.data);
+  }
 };
 
 const handleDeleteOne = async (person) => {
