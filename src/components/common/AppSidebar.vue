@@ -310,6 +310,11 @@
           <i class="pi pi-history"></i>
           <span>Nhật ký hệ thống</span>
         </router-link>
+
+        <router-link to="/settings-import" class="app-nav-item" title="Cài đặt chung & Cấu hình cột">
+          <i class="pi pi-cog"></i>
+          <span>Cài đặt chung (Cấu hình)</span>
+        </router-link>
       </template>
     </nav>
 

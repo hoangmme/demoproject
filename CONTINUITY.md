@@ -1196,3 +1196,14 @@
        * Giữ đầy đủ các nút thao tác nhanh (✏️ Đổi tên, 🗑️ Xóa nhóm thống kê).
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+---
+
+### 83. KHÔI PHỤC MENU CÀI ĐẶT CHUNG (CẤU HÌNH CỘT & HỆ THỐNG) TRÊN SIDEBAR
+- **Strategic Context**:
+  - Người dùng phản hồi: Menu "Cài đặt chung (Cấu hình cột)" bị biến mất khỏi Sidebar (trước đó trợ lý hiểu nhầm là xóa hẳn menu này). Người dùng khẳng định trang Cài đặt chung/Cấu hình cột vẫn rất cần thiết để sử dụng các tính năng quan trọng (xuất mẫu 3 sheet, khóa liên kết CCCD, mã thẻ tag, ảnh nền...).
+- **Giải pháp**:
+  - Khôi phục ngay liên kết `/settings-import` trên Sidebar trong mục **Hệ thống**: `Cài đặt chung (Cấu hình)` với icon `pi pi-cog`.
+  - Giữ nguyên vẹn 100% toàn bộ 5 tab chức năng trong [SettingsImportView.vue](file:///Users/hoji/Documents/code/demoproject/src/views/SettingsImportView.vue) (Cấu hình Cột Cán bộ, Thân nhân, Chuyến đi, Mã Thẻ Tag, Ảnh Nền Đăng nhập, Xuất 3 sheet, Khóa liên kết CCCD).
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
