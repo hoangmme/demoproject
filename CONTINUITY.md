@@ -1076,3 +1076,23 @@
      - Mọi thẻ KPI, biểu đồ, đếm số liệu theo chuyên đề được quản lý tập trung và trực quan tại trang Thống kê.
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+---
+
+### 79. XÓA BỎ HOÀN TOÀN TAB CẤU HÌNH CHUYÊN ĐỀ TRONG TRANG CÀI ĐẶT (SETTINGS)
+- **Strategic Context**:
+  - Người dùng yêu cầu dứt khoát: "bỏ luôn tab cấu hình chuyên đề đi - vì thêm bảng ở menu dashboard rồi? đâu còn lý do gì giữ lại bảng cấu hình chuyên đề?".
+  - Chuẩn hóa tối đa: Tạo bảng mới đã có nút `+` trực tiếp trên Sidebar và Nhập liệu; quản lý cột đã có ColumnHeaderMenu và nút `+` cuối bảng; thống kê đã có trang Dashboard riêng. Tab cấu hình chuyên đề trong Cài đặt không còn lý do tồn tại.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Xóa hoàn toàn Tab 4 khỏi `SettingsImportView.vue`**:
+     - Gỡ bỏ nút tab `Quản lý Danh sách Bảng (Tables)` khỏi thanh navigation tabs.
+     - Xóa bỏ toàn bộ khối giao diện `<div v-else-if="activeTab === 'dashboard'" ...>...</div>` (khoảng 400 dòng code giao diện dư thừa).
+     - Đơn giản hóa nút Lưu ở header thành `Lưu Cấu hình`.
+  2. **Các Tab còn lại trong Cài đặt Hệ thống**:
+     - Tab 1: Cấu hình Cột Cán bộ
+     - Tab 2: Cấu hình Cột Thân nhân
+     - Tab 3: Cấu hình Cột Chuyến đi
+     - Tab 4: Bảng Tra cứu Mã Thẻ Tag
+     - Tab 5: Tùy chỉnh Nhận diện & Ảnh Nền Đăng nhập
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
