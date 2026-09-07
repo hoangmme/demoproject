@@ -51,7 +51,45 @@
             <option value="checkbox">Hộp kiểm đơn (Checkbox)</option>
             <option value="checkbox_file">Hộp kiểm kèm Tệp (Checkbox + File)</option>
             <option value="file">Tệp đính kèm (Attachment)</option>
+            <option value="lookup">🔗 Tham chiếu tự động (Lookup)</option>
           </select>
+        </div>
+
+        <!-- Cấu hình Tham chiếu Lookup nếu là lookup -->
+        <div v-if="editFormat === 'lookup'" class="menu-field" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; margin-top: 6px;">
+          <div style="font-size: 0.76rem; font-weight: 700; color: #1d4ed8; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
+            <i class="pi pi-link"></i>
+            <span>Cấu hình Tham chiếu (Lookup)</span>
+          </div>
+          
+          <div style="margin-bottom: 6px;">
+            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Bảng đích:</label>
+            <select v-model="editLookupTarget" class="menu-select" @change="editLookupField = ''; handleSaveLookup()">
+              <option value="personnel">Bảng Cán bộ / Hồ sơ chính</option>
+              <option value="relatives">Bảng Thân nhân</option>
+              <option value="trips">Bảng Chuyến đi</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 6px;">
+            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Cột lấy dữ liệu:</label>
+            <select v-model="editLookupField" class="menu-select" @change="handleSaveLookup">
+              <option value="">-- Chọn cột cần hiển thị --</option>
+              <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
+                {{ c.label }} ({{ c.id }})
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Khóa liên kết (Tùy chọn):</label>
+            <input
+              v-model="editLookupLinkCol"
+              class="menu-input"
+              placeholder="Mặc định: Khóa CCCD"
+              @blur="handleSaveLookup"
+            />
+          </div>
         </div>
 
         <!-- Tùy chọn Options nếu là dropdown -->
@@ -174,6 +212,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { usePersonnelStore } from "@/stores/personnel";
 
 const props = defineProps({
   visible: {
@@ -206,11 +245,14 @@ const emit = defineEmits([
   "change-width",
   "change-form-width",
   "change-required",
+  "change-lookup",
   "change-name-col-field",
   "delete-column",
   "hide-column",
   "filter-column",
 ]);
+
+const personnelStore = usePersonnelStore();
 
 const editLabel = ref("");
 const editFormat = ref("text");
@@ -218,6 +260,46 @@ const editOptions = ref("");
 const editWidth = ref(160);
 const editFormWidth = ref("50");
 const editRequired = ref(false);
+
+const editLookupTarget = ref("personnel");
+const editLookupLinkCol = ref("");
+const editLookupField = ref("");
+
+const availablePersonnelCols = computed(() => {
+  const list = [];
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && c.id !== 'code') list.push({ id: c.id, label: c.label || c.id });
+    });
+  });
+  return list;
+});
+
+const availableRelativeCols = computed(() => {
+  const list = [];
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') list.push({ id: c.id, label: c.label || c.id });
+    });
+  });
+  return list;
+});
+
+const availableTripCols = computed(() => {
+  const list = [];
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') list.push({ id: c.id, label: c.label || c.id });
+    });
+  });
+  return list;
+});
+
+const targetLookupCols = computed(() => {
+  if (editLookupTarget.value === 'relatives') return availableRelativeCols.value;
+  if (editLookupTarget.value === 'trips') return availableTripCols.value;
+  return availablePersonnelCols.value;
+});
 
 const defaultFallbackParentFields = [
   { key: 'name', label: 'Họ và tên' },
@@ -247,6 +329,9 @@ watch(
       editWidth.value = parseInt(col.tableWidth || col.width) || 160;
       editFormWidth.value = String(col.formWidth || col.width || "50").replace("%", "");
       editRequired.value = Boolean(col.required);
+      editLookupTarget.value = col.lookupTarget || "personnel";
+      editLookupLinkCol.value = col.lookupLinkCol || "";
+      editLookupField.value = col.lookupField || "";
     }
   },
   { immediate: true }
@@ -262,8 +347,20 @@ const handleSaveRename = () => {
   closeMenu();
 };
 
+const handleSaveLookup = () => {
+  emit("change-lookup", {
+    colId: props.column.id,
+    lookupTarget: editLookupTarget.value,
+    lookupLinkCol: editLookupLinkCol.value.trim(),
+    lookupField: editLookupField.value,
+  });
+};
+
 const handleFormatChange = () => {
   emit("change-format", { colId: props.column.id, newFormat: editFormat.value });
+  if (editFormat.value === 'lookup') {
+    handleSaveLookup();
+  }
 };
 
 const handleSaveOptions = () => {

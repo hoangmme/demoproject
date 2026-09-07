@@ -1143,6 +1143,7 @@
       @change-width="onChangeColumnWidth"
       @change-form-width="onChangeColumnFormWidth"
       @change-required="onColChangeRequired"
+      @change-lookup="onChangeColumnLookup"
       @change-name-col-field="toggleNameColField"
       @delete-column="onDeleteColumnFromTable"
       @hide-column="onHideColumn"
@@ -2409,6 +2410,27 @@ const onChangeColumnFormat = async ({ colId, newFormat }) => {
     for (const c of (g.columns || [])) {
       if (c.id === colId) {
         c.format = newFormat;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings(mappingKey, mapping);
+  }
+};
+
+const onChangeColumnLookup = async ({ colId, lookupTarget, lookupLinkCol, lookupField }) => {
+  const { mappingKey, mapping } = getActiveTableMapping();
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.format = 'lookup';
+        c.lookupTarget = lookupTarget;
+        c.lookupLinkCol = lookupLinkCol;
+        c.lookupField = lookupField;
         found = true;
         break;
       }

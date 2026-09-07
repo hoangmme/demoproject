@@ -1303,5 +1303,29 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+---
+
+### 88. NÂNG CẤP THAM CHIẾU TỰ ĐỘNG ĐA BẢNG (LOOKUP ENGINE) & GIẢI QUYẾT BÀI TOÁN "CỘT PRIMAL" (PRIMARY KEY) (2026-09-07)
+- **Strategic Context**:
+  - Người dùng hỏi: "Ví dụ cột A muốn tham chiếu dữ liệu bảng B thì sao? trước đây tôi chọn cột primal ấy giờ làm sao? bạn có chuyển qua tham chiếu tự động giúp tôi chưa?".
+  - Bản chất: Khái niệm "cột primal" mà người dùng nhắc tới chính là **Primary Key (Khóa định danh / Khóa chính)**. Trong mô hình dữ liệu quan hệ, để Bảng A tham chiếu sang Bảng B thì Bảng A cần có Khóa liên kết khớp với Primary Key của Bảng B. Hệ thống trước đây đã quy hoạch tập trung Primary Key và Link Key tại tab **"Khóa Định danh & Liên kết (CCCD)"**.
+  - Tính năng "Tham chiếu tự động (Lookup)" trước đây bị cố định cứng chỉ tra cứu từ Cán bộ qua CCCD. Cần mở rộng để cột ở bất kỳ bảng nào cũng có thể linh hoạt tham chiếu dữ liệu từ Bảng Cán bộ, Thân nhân, hay Chuyến đi.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Đa dạng hóa Cấu hình Tham chiếu Tự động đa bảng (`AddColumnDialog.vue`, `ColumnHeaderMenu.vue`)**:
+     - Cho phép chọn **Bảng cần tham chiếu đến (`lookupTarget`)**: Bảng Cán bộ (`personnel`), Bảng Thân nhân (`relatives`), hoặc Bảng Chuyến đi (`trips`).
+     - Cho phép chọn **Cột khóa liên kết trên Bảng hiện tại (`lookupLinkCol`)**: Tùy biến cột dùng để so khớp, hoặc để trống để hệ thống tự động nhận diện theo Khóa định danh chuẩn (CCCD).
+     - Cho phép chọn **Cột dữ liệu cần lấy từ bảng đích (`lookupField`)**: Tự động hiển thị toàn bộ các cột của bảng được chọn làm đích.
+     - Tích hợp cấu hình Lookup trực tiếp trong Menu tiêu đề cột (`ColumnHeaderMenu.vue`) giúp người dùng có thể xem và đổi cấu hình tham chiếu ngay trên bảng.
+  2. **Động cơ phân giải Lookup đa bảng (`src/utils/formatters.js` - `evaluateLookup`)**:
+     - Khi `target === 'personnel'`: Dò tìm hồ sơ Cán bộ qua khóa liên kết tùy chọn hoặc fallback sang `cccdparent` / `cccd`.
+     - Khi `target === 'relatives'`: Dò tìm hồ sơ Thân nhân trong `personnelStore.relativesList` khớp theo khóa liên kết hoặc `cccdthannhan`.
+     - Khi `target === 'trips'`: Dò tìm chuyến đi trong danh sách chuyến đi khớp theo mã chuyến đi (`cccdchuyendi` / ID).
+     - An toàn truy xuất trường dữ liệu từ cả thuộc tính trực tiếp lẫn trong `custom_data`.
+  3. **Đồng bộ trên Bảng Cán bộ, Thân nhân và Bảng Chuyên đề (`PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - Kết nối sự kiện `@change-lookup` để lưu tức thì vào cấu hình cột của bảng hoặc cấu hình Chuyên đề trống.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+
 
 

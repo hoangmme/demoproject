@@ -47,7 +47,7 @@
           <option value="checkbox">Hộp kiểm đơn (Checkbox)</option>
           <option value="checkbox_file_loop">Hộp kiểm kèm Tệp đính kèm</option>
           <option value="file">Tệp đính kèm (File / Ảnh / PDF)</option>
-          <option value="lookup">🔗 Tham chiếu tự động (Lookup từ Cán bộ qua CCCD)</option>
+          <option value="lookup">🔗 Tham chiếu tự động (Lookup từ Bảng khác)</option>
           <option value="formula">⚡ Công thức tính toán (Formula)</option>
           <option value="rollup">📊 Tính toán tổng hợp (Rollup)</option>
         </select>
@@ -68,30 +68,52 @@
         </div>
       </div>
 
-      <!-- CẤU HÌNH THAM CHIẾU TỰ ĐỘNG (LOOKUP - LIÊN KẾT QUA CCCD) -->
-      <div v-if="form.format === 'lookup'" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+      <!-- CẤU HÌNH THAM CHIẾU TỰ ĐỘNG (LOOKUP ĐA BẢNG) -->
+      <div v-if="form.format === 'lookup'" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
         <div style="font-size: 0.76rem; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 6px;">
           <i class="pi pi-link"></i>
-          <span>Cấu hình Tham chiếu (Lookup) liên kết qua CCCD Cán bộ</span>
+          <span>Cấu hình Tham chiếu Tự động (Lookup)</span>
         </div>
         <div style="font-size: 0.72rem; color: #3b82f6; line-height: 1.35;">
-          Tự động lấy dữ liệu từ hồ sơ Cán bộ liên quan để hiển thị trên bảng này mà không cần nhập trùng lặp.
+          Tự động tra cứu và lấy dữ liệu từ bảng khác hiển thị lên bảng này thông qua Khóa liên kết / Mã định danh mà không cần nhập trùng lặp.
         </div>
+
+        <!-- 1. Bảng đích cần tham chiếu -->
         <div>
           <label style="font-size: 0.72rem; font-weight: 700; color: #1e3a8a; display: block; margin-bottom: 3px;">
-            Chọn trường dữ liệu cần lấy từ Cán bộ: <span style="color: #ef4444;">*</span>
+            1. Bảng cần tham chiếu đến: <span style="color: #ef4444;">*</span>
+          </label>
+          <select v-model="form.lookupTarget" class="dialog-select" @change="form.lookupField = ''">
+            <option value="personnel">Bảng Cán bộ / Hồ sơ chính</option>
+            <option value="relatives">Bảng Thân nhân</option>
+            <option value="trips">Bảng Chuyến đi</option>
+          </select>
+        </div>
+
+        <!-- 2. Cột khóa liên kết trên Bảng hiện tại (Link Key) -->
+        <div>
+          <label style="font-size: 0.72rem; font-weight: 700; color: #1e3a8a; display: block; margin-bottom: 3px;">
+            2. Cột khóa liên kết trên bảng này (Link Key):
+          </label>
+          <select v-model="form.lookupLinkCol" class="dialog-select">
+            <option value="">-- Mặc định (Tự động theo Khóa định danh CCCD / Mã liên kết) --</option>
+            <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
+              {{ c.label }} ({{ c.id }})
+            </option>
+          </select>
+          <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
+            Cột trên bảng hiện tại chứa mã để so khớp với bảng đích. Để mặc định nếu bảng đã có liên kết CCCD chuẩn.
+          </div>
+        </div>
+
+        <!-- 3. Cột dữ liệu cần lấy từ bảng đích -->
+        <div>
+          <label style="font-size: 0.72rem; font-weight: 700; color: #1e3a8a; display: block; margin-bottom: 3px;">
+            3. Cột dữ liệu cần lấy từ bảng đích: <span style="color: #ef4444;">*</span>
           </label>
           <select v-model="form.lookupField" class="dialog-select">
-            <option value="">-- Chọn cột cần hiển thị từ Cán bộ --</option>
-            <option value="name">Họ và tên Cán bộ (name)</option>
-            <option value="cccd">Số CCCD Cán bộ (cccd)</option>
-            <option value="positionName">Chức vụ Cán bộ (positionName)</option>
-            <option value="departmentName">Đơn vị / Phòng ban Cán bộ (departmentName)</option>
-            <option value="birthYear">Năm sinh (birthYear)</option>
-            <option value="gender">Giới tính (gender)</option>
-            <option value="phone">Số điện thoại (phone)</option>
-            <option value="hometown">Quê quán (hometown)</option>
-            <option v-for="c in availablePersonnelCols" :key="c.id" :value="c.id">
+            <option value="">-- Chọn cột cần hiển thị --</option>
+            <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
               {{ c.label }} ({{ c.id }})
             </option>
           </select>
@@ -225,6 +247,7 @@ const form = ref({
   width: '50',
   required: false,
   lookupTarget: 'personnel',
+  lookupLinkCol: '',
   lookupField: '',
   formulaType: 'presence_status',
 });
@@ -242,6 +265,7 @@ watch(
         width: '50',
         required: false,
         lookupTarget: 'personnel',
+        lookupLinkCol: '',
         lookupField: '',
         formulaType: 'presence_status',
       };
@@ -261,6 +285,42 @@ const availablePersonnelCols = computed(() => {
   return list;
 });
 
+const availableRelativeCols = computed(() => {
+  const list = [];
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') {
+        list.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+  return list;
+});
+
+const availableTripCols = computed(() => {
+  const list = [];
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') {
+        list.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+  return list;
+});
+
+const currentTableCols = computed(() => {
+  if (props.tableSource === 'relatives') return availableRelativeCols.value;
+  if (props.tableSource === 'trips') return availableTripCols.value;
+  return availablePersonnelCols.value;
+});
+
+const targetLookupCols = computed(() => {
+  if (form.value.lookupTarget === 'relatives') return availableRelativeCols.value;
+  if (form.value.lookupTarget === 'trips') return availableTripCols.value;
+  return availablePersonnelCols.value;
+});
+
 const onLabelInput = () => {
   if (form.value.label) {
     form.value.id = generateSlug(form.value.label);
@@ -277,7 +337,7 @@ const handleSave = async () => {
     return;
   }
   if (form.value.format === 'lookup' && !form.value.lookupField) {
-    alert('Vui lòng chọn trường dữ liệu cần lấy từ Cán bộ!');
+    alert('Vui lòng chọn cột dữ liệu cần lấy từ bảng đích!');
     return;
   }
 
@@ -292,7 +352,8 @@ const handleSave = async () => {
       required: Boolean(form.value.required),
       options: form.value.options ? form.value.options.trim() : '',
       ...(form.value.format === 'lookup' ? {
-        lookupTarget: 'personnel',
+        lookupTarget: form.value.lookupTarget || 'personnel',
+        lookupLinkCol: form.value.lookupLinkCol || '',
         lookupField: form.value.lookupField,
       } : {}),
       ...(form.value.format === 'formula' ? {

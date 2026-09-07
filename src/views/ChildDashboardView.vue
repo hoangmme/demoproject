@@ -984,6 +984,7 @@
       @change-width="onChildChangeColumnWidth"
       @change-form-width="onChildChangeColumnFormWidth"
       @change-required="onChildChangeColumnRequired"
+      @change-lookup="onChildChangeColumnLookup"
       @change-name-col-field="toggleNameColField"
       @delete-column="onChildDeleteColumnFromTable"
       @hide-column="onChildHideColumn"
@@ -1944,6 +1945,37 @@ const onChildChangeColumnFormat = async ({ colId, newFormat }) => {
   }
   if (found) {
     await saveAppSettings(key, mapping);
+  }
+};
+
+const onChildChangeColumnLookup = async ({ colId, lookupTarget, lookupLinkCol, lookupField }) => {
+  const { key, mapping } = getTargetMappingRef();
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.format = 'lookup';
+        c.lookupTarget = lookupTarget;
+        c.lookupLinkCol = lookupLinkCol;
+        c.lookupField = lookupField;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings(key, mapping);
+  }
+  if (!found && currentDashboardConfig.value?.customColumns) {
+    const c = currentDashboardConfig.value.customColumns.find((col) => col.id === colId);
+    if (c) {
+      c.format = 'lookup';
+      c.lookupTarget = lookupTarget;
+      c.lookupLinkCol = lookupLinkCol;
+      c.lookupField = lookupField;
+      await saveAppSettings('custom_dashboards_config', personnelStore.customDashboards);
+    }
   }
 };
 

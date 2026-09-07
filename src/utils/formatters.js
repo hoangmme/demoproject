@@ -1305,8 +1305,9 @@ export const formatOptions = [
 
 /**
  * Đánh giá giá trị cột Tham chiếu tự động (Lookup)
- * @param {Object} item - Bản ghi hiện tại (chuyến đi, thân nhân...)
- * @param {Object} col - Cấu hình cột lookup
+ * Hỗ trợ tra cứu đa bảng: Cán bộ (personnel), Thân nhân (relatives), Chuyến đi (trips)
+ * @param {Object} item - Bản ghi hiện tại (chuyến đi, thân nhân, cán bộ...)
+ * @param {Object} col - Cấu hình cột lookup (chứa lookupTarget, lookupField, lookupLinkCol)
  * @param {Object} personnelStore - Store dữ liệu cán bộ
  */
 export const evaluateLookup = (item, col, personnelStore) => {
@@ -1315,18 +1316,86 @@ export const evaluateLookup = (item, col, personnelStore) => {
   const field = col.lookupField;
   if (!field) return '-';
 
-  let parent = item.rawPerson;
-  if (!parent && personnelStore) {
-    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-    const parentKey = item.cccdparent || item.parentCccd || item[pKeyField];
-    if (parentKey) {
-      parent = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(parentKey) : null;
+  const getProp = (obj, key) => {
+    if (!obj || !key) return undefined;
+    if (obj[key] !== undefined && obj[key] !== null) return obj[key];
+    let cd = obj.custom_data;
+    if (typeof cd === 'string') {
+      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
     }
+    return cd?.[key];
+  };
+
+  // 1. Tham chiếu đến Bảng Cán bộ (personnel)
+  if (target === 'personnel') {
+    let parent = item.rawPerson;
+    if (!parent && personnelStore) {
+      const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+      const linkCol = col.lookupLinkCol;
+      const parentKey = linkCol ? getProp(item, linkCol) : (item.cccdparent || item.parentCccd || item[pKeyField]);
+      if (parentKey) {
+        parent = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(parentKey) : null;
+      }
+    }
+    if (parent) {
+      const val = getProp(parent, field);
+      return val !== undefined && val !== null && val !== '' ? String(val) : '-';
+    }
+    return '-';
   }
 
-  if (target === 'personnel' && parent) {
-    const val = parent[field] !== undefined ? parent[field] : parent.custom_data?.[field];
-    return val !== undefined && val !== null && val !== '' ? String(val) : '-';
+  // 2. Tham chiếu đến Bảng Thân nhân (relatives)
+  if (target === 'relatives') {
+    if (!personnelStore) return '-';
+    const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+    const linkCol = col.lookupLinkCol;
+    const searchKey = linkCol ? getProp(item, linkCol) : (item.cccdthannhan || item[rKeyField] || item.cccd);
+    if (!searchKey) return '-';
+
+    const relativesList = personnelStore.relativesList || [];
+    const rel = relativesList.find((r) => {
+      const k = getProp(r, rKeyField) ?? r.cccdthannhan ?? r.cccd;
+      return String(k).trim() === String(searchKey).trim();
+    });
+
+    if (rel) {
+      const val = getProp(rel, field);
+      return val !== undefined && val !== null && val !== '' ? String(val) : '-';
+    }
+    return '-';
+  }
+
+  // 3. Tham chiếu đến Bảng Chuyến đi (trips)
+  if (target === 'trips') {
+    if (!personnelStore) return '-';
+    const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
+    const linkCol = col.lookupLinkCol;
+    const searchKey = linkCol ? getProp(item, linkCol) : (item.cccdchuyendi || item[tKeyField] || item.id);
+    if (!searchKey) return '-';
+
+    let targetTrip = null;
+    if (Array.isArray(item.trips)) {
+      targetTrip = item.trips.find((t) => {
+        const k = getProp(t, tKeyField) ?? t.id;
+        return String(k).trim() === String(searchKey).trim();
+      });
+    }
+    if (!targetTrip && personnelStore.personnelList) {
+      for (const p of personnelStore.personnelList) {
+        if (p.trips && Array.isArray(p.trips)) {
+          targetTrip = p.trips.find((t) => {
+            const k = getProp(t, tKeyField) ?? t.id;
+            return String(k).trim() === String(searchKey).trim();
+          });
+          if (targetTrip) break;
+        }
+      }
+    }
+    if (targetTrip) {
+      const val = getProp(targetTrip, field);
+      return val !== undefined && val !== null && val !== '' ? String(val) : '-';
+    }
+    return '-';
   }
 
   return '-';
