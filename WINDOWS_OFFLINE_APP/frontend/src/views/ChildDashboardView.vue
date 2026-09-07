@@ -241,28 +241,28 @@
               </span>
             </template>
 
-            <!-- 1. Cột ảo Thông tin Cán bộ (configurable rows) -->
+            <!-- 1. Cột ảo Thông tin Đối tượng / Cán bộ / Học sinh (configurable fields) -->
             <template v-else-if="isNameColumn(col.id)">
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
-                <!-- Tên cán bộ -->
-                <div v-if="nameColFields.name">
-                  <span v-if="data.isRelative || currentDashboardConfig.source === 'relatives'" style="font-size: 0.7rem; color: #64748b; font-weight: 600;">Cán bộ: </span>
-                  <strong style="color: #0f172a; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
-                    {{ getPersonInfo(data).name }}
-                  </strong>
-                </div>
-                <!-- CCCD Cán bộ -->
-                <div v-if="nameColFields.cccdCB && getPersonInfo(data).cccdCB" style="font-size: 0.72rem; color: #475569; font-weight: 500;">
-                  {{ getPersonInfo(data).cccdCB }}
-                </div>
-                <!-- Chức vụ -->
-                <div v-if="nameColFields.position && getPersonInfo(data).position" style="font-size: 0.72rem; color: #334155;">
-                  {{ getPersonInfo(data).position }}
-                </div>
-                <!-- Đơn vị công tác -->
-                <div v-if="nameColFields.department && getPersonInfo(data).department" style="font-size: 0.72rem; color: #64748b;">
-                  {{ getPersonInfo(data).department }}
-                </div>
+                <template v-for="(opt, fIdx) in activeParentFieldsList" :key="opt.key">
+                  <div v-if="getPersonFieldValue(data, opt.key)">
+                    <!-- Dòng Họ tên / Trường chính: đậm và nổi bật -->
+                    <strong
+                      v-if="opt.key === 'name' || (fIdx === 0 && !activeParentFieldsList.some(o => o.key === 'name'))"
+                      style="color: #0f172a; font-weight: 700; font-size: 0.85rem; cursor: pointer;"
+                    >
+                      <span v-if="(data.isRelative || currentDashboardConfig.source === 'relatives') && opt.key === 'name'" style="font-size: 0.7rem; color: #64748b; font-weight: 600;">
+                        {{ getParentColPrefix() }}:
+                      </span>
+                      {{ getPersonFieldValue(data, opt.key) }}
+                    </strong>
+                    <!-- Các dòng thuộc tính tiếp theo: hiển thị rõ Tiêu đề cột + Giá trị -->
+                    <div v-else style="font-size: 0.72rem; color: #475569; line-height: 1.3;">
+                      <span style="color: #64748b; font-weight: 600;">{{ opt.label }}: </span>
+                      <span style="color: #334155;">{{ getPersonFieldValue(data, opt.key) }}</span>
+                    </div>
+                  </div>
+                </template>
               </div>
             </template>
 
@@ -942,11 +942,24 @@
     <!-- Name Column Config Popover -->
     <div v-if="showNameColConfig" class="name-col-config-overlay" @click.self="showNameColConfig = false">
       <div class="name-col-config-panel" :style="nameColConfigPos">
-        <div style="font-weight: 600; font-size: 0.82rem; margin-bottom: 8px; color: #1e293b;">Tùy chỉnh cột "Thông tin cán bộ"</div>
-        <label v-for="opt in nameColFieldOptions" :key="opt.key" class="name-col-opt">
-          <input type="checkbox" :checked="nameColFields[opt.key]" @change="toggleNameColField(opt.key)" />
-          <span>{{ opt.label }}</span>
-        </label>
+        <div style="font-weight: 700; font-size: 0.82rem; margin-bottom: 4px; color: #1e293b;">
+          Tùy chỉnh trường hiển thị ({{ getParentColPrefix() }})
+        </div>
+        <div style="font-size: 0.68rem; color: #64748b; margin-bottom: 8px;">
+          Tick chọn các cột từ hồ sơ chính để hiển thị gộp vào cột này:
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; padding-right: 4px;">
+          <label
+            v-for="opt in availableParentFields"
+            :key="opt.key"
+            class="name-col-opt"
+            style="display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: #334155; cursor: pointer; padding: 2px 4px;"
+            :style="nameColFields[opt.key] ? 'background: #eff6ff; font-weight: 600; color: #1d4ed8;' : ''"
+          >
+            <input type="checkbox" :checked="Boolean(nameColFields[opt.key])" @change="toggleNameColField(opt.key)" style="accent-color: #2563eb; cursor: pointer;" />
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ opt.label }}</span>
+          </label>
+        </div>
       </div>
     </div>
 
@@ -964,6 +977,7 @@
       :column="selectedChildMenuCol"
       :position="childColMenuPosition"
       :nameColFields="nameColFields"
+      :availableParentFields="availableParentFields"
       @rename-column="onChildRenameColumn"
       @change-format="onChildChangeColumnFormat"
       @change-options="onChildChangeColumnOptions"
@@ -1006,19 +1020,117 @@ const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 const isExportDocxDialogOpen = ref(false);
 
-// ===== Name Column Config =====
+// ===== Name Column Config (Linh hoạt cho mọi mô hình: Cán bộ, Học sinh, Nhân sự...) =====
 const NAME_COL_IDS = new Set(['_parentPersonnelName']);
 const isNameColumn = (colId) => NAME_COL_IDS.has(colId);
 
-const nameColFieldOptions = [
-  { key: 'name', label: 'Họ và tên Cán bộ' },
-  { key: 'cccdCB', label: 'CCCD Cán bộ' },
-  { key: 'position', label: 'Chức vụ Cán bộ' },
-  { key: 'department', label: 'Đơn vị công tác' },
-];
+const availableParentFields = computed(() => {
+  const list = [];
+  const seen = new Set();
+
+  // 1. Cột Họ và tên (luôn là trường định danh chính)
+  list.push({ key: 'name', label: 'Họ và tên' });
+  seen.add('name');
+
+  // 2. Toàn bộ các cột từ Bảng Cán bộ / Hồ sơ chính (theo cấu hình cài đặt)
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c && c.id && c.id !== 'stt' && !seen.has(c.id)) {
+        seen.add(c.id);
+        list.push({
+          key: c.id,
+          label: c.label || c.id,
+        });
+      }
+    });
+  });
+
+  // 3. Các trường cơ bản dự phòng nếu bảng chưa khai báo
+  if (!seen.has('cccdCB')) {
+    list.push({ key: 'cccdCB', label: 'Số CCCD / Mã định danh' });
+    seen.add('cccdCB');
+  }
+  if (!seen.has('position') && !seen.has('positionName')) {
+    list.push({ key: 'position', label: 'Chức vụ / Vị trí' });
+    seen.add('position');
+  }
+  if (!seen.has('department') && !seen.has('departmentName') && !seen.has('departmentId')) {
+    list.push({ key: 'department', label: 'Đơn vị / Phòng ban' });
+    seen.add('department');
+  }
+
+  return list;
+});
 
 const DEFAULT_NAME_COL_FIELDS = { name: true, cccdCB: true, position: true, department: true };
 const nameColFields = ref({ ...DEFAULT_NAME_COL_FIELDS });
+
+const activeParentFieldsList = computed(() => {
+  const selected = availableParentFields.value.filter((opt) => Boolean(nameColFields.value[opt.key]));
+  if (selected.length === 0) {
+    return [{ key: 'name', label: 'Họ và tên' }];
+  }
+  return selected;
+});
+
+const getParentColPrefix = () => {
+  const custom = customParentLabels.value[topicId.value] || localStorage.getItem('parent_col_label_' + topicId.value);
+  if (custom) return custom;
+  return 'Cán bộ';
+};
+
+const getPersonFieldValue = (data, fieldKey) => {
+  if (!data) return '';
+  const parentPerson = data.rawPerson || (data.cccdparent ? personnelStore.findPersonByCccd(data.cccdparent) : null) || (!data.isRelative ? data : null);
+  if (!parentPerson) {
+    if (fieldKey === 'name') return data.parentPersonnelName || data.parentName || data.name || '-';
+    return '';
+  }
+
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+  const posField = personnelStore.getPersonnelPositionField ? personnelStore.getPersonnelPositionField() : 'position';
+  const deptField = personnelStore.getPersonnelDepartmentField ? personnelStore.getPersonnelDepartmentField() : 'departmentName';
+
+  // 1. Tên
+  if (fieldKey === 'name') {
+    return parentPerson.name || parentPerson.fullName || data.parentPersonnelName || data.parentName || data.name || '-';
+  }
+
+  // 2. CCCD / Mã định danh
+  if (fieldKey === 'cccdCB' || fieldKey === pKeyField || fieldKey === 'cccd' || fieldKey === 'cccdparent') {
+    const cVal = parentPerson[pKeyField] || parentPerson.cccd || parentPerson.cccdparent || data.parentCccd || data.cccdparent || '';
+    if (cVal && String(cVal).trim() !== '' && String(cVal).trim() !== '-' && !String(cVal).startsWith('p_') && !String(cVal).startsWith('cd_') && !String(cVal).startsWith('rel_') && !String(cVal).startsWith('trip_')) {
+      return String(cVal).trim();
+    }
+    return '';
+  }
+
+  // 3. Chức vụ / Vị trí
+  if (fieldKey === 'position' || fieldKey === posField || fieldKey === 'positionName' || fieldKey === 'chuc_vu') {
+    const pVal = parentPerson[posField] || parentPerson.positionName || parentPerson.position || data.parentPosition || '';
+    if (pVal && String(pVal).trim() !== '' && String(pVal).trim() !== '-') return String(pVal).trim();
+    return '';
+  }
+
+  // 4. Đơn vị công tác / Lớp / Khối / Phòng ban
+  if (fieldKey === 'department' || fieldKey === deptField || fieldKey === 'departmentName' || fieldKey === 'departmentId' || fieldKey === 'don_vi') {
+    const dVal = parentPerson[deptField] || parentPerson.departmentName || (parentPerson.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || data.parentDepartment || '';
+    if (dVal && String(dVal).trim() !== '' && String(dVal).trim() !== '-') return String(dVal).trim();
+    return '';
+  }
+
+  // 5. Mọi trường tùy biến động khác (Học sinh: Lớp, Trường, GVCN, Khối, Điểm... hoặc Nhân sự: SĐT, Email...)
+  let custom = parentPerson.custom_data;
+  if (typeof custom === 'string') {
+    try { custom = JSON.parse(custom); } catch (e) { custom = {}; }
+  }
+  const val = parentPerson[fieldKey] ?? custom?.[fieldKey];
+  if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') {
+    return String(val).trim();
+  }
+
+  return '';
+};
 const showNameColConfig = ref(false);
 const nameColConfigPos = ref({});
 

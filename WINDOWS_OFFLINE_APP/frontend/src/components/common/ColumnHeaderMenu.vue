@@ -113,18 +113,31 @@
           </button>
         </div>
 
-        <!-- 6. Cấu hình Cột ảo Thông tin Cán bộ (nếu là _parentPersonnelName) -->
+        <!-- 6. Cấu hình Cột ảo Thông tin Đối tượng / Cán bộ / Học sinh (nếu là _parentPersonnelName) -->
         <div v-if="column?.id === '_parentPersonnelName'" class="menu-field" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-top: 6px;">
-          <label style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">Các trường hiển thị trong cột:</label>
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label v-for="opt in parentFieldOptions" :key="opt.key" style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #334155; cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label style="font-weight: 700; color: #1e293b; margin: 0;">Các trường hiển thị trong cột:</label>
+            <span style="font-size: 0.7rem; color: #2563eb; font-weight: 700;">{{ selectedFieldCount }} trường</span>
+          </div>
+          <div style="font-size: 0.68rem; color: #64748b; margin-bottom: 8px; line-height: 1.35;">
+            Linh hoạt theo mô hình (Cán bộ, Học sinh, Nhân sự...). Tick chọn các cột từ hồ sơ chính để hiển thị gộp vào cột này:
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; padding-right: 4px; border: 1px solid #f1f5f9; border-radius: 6px; padding: 6px; background: #ffffff;">
+            <label
+              v-for="opt in effectiveParentFieldOptions"
+              :key="opt.key"
+              style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; padding: 3px 6px; border-radius: 4px; user-select: none;"
+              :style="nameColFields[opt.key] ? 'background: #eff6ff; font-weight: 600; color: #1d4ed8;' : ''"
+            >
               <input
                 type="checkbox"
-                :checked="nameColFields[opt.key]"
+                :checked="Boolean(nameColFields[opt.key])"
                 @change="handleToggleParentField(opt.key)"
-                style="accent-color: #2563eb; cursor: pointer;"
+                style="accent-color: #2563eb; cursor: pointer; flex-shrink: 0;"
               />
-              <span>{{ opt.label }}</span>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="opt.label">
+                {{ opt.label }}
+              </span>
             </label>
           </div>
         </div>
@@ -160,7 +173,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
 
 const props = defineProps({
   visible: {
@@ -178,6 +191,10 @@ const props = defineProps({
   nameColFields: {
     type: Object,
     default: () => ({ name: true, cccdCB: true, position: true, department: true }),
+  },
+  availableParentFields: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -202,12 +219,23 @@ const editWidth = ref(160);
 const editFormWidth = ref("50");
 const editRequired = ref(false);
 
-const parentFieldOptions = [
-  { key: 'name', label: 'Họ và tên Cán bộ' },
-  { key: 'cccdCB', label: 'Số CCCD Cán bộ' },
-  { key: 'position', label: 'Chức vụ Cán bộ' },
-  { key: 'department', label: 'Đơn vị công tác' },
+const defaultFallbackParentFields = [
+  { key: 'name', label: 'Họ và tên' },
+  { key: 'cccdCB', label: 'Số CCCD / Mã định danh' },
+  { key: 'position', label: 'Chức vụ / Vị trí' },
+  { key: 'department', label: 'Đơn vị / Phòng ban' },
 ];
+
+const effectiveParentFieldOptions = computed(() => {
+  if (Array.isArray(props.availableParentFields) && props.availableParentFields.length > 0) {
+    return props.availableParentFields;
+  }
+  return defaultFallbackParentFields;
+});
+
+const selectedFieldCount = computed(() => {
+  return effectiveParentFieldOptions.value.filter(opt => Boolean(props.nameColFields?.[opt.key])).length;
+});
 
 watch(
   () => props.column,

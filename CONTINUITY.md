@@ -1284,4 +1284,24 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+---
+
+### 87. NÂNG CẤP CỘT THÔNG TIN ĐỐI TƯỢNG CHÍNH ĐỘNG 100% (HỖ TRỢ MỌI MÔ HÌNH: CÁN BỘ, HỌC SINH, NHÂN SỰ...) (2026-09-07)
+- **Strategic Context**:
+  - Người dùng đặt câu hỏi định hướng kiến trúc: "Chọn các trường con hiển thị trong cột ảo: cho phép chọn cột dữ liệu khác được không, vì phần mềm sau này có thể dùng cho học sinh thì sao?".
+  - 4 trường con trước đây (`Họ tên, CCCD, Chức vụ, Đơn vị công tác`) bị hardcode cố định, không đáp ứng được nếu người dùng triển khai phần mềm cho Học sinh (cần hiển thị: Lớp, Trường, GVCN, Khối, Điểm TB...) hoặc Nhân viên công ty (Mã NV, Email, Số điện thoại...).
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Động hóa 100% danh sách trường (`availableParentFields`)**:
+     - Trong [ChildDashboardView.vue](file:///Users/hoji/Documents/code/demoproject/src/views/ChildDashboardView.vue) và [PersonnelView.vue](file:///Users/hoji/Documents/code/demoproject/src/views/PersonnelView.vue): Tự động quét toàn bộ danh mục cột từ cấu hình bảng Cán bộ / Đối tượng chính (`importMappingPersonnel`). Mọi cột mà người dùng tạo (dù là Lớp, Trường, GVCN, Mã học sinh hay bất kỳ trường tùy biến nào) đều tự động xuất hiện trong danh sách lựa chọn.
+  2. **Giao diện Danh sách cuộn thông minh (`ColumnHeaderMenu.vue`)**:
+     - Menu cài đặt cột hiển thị toàn bộ các trường của hồ sơ chính trong khối có thanh cuộn (`max-height: 180px`, scroll mượt mà), có bộ đếm `X trường đã chọn`.
+     - Cho phép tick/bỏ tick bất kỳ cột nào; trạng thái được lưu liên tục vào `name_col_display_config` trên database & localStorage.
+  3. **Động cơ phân giải giá trị & Hiển thị Cell linh hoạt (`getPersonFieldValue`)**:
+     - Bóc tách động giá trị của mọi trường từ hồ sơ đối tượng cha (`parentPerson[key]` hoặc `custom_data[key]`).
+     - Tự động hiển thị trường chính (Họ tên / Trường đầu tiên) dạng chữ đậm nổi bật, và các trường phụ đi kèm với định dạng rõ ràng: `<Tên cột>: <Giá trị>` (Ví dụ: `Lớp: 10A1`, `Trường: THPT Chuyên`, `GVCN: Cô Hoa`...).
+     - Tiền tố nhãn đối tượng cha tự động thích ứng theo tên cột tùy chỉnh (`getParentColPrefix()`).
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+
 

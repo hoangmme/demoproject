@@ -253,19 +253,23 @@
               </span>
             </template>
 
-            <!-- Cột ảo Thông tin cán bộ -->
+            <!-- Cột ảo Thông tin cán bộ / Đối tượng chính (configurable fields) -->
             <template v-else-if="col.id === '_parentPersonnelName'">
               <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
-                <strong style="color: #1f2937; font-size: 0.85rem;">{{ getPersonVirtualInfo(data).name }}</strong>
-                <span v-if="getPersonVirtualInfo(data).cccd" style="font-size: 0.72rem; color: #4b5563;">
-                  CCCD: {{ getPersonVirtualInfo(data).cccd }}
-                </span>
-                <span v-if="getPersonVirtualInfo(data).position" style="font-size: 0.72rem; color: #334155;">
-                  {{ getPersonVirtualInfo(data).position }}
-                </span>
-                <span v-if="getPersonVirtualInfo(data).dept" style="font-size: 0.72rem; color: #6b7280;">
-                  {{ getPersonVirtualInfo(data).dept }}
-                </span>
+                <template v-for="(opt, fIdx) in activeParentFieldsList" :key="opt.key">
+                  <div v-if="getPersonFieldValue(data, opt.key)">
+                    <strong
+                      v-if="opt.key === 'name' || (fIdx === 0 && !activeParentFieldsList.some(o => o.key === 'name'))"
+                      style="color: #1f2937; font-weight: 700; font-size: 0.85rem;"
+                    >
+                      {{ getPersonFieldValue(data, opt.key) }}
+                    </strong>
+                    <div v-else style="font-size: 0.72rem; color: #4b5563; line-height: 1.3;">
+                      <span style="color: #64748b; font-weight: 600;">{{ opt.label }}: </span>
+                      <span>{{ getPersonFieldValue(data, opt.key) }}</span>
+                    </div>
+                  </div>
+                </template>
               </div>
             </template>
 
@@ -1131,12 +1135,15 @@
       v-model:visible="isColMenuVisible"
       :column="selectedMenuCol"
       :position="colMenuPosition"
+      :nameColFields="nameColFields"
+      :availableParentFields="availableParentFields"
       @rename-column="onRenameColumn"
       @change-format="onChangeColumnFormat"
       @change-options="onChangeColumnOptions"
       @change-width="onChangeColumnWidth"
       @change-form-width="onChangeColumnFormWidth"
       @change-required="onColChangeRequired"
+      @change-name-col-field="toggleNameColField"
       @delete-column="onDeleteColumnFromTable"
       @hide-column="onHideColumn"
       @filter-column="onFilterByColumn"
@@ -1498,6 +1505,7 @@ onMounted(async () => {
     await personnelStore.init();
   }
   await loadPersonnelFilterState();
+  await loadNameColConfig();
   handleRouteAction();
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
   window.addEventListener('table-show-col-index-changed', onColIndexChanged);
@@ -1514,6 +1522,112 @@ watch(
     handleRouteAction();
   }
 );
+
+// ===== Name Column Config (Linh hoạt cho mọi mô hình: Cán bộ, Học sinh, Nhân sự...) =====
+const availableParentFields = computed(() => {
+  const list = [];
+  const seen = new Set();
+
+  list.push({ key: 'name', label: 'Họ và tên' });
+  seen.add('name');
+
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c && c.id && c.id !== 'stt' && !seen.has(c.id)) {
+        seen.add(c.id);
+        list.push({
+          key: c.id,
+          label: c.label || c.id,
+        });
+      }
+    });
+  });
+
+  if (!seen.has('cccdCB')) {
+    list.push({ key: 'cccdCB', label: 'Số CCCD / Mã định danh' });
+    seen.add('cccdCB');
+  }
+  if (!seen.has('position') && !seen.has('positionName')) {
+    list.push({ key: 'position', label: 'Chức vụ / Vị trí' });
+    seen.add('position');
+  }
+  if (!seen.has('department') && !seen.has('departmentName') && !seen.has('departmentId')) {
+    list.push({ key: 'department', label: 'Đơn vị / Phòng ban' });
+    seen.add('department');
+  }
+
+  return list;
+});
+
+const DEFAULT_NAME_COL_FIELDS = { name: true, cccdCB: true, position: true, department: true };
+const nameColFields = ref({ ...DEFAULT_NAME_COL_FIELDS });
+
+const activeParentFieldsList = computed(() => {
+  const selected = availableParentFields.value.filter((opt) => Boolean(nameColFields.value[opt.key]));
+  if (selected.length === 0) {
+    return [{ key: 'name', label: 'Họ và tên' }];
+  }
+  return selected;
+});
+
+const toggleNameColField = async (key) => {
+  nameColFields.value = { ...nameColFields.value, [key]: !nameColFields.value[key] };
+  try {
+    await saveAppSettings('name_col_display_config', nameColFields.value);
+  } catch (e) {}
+};
+
+const loadNameColConfig = async () => {
+  try {
+    const saved = await getAppSettings('name_col_display_config');
+    if (saved && typeof saved === 'object') {
+      nameColFields.value = { ...DEFAULT_NAME_COL_FIELDS, ...saved };
+    }
+  } catch (e) {}
+};
+
+const getPersonFieldValue = (data, fieldKey) => {
+  if (!data) return '';
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  const posField = personnelStore.getPersonnelPositionField();
+  const deptField = personnelStore.getPersonnelDepartmentField();
+
+  let cd = data.custom_data;
+  if (typeof cd === 'string') {
+    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+  }
+
+  if (fieldKey === 'name') {
+    return data.name || data.fullName || cd?.name || cd?.fullName || '-';
+  }
+
+  if (fieldKey === 'cccdCB' || fieldKey === pKeyField || fieldKey === 'cccd' || fieldKey === 'cccdparent') {
+    const cVal = data[pKeyField] || cd?.[pKeyField] || data.cccdparent || data.cccd || '';
+    if (cVal && String(cVal).trim() !== '' && String(cVal).trim() !== '-' && !String(cVal).startsWith('p_') && !String(cVal).startsWith('cd_') && !String(cVal).startsWith('rel_') && !String(cVal).startsWith('trip_')) {
+      return String(cVal).trim();
+    }
+    return '';
+  }
+
+  if (fieldKey === 'position' || fieldKey === posField || fieldKey === 'positionName' || fieldKey === 'chuc_vu') {
+    const pVal = data[posField] || cd?.[posField] || data.positionName || data.position || data.chuc_vu || '';
+    if (pVal && String(pVal).trim() !== '' && String(pVal).trim() !== '-') return String(pVal).trim();
+    return '';
+  }
+
+  if (fieldKey === 'department' || fieldKey === deptField || fieldKey === 'departmentName' || fieldKey === 'departmentId' || fieldKey === 'don_vi') {
+    const dVal = data[deptField] || cd?.[deptField] || data.departmentName || data.department || (data.departmentId ? personnelStore.getDepartmentName(data.departmentId) : '') || '';
+    if (dVal && String(dVal).trim() !== '' && String(dVal).trim() !== '-') return String(dVal).trim();
+    return '';
+  }
+
+  const val = data[fieldKey] ?? cd?.[fieldKey];
+  if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') {
+    return String(val).trim();
+  }
+
+  return '';
+};
 
 const getPersonVirtualInfo = (data) => {
   if (!data) return { name: '-', cccd: '', position: '', dept: '' };
