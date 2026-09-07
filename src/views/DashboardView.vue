@@ -538,6 +538,22 @@
           </select>
         </div>
 
+        <!-- 3b. CHỌN CỘT GOM NHÓM PHÂN LOẠI (KHI CHỌN BIỂU ĐỒ) -->
+        <div v-if="widgetForm.displayType !== 'count'" class="field-item">
+          <label class="field-label" style="font-weight: 700; color: #1e293b;">
+            Cột gom nhóm phân bổ (Phân loại theo)
+          </label>
+          <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; max-width: 100%; font-weight: 600;" @change="onWidgetColumnSelect">
+            <option value="">-- Mặc định (theo Quốc gia / Đơn vị) --</option>
+            <option v-for="c in availableColumnsForWidgetSource" :key="c.id" :value="c.id">
+              {{ c.label }}
+            </option>
+          </select>
+          <span style="font-size: 0.72rem; color: #64748b; margin-top: 3px; display: block;">
+            💡 Biểu đồ sẽ tự động đếm số lượt và xếp hạng theo từng giá trị của cột này.
+          </span>
+        </div>
+
         <!-- 4. TIÊU ĐỀ -->
         <div class="field-item">
           <label class="field-label" style="font-weight: 700; color: #1e293b;">4. Tiêu đề hiển thị trên Dashboard <span style="color: #ef4444;">*</span></label>

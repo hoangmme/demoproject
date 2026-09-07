@@ -810,7 +810,22 @@
   3. **Cài đặt (`SettingsImportView.vue`)**:
      - Bổ sung thông báo định hướng cho người dùng: Các khối thống kê và biểu đồ hiện được quản lý trực tiếp tại Dashboard theo phong cách Lark Base, phần Cài đặt chỉ quản lý danh mục Chuyên đề và cột hiển thị.
 - **Status**: Done [Reversible].
-- **Verification**: `npm run build` thành công (0 errors).
+### 68. BỔ SUNG TÍNH NĂNG TẠO CỘT TRỰC TIẾP TẠI BẢNG & CHỌN CỘT GOM NHÓM BIỂU ĐỒ (2026-09-07)
+- **Bối cảnh & Yêu cầu của người dùng**:
+  - Người dùng mong muốn có trải nghiệm linh hoạt như Lark Base / Airtable: Quản lý và tạo thêm cột dữ liệu mới trực tiếp ngay tại Bảng dữ liệu mà không cần phải rời bảng sang trang Cài đặt.
+  - Cần cơ chế chọn cột gom nhóm phân loại linh hoạt cho các biểu đồ (Cột dọc & Thanh ngang) trên Dashboard.
+- **Các cải tiến đã triển khai**:
+  1. **Tạo Cột Trực Tiếp Tại Bảng (`ChildDashboardView.vue`)**:
+     - Bổ sung nút `[+ Thêm cột mới]` trên Toolbar của Bảng.
+     - Bật Dialog nhập thông tin cột chuẩn hóa: Tên cột hiển thị (`label`), Mã định danh tự sinh chuẩn không dấu (`id` qua `generateSlug`), Kiểu dữ liệu (`format`: text, number, date, select, file), Độ rộng hiển thị (`tableWidth`), Danh mục tùy chọn (`options`).
+     - Tự động thêm cột vào mapping của Nguồn tương ứng (`importMappingTrips`, `importMappingRelative`, hoặc `importMappingPersonnel`), lưu trực tiếp xuống Directus DB qua `saveAppSettings`.
+     - Tự động kích hoạt hiển thị cột mới trên Bảng ngay lập tức (`selectedColIds.push(colPayload.id)`).
+  2. **Chọn Cột Gom Nhóm Biểu Đồ Trên Dashboard (`DashboardView.vue`)**:
+     - Bổ sung ô chọn `Cột gom nhóm phân bổ (Group by)` trong Modal cấu hình Khối Thống kê khi người dùng chọn dạng Biểu đồ cột dọc hoặc Thanh ngang.
+     - Cho phép chọn bất kỳ cột nào trong Nguồn dữ liệu (ví dụ: *Quốc gia*, *Nguồn kinh phí*, *Mục đích*, *Đơn vị*...).
+     - `computeWidgetChartData` gom nhóm và tính tần suất chính xác 100% theo cột đã chọn, click vào cột sẽ drill-down lọc đúng theo giá trị đó.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công, đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
 
 
 

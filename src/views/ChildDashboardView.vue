@@ -32,6 +32,18 @@
           <span>Xóa đã chọn ({{ selectedTripKeys.length }})</span>
         </button>
 
+        <!-- ➕ Nút Thêm Cột Mới chuẩn Lark Base -->
+        <Button
+          v-if="authStore.isAdmin"
+          icon="pi pi-plus"
+          label="Thêm cột mới"
+          severity="success"
+          size="small"
+          @click="openAddColumnDialog"
+          title="Tạo thêm cột dữ liệu mới trực tiếp trên bảng này"
+          style="font-size: 0.8rem;"
+        />
+
         <!-- ⚙️ Tùy chọn Cột hiển thị Popover -->
         <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
           <Button
@@ -850,6 +862,95 @@
         </label>
       </div>
     </div>
+
+    <!-- Dialog Thêm Cột Mới chuẩn Lark Base -->
+    <Dialog
+      v-model:visible="isAddColumnDialogOpen"
+      modal
+      header="Thêm Cột Mới vào Bảng"
+      :style="{ width: '520px', maxWidth: '96vw' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 6px;">
+        <div>
+          <label style="font-weight: 700; font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 4px;">
+            Tên cột hiển thị <span style="color: #ef4444;">*</span>
+          </label>
+          <InputText
+            v-model="newColForm.label"
+            placeholder="Ví dụ: Ngày hết hạn visa, Ghi chú an ninh..."
+            style="width: 100%; font-size: 0.82rem;"
+            @input="onNewColLabelInput"
+          />
+        </div>
+
+        <div>
+          <label style="font-weight: 700; font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 4px;">
+            Mã định danh cột (Field ID) <span style="color: #ef4444;">*</span>
+          </label>
+          <InputText
+            v-model="newColForm.id"
+            placeholder="Ví dụ: ngay_het_han_visa"
+            style="width: 100%; font-size: 0.82rem; font-family: monospace;"
+          />
+          <span style="font-size: 0.7rem; color: #64748b; margin-top: 2px; display: block;">
+            Mã ID duy nhất để lưu trữ và truy xuất dữ liệu trong hệ thống.
+          </span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label style="font-weight: 700; font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 4px;">
+              Kiểu dữ liệu
+            </label>
+            <select v-model="newColForm.format" class="settings-select" style="width: 100%; font-size: 0.8rem;">
+              <option value="text">📝 Văn bản (Text)</option>
+              <option value="number">🔢 Số (Number)</option>
+              <option value="date">📅 Ngày tháng (Date)</option>
+              <option value="select">📋 Danh mục lựa chọn</option>
+              <option value="file">📎 Tệp đính kèm</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-weight: 700; font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 4px;">
+              Độ rộng cột trong bảng
+            </label>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <input
+                v-model.number="newColForm.tableWidth"
+                type="number"
+                min="80"
+                max="500"
+                step="10"
+                style="width: 100%; height: 32px; font-size: 0.8rem; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 6px;"
+              />
+              <span style="font-size: 0.75rem; color: #64748b;">px</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="newColForm.format === 'select'">
+          <label style="font-weight: 700; font-size: 0.82rem; color: #1e293b; display: block; margin-bottom: 4px;">
+            Các tùy chọn danh mục (cách nhau bởi dấu phẩy)
+          </label>
+          <InputText
+            v-model="newColForm.options"
+            placeholder="Ví dụ: Đã duyệt, Đang chờ, Từ chối"
+            style="width: 100%; font-size: 0.82rem;"
+          />
+        </div>
+
+        <div style="font-size: 0.75rem; color: #0284c7; background: #f0f9ff; border: 1px solid #bae6fd; padding: 8px 12px; border-radius: 6px; line-height: 1.4;">
+          💡 Cột mới sẽ được tạo trực tiếp vào Bảng <b>{{ currentDashboardConfig.source === 'trips' ? 'Chuyến đi' : (currentDashboardConfig.source === 'relatives' ? 'Thân nhân' : 'Cán bộ') }}</b> và tự động lưu vào hệ thống.
+        </div>
+      </div>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <Button label="Hủy" severity="secondary" text size="small" @click="isAddColumnDialogOpen = false" />
+          <Button label="Thêm Cột" icon="pi pi-check" severity="success" size="small" @click="saveNewColumn" :loading="isSavingNewCol" />
+        </div>
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -867,7 +968,7 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
-import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, extractRowFieldValue } from '@/utils/dashboardMetrics';
 import { getFileUrl } from '@/api/files';
 import * as XLSX from 'xlsx';
@@ -919,7 +1020,102 @@ const loadNameColConfig = async () => {
     }
   } catch (e) {}
 };
-// ===== End Name Column Config =====
+// ===== Lark-Style Add Column State & Handlers =====
+const isAddColumnDialogOpen = ref(false);
+const isSavingNewCol = ref(false);
+const newColForm = ref({
+  label: '',
+  id: '',
+  format: 'text',
+  tableWidth: 160,
+  options: '',
+});
+
+const openAddColumnDialog = () => {
+  newColForm.value = {
+    label: '',
+    id: '',
+    format: 'text',
+    tableWidth: 160,
+    options: '',
+  };
+  isAddColumnDialogOpen.value = true;
+};
+
+const onNewColLabelInput = () => {
+  if (newColForm.value.label) {
+    newColForm.value.id = generateSlug(newColForm.value.label);
+  }
+};
+
+const saveNewColumn = async () => {
+  if (!newColForm.value.label?.trim()) {
+    alert('Vui lòng nhập Tên cột!');
+    return;
+  }
+  if (!newColForm.value.id?.trim()) {
+    alert('Vui lòng nhập Mã định danh cột (Field ID)!');
+    return;
+  }
+
+  const src = currentDashboardConfig.value?.source || 'trips';
+  let mappingKey = 'import_mapping_trips';
+  let mappingRef = personnelStore.importMappingTrips;
+  if (src === 'relatives') {
+    mappingKey = 'import_mapping_relative';
+    mappingRef = personnelStore.importMappingRelative;
+  } else if (src === 'personnel') {
+    mappingKey = 'import_mapping_personnel';
+    mappingRef = personnelStore.importMappingPersonnel;
+  }
+
+  // Kiểm tra trùng ID cột
+  const exists = (mappingRef || []).some((g) => (g.columns || []).some((c) => c.id === newColForm.value.id.trim()));
+  if (exists) {
+    alert(`Mã cột "${newColForm.value.id.trim()}" đã tồn tại trong bảng này! Vui lòng chọn mã khác.`);
+    return;
+  }
+
+  isSavingNewCol.value = true;
+  try {
+    if (!mappingRef || mappingRef.length === 0) {
+      mappingRef = [{ group: 'Thông tin bổ sung', columns: [] }];
+      if (src === 'trips') personnelStore.importMappingTrips = mappingRef;
+      else if (src === 'relatives') personnelStore.importMappingRelative = mappingRef;
+      else personnelStore.importMappingPersonnel = mappingRef;
+    }
+
+    const colPayload = {
+      id: newColForm.value.id.trim(),
+      label: newColForm.value.label.trim(),
+      format: newColForm.value.format || 'text',
+      tableWidth: Number(newColForm.value.tableWidth) || 160,
+      width: '25',
+      options: newColForm.value.options ? newColForm.value.options.trim() : '',
+    };
+
+    // Thêm cột vào nhóm đầu tiên của mapping
+    mappingRef[0].columns.push(colPayload);
+
+    // Lưu cấu hình mapping xuống DB
+    await saveAppSettings(mappingKey, mappingRef);
+
+    // Tự động kích hoạt hiển thị cột mới trên bảng hiện tại
+    if (!selectedColIds.value.includes(colPayload.id)) {
+      selectedColIds.value.push(colPayload.id);
+    }
+    await onColumnsChange();
+
+    isAddColumnDialogOpen.value = false;
+    alert(`Đã tạo thành công cột "${colPayload.label}" trên bảng!`);
+  } catch (e) {
+    console.error('Lỗi khi thêm cột mới:', e);
+    alert('Lỗi khi lưu cột mới: ' + (e.message || e));
+  } finally {
+    isSavingNewCol.value = false;
+  }
+};
+// ===== End Lark-Style Add Column State & Handlers =====
 
 const openAdvancedDocxExport = () => {
   isExportDocxDialogOpen.value = true;

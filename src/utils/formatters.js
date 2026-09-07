@@ -1269,3 +1269,16 @@ export const cleanObjectWhitespace = (obj) => {
   }
   return obj;
 };
+
+export const generateSlug = (str) => {
+  if (!str) return 'cot_' + Date.now();
+  const slug = str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return slug || 'cot_' + Date.now();
+};
+
