@@ -764,6 +764,15 @@ html, body {
   -webkit-line-clamp: unset !important;
 }
 
+/* Ẩn hoàn toàn icon sort / icon lọc trên header bảng */
+.p-datatable-sort-icon,
+.p-datatable-header-cell .p-icon.p-datatable-sort-icon,
+.p-datatable-column-header-content > [data-pc-section="sort"],
+.p-sortable-column-icon,
+.p-column-filter-menu-button {
+  display: none !important;
+}
+
 .p-datatable-tbody > tr:hover {
   background-color: #f9fafb !important;
 }

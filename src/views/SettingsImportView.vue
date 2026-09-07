@@ -4,17 +4,16 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
       <div>
         <h1 style="font-size: 1.35rem; font-weight: 700; color: #1f2937; margin: 0;">
-          Cấu hình Cột & Mẫu Dữ liệu Excel
+          Cài đặt Chung & Khóa Liên kết
         </h1>
         <p style="font-size: 0.85rem; color: #6b7280; margin: 4px 0 0 0;">
-          Tùy chỉnh thứ tự cột, dời vị trí, nhãn hiển thị và định dạng trường thông tin.
+          Cấu hình khóa định danh (CCCD), liên kết dữ liệu giữa các bảng, quản lý thẻ tag và nhận diện hệ thống.
         </p>
       </div>
 
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
         <!-- Nút Xuất toàn bộ dữ liệu web thực tế 3 sheet -->
         <Button
-          v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
           label="Xuất Dữ Liệu Web (3 Sheet)"
           icon="pi pi-file-excel"
           severity="primary"
@@ -26,7 +25,6 @@
 
         <!-- Nút Tải file mẫu Tổng hợp 3 Sheet -->
         <Button
-          v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
           label="Tải Mẫu Tổng Hợp (3 Sheet)"
           icon="pi pi-download"
           severity="secondary"
@@ -34,18 +32,6 @@
           size="small"
           @click="handleExportAllInOneTemplate"
           style="font-size: 0.8rem; font-weight: 600;"
-        />
-
-        <!-- Nút Tải file mẫu Excel theo tab hiện tại -->
-        <Button
-          v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'"
-          :label="`Tải Mẫu Đơn (${getTabName(activeTab)})`"
-          icon="pi pi-download"
-          severity="secondary"
-          outlined
-          size="small"
-          @click="handleExportCurrentTabExcel(activeTab)"
-          style="font-size: 0.8rem;"
         />
 
         <!-- Nút Mở Công cụ Nhập Bảng & List (/bang-tuy-chinh) -->
@@ -79,31 +65,11 @@
       <button
         type="button"
         class="segmented-tab-btn"
-        :class="{ 'tab-active': activeTab === 'personnel' }"
-        @click="activeTab = 'personnel'"
+        :class="{ 'tab-active': activeTab === 'keys' }"
+        @click="activeTab = 'keys'"
       >
-        <i class="pi pi-user"></i>
-        <span>Cấu hình Cột Cán bộ</span>
-      </button>
-
-      <button
-        type="button"
-        class="segmented-tab-btn"
-        :class="{ 'tab-active': activeTab === 'relative' }"
-        @click="activeTab = 'relative'"
-      >
-        <i class="pi pi-users"></i>
-        <span>Cấu hình Cột Thân nhân</span>
-      </button>
-
-      <button
-        type="button"
-        class="segmented-tab-btn"
-        :class="{ 'tab-active': activeTab === 'trips' }"
-        @click="activeTab = 'trips'"
-      >
-        <i class="pi pi-send"></i>
-        <span>Cấu hình Cột Chuyến đi</span>
+        <i class="pi pi-key"></i>
+        <span>Khóa Định danh & Liên kết (CCCD)</span>
       </button>
 
       <button
@@ -113,7 +79,7 @@
         @click="activeTab = 'tags'"
       >
         <i class="pi pi-tags"></i>
-        <span>Bảng Tra cứu Mã Thẻ Tag</span>
+        <span>Bảng Tra cứu Mã Thẻ Tag & Mẫu Word</span>
       </button>
 
       <button
@@ -122,84 +88,104 @@
         :class="{ 'tab-active': activeTab === 'general' }"
         @click="activeTab = 'general'"
       >
-        <i class="pi pi-image"></i>
-        <span>Tùy chỉnh Ảnh Nền Đăng nhập</span>
+        <i class="pi pi-shield"></i>
+        <span>Cài đặt Chung & Nhận diện</span>
       </button>
     </div>
 
-    <!-- Main Content: Tab 1, 2, 3 (Cấu hình Cột Cán bộ, Thân nhân, Chuyến đi) -->
-    <div v-if="activeTab === 'personnel' || activeTab === 'relative' || activeTab === 'trips'" class="app-card" style="padding: 1.25rem;">
-      <!-- Khung Cấu hình Khóa Định Danh & Khóa Liên Kết -->
-      <div style="margin-bottom: 1.25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;">
-        <!-- Khi ở Tab Cán bộ -->
-        <div v-if="activeTab === 'personnel'" style="display: flex; flex-direction: column; gap: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
-                <i class="pi pi-key" style="color: #dc2626; font-size: 1.1rem;"></i>
-              </div>
-              <div>
-                <div style="font-size: 0.86rem; font-weight: 700; color: #1e293b;">
-                  Cột Khóa Định danh Duy nhất (Primary Unique Key) của Cán bộ:
-                </div>
-                <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">
-                  Dùng để định danh chống trùng lặp cán bộ và làm khóa móc nối liên kết với thân nhân.
-                </div>
-              </div>
-            </div>
+    <!-- Main Content: Tab Khóa Định Danh & Khóa Liên Kết (CCCD) -->
+    <div v-if="activeTab === 'keys'" class="app-card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+      <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+        <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <i class="pi pi-key" style="color: #dc2626; font-size: 1.15rem;"></i>
+          Cấu hình Khóa Định Danh & Khóa Liên Kết giữa các Bảng dữ liệu
+        </h3>
+        <p style="font-size: 0.78rem; color: #64748b; margin: 4px 0 0 0;">
+          Thiết lập cột khóa duy nhất (Primary Key) của Cán bộ và các cột khóa liên kết để tự động nối thân nhân, chuyến đi với cán bộ tương ứng qua số CCCD / Mã định danh.
+        </p>
+      </div>
 
-            <div style="min-width: 280px;">
-              <select v-model="personnelKeyField" class="custom-key-select">
-                <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                  {{ col.label }} (mã: {{ col.id }})
-                </option>
-              </select>
+      <!-- Khối 1: Bảng Cán bộ -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
+              <i class="pi pi-user" style="color: #dc2626; font-size: 1.1rem;"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">
+                1. Bảng Cán bộ — Khóa Định danh Duy nhất (Primary Unique Key):
+              </div>
+              <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">
+                Dùng để định danh chống trùng lặp cán bộ và làm khóa móc nối liên kết với thân nhân và chuyến đi.
+              </div>
             </div>
           </div>
+          <div style="min-width: 280px;">
+            <select v-model="personnelKeyField" class="custom-key-select">
+              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
+                {{ col.label }} (mã: {{ col.id }})
+              </option>
+            </select>
+          </div>
+        </div>
 
-          <!-- Vai trò cốt lõi: Họ tên, Chức vụ, Đơn vị -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
-            <div>
-              <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
-                <i class="pi pi-user" style="color: #2563eb;"></i> Cột Họ và tên chính:
-              </span>
-              <select v-model="personnelNameField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
-                <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                  {{ col.label }} (mã: {{ col.id }})
-                </option>
-              </select>
-            </div>
+        <!-- Vai trò cốt lõi: Họ tên, Chức vụ, Đơn vị -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
+          <div>
+            <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
+              <i class="pi pi-user" style="color: #2563eb;"></i> Cột Họ và tên chính:
+            </span>
+            <select v-model="personnelNameField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
+              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
+                {{ col.label }} (mã: {{ col.id }})
+              </option>
+            </select>
+          </div>
 
-            <div>
-              <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
-                <i class="pi pi-briefcase" style="color: #059669;"></i> Cột Chức vụ (hiển thị kèm):
-              </span>
-              <select v-model="personnelPositionField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
-                <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                  {{ col.label }} (mã: {{ col.id }})
-                </option>
-              </select>
-            </div>
+          <div>
+            <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
+              <i class="pi pi-briefcase" style="color: #059669;"></i> Cột Chức vụ (hiển thị kèm):
+            </span>
+            <select v-model="personnelPositionField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
+              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
+                {{ col.label }} (mã: {{ col.id }})
+              </option>
+            </select>
+          </div>
 
-            <div>
-              <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
-                <i class="pi pi-building" style="color: #7c3aed;"></i> Cột Đơn vị công tác (hiển thị kèm):
-              </span>
-              <select v-model="personnelDepartmentField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
-                <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                  {{ col.label }} (mã: {{ col.id }})
-                </option>
-              </select>
+          <div>
+            <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
+              <i class="pi pi-building" style="color: #7c3aed;"></i> Cột Đơn vị công tác (hiển thị kèm):
+            </span>
+            <select v-model="personnelDepartmentField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
+              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
+                {{ col.label }} (mã: {{ col.id }})
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Khối 2: Bảng Thân nhân -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+        <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: #e0f2fe; display: flex; align-items: center; justify-content: center;">
+            <i class="pi pi-users" style="color: #0284c7; font-size: 1.1rem;"></i>
+          </div>
+          <div>
+            <div>2. Bảng Thân nhân — Khóa Liên kết Cán bộ & Khóa Định danh Thân nhân:</div>
+            <div style="font-size: 0.73rem; color: #64748b; font-weight: 400; margin-top: 2px;">
+              Xác định quan hệ thân nhân trực thuộc cán bộ nào và mã định danh riêng của thân nhân.
             </div>
           </div>
         </div>
 
-        <!-- Khi ở Tab Thân nhân -->
-        <div v-else-if="activeTab === 'relative'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="pi pi-link" style="color: #0284c7; font-size: 0.95rem;"></i>
-              <strong style="color: #1e293b; font-size: 0.82rem;">1. Cột Liên kết Cán bộ liên quan (Parent Link Key):</strong>
+              <strong style="color: #1e293b; font-size: 0.82rem;">Cột Liên kết Cán bộ liên quan (Parent Link Key):</strong>
             </div>
             <select v-model="relativeParentKeyField" class="custom-key-select">
               <option v-for="col in availableRelativeCols" :key="col.id" :value="col.id">
@@ -212,7 +198,7 @@
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="pi pi-id-card" style="color: #16a34a; font-size: 0.95rem;"></i>
-              <strong style="color: #1e293b; font-size: 0.82rem;">2. Cột Định danh riêng Thân nhân (Relative Unique Key):</strong>
+              <strong style="color: #1e293b; font-size: 0.82rem;">Cột Định danh riêng Thân nhân (Relative Unique Key):</strong>
             </div>
             <select v-model="relativeKeyField" class="custom-key-select">
               <option v-for="col in availableRelativeCols" :key="col.id" :value="col.id">
@@ -222,673 +208,29 @@
             <span style="font-size: 0.7rem; color: #64748b;">(Cột chứa số CCCD / Mã định danh riêng của từng Thân nhân)</span>
           </div>
         </div>
+      </div>
 
-        <!-- Khi ở Tab Chuyến đi -->
-        <div v-else style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-link" style="color: #0284c7; font-size: 0.95rem;"></i>
-            <strong style="color: #1e293b; font-size: 0.82rem;">Cột Liên kết Đối tượng chuyến đi (Trip Link Key / cccdchuyendi):</strong>
+      <!-- Khối 3: Bảng Chuyến đi -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+        <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: #dcfce7; display: flex; align-items: center; justify-content: center;">
+            <i class="pi pi-send" style="color: #16a34a; font-size: 1.1rem;"></i>
           </div>
+          <div>
+            <div>3. Bảng Chuyến đi — Cột Liên kết Đối tượng chuyến đi (Trip Link Key / CCCD người đi):</div>
+            <div style="font-size: 0.73rem; color: #64748b; font-weight: 400; margin-top: 2px;">
+              Hệ thống tự động liên kết chuyến đi vào Cán bộ nếu khớp CCCD Cán bộ, hoặc vào Thân nhân nếu khớp CCCD Thân nhân.
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
           <select v-model="tripKeyField" class="custom-key-select" style="max-width: 480px;">
             <option v-for="col in availableTripCols" :key="col.id" :value="col.id">
               {{ col.label }} (mã: {{ col.id }})
             </option>
           </select>
-          <span style="font-size: 0.72rem; color: #64748b;">(Cột trong bảng Chuyến đi chứa số CCCD / Mã định danh của người đi. Hệ thống tự động nhận diện gán vào Cán bộ nếu khớp CCCD Cán bộ, hoặc vào Thân nhân nếu khớp CCCD Thân nhân)</span>
-        </div>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
-        <span style="font-size: 0.95rem; font-weight: 700; color: #1f2937;">
-          Danh sách Nhóm & Cột dữ liệu ({{ activeTab === 'personnel' ? 'Hồ sơ Cán bộ' : (activeTab === 'relative' ? 'Hồ sơ Thân nhân' : 'Thông tin Chuyến đi') }})
-        </span>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <Button
-            v-if="activeTab === 'trips'"
-            label="Tạo 20 Chuyến đi mẫu (10 CB & 10 TN)"
-            icon="pi pi-bolt"
-            size="small"
-            severity="warn"
-            :loading="isSeedingData"
-            @click="handleSeedTrips"
-            style="font-size: 0.8rem;"
-          />
-          <Button
-            label="Thêm Nhóm mới"
-            icon="pi pi-plus-circle"
-            size="small"
-            severity="primary"
-            @click="addGroup"
-            style="font-size: 0.8rem;"
-          />
-        </div>
-      </div>
-
-      <!-- Columns List -->
-      <div style="max-height: 60vh; overflow-y: auto; padding-right: 6px;">
-        <div v-for="(group, gIdx) in currentGroups" :key="gIdx" style="margin-bottom: 1.5rem; border: 1px solid #e5e7eb; border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-          <!-- Group Header -->
-          <div style="padding: 0.75rem 1rem; background: #f8fafc; border-bottom: 1px solid #e5e7eb; border-top-left-radius: 12px; border-top-right-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-              <InputText
-                v-model="group.group"
-                placeholder="Tên Nhóm (VD: Khối A: Thông tin cơ bản)"
-                size="small"
-                style="font-weight: 700; font-size: 0.9rem; flex: 1; max-width: 400px;"
-              />
-              <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: #6b21a8; cursor: pointer;">
-                <input type="checkbox" v-model="group.isMultiple" style="accent-color: #6b21a8;" />
-                <span>Cho phép lặp lại (Nhập nhiều lần)</span>
-              </label>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <Button
-                icon="pi pi-arrow-up"
-                severity="secondary"
-                text
-                size="small"
-                :disabled="gIdx === 0"
-                @click="moveGroupUp(gIdx)"
-                title="Dời nhóm lên trên"
-                style="width: 28px; height: 28px; padding: 0;"
-              />
-              <Button
-                icon="pi pi-arrow-down"
-                severity="secondary"
-                text
-                size="small"
-                :disabled="gIdx === currentGroups.length - 1"
-                @click="moveGroupDown(gIdx)"
-                title="Dời nhóm xuống dưới"
-                style="width: 28px; height: 28px; padding: 0;"
-              />
-              <Button
-                label="Xóa Nhóm"
-                icon="pi pi-trash"
-                severity="danger"
-                text
-                size="small"
-                @click="removeGroup(gIdx)"
-                style="font-size: 0.75rem;"
-              />
-            </div>
-          </div>
-
-          <!-- Group Columns List -->
-          <div style="padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 10px;">
-            <div
-              v-for="(col, cIdx) in group.columns"
-              :key="cIdx"
-              style="display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 8px; font-size: 0.8rem;"
-            >
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-                <!-- Move Buttons + Column Badge + Field ID + Field Label -->
-                <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 280px;">
-                  <!-- Move Up / Down Buttons -->
-                  <div style="display: flex; flex-direction: column; gap: 2px;">
-                    <button
-                      type="button"
-                      class="btn-reorder"
-                      :disabled="gIdx === 0 && cIdx === 0"
-                      @click="moveColumn(gIdx, cIdx, -1)"
-                      title="Dời cột lên trên (Ví dụ từ cột 17 lên 16)"
-                    >
-                      <i class="pi pi-chevron-up" style="font-size: 0.62rem;"></i>
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-reorder"
-                      :disabled="gIdx === currentGroups.length - 1 && cIdx === group.columns.length - 1"
-                      @click="moveColumn(gIdx, cIdx, 1)"
-                      title="Dời cột xuống dưới"
-                    >
-                      <i class="pi pi-chevron-down" style="font-size: 0.62rem;"></i>
-                    </button>
-                  </div>
-
-                  <span class="badge-pill badge-green" style="font-weight: 700; font-size: 0.72rem; min-width: 68px; justify-content: center;">
-                    {{ getColLabelBadge(gIdx, cIdx) }}
-                  </span>
-                  
-                  <!-- Editable/Readable Field ID -->
-                  <InputText
-                    v-model="col.id"
-                    placeholder="Mã ID"
-                    size="small"
-                    style="font-family: monospace; font-size: 0.75rem; width: 140px; background: #f1f5f9; color: #334155; font-weight: 600;"
-                    title="Mã trường hệ thống (ID)"
-                  />
-
-                  <InputText
-                    v-model="col.label"
-                    placeholder="Tên nhãn hiển thị"
-                    size="small"
-                    style="font-size: 0.8rem; flex: 1;"
-                    @blur="onLabelBlur(col)"
-                  />
-                </div>
-
-                <!-- Format & Width Settings using clean native selects -->
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <!-- Checkbox Bắt buộc nhập -->
-                  <label
-                    style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #ffffff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; white-space: nowrap;"
-                    :title="col.required ? 'Đang BẮT BUỘC có dữ liệu mới được lưu file/hồ sơ' : 'Không bắt buộc nhập (Tùy chọn)'"
-                  >
-                    <input
-                      type="checkbox"
-                      v-model="col.required"
-                      style="accent-color: #dc2626; width: 14px; height: 14px; cursor: pointer;"
-                    />
-                    <span :style="{ color: col.required ? '#dc2626' : '#64748b', fontWeight: col.required ? '700' : '600' }">
-                      {{ col.required ? '★ Bắt buộc' : 'Bắt buộc' }}
-                    </span>
-                  </label>
-
-                  <!-- Nút tick ẩn cho Cán bộ hoặc Thân nhân -->
-                  <label
-                    v-if="activeTab === 'personnel' || activeTab === 'relative'"
-                    style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; white-space: nowrap;"
-                    :title="col.hidden ? 'Đang ẨN trường này (không hiện trong form chi tiết)' : 'Trường này sẽ hiển thị trong form chi tiết'"
-                  >
-                    <input
-                      type="checkbox"
-                      v-model="col.hidden"
-                      style="accent-color: #ea580c; width: 14px; height: 14px; cursor: pointer;"
-                    />
-                    <span :style="{ color: col.hidden ? '#c2410c' : '#475569', fontWeight: col.hidden ? '700' : '600' }">
-                      {{ col.hidden ? '👁️‍🗨️ Đang ẩn' : 'Ẩn' }}
-                    </span>
-                  </label>
-
-                  <!-- Nút tick ẩn khi nhập chuyến đi: Ẩn với cán bộ & Ẩn với thân nhân -->
-                  <template v-if="activeTab === 'trips'">
-                    <label
-                      style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; white-space: nowrap;"
-                      :title="col.hideForPersonnel ? 'Đang ẨN trường này khi nhập chuyến đi của Cán bộ' : 'Trường này sẽ hiển thị khi nhập chuyến đi của Cán bộ'"
-                    >
-                      <input
-                        type="checkbox"
-                        v-model="col.hideForPersonnel"
-                        style="accent-color: #ea580c; width: 14px; height: 14px; cursor: pointer;"
-                      />
-                      <span :style="{ color: col.hideForPersonnel ? '#c2410c' : '#475569', fontWeight: col.hideForPersonnel ? '700' : '600' }">
-                        {{ col.hideForPersonnel ? 'Ẩn với CB' : 'Ẩn với cán bộ' }}
-                      </span>
-                    </label>
-
-                    <label
-                      style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; user-select: none; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; white-space: nowrap;"
-                      :title="col.hideForRelative ? 'Đang ẨN trường này khi nhập chuyến đi của Thân nhân' : 'Trường này sẽ hiển thị khi nhập chuyến đi của Thân nhân'"
-                    >
-                      <input
-                        type="checkbox"
-                        v-model="col.hideForRelative"
-                        style="accent-color: #ea580c; width: 14px; height: 14px; cursor: pointer;"
-                      />
-                      <span :style="{ color: col.hideForRelative ? '#c2410c' : '#475569', fontWeight: col.hideForRelative ? '700' : '600' }">
-                        {{ col.hideForRelative ? 'Ẩn với TN' : 'Ẩn với thân nhân' }}
-                      </span>
-                    </label>
-                  </template>
-
-                  <select
-                    v-model="col.format"
-                    class="custom-col-select"
-                    style="width: 175px;"
-                    title="Định dạng dữ liệu"
-                  >
-                    <option v-for="opt in formatOptions" :key="opt.value" :value="opt.value">
-                      {{ opt.label }}
-                    </option>
-                  </select>
-
-                  <select
-                    v-model="col.width"
-                    class="custom-col-select"
-                    style="width: 110px;"
-                    title="Độ rộng hiển thị Form"
-                  >
-                    <option v-for="w in widthOptions" :key="w.value" :value="w.value">
-                      {{ w.label }}
-                    </option>
-                  </select>
-
-                  <select
-                    v-model="col.tableWidth"
-                    class="custom-col-select"
-                    style="width: 90px; height: 28px; font-size: 0.72rem;"
-                    title="Độ rộng cột trong bảng. Để trống = mặc định."
-                  >
-                    <option value="">Mặc định</option>
-                    <option value="auto">Auto</option>
-                    <option value="5%">5%</option>
-                    <option value="10%">10%</option>
-                    <option value="15%">15%</option>
-                    <option value="20%">20%</option>
-                    <option value="25%">25%</option>
-                    <option value="30%">30%</option>
-                  </select>
-
-                  <Button
-                    icon="pi pi-trash"
-                    severity="danger"
-                    text
-                    size="small"
-                    @click="removeColumn(gIdx, cIdx)"
-                    style="padding: 2px 4px;"
-                    title="Xóa cột này"
-                  />
-                </div>
-              </div>
-
-              <!-- Options Config (for Checkbox, Checkbox_Text, Checkbox_File, Checkbox_File_Loop, Dropdown, Table Loop) -->
-              <div
-                v-if="col.format === 'checkbox' || col.format === 'checkbox_text' || col.format === 'checkbox_file' || col.format === 'checkbox_file_loop' || col.format === 'dropdown' || col.format === 'table_2col' || col.format === 'table_loop'"
-                style="padding-left: 104px; display: flex; flex-direction: column; gap: 4px;"
-              >
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <i class="pi pi-list" style="font-size: 0.75rem; color: #6b7280;"></i>
-                  <InputText
-                    v-model="col.options"
-                    :placeholder="col.format === 'checkbox_file_loop' ? 'Tùy chọn: Danh sách mục mẫu ban đầu (cách nhau dấu phẩy, VD: Đơn xin phép, Hộ chiếu, Công văn cử đi)' : (col.format === 'table_2col' || col.format === 'table_loop') ? 'Cấu hình các tiêu đề cột (cách nhau bởi dấu phẩy, VD: Từ ngày, Đến ngày, Đơn vị, Chức vụ)' : 'Danh sách tùy chọn (cách nhau bởi dấu phẩy, VD: Ngân sách, Tự túc, Học bổng, Tài trợ)'"
-                    size="small"
-                    style="font-size: 0.75rem; width: 100%;"
-                  />
-                </div>
-
-                <!-- Checkbox_file_loop: Cấu hình Chọn duy nhất / Chọn nhiều và xem trước các hộp kiểm -->
-                <div v-if="col.format === 'checkbox_file_loop'" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <input
-                      type="checkbox"
-                      v-model="col.isSingleSelect"
-                      :id="'single_sel_' + (col.id || cIdx)"
-                      style="accent-color: #2563eb; cursor: pointer; width: 15px; height: 15px;"
-                    />
-                    <label :for="'single_sel_' + (col.id || cIdx)" style="font-size: 0.74rem; color: #1e40af; font-weight: 700; cursor: pointer;">
-                      🔘 Chọn duy nhất 1 mục (Single Choice - Chỉ tick chọn 1 hộp kiểm)
-                    </label>
-                  </div>
-                  <span style="font-size: 0.7rem; color: #64748b; font-style: italic; padding-left: 21px;">
-                    (Nếu không tích tùy chọn trên: Cho phép tick chọn cùng lúc cả 2 hoặc nhiều hộp kiểm)
-                  </span>
-
-                  <!-- Xem trước danh sách các hộp kiểm sẽ hiển thị trong Form -->
-                  <div v-if="col.options && col.options.trim()" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; padding-left: 21px;">
-                    <span style="font-size: 0.7rem; color: #166534; font-weight: 600;">Các hộp kiểm tạo sẵn trong Form:</span>
-                    <span
-                      v-for="(opt, oIdx) in col.options.split(',').map(s => s.trim()).filter(Boolean)"
-                      :key="oIdx"
-                      style="font-size: 0.7rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 8px; border-radius: 4px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"
-                    >
-                      <i :class="col.isSingleSelect ? 'pi pi-circle' : 'pi pi-check-square'" style="font-size: 0.65rem;"></i>
-                      {{ opt }}
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Sub-columns Excel breakdown preview (Only for checkbox_text) -->
-                <div v-if="col.format === 'checkbox_text' && getSubOptions(col).length > 1" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px;">
-                  <span style="font-size: 0.7rem; color: #6b7280; font-weight: 600;">Sẽ xuất ra {{ getSubOptions(col).length }} cột Excel riêng biệt:</span>
-                  <span
-                    v-for="(subOpt, sIdx) in getSubOptions(col)"
-                    :key="sIdx"
-                    style="font-size: 0.7rem; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-weight: 600;"
-                  >
-                    Cột +{{ sIdx }}: {{ subOpt }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Formula Builder Config (When format === 'formula') -->
-              <div
-                v-if="col.format === 'formula'"
-                style="margin-left: 104px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px; background: #f0fdf4; padding: 10px 14px; border-radius: 8px; border: 1px solid #bbf7d0;"
-              >
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <i class="pi pi-calculator" style="color: #16a34a; font-size: 0.85rem;"></i>
-                    <span style="font-size: 0.78rem; font-weight: 700; color: #166534;">Cấu hình Công thức Tự động:</span>
-                  </div>
-                  <select v-model="col.formulaType" class="custom-col-select" style="width: auto; min-width: 260px; height: 28px; font-size: 0.75rem; font-weight: 600;">
-                    <option value="presence_status">Trạng thái Hiện diện (Trong nước / Nước ngoài)</option>
-                    <option value="overdue_status">Quá hạn chưa về</option>
-                    <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
-                    <option value="conditional_check">Kiểm tra điều kiện (Cảnh báo khi thiếu dữ liệu)</option>
-                    <option value="depart_before_decision">Đi khi chưa có cấp thẩm quyền quyết định</option>
-                    <option value="trips_count_in_year">Số lần xuất cảnh trong năm</option>
-                  </select>
-                </div>
-
-                <!-- 1. Trạng thái Hiện diện & Chấp hành thời hạn -->
-                <div v-if="!col.formulaType || col.formulaType === 'presence_status'" style="display: flex; flex-direction: column; gap: 6px;">
-                  <div style="font-size: 0.72rem; color: #15803d; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> Tự động tính toán vị trí thực tế kết hợp đối chiếu <strong>Thời gian duyệt về (Deadline)</strong>:
-                    <ul style="margin: 2px 0 0 16px; padding: 0;">
-                      <li>Nếu đã nhập cảnh &le; Deadline &rarr; <strong>"Đã về nước"</strong>.</li>
-                      <li>Nếu đã nhập cảnh &gt; Deadline &rarr; <strong>"Đã về nước (quá hạn X ngày)"</strong>.</li>
-                      <li>Nếu đã xuất cảnh, chưa về và Today &le; Deadline &rarr; <strong>"Đang ở nước ngoài: [Quốc gia]"</strong>.</li>
-                      <li>Nếu đã xuất cảnh, chưa về và Today &gt; Deadline &rarr; <strong>"Chưa về nước (quá hạn X ngày)"</strong>.</li>
-                    </ul>
-                  </div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Xuất cảnh (Đi):</span>
-                      <select v-model="col.formulaDepartureCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định hệ thống (departureDate) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Nhập cảnh (Về):</span>
-                      <select v-model="col.formulaArrivalCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định hệ thống (arrivalDate) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Thời gian duyệt về (Deadline):</span>
-                      <select v-model="col.formulaApprovedArrivalCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (approvedArrivalDate) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Quốc gia (Tùy chọn):</span>
-                      <select v-model="col.formulaCountryCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (countryName) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đã về nước (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelDomestic"
-                        placeholder="Mặc định: Đã về nước"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đang ở nước ngoài (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelAbroad"
-                        placeholder="Mặc định: Đang ở nước ngoài"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Chưa về nước vượt hạn (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelNotReturnedYet"
-                        placeholder="Mặc định: Chưa về nước"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Từ khóa khi Quá hạn (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelOverdue"
-                        placeholder="Mặc định: quá hạn"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 2. Quá hạn chưa về -->
-                <div v-else-if="col.formulaType === 'overdue_status'" style="display: flex; flex-direction: column; gap: 6px;">
-                  <div style="font-size: 0.72rem; color: #b91c1c; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày nhập cảnh thực tế</strong> với <strong>Thời gian duyệt về (deadline)</strong>. Nếu đã nhập cảnh và đúng hạn → <strong>"Đã nhập cảnh đúng hạn"</strong>. Nếu Today vượt deadline → <strong>"Quá hạn (kèm số ngày)"</strong>. Ngược lại → <strong>"Chưa quá hạn"</strong>.
-                  </div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Nhập cảnh (Về) / Ngày về dự kiến:</span>
-                      <select v-model="col.formulaArrivalCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định hệ thống (arrivalDate) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Thời gian duyệt về (Deadline):</span>
-                      <select v-model="col.formulaApprovedArrivalCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (approvedArrivalDate) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Quá hạn (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelOverdue"
-                        placeholder="Mặc định: Quá hạn"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Chưa về nước (Vượt deadline):</span>
-                      <input
-                        v-model="col.formulaLabelNotReturnedYet"
-                        placeholder="Mặc định: Chưa về nước"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đúng hạn (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelOntime"
-                        placeholder="Mặc định: Đúng hạn"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Chưa quá hạn (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelNotYet"
-                        placeholder="Mặc định: Chưa quá hạn"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 3. So sánh 2 cột ngày -->
-                <div v-else-if="col.formulaType === 'date_delta'" style="display: flex; flex-direction: column; gap: 6px;">
-                  <div style="font-size: 0.72rem; color: #0369a1; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> So sánh <strong>Cột Ngày A (thực tế)</strong> với <strong>Cột Ngày B (theo QĐ/kế hoạch)</strong>. Nếu A &lt; B → <strong>Sớm</strong>. Nếu A &gt; B → <strong>Muộn</strong>. Bằng nhau → <strong>Đúng lịch</strong>. Kèm số ngày chênh lệch.
-                  </div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày A (Thực tế):</span>
-                      <select v-model="col.formulaColA" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Chọn cột --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày B (Theo QĐ/Kế hoạch):</span>
-                      <select v-model="col.formulaColB" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Chọn cột --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Sớm (A &lt; B):</span>
-                      <input v-model="col.formulaLabelEarly" placeholder="Mặc định: Sớm" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;" />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Muộn (A &gt; B):</span>
-                      <input v-model="col.formulaLabelLate" placeholder="Mặc định: Muộn" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;" />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đúng lịch (A = B):</span>
-                      <input v-model="col.formulaLabelOnTime" placeholder="Mặc định: Đúng lịch" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;" />
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                      <input type="checkbox" v-model="col.formulaShowDays" :id="'showDays_' + col.id" style="margin: 0;" />
-                      <label :for="'showDays_' + col.id" style="font-size: 0.72rem; color: #475569; cursor: pointer;">Hiển thị số ngày chênh lệch</label>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 4. Kiểm tra điều kiện -->
-                <div v-else-if="col.formulaType === 'conditional_check'" style="display: flex; flex-direction: column; gap: 6px;">
-                  <div style="font-size: 0.72rem; color: #c2410c; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> Nếu <strong>Cột Điều kiện</strong> có giá trị nhưng <strong>Cột Kiểm tra</strong> rỗng → hiển thị <strong>Cảnh báo</strong>. Ví dụ: Nếu Ngày xuất cảnh có nhưng Số quyết định rỗng → "⚠️ Xuất cảnh chưa có QĐ".
-                  </div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Điều kiện (Phải có giá trị):</span>
-                      <select v-model="col.formulaColCondition" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Chọn cột --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Kiểm tra (Phải rỗng → Cảnh báo):</span>
-                      <select v-model="col.formulaColCheck" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Chọn cột --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn Cảnh báo:</span>
-                      <input v-model="col.formulaLabelWarning" placeholder="Mặc định: ⚠️ Cảnh báo" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;" />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi OK (Tùy chọn):</span>
-                      <input v-model="col.formulaLabelOk" placeholder="Để trống nếu không cần" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;" />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 5. Đi khi chưa có cấp thẩm quyền quyết định -->
-                <div v-else-if="col.formulaType === 'depart_before_decision'" style="display: flex; flex-direction: column; gap: 6px;">
-                  <div style="font-size: 0.72rem; color: #b45309; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày xuất cảnh</strong> với <strong>Ngày duyệt đi</strong> khi có <strong>Quyết định</strong>:
-                    <ul style="margin: 2px 0 0 16px; padding: 0;">
-                      <li>Nếu Ngày xuất cảnh &lt; Ngày duyệt đi (xuất cảnh trước ngày có quyết định duyệt) &amp; Có quyết định &rarr; <strong>"Đi khi chưa có cấp thẩm quyền quyết định"</strong> (Cảnh báo).</li>
-                      <li>Nếu Ngày xuất cảnh &ge; Ngày duyệt đi &amp; Có quyết định &rarr; <strong>"Đi đúng quyết định"</strong> (Đúng hạn).</li>
-                      <li>Nếu có ô nào không có dữ liệu &rarr; hiển thị <strong>"-"</strong>.</li>
-                    </ul>
-                  </div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày xuất cảnh:</span>
-                      <select v-model="col.formulaColDep" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (ngay_xuat_canh / departureDate) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày duyệt đi:</span>
-                      <select v-model="col.formulaColApprovedDep" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (thoi_gian_duyet_di / ngay_ban_hanh) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Quyết định / Số QĐ:</span>
-                      <select v-model="col.formulaColDecision" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (so_quyet_dinh / decisionNumber) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn Cảnh báo:</span>
-                      <input
-                        v-model="col.formulaLabelWarning"
-                        placeholder="Mặc định: Đi khi chưa có cấp thẩm quyền quyết định"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Nhãn khi Đi đúng QĐ:</span>
-                      <input
-                        v-model="col.formulaLabelOnTime"
-                        placeholder="Mặc định: Đi đúng quyết định"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 6. Số lần xuất cảnh trong năm -->
-                <div v-else-if="col.formulaType === 'trips_count_in_year'" style="display: flex; flex-direction: column; gap: 6px;">
-                  <div style="font-size: 0.72rem; color: #7c2d12; line-height: 1.4;">
-                    💡 <strong>Nguyên lý:</strong> Tự động tính <strong>tổng số lần xuất cảnh trong cùng 1 năm</strong> của Cán bộ (dựa theo Cột Ngày xuất cảnh). Giá trị hiển thị là số lần (ví dụ: <em>1 lần</em>, <em>2 lần</em>, <em>3 lần</em>...). Sau đó bạn có thể đặt điều kiện lọc trên Thẻ KPI (ví dụ: chọn cột này và toán tử <strong>&gt;= 2</strong> hoặc <strong>&gt; 2</strong>).
-                  </div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;">
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Ngày Xuất cảnh (Đi):</span>
-                      <select v-model="col.formulaDepartureCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (ngay_xuat_canh) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột Quốc gia / Nơi đến:</span>
-                      <select v-model="col.formulaCountryCol" class="custom-col-select" style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px;">
-                        <option value="">-- Mặc định (countryName / quoc_gia) --</option>
-                        <option v-for="c in currentActiveFormulaCols" :key="c.id" :value="c.id">
-                          Cột {{ c.colIndex }}: {{ c.label }} ({{ c.id }})
-                        </option>
-                      </select>
-                    </div>
-                    <div>
-                      <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Định dạng hiển thị (Tùy chọn):</span>
-                      <input
-                        v-model="col.formulaLabelFormat"
-                        placeholder="Mặc định: {count} lần"
-                        style="width: 100%; height: 30px; font-size: 0.75rem; margin-top: 2px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Add column button -->
-            <div style="margin-top: 6px;">
-              <Button
-                label="Thêm Cột Tùy chỉnh vào nhóm này"
-                icon="pi pi-plus"
-                size="small"
-                text
-                severity="primary"
-                @click="addColumn(gIdx)"
-                style="font-size: 0.78rem;"
-              />
-            </div>
-          </div>
+          <span style="font-size: 0.72rem; color: #64748b;">(Cột trong bảng Chuyến đi chứa số CCCD / Mã định danh của người đi. Tự động nhận diện vào Cán bộ hoặc Thân nhân)</span>
         </div>
       </div>
     </div>
@@ -1883,7 +1225,7 @@ const route = useRoute();
 const router = useRouter();
 const personnelStore = usePersonnelStore();
 
-const activeTab = ref('personnel');
+const activeTab = ref('keys');
 const saving = ref(false);
 
 const isWizardOpen = ref(false);
@@ -3612,6 +2954,11 @@ const saveConfig = async () => {
     };
     await saveAppSettings('system_key_config', keyConfig);
     personnelStore.systemKeyConfig = keyConfig;
+
+    if (activeTab.value === 'keys') {
+      alert('Đã lưu cấu hình Khóa định danh & Khóa liên kết thành công!');
+      return;
+    }
 
     if (activeTab.value === 'personnel') {
       const allActiveCols = (personnelGroups.value || []).flatMap((g) => g.columns || []).filter((c) => c.id && c.id !== 'stt');

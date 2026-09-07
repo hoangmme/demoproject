@@ -206,7 +206,6 @@
           v-for="col in visibleColumns"
           :key="col.id"
           :field="col.id"
-          sortable
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
           :headerStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"

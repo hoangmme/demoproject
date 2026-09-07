@@ -1235,3 +1235,27 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+---
+
+### 85. XÓA 3 TAB CẤU HÌNH CỘT THỪA TRONG CÀI ĐẶT (GOM VÀO BẢNG) & XÓA ICON LỌC/SORT TRÊN HEADER BẢNG (2026-09-07)
+- **Strategic Context**:
+  - Người dùng yêu cầu:
+    1. Xóa 3 tab "Cấu hình Cột Cán bộ", "Cấu hình Cột Thân nhân", "Cấu hình Cột Chuyến đi" và toàn bộ danh sách cấu hình cột rườm rà trong trang Cài đặt chung (`SettingsImportView.vue`) vì toàn bộ việc tùy chỉnh cột (thêm cột, sửa tên, kiểu dữ liệu, độ rộng, ẩn/hiện, xóa cột) đã được dồn trực tiếp vào các bảng dữ liệu qua `ColumnHeaderMenu` và `ColumnSelector`.
+    2. Xóa icon lọc/sort (`.p-datatable-sort-icon`) hiển thị trên thẻ `<th class="p-datatable-header-cell ...">` của các cột trong bảng.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Tối giản hóa Trang Cài Đặt Chung (`SettingsImportView.vue`)**:
+     - Gỡ bỏ hoàn toàn 3 tab cấu hình cột cũ và khối danh sách cột rườm rà (~650 dòng template thừa).
+     - Thay thế bằng Tab duy nhất và tập trung: **"Khóa Định danh & Liên kết (CCCD)"** (`activeTab = 'keys'`):
+       * Cấu hình Primary Unique Key và các cột đại diện chính của Cán bộ (Họ tên, Chức vụ, Đơn vị).
+       * Cấu hình Parent Link Key và Relative Unique Key của Thân nhân.
+       * Cấu hình Trip Link Key của Chuyến đi.
+     - Giữ nguyên 2 tab còn lại: **"Bảng Tra cứu Mã Thẻ Tag & Mẫu Word"** và **"Cài đặt Chung & Nhận diện"**.
+     - Các nút hành động cấp cao: **"Xuất Dữ Liệu Web (3 Sheet)"** và **"Tải Mẫu Tổng Hợp (3 Sheet)"** luôn hiển thị sẵn sàng trên thanh công cụ trên cùng.
+  2. **Xóa Sạch Icon Lọc/Sort trên Header Bảng (`PersonnelView.vue`, `ChildDashboardView.vue`, `main.css`)**:
+     - Gỡ bỏ thuộc tính `sortable` khỏi tất cả các cột dữ liệu động và cố định trong [PersonnelView.vue](file:///Users/hoji/Documents/code/demoproject/src/views/PersonnelView.vue) và [ChildDashboardView.vue](file:///Users/hoji/Documents/code/demoproject/src/views/ChildDashboardView.vue).
+     - Bổ sung CSS trong [main.css](file:///Users/hoji/Documents/code/demoproject/src/assets/styles/main.css): Ẩn triệt để `.p-datatable-sort-icon`, `[data-pc-section="sort"]`, `.p-sortable-column-icon`, và `.p-column-filter-menu-button`.
+     - Tiêu đề cột trong bảng giờ đây hoàn toàn sạch sẽ, chỉ bao gồm nhãn cột và nút chevron-down mở menu tùy chỉnh cột.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+

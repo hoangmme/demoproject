@@ -172,7 +172,6 @@
           v-if="personnelStore.visibleColumns.includes('code')"
           field="code"
           header="Mã CB"
-          sortable
           :headerStyle="{ width: '115px', minWidth: '115px' }"
           :bodyStyle="{ width: '115px', minWidth: '115px' }"
         >
@@ -222,7 +221,6 @@
           v-for="col in activeColumns"
           :key="col.id"
           :field="col.id"
-          :sortable="col.id !== 'stt' && col.id !== 'name' && col.id !== '_parentPersonnelName'"
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
           :headerStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
@@ -668,12 +666,12 @@
             <span style="font-weight: 600; color: #4b5563;">{{ dtFirstRel + index + 1 }}</span>
           </template>
         </Column>
-        <Column field="code" header="Mã TN" sortable :headerStyle="{ width: '110px', minWidth: '110px' }">
+        <Column field="code" header="Mã TN" :headerStyle="{ width: '110px', minWidth: '110px' }">
           <template #body="{ data, index }">
             <span class="badge-code">{{ data.code || ('TN-' + String(data.id || (index + 1)).slice(-5).padStart(5, '0')) }}</span>
           </template>
         </Column>
-        <Column field="parentName" header="Cán bộ liên quan" sortable :headerStyle="{ width: '210px', minWidth: '210px' }">
+        <Column field="parentName" header="Cán bộ liên quan" :headerStyle="{ width: '210px', minWidth: '210px' }">
           <template #body="{ data }">
             <div v-if="isFirstRelativeOfParent(data)">
               <strong style="cursor: pointer; color: #1f2937; font-size: 0.82rem;" @click="openEditDialog(data.parentPerson)">{{ data.parentName || data.parentPersonnelName || 'Cán bộ' }}</strong>
@@ -728,7 +726,6 @@
           v-for="col in activeRelativeColumns"
           :key="col.id"
           :field="col.id"
-          sortable
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
           :headerStyle="{ width: col.tableWidth || col.width || '150px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '150px') }"
