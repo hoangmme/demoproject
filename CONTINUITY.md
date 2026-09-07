@@ -864,6 +864,40 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công (0 errors), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
 
+---
+
+### 71. TÙY BIẾN NHẬN DIỆN HỆ THỐNG (SYSTEM BRANDING), SỬA CSS Ô SELECT, THÊM TRƯỜNG THAM CHIẾU TỰ ĐỘNG (LOOKUP & ROLLUP) & TINH GỌN BỘ LỌC CƠ SỞ (SCOPE FILTER) CHUYÊN ĐỀ
+- **Strategic Context**:
+  - Người dùng yêu cầu:
+    1. Tùy biến tên ở menu, tiêu đề 2 dòng và đổi Logo linh hoạt theo từng đơn vị triển khai (ví dụ từ Cán bộ - Thân nhân - Chuyến đi sang Học sinh - Phụ huynh - Điểm số).
+    2. Sửa CSS ô dropdown chọn kiểu dữ liệu bị xấu (viền đen thô, thiếu padding và bo góc).
+    3. Bổ sung 2 kiểu dữ liệu tham chiếu tự động giống Lark Base: Lookup (trích xuất giá trị trường liên quan) và Rollup (tính tổng/đếm/ghép danh sách từ bảng con).
+    4. Tinh gọn triệt để Quản lý Chuyên đề: loại bỏ toàn bộ các khối KPI pill, màu sắc, % width thẻ đếm; gom toàn bộ thống kê về trang Dashboard, chuyển chuyên đề thành Bảng Lọc Dữ liệu Cơ sở (Scope Filter).
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Nâng cấp Hệ thống Định dạng Dữ liệu chuẩn (`src/utils/formatters.js`)**:
+     - Bổ sung 2 kiểu dữ liệu mới vào `formatOptions` (tổng cộng 15 kiểu dữ liệu):
+       + `lookup`: Trường tham chiếu (Lookup từ Bảng liên quan).
+       + `rollup`: Trường tổng hợp (Rollup: Đếm/Tính tổng/Liệt kê từ Bảng liên quan).
+     - Export 2 hàm xử lý: `evaluateLookup(item, col, personnelStore)` và `evaluateRollup(item, col, personnelStore)`.
+  2. **Hoàn thiện Giao diện & Trình Cấu hình Thêm Cột (`src/views/ChildDashboardView.vue`)**:
+     - Sửa CSS class `.settings-select`: bo góc 6px, chiều cao 36px, viền `#cbd5e1`, custom chevron SVG, hover & focus ring hiện đại.
+     - Thêm UI cấu hình trực quan cho Lookup (chọn nguồn, trường tham chiếu) và Rollup (chọn nguồn liên quan, hàm tổng hợp COUNT/SUM/JOIN, cột tính toán).
+     - Tích hợp `evaluateLookup` và `evaluateRollup` vào hàm `getCellValue` và `PersonnelView.vue` (`getDisplayValue`).
+  3. **Tinh gọn Quản lý Chuyên đề thành Scope Filter chuẩn Lark Base (`src/views/SettingsImportView.vue`)**:
+     - Loại bỏ toàn bộ các ô cấu hình thẻ KPI, khối thống kê, màu sắc, % width trong Quản lý Chuyên đề.
+     - Xây dựng giao diện "Bộ lọc Dữ liệu Cơ sở của Bảng (Scope Filter)" với danh sách điều kiện linh hoạt (`cond.field`, `cond.operator`, `cond.value`), kiểu kết hợp AND/OR, nút Thêm/Xóa điều kiện.
+     - Tự động đồng bộ và lưu cấu hình vào `scopeConditions` & `metricCards[0]` bảo đảm tương thích ngược 100%.
+  4. **Tùy biến Nhận diện Hệ thống & Tên Menu (System Branding)**:
+     - Thêm Khối "Tùy biến Logo, Tiêu đề Đơn vị & Tên Menu" tại Tab Cài đặt Chung (`SettingsImportView.vue`):
+       + Tải lên Logo mới (hỗ trợ Directus Storage và nén tự động qua Canvas) hoặc Dùng Logo Mặc định.
+       + Cấu hình 2 dòng tiêu đề đơn vị trên thanh bên (Dòng 1: Cơ quan cấp trên, Dòng 2: Đơn vị trực thuộc).
+       + Đổi tên Menu các bảng dữ liệu: Bảng chính (mặc định "Hồ sơ cán bộ"), Bảng phụ ("Thân nhân"), Bảng sự kiện ("Chuyến đi").
+       + Lưu xuống Directus DB (`system_branding_config`) và phát sự kiện `system-branding-updated`.
+     - Cập nhật `src/components/common/AppSidebar.vue`:
+       + Lắng nghe `system-branding-updated`, hiển thị Logo động, tiêu đề 2 dòng động, tên menu động và cập nhật nhãn trong các hộp thoại nhập liệu nhanh.
+- **Status**: Done [Reversible].
+- **Verification**: `npx vite build` thành công tuyệt đối (0 lỗi). Đã đồng bộ toàn bộ bản build mới vào `WINDOWS_OFFLINE_APP/frontend/`.
+
 
 
 

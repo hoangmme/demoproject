@@ -1293,9 +1293,100 @@ export const formatOptions = [
   { label: 'Hộp kiểm + Tệp đính kèm', value: 'checkbox_file' },
   { label: 'Dropdown (Lựa chọn đơn)', value: 'dropdown' },
   { label: 'Cột Công thức (Formula / Trạng thái)', value: 'formula' },
+  { label: 'Tham chiếu tự động (Lookup)', value: 'lookup' },
+  { label: 'Tính toán tổng hợp (Rollup)', value: 'rollup' },
   { label: 'Tệp đính kèm (File/Ảnh/PDF)', value: 'file' },
   { label: 'Văn bản + Tệp đính kèm (Loop)', value: 'text_file_loop' },
   { label: 'Hộp kiểm + Tệp đính kèm (Loop)', value: 'checkbox_file_loop' },
 ];
+
+/**
+ * Đánh giá giá trị cột Tham chiếu tự động (Lookup)
+ * @param {Object} item - Bản ghi hiện tại (chuyến đi, thân nhân...)
+ * @param {Object} col - Cấu hình cột lookup
+ * @param {Object} personnelStore - Store dữ liệu cán bộ
+ */
+export const evaluateLookup = (item, col, personnelStore) => {
+  if (!item || !col) return '-';
+  const target = col.lookupTarget || 'personnel';
+  const field = col.lookupField;
+  if (!field) return '-';
+
+  let parent = item.rawPerson;
+  if (!parent && personnelStore) {
+    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+    const parentKey = item.cccdparent || item.parentCccd || item[pKeyField];
+    if (parentKey) {
+      parent = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(parentKey) : null;
+    }
+  }
+
+  if (target === 'personnel' && parent) {
+    const val = parent[field] !== undefined ? parent[field] : parent.custom_data?.[field];
+    return val !== undefined && val !== null && val !== '' ? String(val) : '-';
+  }
+
+  return '-';
+};
+
+/**
+ * Đánh giá giá trị cột Tính toán tổng hợp (Rollup)
+ * @param {Object} item - Bản ghi hiện tại (cán bộ...)
+ * @param {Object} col - Cấu hình cột rollup
+ * @param {Object} personnelStore - Store dữ liệu cán bộ
+ */
+export const evaluateRollup = (item, col, personnelStore) => {
+  if (!item || !col) return '-';
+  const target = col.rollupTarget || 'trips';
+  const field = col.rollupField;
+  const fn = col.rollupFunction || 'count';
+
+  let list = [];
+  if (target === 'trips') {
+    list = item.trips || item.rawPerson?.trips || [];
+  } else if (target === 'relatives') {
+    if (Array.isArray(item.relatives)) {
+      list = item.relatives;
+    } else if (personnelStore) {
+      const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+      const keyVal = item[pKeyField] || item.cccd || item.cccdparent;
+      list = (personnelStore.relativesList || []).filter(
+        (r) => (r.cccdparent || r.parentCccd) === keyVal
+      );
+    }
+  }
+
+  if (!Array.isArray(list)) list = [];
+
+  if (fn === 'count') {
+    return list.length;
+  }
+
+  if (fn === 'sum') {
+    const sum = list.reduce((acc, sub) => {
+      const val = Number(sub[field] !== undefined ? sub[field] : sub.custom_data?.[field] ?? 0);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+    return sum;
+  }
+
+  if (fn === 'join') {
+    const values = list
+      .map((sub) => (sub[field] !== undefined ? sub[field] : sub.custom_data?.[field]))
+      .filter((v) => v !== undefined && v !== null && v !== '')
+      .map((v) => String(v).trim());
+    return values.length > 0 ? Array.from(new Set(values)).join(', ') : '-';
+  }
+
+  if (fn === 'latest') {
+    if (list.length === 0) return '-';
+    const lastItem = list[list.length - 1];
+    const val = lastItem[field] !== undefined ? lastItem[field] : lastItem.custom_data?.[field];
+    return val !== undefined && val !== null && val !== '' ? String(val) : '-';
+  }
+
+  return '-';
+};
+
 
 

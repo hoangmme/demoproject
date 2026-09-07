@@ -1070,6 +1070,70 @@
           </div>
         </div>
 
+        <!-- Cột Tham chiếu tự động (Lookup) -->
+        <div v-if="newColForm.format === 'lookup'" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 0.76rem; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-link"></i> Cấu hình Tham chiếu Tự động (Lookup từ Bảng liên kết):
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Bảng nguồn liên kết:</span>
+              <select v-model="newColForm.lookupTarget" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="personnel">👤 Bảng Cán bộ (Cha)</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột cần lấy dữ liệu:</span>
+              <select v-model="newColForm.lookupField" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Chọn Cột từ Bảng cha --</option>
+                <option v-for="c in availablePersonnelColsForLookup" :key="c.id" :value="c.id">
+                  {{ c.label }} ({{ c.id }})
+                </option>
+              </select>
+            </div>
+          </div>
+          <div style="font-size: 0.7rem; color: #0284c7; line-height: 1.35;">
+            💡 Tự động tìm bản ghi Cán bộ liên quan và hiển thị giá trị cột tương ứng của Cán bộ đó.
+          </div>
+        </div>
+
+        <!-- Cột Tính toán tổng hợp (Rollup) -->
+        <div v-if="newColForm.format === 'rollup'" style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 0.76rem; font-weight: 700; color: #7e22ce; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-calculator"></i> Cấu hình Tính toán Tổng hợp (Rollup từ Bảng con):
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Bảng dữ liệu con:</span>
+              <select v-model="newColForm.rollupTarget" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="trips">✈️ Chuyến đi</option>
+                <option value="relatives">👨‍👩‍👧 Thân nhân</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Phép tính toán:</span>
+              <select v-model="newColForm.rollupFunction" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="count">Đếm số lượng (COUNT)</option>
+                <option value="sum">Tính tổng số (SUM)</option>
+                <option value="join">Nối chuỗi danh sách (JOIN)</option>
+                <option value="latest">Lấy mới nhất (LATEST)</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Cột cần tính:</span>
+              <select v-model="newColForm.rollupField" class="settings-select" style="width: 100%; font-size: 0.75rem;">
+                <option value="">-- Chọn Cột --</option>
+                <option v-for="c in (newColForm.rollupTarget === 'trips' ? availableTripColsForRollup : availableRelativeColsForRollup)" :key="c.id" :value="c.id">
+                  {{ c.label }} ({{ c.id }})
+                </option>
+              </select>
+            </div>
+          </div>
+          <div style="font-size: 0.7rem; color: #7e22ce; line-height: 1.35;">
+            💡 Tự động duyệt qua danh sách các bản ghi con liên kết và áp dụng phép tính toán (Đếm, Tính tổng, Nối chuỗi, Mới nhất).
+          </div>
+        </div>
+
         <div style="font-size: 0.75rem; color: #0284c7; background: #f0f9ff; border: 1px solid #bae6fd; padding: 8px 12px; border-radius: 6px; line-height: 1.4;">
           💡 Cột mới sẽ được tạo trực tiếp vào Bảng <b>{{ currentDashboardConfig.source === 'trips' ? 'Chuyến đi' : (currentDashboardConfig.source === 'relatives' ? 'Thân nhân' : 'Cán bộ') }}</b> và tự động đồng bộ vào cấu hình hệ thống.
         </div>
@@ -1098,7 +1162,7 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
-import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug, formatOptions } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug, formatOptions } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, extractRowFieldValue } from '@/utils/dashboardMetrics';
 import { getFileUrl } from '@/api/files';
 import * as XLSX from 'xlsx';
@@ -1178,10 +1242,45 @@ const newColForm = ref({
   formulaLabelAbroad: '',
   formulaLabelNotReturnedYet: '',
   formulaLabelOverdue: '',
+  lookupTarget: 'personnel',
+  lookupField: '',
+  rollupTarget: 'trips',
+  rollupField: '',
+  rollupFunction: 'count',
 });
 
 const availableColsForFormula = computed(() => {
   return (allAvailableColumnsList.value || []).filter(c => c.id && c.id !== 'stt' && c.format !== 'formula');
+});
+
+const availablePersonnelColsForLookup = computed(() => {
+  const cols = [];
+  (personnelStore.importMappingPersonnel || []).forEach(g => {
+    (g.columns || []).forEach(c => {
+      if (c.id && c.id !== 'stt') cols.push({ id: c.id, label: c.label || c.id });
+    });
+  });
+  return cols;
+});
+
+const availableTripColsForRollup = computed(() => {
+  const cols = [];
+  (personnelStore.importMappingTrips || []).forEach(g => {
+    (g.columns || []).forEach(c => {
+      if (c.id && c.id !== 'stt') cols.push({ id: c.id, label: c.label || c.id });
+    });
+  });
+  return cols;
+});
+
+const availableRelativeColsForRollup = computed(() => {
+  const cols = [];
+  (personnelStore.importMappingRelative || []).forEach(g => {
+    (g.columns || []).forEach(c => {
+      if (c.id && c.id !== 'stt') cols.push({ id: c.id, label: c.label || c.id });
+    });
+  });
+  return cols;
 });
 
 const openAddColumnDialog = () => {
@@ -1210,6 +1309,11 @@ const openAddColumnDialog = () => {
     formulaLabelAbroad: '',
     formulaLabelNotReturnedYet: '',
     formulaLabelOverdue: '',
+    lookupTarget: 'personnel',
+    lookupField: '',
+    rollupTarget: 'trips',
+    rollupField: '',
+    rollupFunction: 'count',
   };
   isAddColumnDialogOpen.value = true;
 };
@@ -1284,6 +1388,15 @@ const saveNewColumn = async () => {
         formulaLabelAbroad: newColForm.value.formulaLabelAbroad || '',
         formulaLabelNotReturnedYet: newColForm.value.formulaLabelNotReturnedYet || '',
         formulaLabelOverdue: newColForm.value.formulaLabelOverdue || '',
+      } : {}),
+      ...(newColForm.value.format === 'lookup' ? {
+        lookupTarget: newColForm.value.lookupTarget || 'personnel',
+        lookupField: newColForm.value.lookupField || '',
+      } : {}),
+      ...(newColForm.value.format === 'rollup' ? {
+        rollupTarget: newColForm.value.rollupTarget || 'trips',
+        rollupField: newColForm.value.rollupField || '',
+        rollupFunction: newColForm.value.rollupFunction || 'count',
       } : {}),
     };
 
@@ -2700,6 +2813,12 @@ const getCellValue = (trip, colId) => {
   if (colDef && colDef.format === 'formula') {
     const result = evaluateFormula(trip, colDef);
     return result?.label || result?.shortLabel || '-';
+  }
+  if (colDef && colDef.format === 'lookup') {
+    return evaluateLookup(trip, colDef, personnelStore);
+  }
+  if (colDef && colDef.format === 'rollup') {
+    return evaluateRollup(trip, colDef, personnelStore);
   }
 
   // 2. Identify column origin strictly from import mappings
@@ -4128,6 +4247,35 @@ onMounted(async () => {
   accent-color: #3b82f6;
   width: 15px;
   height: 15px;
+}
+
+.settings-select {
+  width: 100%;
+  height: 36px;
+  padding: 6px 30px 6px 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #1e293b;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+}
+.settings-select:hover {
+  border-color: #94a3b8;
+}
+.settings-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 </style>
 

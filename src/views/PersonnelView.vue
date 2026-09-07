@@ -1057,7 +1057,7 @@ import apiClient from '@/api/client';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
+import { formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, evaluateLookup, evaluateRollup, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
 import {
   exportToExcel,
   exportMultiSheetExcel,
@@ -1860,8 +1860,16 @@ const getDisplayValue = (person, colId) => {
   const vVal = resolveVirtualColumnValue(person, colId);
   if (vVal !== undefined) return vVal || '-';
 
+  const colDef = allColumnDefsMap.value[colId];
+  if (colDef && colDef.format === 'lookup') {
+    return evaluateLookup(person, colDef, personnelStore);
+  }
+  if (colDef && colDef.format === 'rollup') {
+    return evaluateRollup(person, colDef, personnelStore);
+  }
+
   if (isFormulaCol(colId)) {
-    return getFormulaStatus(person, allColumnDefsMap.value[colId] || {});
+    return getFormulaStatus(person, colDef || {});
   }
 
   let cd = person.custom_data;
@@ -1917,8 +1925,8 @@ const getDisplayValue = (person, colId) => {
     }
   }
 
-  const colDef = allColumnDefsMap.value[colId] || { id: colId };
-  return formatGenericCellValue(val, colDef);
+  const finalColDef = colDef || { id: colId };
+  return formatGenericCellValue(val, finalColDef);
 };
 
 const onColumnsChange = async () => {

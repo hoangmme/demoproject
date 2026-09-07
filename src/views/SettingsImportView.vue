@@ -1335,326 +1335,166 @@
             <InputText v-model="currentSelectedDashboard.description" placeholder="VD: Tổng hợp các chuyến đi nước ngoài của cán bộ và thân nhân" size="small" style="width: 100%; font-size: 0.8rem;" />
           </div>
 
-          <!-- 2. Cấu hình Khối Thống kê ở trên / Khối Điều kiện Phụ lục -->
-          <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <!-- 2. Cấu hình Bộ lọc Dữ liệu Cơ sở của Bảng Chuyên đề (Scope Filter) -->
+          <div style="border-top: 1px solid #e2e8f0; padding-top: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <div>
-                <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 0.86rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
                   <i class="pi pi-filter" style="color: #0284c7;"></i>
-                  2. Cấu hình Bộ lọc Dữ liệu Cơ sở (Scope Filter) & Thẻ Thống kê:
+                  2. Bộ lọc Dữ liệu Cơ sở của Bảng (Scope Filter):
                 </span>
                 <span style="font-size: 0.72rem; color: #64748b;">
-                  Thẻ đầu tiên là <b>Bộ lọc Phạm vi Cơ sở (Baseline Scope)</b> của Chuyên đề (bảng dữ liệu sẽ tự động lọc theo điều kiện này). Các thẻ tiếp theo là bộ lọc nhanh / chỉ số thống kê.
+                  Thiết lập điều kiện để lọc phạm vi bản ghi cho Bảng Chuyên đề này. Để trống = Bảng hiển thị toàn bộ bản ghi nguồn. (Các khối thống kê / thẻ đếm / biểu đồ đã được gom tập trung quản lý tại trang Thống kê Dashboard).
                 </span>
               </div>
 
               <Button
-                v-if="currentSelectedDashboard.displayMode !== 'appendix' || (!currentSelectedDashboard.metricCards || currentSelectedDashboard.metricCards.length === 0)"
-                :label="currentSelectedDashboard.displayMode === 'appendix' ? 'Thiết lập Điều kiện Lọc' : 'Thêm Khối Thống kê'"
+                label="Thêm Điều kiện lọc"
                 icon="pi pi-plus"
                 severity="primary"
                 size="small"
-                @click="addMetricCardToDashboard(currentSelectedDashboard)"
+                @click="addScopeCondition"
                 style="font-size: 0.75rem;"
               />
             </div>
 
-            <!-- List of Metric Cards -->
-            <div v-if="!currentSelectedDashboard.metricCards || currentSelectedDashboard.metricCards.length === 0" style="text-align: center; padding: 1.25rem; color: #94a3b8; font-size: 0.8rem; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1;">
-              Chưa có thẻ thống kê nào. Nhấp vào <b>"+ Thêm Khối Thống kê"</b> để tạo thẻ đếm!
+            <!-- Khung hiển thị các điều kiện lọc -->
+            <div v-if="!currentScopeConditions || currentScopeConditions.length === 0" style="padding: 14px; text-align: center; color: #64748b; font-size: 0.78rem; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
+              <i class="pi pi-info-circle" style="color: #0284c7; margin-right: 4px;"></i>
+              Chưa thiết lập điều kiện lọc. Bảng Chuyên đề này sẽ <b>hiển thị toàn bộ bản ghi</b> của nguồn <b>{{ currentSelectedDashboard.source === 'trips' ? 'Chuyến đi' : (currentSelectedDashboard.source === 'relatives' ? 'Thân nhân' : 'Cán bộ') }}</b>.
             </div>
 
-            <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+            <div v-else style="display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <!-- Kiểu kết hợp (Khi có từ 2 điều kiện trở lên) -->
+              <div v-if="currentScopeConditions.length > 1" style="display: flex; align-items: center; gap: 8px; background: #eff6ff; padding: 6px 10px; border-radius: 6px; border: 1px dashed #93c5fd;">
+                <label style="font-size: 0.75rem; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 4px;">
+                  <i class="pi pi-sliders-h"></i> Kiểu kết hợp điều kiện:
+                </label>
+                <select v-model="currentSelectedDashboard.scopeLogicOp" @change="syncScopeToMetricCards" class="custom-key-select" style="font-size: 0.75rem; padding: 3px 8px; font-weight: 600; color: #1e40af; border-radius: 4px;">
+                  <option value="AND">🔗 VÀ (AND) - Thỏa mãn đồng thời tất cả điều kiện</option>
+                  <option value="OR">🔀 HOẶC (OR) - Thỏa mãn ít nhất một điều kiện</option>
+                </select>
+              </div>
+
+              <!-- Danh sách các điều kiện lọc -->
               <div
-                v-for="(card, cIdx) in currentSelectedDashboard.metricCards"
-                :key="card.id || cIdx"
-                style="border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease;"
-                :style="{
-                  backgroundColor: getCardColorTheme(card.color, isCardHidden(card)).cardBg,
-                  border: `1.5px solid ${getCardColorTheme(card.color, isCardHidden(card)).cardBorder}`,
-                  opacity: getCardColorTheme(card.color, isCardHidden(card)).cardOpacity,
-                }"
+                v-for="(cond, condIdx) in currentScopeConditions"
+                :key="cond.id || condIdx"
+                style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px;"
               >
-                <!-- Tiêu đề thẻ & Các nút thao tác di chuyển/ẩn/xóa -->
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                  <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
-                    <span
-                      style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0;"
-                      :style="{ backgroundColor: getCardColorTheme(card.color, isCardHidden(card)).dot }"
-                    ></span>
-                    <input
-                      v-model="card.label"
-                      placeholder="Tên thẻ (VD: Có vấn đề chính trị, Đi Nhật...)"
-                      style="font-size: 0.84rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; width: 100%; transition: all 0.2s ease; outline: none;"
-                      :style="{
-                        backgroundColor: isCardHidden(card) ? '#f8fafc' : getCardColorTheme(card.color).titleBg,
-                        color: isCardHidden(card) ? '#334155' : getCardColorTheme(card.color).titleColor,
-                        border: `1px solid ${isCardHidden(card) ? '#cbd5e1' : getCardColorTheme(card.color).titleBorder}`,
-                      }"
-                    />
-                  </div>
-                  <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0;">
-                    <button
-                      type="button"
-                      :disabled="cIdx === 0"
-                      @click="moveMetricCard(currentSelectedDashboard, cIdx, -1)"
-                      title="Di chuyển sang trái / lên trước"
-                      style="background: transparent; border: none; color: #475569; cursor: pointer; padding: 2px 4px;"
-                      :style="cIdx === 0 ? 'opacity: 0.25; cursor: not-allowed;' : ''"
-                    >
-                      <i class="pi pi-arrow-left" style="font-size: 0.72rem;"></i>
-                    </button>
-                    <button
-                      type="button"
-                      :disabled="cIdx === currentSelectedDashboard.metricCards.length - 1"
-                      @click="moveMetricCard(currentSelectedDashboard, cIdx, 1)"
-                      title="Di chuyển sang phải / xuống sau"
-                      style="background: transparent; border: none; color: #475569; cursor: pointer; padding: 2px 4px;"
-                      :style="cIdx === currentSelectedDashboard.metricCards.length - 1 ? 'opacity: 0.25; cursor: not-allowed;' : ''"
-                    >
-                      <i class="pi pi-arrow-right" style="font-size: 0.72rem;"></i>
-                    </button>
-                    <!-- Nút Ẩn / Hiện Thống kê -->
-                    <button
-                      type="button"
-                      @click="toggleCardHidden(card)"
-                      style="background: transparent; border: none; cursor: pointer; padding: 2px 4px; display: flex; align-items: center;"
-                      :style="{ color: isCardHidden(card) ? '#dc2626' : '#94a3b8' }"
-                      :title="isCardHidden(card) ? 'Thẻ đang bị ẩn (Bấm để hiển thị lại)' : 'Bấm để ẩn thẻ thống kê này (0%)'"
-                    >
-                      <i :class="isCardHidden(card) ? 'pi pi-eye-slash' : 'pi pi-eye'" style="font-size: 0.85rem;"></i>
-                    </button>
-                    <button
-                      type="button"
-                      @click="removeMetricCard(currentSelectedDashboard, cIdx)"
-                      style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 2px 4px;"
-                      title="Xóa thẻ này"
-                    >
-                      <i class="pi pi-trash" style="font-size: 0.75rem;"></i>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Cùng hàng: Độ rộng khối (% Width) và Màu sắc thẻ -->
-                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px;">
-                  <div style="display: flex; flex-direction: column; gap: 3px;">
-                    <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Độ rộng khối:</label>
-                    <select
-                      :value="isCardHidden(card) ? 0 : (card.widthPercent ?? '')"
-                      @change="e => onCardWidthChange(card, e.target.value)"
-                      class="custom-key-select"
-                      style="font-size: 0.75rem; padding: 4px 6px; width: 100%;"
-                    >
-                      <option value="">Tự động co giãn (Mặc định)</option>
-                      <option :value="0">Ẩn thống kê (0% - Không hiển thị)</option>
-                      <option :value="16.66">16.66% (1/6 hàng - 6 khối/dòng)</option>
-                      <option :value="20">20% (1/5 hàng - 5 khối/dòng)</option>
-                      <option :value="25">25% (1/4 hàng - 4 khối/dòng)</option>
-                      <option :value="33">33% (1/3 hàng - 3 khối/dòng)</option>
-                      <option :value="50">50% (1/2 hàng - 2 khối/dòng)</option>
-                      <option :value="100">100% (Toàn hàng - 1 khối/dòng)</option>
-                    </select>
-                  </div>
-                  <div style="display: flex; flex-direction: column; gap: 3px;">
-                    <label style="font-size: 0.7rem; font-weight: 600; color: #475569;">Màu sắc thẻ:</label>
-                    <select
-                      v-model="card.color"
-                      class="custom-key-select"
-                      style="font-size: 0.75rem; padding: 4px 6px; width: 100%;"
-                    >
-                      <option value="blue">🔵 Xanh dương</option>
-                      <option value="green">🟢 Xanh lá</option>
-                      <option value="amber">🟠 Cam hổ phách</option>
-                      <option value="red">🔴 Đỏ</option>
-                      <option value="purple">🟣 Tím</option>
-                    </select>
-                  </div>
-                </div>
-
-                <!-- Đếm giá trị duy nhất (Unique) -->
-                <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
-                  <input
-                    type="checkbox"
-                    v-model="card.isUnique"
-                    :id="'uniq_' + (card.id || cIdx)"
-                    style="margin: 0; cursor: pointer;"
-                  />
-                  <label
-                    :for="'uniq_' + (card.id || cIdx)"
-                    style="font-size: 0.72rem; font-weight: 600; color: #334155; cursor: pointer;"
-                  >
-                    Đếm giá trị duy nhất (Unique)
-                  </label>
-                </div>
-
-                <!-- Ẩn/Hiện cột đối chiếu khi ấn vào thống kê -->
-                <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
-                  <input
-                    type="checkbox"
-                    v-model="card.showCompareCol"
-                    :id="'showCompareCol_' + (card.id || cIdx)"
-                    style="margin: 0; cursor: pointer;"
-                  />
-                  <label
-                    :for="'showCompareCol_' + (card.id || cIdx)"
-                    style="font-size: 0.72rem; font-weight: 600; color: #334155; cursor: pointer;"
-                  >
-                    Hiện cột đối chiếu khi ấn vào thống kê (🎯)
-                  </label>
-                </div>
-
-                <!-- Ràng buộc theo Thẻ đầu tiên (Tổng cộng) (Hiển thị từ thẻ thứ 2 trở đi) -->
-                <div v-if="cIdx > 0" style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
-                  <input
-                    type="checkbox"
-                    :checked="card.inheritBaseline !== false"
-                    @change="card.inheritBaseline = $event.target.checked"
-                    :id="'inheritBaseline_' + (card.id || cIdx)"
-                    style="margin: 0; cursor: pointer;"
-                  />
-                  <label
-                    :for="'inheritBaseline_' + (card.id || cIdx)"
-                    style="font-size: 0.72rem; font-weight: 600; color: #334155; cursor: pointer;"
-                    title="Ràng buộc thẻ này luôn lọc trong phạm vi dữ liệu và kế thừa cách đếm của Thẻ đầu tiên (Tổng cộng)"
-                  >
-                    Ràng buộc theo Thẻ đầu tiên (Tổng cộng)
-                  </label>
-                </div>
-
-                <!-- Kiểu kết hợp (Khi có từ 2 điều kiện trở lên) -->
-                <div v-if="getCardConditions(card).length > 1" style="display: flex; flex-direction: column; gap: 3px; background: #eff6ff; padding: 6px 8px; border-radius: 4px; border: 1px dashed #93c5fd;">
-                  <label style="font-size: 0.68rem; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 4px;">
-                    <i class="pi pi-sliders-h"></i> Kiểu kết hợp điều kiện:
-                  </label>
-                  <select v-model="card.logicOp" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px; font-weight: 600; color: #1e40af;">
-                    <option value="OR">🔀 HOẶC (OR) - Cộng dồn số liệu các cột (Tổng cộng)</option>
-                    <option value="AND">🔗 VÀ (AND) - Thỏa mãn đồng thời tất cả điều kiện</option>
-                  </select>
-                </div>
-
-                <!-- Danh sách các điều kiện lọc -->
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                  <div
-                    v-for="(cond, condIdx) in getCardConditions(card)"
-                    :key="cond.id || condIdx"
-                    style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; display: flex; flex-direction: column; gap: 4px;"
-                  >
-                    <!-- Tiêu đề dòng điều kiện + nút xóa -->
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">
-                        Điều kiện #{{ condIdx + 1 }}:
-                      </span>
-                      <button
-                        v-if="getCardConditions(card).length > 1 || cond.field"
-                        type="button"
-                        @click="removeConditionFromCard(card, condIdx)"
-                        style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 0 2px; font-size: 0.75rem;"
-                        title="Xóa điều kiện này"
-                      >
-                        <i class="pi pi-times-circle"></i>
-                      </button>
-                    </div>
-
-                    <!-- Chọn Cột để đếm -->
-                    <div style="display: flex; flex-direction: column; gap: 2px;">
-                      <select v-model="cond.field" @change="onCardConditionFieldChange(cond)" class="custom-key-select" style="font-size: 0.72rem; padding: 3px 6px;">
-                        <option value="">-- Toàn bộ danh sách (Không lọc cột) --</option>
-                        <optgroup v-for="grp in categorizedDashboardCols" :key="grp.category" :label="grp.category">
-                          <option v-for="col in grp.options" :key="col.id" :value="col.id">
-                            {{ col.displayLabel || col.label }}
-                          </option>
-                        </optgroup>
-                      </select>
-                    </div>
-
-                    <!-- Toán tử & Giá trị so sánh -->
-                    <div v-if="cond.field" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                      <!-- Giao diện chuyên biệt khi chọn Đối tượng (Cán bộ / Thân nhân) -->
-                      <template v-if="cond.field === 'isRelative' || cond.field === '_doiTuong' || cond.field === 'doi_tuong'">
-                        <div>
-                          <select v-model="cond.operator" class="custom-key-select" style="font-size: 0.7rem; padding: 2px 4px; font-weight: 600;">
-                            <option value="equals">Là</option>
-                            <option value="not_equals">Không phải là (Khác)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <select
-                            v-model="cond.value"
-                            class="custom-key-select"
-                            style="font-size: 0.72rem; padding: 2px 4px; width: 100%; font-weight: 700; color: #1e40af; background: #eff6ff; border-color: #93c5fd;"
-                          >
-                            <option value="Cán bộ">👤 Cán bộ</option>
-                            <option value="Thân nhân">👨‍👩‍👧 Thân nhân</option>
-                          </select>
-                        </div>
-                      </template>
-                      <!-- Giao diện chuyên biệt khi chọn Trạng thái hiện diện -->
-                      <template v-else-if="cond.field === 'presenceStatus' || cond.field === '_presenceStatus'">
-                        <div>
-                          <select v-model="cond.operator" class="custom-key-select" style="font-size: 0.7rem; padding: 2px 4px; font-weight: 600;">
-                            <option value="equals">Là</option>
-                            <option value="not_equals">Không phải là (Khác)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <select
-                            v-model="cond.value"
-                            class="custom-key-select"
-                            style="font-size: 0.72rem; padding: 2px 4px; width: 100%; font-weight: 700; color: #0284c7; background: #f0f9ff; border-color: #7dd3fc;"
-                          >
-                            <option value="Đang ở nước ngoài">🌍 Đang ở nước ngoài</option>
-                            <option value="Trong nước">🇻🇳 Trong nước (Đã về nước)</option>
-                            <option value="Quá hạn chưa về">⚠️ Quá hạn chưa về</option>
-                          </select>
-                        </div>
-                      </template>
-                      <!-- Giao diện chuẩn cho các cột thông thường khác -->
-                      <template v-else>
-                        <div>
-                          <select v-model="cond.operator" class="custom-key-select" style="font-size: 0.7rem; padding: 2px 4px;">
-                            <optgroup label="-- So sánh giá trị cột --">
-                              <option value="has_value">Có dữ liệu (khác rỗng)</option>
-                              <option value="empty">Để trống (chưa có)</option>
-                              <option value="equals">Là (khớp chính xác)</option>
-                              <option value="not_equals">Khác</option>
-                              <option value="contains">Chứa từ khóa</option>
-                              <option value="not_contains">Không chứa từ khóa</option>
-                              <option value="gt">Giá trị lớn hơn (&gt;)</option>
-                              <option value="gte">Giá trị lớn hơn hoặc bằng (&gt;=)</option>
-                              <option value="lt">Giá trị nhỏ hơn (&lt;)</option>
-                              <option value="lte">Giá trị nhỏ hơn hoặc bằng (&lt;=)</option>
-                              <option value="before">Trước ngày</option>
-                              <option value="after">Sau ngày</option>
-                            </optgroup>
-                            <optgroup label="-- Điều kiện đếm (Tần suất / Số lần) --">
-                              <option value="count_gt">Điều kiện đếm: Lớn hơn (&gt;)</option>
-                              <option value="count_gte">Điều kiện đếm: Lớn hơn hoặc bằng (&gt;=)</option>
-                              <option value="count_lt">Điều kiện đếm: Nhỏ hơn (&lt;)</option>
-                              <option value="count_lte">Điều kiện đếm: Nhỏ hơn hoặc bằng (&lt;=)</option>
-                              <option value="count_eq">Điều kiện đếm: Bằng (=)</option>
-                            </optgroup>
-                          </select>
-                        </div>
-                        <div v-if="cond.operator !== 'has_value' && cond.operator !== 'empty'">
-                          <input
-                            v-model="cond.value"
-                            placeholder="Nhập giá trị..."
-                            style="font-size: 0.72rem; border: 1px solid #cbd5e1; background: #fff; padding: 2px 4px; border-radius: 4px; width: 100%;"
-                          />
-                        </div>
-                      </template>
-                    </div>
-                  </div>
-
-                  <!-- Nút + Thêm điều kiện lọc -->
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.75rem; font-weight: 700; color: #475569;">
+                    Điều kiện #{{ condIdx + 1 }}:
+                  </span>
                   <button
                     type="button"
-                    @click="addConditionToCard(card)"
-                    style="display: flex; align-items: center; justify-content: center; gap: 4px; background: #fff; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 5px 8px; color: #0284c7; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                    @click="removeScopeCondition(condIdx)"
+                    style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 2px 4px; font-size: 0.8rem;"
+                    title="Xóa điều kiện này"
                   >
-                    <i class="pi pi-plus" style="font-size: 0.65rem;"></i> Thêm điều kiện lọc (+)
+                    <i class="pi pi-trash"></i> Xóa
                   </button>
                 </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1.5fr 2fr; gap: 6px; align-items: center;">
+                  <!-- Chọn Cột -->
+                  <div>
+                    <select v-model="cond.field" @change="syncScopeToMetricCards" class="custom-key-select" style="width: 100%; font-size: 0.75rem; padding: 4px 6px;">
+                      <option value="">-- Chọn Cột cần lọc --</option>
+                      <optgroup v-for="grp in categorizedDashboardCols" :key="grp.category" :label="grp.category">
+                        <option v-for="col in grp.options" :key="col.id" :value="col.id">
+                          {{ col.displayLabel || col.label }}
+                        </option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <!-- Toán tử -->
+                  <div>
+                    <!-- Đối tượng -->
+                    <template v-if="cond.field === 'isRelative' || cond.field === '_doiTuong' || cond.field === 'doi_tuong'">
+                      <select v-model="cond.operator" @change="syncScopeToMetricCards" class="custom-key-select" style="width: 100%; font-size: 0.75rem; padding: 4px 6px; font-weight: 600;">
+                        <option value="equals">Là</option>
+                        <option value="not_equals">Khác</option>
+                      </select>
+                    </template>
+                    <!-- Hiện diện -->
+                    <template v-else-if="cond.field === 'presenceStatus' || cond.field === '_presenceStatus'">
+                      <select v-model="cond.operator" @change="syncScopeToMetricCards" class="custom-key-select" style="width: 100%; font-size: 0.75rem; padding: 4px 6px; font-weight: 600;">
+                        <option value="equals">Là</option>
+                        <option value="not_equals">Khác</option>
+                      </select>
+                    </template>
+                    <!-- Cột thường -->
+                    <template v-else>
+                      <select v-model="cond.operator" @change="syncScopeToMetricCards" class="custom-key-select" style="width: 100%; font-size: 0.75rem; padding: 4px 6px;">
+                        <option value="has_value">Có dữ liệu (khác rỗng)</option>
+                        <option value="empty">Để trống (chưa có)</option>
+                        <option value="equals">Là (khớp chính xác)</option>
+                        <option value="not_equals">Khác</option>
+                        <option value="contains">Chứa từ khóa</option>
+                        <option value="not_contains">Không chứa từ khóa</option>
+                        <option value="gt">Lớn hơn (&gt;)</option>
+                        <option value="gte">Lớn hơn hoặc bằng (&gt;=)</option>
+                        <option value="lt">Nhỏ hơn (&lt;)</option>
+                        <option value="lte">Nhỏ hơn hoặc bằng (&lt;=)</option>
+                        <option value="before">Trước ngày</option>
+                        <option value="after">Sau ngày</option>
+                      </select>
+                    </template>
+                  </div>
+
+                  <!-- Giá trị so sánh -->
+                  <div>
+                    <template v-if="cond.field === 'isRelative' || cond.field === '_doiTuong' || cond.field === 'doi_tuong'">
+                      <select
+                        v-model="cond.value"
+                        @change="syncScopeToMetricCards"
+                        class="custom-key-select"
+                        style="width: 100%; font-size: 0.75rem; padding: 4px 6px; font-weight: 700; color: #1e40af; background: #eff6ff; border-color: #93c5fd;"
+                      >
+                        <option value="Cán bộ">👤 Cán bộ</option>
+                        <option value="Thân nhân">👨‍👩‍👧 Thân nhân</option>
+                      </select>
+                    </template>
+                    <template v-else-if="cond.field === 'presenceStatus' || cond.field === '_presenceStatus'">
+                      <select
+                        v-model="cond.value"
+                        @change="syncScopeToMetricCards"
+                        class="custom-key-select"
+                        style="width: 100%; font-size: 0.75rem; padding: 4px 6px; font-weight: 700; color: #0284c7; background: #f0f9ff; border-color: #7dd3fc;"
+                      >
+                        <option value="Đang ở nước ngoài">🌍 Đang ở nước ngoài</option>
+                        <option value="Trong nước">🇻🇳 Trong nước (Đã về nước)</option>
+                        <option value="Quá hạn chưa về">⚠️ Quá hạn chưa về</option>
+                      </select>
+                    </template>
+                    <template v-else-if="cond.operator !== 'has_value' && cond.operator !== 'empty'">
+                      <input
+                        v-model="cond.value"
+                        @input="syncScopeToMetricCards"
+                        placeholder="Nhập giá trị so sánh..."
+                        style="width: 100%; font-size: 0.75rem; border: 1px solid #cbd5e1; background: #fff; padding: 4px 8px; border-radius: 4px;"
+                      />
+                    </template>
+                    <template v-else>
+                      <span style="font-size: 0.72rem; color: #94a3b8; font-style: italic;">(Không cần giá trị)</span>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Nút Thêm Điều Kiện -->
+              <div style="margin-top: 4px;">
+                <Button
+                  label="Thêm điều kiện lọc (+)"
+                  icon="pi pi-plus"
+                  size="small"
+                  outlined
+                  severity="primary"
+                  @click="addScopeCondition"
+                  style="font-size: 0.75rem;"
+                />
               </div>
             </div>
           </div>
@@ -1743,17 +1583,168 @@
       </div>
     </div>
 
-    <!-- Tab 4: Cài đặt Chung & Ảnh nền Đăng nhập -->
-    <div v-else-if="activeTab === 'general'" class="app-card" style="padding: 1.5rem;">
-      <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
-        <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
-          <i class="pi pi-image" style="color: #ea580c; font-size: 1.15rem;"></i>
-          Tùy chỉnh Hình nền Trang Đăng nhập (Login Background)
-        </h3>
-        <p style="font-size: 0.78rem; color: #64748b; margin: 4px 0 0 0;">
-          Tải lên hình ảnh tùy biến để thay đổi giao diện màn hình Đăng nhập của Hệ thống.
-        </p>
+    <!-- Tab 4: Cài đặt Chung, Nhận diện Hệ thống & Ảnh nền -->
+    <div v-else-if="activeTab === 'general'" class="app-card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.75rem;">
+      <!-- Khối 1: Tùy biến Nhận diện Logo, Đơn vị & Tên Menu -->
+      <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 1.5rem;">
+        <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="pi pi-shield" style="color: #2563eb; font-size: 1.15rem;"></i>
+            Tùy biến Logo, Tiêu đề Đơn vị & Tên Menu (System Branding)
+          </h3>
+          <p style="font-size: 0.78rem; color: #64748b; margin: 4px 0 0 0;">
+            Tùy biến nhận diện hệ thống: đổi Logo cơ quan, 2 dòng tiêu đề ở thanh điều hướng bên trái và tên các Menu (Cán bộ, Thân nhân, Chuyến đi) phù hợp với mọi mô hình quản lý (Cán bộ, Sinh viên, Giáo viên...).
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: start;">
+          <!-- Cột 1: Preview & Đổi Logo -->
+          <div style="display: flex; flex-direction: column; align-items: center; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 8px;">
+              Logo Hiển thị (Sidebar):
+            </div>
+            <div style="width: 110px; height: 110px; border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; background: #ffffff; margin-bottom: 12px; overflow: hidden; padding: 6px;">
+              <img
+                :src="systemBranding.logoUrl || '/bo-cong-an-logo.png'"
+                alt="Logo Preview"
+                style="max-width: 100%; max-height: 100%; object-fit: contain;"
+              />
+            </div>
+            <input
+              type="file"
+              ref="logoFileInputRef"
+              accept="image/*"
+              style="display: none;"
+              @change="handleUploadLogo"
+            />
+            <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+              <Button
+                label="Tải lên Logo Mới"
+                icon="pi pi-upload"
+                severity="primary"
+                size="small"
+                @click="triggerUploadLogo"
+                style="font-size: 0.78rem; width: 100%;"
+              />
+              <Button
+                v-if="systemBranding.logoUrl"
+                label="Dùng Logo Mặc định"
+                icon="pi pi-refresh"
+                severity="secondary"
+                size="small"
+                text
+                @click="systemBranding.logoUrl = ''"
+                style="font-size: 0.75rem; width: 100%;"
+              />
+            </div>
+            <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 8px; line-height: 1.3;">
+              Khuyến nghị tệp PNG/SVG nền trong suốt để hiển thị hài hòa trên thanh bên.
+            </div>
+          </div>
+
+          <!-- Cột 2: Cấu hình Tiêu đề Đơn vị & Tên Menu -->
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Tiêu đề Đơn vị 2 dòng -->
+            <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
+              <div style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                <i class="pi pi-building" style="color: #0284c7;"></i>
+                Tiêu đề Đơn vị (2 dòng hiển thị dưới Logo ở Sidebar):
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Dòng 1 (Cấp cơ quan chủ quản):</label>
+                  <InputText
+                    v-model="systemBranding.orgNameLine1"
+                    placeholder="VD: CÔNG AN THÀNH PHỐ HỒ CHÍ MINH"
+                    size="small"
+                    style="width: 100%; font-size: 0.8rem;"
+                  />
+                </div>
+                <div>
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Dòng 2 (Đơn vị cơ sở / Phòng ban):</label>
+                  <InputText
+                    v-model="systemBranding.orgNameLine2"
+                    placeholder="VD: PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ"
+                    size="small"
+                    style="width: 100%; font-size: 0.8rem;"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Tên hiển thị các Menu Thực thể -->
+            <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
+              <div style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                <i class="pi pi-bars" style="color: #7c3aed;"></i>
+                Tùy biến Tên Menu Các Bảng Dữ liệu & Menu Thao tác:
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                <div>
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Menu Bảng Chính (Mặc định: Cán bộ):</label>
+                  <InputText
+                    v-model="systemBranding.menuLabelPersonnel"
+                    placeholder="VD: Hồ sơ cán bộ / Hồ sơ học sinh"
+                    size="small"
+                    style="width: 100%; font-size: 0.8rem;"
+                  />
+                </div>
+                <div>
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Menu Bảng Phụ (Mặc định: Thân nhân):</label>
+                  <InputText
+                    v-model="systemBranding.menuLabelRelatives"
+                    placeholder="VD: Thân nhân / Phụ huynh"
+                    size="small"
+                    style="width: 100%; font-size: 0.8rem;"
+                  />
+                </div>
+                <div>
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Menu Chuyến đi / Sự kiện:</label>
+                  <InputText
+                    v-model="systemBranding.menuLabelTrips"
+                    placeholder="VD: Chuyến đi / Khóa học / Điểm số"
+                    size="small"
+                    style="width: 100%; font-size: 0.8rem;"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Nút Lưu & Khôi phục -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 4px;">
+              <Button
+                label="Khôi phục Mặc định"
+                icon="pi pi-refresh"
+                severity="secondary"
+                size="small"
+                outlined
+                @click="resetSystemBranding"
+                style="font-size: 0.78rem;"
+              />
+              <Button
+                label="Lưu Nhận diện & Tên Menu"
+                icon="pi pi-check"
+                severity="primary"
+                size="small"
+                @click="saveSystemBranding"
+                :loading="isSavingBranding"
+                style="font-size: 0.78rem;"
+              />
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- Khối 2: Tùy chỉnh Hình nền Trang Đăng nhập (Login Background) -->
+      <div>
+        <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="pi pi-image" style="color: #ea580c; font-size: 1.15rem;"></i>
+            Tùy chỉnh Hình nền Trang Đăng nhập (Login Background)
+          </h3>
+          <p style="font-size: 0.78rem; color: #64748b; margin: 4px 0 0 0;">
+            Tải lên hình ảnh tùy biến để thay đổi giao diện màn hình Đăng nhập của Hệ thống.
+          </p>
+        </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
         <!-- Cột 1: Preview ảnh hiện tại -->
@@ -1818,9 +1809,10 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Khối 2: Tùy chỉnh Hình nền Menu Bên Trái (Sidebar Background) -->
-      <div style="border-top: 1px solid #e2e8f0; padding-top: 1.5rem; margin-top: 1.5rem;">
+      <!-- Khối 3: Tùy chỉnh Hình nền Menu Bên Trái (Sidebar Background) -->
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 1.5rem;">
         <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
           <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
             <i class="pi pi-palette" style="color: #16a34a; font-size: 1.15rem;"></i>
@@ -2407,6 +2399,93 @@ const tripKeyField = ref('cccdchuyendi');
 const tagSearch = ref('');
 const selectedCategory = ref('personnel');
 const copiedTag = ref('');
+
+// Cài đặt Nhận diện Hệ thống & Tên Menu (System Branding)
+const DEFAULT_BRANDING = {
+  logoUrl: '',
+  orgNameLine1: 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH',
+  orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
+  menuLabelPersonnel: 'Hồ sơ cán bộ',
+  menuLabelRelatives: 'Thân nhân',
+  menuLabelTrips: 'Chuyến đi',
+};
+
+const getInitialBranding = () => {
+  try {
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      return { ...DEFAULT_BRANDING, ...parsed };
+    }
+  } catch (e) {}
+  return { ...DEFAULT_BRANDING };
+};
+
+const systemBranding = ref(getInitialBranding());
+const isSavingBranding = ref(false);
+const logoFileInputRef = ref(null);
+
+const triggerUploadLogo = () => logoFileInputRef.value?.click();
+
+const handleUploadLogo = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const uploaded = await uploadFile(file);
+    if (uploaded && uploaded.id) {
+      const url = getFileUrl(uploaded.id);
+      systemBranding.value.logoUrl = url;
+      return;
+    }
+    throw new Error('Không nhận được mã tệp');
+  } catch (err) {
+    try {
+      const compressedBase64 = await compressImage(file, 400, 400, 0.9);
+      systemBranding.value.logoUrl = compressedBase64;
+    } catch (fallbackErr) {
+      alert('Lỗi tải ảnh logo: ' + (err.message || fallbackErr.message));
+    }
+  } finally {
+    event.target.value = '';
+  }
+};
+
+const loadSystemBranding = async () => {
+  try {
+    const saved = await getAppSettings('system_branding_config', null);
+    if (saved && typeof saved === 'object') {
+      systemBranding.value = { ...DEFAULT_BRANDING, ...saved };
+      localStorage.setItem('system_branding_config', JSON.stringify(systemBranding.value));
+    }
+  } catch (e) {
+    console.warn('Failed to load branding settings:', e);
+  }
+};
+
+const saveSystemBranding = async () => {
+  try {
+    isSavingBranding.value = true;
+    const configToSave = { ...systemBranding.value };
+    localStorage.setItem('system_branding_config', JSON.stringify(configToSave));
+    await saveAppSettings('system_branding_config', configToSave);
+    window.dispatchEvent(new CustomEvent('system-branding-updated', { detail: configToSave }));
+    alert('Đã lưu cấu hình Nhận diện và Tên Menu thành công!');
+  } catch (err) {
+    alert('Lỗi lưu cấu hình: ' + (err.message || err));
+  } finally {
+    isSavingBranding.value = false;
+  }
+};
+
+const resetSystemBranding = async () => {
+  if (!confirm('Bạn có chắc muốn khôi phục lại nhận diện & tên menu mặc định?')) return;
+  systemBranding.value = { ...DEFAULT_BRANDING };
+  localStorage.setItem('system_branding_config', JSON.stringify(DEFAULT_BRANDING));
+  await saveAppSettings('system_branding_config', DEFAULT_BRANDING);
+  window.dispatchEvent(new CustomEvent('system-branding-updated', { detail: DEFAULT_BRANDING }));
+  alert('Đã khôi phục nhận diện mặc định!');
+};
 
 // Cài đặt Ảnh nền Đăng nhập
 const loginBgFileInputRef = ref(null);
@@ -3398,6 +3477,76 @@ const resetDashboardColumns = () => {
   debouncedAutoSaveDashboards();
 };
 
+const currentScopeConditions = computed(() => {
+  if (!currentSelectedDashboard.value) return [];
+  if (!currentSelectedDashboard.value.scopeConditions) {
+    if (currentSelectedDashboard.value.metricCards && currentSelectedDashboard.value.metricCards.length > 0) {
+      const c0 = currentSelectedDashboard.value.metricCards[0];
+      if (Array.isArray(c0.conditions) && c0.conditions.length > 0) {
+        currentSelectedDashboard.value.scopeConditions = JSON.parse(JSON.stringify(c0.conditions));
+      } else if (c0.condition && c0.condition !== 'all') {
+        currentSelectedDashboard.value.scopeConditions = [
+          {
+            id: 'sc_init_1',
+            field: c0.conditionField || '',
+            operator: c0.conditionOp || 'equals',
+            value: c0.conditionVal || '',
+          },
+        ];
+      } else {
+        currentSelectedDashboard.value.scopeConditions = [];
+      }
+    } else {
+      currentSelectedDashboard.value.scopeConditions = [];
+    }
+  }
+  return currentSelectedDashboard.value.scopeConditions;
+});
+
+const syncScopeToMetricCards = () => {
+  if (!currentSelectedDashboard.value) return;
+  if (!currentSelectedDashboard.value.metricCards) {
+    currentSelectedDashboard.value.metricCards = [];
+  }
+  if (currentSelectedDashboard.value.metricCards.length === 0) {
+    currentSelectedDashboard.value.metricCards.push({
+      id: 'all',
+      label: currentSelectedDashboard.value.title || 'Tổng cộng',
+      condition: 'all',
+      color: 'blue',
+    });
+  }
+  const c0 = currentSelectedDashboard.value.metricCards[0];
+  c0.conditions = JSON.parse(JSON.stringify(currentSelectedDashboard.value.scopeConditions || []));
+  c0.logicOp = currentSelectedDashboard.value.scopeLogicOp || 'AND';
+  if (c0.conditions.length === 0) {
+    c0.condition = 'all';
+  } else {
+    c0.condition = 'custom';
+  }
+  debouncedAutoSaveDashboards();
+};
+
+const addScopeCondition = () => {
+  if (!currentSelectedDashboard.value) return;
+  if (!currentSelectedDashboard.value.scopeConditions) {
+    currentSelectedDashboard.value.scopeConditions = [];
+  }
+  currentSelectedDashboard.value.scopeConditions.push({
+    id: 'sc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    field: '',
+    operator: 'equals',
+    value: '',
+  });
+  syncScopeToMetricCards();
+};
+
+const removeScopeCondition = (idx) => {
+  if (!currentSelectedDashboard.value || !currentSelectedDashboard.value.scopeConditions) return;
+  currentSelectedDashboard.value.scopeConditions.splice(idx, 1);
+  syncScopeToMetricCards();
+};
+
 const openTopicDashboard = (id) => {
   if (id === 'trips') router.push('/trips');
   else router.push(`/dashboard-topic/${id}`);
@@ -3407,6 +3556,7 @@ onMounted(async () => {
   if (route.query.tab) {
     activeTab.value = route.query.tab;
   }
+  loadSystemBranding();
   await personnelStore.loadSettings();
   personnelGroups.value = normalizeGroupColumns(JSON.parse(JSON.stringify(personnelStore.importMappingPersonnel || [])));
   relativeGroups.value = normalizeGroupColumns(
