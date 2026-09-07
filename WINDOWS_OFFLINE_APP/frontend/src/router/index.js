@@ -39,7 +39,13 @@ const routes = [
     path: '/personnel',
     name: 'Personnel',
     component: PersonnelView,
-    meta: { title: 'Quản lý Cán bộ', requiresAuth: true },
+    meta: { title: 'Bảng Cán bộ', requiresAuth: true },
+  },
+  {
+    path: '/relatives',
+    name: 'Relatives',
+    component: PersonnelView,
+    meta: { title: 'Bảng Thân nhân', requiresAuth: true },
   },
   {
     path: '/trips',

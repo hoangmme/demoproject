@@ -1,27 +1,5 @@
 <template>
   <div class="app-content">
-    <!-- Top-level Tab Switcher (chỉ hiển thị khi có dữ liệu bảng phụ liên quan) -->
-    <div v-if="personnelStore.relativesList.length > 0" style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content; margin-bottom: 1rem;">
-      <button
-        type="button"
-        class="segmented-tab-btn"
-        :class="{ 'tab-active': mainTab === 'canhan' }"
-        @click="mainTab = 'canhan'"
-      >
-        <i class="pi pi-table"></i>
-        <span>{{ mainTableTitle }} ({{ personnelStore.personnelList.length }})</span>
-      </button>
-      <button
-        type="button"
-        class="segmented-tab-btn"
-        :class="{ 'tab-active': mainTab === 'thannhan' }"
-        @click="mainTab = 'thannhan'"
-      >
-        <i class="pi pi-users"></i>
-        <span>Bảng phụ liên quan ({{ personnelStore.relativesList.length }})</span>
-      </button>
-    </div>
-
     <!-- TAB 1: DANH SÁCH CÁN BỘ (CÁ NHÂN) -->
     <div v-show="mainTab === 'canhan'" class="app-card">
       <!-- Toolbar -->
@@ -536,7 +514,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem;">
         <div style="display: flex; align-items: center; gap: 12px;">
           <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">
-            Danh sách Thân nhân liên quan ({{ flattenedRelatives.length }} người)
+            {{ relativeTableTitle }} ({{ flattenedRelatives.length }} bản ghi)
           </span>
           <Button
             v-if="selectedRelatives.length > 0"
@@ -1204,6 +1182,16 @@ const mainTableTitle = computed(() => {
   return 'Cán bộ';
 });
 
+const relativeTableTitle = computed(() => {
+  try {
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      const p = JSON.parse(local);
+      if (p.menuLabelRelatives) return p.menuLabelRelatives;
+    }
+  } catch (e) {}
+  return 'Thân nhân';
+});
 
 const isWizardOpen = ref(false);
 const wizardTarget = ref('personnel');
@@ -1218,6 +1206,22 @@ const onWizardImported = async () => {
 };
 
 const mainTab = ref('canhan'); // 'canhan' or 'thannhan'
+
+const syncTabWithRoute = () => {
+  if (route.path === '/relatives' || route.query.tab === 'thannhan' || route.query.tab === 'relatives') {
+    mainTab.value = 'thannhan';
+  } else {
+    mainTab.value = 'canhan';
+  }
+};
+
+watch(
+  () => [route.path, route.query.tab],
+  () => {
+    syncTabWithRoute();
+  },
+  { immediate: true }
+);
 const searchQuery = ref('');
 const relativeSearchQuery = ref('');
 const selectedPersonnel = ref([]);
@@ -2108,7 +2112,7 @@ const loadPersonnelFilterState = async () => {
       }
     }
     if (saved && typeof saved === 'object') {
-      if (saved.mainTab !== undefined) mainTab.value = saved.mainTab;
+      syncTabWithRoute();
       if (saved.searchQuery !== undefined) searchQuery.value = saved.searchQuery;
       if (saved.relativeSearchQuery !== undefined) relativeSearchQuery.value = saved.relativeSearchQuery;
       if (saved.smartFilter !== undefined) smartFilter.value = saved.smartFilter;

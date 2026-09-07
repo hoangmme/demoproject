@@ -64,7 +64,20 @@
       <router-link to="/personnel" class="app-nav-item" :title="systemBranding.menuLabelPersonnel || 'Cán bộ'">
         <i class="pi pi-table" style="color: #0284c7;"></i>
         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          {{ systemBranding.menuLabelPersonnel || 'Cán bộ' }}
+          {{ systemBranding.menuLabelPersonnel || 'Cán bộ' }} ({{ personnelStore.personnelList.length }})
+        </span>
+      </router-link>
+
+      <!-- Bảng 2: Thân nhân (Table 2 độc lập) -->
+      <router-link
+        v-if="personnelStore.relativesList.length > 0 || systemBranding.showSecondaryInputs"
+        to="/relatives"
+        class="app-nav-item"
+        :title="systemBranding.menuLabelRelatives || 'Thân nhân'"
+      >
+        <i class="pi pi-users" style="color: #a855f7;"></i>
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          {{ systemBranding.menuLabelRelatives || 'Thân nhân' }} ({{ personnelStore.relativesList.length }})
         </span>
       </router-link>
 
@@ -91,19 +104,19 @@
 
       <a class="app-nav-item" href="javascript:void(0)" @click="handleInputClick('new_personnel')" :title="'Thêm bản ghi vào ' + (systemBranding.menuLabelPersonnel || 'Cán bộ')">
         <i class="pi pi-user-plus" style="color: #0284c7;"></i>
-        <span>+ Thêm bản ghi {{ (systemBranding.menuLabelPersonnel || 'Cán bộ') }}</span>
+        <span>+ Thêm {{ (systemBranding.menuLabelPersonnel || 'Cán bộ') }}</span>
+      </a>
+
+      <!-- Thêm Thân nhân nếu có quản lý -->
+      <a v-if="personnelStore.relativesList.length > 0 || systemBranding.showSecondaryInputs" class="app-nav-item" href="javascript:void(0)" @click="openQuickRelativeDialog" :title="'Thêm ' + (systemBranding.menuLabelRelatives || 'Thân nhân')">
+        <i class="pi pi-users" style="color: #a855f7;"></i>
+        <span>+ Thêm {{ (systemBranding.menuLabelRelatives || 'Thân nhân') }}</span>
       </a>
 
       <!-- Nút Thêm Bảng mới trực tiếp từ Nhập liệu -->
       <a class="app-nav-item" href="javascript:void(0)" @click="openAddTableDialog" title="Thêm Bảng / Chuyên đề mới">
         <i class="pi pi-plus-circle" style="color: #34d399;"></i>
         <span>+ Thêm Bảng mới</span>
-      </a>
-
-      <!-- Các nút phụ chỉ hiển thị khi có cấu hình sử dụng -->
-      <a v-if="systemBranding.showSecondaryInputs" class="app-nav-item" href="javascript:void(0)" @click="openQuickRelativeDialog" :title="'Thêm ' + (systemBranding.menuLabelRelatives || 'thân nhân')">
-        <i class="pi pi-users" style="color: #c084fc;"></i>
-        <span>Thêm {{ (systemBranding.menuLabelRelatives || 'thân nhân') }}</span>
       </a>
 
       <a v-if="systemBranding.showSecondaryInputs" class="app-nav-item" href="javascript:void(0)" @click="openQuickTripDialog" :title="'Thêm ' + (systemBranding.menuLabelTrips || 'chuyến đi')">
@@ -520,7 +533,7 @@ const confirmRelativeNavigate = () => {
   if (!selectedParentCccdForRelative.value) return;
   isRelativeSelectOpen.value = false;
   router.push({
-    path: '/personnel',
+    path: '/relatives',
     query: {
       action: 'new_relative',
       targetCccd: selectedParentCccdForRelative.value,

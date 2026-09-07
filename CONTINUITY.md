@@ -1031,3 +1031,28 @@
      - Đổi nhóm trường `2. Cột Bảng Chính (Hồ sơ)` thành `2. Cột Bảng Cán bộ (Hồ sơ)`.
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+---
+
+### 77. TÁCH BIỆT HOÀN TOÀN CÁC BẢNG DỮ LIỆU - MỖI BẢNG CHỈ CHỨA DUY NHẤT 1 LOẠI DỮ LIỆU (XOÁ BỎ TAB CHUYỂN BẢNG)
+- **Strategic Context**:
+  - Người dùng phản hồi với ảnh chụp 2 tab `[Cán bộ (30)]` và `[Bảng phụ liên quan (28)]`: "Mỗi bảng chỉ có 1 loại dữ liệu thôi sao bạn lại gộp lại vậy".
+  - Theo chuẩn Lark Suite Base / Airtable: Mỗi Table là một thực thể riêng biệt 100%, không lồng ghép tab chuyển bảng qua lại trong cùng một view bảng.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Xóa Bỏ Hoàn Toàn Tab Chuyển Bảng Lồng Ghép (`PersonnelView.vue`)**:
+     - Gỡ bỏ hoàn toàn thanh tab switcher `[Cán bộ (30)]` | `[Bảng phụ liên quan (28)]`.
+     - Mỗi bảng chỉ hiển thị đúng 1 loại dữ liệu duy nhất:
+       * Khi vào Bảng Cán bộ: Chỉ hiển thị dữ liệu Cán bộ (30 bản ghi).
+       * Khi vào Bảng Thân nhân: Chỉ hiển thị dữ liệu Thân nhân (28 bản ghi).
+  2. **Tạo Tuyến Đường Độc Lập Cho Bảng Thân Nhân (`router/index.js`)**:
+     - Thêm route chính thức `/relatives` dẫn đến Bảng Thân nhân độc lập.
+     - View tự động nhận diện tuyến đường (`route.path === '/relatives'`) để hiển thị đúng bảng dữ liệu mà không cần tab chuyển đổi.
+  3. **Tách Bảng Trên Sidebar Thành Các Table Riêng Biệt (`AppSidebar.vue`)**:
+     - Trong mục **BẢNG DỮ LIỆU (TABLES)**:
+       * 📋 **Cán bộ** (`/personnel` - 30 bản ghi)
+       * 👥 **Thân nhân** (`/relatives` - 28 bản ghi)
+       * ✈️ **Danh sách Chuyến đi** (`/trips`)
+       * 📋 *(Các Bảng chuyên đề khác nếu có...)*
+     - Mục **Nhập liệu**: Cung cấp tùy chọn trực tiếp `+ Thêm Cán bộ` và `+ Thêm Thân nhân`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
