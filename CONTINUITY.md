@@ -763,8 +763,32 @@
   4. **Tiêu đề thẻ Thân nhân (`PersonnelFamilyForm.vue`)**: Thay thế hiển thị tĩnh `rel.relationshipName` / `rel.relativeName` / `rel.countryName` bằng `getRelativeHeaderTitle(rel)` tự động đọc theo các cột định nghĩa trong `importMappingRelative`.
   5. **Tạo mới Thân nhân (`addRelative`)**: Tự động duyệt qua `importMappingRelative` để gán khóa chính động `personnelStore.getRelativeKeyField()` và khởi tạo toàn bộ các trường động cho thân nhân mới.
   6. **Validate & Lưu hồ sơ (`PersonnelDialog.vue`)**: Đọc tên cán bộ và CCCD cán bộ thông qua `personnelStore.getPersonnelNameField()` và `personnelStore.getPersonnelKeyField()`.
+### 66. KHẮC PHỤC TRIỆT ĐỂ LỖI KHÔNG SỬA ĐƯỢC ĐỘ RỘNG VÀ KHÔNG XÓA ĐƯỢC KHỐI THỐNG KÊ (2026-09-07)
+- **Vấn đề phản hồi**: Người dùng không thể chỉnh sửa độ rộng (width) hoặc xóa khối thống kê trên Dashboard (Thống kê).
+- **Nguyên nhân cốt lõi phát hiện (Root Causes)**:
+  1. **Lỗi xóa khối bị tự động hồi sinh (Resurrection on Reconcile)**:
+     - Khi bấm icon thùng rác "Xóa khối này" (`deleteWidget`), widget bị xóa khỏi `group.widgets` và lưu vào DB.
+     - Tuy nhiên, mỗi khi load lại trang hoặc chuyển tab, hàm `reconcileGroupsWithTopics` tự động chạy trong `onMounted`. Hàm này duyệt qua toàn bộ `topic.metricCards`, thấy thẻ chưa có trong `existingWidgets` nên tự động gán là "thẻ mới" và **tạo mới lại widget (`updatedWidgets.push(...)`)**, làm khối thống kê vừa xóa lập tức hồi sinh trở lại!
+     - Tương tự khi xóa cả nhóm (`deleteGroup`), nhóm có `topicId` bị `reconcileGroupsWithTopics` coi là chưa có và tạo mới lại toàn bộ!
+  2. **Lỗi không chỉnh được độ rộng (Width Overwritten & Logical Fallback)**:
+     - **Không ẩn được (0%)**: Trong `saveWidget`, code cũ dùng `widthPercent: Number(widgetForm.value.widthPercent) || 33`. Do `Number(0) === 0`, biểu thức `0 || 33` luôn ép ngược về `33`! Người dùng chọn ẩn (0%) thì luôn bị biến thành 33%.
+     - **Bị đè độ rộng sau khi lưu**: Trong `reconcileGroupsWithTopics`, biểu thức tính `targetWp` ưu tiên `Number(card.widthPercent) > 0 ? Number(card.widthPercent) : existingWidget.widthPercent`. Do đó, nếu thẻ ở Chuyên đề có độ rộng mặc định, nó sẽ đè bẹp và xóa sạch độ rộng mà người dùng vừa tùy chỉnh trên Dashboard!
+- **Giải pháp xử lý triệt để**:
+  1. **Cơ chế ghi nhận xóa vĩnh viễn (`deletedCardKeys` & `deletedTopicGroupIds`)**:
+     - Trong `deleteWidget`: Lưu các khóa định danh của widget (`id`, `cardId`, `cardIndex`, `title`) vào mảng `group.deletedCardKeys`. Trong `reconcileGroupsWithTopics`, nếu thẻ nằm trong `deletedCardKeys`, hệ thống **tuyệt đối không hồi sinh lại**.
+     - Khi người dùng chủ động bấm icon `pi pi-sync` "Đồng bộ từ Chuyên đề" trên Header nhóm, `deletedCardKeys` mới được reset để phục hồi theo chủ đích của người dùng.
+     - Trong `deleteGroup`: Nhóm có `topicId` được lưu vào `deletedTopicGroupIds` (LocalStorage + DB), ngăn chặn reconcile tự tạo lại nhóm đã bị xóa.
+  2. **Tôn trọng 100% độ rộng người dùng tùy chỉnh (`userCustomizedWidth`)**:
+     - Sửa `saveWidget`: Parse `finalWp` an toàn (`rawWp !== '' ? Number(rawWp) : 33`), cho phép giá trị `0` (ẩn `hidden: true`).
+     - Gán cờ `userCustomizedWidth: true` và `userCustomizedTitle: true`.
+     - Trong `reconcileGroupsWithTopics`: Nếu widget đã có `userCustomizedWidth` hoặc `existingWidget.widthPercent` hợp lệ, **giữ nguyên 100% độ rộng của người dùng**, tuyệt đối không lấy `card.widthPercent` đè lên.
+  3. **Tối ưu hóa hiển thị và quản lý trực tiếp (`getWidgetStyle` & `Reorder Dialog`)**:
+     - `getWidgetStyle`: Tính toán chuẩn xác tỉ lệ Flexbox (`calc(X% - gap)`) kèm `boxSizing: 'border-box'` cho mọi độ rộng (100%, 50%, 33%, 25%, 20%, 16.66% và các số tùy chọn khác).
+     - Bổ sung nút Sửa (`pi pi-pencil`) và Xóa (`pi pi-trash`) trực tiếp trong popup "Sắp xếp vị trí" kèm huy hiệu `[Ẩn (0%)]` hoặc `[X%]`, giúp người dùng dễ dàng bật lại các thẻ đã ẩn.
+     - Thêm `.stop` cho các sự kiện click trên biểu đồ cột dọc và thanh ngang để không kích hoạt nhầm mở trang Chuyên đề khi ấn nút Sửa/Xóa.
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công, đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
+
 
 
 

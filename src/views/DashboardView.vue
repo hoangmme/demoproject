@@ -242,11 +242,11 @@
                   </h4>
                 </div>
               </div>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <button type="button" class="btn-card-setting" @click="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
+              <div style="display: flex; align-items: center; gap: 4px;" @click.stop>
+                <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
                   <i class="pi pi-pencil"></i>
                 </button>
-                <button type="button" class="btn-card-setting" @click="deleteWidget(group, widget)" title="Xóa biểu đồ này" style="color: #ef4444;">
+                <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa biểu đồ này" style="color: #ef4444;">
                   <i class="pi pi-trash"></i>
                 </button>
               </div>
@@ -307,11 +307,11 @@
                   </h4>
                 </div>
               </div>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <button type="button" class="btn-card-setting" @click="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
+              <div style="display: flex; align-items: center; gap: 4px;" @click.stop>
+                <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
                   <i class="pi pi-pencil"></i>
                 </button>
-                <button type="button" class="btn-card-setting" @click="deleteWidget(group, widget)" title="Xóa biểu đồ này" style="color: #ef4444;">
+                <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa biểu đồ này" style="color: #ef4444;">
                   <i class="pi pi-trash"></i>
                 </button>
               </div>
@@ -636,16 +636,24 @@
                 #{{ idx + 1 }}
               </span>
               <div style="display: flex; flex-direction: column; overflow: hidden;">
-                <span style="font-size: 0.84rem; font-weight: 600; color: #1e293b; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-                  {{ w.title }}
-                </span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 0.84rem; font-weight: 600; color: #1e293b; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                    {{ w.title }}
+                  </span>
+                  <span v-if="isWidgetHidden(w)" style="font-size: 0.68rem; background: #fee2e2; color: #dc2626; padding: 1px 6px; border-radius: 4px; font-weight: 700;">
+                    Ẩn (0%)
+                  </span>
+                  <span v-else-if="w.widthPercent" style="font-size: 0.68rem; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-weight: 600;">
+                    {{ w.widthPercent }}%
+                  </span>
+                </div>
                 <span style="font-size: 0.7rem; color: #64748b;">
                   {{ w.displayType === 'count' ? 'Thẻ đếm số lượng' : (w.displayType === 'vertical_bar' ? 'Biểu đồ cột dọc' : 'Biểu đồ thanh ngang') }}
                 </span>
               </div>
             </div>
 
-            <!-- Điều khiển vị trí -->
+            <!-- Điều khiển vị trí & Thao tác -->
             <div style="display: flex; align-items: center; gap: 4px;">
               <select
                 :value="idx + 1"
@@ -697,6 +705,26 @@
                 style="padding: 4px 6px; height: 28px;"
               >
                 <i class="pi pi-angle-double-down" style="font-size: 0.8rem;"></i>
+              </button>
+
+              <!-- Sửa & Xóa trực tiếp trong danh sách -->
+              <button
+                type="button"
+                class="btn-card-setting"
+                @click="isReorderWidgetsDialogOpen = false; openEditWidgetDialog(reorderingGroup, w)"
+                title="Cài đặt khối này (độ rộng, màu sắc, tiêu đề)"
+                style="padding: 4px 6px; height: 28px; margin-left: 4px;"
+              >
+                <i class="pi pi-pencil" style="font-size: 0.8rem; color: #0284c7;"></i>
+              </button>
+              <button
+                type="button"
+                class="btn-card-setting"
+                @click="deleteWidget(reorderingGroup, w)"
+                title="Xóa khối này"
+                style="padding: 4px 6px; height: 28px; color: #ef4444;"
+              >
+                <i class="pi pi-trash" style="font-size: 0.8rem;"></i>
               </button>
             </div>
           </div>
@@ -1223,17 +1251,37 @@ const widgetForm = ref({
   icon: 'pi-chart-line',
 });
 
+const deletedTopicGroupIds = ref([]);
+
+const loadDeletedTopicGroupIds = async () => {
+  try {
+    const local = localStorage.getItem('dashboard_deleted_topic_group_ids');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed)) {
+        deletedTopicGroupIds.value = parsed;
+      }
+    }
+    const dbDeleted = await getAppSettings('dashboard_deleted_topic_group_ids');
+    if (dbDeleted && Array.isArray(dbDeleted)) {
+      deletedTopicGroupIds.value = dbDeleted;
+    }
+  } catch (e) {
+    console.error('Error loading deletedTopicGroupIds:', e);
+  }
+};
+
 const loadCustomGroups = async () => {
   try {
     const local = localStorage.getItem('dashboard_custom_groups');
-    if (local) {
+    if (local !== null && local !== undefined) {
       const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         customGroups.value = parsed;
       }
     }
     const dbGroups = await getAppSettings('dashboard_custom_groups');
-    if (dbGroups && Array.isArray(dbGroups) && dbGroups.length > 0) {
+    if (dbGroups !== null && dbGroups !== undefined && Array.isArray(dbGroups)) {
       customGroups.value = dbGroups;
       try {
         localStorage.setItem('dashboard_custom_groups', JSON.stringify(dbGroups));
@@ -1255,7 +1303,7 @@ const saveCustomGroupsToDb = async () => {
   }
 };
 
-const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = null) => {
+const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = null, forceSyncFromTopic = false) => {
   if (!availableTopicDashboards.value || availableTopicDashboards.value.length === 0) {
     if (!silent) alert('Không tìm thấy cấu hình Chuyên đề nào!');
     return;
@@ -1292,6 +1340,11 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
     const widthPerCard = visibleCards.length <= 2 ? 50 : (visibleCards.length === 3 ? 33 : 25);
 
     if (!existingGroup) {
+      // Nếu nhóm này đã bị người dùng xóa trên Dashboard -> Không tự ý tạo lại (trừ khi forceSyncFromTopic)
+      if (!forceSyncFromTopic && (deletedTopicGroupIds.value || []).includes(topic.id)) {
+        return;
+      }
+
       // Nếu nhóm này chưa có trên Dashboard chính -> Tạo nhóm mới với các thẻ tương ứng
       const widgets = cards.map((card, cIdx) => {
         const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
@@ -1340,7 +1393,7 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
       hasChanges = true;
     }
 
-    // Nhóm đã tồn tại -> Smart Reconcile từng thẻ widget (BẢO TỒN 100% STYLE CỦA NGƯỜI DÙNG)
+    // Nhóm đã tồn tại -> Smart Reconcile từng thẻ widget (BẢO TỒN 100% STYLE VÀ CẤU HÌNH CỦA NGƯỜI DÙNG)
     const existingWidgets = existingGroup.widgets || [];
     const updatedWidgets = [];
     const matchedWidgetIds = new Set();
@@ -1348,6 +1401,19 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
     cards.forEach((card, cIdx) => {
       const cardConds = (card.conditions && card.conditions.length > 0) ? card.conditions : (card.field ? [{ field: card.field }] : []);
       const primaryField = cardConds.length > 0 ? cardConds[0].field : '';
+
+      // Kiểm tra xem thẻ này có bị người dùng xóa khỏi nhóm không
+      const isCardDeletedByUser = (existingGroup.deletedCardKeys || []).some((k) =>
+        k === card.id ||
+        k === card.label ||
+        k === `card_${cIdx}` ||
+        k === `idx_${cIdx}` ||
+        k === `title_${card.label}` ||
+        k === `${topic.id}_${card.id}`
+      );
+      if (isCardDeletedByUser && !forceSyncFromTopic) {
+        return; // Không phục hồi thẻ người dùng đã chủ động xóa
+      }
 
       // Tìm widget tương ứng đã có trong nhóm (chưa được match với thẻ khác)
       let existingWidget = existingWidgets.find(
@@ -1367,18 +1433,29 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
 
       if (existingWidget) {
         matchedWidgetIds.add(existingWidget.id);
-        // Giữ nguyên 100% style người dùng đã setup (color, icon, displayType, chartType, bgColor, etc.)
-        // Nếu thẻ không bị ẩn từ Cấu hình Chuyên đề, giải phóng trạng thái ẩn (hidden: false) và khôi phục độ rộng hợp lệ
-        const targetWp = isCardHidden
-          ? 0
-          : ((card.widthPercent !== '' && card.widthPercent !== undefined && card.widthPercent !== null && Number(card.widthPercent) > 0)
-              ? Number(card.widthPercent)
-              : (existingWidget.widthPercent && Number(existingWidget.widthPercent) > 0 ? Number(existingWidget.widthPercent) : widthPerCard));
+
+        // XÁC ĐỊNH ĐỘ RỘNG HỢP LỆ:
+        // 1. Nếu thẻ bị ẩn từ Topic -> width = 0
+        // 2. Nếu người dùng đã tùy chỉnh trên Dashboard (userCustomizedWidth hoặc existingWidget.widthPercent) -> ƯU TIÊN GIỮ NGUYÊN (trừ khi forceSyncFromTopic)
+        // 3. Nếu không, lấy theo card.widthPercent từ Chuyên đề
+        // 4. Mặc định theo widthPerCard
+        let targetWp;
+        if (isCardHidden) {
+          targetWp = 0;
+        } else if (!forceSyncFromTopic && (existingWidget.userCustomizedWidth || (existingWidget.widthPercent !== undefined && existingWidget.widthPercent !== null && existingWidget.widthPercent !== '' && Number(existingWidget.widthPercent) >= 0))) {
+          targetWp = Number(existingWidget.widthPercent);
+        } else if (card.widthPercent !== '' && card.widthPercent !== undefined && card.widthPercent !== null && Number(card.widthPercent) > 0) {
+          targetWp = Number(card.widthPercent);
+        } else if (existingWidget.widthPercent !== undefined && existingWidget.widthPercent !== null && Number(existingWidget.widthPercent) > 0) {
+          targetWp = Number(existingWidget.widthPercent);
+        } else {
+          targetWp = widthPerCard;
+        }
 
         updatedWidgets.push({
           ...existingWidget,
           cardIndex: cIdx,
-          title: card.label || existingWidget.title,
+          title: existingWidget.userCustomizedTitle ? existingWidget.title : (card.label || existingWidget.title),
           topicId: topic.id,
           topicTitle: topic.title,
           cardId: card.id || card.label || `card_${cIdx}`,
@@ -1391,8 +1468,10 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
           source: topic.source || 'trips',
           isUnique: !!card.isUnique,
           inheritBaseline: card.inheritBaseline !== false,
-          hidden: isCardHidden,
+          hidden: targetWp === 0,
           widthPercent: targetWp,
+          userCustomizedWidth: existingWidget.userCustomizedWidth || false,
+          userCustomizedTitle: existingWidget.userCustomizedTitle || false,
         });
       } else {
         // Thẻ mới được thêm ở Child Dashboard -> Tạo widget mới trong nhóm
@@ -1456,18 +1535,27 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
 const syncSingleGroupFromTopic = async (group) => {
   await loadTopicDashboards();
   await loadCustomGroups();
+  const currentGroup = (customGroups.value || []).find((g) => g.id === group.id || (group.topicId && g.topicId === group.topicId) || g.title === group.title);
+  if (currentGroup) {
+    currentGroup.deletedCardKeys = [];
+  }
   const topic = availableTopicDashboards.value.find((t) => (group.topicId && t.id === group.topicId) || t.title === group.title);
   if (!topic) {
     alert('Không tìm thấy cấu hình Chuyên đề tương ứng với nhóm này để đồng bộ!');
     return;
   }
-  await reconcileGroupsWithTopics(false, group.id || group.title);
+  await reconcileGroupsWithTopics(false, group.id || group.title, true);
 };
 
 const syncAllTopicDashboardsToWidgets = async () => {
+  deletedTopicGroupIds.value = [];
+  try {
+    localStorage.removeItem('dashboard_deleted_topic_group_ids');
+    await saveAppSettings('dashboard_deleted_topic_group_ids', []);
+  } catch (e) {}
   await loadTopicDashboards();
   await loadCustomGroups();
-  await reconcileGroupsWithTopics(false);
+  await reconcileGroupsWithTopics(false, null, true);
 };
 
 // Group CRUD
@@ -1535,6 +1623,18 @@ const saveGroup = async () => {
 const deleteGroup = async (group) => {
   if (!confirm(`Bạn có chắc muốn xóa nhóm "${group.title}" và toàn bộ khối thống kê bên trong?`)) return;
   customGroups.value = customGroups.value.filter((g) => g.id !== group.id);
+
+  if (group.topicId) {
+    if (!deletedTopicGroupIds.value) deletedTopicGroupIds.value = [];
+    if (!deletedTopicGroupIds.value.includes(group.topicId)) {
+      deletedTopicGroupIds.value.push(group.topicId);
+      try {
+        localStorage.setItem('dashboard_deleted_topic_group_ids', JSON.stringify(deletedTopicGroupIds.value));
+        await saveAppSettings('dashboard_deleted_topic_group_ids', deletedTopicGroupIds.value);
+      } catch (e) {}
+    }
+  }
+
   await saveCustomGroupsToDb();
 };
 
@@ -2257,7 +2357,7 @@ const openEditWidgetDialog = (group, widget) => {
   const curIdx = (group.widgets || []).findIndex((w) => w.id === widget.id);
   widgetOrder.value = curIdx !== -1 ? curIdx + 1 : (group.widgets || []).length;
   widgetForm.value = {
-    widthPercent: 33,
+    widthPercent: (widget.widthPercent !== undefined && widget.widthPercent !== null && widget.widthPercent !== '') ? Number(widget.widthPercent) : 33,
     ...JSON.parse(JSON.stringify(widget)),
   };
   isWidgetDialogOpen.value = true;
@@ -2277,7 +2377,7 @@ const onWidgetColumnSelect = () => {
 
 const saveWidget = async () => {
   if (isSavingWidget.value) return;
-  if (!widgetForm.value.title.trim()) {
+  if (!widgetForm.value.title?.trim()) {
     alert('Vui lòng nhập Tiêu đề cho Khối thống kê!');
     return;
   }
@@ -2293,9 +2393,17 @@ const saveWidget = async () => {
   isWidgetDialogOpen.value = false;
 
   try {
+    const rawWp = widgetForm.value.widthPercent;
+    const finalWp = (rawWp !== '' && rawWp !== undefined && rawWp !== null && !isNaN(Number(rawWp)))
+      ? Number(rawWp)
+      : 33;
+
     const payload = {
       ...widgetForm.value,
-      widthPercent: Number(widgetForm.value.widthPercent) || 33,
+      widthPercent: finalWp,
+      hidden: finalWp === 0,
+      userCustomizedWidth: true,
+      userCustomizedTitle: true,
     };
 
     if (editingWidget.value) {
@@ -2378,12 +2486,13 @@ const getWidgetStyle = (widget) => {
       display: 'none',
     };
   }
-  const wp = Number(widget.widthPercent) || 33;
-  if (wp === 100) {
+  const wp = Number(widget.widthPercent);
+  if (wp >= 95) {
     return {
       flex: '1 1 100%',
       width: '100%',
       maxWidth: '100%',
+      boxSizing: 'border-box',
     };
   }
   if (wp === 50) {
@@ -2391,7 +2500,8 @@ const getWidgetStyle = (widget) => {
       flex: '1 1 calc(50% - 0.5rem)',
       width: 'calc(50% - 0.5rem)',
       maxWidth: 'calc(50% - 0.5rem)',
-      minWidth: '320px',
+      minWidth: '280px',
+      boxSizing: 'border-box',
     };
   }
   if (wp === 25) {
@@ -2399,7 +2509,8 @@ const getWidgetStyle = (widget) => {
       flex: '1 1 calc(25% - 0.75rem)',
       width: 'calc(25% - 0.75rem)',
       maxWidth: 'calc(25% - 0.75rem)',
-      minWidth: '220px',
+      minWidth: '210px',
+      boxSizing: 'border-box',
     };
   }
   if (wp === 20) {
@@ -2407,7 +2518,8 @@ const getWidgetStyle = (widget) => {
       flex: '1 1 calc(20% - 0.8rem)',
       width: 'calc(20% - 0.8rem)',
       maxWidth: 'calc(20% - 0.8rem)',
-      minWidth: '180px',
+      minWidth: '170px',
+      boxSizing: 'border-box',
     };
   }
   if (wp === 16.66 || wp === 16 || wp === 17 || Math.abs(wp - 16.66) < 1) {
@@ -2415,7 +2527,17 @@ const getWidgetStyle = (widget) => {
       flex: '1 1 calc(16.666% - 0.85rem)',
       width: 'calc(16.666% - 0.85rem)',
       maxWidth: 'calc(16.666% - 0.85rem)',
-      minWidth: '150px',
+      minWidth: '140px',
+      boxSizing: 'border-box',
+    };
+  }
+  if (wp > 0 && wp < 95) {
+    return {
+      flex: `1 1 calc(${wp}% - 0.67rem)`,
+      width: `calc(${wp}% - 0.67rem)`,
+      maxWidth: `calc(${wp}% - 0.67rem)`,
+      minWidth: wp <= 20 ? '160px' : (wp <= 25 ? '200px' : (wp <= 34 ? '240px' : '280px')),
+      boxSizing: 'border-box',
     };
   }
   // Default 33.333%
@@ -2423,13 +2545,30 @@ const getWidgetStyle = (widget) => {
     flex: '1 1 calc(33.333% - 0.67rem)',
     width: 'calc(33.333% - 0.67rem)',
     maxWidth: 'calc(33.333% - 0.67rem)',
-    minWidth: '260px',
+    minWidth: '240px',
+    boxSizing: 'border-box',
   };
 };
 
 const deleteWidget = async (group, widget) => {
   if (!confirm(`Bạn có chắc muốn xóa khối thống kê "${widget.title}"?`)) return;
   group.widgets = group.widgets.filter((w) => w.id !== widget.id);
+
+  // Ghi nhận định danh của widget bị xóa để reconcileGroupsWithTopics không tự ý hồi sinh
+  if (!group.deletedCardKeys) group.deletedCardKeys = [];
+  const keys = [
+    widget.id,
+    widget.cardId,
+    widget.cardIndex !== undefined ? `idx_${widget.cardIndex}` : null,
+    widget.title ? `title_${widget.title}` : null,
+    widget.topicId && widget.cardId ? `${widget.topicId}_${widget.cardId}` : null,
+  ].filter(Boolean);
+  keys.forEach((k) => {
+    if (!group.deletedCardKeys.includes(k)) {
+      group.deletedCardKeys.push(k);
+    }
+  });
+
   await saveCustomGroupsToDb();
 };
 
@@ -2959,6 +3098,7 @@ onMounted(async () => {
     loadDashboardSettings(),
     loadTopicDashboards(),
     loadCustomGroups(),
+    loadDeletedTopicGroupIds(),
   ]);
   await reconcileGroupsWithTopics(true);
 });
