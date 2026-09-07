@@ -31,7 +31,7 @@
           style="font-size: 0.85rem; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 6px;"
         >
           <i class="pi pi-send" style="font-size: 0.8rem; color: #0284c7;"></i>
-          <span>Chuyến {{ idx + 1 }}: {{ trip.countryName || 'Chưa đặt quốc gia' }} {{ trip.departureDate ? `(${trip.departureDate})` : '' }}</span>
+          <span>Chuyến {{ idx + 1 }}: {{ getTripCountry(trip) }} {{ getTripDepDate(trip) ? `(${getTripDepDate(trip)})` : '' }}</span>
         </span>
         <Button
           label="Xóa chuyến này"
@@ -146,25 +146,48 @@ const getColClass = (w) => {
   return 'col-3';
 };
 
+const getTripCountry = (trip) => {
+  if (!trip) return 'Chưa đặt quốc gia';
+  // Tìm cột quốc gia từ cấu hình chuyến đi
+  const cCols = tripColumns.value.filter(c => c.id.includes('quoc_gia') || c.id.includes('country') || c.label.toLowerCase().includes('quốc gia') || c.label.toLowerCase().includes('nơi đến'));
+  for (const c of cCols) {
+    const v = trip[c.id] ?? trip.custom_data?.[c.id];
+    if (v && String(v).trim() !== '') return String(v).trim();
+  }
+  return trip.quoc_gia_xuat_canh || trip.countryName || 'Chưa đặt quốc gia';
+};
+
+const getTripDepDate = (trip) => {
+  if (!trip) return '';
+  // Tìm cột ngày xuất cảnh từ cấu hình chuyến đi
+  const dCols = tripColumns.value.filter(c => c.id.includes('xuat_canh') || c.id.includes('departure') || c.label.toLowerCase().includes('ngày đi') || c.label.toLowerCase().includes('ngày xuất cảnh'));
+  for (const c of dCols) {
+    const v = trip[c.id] ?? trip.custom_data?.[c.id];
+    if (v && String(v).trim() !== '') return String(v).trim();
+  }
+  return trip.ngay_xuat_canh || trip.departureDate || '';
+};
+
 const addTrip = () => {
   const isRelative = !!props.form.relationshipName || !!props.form.relativeName;
   const pKey = props.form.cccd || props.form.cccdparent || props.form.id || '';
   const rKey = props.form.cccdthannhan || props.form.cccd || '';
 
-  trips.value.push({
+  const newTrip = {
     id: 'trip_' + Date.now(),
     cccdchuyendi: 'cd_' + Date.now(),
     cccdparent: isRelative ? (props.form.cccdparent || '') : pKey,
     cccdthannhan: isRelative ? rKey : '',
-    decisionNumber: '',
-    decisionDate: '',
-    departureDate: '',
-    arrivalDate: '',
-    countryName: '',
-    purpose: '',
-    fundingName: 'Ngân sách nhà nước',
-    passportNumber: '',
+  };
+
+  // Khởi tạo động toàn bộ các cột từ cấu hình importMappingTrips
+  tripColumns.value.forEach((col) => {
+    if (col.id && !newTrip[col.id]) {
+      newTrip[col.id] = '';
+    }
   });
+
+  trips.value.push(newTrip);
 };
 
 const removeTrip = (index) => {

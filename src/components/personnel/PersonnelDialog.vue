@@ -185,10 +185,12 @@ const isNotesGroup = (grp, idx) => {
 };
 
 const dialogHeader = computed(() => {
+  const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
+  const nameVal = form.value[pNameField] || form.value.name || '';
   if (props.targetRelativeCode) {
-    return `Chi tiết Thân nhân (${props.targetRelativeCode}) - Cán bộ: ${form.value.name || 'Hồ sơ liên quan'}`;
+    return `Chi tiết Thân nhân (${props.targetRelativeCode}) - Cán bộ: ${nameVal || 'Hồ sơ liên quan'}`;
   }
-  return isEdit.value ? `Chỉnh sửa Hồ sơ: ${form.value.name || ''}` : 'Thêm mới Hồ sơ Cán bộ';
+  return isEdit.value ? `Chỉnh sửa Hồ sơ: ${nameVal || ''}` : 'Thêm mới Hồ sơ Cán bộ';
 });
 
 const form = ref({
@@ -301,8 +303,11 @@ watch(
 let isSavingInternal = false;
 
 const triggerAutoSave = () => {
-  if (!isEdit.value || !form.value.id || !form.value.name?.trim() || isSavingInternal || saving.value) return;
-  const cccdVal = form.value.cccdparent || form.value.cccd || form.value.so_cccd;
+  const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+  const nameVal = form.value[pNameField] || form.value.name;
+  if (!isEdit.value || !form.value.id || !nameVal?.trim() || isSavingInternal || saving.value) return;
+  const cccdVal = form.value[pKeyField] ?? form.value.cccdparent ?? form.value.cccd;
   if (!cccdVal || !String(cccdVal).trim()) return;
 
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
@@ -345,7 +350,9 @@ watch(
 );
 
 const handleSave = async () => {
-  if (!form.value.name?.trim()) {
+  const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
+  const nameVal = form.value[pNameField] || form.value.name;
+  if (!nameVal?.trim()) {
     alert('Vui lòng nhập Họ và tên cán bộ!');
     activeTab.value = 0;
     return;

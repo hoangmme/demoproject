@@ -755,6 +755,17 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công, đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
 
+### 65. RÀ SOÁT & CHUẨN HÓA 100% ĐỘNG TRONG POPUP CHI TIẾT (2026-09-07)
+- **Kiểm tra Popup Chi tiết (`PersonnelDialog.vue` & các Form con)**:
+  1. **Hiển thị Form nhập liệu**: Đã render 100% động qua `DynamicField` lặp trên danh sách cột cấu hình (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`).
+  2. **Tiêu đề thẻ Chuyến đi (`PersonnelTravelForm.vue`)**: Thay thế hiển thị tĩnh `trip.countryName` / `trip.departureDate` bằng hàm động `getTripCountry(trip)` và `getTripDepDate(trip)` tự động nhận diện theo cột cấu hình.
+  3. **Tạo mới Chuyến đi (`addTrip`)**: Không còn khởi tạo đối tượng tĩnh, hệ thống duyệt qua toàn bộ `tripColumns` đã cấu hình để gán giá trị mặc định cho bản ghi chuyến đi mới.
+  4. **Tiêu đề thẻ Thân nhân (`PersonnelFamilyForm.vue`)**: Thay thế hiển thị tĩnh `rel.relationshipName` / `rel.relativeName` / `rel.countryName` bằng `getRelativeHeaderTitle(rel)` tự động đọc theo các cột định nghĩa trong `importMappingRelative`.
+  5. **Tạo mới Thân nhân (`addRelative`)**: Tự động duyệt qua `importMappingRelative` để gán khóa chính động `personnelStore.getRelativeKeyField()` và khởi tạo toàn bộ các trường động cho thân nhân mới.
+  6. **Validate & Lưu hồ sơ (`PersonnelDialog.vue`)**: Đọc tên cán bộ và CCCD cán bộ thông qua `personnelStore.getPersonnelNameField()` và `personnelStore.getPersonnelKeyField()`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công, đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
+
 
 
 

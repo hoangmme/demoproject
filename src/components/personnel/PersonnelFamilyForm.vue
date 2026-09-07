@@ -47,7 +47,7 @@
             {{ getRelativeCode(rel, idx) }}
           </span>
           <span style="font-size: 0.85rem; font-weight: 700; color: #581c87;">
-            {{ rel.relationshipName ? `[${rel.relationshipName}] ` : '' }}{{ rel.relativeName || 'Chưa đặt tên' }} {{ rel.countryName ? `(${rel.countryName})` : '' }}
+            {{ getRelativeHeaderTitle(rel) }}
           </span>
         </div>
         <Button
@@ -260,31 +260,69 @@ const getColClass = (w) => {
   return 'col-3';
 };
 
+const getRelativeHeaderTitle = (rel) => {
+  if (!rel) return 'Chưa đặt tên';
+  // 1. Tên mối quan hệ
+  const relShipCols = (personnelStore.importMappingRelative || []).flatMap(g => g.columns || []).filter(c => c.id.includes('quan_he') || c.id.includes('relationship') || c.label.toLowerCase().includes('quan hệ'));
+  let ship = '';
+  for (const c of relShipCols) {
+    const v = rel[c.id] ?? rel.custom_data?.[c.id];
+    if (v && String(v).trim() !== '') { ship = String(v).trim(); break; }
+  }
+  if (!ship) ship = rel.relationshipName || rel.relationship || '';
+
+  // 2. Họ và tên thân nhân
+  const nameCols = (personnelStore.importMappingRelative || []).flatMap(g => g.columns || []).filter(c => c.id.includes('ten') || c.id.includes('name') || c.label.toLowerCase().includes('họ và tên') || c.label.toLowerCase().includes('họ tên'));
+  let name = '';
+  for (const c of nameCols) {
+    if (c.id === 'parentPersonnelName' || c.id === 'parentName') continue;
+    const v = rel[c.id] ?? rel.custom_data?.[c.id];
+    if (v && String(v).trim() !== '') { name = String(v).trim(); break; }
+  }
+  if (!name) name = rel.relativeName || rel.name || 'Chưa đặt tên';
+
+  // 3. Quốc gia / nơi đến nếu có
+  const countryCols = (personnelStore.importMappingRelative || []).flatMap(g => g.columns || []).filter(c => c.id.includes('quoc_gia') || c.id.includes('country') || c.label.toLowerCase().includes('quốc gia'));
+  let country = '';
+  for (const c of countryCols) {
+    const v = rel[c.id] ?? rel.custom_data?.[c.id];
+    if (v && String(v).trim() !== '') { country = String(v).trim(); break; }
+  }
+  if (!country) country = rel.countryName || '';
+
+  const prefix = ship ? `[${ship}] ` : '';
+  const suffix = country ? ` (${country})` : '';
+  return `${prefix}${name}${suffix}`;
+};
+
 const addRelative = () => {
   const nextIdx = relatives.value.length + 1;
   const newCode = 'TN-' + String(nextIdx).padStart(5, '0');
   const parentCccd = props.form.cccdparent || '';
-  relatives.value.push({
+  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+
+  const newRel = {
     code: newCode,
     personnelId: props.form.id || '',
     personnelName: props.form.name || '',
     cccdparent: parentCccd,
-    relationshipName: '',
-    relativeName: '',
-    birthYear: '',
-    cccdthannhan: '',
-    currentAddress: '',
-    occupation: '',
-    countryName: '',
-    timeAbroad: '',
-    unitAbroad: '',
-    fundingName: '',
-    marriedToForeigner: '',
-    workInForeignCompany: '',
+    [rKeyField]: '',
     custom_data: {
       cccdparent: parentCccd,
     },
+  };
+
+  // Khởi tạo động toàn bộ các cột từ importMappingRelative
+  (personnelStore.importMappingRelative || []).forEach(g => {
+    (g.columns || []).forEach(c => {
+      if (c.id && newRel[c.id] === undefined) {
+        newRel[c.id] = '';
+        newRel.custom_data[c.id] = '';
+      }
+    });
   });
+
+  relatives.value.push(newRel);
 };
 
 const removeRelative = (index) => {
