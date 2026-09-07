@@ -1123,3 +1123,12 @@ td.col-right {
   color: #475569;
 }
 
+.badge-code-cd {
+  background: #1e3a8a;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+

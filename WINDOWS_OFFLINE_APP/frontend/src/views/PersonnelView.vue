@@ -1,14 +1,27 @@
 <template>
   <div class="app-content">
     <!-- TAB 1: DANH SÁCH CÁN BỘ (CÁ NHÂN) -->
-    <div v-show="mainTab === 'canhan'" class="app-card">
-      <!-- Toolbar -->
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem;">
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">
-            {{ mainTableTitle }} ({{ personnelStore.personnelList.length }} bản ghi)
-          </span>
+    <div v-show="mainTab === 'canhan'">
+      <!-- Breadcrumb & Top Bar -->
+      <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+        <span>Bảng dữ liệu</span>
+        <span>/</span>
+        <span style="color: #0f172a; font-weight: 600;">{{ mainTableTitle }}</span>
+      </div>
 
+      <!-- Header Section with Actions -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="badge-code-cd">CB-01</span>
+          <div>
+            <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
+              {{ mainTableTitle }}
+              <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredPersonnel.length }} bản ghi</span>
+            </h1>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <!-- Bulk delete button -->
           <Button
             v-if="authStore.isAdmin && selectedPersonnel.length > 0"
@@ -19,9 +32,7 @@
             @click="handleBulkDelete"
             style="font-size: 0.8rem;"
           />
-        </div>
 
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <!-- Search input with Icon -->
           <div class="search-input-wrapper">
             <i class="pi pi-search search-icon-left"></i>
@@ -29,7 +40,7 @@
               v-model="searchQuery"
               placeholder="Tìm tên, CCCD, chức vụ, đơn vị..."
               size="small"
-              style="width: 230px; font-size: 0.8rem;"
+              style="width: 250px; font-size: 0.8rem; height: 32px;"
             />
             <button
               v-if="searchQuery"
@@ -154,6 +165,7 @@
       </div>
 
       <!-- PrimeVue DataTable with Fixed Column Widths & Centered Actions -->
+      <div class="app-card" style="padding: 0; overflow-x: auto; max-width: 100%; position: relative;">
       <DataTable
         v-model:selection="selectedPersonnel"
         :value="filteredPersonnel"
@@ -519,15 +531,31 @@
           </template>
         </Column>
       </DataTable>
+      </div>
     </div>
 
     <!-- TAB 2: DANH SÁCH THÂN NHÂN -->
-    <div v-show="mainTab === 'thannhan'" class="app-card">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">
-            {{ relativeTableTitle }} ({{ flattenedRelatives.length }} bản ghi)
-          </span>
+    <div v-show="mainTab === 'thannhan'">
+      <!-- Breadcrumb & Top Bar -->
+      <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+        <span>Bảng dữ liệu</span>
+        <span>/</span>
+        <span style="color: #0f172a; font-weight: 600;">{{ relativeTableTitle }}</span>
+      </div>
+
+      <!-- Header Section with Actions -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="badge-code-cd">TN-02</span>
+          <div>
+            <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
+              {{ relativeTableTitle }}
+              <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredRelatives.length }} bản ghi</span>
+            </h1>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <Button
             v-if="selectedRelatives.length > 0"
             :label="`Xóa (${selectedRelatives.length} đã chọn)`"
@@ -537,16 +565,14 @@
             @click="handleBulkDeleteRelatives"
             style="font-size: 0.8rem;"
           />
-        </div>
 
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <div class="search-input-wrapper">
             <i class="pi pi-search search-icon-left"></i>
             <InputText
               v-model="relativeSearchQuery"
               placeholder="Tìm tên thân nhân, cán bộ, CCCD, đơn vị..."
               size="small"
-              style="width: 250px; font-size: 0.8rem;"
+              style="width: 250px; font-size: 0.8rem; height: 32px;"
             />
             <button
               v-if="relativeSearchQuery"
@@ -670,6 +696,8 @@
         </div>
       </div>
 
+      <!-- PrimeVue DataTable with Fixed Column Widths & Centered Actions -->
+      <div class="app-card" style="padding: 0; overflow-x: auto; max-width: 100%; position: relative;">
       <DataTable
         v-model:selection="selectedRelatives"
         :value="filteredRelatives"
@@ -967,6 +995,7 @@
           </template>
         </Column>
       </DataTable>
+      </div>
     </div>
 
     <!-- Edit/Create Dialog -->

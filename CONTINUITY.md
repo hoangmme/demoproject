@@ -1412,6 +1412,20 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+### 11. ĐỒNG BỘ GIAO DIỆN HEADER, BREADCRUMB VÀ HUY HIỆU MÃ BẢNG (CB-01, TN-02, CD-03)
+- **Đồng bộ nhận diện tiêu đề Bảng theo chuẩn Lark Base (`PersonnelView.vue`, `ChildDashboardView.vue`)**:
+  - Breadcrumb chuẩn: `Bảng dữ liệu / [Tên bảng]`
+  - Huy hiệu mã bảng phân tầng:
+    - Bảng Cán bộ: `[CB-01]`
+    - Bảng Thân nhân: `[TN-02]`
+    - Bảng Chuyến đi: `[CD-03]`
+    - Bảng Tự tạo / Chuyên đề: `[TB-01]`, `[TB-02]`...
+  - Typography tiêu đề chuẩn hóa: Font size `1.35rem`, `font-weight: 700`, màu `#0f172a`, kèm số lượng bản ghi phụ `· X bản ghi` màu `#64748b` (`0.85rem`).
+  - Thanh công cụ (Toolbar) đưa ra ngoài thẻ bảng, căn lề phải thẳng hàng với tiêu đề.
+  - Thẻ bảng `DataTable` bọc bên trong container `.app-card` viền bo chuẩn mực, hỗ trợ cuộn ngang sạch sẽ.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` đạt 100% không lỗi, đã `rsync` đồng bộ sang `WINDOWS_OFFLINE_APP`.
+
 
 
 
