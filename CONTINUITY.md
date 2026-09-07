@@ -1163,3 +1163,36 @@
      - Tích hợp vào toolbar và nút `+` cuối bảng trên cả `PersonnelView.vue` (Cán bộ, Thân nhân) và `ChildDashboardView.vue` (Chuyến đi, Bảng chuyên đề).
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+---
+
+### 82. TỐI ƯU GIAO DIỆN TÙY CHỌN CỘT (CHIỀU CAO HÀNG), NÚT + SIDEBAR VÀ ĐỒNG BỘ THỐNG KÊ
+- **Strategic Context**:
+  - Người dùng phản hồi 3 vấn đề giao diện:
+    1. Tùy chọn hiển thị cột thiếu thiết lập chiều cao hàng (gồm cả Tự động) do component ColumnSelector bị bọc 2 tầng dropdown khiến người dùng chỉ thấy nút "35 cột được chọn" mà không thấy phần chọn chiều cao hàng.
+    2. Bấm dấu `+` trên Sidebar bị lỗi: Popover menu lơ lửng đè trực tiếp lên chữ của các menu bên dưới ("Cán bộ", "Thân nhân", "Chuyến đi"). Yêu cầu đề xuất vị trí đặt dấu `+` / chức năng thêm mới hợp lý.
+    3. Menu Thống kê bị thụt vào trong và chữ nhỏ, yêu cầu đồng bộ kích thước và kiểu dáng như menu Bảng.
+- **Các giải pháp đã triển khai chi tiết**:
+  1. **Hiển thị Trực tiếp Bộ chọn Chiều cao Hàng & Tùy chọn Cột (`ColumnSelector.vue`, `PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - Bổ sung prop `inline: { type: Boolean, default: false }` cho `ColumnSelector.vue`.
+     - Khi `inline: true`: Loại bỏ nút bấm lồng con `selectedLabel`, render trực tiếp 100% nội dung bên trong dropdown header của bảng gồm:
+       * Thanh thao tác nhanh: `[Chọn tất cả] | [Bỏ chọn] | [Thứ tự chuẩn]`
+       * Bộ chọn Chiều cao hàng trực quan, nổi bật: **[1 hàng (Mặc định - Cắt ngắn ...)] [2 hàng] [3 hàng] [Tự động (Không giới hạn)]**
+       * Ô tìm kiếm cột nhanh (`searchQuery`) hỗ trợ lọc tức thì danh sách 35+ cột
+       * Danh sách checkbox và các nút dời thứ tự cột lên/xuống
+     - Tích hợp `:inline="true"` trên cả 3 bảng: Cán bộ (`PersonnelView.vue`), Thân nhân (`PersonnelView.vue`) và Chuyến đi/Chuyên đề (`ChildDashboardView.vue`). Người dùng bấm "Tùy chọn Cột hiển thị" sẽ thấy NGAY bộ chọn chiều cao hàng và danh sách cột mà không bị ẩn hay phải click thêm lần nữa.
+  2. **Đề xuất & Tối ưu Vị trí Dấu `+` / Thêm Mới trên Sidebar (`AppSidebar.vue`)**:
+     - Đề xuất vị trí chuẩn hóa chuẩn Airtable / Lark Base / Notion:
+       * **Vị trí 1 (Tối ưu tự nhiên nhất)**: Bổ sung nút `+ Thêm Bảng mới` ở ngay CUỐI danh sách các Bảng dữ liệu (trước dòng Tìm kiếm nâng cao). Người dùng lướt hết danh sách bảng sẽ thấy ngay nút thêm bảng tiếp theo, không che khuất bất kỳ nội dung nào.
+       * **Vị trí 2 (Nút `+` cạnh tiêu đề Bảng dữ liệu)**: Giữ icon `+` cạnh tiêu đề "Bảng dữ liệu (Tables)" nhưng thay thế popover lơ lửng đè chữ bằng **Modal Dialog chuyên nghiệp** (`isAddChooserDialogOpen`):
+         - Thẻ 1: 📋 **Bảng dữ liệu mới (Table)** -> Mở Dialog tạo bảng dạng Grid.
+         - Thẻ 2: 📊 **Khối Thống kê mới (Dashboard)** -> Mở Dialog tạo khối thống kê/biểu đồ.
+       - Xóa bỏ hoàn toàn CSS popover lơ lửng gây lỗi đè chữ (`sidebar-add-popover`).
+  3. **Đồng bộ Kiểu dáng & Kích thước Menu Thống kê trên Sidebar (`AppSidebar.vue`)**:
+     - Gỡ bỏ class `.sidebar-sub-group` và `.sidebar-sub-item` gây thụt lề `margin-left: 0.85rem` và giảm font chữ `0.78rem`.
+     - Đưa toàn bộ các nhóm Thống kê về chuẩn `sidebar-item-row` và `app-nav-item`:
+       * Font size chuẩn: `0.88rem`, font weight `600`, padding `0.55rem 0.75rem`.
+       * Icon chuẩn `1.05rem` với màu nhận diện sắc nét `#0284c7`.
+       * Giữ đầy đủ các nút thao tác nhanh (✏️ Đổi tên, 🗑️ Xóa nhóm thống kê).
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ toàn bộ file sang `WINDOWS_OFFLINE_APP/frontend/src/`.

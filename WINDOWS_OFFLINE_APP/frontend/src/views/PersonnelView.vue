@@ -83,18 +83,13 @@
               style="font-size: 0.8rem;"
             />
 
-            <div v-show="isFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown">
-              <div class="filter-section">
-                <div class="filter-section-title" style="margin-bottom: 8px;">
-                  <i class="pi pi-table" style="color: #7c3aed;"></i>
-                  <span>Tùy chọn Cột hiển thị</span>
-                </div>
-                <ColumnSelector
-                  v-model="personnelStore.visibleColumns"
-                  :options="personnelStore.allAvailableColumns"
-                  @change="onColumnsChange"
-                />
-              </div>
+            <div v-show="isFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown" style="padding: 0; overflow: hidden;">
+              <ColumnSelector
+                :inline="true"
+                v-model="personnelStore.visibleColumns"
+                :options="personnelStore.allAvailableColumns"
+                @change="onColumnsChange"
+              />
             </div>
           </div>
 
@@ -583,18 +578,13 @@
               style="font-size: 0.8rem;"
             />
 
-            <div v-show="isRelativeFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown">
-              <div class="filter-section">
-                <div class="filter-section-title" style="margin-bottom: 8px;">
-                  <i class="pi pi-table" style="color: #7c3aed;"></i>
-                  <span>Tùy chọn Cột hiển thị Thân nhân</span>
-                </div>
-                <ColumnSelector
-                  v-model="personnelStore.visibleRelativeColumns"
-                  :options="personnelStore.allAvailableRelativeColumns"
-                  @change="onRelativeColumnsChange"
-                />
-              </div>
+            <div v-show="isRelativeFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown" style="padding: 0; overflow: hidden;">
+              <ColumnSelector
+                :inline="true"
+                v-model="personnelStore.visibleRelativeColumns"
+                :options="personnelStore.allAvailableRelativeColumns"
+                @change="onRelativeColumnsChange"
+              />
             </div>
           </div>
 

@@ -60,11 +60,11 @@
       </div>
 
       <!-- Danh sách các nhóm thống kê con (Dashboard Groups) nếu có -->
-      <div v-if="sidebarDashboardGroups.length > 0" class="sidebar-sub-group">
+      <template v-if="sidebarDashboardGroups.length > 0">
         <div
           v-for="grp in sidebarDashboardGroups"
           :key="grp.id"
-          class="sidebar-item-row sidebar-sub-item"
+          class="sidebar-item-row"
         >
           <a
             href="javascript:void(0)"
@@ -72,8 +72,8 @@
             @click="navigateToDashboardGroup(grp)"
             :title="grp.title"
           >
-            <i class="pi pi-chart-bar" style="font-size: 0.72rem; opacity: 0.8; color: #38bdf8;"></i>
-            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem;">
+            <i class="pi pi-chart-bar" style="color: #0284c7;"></i>
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               {{ grp.title }}
             </span>
           </a>
@@ -96,41 +96,19 @@
             </button>
           </div>
         </div>
-      </div>
+      </template>
 
       <!-- TIÊU ĐỀ BẢNG DỮ LIỆU & NÚT + TÙY CHỌN -->
-      <div class="app-nav-heading" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px; position: relative;">
+      <div class="app-nav-heading" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
         <span>{{ systemBranding.sectionLabelTopics || 'Bảng dữ liệu (Tables)' }}</span>
         <button
           type="button"
-          @click.stop="toggleAddMenu"
-          title="Thêm Bảng mới hoặc Thống kê mới"
-          style="background: transparent; border: none; color: inherit; cursor: pointer; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; opacity: 0.85;"
+          class="btn-heading-add"
+          @click.stop="isAddChooserDialogOpen = true"
+          title="Tạo Bảng mới hoặc Thống kê mới"
         >
           <i class="pi pi-plus" style="font-weight: 800;"></i>
         </button>
-
-        <!-- Dropdown menu khi ấn nút + -->
-        <template v-if="isAddMenuOpen">
-          <div class="popover-backdrop" @click.stop="isAddMenuOpen = false"></div>
-          <div class="sidebar-add-popover">
-            <div class="add-popover-item" @click="selectAddAction('table')">
-              <i class="pi pi-table" style="color: #10b981; font-size: 0.95rem;"></i>
-              <div>
-                <div style="font-weight: 700; font-size: 0.78rem; color: #1e293b;">+ Thêm Bảng mới (Table)</div>
-                <div style="font-size: 0.68rem; color: #64748b;">Tạo bảng dữ liệu dạng Grid mới</div>
-              </div>
-            </div>
-            <div class="add-popover-divider"></div>
-            <div class="add-popover-item" @click="selectAddAction('dashboard')">
-              <i class="pi pi-chart-pie" style="color: #3b82f6; font-size: 0.95rem;"></i>
-              <div>
-                <div style="font-weight: 700; font-size: 0.78rem; color: #1e293b;">+ Thêm Thống kê mới (Dashboard)</div>
-                <div style="font-size: 0.68rem; color: #64748b;">Tạo khối thống kê / biểu đồ mới</div>
-              </div>
-            </div>
-          </div>
-        </template>
       </div>
 
       <!-- Bảng 1: Cán bộ (Table 1 trong Base) -->
@@ -263,6 +241,17 @@
           </button>
         </div>
       </div>
+
+      <!-- Nút + Thêm Bảng mới ở cuối danh sách Bảng (Chuẩn Airtable / Lark Base) -->
+      <a
+        class="app-nav-item btn-add-table-inline"
+        href="javascript:void(0)"
+        @click="openAddTableDialog"
+        title="Tạo thêm bảng dữ liệu mới"
+      >
+        <i class="pi pi-plus" style="font-size: 0.85rem; color: #10b981;"></i>
+        <span style="font-size: 0.82rem; color: #059669; font-weight: 600;">+ Thêm Bảng mới</span>
+      </a>
 
       <router-link to="/advanced-search" class="app-nav-item" title="Tra cứu & Tìm kiếm nâng cao">
         <i class="pi pi-search-plus"></i>
@@ -603,6 +592,52 @@
         </div>
       </template>
     </Dialog>
+
+    <!-- Dialog Lựa chọn Tạo mới (Bảng dữ liệu vs Khối Thống kê) -->
+    <Dialog
+      v-model:visible="isAddChooserDialogOpen"
+      modal
+      header="Tạo mới trong Không gian làm việc"
+      :style="{ width: '440px' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 6px 0;">
+        <div
+          class="create-choice-card"
+          @click="isAddChooserDialogOpen = false; openAddTableDialog();"
+        >
+          <div class="choice-icon-box" style="background: #ecfdf5; color: #059669;">
+            <i class="pi pi-table" style="font-size: 1.25rem;"></i>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 2px;">
+              Bảng dữ liệu mới (Table)
+            </div>
+            <div style="font-size: 0.76rem; color: #64748b; line-height: 1.35;">
+              Tạo bảng dữ liệu dạng lưới Grid để quản lý danh sách hồ sơ, cán bộ, dữ liệu
+            </div>
+          </div>
+          <i class="pi pi-chevron-right" style="color: #94a3b8; font-size: 0.8rem;"></i>
+        </div>
+
+        <div
+          class="create-choice-card"
+          @click="isAddChooserDialogOpen = false; openAddDashboardGroupDialog();"
+        >
+          <div class="choice-icon-box" style="background: #eff6ff; color: #2563eb;">
+            <i class="pi pi-chart-pie" style="font-size: 1.25rem;"></i>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 2px;">
+              Khối Thống kê mới (Dashboard)
+            </div>
+            <div style="font-size: 0.76rem; color: #64748b; line-height: 1.35;">
+              Tạo khối biểu đồ, thẻ chỉ số KPI tổng hợp và phân tích dữ liệu trực quan
+            </div>
+          </div>
+          <i class="pi pi-chevron-right" style="color: #94a3b8; font-size: 0.8rem;"></i>
+        </div>
+      </div>
+    </Dialog>
   </aside>
 </template>
 
@@ -622,20 +657,8 @@ const router = useRouter();
 const authStore = useAuthStore();
 const personnelStore = usePersonnelStore();
 
-// Popover menu nút +
-const isAddMenuOpen = ref(false);
-const toggleAddMenu = () => {
-  isAddMenuOpen.value = !isAddMenuOpen.value;
-};
-
-const selectAddAction = (action) => {
-  isAddMenuOpen.value = false;
-  if (action === 'table') {
-    openAddTableDialog();
-  } else if (action === 'dashboard') {
-    openAddDashboardGroupDialog();
-  }
-};
+// Dialog lựa chọn Tạo mới (Bảng vs Thống kê)
+const isAddChooserDialogOpen = ref(false);
 
 // Tổng số chuyến đi hiển thị trên Sidebar
 const totalTripsCount = computed(() => {
@@ -1381,64 +1404,68 @@ onUnmounted(() => {
   color: #ef4444 !important;
 }
 
-.sidebar-sub-group {
-  margin-left: 0.85rem;
-  padding-left: 0.5rem;
-  border-left: 2px solid rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 6px;
-}
-
-.sidebar-sub-item .app-nav-item {
-  padding: 0.35rem 0.5rem;
-  font-size: 0.8rem;
-}
-
-.sidebar-add-popover {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 8px;
-  width: 240px;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
-  border: 1px solid #e2e8f0;
-  padding: 6px;
-  z-index: 1050;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.popover-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1040;
-  background: transparent;
-}
-
-.add-popover-item {
+.create-choice-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 6px;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.2s ease;
 }
 
-.add-popover-item:hover {
-  background: #f1f5f9;
+.create-choice-card:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
-.add-popover-divider {
-  height: 1px;
-  background: #e2e8f0;
-  margin: 2px 0;
+.choice-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-add-table-inline {
+  color: #059669 !important;
+  opacity: 0.85;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 1px dashed rgba(16, 185, 129, 0.35);
+  margin: 2px 0 6px 0;
+  padding: 0.45rem 0.75rem !important;
+}
+
+.btn-add-table-inline:hover {
+  opacity: 1;
+  background: rgba(16, 185, 129, 0.08) !important;
+  border-color: #10b981;
+}
+
+.btn-heading-add {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  opacity: 0.85;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.btn-heading-add:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
 }
 </style>

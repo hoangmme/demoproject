@@ -1,6 +1,7 @@
 <template>
-  <div class="column-selector-container" ref="containerRef">
+  <div class="column-selector-container" :class="{ 'is-inline': inline }" ref="containerRef">
     <button
+      v-if="!inline"
       type="button"
       class="column-selector-btn"
       @click="isOpen = !isOpen"
@@ -12,18 +13,18 @@
       <i class="pi pi-chevron-down" style="font-size: 0.65rem; color: #6b7280;"></i>
     </button>
 
-    <div v-if="isOpen" class="column-selector-dropdown">
+    <div v-if="isOpen || inline" class="column-selector-dropdown" :class="{ 'inline-dropdown': inline }">
       <div class="column-selector-header">
         <span style="font-size: 0.78rem; font-weight: 700; color: #1e293b;">
           Tùy chọn cột hiển thị
         </span>
         <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
-          {{ modelValue.length }}/{{ displayOptions.length }}
+          {{ modelValue.length }}/{{ options.length }} cột
         </span>
       </div>
 
       <!-- Quick Actions Toolbar -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; background: #fafafa; border-bottom: 1px solid #f1f5f9; font-size: 0.72rem;">
+      <div class="column-quick-actions">
         <button type="button" class="btn-text-link" @click="selectAll">Chọn tất cả</button>
         <span style="color: #cbd5e1;">|</span>
         <button type="button" class="btn-text-link" @click="deselectAll">Bỏ chọn</button>
@@ -34,7 +35,7 @@
       <!-- Giới hạn chiều cao hàng tối đa (Row Height Limit - Mặc định 1 hàng) -->
       <div class="row-height-control">
         <div class="row-height-title">
-          <i class="pi pi-arrows-v" style="font-size: 0.72rem; color: #0284c7;"></i>
+          <i class="pi pi-arrows-v" style="font-size: 0.75rem; color: #0284c7;"></i>
           <span>Chiều cao hàng:</span>
         </div>
         <div class="row-height-btns">
@@ -75,6 +76,23 @@
             Tự động
           </button>
         </div>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <div class="column-search-box">
+        <i class="pi pi-search" style="font-size: 0.72rem; color: #94a3b8;"></i>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Tìm kiếm cột..."
+          class="column-search-input"
+        />
+        <i
+          v-if="searchQuery"
+          class="pi pi-times"
+          style="font-size: 0.65rem; color: #94a3b8; cursor: pointer;"
+          @click="searchQuery = ''"
+        ></i>
       </div>
 
       <div class="column-selector-list">
@@ -143,11 +161,16 @@ const props = defineProps({
     type: String,
     default: 'Cột hiển thị',
   },
+  inline: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'change']);
 
 const isOpen = ref(false);
+const searchQuery = ref('');
 const containerRef = ref(null);
 const customOrder = ref([]);
 
@@ -180,23 +203,30 @@ const getColIndex = (col) => {
 };
 
 const displayOptions = computed(() => {
-  const opts = [...props.options];
+  let opts = [...props.options];
   if (customOrder.value.length === 0) {
     const activeSet = new Set(props.modelValue);
     const orderedActive = props.modelValue
       .map((id) => opts.find((o) => o.id === id))
       .filter(Boolean);
     const remaining = opts.filter((o) => !activeSet.has(o.id));
-    return [...orderedActive, ...remaining];
+    opts = [...orderedActive, ...remaining];
+  } else {
+    const map = new Map(opts.map((o) => [o.id, o]));
+    const ordered = customOrder.value.map((id) => map.get(id)).filter(Boolean);
+    const orderedIds = new Set(customOrder.value);
+    opts.forEach((o) => {
+      if (!orderedIds.has(o.id)) ordered.push(o);
+    });
+    opts = ordered;
   }
 
-  const map = new Map(opts.map((o) => [o.id, o]));
-  const ordered = customOrder.value.map((id) => map.get(id)).filter(Boolean);
-  const orderedIds = new Set(customOrder.value);
-  opts.forEach((o) => {
-    if (!orderedIds.has(o.id)) ordered.push(o);
-  });
-  return ordered;
+  if (searchQuery.value && searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase();
+    return opts.filter((o) => (o.label || o.id || '').toLowerCase().includes(q));
+  }
+
+  return opts;
 });
 
 const moveUp = (idx) => {
@@ -259,6 +289,7 @@ const toggleCol = (id) => {
 };
 
 const handleClickOutside = (e) => {
+  if (props.inline) return;
   if (containerRef.value && !containerRef.value.contains(e.target)) {
     isOpen.value = false;
   }
@@ -277,6 +308,11 @@ onUnmounted(() => {
 .column-selector-container {
   position: relative;
   display: inline-block;
+}
+
+.column-selector-container.is-inline {
+  width: 100%;
+  display: block;
 }
 
 .column-selector-btn {
@@ -309,6 +345,43 @@ onUnmounted(() => {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12), 0 4px 6px rgba(0, 0, 0, 0.05);
   z-index: 9999;
   overflow: hidden;
+}
+
+.column-selector-dropdown.inline-dropdown {
+  position: static;
+  width: 100%;
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
+  z-index: auto;
+}
+
+.column-quick-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.72rem;
+}
+
+.column-search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.column-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.75rem;
+  color: #1e293b;
+  background: transparent;
 }
 
 .column-selector-header {
