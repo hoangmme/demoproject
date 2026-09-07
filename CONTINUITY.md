@@ -733,10 +733,24 @@
 - **Fix Applied**: Đổi `(card.logicOp || 'OR')` → `(card.logicOp || 'AND')` tại dashboardMetrics.js:741.
 - **Commit**: `5b4a17c`
 
-### 62. LEDGER STATUS
-- **Status**: Done (Bug #1 đã sửa; Bug #2 ghi nhận là thiết kế có chủ đích — URL filters chỉ ảnh hưởng bảng, không ảnh hưởng số đếm thẻ).
-- **Flags**: None.
-- **Cost/Impact Alerts**: Không có (Thay đổi [Reversible]).
+### 64. CHUYỂN ĐỔI 100% SANG CẤU HÌNH CỘT ĐỘNG - XÓA BỎ TOÀN BỘ FALLBACK TĨNH (2026-09-07)
+- **Yêu cầu cốt lõi**:
+  - Tuyệt đối không dùng các mảng alias tĩnh như `['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'countryNameTN']`.
+  - Không fallback tự chế giữa các trường tĩnh. Dữ liệu cột nào lấy chính xác theo `column.id` mà người dùng đã cấu hình trong `importMappingTrips`, `importMappingRelative`, `importMappingPersonnel`.
+- **Giải pháp kiến trúc**:
+  1. **Động cơ trích xuất trường động (`buildTopicSourceList`)**:
+     - Khi build danh sách Thân nhân (`relatives`), tự động trích xuất toàn bộ các trường động từ `primaryTrip` (`activeTrip || latestTrip`, bao gồm cả `custom_data`) và gán trực tiếp lên bản ghi Thân nhân (`{ ...rCustom, ...r, ...tripDynamicFields, ... }`).
+     - Mọi cột người dùng đã cấu hình ở Chuyến đi (`quoc_gia_xuat_canh`, `ngay_xuat_canh`, `nguon_kinh_phi`...) đều tự động hiện diện 1-1 trên bản ghi mà không cần gán cứng hay fallback tĩnh.
+  2. **Bỏ toàn bộ chuỗi alias fallback trong `extractRowFieldValue`**:
+     - Xóa bỏ block 3b và các nhánh alias fallback trong `extractRowFieldValue`.
+     - Chỉ tìm kiếm chính xác `field` trên `item`, `rawPerson`, `activeTrip`, `rawRelative`.
+  3. **Nhận diện cột chuyến đi 100% động trong `matchSingleCondition` & `matchCardCondition`**:
+     - Thay thế `isCountryField` / `isCountryCol` tĩnh bằng `tripColIds.includes(field)` lấy trực tiếp từ `personnelStore.importMappingTrips`.
+  4. **Dọn dẹp `ChildDashboardView.vue` và `DashboardView.vue`**:
+     - Bỏ mảng `isCountryCol` trong `getCellValue` và `matchSingleCondition`. Giá trị chuyến đi được lấy chính xác theo `colId` từ `latestTrip[colId]`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công, đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/`.
+
 
 
 

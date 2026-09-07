@@ -100,15 +100,37 @@ export const buildTopicSourceList = (source, personnelStore) => {
       }
 
       const latestTrip = relTrips.length > 0 ? relTrips[relTrips.length - 1] : null;
+      const primaryTrip = activeTrip || latestTrip;
+
+      // Trích xuất toàn bộ các trường động của chuyến đi để gán trực tiếp lên bản ghi Thân nhân theo đúng column.id cấu hình
+      let tripDynamicFields = {};
+      if (primaryTrip) {
+        let tcd = {};
+        if (primaryTrip.custom_data) {
+          try {
+            tcd = typeof primaryTrip.custom_data === 'string' ? JSON.parse(primaryTrip.custom_data) : primaryTrip.custom_data;
+          } catch (e) {}
+        }
+        tripDynamicFields = { ...tcd, ...primaryTrip };
+        delete tripDynamicFields.id;
+        delete tripDynamicFields.uniqueKey;
+        delete tripDynamicFields._recordType;
+        delete tripDynamicFields.isRelative;
+        delete tripDynamicFields.custom_data;
+        delete tripDynamicFields.trips;
+        delete tripDynamicFields.rawPerson;
+        delete tripDynamicFields.rawRelative;
+      }
 
       return {
         ...rCustom,
         ...r,
+        ...tripDynamicFields,
         _recordType: 'relative',
         uniqueKey: r.id || `rel_${idx}`,
         isRelative: true,
         trips: relTrips,
-        activeTrip: activeTrip || latestTrip,
+        activeTrip: primaryTrip,
         personnelName: r.relativeName || r.name || 'Thân nhân',
         personnelCode: r.code || `TN-${String(idx + 1).padStart(5, '0')}`,
         relativeName: r.relativeName || r.name || 'Thân nhân',
@@ -119,11 +141,6 @@ export const buildTopicSourceList = (source, personnelStore) => {
         cccdparent: r.cccdparent || parentPerson?.cccd || parentPerson?.cccdparent || '',
         cccdthannhan: r.cccdthannhan || r.cccd || '',
         departmentName: parentPerson?.departmentName || (parentPerson?.departmentId && personnelStore.getDepartmentName ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || '',
-        countryName: activeTrip?.countryName || activeTrip?.country || presence.country || latestTrip?.countryName || latestTrip?.country || r.countryName || rCustom.countryName || '',
-        departureDate: activeTrip?.departureDate || activeTrip?.ngay_xuat_canh || latestTrip?.departureDate || latestTrip?.ngay_xuat_canh || '',
-        arrivalDate: activeTrip?.arrivalDate || activeTrip?.ngay_nhap_canh || activeTrip?.approvedArrivalDate || latestTrip?.arrivalDate || latestTrip?.ngay_nhap_canh || '',
-        purpose: activeTrip?.purpose || activeTrip?.muc_dich || latestTrip?.purpose || latestTrip?.muc_dich || '',
-        decisionNumber: activeTrip?.decisionNumber || activeTrip?.so_quyet_dinh || latestTrip?.decisionNumber || latestTrip?.so_quyet_dinh || '',
         rawPerson: parentPerson || r,
         rawRelative: r,
         custom_data: rCustom,
