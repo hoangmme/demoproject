@@ -1423,8 +1423,16 @@
   - Typography tiêu đề chuẩn hóa: Font size `1.35rem`, `font-weight: 700`, màu `#0f172a`, kèm số lượng bản ghi phụ `· X bản ghi` màu `#64748b` (`0.85rem`).
   - Thanh công cụ (Toolbar) đưa ra ngoài thẻ bảng, căn lề phải thẳng hàng với tiêu đề.
   - Thẻ bảng `DataTable` bọc bên trong container `.app-card` viền bo chuẩn mực, hỗ trợ cuộn ngang sạch sẽ.
+### 12. TÍCH HỢP BẢNG DỮ LIỆU TỰ TẠO VÀO NGUỒN DỮ LIỆU THỐNG KÊ (DASHBOARD WIDGETS)
+- **Vấn đề**: Khi tạo bảng mới (Custom Table, ví dụ `[TB-02] Test`), popup thêm/sửa khối thống kê (`DashboardView.vue`) chỉ có 3 nguồn dữ liệu cố định: Chuyến đi, Cán bộ, Thân nhân.
+- **Giải pháp**:
+  - Bổ sung nhóm `<optgroup label="📋 Bảng dữ liệu tự tạo">` hiển thị danh sách toàn bộ các bảng tùy chỉnh (`customTablesList` từ `availableTopicDashboards`) kèm mã định danh `[TB-xx]` và tên bảng.
+  - Cập nhật `getSourceList(source)`: Tự động phát hiện nguồn là bảng tự tạo; nạp các dòng dữ liệu trực tiếp từ `custom_table_rows_${tableId}` (hỗ trợ cả localStorage và async API qua `customTableRowsMap`).
+  - Cập nhật `allSearchableGroupsForWidget` & `availableColumnsForWidgetSource`: Khi chọn bảng tự tạo, tự động đẩy nhóm cột của bảng đó lên đầu danh mục để dễ dàng chọn cột gom nhóm phân loại biểu đồ và cấu hình các điều kiện lọc.
+  - Cập nhật `handleWidgetClick`: Khi nhấn vào khối thống kê tạo từ bảng tùy chỉnh, tự động điều hướng trực tiếp sang bảng đó (`/dashboard-topic/${customTable.id}`).
+  - Lắng nghe sự kiện `custom-dashboards-updated` trên `window` để tự động làm mới danh sách bảng thống kê ngay khi người dùng vừa tạo bảng mới.
 - **Status**: Done [Reversible].
-- **Verification**: `npm run build` đạt 100% không lỗi, đã `rsync` đồng bộ sang `WINDOWS_OFFLINE_APP`.
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP`.
 
 
 

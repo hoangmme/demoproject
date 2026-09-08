@@ -508,10 +508,17 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="field-item">
             <label class="field-label" style="font-weight: 700; color: #1e293b;">1. Nguồn Dữ liệu Thống kê <span style="color: #ef4444;">*</span></label>
-            <select v-model="widgetForm.source" class="settings-select" style="width: 100%; font-weight: 600;">
-              <option value="trips">✈️ Bảng Chuyến đi nước ngoài (Trips)</option>
-              <option value="personnel">👤 Bảng Hồ sơ Cán bộ (Personnel)</option>
-              <option value="relatives">👨‍👩‍👧 Bảng Thân nhân (Relatives)</option>
+            <select v-model="widgetForm.source" class="settings-select" style="width: 100%; font-weight: 600;" @change="onWidgetSourceChange">
+              <optgroup label="📌 Bảng dữ liệu hệ thống">
+                <option value="trips">✈️ Bảng Chuyến đi nước ngoài (Trips)</option>
+                <option value="personnel">👤 Bảng Hồ sơ Cán bộ (Personnel)</option>
+                <option value="relatives">👨‍👩‍👧 Bảng Thân nhân (Relatives)</option>
+              </optgroup>
+              <optgroup v-if="customTablesList.length > 0" label="📋 Bảng dữ liệu tự tạo">
+                <option v-for="t in customTablesList" :key="t.id" :value="t.id">
+                  📋 {{ t.code ? `[${t.code}] ` : '' }}{{ t.title }}
+                </option>
+              </optgroup>
             </select>
           </div>
 
@@ -956,7 +963,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
@@ -1864,10 +1871,62 @@ const loadTopicDashboards = async () => {
         }
       });
     });
+    await loadAllCustomTablesData();
   } catch (e) {
     if (!availableTopicDashboards.value || availableTopicDashboards.value.length === 0) {
       availableTopicDashboards.value = DEFAULT_TOPIC_DASHBOARDS;
     }
+  }
+};
+
+const customTablesList = computed(() => {
+  return (availableTopicDashboards.value || []).filter(
+    (d) => d && d.id && d.id !== 'trips' && d.id !== 'personnel' && d.id !== 'relatives'
+  );
+});
+
+const customTableRowsMap = ref({});
+
+const loadCustomTableRowsForDashboard = async (tableId) => {
+  if (!tableId) return [];
+  if (customTableRowsMap.value[tableId] && customTableRowsMap.value[tableId].length > 0) {
+    return customTableRowsMap.value[tableId];
+  }
+  let rows = [];
+  try {
+    const local = localStorage.getItem(`custom_table_rows_${tableId}`);
+    if (local) {
+      rows = JSON.parse(local) || [];
+    }
+  } catch (e) {}
+
+  try {
+    const db = await getAppSettings(`custom_table_rows_${tableId}`, null);
+    if (db && Array.isArray(db)) {
+      rows = db;
+      try { localStorage.setItem(`custom_table_rows_${tableId}`, JSON.stringify(db)); } catch (e) {}
+    }
+  } catch (e) {}
+
+  const mapped = (rows || []).map((r, idx) => ({ ...r, uniqueKey: r.uniqueKey || r.id || `row_${idx}` }));
+  customTableRowsMap.value[tableId] = mapped;
+  return mapped;
+};
+
+const loadAllCustomTablesData = async () => {
+  const tables = customTablesList.value.filter((t) => t.source === 'blank');
+  for (const t of tables) {
+    await loadCustomTableRowsForDashboard(t.id);
+  }
+};
+
+const onWidgetSourceChange = () => {
+  widgetForm.value.columnId = '';
+  if (widgetForm.value.conditions && widgetForm.value.conditions.length > 0) {
+    widgetForm.value.conditions.forEach((c) => {
+      c.field = '';
+      c.value = '';
+    });
   }
 };
 
@@ -2267,6 +2326,46 @@ const cachedSourceRelatives = computed(() => buildTopicSourceList('relatives', p
 const getSourceList = (source) => {
   if (source === 'personnel') return cachedSourcePersonnel.value || [];
   if (source === 'relatives' || source === 'relative') return cachedSourceRelatives.value || [];
+  if (source === 'trips' || source === 'trip') return cachedSourceTrips.value || [];
+
+  // Hỗ trợ Bảng dữ liệu tự tạo (Custom Tables) & Chuyên đề tùy chỉnh
+  const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
+  if (customTable) {
+    if (customTable.source === 'blank') {
+      if (customTableRowsMap.value[source] && Array.isArray(customTableRowsMap.value[source])) {
+        return customTableRowsMap.value[source];
+      }
+      try {
+        const local = localStorage.getItem(`custom_table_rows_${source}`);
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed)) {
+            const mapped = parsed.map((r, idx) => ({ ...r, uniqueKey: r.uniqueKey || r.id || `row_${idx}` }));
+            customTableRowsMap.value[source] = mapped;
+            return mapped;
+          }
+        }
+      } catch (e) {}
+      loadCustomTableRowsForDashboard(source);
+      return [];
+    } else {
+      const baseSource = customTable.source || 'trips';
+      const baseList = baseSource === 'personnel'
+        ? (cachedSourcePersonnel.value || [])
+        : (baseSource === 'relatives' ? (cachedSourceRelatives.value || []) : (cachedSourceTrips.value || []));
+
+      const firstCard = (customTable.metricCards || [])[0];
+      if (firstCard && firstCard.condition && firstCard.condition !== 'all') {
+        return baseList.filter((row) => matchSharedCardCondition(row, firstCard, personnelStore));
+      }
+      if (Array.isArray(customTable.scopeConditions) && customTable.scopeConditions.length > 0) {
+        const scopeCard = { conditions: customTable.scopeConditions, logicOp: customTable.scopeLogicOp || 'AND' };
+        return baseList.filter((row) => matchSharedCardCondition(row, scopeCard, personnelStore));
+      }
+      return baseList;
+    }
+  }
+
   return cachedSourceTrips.value || [];
 };
 
@@ -2450,6 +2549,48 @@ const getCardMetricValueForTopic = (card, topic) => {
 // Dynamic Searchable Groups for Query Criteria Builder (Matches Advanced Search)
 const allSearchableGroupsForWidget = computed(() => {
   const groups = [];
+
+  // 0. Nếu widgetForm.source là bảng tự tạo -> Đưa nhóm cột của bảng này lên đầu tiên
+  const selectedCustom = (availableTopicDashboards.value || []).find((d) => d && d.id === widgetForm.value.source);
+  if (selectedCustom) {
+    if (selectedCustom.source === 'blank') {
+      const customCols = (selectedCustom.customColumns || []).map((c, idx) => ({
+        id: c.id,
+        rawId: c.id,
+        label: c.label || c.id,
+        colIndex: idx + 1,
+        isVirtual: false,
+        format: c.format,
+        options: c.options,
+      }));
+      if (customCols.length > 0) {
+        groups.push({
+          name: `📋 Cột Bảng "${selectedCustom.title}"`,
+          columns: customCols,
+        });
+        return groups;
+      }
+    }
+  }
+
+  // Bổ sung các nhóm cột của các bảng tự tạo khác
+  const otherCustoms = (availableTopicDashboards.value || []).filter((d) => d && d.source === 'blank' && d.id !== widgetForm.value.source);
+  otherCustoms.forEach((dash) => {
+    if (dash.customColumns && dash.customColumns.length > 0) {
+      groups.push({
+        name: `📋 Bảng tự tạo: ${dash.code ? '[' + dash.code + '] ' : ''}${dash.title}`,
+        columns: dash.customColumns.map((c, idx) => ({
+          id: c.id,
+          rawId: c.id,
+          label: c.label || c.id,
+          colIndex: idx + 1,
+          isVirtual: false,
+          format: c.format,
+          options: c.options,
+        })),
+      });
+    }
+  });
 
   // Group 1: Bảng Sự kiện / Chuyến đi (From importMappingTrips)
   const tripCols = [];
@@ -2660,9 +2801,10 @@ const previewLiveCount = computed(() => {
 });
 
 // Widget CRUD
-const openAddWidgetDialog = (group) => {
+const openAddWidgetDialog = async (group) => {
   activeGroupForWidget.value = group;
   editingWidget.value = null;
+  await loadTopicDashboards();
   widgetForm.value = {
     id: 'w_' + Date.now(),
     title: '',
@@ -2689,9 +2831,10 @@ const openAddWidgetDialog = (group) => {
   isWidgetDialogOpen.value = true;
 };
 
-const openEditWidgetDialog = (group, widget) => {
+const openEditWidgetDialog = async (group, widget) => {
   activeGroupForWidget.value = group;
   editingWidget.value = widget;
+  await loadTopicDashboards();
 
   const hydrated = hydrateWidgetConditions(widget, group);
   const curIdx = (group.widgets || []).findIndex((w) => w.id === widget.id);
@@ -2943,6 +3086,8 @@ const getSourceLabel = (source) => {
   if (source === 'personnel') return 'Cán bộ';
   if (source === 'relatives') return 'Thân nhân';
   if (source === 'trips') return 'Chuyến đi';
+  const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
+  if (customTable) return customTable.title || 'Bảng tự tạo';
   return 'Dữ liệu';
 };
 
@@ -2999,6 +3144,13 @@ function computeWidgetCount(widget) {
 };
 
 const handleWidgetClick = (widget) => {
+  const source = widget.source || 'trips';
+  const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
+  if (customTable) {
+    router.push(`/dashboard-topic/${customTable.id}`);
+    return;
+  }
+
   const conds = (Array.isArray(widget.conditions) && widget.conditions.length > 0)
     ? widget.conditions
     : (Array.isArray(widget.criteria) && widget.criteria.length > 0
@@ -3036,6 +3188,13 @@ const handleWidgetClick = (widget) => {
 };
 
 const handleChartItemClick = (widget, item) => {
+  const source = widget.source || 'trips';
+  const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
+  if (customTable) {
+    router.push(`/dashboard-topic/${customTable.id}`);
+    return;
+  }
+
   const groupField = item?.field || widget.columnId || (widget.source === 'personnel' ? 'departmentName' : 'countryName');
   const groupVal = item?.name || '';
 
@@ -3168,6 +3327,40 @@ const getWidgetChartData = (widget) => {
 
 const availableColumnsForWidgetSource = computed(() => {
   const source = widgetForm.value.source;
+
+  // Hỗ trợ Bảng dữ liệu tự tạo
+  const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
+  if (customTable) {
+    if (customTable.source === 'blank') {
+      const cols = customTable.customColumns || [];
+      return cols.map((c, idx) => ({
+        id: c.id,
+        rawLabel: c.label || c.id,
+        label: `[Cột ${idx + 1}] ${c.label || c.id} (${c.id})`,
+      }));
+    } else {
+      const baseSource = customTable.source || 'trips';
+      if (baseSource === 'trips') return allAvailableTripColumns.value;
+      const mapping = baseSource === 'relatives' ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel;
+      const colMap = computeColumnIndexMap(mapping);
+      const list = [];
+      (mapping || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          if (c.id && c.label) {
+            const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
+            const grp = g.group ? `[${g.group}] ` : '';
+            list.push({
+              id: c.id,
+              rawLabel: c.label,
+              label: `${colNum}${grp}${c.label} (${c.id})`,
+            });
+          }
+        });
+      });
+      return list;
+    }
+  }
+
   if (source === 'trips') return allAvailableTripColumns.value;
   const mapping = source === 'relatives' ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel;
   const colMap = computeColumnIndexMap(mapping);
@@ -3532,7 +3725,17 @@ const refreshData = async () => {
   await personnelStore.fetchPersonnel();
 };
 
+const handleCustomDashboardsUpdated = async (e) => {
+  if (e?.detail && Array.isArray(e.detail)) {
+    availableTopicDashboards.value = e.detail;
+  } else {
+    await loadTopicDashboards();
+  }
+  await loadAllCustomTablesData();
+};
+
 onMounted(async () => {
+  window.addEventListener('custom-dashboards-updated', handleCustomDashboardsUpdated);
   await Promise.all([
     personnelStore.loadSettings(),
     personnelStore.fetchPersonnel(),
@@ -3545,6 +3748,10 @@ onMounted(async () => {
   if (!customGroups.value || customGroups.value.length === 0) {
     await reconcileGroupsWithTopics(true);
   }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('custom-dashboards-updated', handleCustomDashboardsUpdated);
 });
 </script>
 
