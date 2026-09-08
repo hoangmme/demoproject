@@ -12,34 +12,38 @@
       <!-- Header Section with Actions -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 12px;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <span class="badge-code-cd">CB-01</span>
+          <!-- Biểu tượng Bảng với màu sắc tùy chỉnh -->
+          <button
+            v-if="authStore.isAdmin"
+            type="button"
+            class="table-icon-badge-btn"
+            :style="{
+              color: getTableIconColor('personnel'),
+              borderColor: getTableIconColor('personnel') + '40',
+              background: getTableIconColor('personnel') + '15'
+            }"
+            @click="openIconColorDialog('personnel', mainTableTitle)"
+            title="Nhấn để đổi biểu tượng (Icon) & màu sắc bảng Cán bộ"
+          >
+            <i :class="['pi', getTableIcon('personnel')]" style="font-size: 1.25rem;"></i>
+          </button>
+          <span
+            v-else
+            class="table-icon-badge"
+            :style="{
+              color: getTableIconColor('personnel'),
+              borderColor: getTableIconColor('personnel') + '40',
+              background: getTableIconColor('personnel') + '15'
+            }"
+          >
+            <i :class="['pi', getTableIcon('personnel')]" style="font-size: 1.25rem;"></i>
+          </span>
+
           <div>
             <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
               {{ mainTableTitle }}
               <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredPersonnel.length }} bản ghi</span>
             </h1>
-          </div>
-
-          <!-- Table Switcher Pills -->
-          <div class="lark-table-switcher-pills">
-            <button
-              type="button"
-              class="table-switch-btn switch-active"
-              @click="switchToTable('canhan')"
-            >
-              <i class="pi pi-table" style="color: #0284c7; font-size: 0.75rem;"></i>
-              <span>{{ mainTableTitle }}</span>
-              <span class="switch-badge" style="background: #dbeafe; color: #1d4ed8;">CB-01</span>
-            </button>
-            <button
-              type="button"
-              class="table-switch-btn"
-              @click="switchToTable('thannhan')"
-            >
-              <i class="pi pi-users" style="color: #9333ea; font-size: 0.75rem;"></i>
-              <span>{{ relativeTableTitle }}</span>
-              <span class="switch-badge" style="background: #fae8ff; color: #86198f;">TN-02</span>
-            </button>
           </div>
         </div>
 
@@ -591,44 +595,41 @@
 
     <!-- TAB 2: DANH SÁCH THÂN NHÂN -->
     <div v-show="mainTab === 'thannhan'">
-      <!-- Breadcrumb & Top Bar -->
-      <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-        <span>Bảng dữ liệu</span>
-        <span>/</span>
-        <span style="color: #0f172a; font-weight: 600;">{{ relativeTableTitle }}</span>
-      </div>
-
       <!-- Header Section with Actions -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 12px;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <span class="badge-code-cd">TN-02</span>
+          <!-- Biểu tượng Bảng với màu sắc tùy chỉnh -->
+          <button
+            v-if="authStore.isAdmin"
+            type="button"
+            class="table-icon-badge-btn"
+            :style="{
+              color: getTableIconColor('relatives'),
+              borderColor: getTableIconColor('relatives') + '40',
+              background: getTableIconColor('relatives') + '15'
+            }"
+            @click="openIconColorDialog('relatives', relativeTableTitle)"
+            title="Nhấn để đổi biểu tượng (Icon) & màu sắc bảng Thân nhân"
+          >
+            <i :class="['pi', getTableIcon('relatives')]" style="font-size: 1.25rem;"></i>
+          </button>
+          <span
+            v-else
+            class="table-icon-badge"
+            :style="{
+              color: getTableIconColor('relatives'),
+              borderColor: getTableIconColor('relatives') + '40',
+              background: getTableIconColor('relatives') + '15'
+            }"
+          >
+            <i :class="['pi', getTableIcon('relatives')]" style="font-size: 1.25rem;"></i>
+          </span>
+
           <div>
             <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
               {{ relativeTableTitle }}
               <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredRelatives.length }} bản ghi</span>
             </h1>
-          </div>
-
-          <!-- Table Switcher Pills -->
-          <div class="lark-table-switcher-pills">
-            <button
-              type="button"
-              class="table-switch-btn"
-              @click="switchToTable('canhan')"
-            >
-              <i class="pi pi-table" style="color: #0284c7; font-size: 0.75rem;"></i>
-              <span>{{ mainTableTitle }}</span>
-              <span class="switch-badge" style="background: #dbeafe; color: #1d4ed8;">CB-01</span>
-            </button>
-            <button
-              type="button"
-              class="table-switch-btn switch-active"
-              @click="switchToTable('thannhan')"
-            >
-              <i class="pi pi-users" style="color: #9333ea; font-size: 0.75rem;"></i>
-              <span>{{ relativeTableTitle }}</span>
-              <span class="switch-badge" style="background: #fae8ff; color: #86198f;">TN-02</span>
-            </button>
           </div>
         </div>
 
@@ -1496,6 +1497,16 @@
       </template>
     </Dialog>
 
+    <!-- Dialog Tùy chỉnh Biểu tượng & Màu sắc Bảng -->
+    <TableIconColorDialog
+      v-model:visible="isIconColorDialogOpen"
+      :tableId="iconDialogTableId"
+      :tableTitle="iconDialogTableTitle"
+      :currentIcon="iconDialogCurrentIcon"
+      :currentColor="iconDialogCurrentColor"
+      @saved="onIconColorSaved"
+    />
+
 </template>
 
 <script setup>
@@ -1510,6 +1521,7 @@ import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import ColumnHeaderMenu from '@/components/common/ColumnHeaderMenu.vue';
 import AddColumnDialog from '@/components/common/AddColumnDialog.vue';
 import TableKeyLinkDialog from '@/components/common/TableKeyLinkDialog.vue';
+import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
 
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
@@ -1639,6 +1651,48 @@ const personnelDashboardConfig = computed(() => {
 const relativeDashboardConfig = computed(() => {
   return (customDashboards.value || []).find((d) => d.id === 'relatives') || DEFAULT_UNIFIED_DASHBOARDS[1];
 });
+
+// Tùy chỉnh Biểu tượng & Màu sắc Bảng
+const isIconColorDialogOpen = ref(false);
+const iconDialogTableId = ref('personnel');
+const iconDialogTableTitle = ref('Cán bộ');
+const iconDialogCurrentIcon = ref('pi-users');
+const iconDialogCurrentColor = ref('#0284c7');
+
+const getTableConfig = (tableKey) => {
+  const normKey = (tableKey === 'canhan' || tableKey === 'personnel') ? 'personnel' : (tableKey === 'thannhan' || tableKey === 'relatives') ? 'relatives' : tableKey;
+  return (customDashboards.value || []).find((d) => d.id === normKey) || null;
+};
+
+const getTableIcon = (tableKey) => {
+  const cfg = getTableConfig(tableKey);
+  if (cfg && cfg.icon) return cfg.icon;
+  return (tableKey === 'canhan' || tableKey === 'personnel') ? 'pi-users' : 'pi-heart';
+};
+
+const getTableIconColor = (tableKey) => {
+  const cfg = getTableConfig(tableKey);
+  if (cfg && cfg.iconColor) return cfg.iconColor;
+  return (tableKey === 'canhan' || tableKey === 'personnel') ? '#0284c7' : '#a855f7';
+};
+
+const openIconColorDialog = (tableId, defaultTitle) => {
+  const normKey = (tableId === 'canhan' || tableId === 'personnel') ? 'personnel' : (tableId === 'thannhan' || tableId === 'relatives') ? 'relatives' : tableId;
+  iconDialogTableId.value = normKey;
+  iconDialogTableTitle.value = defaultTitle || (normKey === 'relatives' ? relativeTableTitle.value : mainTableTitle.value);
+  iconDialogCurrentIcon.value = getTableIcon(normKey);
+  iconDialogCurrentColor.value = getTableIconColor(normKey);
+  isIconColorDialogOpen.value = true;
+};
+
+const onIconColorSaved = ({ tableId, icon, iconColor }) => {
+  const normKey = (tableId === 'canhan' || tableId === 'personnel') ? 'personnel' : (tableId === 'thannhan' || tableId === 'relatives') ? 'relatives' : tableId;
+  const idx = (customDashboards.value || []).findIndex((d) => d.id === normKey);
+  if (idx !== -1) {
+    customDashboards.value[idx].icon = icon;
+    customDashboards.value[idx].iconColor = iconColor;
+  }
+};
 
 const activePersonnelMetricCards = computed(() => {
   return personnelDashboardConfig.value.metricCards || DEFAULT_UNIFIED_DASHBOARDS[0].metricCards;

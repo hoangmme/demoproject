@@ -10,7 +10,32 @@
     <!-- Header Section with Actions -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <span class="badge-code-cd">{{ currentDashboardConfig.code || 'CD-03' }}</span>
+        <!-- Biểu tượng Bảng với màu sắc tùy chỉnh -->
+        <button
+          v-if="authStore.isAdmin"
+          type="button"
+          class="table-icon-badge-btn"
+          :style="{
+            color: getTableIconColor(currentDashboardId),
+            borderColor: getTableIconColor(currentDashboardId) + '40',
+            background: getTableIconColor(currentDashboardId) + '15'
+          }"
+          @click="openIconColorDialog(currentDashboardId, currentDashboardConfig.title || 'Bảng dữ liệu')"
+          title="Nhấn để đổi biểu tượng (Icon) & màu sắc bảng"
+        >
+          <i :class="['pi', getTableIcon(currentDashboardId)]" style="font-size: 1.25rem;"></i>
+        </button>
+        <span
+          v-else
+          class="table-icon-badge"
+          :style="{
+            color: getTableIconColor(currentDashboardId),
+            borderColor: getTableIconColor(currentDashboardId) + '40',
+            background: getTableIconColor(currentDashboardId) + '15'
+          }"
+        >
+          <i :class="['pi', getTableIcon(currentDashboardId)]" style="font-size: 1.25rem;"></i>
+        </span>
         <div>
           <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
             {{ currentDashboardConfig.title || 'Danh sách chuyến đi' }}
@@ -1165,6 +1190,16 @@
       :activeSource="currentDashboardConfig.source || 'trips'"
     />
 
+    <!-- Dialog Tùy chỉnh Biểu tượng & Màu sắc Bảng -->
+    <TableIconColorDialog
+      v-model:visible="isIconColorDialogOpen"
+      :tableId="iconDialogTableId"
+      :tableTitle="iconDialogTableTitle"
+      :currentIcon="iconDialogCurrentIcon"
+      :currentColor="iconDialogCurrentColor"
+      @saved="onIconColorSaved"
+    />
+
 </template>
 
 <script setup>
@@ -1184,6 +1219,7 @@ import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import ColumnHeaderMenu from '@/components/common/ColumnHeaderMenu.vue';
 import AddColumnDialog from '@/components/common/AddColumnDialog.vue';
 import TableKeyLinkDialog from '@/components/common/TableKeyLinkDialog.vue';
+import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
 
 import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug, formatOptions } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, extractRowFieldValue } from '@/utils/dashboardMetrics';
@@ -1649,6 +1685,48 @@ const currentDashboardConfig = computed(() => {
     metricCards: [],
   };
 });
+
+// Tùy chỉnh Biểu tượng & Màu sắc Bảng
+const isIconColorDialogOpen = ref(false);
+const iconDialogTableId = ref('trips');
+const iconDialogTableTitle = ref('Danh sách chuyến đi');
+const iconDialogCurrentIcon = ref('pi-send');
+const iconDialogCurrentColor = ref('#10b981');
+
+const getTableIcon = (tableId) => {
+  const cfg = (customDashboards.value || []).find((d) => d.id === tableId);
+  if (cfg && cfg.icon) return cfg.icon;
+  if (tableId === 'trips') return 'pi-send';
+  if (tableId === 'personnel') return 'pi-users';
+  if (tableId === 'relatives') return 'pi-heart';
+  return 'pi-table';
+};
+
+const getTableIconColor = (tableId) => {
+  const cfg = (customDashboards.value || []).find((d) => d.id === tableId);
+  if (cfg && cfg.iconColor) return cfg.iconColor;
+  if (tableId === 'trips') return '#10b981';
+  if (tableId === 'personnel') return '#0284c7';
+  if (tableId === 'relatives') return '#a855f7';
+  return '#0284c7';
+};
+
+const openIconColorDialog = (tableId, defaultTitle) => {
+  const id = tableId || currentDashboardId.value || 'trips';
+  iconDialogTableId.value = id;
+  iconDialogTableTitle.value = defaultTitle || currentDashboardConfig.value?.title || 'Bảng dữ liệu';
+  iconDialogCurrentIcon.value = getTableIcon(id);
+  iconDialogCurrentColor.value = getTableIconColor(id);
+  isIconColorDialogOpen.value = true;
+};
+
+const onIconColorSaved = ({ tableId, icon, iconColor }) => {
+  const idx = (customDashboards.value || []).findIndex((d) => d.id === tableId);
+  if (idx !== -1) {
+    customDashboards.value[idx].icon = icon;
+    customDashboards.value[idx].iconColor = iconColor;
+  }
+};
 
 const activeMetricCards = computed(() => {
   if (currentDashboardConfig.value.metricCards && currentDashboardConfig.value.metricCards.length > 0) {
@@ -4466,6 +4544,14 @@ const onRowHeightChanged = (e) => {
   currentRowHeightLimit.value = String(e.detail || '1');
 };
 
+const onCustomDashboardsUpdated = (e) => {
+  if (e && e.detail && Array.isArray(e.detail)) {
+    customDashboards.value = e.detail;
+  } else {
+    loadCustomDashboards();
+  }
+};
+
 onMounted(async () => {
   await Promise.all([
     (!personnelStore.importMappingTrips || personnelStore.importMappingTrips.length === 0)
@@ -4481,11 +4567,13 @@ onMounted(async () => {
   loadCustomParentLabel();
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
   window.addEventListener('table-show-col-index-changed', onColIndexChanged);
+  window.addEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
 });
 
 onUnmounted(() => {
   window.removeEventListener('table-row-height-changed', onRowHeightChanged);
   window.removeEventListener('table-show-col-index-changed', onColIndexChanged);
+  window.removeEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
 });
 </script>
 

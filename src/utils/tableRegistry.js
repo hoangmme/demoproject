@@ -27,12 +27,17 @@ export function getUnifiedTableDefinitions(options = {}) {
   const coreRelativesTitle = systemBranding?.menuLabelRelatives || 'Thân nhân';
   const coreTripsTitle = systemBranding?.menuLabelTrips || 'Chuyến đi';
 
-  // Bảng 1: Chuyến đi [CD-03]
+  const savedTripsCfg = (customDashboards || []).find(d => d.id === 'trips');
+  const savedPersonnelCfg = (customDashboards || []).find(d => d.id === 'personnel');
+  const savedRelativesCfg = (customDashboards || []).find(d => d.id === 'relatives');
+
+  // Bảng 1: Chuyến đi
   const tripsTable = {
     id: 'trips',
     code: 'CD-03',
     title: coreTripsTitle,
-    icon: 'pi-send',
+    icon: savedTripsCfg?.icon || 'pi-send',
+    iconColor: savedTripsCfg?.iconColor || '#10b981',
     source: 'trips',
     isCore: true,
     route: '/trips',
@@ -99,12 +104,13 @@ export function getUnifiedTableDefinitions(options = {}) {
     },
   };
 
-  // Bảng 2: Cán bộ [CB-01]
+  // Bảng 2: Cán bộ
   const personnelTable = {
     id: 'personnel',
     code: 'CB-01',
     title: corePersonnelTitle,
-    icon: 'pi-users',
+    icon: savedPersonnelCfg?.icon || 'pi-users',
+    iconColor: savedPersonnelCfg?.iconColor || '#0284c7',
     source: 'personnel',
     isCore: true,
     route: '/personnel',
@@ -149,12 +155,13 @@ export function getUnifiedTableDefinitions(options = {}) {
     },
   };
 
-  // Bảng 3: Thân nhân [TN-02]
+  // Bảng 3: Thân nhân
   const relativesTable = {
     id: 'relatives',
     code: 'TN-02',
     title: coreRelativesTitle,
-    icon: 'pi-heart',
+    icon: savedRelativesCfg?.icon || 'pi-heart',
+    iconColor: savedRelativesCfg?.iconColor || '#a855f7',
     source: 'relatives',
     isCore: true,
     route: '/relatives',
@@ -343,6 +350,7 @@ export const DEFAULT_UNIFIED_DASHBOARDS = [
     description: 'Danh sách hồ sơ cán bộ',
     source: 'personnel',
     icon: 'pi-users',
+    iconColor: '#0284c7',
     metricCards: [
       { id: 'all', label: 'Toàn bộ cán bộ', condition: 'all', color: 'blue' },
       { id: 'has_trips', label: 'Có chuyến đi', field: 'has_trips', operator: 'has_value', color: 'green' },
@@ -358,6 +366,7 @@ export const DEFAULT_UNIFIED_DASHBOARDS = [
     description: 'Danh sách thân nhân của cán bộ',
     source: 'relatives',
     icon: 'pi-heart',
+    iconColor: '#a855f7',
     metricCards: [
       { id: 'all', label: 'Toàn bộ thân nhân', condition: 'all', color: 'blue' },
       { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
@@ -372,6 +381,7 @@ export const DEFAULT_UNIFIED_DASHBOARDS = [
     description: 'Tổng hợp các chuyến đi nước ngoài của cán bộ và thân nhân',
     source: 'trips',
     icon: 'pi-send',
+    iconColor: '#10b981',
     metricCards: [
       { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
       { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
@@ -404,6 +414,9 @@ export function ensureStandardDashboards(dashboards = []) {
       }
       if (!result[existingIdx].icon) {
         result[existingIdx].icon = defDash.icon;
+      }
+      if (!result[existingIdx].iconColor) {
+        result[existingIdx].iconColor = defDash.iconColor;
       }
     }
   });

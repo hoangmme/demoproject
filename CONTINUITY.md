@@ -1540,6 +1540,35 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+### 18. KHẮC PHỤC HIỂN THỊ NỘI DUNG CŨ, BỎ THẺ MÃ BẢNG VÀ TÙY CHỈNH BIỂU TƯỢNG (ICON) & MÀU SẮC BẢNG
+- **Vấn đề giải quyết**:
+  - `PersonnelView.vue`: Xuất hiện breadcrumb trùng lặp ở bảng Thân nhân (`Bảng dữ liệu / Thân nhân` bị hiển thị 2 lần).
+  - Cả Cán bộ và Thân nhân đều bị gắn bộ nút chuyển đổi bảng tĩnh `[ ⊞ Cán bộ CB-01 ] [ 👥 Thân nhân TN-02 ]` cạnh tiêu đề khiến giao diện bị rối và hiển thị nội dung cũ không cần thiết.
+  - Các thẻ mã bảng cố định như `CB-01`, `TN-02`, `CD-03` không cần thiết trong trải nghiệm người dùng hiện đại.
+  - Cần tính năng cho phép Quản trị viên tùy biến Biểu tượng (Icon) và Màu sắc nhận diện của từng bảng (Cán bộ, Thân nhân, Chuyến đi, Bảng tự tạo).
+- **Giải pháp thực hiện**:
+  1. **Khắc phục Lỗi Hiển thị Nội dung Cũ**:
+     - Xóa bỏ breadcrumb thứ hai bị lặp ở bảng Thân nhân trong `PersonnelView.vue`.
+     - Xóa bỏ hoàn toàn thanh nút chuyển đổi bảng `.lark-table-switcher-pills` ở cả Cán bộ và Thân nhân. Cả 2 bảng đều có trang/route và mục menu độc lập trên Sidebar.
+  2. **Bỏ Thẻ Mã Bảng (`CB-01`, `TN-02`, `CD-03`)**:
+     - Xóa bỏ các thẻ `<span class="badge-code-cd">CB-01</span>`, `<span class="badge-code-cd">TN-02</span>` trong `PersonnelView.vue` và `<span class="badge-code-cd">{{ currentDashboardConfig.code || 'CD-03' }}</span>` trong `ChildDashboardView.vue`.
+  3. **Tùy Chỉnh Biểu Tượng & Màu Sắc Bảng (`TableIconColorDialog.vue`)**:
+     - Xây dựng component `TableIconColorDialog.vue`:
+       - Hộp xem trước (Live Preview Card) cập nhật tức thì màu sắc và biểu tượng.
+       - 14 màu sắc nhận diện chuẩn (Blue, Royal Blue, Purple, Violet, Emerald, Green, Olive, Amber, Orange, Red, Pink, Cyan, Indigo, Slate) kèm ô nhập/chọn mã màu Hex tùy chọn.
+       - Lưới 26 biểu tượng PrimeIcons được chọn lọc chuyên sâu cho nghiệp vụ quản lý kèm ô tìm kiếm theo tên và từ khóa tiếng Việt.
+       - Lưu trực tiếp cấu hình `icon` và `iconColor` vào `custom_dashboards_config` (cả localStorage và server).
+       - Phát sự kiện `custom-dashboards-updated` để đồng bộ toàn bộ ứng dụng trong 0ms.
+  4. **Tích hợp Nút Biểu Tượng Tương Tác**:
+     - **Header Bảng dữ liệu** (`PersonnelView.vue`, `ChildDashboardView.vue`): Đặt nút biểu tượng bảng có bo góc, viền và nền mang màu sắc tùy chỉnh ngay trước tiêu đề bảng. Quản trị viên chỉ cần click vào biểu tượng là mở ngay modal chọn icon và màu sắc.
+     - **Thanh điều hướng Sidebar** (`AppSidebar.vue`): Render icon và màu sắc động của từng bảng (`personnel`, `relatives`, `trips`, và các bảng chuyên đề/tự tạo). Thêm nút icon bảng màu `pi pi-palette` trong menu thao tác cạnh nút đổi tên để quản trị viên có thể đổi trực tiếp từ Sidebar.
+  5. **Cập nhật `DEFAULT_UNIFIED_DASHBOARDS` & `ensureStandardDashboards`**:
+     - Mặc định Cán bộ: `icon: 'pi-users'`, `iconColor: '#0284c7'`.
+     - Mặc định Thân nhân: `icon: 'pi-heart'`, `iconColor: '#a855f7'`.
+     - Mặc định Chuyến đi: `icon: 'pi-send'`, `iconColor: '#10b981'`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
 
 
 

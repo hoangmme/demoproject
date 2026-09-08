@@ -113,12 +113,21 @@
       <!-- Bảng 1: Cán bộ (Table 1 trong Base) -->
       <div class="sidebar-item-row">
         <router-link to="/personnel" class="app-nav-item" :title="systemBranding.menuLabelPersonnel || 'Cán bộ'">
-          <i class="pi pi-table" style="color: #0284c7;"></i>
+          <i :class="['pi', getTableIcon('personnel', 'pi-users')]" :style="{ color: getTableIconColor('personnel', '#0284c7') }"></i>
           <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             {{ systemBranding.menuLabelPersonnel || 'Cán bộ' }} ({{ personnelStore.personnelList.length }})
           </span>
         </router-link>
         <div class="sidebar-item-actions">
+          <button
+            v-if="authStore.isAdmin"
+            type="button"
+            class="sidebar-item-action-btn"
+            @click.stop="openIconColorDialog('personnel', systemBranding.menuLabelPersonnel || 'Cán bộ')"
+            title="Đổi biểu tượng & màu sắc"
+          >
+            <i class="pi pi-palette"></i>
+          </button>
           <button
             type="button"
             class="sidebar-item-action-btn"
@@ -148,12 +157,21 @@
           class="app-nav-item"
           :title="systemBranding.menuLabelRelatives || 'Thân nhân'"
         >
-          <i class="pi pi-users" style="color: #a855f7;"></i>
+          <i :class="['pi', getTableIcon('relatives', 'pi-heart')]" :style="{ color: getTableIconColor('relatives', '#a855f7') }"></i>
           <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             {{ systemBranding.menuLabelRelatives || 'Thân nhân' }} ({{ personnelStore.relativesList.length }})
           </span>
         </router-link>
         <div class="sidebar-item-actions">
+          <button
+            v-if="authStore.isAdmin"
+            type="button"
+            class="sidebar-item-action-btn"
+            @click.stop="openIconColorDialog('relatives', systemBranding.menuLabelRelatives || 'Thân nhân')"
+            title="Đổi biểu tượng & màu sắc"
+          >
+            <i class="pi pi-palette"></i>
+          </button>
           <button
             type="button"
             class="sidebar-item-action-btn"
@@ -180,12 +198,21 @@
           class="app-nav-item"
           :title="systemBranding.menuLabelTrips || 'Chuyến đi'"
         >
-          <i class="pi pi-send" style="color: #10b981;"></i>
+          <i :class="['pi', getTableIcon('trips', 'pi-send')]" :style="{ color: getTableIconColor('trips', '#10b981') }"></i>
           <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             {{ systemBranding.menuLabelTrips || 'Chuyến đi' }} ({{ totalTripsCount }})
           </span>
         </router-link>
         <div class="sidebar-item-actions">
+          <button
+            v-if="authStore.isAdmin"
+            type="button"
+            class="sidebar-item-action-btn"
+            @click.stop="openIconColorDialog('trips', systemBranding.menuLabelTrips || 'Chuyến đi')"
+            title="Đổi biểu tượng & màu sắc"
+          >
+            <i class="pi pi-palette"></i>
+          </button>
           <button
             type="button"
             class="sidebar-item-action-btn"
@@ -216,12 +243,21 @@
           class="app-nav-item"
           :title="dash.title"
         >
-          <i :class="dash.icon ? `pi ${dash.icon}` : 'pi pi-table'"></i>
+          <i :class="['pi', getTableIcon(dash.id, dash.icon || 'pi-table')]" :style="{ color: getTableIconColor(dash.id, dash.iconColor || '#0284c7') }"></i>
           <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             {{ dash.title }}
           </span>
         </router-link>
         <div class="sidebar-item-actions">
+          <button
+            v-if="authStore.isAdmin"
+            type="button"
+            class="sidebar-item-action-btn"
+            @click.stop="openIconColorDialog(dash.id, dash.title)"
+            title="Đổi biểu tượng & màu sắc"
+          >
+            <i class="pi pi-palette"></i>
+          </button>
           <button
             type="button"
             class="sidebar-item-action-btn"
@@ -623,6 +659,16 @@
 
     <!-- Dialog Nhập Liệu Bản Ghi Mới Đa Năng -->
     <TableDataEntryDialog v-model="isDynamicDataEntryOpen" />
+
+    <!-- Dialog Tùy chỉnh Biểu tượng & Màu sắc Bảng -->
+    <TableIconColorDialog
+      v-model:visible="isIconColorDialogOpen"
+      :tableId="iconDialogTableId"
+      :tableTitle="iconDialogTableTitle"
+      :currentIcon="iconDialogCurrentIcon"
+      :currentColor="iconDialogCurrentColor"
+      @saved="onIconColorSaved"
+    />
   </aside>
 </template>
 
@@ -633,10 +679,12 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
+import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
 import { useAuthStore } from '@/stores/auth';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { buildTopicSourceList } from '@/utils/dashboardMetrics';
+import { DEFAULT_UNIFIED_DASHBOARDS, ensureStandardDashboards } from '@/utils/tableRegistry';
 
 const route = useRoute();
 const router = useRouter();
@@ -1115,13 +1163,50 @@ const getInitialDashboards = () => {
     const local = localStorage.getItem('custom_dashboards_config');
     if (local) {
       const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return ensureStandardDashboards(parsed);
     }
   } catch (e) {}
-  return [...DEFAULT_DASHBOARDS];
+  return ensureStandardDashboards([...DEFAULT_UNIFIED_DASHBOARDS]);
 };
 
 const dynamicDashboards = ref(getInitialDashboards());
+
+// Tùy chỉnh Biểu tượng & Màu sắc Bảng từ Sidebar
+const isIconColorDialogOpen = ref(false);
+const iconDialogTableId = ref('personnel');
+const iconDialogTableTitle = ref('Cán bộ');
+const iconDialogCurrentIcon = ref('pi-users');
+const iconDialogCurrentColor = ref('#0284c7');
+
+const getTableConfig = (tableId) => {
+  return (dynamicDashboards.value || []).find((d) => d.id === tableId) || null;
+};
+
+const getTableIcon = (tableId, defaultIcon = 'pi-table') => {
+  const cfg = getTableConfig(tableId);
+  return (cfg && cfg.icon) ? cfg.icon : defaultIcon;
+};
+
+const getTableIconColor = (tableId, defaultColor = '#0284c7') => {
+  const cfg = getTableConfig(tableId);
+  return (cfg && cfg.iconColor) ? cfg.iconColor : defaultColor;
+};
+
+const openIconColorDialog = (tableId, defaultTitle) => {
+  iconDialogTableId.value = tableId;
+  iconDialogTableTitle.value = defaultTitle || 'Bảng dữ liệu';
+  iconDialogCurrentIcon.value = getTableIcon(tableId);
+  iconDialogCurrentColor.value = getTableIconColor(tableId);
+  isIconColorDialogOpen.value = true;
+};
+
+const onIconColorSaved = ({ tableId, icon, iconColor }) => {
+  const idx = (dynamicDashboards.value || []).findIndex((d) => d.id === tableId);
+  if (idx !== -1) {
+    dynamicDashboards.value[idx].icon = icon;
+    dynamicDashboards.value[idx].iconColor = iconColor;
+  }
+};
 
 const topicDashboards = computed(() => {
   return (dynamicDashboards.value || []).filter((d) => d.displayMode !== 'appendix' && d.id !== 'trips' && d.id !== 'personnel' && d.id !== 'relatives');
@@ -1133,11 +1218,20 @@ const appendixDashboards = computed(() => {
 
 const loadSidebarData = async () => {
   try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      try {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          dynamicDashboards.value = ensureStandardDashboards(parsed);
+        }
+      } catch (e) {}
+    }
     const savedDash = await getAppSettings('custom_dashboards_config', null);
     if (savedDash && Array.isArray(savedDash) && savedDash.length > 0) {
-      dynamicDashboards.value = savedDash;
+      dynamicDashboards.value = ensureStandardDashboards(savedDash);
       try {
-        localStorage.setItem('custom_dashboards_config', JSON.stringify(savedDash));
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(dynamicDashboards.value));
       } catch (e) {}
     }
   } catch (e) {

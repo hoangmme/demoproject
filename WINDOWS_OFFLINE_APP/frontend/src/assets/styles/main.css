@@ -1132,6 +1132,36 @@ td.col-right {
   border-radius: 6px;
 }
 
+.table-icon-badge-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1.5px solid;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.table-icon-badge-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.table-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1.5px solid;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
 /* Lark Base Table View Tabs Header */
 .lark-base-view-tabs-container {
   display: flex;
