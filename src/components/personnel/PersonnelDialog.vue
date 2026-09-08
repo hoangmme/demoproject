@@ -109,6 +109,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  targetType: {
+    type: String,
+    default: 'auto',
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'saved', 'deleted']);
@@ -130,15 +134,45 @@ const form = ref({});
 
 const isEdit = computed(() => Boolean(form.value.id || form.value.uniqueKey));
 
+const effectiveTargetType = computed(() => {
+  if (props.targetType && props.targetType !== 'auto') {
+    if (props.targetType === 'relatives') return 'relative';
+    if (props.targetType === 'trips') return 'trip';
+    return props.targetType;
+  }
+  const data = props.personData || form.value || {};
+  if (
+    data._recordType === 'relative' ||
+    data.rawRelative ||
+    Boolean(data.relationshipName || data.cccdthannhan || data.relativeName || data.birthYearTN)
+  ) {
+    return 'relative';
+  }
+  if (
+    data._recordType === 'trip' ||
+    data.rawTrip ||
+    Boolean(data.departureDate || data.ngay_xuat_canh || data.destination)
+  ) {
+    return 'trip';
+  }
+  return 'personnel';
+});
+
 const allTableColumns = computed(() => {
   if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
     return props.columns.filter((c) => !c.isVirtual && c.id !== 'stt');
   }
-  // Mặc định lấy toàn bộ cột cấu hình của bảng Cán bộ
+  let mappingSource = personnelStore.importMappingPersonnel || [];
+  if (effectiveTargetType.value === 'relative') {
+    mappingSource = personnelStore.importMappingRelative || [];
+  } else if (effectiveTargetType.value === 'trip') {
+    mappingSource = personnelStore.importMappingTrips || [];
+  }
+
   const list = [];
-  (personnelStore.importMappingPersonnel || []).forEach((grp) => {
+  (mappingSource || []).forEach((grp) => {
     (grp.columns || []).forEach((col) => {
-      if (col && col.id && col.id !== 'stt') {
+      if (col && col.id && col.id !== 'stt' && !col.isVirtual) {
         list.push(col);
       }
     });
@@ -147,9 +181,18 @@ const allTableColumns = computed(() => {
 });
 
 const dialogHeader = computed(() => {
+  if (effectiveTargetType.value === 'relative') {
+    const nameVal = form.value.relativeName || form.value.name || form.value.ho_va_ten || '';
+    return isEdit.value ? `Chi tiết Thân nhân: ${nameVal || 'Hồ sơ'}` : `Thêm thân nhân mới`;
+  }
+  if (effectiveTargetType.value === 'trip') {
+    const tripDest = form.value.countryName || form.value.quoc_gia_xuat_canh || form.value.destination || '';
+    const nameVal = form.value.personnelName || form.value.relativeName || form.value.name || '';
+    return isEdit.value ? `Chi tiết Chuyến đi: ${tripDest || 'Chuyến đi'} (${nameVal})` : `Thêm chuyến đi mới`;
+  }
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
   const nameVal = form.value[pNameField] || form.value.name || form.value.ho_va_ten || '';
-  return isEdit.value ? `Chi tiết: ${nameVal || 'Hồ sơ'}` : `Thêm hồ sơ mới`;
+  return isEdit.value ? `Chi tiết Cán bộ: ${nameVal || 'Hồ sơ'}` : `Thêm cán bộ mới`;
 });
 
 const safeClone = (obj) => {
@@ -212,6 +255,16 @@ watch(
   { immediate: true, deep: true }
 );
 
+const executeSave = async (payload) => {
+  if (effectiveTargetType.value === 'relative') {
+    return await personnelStore.saveRelative(payload);
+  } else if (effectiveTargetType.value === 'trip') {
+    return await personnelStore.saveTrip(payload);
+  } else {
+    return await personnelStore.savePerson(payload);
+  }
+};
+
 const triggerAutoSave = () => {
   if (!isEdit.value || isSavingInternal || saving.value) return;
 
@@ -226,7 +279,7 @@ const triggerAutoSave = () => {
         ...form.value,
         custom_data: { ...(form.value.custom_data || {}), ...form.value },
       };
-      const saved = await personnelStore.savePerson(payload);
+      const saved = await executeSave(payload);
       initialJsonSnapshot = JSON.stringify(form.value);
       autoSaveStatus.value = 'saved';
       emit('saved', saved);
@@ -270,7 +323,7 @@ const handleSave = async () => {
       ...form.value,
       custom_data: { ...(form.value.custom_data || {}), ...form.value },
     };
-    const saved = await personnelStore.savePerson(payload);
+    const saved = await executeSave(payload);
     initialJsonSnapshot = JSON.stringify(form.value);
     autoSaveStatus.value = 'saved';
     emit('saved', saved);
@@ -288,9 +341,33 @@ const handleSave = async () => {
 };
 
 const handleDelete = async () => {
+  if (effectiveTargetType.value === 'relative') {
+    const nameVal = form.value.relativeName || form.value.name || 'thân nhân này';
+    if (!confirm(`Bạn có chắc chắn muốn xóa thân nhân "${nameVal}" không?`)) return;
+    try {
+      await personnelStore.deleteRelative(form.value);
+      emit('deleted', form.value);
+      visible.value = false;
+    } catch (e) {
+      alert('Lỗi xóa thân nhân: ' + (e.message || e));
+    }
+    return;
+  }
+  if (effectiveTargetType.value === 'trip') {
+    const cName = form.value.countryName || form.value.quoc_gia_xuat_canh || 'chuyến đi này';
+    if (!confirm(`Bạn có chắc chắn muốn xóa chuyến đi "${cName}" không?`)) return;
+    try {
+      await personnelStore.deleteTrip(form.value);
+      emit('deleted', form.value);
+      visible.value = false;
+    } catch (e) {
+      alert('Lỗi xóa chuyến đi: ' + (e.message || e));
+    }
+    return;
+  }
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
   const nameVal = form.value[pNameField] || form.value.name || 'hồ sơ này';
-  if (!confirm(`Bạn có chắc chắn muốn xóa "${nameVal}" không?`)) return;
+  if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ cán bộ "${nameVal}" không?`)) return;
   try {
     await personnelStore.deletePerson(form.value);
     emit('deleted', form.value);

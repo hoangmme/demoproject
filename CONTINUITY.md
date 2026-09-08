@@ -1937,17 +1937,30 @@
       - npm run build thành công 100% (0 lỗi, 567ms). Đã push commit ec4ab7c lên git.
    5. **Trạng thái**: Done [Reversible].
 
-- **Entry (2026-09-08)**: **Triệt Tiêu Bất Đồng Bộ Giữa Cột Lookup TEST và Bảng/Chi Tiết, Thay Thế 'Bản Ghi' Bằng 'Kết Quả'**:
+- **Entry (2026-09-08)**: **Sửa Lỗi Bấm "Chỉnh Sửa Hồ Sơ" Thân Nhân ở Popup Lại Nhảy Qua Cán Bộ**:
    1. **Vấn đề & Báo cáo của người dùng**:
-      - Yêu cầu 1: Đổi toàn bộ chữ "bản ghi" thành "kết quả" (hoặc "hồ sơ" trong ngữ cảnh thông tin cán bộ) trên toàn hệ thống.
-      - Yêu cầu 2: Phát hiện cột TEST (lookup CCCD) hiển thị dấu '-' (không có dữ liệu) nhưng cột THUỘC TÍNH (công thức IF) lại đánh dấu là 'Cán bộ'. Dữ liệu không trùng khớp giữa chi tiết và bảng do có chỗ đang fallback hoặc gán tĩnh.
+      - "khi bấm chính sửa hồ sơ thân nhân ở popup thì nhảy qua cán bộ?"
    2. **Nguyên nhân gốc rễ**:
-      - Vấn đề 1 (Bất đồng bộ CCCD): Trong database, 2 chuyến đi của cán bộ (Lê Công Tuấn Anh, Lê Thanh Bình) có trường chuyến đi `cccdchuyendi` là null/rỗng. Trên bảng, `getCellValue` dùng fallback hiển thị CCCD của Cán bộ chủ quản (`canBoCccd`). Nhưng cột Lookup `TEST` lại đọc trực tiếp từ record nên thấy rỗng -> trả về '-'.
-      - Vấn đề 2 (Công thức IF so sánh rỗng = rỗng): Trong `FormulaEvaluator`, khi cả hai trường đều thiếu dữ liệu/không tìm thấy, phép so sánh chuỗi mặc định `"" === ""` trả về TRUE, khiến các dòng không có CCCD và Lookup trả về '-' lại bị đánh dấu nhầm thành 'Cán bộ'!
+      - Trước đây, `PersonnelDialog.vue` từng có các Tab (Tab 0: Cán bộ, Tab 1: Chuyến đi, Tab 2: Thân nhân). Sau đợt tái cấu trúc thành Dynamic Flat Form, `PersonnelDialog` đã loại bỏ hoàn toàn các tab để hiển thị trực tiếp danh sách cột động theo cấu hình.
+      - Tuy nhiên, trong `DashboardView.vue`, hàm `openRelativeDetail(r)` vẫn giữ logic cũ: tìm cán bộ cha `parent = r.rawPerson || ...`, sau đó gán `selectedPersonForDialog.value = parent` (tức là gán hồ sơ Cán bộ) và `dialogInitialTab.value = 2` (không còn tác dụng).
+      - Đồng thời, `PersonnelDialog.vue` không được truyền `:columns`, nên mặc định fallback về `importMappingPersonnel` (cột của Cán bộ). Kết quả là form hiển thị toàn bộ thông tin và các trường của Cán bộ cha thay vì Thân nhân.
+      - Tương tự tại `UnifiedTableView.vue`, hàm `openPersonnelDetail(trip)` từng kiểm tra `trip.rawPerson || trip.rawRelative || ...`, khiến cho các dòng trong bảng Thân nhân có gắn `rawPerson` đều bị phân giải nhầm thành Cán bộ.
    3. **Giải pháp kiến trúc đã triển khai**:
-      - Chuẩn hóa `buildTopicSourceList` trong `dashboardMetrics.js`: Khi tạo bản ghi phẳng cho chuyến đi từ hồ sơ Cán bộ/Thân nhân, tự động phân giải và gán nhất quán `cccdchuyendi` = CCCD thật của đối tượng đi. Nhờ đó mọi cột (cột hiển thị, cột Lookup, form Chi tiết) đều đọc cùng một giá trị CCCD thực, không còn tình trạng Lookup bị '-'.
-      - Nâng cấp `FormulaEvaluator` trong `formulaEngine.js`: Phép so sánh đẳng thức (== / !=) có cơ chế phân biệt trường thiếu dữ liệu (`null`). Hai trường dữ liệu cùng rỗng (`null == null`) sẽ trả về **FALSE** (không coi là khớp nhau trong đối chiếu quan hệ), trong khi so sánh có chủ đích với chuỗi rỗng (`{field} == ""`) vẫn trả về TRUE.
-      - Thay thế toàn bộ từ "bản ghi" thành "kết quả" (và "hồ sơ" tại dialog chi tiết cán bộ) trên toàn bộ hệ thống (`DashboardView`, `UnifiedTableView`, `AdvancedSearchView`, `AuditLogView`, `AppSidebar`, `ExcelImportWizard`, `PersonnelDialog`, `TableViewManagerDialog`).
+      - **Đa hình hóa `PersonnelDialog.vue` (Polymorphic Dynamic Dialog)**:
+        - Bổ sung prop `targetType` (`'personnel' | 'relative' | 'trip' | 'auto'`) và `effectiveTargetType` tự động nhận diện đối tượng.
+        - `allTableColumns`: Tự động lấy đúng bộ cấu hình cột (`importMappingRelative` cho thân nhân, `importMappingTrips` cho chuyến đi, `importMappingPersonnel` cho cán bộ) khi không truyền `:columns`.
+        - `dialogHeader`: Hiển thị chính xác tiêu đề tương ứng (`Chi tiết Thân nhân: [Tên]`, `Chi tiết Chuyến đi: [Nơi đến]`, `Chi tiết Cán bộ: [Tên]`).
+        - Tự động gọi đúng hàm lưu/xóa tương ứng (`saveRelative` / `deleteRelative` cho thân nhân, `saveTrip` / `deleteTrip` cho chuyến đi, `savePerson` / `deletePerson` cho cán bộ).
+      - **Bổ sung `saveRelative`, `saveTrip`, `deleteTrip` trong `src/stores/personnel.js`**:
+        - `saveRelative(relData)`: Tìm cán bộ cha tương ứng trong `personnelList` (theo CCCD cha, `personnelId`, hoặc mã thân nhân), cập nhật vào `p.relatives` và `p.custom_data.relatives`, lưu qua `savePerson(updatedP)`, đồng bộ Directus `appendix2` nếu có ID, ghi nhật ký hoạt động.
+        - `saveTrip(tripData)` & `deleteTrip(trip)`: Quản lý chuyến đi trực tiếp và cập nhật hồ sơ chủ quản.
+      - **Cập nhật `DashboardView.vue`**:
+        - `openRelativeDetail(r)`: Gán trực tiếp bản ghi thân nhân `selectedPersonForDialog.value = r.rawRelative || r`, thiết lập `dialogTargetType = 'relative'`, cung cấp danh mục cột thân nhân `importMappingRelative`.
+        - `openTripDetail(t)`: Gán bản ghi chuyến đi và cột chuyến đi tương ứng.
+        - `openPersonnelDetailFromRecord`: Nhận diện chuẩn xác thân nhân qua `row.rawRelative || row._recordType === 'relative' || row.relationshipName || row.cccdthannhan || row.relativeName`.
+      - **Cập nhật `UnifiedTableView.vue`**:
+        - `openPersonnelDetail(trip)`: Kiểm tra nguồn bảng `src === 'relatives'` để ưu tiên `trip.rawRelative || trip`, đảm bảo click vào thân nhân mở đúng form thân nhân.
    4. **Kiểm thử & Triển khai**:
-      - `npm run build` thành công 100% (0 lỗi, 593ms). Đã push commit `ffb227b` lên git.
+      - `npm run build` thành công 100% (0 lỗi, 575ms).
    5. **Trạng thái**: Done [Reversible].
+

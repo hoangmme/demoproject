@@ -1012,7 +1012,9 @@
       v-model="isPersonnelDialogOpen"
       :personData="activePersonData"
       :columns="allAvailableColumnsList"
+      :targetType="currentDashboardConfig?.source || 'auto'"
       @saved="handlePersonnelSaved"
+      @deleted="handlePersonnelSaved"
     />
 
     <!-- Dialog Quản lý Chế độ xem (View) đa hình (Thêm / Sửa / Xóa / Bộ lọc điều kiện dùng chung) -->
@@ -4029,7 +4031,24 @@ const saveColumnSelection = async () => {
 
 // Actions
 const openPersonnelDetail = (trip) => {
-  const targetRecord = trip.rawPerson || trip.rawRelative || trip.rawTrip || trip;
+  const src = currentDashboardConfig.value?.source || '';
+  let targetRecord = null;
+  if (src === 'relatives') {
+    targetRecord = trip.rawRelative || trip;
+  } else if (src === 'trips') {
+    targetRecord = trip.rawTrip || trip;
+  } else if (src === 'personnel') {
+    targetRecord = trip.rawPerson || trip;
+  } else {
+    if (trip.rawRelative || trip._recordType === 'relative' || trip.relationshipName || trip.cccdthannhan || trip.relativeName) {
+      targetRecord = trip.rawRelative || trip;
+    } else if (trip.rawTrip || trip._recordType === 'trip' || trip.departureDate || trip.ngay_xuat_canh) {
+      targetRecord = trip.rawTrip || trip;
+    } else {
+      targetRecord = trip.rawPerson || trip;
+    }
+  }
+
   if (targetRecord) {
     activePersonData.value = targetRecord;
     isPersonnelDialogOpen.value = true;

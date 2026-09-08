@@ -1214,10 +1214,12 @@
       </template>
     </Dialog>
 
-    <!-- Detailed Personnel / Relative Dialog -->
+    <!-- Detailed Personnel / Relative / Trip Dialog -->
     <PersonnelDialog
       v-model="isPersonDialogOpen"
       :personData="selectedPersonForDialog"
+      :columns="selectedColumnsForDialog"
+      :targetType="dialogTargetType"
       :initialTab="dialogInitialTab"
       :targetRelativeCode="dialogTargetRelativeCode"
       @saved="onPersonSaved"
@@ -1534,7 +1536,7 @@ const openPersonnelDetailFromRecord = () => {
   isDrilldownRecordDetailOpen.value = false;
   if (row.rawTrip || row._recordType === 'trip' || drilldownSourceType.value === 'trips') {
     openTripDetail(row);
-  } else if (row.rawRelative || row.relationshipName || drilldownSourceType.value === 'relatives') {
+  } else if (row.rawRelative || row._recordType === 'relative' || row.relationshipName || row.cccdthannhan || row.relativeName || drilldownSourceType.value === 'relatives') {
     openRelativeDetail(row);
   } else {
     openPersonnelDetail(row);
@@ -1612,6 +1614,8 @@ const getPersonnelForTrip = (t) => {
 // Dialog state for personnel & relative detail
 const isPersonDialogOpen = ref(false);
 const selectedPersonForDialog = ref(null);
+const dialogTargetType = ref('personnel');
+const selectedColumnsForDialog = ref([]);
 const dialogInitialTab = ref(0);
 const dialogTargetRelativeCode = ref('');
 
@@ -1624,6 +1628,17 @@ const openPersonnelDetail = (p) => {
            (targetCccd && (x[pKeyField] === targetCccd || x.cccdparent === targetCccd || x.cccd === targetCccd))
   ) || p.rawPerson || p;
   selectedPersonForDialog.value = target;
+  dialogTargetType.value = 'personnel';
+
+  const pCols = [];
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c && c.id && c.id !== 'stt' && !c.isVirtual) {
+        pCols.push(c);
+      }
+    });
+  });
+  selectedColumnsForDialog.value = pCols;
   dialogInitialTab.value = 0;
   dialogTargetRelativeCode.value = '';
   isPersonDialogOpen.value = true;
@@ -1631,60 +1646,42 @@ const openPersonnelDetail = (p) => {
 
 const openTripDetail = (t) => {
   if (!t) return;
-  let p = t.rawPerson || null;
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  if (!p) {
-    const pCccd = t[pKeyField] ?? t.parentCccd ?? t.cccdparent ?? t.cccd_can_bo;
-    if (pCccd) {
-      p = (personnelStore.personnelList || []).find(
-        (x) => (x[pKeyField] && String(x[pKeyField]).trim() === String(pCccd).trim()) ||
-               (x.cccdparent && String(x.cccdparent).trim() === String(pCccd).trim()) ||
-               (x.cccd && String(x.cccd).trim() === String(pCccd).trim())
-      );
-    }
-  }
-  if (!p) {
-    p = (personnelStore.personnelList || []).find(
-      (x) => x.id === t.personnelId || x.code === t.personnelId || x.code === t.personnelCode || x.name === t.personnelName
-    );
-  }
-  if (p) {
-    selectedPersonForDialog.value = p;
-    dialogInitialTab.value = t.isRelative ? 2 : 1; // 1 = Chuyến đi, 2 = Thân nhân
-    dialogTargetRelativeCode.value = t.isRelative ? (t.rawRelative?.code || '') : '';
-    isPersonDialogOpen.value = true;
-  }
+  const trip = t.rawTrip || t;
+  selectedPersonForDialog.value = trip;
+  dialogTargetType.value = 'trip';
+
+  const tripCols = [];
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c && c.id && c.id !== 'stt' && !c.isVirtual) {
+        tripCols.push(c);
+      }
+    });
+  });
+  selectedColumnsForDialog.value = tripCols;
+  dialogInitialTab.value = 0;
+  dialogTargetRelativeCode.value = '';
+  isPersonDialogOpen.value = true;
 };
 
 const openRelativeDetail = (r) => {
   if (!r) return;
-  let parent = r.rawPerson || null;
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  if (!parent && (r.cccd_can_bo || r.cccdparent || r.parentCccd || r[pKeyField])) {
-    const targetCccd = String(r[pKeyField] || r.cccd_can_bo || r.cccdparent || r.parentCccd).trim();
-    parent = (personnelStore.personnelList || []).find(
-      (p) => String(p[pKeyField] || p.cccdparent || p.cccd || p.custom_data?.[pKeyField] || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim() === targetCccd
-    );
-  }
-  if (!parent && r.personnelId) {
-    parent = (personnelStore.personnelList || []).find((p) => p.id === r.personnelId || p.code === r.personnelId);
-  }
-  const relCode = r.code || ('TN-' + String(r.id || '').slice(-5).padStart(5, '0'));
+  const rel = r.rawRelative || r;
+  selectedPersonForDialog.value = rel;
+  dialogTargetType.value = 'relative';
 
-  if (parent) {
-    selectedPersonForDialog.value = parent;
-    dialogInitialTab.value = 2; // Tab 3: Thân nhân
-    dialogTargetRelativeCode.value = relCode;
-    isPersonDialogOpen.value = true;
-  } else {
-    selectedPersonForDialog.value = {
-      name: r.parentName || 'Cán bộ liên quan',
-      relatives: [r],
-    };
-    dialogInitialTab.value = 2; // Tab 3: Thân nhân
-    dialogTargetRelativeCode.value = relCode;
-    isPersonDialogOpen.value = true;
-  }
+  const relCols = [];
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c && c.id && c.id !== 'stt' && !c.isVirtual) {
+        relCols.push(c);
+      }
+    });
+  });
+  selectedColumnsForDialog.value = relCols;
+  dialogInitialTab.value = 0;
+  dialogTargetRelativeCode.value = rel.code || '';
+  isPersonDialogOpen.value = true;
 };
 
 const onPersonSaved = async () => {
