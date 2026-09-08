@@ -6,38 +6,10 @@
     :style="{ width: '85vw', maxWidth: '1100px' }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
-    <!-- 3 Tab độc lập riêng biệt: Bấm cái nào chỉ hiển thị đúng cái đó -->
-    <div style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; padding-bottom: 8px; flex-wrap: wrap;">
-      <Button
-        :label="'1. ' + (customTableName || 'Thông tin bản ghi')"
-        icon="pi pi-user"
-        :severity="activeTab === 0 ? 'primary' : 'secondary'"
-        :text="activeTab !== 0"
-        size="small"
-        @click="activeTab = 0"
-      />
-      <Button
-        :label="'2. Chuyến đi nước ngoài (' + (form.trips?.length || 0) + ')'"
-        icon="pi pi-send"
-        :severity="activeTab === 1 ? 'primary' : 'secondary'"
-        :text="activeTab !== 1"
-        size="small"
-        @click="activeTab = 1"
-      />
-      <Button
-        :label="'3. Thân nhân liên quan (' + (form.relatives?.length || 0) + ')'"
-        icon="pi pi-users"
-        :severity="activeTab === 2 ? 'primary' : 'secondary'"
-        :text="activeTab !== 2"
-        size="small"
-        @click="activeTab = 2"
-      />
-    </div>
-
-    <!-- Fixed Height Tab Contents Area to prevent jumping -->
+    <!-- Fixed Height Contents Area -->
     <div style="height: 560px; max-height: 68vh; overflow-y: auto; padding-right: 8px;">
-      <!-- TAB 1: CÁN BỘ / HỒ SƠ CHÍNH (Chỉ hiển thị lý lịch cá nhân & kỷ luật, không lồng chuyến đi) -->
-      <div v-show="activeTab === 0" style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- 1. CÁN BỘ / HỒ SƠ CHÍNH (Chỉ hiển thị thông tin bảng này) -->
+      <div v-if="activeTab === 0" style="display: flex; flex-direction: column; gap: 1.5rem;">
         <template v-for="(grp, gIdx) in (personnelStore.importMappingPersonnel || [])" :key="gIdx">
           <!-- Nhóm Kỷ luật & Lưu ý chính trị -->
           <div v-if="isNotesGroup(grp, gIdx)">
@@ -63,8 +35,8 @@
         </template>
       </div>
 
-      <!-- TAB 2: CHUYẾN ĐI NƯỚC NGOÀI (Chỉ hiển thị quản lý chuyến đi riêng của đối tượng này) -->
-      <div v-show="activeTab === 1">
+      <!-- 2. CHUYẾN ĐI (Chỉ khi mở riêng chuyến đi) -->
+      <div v-else-if="activeTab === 1">
         <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px 16px;">
           <h4 style="font-size: 0.92rem; font-weight: 700; color: #0369a1; margin-bottom: 0.75rem; border-bottom: 1px solid #bae6fd; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
             <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
@@ -74,8 +46,8 @@
         </div>
       </div>
 
-      <!-- TAB 3: THÂN NHÂN (Danh sách thân nhân + Chuyến đi riêng bên trong từng thân nhân) -->
-      <div v-show="activeTab === 2">
+      <!-- 3. THÂN NHÂN (Chỉ khi mở riêng thân nhân) -->
+      <div v-else-if="activeTab === 2">
         <PersonnelFamilyForm :form="form" :targetRelativeCode="targetRelativeCode" />
       </div>
     </div>

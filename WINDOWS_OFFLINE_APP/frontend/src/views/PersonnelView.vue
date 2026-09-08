@@ -1818,24 +1818,29 @@ const activeColumns = computed(() => {
     return '160px';
   };
 
-  return personnelStore.visibleColumns
-    .filter((id) => map[id])
-    .map((id, idx) => {
-      const cfg = map[id];
-      const rawIdx = colMap[cfg.id];
-      const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
-      return {
-        id: cfg.id,
-        label: cfg.label || cfg.id,
-        colIndex: idxText,
-        width: cfg.tableWidth || getColWidth(cfg.id),
-        tableWidth: cfg.tableWidth || null,
-        format: cfg.format || 'text',
-        required: Boolean(cfg.required),
-        options: cfg.options || '',
-        isPrimaryField: idx === 0,
-      };
-    });
+  // Đảm bảo Cột chính (Primary Field) luôn đứng ở vị trí đầu tiên [0]
+  const primaryId = '_parentPersonnelName';
+  let orderedIds = personnelStore.visibleColumns.filter((id) => map[id]);
+  if (orderedIds.includes(primaryId)) {
+    orderedIds = [primaryId, ...orderedIds.filter((id) => id !== primaryId)];
+  }
+
+  return orderedIds.map((id, idx) => {
+    const cfg = map[id];
+    const rawIdx = colMap[cfg.id];
+    const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
+    return {
+      id: cfg.id,
+      label: cfg.label || cfg.id,
+      colIndex: idxText,
+      width: cfg.tableWidth || getColWidth(cfg.id),
+      tableWidth: cfg.tableWidth || null,
+      format: cfg.format || 'text',
+      required: Boolean(cfg.required),
+      options: cfg.options || '',
+      isPrimaryField: idx === 0,
+    };
+  });
 });
 
 const getFileColumnItems = (data, colId) => {
@@ -1955,27 +1960,32 @@ const activeRelativeColumns = computed(() => {
     });
   });
 
-  return (personnelStore.visibleRelativeColumns || [])
-    .filter((id) => id !== '_parentPersonnelName' && id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo')
-    .map((id, idx) => {
-      const cfg = map[id];
-      const rawIdx = colMap[id];
-      const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
-      if (cfg && cfg.label) {
-        return {
-          id: cfg.id,
-          label: cfg.label,
-          colIndex: idxText,
-          width: cfg.tableWidth || '160px',
-          tableWidth: cfg.tableWidth || null,
-          required: Boolean(cfg.required),
-          options: cfg.options || '',
-          isPrimaryField: idx === 0,
-        };
-      }
-      const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
-      return found ? { ...found, colIndex: idxText, isPrimaryField: idx === 0 } : { id, label: id, width: '160px', colIndex: idxText, isPrimaryField: idx === 0 };
-    });
+  const primaryRelId = (personnelStore.importMappingRelative?.[0]?.columns?.find(c => c.id && c.id !== 'stt')?.id) || 'name';
+  let filteredIds = (personnelStore.visibleRelativeColumns || [])
+    .filter((id) => id !== '_parentPersonnelName' && id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo');
+  if (filteredIds.includes(primaryRelId)) {
+    filteredIds = [primaryRelId, ...filteredIds.filter((id) => id !== primaryRelId)];
+  }
+
+  return filteredIds.map((id, idx) => {
+    const cfg = map[id];
+    const rawIdx = colMap[id];
+    const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
+    if (cfg && cfg.label) {
+      return {
+        id: cfg.id,
+        label: cfg.label,
+        colIndex: idxText,
+        width: cfg.tableWidth || '160px',
+        tableWidth: cfg.tableWidth || null,
+        required: Boolean(cfg.required),
+        options: cfg.options || '',
+        isPrimaryField: idx === 0,
+      };
+    }
+    const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
+    return found ? { ...found, colIndex: idxText, isPrimaryField: idx === 0 } : { id, label: id, width: '160px', colIndex: idxText, isPrimaryField: idx === 0 };
+  });
 });
 
 const filteredPersonnel = computed(() => {
@@ -2541,7 +2551,8 @@ const onInsertColLeft = (col) => {
   for (const g of (mapping || [])) {
     const found = (g.columns || []).findIndex(c => c.id === col.id);
     if (found !== -1) {
-      addColTargetIndex.value = found;
+      // Cột đầu tiên (Cột chính index 0) là bất khả xâm phạm, không cho chèn trước nó
+      addColTargetIndex.value = Math.max(1, found);
       break;
     }
   }
@@ -2879,7 +2890,12 @@ const onSaveNewColumn = async (colPayload) => {
     if (isRel) personnelStore.importMappingRelative = mapping;
     else personnelStore.importMappingPersonnel = mapping;
   }
-  mapping[0].columns.push(colPayload);
+  const targetIdx = typeof colPayload.targetIndex === 'number' ? Math.max(1, colPayload.targetIndex) : null;
+  if (targetIdx !== null && mapping[0].columns.length >= targetIdx) {
+    mapping[0].columns.splice(targetIdx, 0, colPayload);
+  } else {
+    mapping[0].columns.push(colPayload);
+  }
   await saveAppSettings(mappingKey, mapping);
 
   if (isRel) {

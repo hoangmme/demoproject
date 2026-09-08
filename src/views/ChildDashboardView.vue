@@ -2144,12 +2144,12 @@ const onInsertChildColLeft = (col) => {
   const { isBlank, cDash, mapping } = getTargetMappingRef();
   if (isBlank && cDash) {
     const idx = (cDash.customColumns || []).findIndex((c) => c.id === col.id);
-    addChildColTargetIndex.value = idx !== -1 ? idx : -1;
+    addChildColTargetIndex.value = idx !== -1 ? Math.max(1, idx) : -1;
   } else {
     for (const g of (mapping || [])) {
       const found = (g.columns || []).findIndex((c) => c.id === col.id);
       if (found !== -1) {
-        addChildColTargetIndex.value = found;
+        addChildColTargetIndex.value = Math.max(1, found);
         break;
       }
     }
@@ -2715,12 +2715,16 @@ const visibleColumns = computed(() => {
       });
     }
   });
-  return selectedColIds.value
-    .filter((id) => id !== 'status' && id !== 'tripStatus' && colMap.has(id))
-    .map((id, idx) => ({
-      ...colMap.get(id),
-      isPrimaryField: idx === 0,
-    }));
+  const primaryId = allAvailableColumnsList.value.find(c => c.id && c.id !== 'stt')?.id;
+  let filteredIds = selectedColIds.value
+    .filter((id) => id !== 'status' && id !== 'tripStatus' && colMap.has(id));
+  if (primaryId && filteredIds.includes(primaryId)) {
+    filteredIds = [primaryId, ...filteredIds.filter((id) => id !== primaryId)];
+  }
+  return filteredIds.map((id, idx) => ({
+    ...colMap.get(id),
+    isPrimaryField: idx === 0,
+  }));
 });
 
 // Build unified list of trips from both Cán bộ and Thân nhân profiles

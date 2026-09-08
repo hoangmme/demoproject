@@ -117,11 +117,13 @@
               type="checkbox"
               :value="col.id"
               :checked="modelValue.includes(col.id)"
+              :disabled="idx === 0 || col.isPrimaryField"
               @change="toggleCol(col.id)"
               style="accent-color: #2e7d32; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;"
             />
             <span class="item-text" :title="col.label || col.id">
-              <span v-if="showColIndex && getColIndex(col)" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.75rem;">
+              <span v-if="idx === 0 || col.isPrimaryField" style="margin-right: 4px;" title="Cột chính (Cố định vị trí đầu tiên)">🔒</span>
+              <span v-else-if="showColIndex && getColIndex(col)" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.75rem;">
                 Cột {{ getColIndex(col) }}:
               </span>
               {{ col.label || col.id }}
@@ -143,18 +145,18 @@
             <button
               type="button"
               class="btn-reorder"
-              :disabled="idx === 0"
+              :disabled="idx <= 1 || col.isPrimaryField"
               @click.stop="moveUp(idx)"
-              title="Dời cột lên trước (sang trái trên bảng)"
+              :title="idx <= 1 ? 'Cột đầu tiên (Cột chính) được khóa cố định vị trí' : 'Dời cột lên trước (sang trái trên bảng)'"
             >
               <i class="pi pi-chevron-up"></i>
             </button>
             <button
               type="button"
               class="btn-reorder"
-              :disabled="idx === displayOptions.length - 1"
+              :disabled="idx === 0 || idx === displayOptions.length - 1 || col.isPrimaryField"
               @click.stop="moveDown(idx)"
-              title="Dời cột xuống sau (sang phải trên bảng)"
+              :title="idx === 0 ? 'Cột đầu tiên (Cột chính) được khóa cố định vị trí' : 'Dời cột xuống sau (sang phải trên bảng)'"
             >
               <i class="pi pi-chevron-down"></i>
             </button>
@@ -252,6 +254,15 @@ const displayOptions = computed(() => {
     opts = ordered;
   }
 
+  // Khóa cứng: Cột đầu tiên (Primary Field) BẮT BUỘC luôn ở vị trí index 0
+  if (opts.length > 1) {
+    const primaryIdx = opts.findIndex((o) => o.isPrimaryField || o.id === props.options[0]?.id);
+    if (primaryIdx > 0) {
+      const [primaryCol] = opts.splice(primaryIdx, 1);
+      opts.unshift(primaryCol);
+    }
+  }
+
   if (searchQuery.value && searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase();
     return opts.filter((o) => (o.label || o.id || '').toLowerCase().includes(q));
@@ -261,7 +272,8 @@ const displayOptions = computed(() => {
 });
 
 const moveUp = (idx) => {
-  if (idx <= 0) return;
+  // Tuyệt đối không cho phép đổi chỗ với cột chính (idx <= 1)
+  if (idx <= 1) return;
   const list = displayOptions.value.map((o) => o.id);
   const temp = list[idx];
   list[idx] = list[idx - 1];
@@ -275,7 +287,8 @@ const moveUp = (idx) => {
 };
 
 const moveDown = (idx) => {
-  if (idx >= displayOptions.value.length - 1) return;
+  // Tuyệt đối không cho phép di dời cột chính (idx === 0)
+  if (idx === 0 || idx >= displayOptions.value.length - 1) return;
   const list = displayOptions.value.map((o) => o.id);
   const temp = list[idx];
   list[idx] = list[idx + 1];
@@ -295,18 +308,28 @@ const selectAll = () => {
 };
 
 const deselectAll = () => {
-  emit('update:modelValue', []);
-  emit('change', []);
+  // Luôn giữ lại cột chính (Primary Field)
+  const primaryId = props.options[0]?.id;
+  emit('update:modelValue', primaryId ? [primaryId] : []);
+  emit('change', primaryId ? [primaryId] : []);
 };
 
 const resetOrder = () => {
   customOrder.value = [];
+  const primaryId = props.options[0]?.id;
   const list = props.options.map((o) => o.id).filter((id) => props.modelValue.includes(id));
+  if (primaryId && !list.includes(primaryId)) {
+    list.unshift(primaryId);
+  }
   emit('update:modelValue', list);
   emit('change', list);
 };
 
 const toggleCol = (id) => {
+  const primaryId = props.options[0]?.id;
+  // Cột chính là bất khả xâm phạm, không cho bỏ chọn
+  if (id === primaryId) return;
+
   const currentList = [...displayOptions.value.map((o) => o.id)];
   const activeSet = new Set(props.modelValue);
   if (activeSet.has(id)) {
@@ -315,6 +338,9 @@ const toggleCol = (id) => {
     activeSet.add(id);
   }
   const result = currentList.filter((item) => activeSet.has(item));
+  if (primaryId && !result.includes(primaryId)) {
+    result.unshift(primaryId);
+  }
   emit('update:modelValue', result);
   emit('change', result);
 };

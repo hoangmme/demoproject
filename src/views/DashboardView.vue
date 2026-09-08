@@ -984,17 +984,6 @@
               />
             </div>
 
-            <!-- Xuất Excel -->
-            <Button
-              icon="pi pi-file-excel"
-              label="Xuất Excel"
-              severity="success"
-              size="small"
-              outlined
-              @click="exportDrilldownExcel"
-              style="font-size: 0.78rem; height: 32px;"
-            />
-
             <!-- Xuất PDF -->
             <Button
               icon="pi pi-file-pdf"
@@ -1024,9 +1013,11 @@
           responsiveLayout="scroll"
           stripedRows
           removableSort
-          class="p-datatable-sm custom-datatable"
+          class="p-datatable-sm custom-datatable drilldown-clickable-table"
           :tableStyle="{ minWidth: 'max-content', width: '100%' }"
           @page="e => drilldownDtFirst = e.first"
+          @row-click="e => handleDrilldownRowClick(e.data)"
+          :rowHover="true"
           scrollable
           scrollHeight="flex"
         >
@@ -1073,13 +1064,9 @@
                 </span>
               </template>
 
-              <!-- Họ tên Cán bộ (dòng to, đậm, click xem chi tiết) -->
+              <!-- Họ tên Cán bộ / Bản ghi chính (dòng đậm) -->
               <template v-else-if="col.id === '_parentPersonnelName' || col.id === 'name' || col.id === 'ho_va_ten'">
-                <strong
-                  style="color: #0284c7; font-weight: 700; font-size: 0.82rem; cursor: pointer; text-decoration: underline;"
-                  @click="handleDrilldownRowDetail(data)"
-                  title="Xem hồ sơ cán bộ"
-                >
+                <strong style="color: #0284c7; font-weight: 700; font-size: 0.82rem;">
                   {{ getRowFieldValue(data, col.id) || '-' }}
                 </strong>
               </template>
@@ -1092,39 +1079,107 @@
               </template>
             </template>
           </Column>
-
-          <!-- Action column: [Chi tiết] -->
-          <Column
-            header="Hồ sơ"
-            headerClass="col-center"
-            bodyClass="col-center"
-            frozen
-            alignFrozen="right"
-            :headerStyle="{ width: '85px', minWidth: '85px', background: '#f8fafc' }"
-            :bodyStyle="{ width: '85px', minWidth: '85px', background: '#ffffff' }"
-          >
-            <template #body="{ data }">
-              <Button
-                icon="pi pi-eye"
-                label="Xem"
-                size="small"
-                severity="secondary"
-                outlined
-                @click="handleDrilldownRowDetail(data)"
-                style="font-size: 0.72rem; padding: 3px 8px;"
-                v-tooltip.top="'Xem chi tiết hồ sơ'"
-              />
-            </template>
-          </Column>
         </DataTable>
       </div>
 
       <template #footer>
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding-top: 6px;">
           <span style="font-size: 0.75rem; color: #64748b;">
-            Tổng cộng: <strong>{{ filteredDrilldownList.length }}</strong> bản ghi (Cuộn ngang để xem đầy đủ các cột)
+            Tổng cộng: <strong>{{ filteredDrilldownList.length }}</strong> bản ghi (Bấm vào dòng để xem chi tiết bản ghi)
           </span>
           <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownModalOpen = false" />
+        </div>
+      </template>
+    </Dialog>
+
+    <!-- POPUP XEM CHI TIẾT BẢN GHI ĐA HÌNH (UNIFIED RECORD DETAIL MODAL) -->
+    <Dialog
+      v-model:visible="isDrilldownRecordDetailOpen"
+      modal
+      :style="{ width: '85vw', maxWidth: '1000px' }"
+      :contentStyle="{ maxHeight: '78vh', overflowY: 'auto', padding: '16px' }"
+    >
+      <template #header>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 8px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center;">
+            <i class="pi pi-id-card" style="font-size: 1.2rem;"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0;">
+              Chi tiết Bản ghi: {{ getRecordTitle(selectedDrilldownRow) }}
+            </h3>
+            <span style="font-size: 0.74rem; color: #64748b;">
+              Bảng dữ liệu: <strong>{{ getSourceLabel(drilldownSourceType) }}</strong>
+            </span>
+          </div>
+        </div>
+      </template>
+
+      <div v-if="selectedDrilldownRow" style="display: flex; flex-direction: column; gap: 14px;">
+        <div
+          v-for="grp in drilldownDetailGroups"
+          :key="grp.name"
+          style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;"
+        >
+          <h4 style="font-size: 0.85rem; font-weight: 700; color: #1e293b; margin: 0 0 10px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-folder" style="color: #0284c7; font-size: 0.85rem;"></i>
+            <span>{{ grp.name }}</span>
+          </h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">
+            <div
+              v-for="col in grp.columns"
+              :key="col.id"
+              style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px;"
+            >
+              <span style="font-size: 0.7rem; color: #64748b; font-weight: 600;">
+                {{ col.label }}
+              </span>
+              <div>
+                <template v-if="col.id === 'presenceStatus' || col.id === '_presenceStatus' || col.format === 'presence'">
+                  <span
+                    class="presence-badge"
+                    :style="{
+                      backgroundColor: getPresenceBadge(selectedDrilldownRow).bgColor,
+                      color: getPresenceBadge(selectedDrilldownRow).color,
+                      borderColor: getPresenceBadge(selectedDrilldownRow).borderColor,
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '0.72rem',
+                      fontWeight: '600',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }"
+                  >
+                    <i :class="['pi', getPresenceBadge(selectedDrilldownRow).icon]" style="font-size: 0.7rem;"></i>
+                    {{ getPresenceBadge(selectedDrilldownRow).text }}
+                  </span>
+                </template>
+                <template v-else>
+                  <span style="font-size: 0.82rem; font-weight: 600; color: #0f172a; word-break: break-word;">
+                    {{ getRowFieldValue(selectedDrilldownRow, col.id) || '-' }}
+                  </span>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <Button
+            v-if="drilldownSourceType === 'personnel' && selectedDrilldownRow?.id"
+            label="Chỉnh sửa hồ sơ"
+            icon="pi pi-user-edit"
+            severity="primary"
+            size="small"
+            @click="openPersonnelDetailFromRecord"
+          />
+          <div v-else></div>
+          <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownRecordDetailOpen = false" />
         </div>
       </template>
     </Dialog>
@@ -1307,37 +1362,41 @@ const openDrilldownDocxExport = () => {
   isDocxExportOpen.value = true;
 };
 
-const exportDrilldownExcel = () => {
-  const list = drilldownSelectedRows.value.length > 0 ? drilldownSelectedRows.value : filteredDrilldownList.value;
-  if (!list || list.length === 0) {
-    alert('Không có dữ liệu để xuất Excel!');
-    return;
-  }
+const selectedDrilldownRow = ref(null);
+const isDrilldownRecordDetailOpen = ref(false);
 
-  const cols = drilldownColumns.value;
-  const exportData = list.map((row, idx) => {
-    const item = { 'STT': idx + 1 };
-    cols.forEach((col) => {
-      item[col.label] = getRowFieldValue(row, col.id) || '';
-    });
-    return item;
-  });
-
-  const rawTitle = drilldownExtraTitle.value || drilldownWidget.value?.title || 'Du_Lieu';
-  const cleanTitle = rawTitle.replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_');
-  const fileName = `Thong_Ke_${cleanTitle}_${new Date().toISOString().slice(0, 10)}`;
-  exportToExcel(exportData, fileName, 'Dữ liệu thống kê');
+const handleDrilldownRowClick = (row) => {
+  if (!row) return;
+  selectedDrilldownRow.value = row;
+  isDrilldownRecordDetailOpen.value = true;
 };
 
-const handleDrilldownRowDetail = (row) => {
-  const src = drilldownSourceType.value;
-  if (src === 'trips' || src === 'trip') {
-    openTripDetail(row);
-  } else if (src === 'relatives' || src === 'relative') {
-    openRelativeDetail(row);
-  } else {
-    openPersonnelDetail(row);
-  }
+const getRecordTitle = (row) => {
+  if (!row) return 'Bản ghi';
+  const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
+  return row[pNameField] || row.name || row.fullName || row.ho_va_ten || row._parentPersonnelName || row.id || 'Bản ghi';
+};
+
+const drilldownDetailGroups = computed(() => {
+  const cols = drilldownColumns.value || [];
+  const groupsMap = new Map();
+  cols.forEach((col) => {
+    const grpName = col.group || 'Thông tin chi tiết';
+    if (!groupsMap.has(grpName)) {
+      groupsMap.set(grpName, []);
+    }
+    groupsMap.get(grpName).push(col);
+  });
+  return Array.from(groupsMap.entries()).map(([name, columns]) => ({
+    name,
+    columns,
+  }));
+});
+
+const openPersonnelDetailFromRecord = () => {
+  if (!selectedDrilldownRow.value) return;
+  isDrilldownRecordDetailOpen.value = false;
+  openPersonnelDetail(selectedDrilldownRow.value);
 };
 
 const getDisplayValue = (row, colId) => {
@@ -4153,5 +4212,12 @@ onUnmounted(() => {
   border-radius: 6px;
   font-size: 0.72rem;
   font-weight: 600;
+}
+.drilldown-clickable-table :deep(tbody tr) {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+.drilldown-clickable-table :deep(tbody tr:hover) {
+  background-color: #f0fdf4 !important;
 }
 </style>

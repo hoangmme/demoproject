@@ -253,7 +253,12 @@
 
         <!-- Chèn cột & Nhân bản (Lark Base style) -->
         <div class="menu-actions" style="margin-bottom: 6px;">
-          <button type="button" class="menu-action-btn" @click="handleInsertLeft">
+          <button
+            v-if="!column?.isPrimaryField && !isFirstColumn && column?.id !== '_parentPersonnelName' && column?.id !== 'name' && column?.id !== 'ho_va_ten'"
+            type="button"
+            class="menu-action-btn"
+            @click="handleInsertLeft"
+          >
             <i class="pi pi-arrow-left" style="color: #0284c7;"></i>
             <span>← Chèn cột bên trái (Insert Left)</span>
           </button>
@@ -328,6 +333,10 @@ const props = defineProps({
   availableParentFields: {
     type: Array,
     default: () => [],
+  },
+  isFirstColumn: {
+    type: Boolean,
+    default: false,
   },
 });
 

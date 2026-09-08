@@ -1471,6 +1471,26 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+### 15. TỐI ƯU HÓA POPUP THỐNG KÊ, KHÓA CỨNG CỘT ĐẦU TIÊN VÀ ĐỒNG BỘ CHI TIẾT ĐA BẢNG
+- **Các cải tiến đã thực hiện**:
+  1. **Đồng bộ Module Xuất Báo cáo (Xóa nút Xuất Excel trong Popup Thống kê)**:
+     - Xóa bỏ nút `Xuất Excel` trong popup Drilldown (`DashboardView.vue`).
+     - Sử dụng duy nhất module `Xuất PDF` (`AdvancedDocxExportDialog`) đồng bộ cho toàn bộ hệ thống.
+  2. **Bỏ nút "Xem", Chuyển sang Click Hàng (Row-click Trigger)**:
+     - Xóa bỏ cột hành động "Hồ sơ / [Xem]" chiếm diện tích ở cuối bảng.
+     - Thêm sự kiện `@row-click="e => handleDrilldownRowClick(e.data)"` và style hover, con trỏ pointer (`.drilldown-clickable-table :deep(tbody tr)`). Người dùng nhấp vào bất kỳ đâu trên dòng là mở ngay xem chi tiết.
+  3. **Đồng bộ Chi tiết Bản ghi Đa bảng (Xóa bỏ các Tab liên kết thừa)**:
+     - Xóa bỏ 3 nút tab liên kết (`2. Chuyến đi nước ngoài`, `3. Thân nhân liên quan`) trong `PersonnelDialog.vue`. Chi tiết bản ghi khi hiện lên chỉ hiển thị đúng các trường dữ liệu của chính bảng đó.
+     - Tích hợp `Unified Record Detail Dialog` (Popup Chi tiết Bản ghi Đa hình) ngay trong `DashboardView.vue`, hiển thị toàn bộ cột của bảng tương ứng (Chuyến đi, Cán bộ, Thân nhân, hoặc Bảng tự tạo bất kỳ) được gom nhóm khoa học (`col.group`) và hiển thị huy hiệu, format chuẩn xác.
+  4. **Khóa cứng Cột đầu tiên (Primary Field - Cột hệ thống tự tạo)**:
+     - Khắc phục triệt để lỗi cột tùy chọn đẩy qua cột đầu tiên:
+       - Trong `ColumnSelector.vue`: Cột chính ở vị trí [0] bị khóa không cho đổi chỗ (`moveDown(0)` bị disable, `moveUp(1)` của cột liền sau bị disable không thể hoán vị với cột chính). Bắt buộc `orderedIds` luôn duy trì cột chính ở index 0. Khóa hộp kiểm không cho bỏ chọn cột chính.
+       - Trong `ColumnHeaderMenu.vue`: Ẩn nút `← Chèn cột bên trái (Insert Left)` đối với cột chính (không cho phép chèn trước cột chính).
+       - Trong `PersonnelView.vue` và `ChildDashboardView.vue`: Chuẩn hóa `activeColumns`, `activeRelativeColumns`, `visibleColumns` luôn gán cố định cột chính ở index 0 và bắt buộc `onInsertColLeft` luôn chèn từ vị trí `targetIndex >= 1`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
+
 
 
 
