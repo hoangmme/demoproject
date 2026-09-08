@@ -129,17 +129,47 @@
             </select>
 
             <!-- Nhập Giá trị (nếu toán tử cần giá trị) -->
-            <div v-if="cond.operator !== 'has_value' && cond.operator !== 'empty'" style="flex: 1; min-width: 110px;">
+            <div v-if="cond.operator !== 'has_value' && cond.operator !== 'empty'" style="flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: 4px;">
               <!-- Dropdown gợi ý nếu cột có options -->
-              <input
-                v-model="cond.value"
-                :list="'opts_' + cond.field"
-                placeholder="Nhập giá trị..."
-                style="width: 100%; height: 32px; font-size: 0.78rem; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;"
-              />
-              <datalist :id="'opts_' + cond.field">
-                <option v-for="(opt, oIdx) in getFieldOptions(cond.field)" :key="oIdx" :value="opt" />
-              </datalist>
+              <div style="display: flex; align-items: center; gap: 4px; width: 100%;">
+                <input
+                  v-model="cond.value"
+                  :list="'opts_' + cond.field"
+                  :placeholder="cond.operator === 'contains' || cond.operator === 'not_contains' ? 'Nhập từ khóa hoặc chọn gợi ý...' : 'Nhập giá trị...'"
+                  style="flex: 1; height: 32px; font-size: 0.78rem; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;"
+                />
+                <datalist :id="'opts_' + cond.field">
+                  <option v-for="(opt, oIdx) in getFieldOptions(cond.field)" :key="oIdx" :value="opt" />
+                </datalist>
+                <select
+                  v-if="getFieldOptions(cond.field).length > 0"
+                  @change="(e) => { if (e.target.value) { cond.value = cond.value ? `${cond.value}, ${e.target.value}` : e.target.value; e.target.value = ''; } }"
+                  style="width: 28px; height: 32px; padding: 0 4px; font-size: 0.78rem; text-align: center; cursor: pointer; color: #0284c7; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; flex-shrink: 0;"
+                  title="Chọn thêm từ danh sách gợi ý để điền vào ô nhập"
+                >
+                  <option value="" disabled selected>▾</option>
+                  <option v-for="(opt, oIdx) in getFieldOptions(cond.field)" :key="oIdx" :value="opt">
+                    + {{ opt }}
+                  </option>
+                </select>
+              </div>
+              <div
+                v-if="getFieldOptions(cond.field).length > 0 && getFieldOptions(cond.field).length <= 6"
+                style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;"
+              >
+                <span style="font-size: 0.66rem; color: #64748b;">Gợi ý:</span>
+                <button
+                  v-for="(opt, oIdx) in getFieldOptions(cond.field)"
+                  :key="oIdx"
+                  type="button"
+                  @click="cond.value = opt"
+                  style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px; border: 1px solid #bae6fd; background: #f0f9ff; color: #0284c7; cursor: pointer; transition: all 0.15s;"
+                  :style="cond.value === opt ? 'background: #0284c7; color: #fff; font-weight: 600; border-color: #0284c7;' : ''"
+                  :title="`Bấm để chọn nhanh '${opt}'`"
+                >
+                  {{ opt }}
+                </button>
+              </div>
             </div>
 
             <!-- Nút xóa dòng điều kiện -->

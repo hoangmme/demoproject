@@ -648,14 +648,6 @@
                 <template v-if="crit.operator === 'empty' || crit.operator === 'has_value'">
                   <span style="font-size: 0.72rem; color: #94a3b8; font-style: italic;">(Không cần nhập giá trị)</span>
                 </template>
-                <template v-else-if="getFieldOptionsForWidget(crit.field).length > 0">
-                  <select v-model="crit.value" class="settings-select" style="width: 100%; font-size: 0.75rem; padding: 4px 6px; font-weight: 600; color: #0284c7;">
-                    <option value="">-- Chọn giá trị --</option>
-                    <option v-for="opt in getFieldOptionsForWidget(crit.field)" :key="opt" :value="opt">
-                      {{ opt }}
-                    </option>
-                  </select>
-                </template>
                 <template v-else-if="crit.operator === 'before_date' || crit.operator === 'after_date'">
                   <input
                     v-model="crit.value"
@@ -675,12 +667,51 @@
                   />
                 </template>
                 <template v-else>
-                  <input
-                    v-model="crit.value"
-                    placeholder="Nhập giá trị so sánh..."
-                    class="settings-select"
-                    style="width: 100%; font-size: 0.75rem; padding: 4px 8px;"
-                  />
+                  <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 4px; width: 100%;">
+                      <input
+                        v-model="crit.value"
+                        :list="'opts_crit_' + (crit.id || cIdx)"
+                        type="text"
+                        :placeholder="crit.operator === 'contains' || crit.operator === 'not_contains' ? 'Nhập từ khóa (hoặc chọn gợi ý, nhiều từ cách nhau dấu phẩy)...' : (getFieldOptionsForWidget(crit.field).length > 0 ? 'Nhập hoặc chọn gợi ý...' : 'Nhập giá trị so sánh...')"
+                        class="settings-select"
+                        style="flex: 1; font-size: 0.75rem; padding: 4px 8px;"
+                      />
+                      <datalist :id="'opts_crit_' + (crit.id || cIdx)">
+                        <option v-for="opt in getFieldOptionsForWidget(crit.field)" :key="opt" :value="opt" />
+                      </datalist>
+                      <select
+                        v-if="getFieldOptionsForWidget(crit.field).length > 0"
+                        @change="(e) => { if (e.target.value) { crit.value = crit.value ? `${crit.value}, ${e.target.value}` : e.target.value; e.target.value = ''; } }"
+                        class="settings-select"
+                        style="width: 28px; height: 26px; padding: 0 4px; font-size: 0.75rem; text-align: center; cursor: pointer; color: #0284c7; flex-shrink: 0;"
+                        title="Chọn thêm từ danh sách gợi ý để điền vào ô nhập"
+                      >
+                        <option value="" disabled selected>▾</option>
+                        <option v-for="opt in getFieldOptionsForWidget(crit.field)" :key="opt" :value="opt">
+                          + {{ opt }}
+                        </option>
+                      </select>
+                    </div>
+                    <!-- Các nút gợi ý nhanh nếu có options -->
+                    <div
+                      v-if="getFieldOptionsForWidget(crit.field).length > 0 && getFieldOptionsForWidget(crit.field).length <= 8"
+                      style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;"
+                    >
+                      <span style="font-size: 0.66rem; color: #64748b; font-weight: 500;">Gợi ý:</span>
+                      <button
+                        v-for="opt in getFieldOptionsForWidget(crit.field)"
+                        :key="opt"
+                        type="button"
+                        @click="crit.value = opt"
+                        style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px; border: 1px solid #bae6fd; background: #f0f9ff; color: #0284c7; cursor: pointer; transition: all 0.15s;"
+                        :style="crit.value === opt ? 'background: #0284c7; color: #fff; font-weight: 600; border-color: #0284c7;' : ''"
+                        :title="`Bấm để chọn nhanh '${opt}'`"
+                      >
+                        {{ opt }}
+                      </button>
+                    </div>
+                  </div>
                 </template>
               </div>
 

@@ -1687,6 +1687,19 @@
      - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` thành công 100% (0 lỗi).
 - **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Chuyển Đổi Ô Nhập Giá Trị Điều Kiện Lọc Sang Định Dạng Lai (Hybrid Input: Tự Do Nhập Text + Gợi Ý Datalist + Pills Chọn Nhanh)**:
+  1. **Vấn đề người dùng phản ánh**:
+     - Khi lọc điều kiện (ví dụ toán tử `Chứa từ khóa` với cột `Trạng thái hiện diện`), hệ thống trước đây ép buộc dùng thẻ `<select>` khóa chết, khiến người dùng không thể tự gõ từ khóa tự do (như gõ tắt "Quá hạn", "Chưa về", hoặc nhập nhiều từ khóa cách nhau bằng dấu phẩy `,`).
+  2. **Giải pháp kiến trúc đồng bộ (`DashboardView.vue`, `AdvancedSearchView.vue`, `TableViewManagerDialog.vue`)**:
+     - Thay thế toàn bộ `<select>` cứng bằng **Ô nhập lai (Hybrid Combobox)**:
+       - **Ô nhập tự do (`<input type="text">`)**: Luôn luôn cho phép gõ phím bất kỳ từ khóa nào, gõ tắt, hoặc gõ nhiều từ khóa phân tách bằng dấu phẩy `,` (đã được bộ lọc `matchSingleCondition` hỗ trợ sẵn).
+       - **Gợi ý tự động (`<datalist>`)**: Tích hợp danh sách giá trị mẫu (Ví dụ: `Trong nước`, `Đang ở nước ngoài`, `Quá hạn chưa về`, hoặc options của dropdown/checkbox) để tự động gợi ý khi click hoặc gõ ký tự.
+       - **Thẻ chọn nhanh (Quick Pills `[Trong nước] [Đang ở nước ngoài]...`)**: Hiển thị các nút pill trực quan ngay dưới ô nhập, người dùng chỉ cần 1 click là điền ngay giá trị, có highlight trạng thái đang chọn.
+       - **Nút mở rộng `▾`**: Cho phép bấm chọn thêm bất kỳ giá trị nào từ danh sách để nối tiếp vào ô nhập.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi).
+- **Status**: Done [Reversible].
 
 
 

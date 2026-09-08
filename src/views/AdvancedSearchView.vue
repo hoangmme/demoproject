@@ -153,21 +153,9 @@
 
             <!-- Value Input (Hidden if operator is empty / has_value) -->
             <div style="flex: 1; min-width: 180px;" v-if="row.operator !== 'empty' && row.operator !== 'has_value'">
-              <!-- Dropdown if field has configured options -->
-              <select
-                v-if="getFieldOptions(row.field).length > 0"
-                v-model="row.value"
-                class="builder-select"
-              >
-                <option value="">-- Chọn giá trị --</option>
-                <option v-for="opt in getFieldOptions(row.field)" :key="opt" :value="opt">
-                  {{ opt }}
-                </option>
-              </select>
-
               <!-- Date Input -->
               <input
-                v-else-if="row.operator === 'before_date' || row.operator === 'after_date'"
+                v-if="row.operator === 'before_date' || row.operator === 'after_date'"
                 v-model="row.value"
                 type="text"
                 placeholder="DD/MM/YYYY"
@@ -183,14 +171,52 @@
                 class="builder-input"
               />
 
-              <!-- General text input -->
-              <input
-                v-else
-                v-model="row.value"
-                type="text"
-                placeholder="Nhập giá trị tìm kiếm..."
-                class="builder-input"
-              />
+              <!-- General text / suggestion input -->
+              <div v-else style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+                <div style="display: flex; align-items: center; gap: 4px; width: 100%;">
+                  <input
+                    v-model="row.value"
+                    :list="'opts_search_' + index"
+                    type="text"
+                    :placeholder="row.operator === 'contains' || row.operator === 'not_contains' ? 'Nhập từ khóa (hoặc chọn gợi ý, nhiều từ cách nhau dấu phẩy)...' : (getFieldOptions(row.field).length > 0 ? 'Nhập hoặc chọn gợi ý...' : 'Nhập giá trị tìm kiếm...')"
+                    class="builder-input"
+                    style="flex: 1;"
+                  />
+                  <datalist :id="'opts_search_' + index">
+                    <option v-for="opt in getFieldOptions(row.field)" :key="opt" :value="opt" />
+                  </datalist>
+                  <select
+                    v-if="getFieldOptions(row.field).length > 0"
+                    @change="(e) => { if (e.target.value) { row.value = row.value ? `${row.value}, ${e.target.value}` : e.target.value; e.target.value = ''; } }"
+                    class="builder-select"
+                    style="width: 28px; height: 32px; padding: 0 4px; font-size: 0.78rem; text-align: center; cursor: pointer; color: #0284c7; flex-shrink: 0;"
+                    title="Chọn thêm từ danh sách gợi ý để điền vào ô nhập"
+                  >
+                    <option value="" disabled selected>▾</option>
+                    <option v-for="opt in getFieldOptions(row.field)" :key="opt" :value="opt">
+                      + {{ opt }}
+                    </option>
+                  </select>
+                </div>
+                <!-- Các nút gợi ý nhanh nếu có options -->
+                <div
+                  v-if="getFieldOptions(row.field).length > 0 && getFieldOptions(row.field).length <= 8"
+                  style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;"
+                >
+                  <span style="font-size: 0.66rem; color: #64748b; font-weight: 500;">Gợi ý:</span>
+                  <button
+                    v-for="opt in getFieldOptions(row.field)"
+                    :key="opt"
+                    type="button"
+                    @click="row.value = opt"
+                    style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px; border: 1px solid #bae6fd; background: #f0f9ff; color: #0284c7; cursor: pointer; transition: all 0.15s;"
+                    :style="row.value === opt ? 'background: #0284c7; color: #fff; font-weight: 600; border-color: #0284c7;' : ''"
+                    :title="`Bấm để chọn nhanh '${opt}'`"
+                  >
+                    {{ opt }}
+                  </button>
+                </div>
+              </div>
             </div>
 
             <!-- Remove Row Button -->
