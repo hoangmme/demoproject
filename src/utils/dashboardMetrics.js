@@ -154,22 +154,74 @@ export const buildTopicSourceList = (source, personnelStore) => {
     });
   }
 
-  // trips (hoặc trip)
+  // trips (hoặc trip) - Kiến trúc Flat Table ánh xạ theo điều kiện khóa riêng
   const trips = [];
   const seenTripKeys = new Set();
 
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+  const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
+
+  // Xây dựng bản đồ tra cứu nhanh theo khóa định danh (Cán bộ & Thân nhân)
+  const personnelByKey = new Map();
   (personnelStore.personnelList || []).forEach((p) => {
     let pCustom = {};
     if (p.custom_data) {
       try { pCustom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data; } catch (e) {}
     }
-    const allTrips = Array.isArray(p.trips)
-      ? [...p.trips]
-      : (Array.isArray(pCustom.trips)
-          ? [...pCustom.trips]
-          : (Array.isArray(pCustom['Khối B: Chuyến đi nước ngoài']) ? [...pCustom['Khối B: Chuyến đi nước ngoài']] : []));
+    const keyVal = String(p[pKeyField] ?? pCustom[pKeyField] ?? p.cccdparent ?? p.cccd ?? p.id ?? '').trim().toLowerCase();
+    if (keyVal) {
+      personnelByKey.set(keyVal, p);
+    }
+    if (p.code) personnelByKey.set(String(p.code).trim().toLowerCase(), p);
+    if (p.id) personnelByKey.set(String(p.id).trim().toLowerCase(), p);
+  });
 
-    // Thu thập thêm chuyến đi của thân nhân thuộc cán bộ này (nếu chưa có trong allTrips)
+  const relativeByKey = new Map();
+  (personnelStore.relativesList || []).forEach((r) => {
+    let rCustom = {};
+    if (r.custom_data) {
+      try { rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data; } catch (e) {}
+    }
+    const keyVal = String(r[rKeyField] ?? rCustom[rKeyField] ?? r.cccdthannhan ?? r.cccd ?? r.id ?? '').trim().toLowerCase();
+    if (keyVal) {
+      relativeByKey.set(keyVal, r);
+    }
+    if (r.code) relativeByKey.set(String(r.code).trim().toLowerCase(), r);
+    if (r.id) relativeByKey.set(String(r.id).trim().toLowerCase(), r);
+  });
+
+  // 1. Tập hợp TẤT CẢ các chuyến đi vào một danh sách phẳng (Flat Pool)
+  const rawTripsPool = [];
+
+  // Nguồn 1: Từ store.tripsList
+  if (Array.isArray(personnelStore.tripsList)) {
+    personnelStore.tripsList.forEach((t) => rawTripsPool.push(t));
+  }
+
+  // Nguồn 2: Từ standaloneTrips trong store nếu có
+  if (Array.isArray(personnelStore.standaloneTrips)) {
+    personnelStore.standaloneTrips.forEach((t) => rawTripsPool.push(t));
+  }
+
+  // Nguồn 3: Thu thập thêm từ các bản ghi hiện hữu (đảm bảo tương thích ngược dữ liệu cũ)
+  (personnelStore.personnelList || []).forEach((p) => {
+    let pCustom = {};
+    if (p.custom_data) {
+      try { pCustom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data; } catch (e) {}
+    }
+    const pTrips = Array.isArray(p.trips)
+      ? p.trips
+      : (Array.isArray(pCustom.trips)
+          ? pCustom.trips
+          : (Array.isArray(pCustom['Khối B: Chuyến đi nước ngoài']) ? pCustom['Khối B: Chuyến đi nước ngoài'] : []));
+    pTrips.forEach((t) => {
+      rawTripsPool.push({
+        ...t,
+        _fallbackPerson: p,
+      });
+    });
+
     const pRelatives = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(pCustom.relatives) ? pCustom.relatives : []);
     pRelatives.forEach((r) => {
       let rCustom = {};
@@ -178,55 +230,105 @@ export const buildTopicSourceList = (source, personnelStore) => {
       }
       const rTrips = Array.isArray(r.trips) ? r.trips : (Array.isArray(rCustom.trips) ? rCustom.trips : []);
       rTrips.forEach((rt) => {
-        const rtId = rt.id || rt.uniqueKey;
-        const exists = allTrips.some((et) => (rtId && (et.id === rtId || et.uniqueKey === rtId)));
-        if (!exists) {
-          allTrips.push({
-            ...rt,
-            isRelative: true,
-            relativeName: rt.relativeName || r.relativeName || r.name || 'Thân nhân',
-            cccdthannhan: rt.cccdthannhan || rt.cccd || r.cccdthannhan || r.cccd || '',
-            relationshipName: rt.relationshipName || r.relationshipName || r.relationship || '',
-          });
-        }
+        rawTripsPool.push({
+          ...rt,
+          isRelative: true,
+          _fallbackRelative: r,
+          _fallbackPerson: p,
+        });
       });
     });
+  });
 
-    allTrips.forEach((t, tIdx) => {
-      let tCustom = {};
-      if (t.custom_data) {
-        try { tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data; } catch (e) {}
+  // 2. Duyệt qua từng chuyến đi độc lập và ÁNH XẠ ĐỘNG QUA ĐIỀU KIỆN KHÓA (Condition-based Join)
+  rawTripsPool.forEach((t, tIdx) => {
+    let tCustom = {};
+    if (t.custom_data) {
+      try { tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data; } catch (e) {}
+    }
+
+    const tripKey = t.id || t.uniqueKey || `trip_${tIdx}_${t[tKeyField] || t.cccdchuyendi || t.departureDate || ''}`;
+    if (seenTripKeys.has(tripKey)) return;
+    seenTripKeys.add(tripKey);
+
+    // Khóa liên kết của chuyến đi (ví dụ CCCD người đi / cccdchuyendi)
+    const tripLinkKey = String(
+      t[tKeyField] ??
+      tCustom[tKeyField] ??
+      t.cccdchuyendi ??
+      t.cccd ??
+      tCustom.cccdchuyendi ??
+      tCustom.cccd ??
+      ''
+    ).trim().toLowerCase();
+
+    let matchedPerson = null;
+    let matchedRelative = null;
+    let isRel = Boolean(t.isRelative || tCustom.isRelative);
+
+    // ÁNH XẠ QUA ĐIỀU KIỆN KHÓA RIÊNG (Không phụ thuộc cấu trúc lồng nhau)
+    if (tripLinkKey) {
+      // Điều kiện 1: Khớp khóa với Cán bộ
+      if (personnelByKey.has(tripLinkKey)) {
+        matchedPerson = personnelByKey.get(tripLinkKey);
+        isRel = false;
       }
-      const isRel = Boolean(t.isRelative || tCustom.isRelative || t.relativeName || tCustom.relativeName);
-      const tripKey = t.id || t.uniqueKey || `${p.id}_t_${tIdx}_${t.departureDate || t.ngay_xuat_canh || ''}`;
-      if (seenTripKeys.has(tripKey)) return;
-      seenTripKeys.add(tripKey);
+      // Điều kiện 2: Khớp khóa với Thân nhân
+      else if (relativeByKey.has(tripLinkKey)) {
+        matchedRelative = relativeByKey.get(tripLinkKey);
+        isRel = true;
+        const parentKey = String(matchedRelative.cccdparent || matchedRelative.parentCccd || '').trim().toLowerCase();
+        if (parentKey && personnelByKey.has(parentKey)) {
+          matchedPerson = personnelByKey.get(parentKey);
+        } else if (matchedRelative.rawPerson) {
+          matchedPerson = matchedRelative.rawPerson;
+        }
+      }
+    }
 
-      const presence = resolvePresence(t);
-      const tripPrimaryKey = t.id || t.uniqueKey || t.code || (p.code ? `${p.code}-CD${tIdx + 1}` : `CD-${trips.length + 1}`);
+    // Fallback nếu không có khóa nhưng có dữ liệu gắn sẵn từ trước
+    if (!matchedPerson && t._fallbackPerson) matchedPerson = t._fallbackPerson;
+    if (!matchedPerson && t.rawPerson) matchedPerson = t.rawPerson;
+    if (!matchedRelative && t._fallbackRelative) matchedRelative = t._fallbackRelative;
+    if (!matchedRelative && t.rawRelative) matchedRelative = t.rawRelative;
 
-      trips.push({
-        ...tCustom,
-        ...t,
-        _recordType: 'trip',
-        _primaryKey: tripPrimaryKey,
-        uniqueKey: tripKey,
-        isRelative: isRel,
-        personnelName: isRel ? (t.relativeName || tCustom.relativeName || 'Thân nhân') : p.name,
-        personnelCode: isRel ? (t.code || tCustom.code || '') : p.code,
-        parentName: isRel ? p.name : '',
-        parentPersonnelName: isRel ? p.name : '',
-        parentPosition: isRel ? (p.positionName || p.position || '') : '',
-        departmentName: (personnelStore.getDepartmentName && personnelStore.getDepartmentName(p.departmentId)) || p.departmentName || '',
-        rawPerson: p,
-        custom_data: tCustom,
-        isAbroad: presence.isAbroad,
-        isOverdue: presence.isOverdue,
-        overdueDays: presence.overdueDays || 0,
-        presenceStatus: presence.label || presence.shortLabel,
-        presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel || presence.label,
-      });
+    const presence = resolvePresence(t);
+    const tripPrimaryKey = t.id || t.uniqueKey || t.code || `CD-${trips.length + 1}`;
+
+    const resolvedPersonnelName = isRel
+      ? (matchedRelative?.relativeName || matchedRelative?.name || t.relativeName || tCustom.relativeName || t.personnelName || 'Thân nhân')
+      : (matchedPerson?.name || t.personnelName || t.ho_va_ten || t.name || 'Chưa liên kết cán bộ');
+
+    const resolvedParentName = isRel
+      ? (matchedPerson?.name || matchedRelative?.parentName || t.parentName || t.parentPersonnelName || '')
+      : '';
+
+    const resolvedDepartmentName = matchedPerson
+      ? ((personnelStore.getDepartmentName && personnelStore.getDepartmentName(matchedPerson.departmentId)) || matchedPerson.departmentName || '')
+      : (t.departmentName || '');
+
+    trips.push({
+      ...tCustom,
+      ...t,
+      _recordType: 'trip',
+      _primaryKey: tripPrimaryKey,
+      uniqueKey: tripKey,
+      isRelative: isRel,
+      personnelName: resolvedPersonnelName,
+      personnelCode: isRel ? (matchedRelative?.code || t.code || '') : (matchedPerson?.code || t.personnelCode || t.code || ''),
+      parentName: resolvedParentName,
+      parentPersonnelName: resolvedParentName,
+      parentPosition: isRel ? (matchedPerson?.positionName || matchedPerson?.position || '') : '',
+      departmentName: resolvedDepartmentName,
+      rawPerson: matchedPerson,
+      rawRelative: matchedRelative,
+      custom_data: tCustom,
+      isAbroad: presence.isAbroad,
+      isOverdue: presence.isOverdue,
+      overdueDays: presence.overdueDays || 0,
+      presenceStatus: presence.label || presence.shortLabel,
+      presenceLabel: presence.label,
+      _presenceStatus: presence.shortLabel || presence.label,
     });
   });
 

@@ -8,7 +8,7 @@
 - **Child Dashboard (Dashboard Chuyên đề)**:
   - Source `personnel`: Displays list of Cán bộ (`personnelStore.personnelList`).
   - Source `relatives`: Displays list of Thân nhân (`personnelStore.relativesList`).
-  - Source `trips`: Bóc tách trực tiếp từ `p.trips` và `r.trips` nằm trong hồ sơ Cán bộ.
+  - Source `trips`: Bảng Chuyến đi độc lập dạng Flat Table. Không còn phụ thuộc vào việc lồng cứng bên trong mảng `p.trips` hay `r.trips`. Mọi chuyến đi tồn tại độc lập và được ánh xạ động (Dynamic Relational Join) tới hồ sơ Cán bộ hoặc Thân nhân thông qua điều kiện khóa (`tripKeyField === personnelKeyField` hoặc `tripKeyField === relativeKeyField`). Chuyến đi độc lập chưa khớp hồ sơ (`standaloneTrips`) vẫn được bảo toàn nguyên vẹn trên bảng flat.
   - Action button: Always provides `[Chi tiết]` and `[Xóa]` (Admin) buttons linking directly to `PersonnelDialog` for the corresponding Cán bộ profile.
 
 ### 2. PERFORMANCE CACHING ENGINE
@@ -69,6 +69,7 @@
   - Tự động hiển thị huy hiệu `[Đảng]`, `[Chính quyền]` kèm nội dung text và link mở tệp đính kèm.
 
 ### 10. PHÂN TẦNG MÀU SẮC POPUP CHI TIẾT & BỘ LỌC HIỆN DIỆN THÂN NHÂN
+- **Xóa bỏ Phân nhóm Popup Chi tiết (Eliminate Grouping in Drilldown Popup)**: Theo nguyên tắc gỡ bỏ group, Dialog Chi tiết Bản ghi (Drilldown Detail Dialog) không còn phân tách các block folder (📁) mà hiển thị toàn bộ cột trong 1 khung thẻ thống nhất, hiện đại, loại bỏ hoàn toàn các chuỗi tiêu đề hardcode cũ ("Thông tin chuyến đi xuất nhập cảnh").
 - **Phân tầng màu sắc Visual Hierarchy (`PersonnelDialog.vue`, `PersonnelTravelForm.vue`, `PersonnelFamilyForm.vue`)**:
   - Khối Cố định: Nền trắng `#ffffff`, viền xám `#e2e8f0`.
   - Khối Chuyến đi nước ngoài (Đồng bộ nhận diện thống nhất cho CẢ Cán bộ & Thân nhân):

@@ -73,7 +73,7 @@ export function getUnifiedTableDefinitions(options = {}) {
             cols.push({
               id: c.id,
               label: c.label || c.id,
-              group: g.group || 'Chuyến đi',
+              group: coreTripsTitle,
               format: c.format || 'text',
               width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
               tableWidth: c.tableWidth || null,

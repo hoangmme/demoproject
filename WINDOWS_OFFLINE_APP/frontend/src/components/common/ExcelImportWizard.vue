@@ -1063,6 +1063,10 @@ const executeImport = async () => {
           };
           await updatePersonnel(resolvedPerson.id, updatedParent);
           createdCount++;
+        } else {
+          // Lưu chuyến đi độc lập dạng Flat (ánh xạ độc lập qua điều kiện khóa, không phụ thuộc cán bộ)
+          await personnelStore.addStandaloneTrip(tripPayload);
+          createdCount++;
         }
       }
     }

@@ -1154,18 +1154,10 @@
       </template>
 
       <div v-if="selectedDrilldownRow" style="display: flex; flex-direction: column; gap: 14px;">
-        <div
-          v-for="grp in drilldownDetailGroups"
-          :key="grp.name"
-          style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;"
-        >
-          <h4 style="font-size: 0.85rem; font-weight: 700; color: #1e293b; margin: 0 0 10px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-folder" style="color: #0284c7; font-size: 0.85rem;"></i>
-            <span>{{ grp.name }}</span>
-          </h4>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px;">
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">
             <div
-              v-for="col in grp.columns"
+              v-for="col in drilldownColumns"
               :key="col.id"
               style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px;"
             >
@@ -1554,6 +1546,9 @@ const getDisplayValue = (row, colId) => {
 
   // Check if column is a Formula Column
   const allMap = {};
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
   });

@@ -1593,7 +1593,7 @@ const DEFAULT_RELATIVE_MAPPING = [
 
 const DEFAULT_TRIPS_MAPPING = [
   {
-    group: 'Thông tin chuyến đi xuất nhập cảnh',
+    group: 'Chuyến đi',
     isMultiple: false,
     columns: [
       { id: 'cccdchuyendi', label: 'CCCD / Định danh người đi (cccdchuyendi)', width: '25', format: 'text', placeholder: 'Nhập CCCD Cán bộ hoặc Thân nhân' },

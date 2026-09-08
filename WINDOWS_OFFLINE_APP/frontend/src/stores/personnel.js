@@ -17,6 +17,7 @@ export const usePersonnelStore = defineStore('personnel', {
     personnelList: [],
     relativesList: [],
     tripsList: [],
+    standaloneTrips: [],
     departments: [],
     loading: false,
     selectedPerson: null,
@@ -422,7 +423,7 @@ export const usePersonnelStore = defineStore('personnel', {
           };
         });
 
-        this.tripsList = allTrips;
+        this.tripsList = [...allTrips, ...(this.standaloneTrips || [])];
         this.relativesList = allRelatives;
       } catch (e) {
         console.error('Error fetching personnel:', e);
@@ -434,12 +435,15 @@ export const usePersonnelStore = defineStore('personnel', {
       this.departments = await getDepartments();
     },
     async loadSettings() {
-      const [pMap, rMap, tMap, keyCfg] = await Promise.all([
+      const [pMap, rMap, tMap, keyCfg, sTrips] = await Promise.all([
         getAppSettings('mapping_config_personnel', null),
         getAppSettings('mapping_config_relative', null),
         getAppSettings('mapping_config_trips', null),
         getAppSettings('system_key_config', null),
+        getAppSettings('standalone_trips', []),
       ]);
+
+      this.standaloneTrips = Array.isArray(sTrips) ? sTrips : [];
 
       this.importMappingPersonnel = pMap || [];
 
@@ -472,7 +476,7 @@ export const usePersonnelStore = defineStore('personnel', {
       } else {
         this.importMappingTrips = [
           {
-            group: 'Thông tin chuyến đi xuất nhập cảnh',
+            group: 'Chuyến đi',
             isMultiple: false,
             columns: [
               { id: 'cccdchuyendi', label: 'CCCD / Định danh người đi (cccdchuyendi)', width: '25', format: 'text', placeholder: 'Nhập CCCD Cán bộ hoặc Thân nhân' },
@@ -546,6 +550,23 @@ export const usePersonnelStore = defineStore('personnel', {
         const id = String(r.id || '').trim().toLowerCase();
         return cccd === cleanVal || code === cleanVal || id === cleanVal;
       }) || null;
+    },
+    async addStandaloneTrip(tripPayload) {
+      if (!tripPayload) return;
+      if (!Array.isArray(this.standaloneTrips)) this.standaloneTrips = [];
+      const idx = this.standaloneTrips.findIndex((t) => t.id === tripPayload.id);
+      if (idx !== -1) {
+        this.standaloneTrips[idx] = tripPayload;
+      } else {
+        this.standaloneTrips.push(tripPayload);
+      }
+      await saveAppSettings('standalone_trips', this.standaloneTrips);
+      const tIdx = (this.tripsList || []).findIndex((t) => t.id === tripPayload.id);
+      if (tIdx !== -1) {
+        this.tripsList[tIdx] = tripPayload;
+      } else {
+        this.tripsList.push(tripPayload);
+      }
     },
     async savePerson(formData) {
       this.loading = true;
