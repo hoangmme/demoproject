@@ -1936,3 +1936,18 @@
    4. **Kiểm thử & Triển khai**:
       - npm run build thành công 100% (0 lỗi, 567ms). Đã push commit ec4ab7c lên git.
    5. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-08)**: **Triệt Tiêu Bất Đồng Bộ Giữa Cột Lookup TEST và Bảng/Chi Tiết, Thay Thế 'Bản Ghi' Bằng 'Kết Quả'**:
+   1. **Vấn đề & Báo cáo của người dùng**:
+      - Yêu cầu 1: Đổi toàn bộ chữ "bản ghi" thành "kết quả" (hoặc "hồ sơ" trong ngữ cảnh thông tin cán bộ) trên toàn hệ thống.
+      - Yêu cầu 2: Phát hiện cột TEST (lookup CCCD) hiển thị dấu '-' (không có dữ liệu) nhưng cột THUỘC TÍNH (công thức IF) lại đánh dấu là 'Cán bộ'. Dữ liệu không trùng khớp giữa chi tiết và bảng do có chỗ đang fallback hoặc gán tĩnh.
+   2. **Nguyên nhân gốc rễ**:
+      - Vấn đề 1 (Bất đồng bộ CCCD): Trong database, 2 chuyến đi của cán bộ (Lê Công Tuấn Anh, Lê Thanh Bình) có trường chuyến đi `cccdchuyendi` là null/rỗng. Trên bảng, `getCellValue` dùng fallback hiển thị CCCD của Cán bộ chủ quản (`canBoCccd`). Nhưng cột Lookup `TEST` lại đọc trực tiếp từ record nên thấy rỗng -> trả về '-'.
+      - Vấn đề 2 (Công thức IF so sánh rỗng = rỗng): Trong `FormulaEvaluator`, khi cả hai trường đều thiếu dữ liệu/không tìm thấy, phép so sánh chuỗi mặc định `"" === ""` trả về TRUE, khiến các dòng không có CCCD và Lookup trả về '-' lại bị đánh dấu nhầm thành 'Cán bộ'!
+   3. **Giải pháp kiến trúc đã triển khai**:
+      - Chuẩn hóa `buildTopicSourceList` trong `dashboardMetrics.js`: Khi tạo bản ghi phẳng cho chuyến đi từ hồ sơ Cán bộ/Thân nhân, tự động phân giải và gán nhất quán `cccdchuyendi` = CCCD thật của đối tượng đi. Nhờ đó mọi cột (cột hiển thị, cột Lookup, form Chi tiết) đều đọc cùng một giá trị CCCD thực, không còn tình trạng Lookup bị '-'.
+      - Nâng cấp `FormulaEvaluator` trong `formulaEngine.js`: Phép so sánh đẳng thức (== / !=) có cơ chế phân biệt trường thiếu dữ liệu (`null`). Hai trường dữ liệu cùng rỗng (`null == null`) sẽ trả về **FALSE** (không coi là khớp nhau trong đối chiếu quan hệ), trong khi so sánh có chủ đích với chuỗi rỗng (`{field} == ""`) vẫn trả về TRUE.
+      - Thay thế toàn bộ từ "bản ghi" thành "kết quả" (và "hồ sơ" tại dialog chi tiết cán bộ) trên toàn bộ hệ thống (`DashboardView`, `UnifiedTableView`, `AdvancedSearchView`, `AuditLogView`, `AppSidebar`, `ExcelImportWizard`, `PersonnelDialog`, `TableViewManagerDialog`).
+   4. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 593ms). Đã push commit `ffb227b` lên git.
+   5. **Trạng thái**: Done [Reversible].
