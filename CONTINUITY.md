@@ -1584,6 +1584,24 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/` và push git lên repository.
 
+- **Entry (2026-09-08)**: **Dynamic Table Scanning cho Nhập liệu mới, Đồng bộ Icon & Màu sắc, Quản lý View (Sửa, Xóa, Dời vị trí) & Bộ lọc Điều kiện dùng chung chuẩn Lark Base**:
+  1. **Quét Bảng Động 100% cho Nhập liệu mới (`TableDataEntryDialog.vue` & `tableRegistry.js`)**:
+     - Loại bỏ danh sách 3 bảng hardcode tĩnh (`CB-01`, `TN-02`, `CD-03`).
+     - `getUnifiedTableDefinitions(options)` tự động đọc cấu hình `custom_dashboards_config` từ `localStorage` và đồng bộ qua sự kiện `custom-dashboards-updated`.
+     - Tự động quét và nạp toàn bộ các bảng trong hệ thống: Bảng Cán bộ, Thân nhân, Chuyến đi và MỌI bảng tự tạo / chuyên đề với icon và màu sắc động (`table.iconColor`).
+     - Bỏ toàn bộ tag mã cứng (`TN-02`). Khi chọn bảng tự tạo, hệ thống tự động điều hướng sang `${table.route}?action=new_record` và mở form thêm bản ghi trực tiếp.
+  2. **Quản lý View toàn diện cho Mọi Bảng (Dời trái/phải, Sửa tên/điều kiện, Xóa view)**:
+     - Tích hợp thanh công cụ thao tác view `.lark-tab-actions` (Dời trái `pi-arrow-left`, Dời phải `pi-arrow-right`, Sửa `pi-pencil`, Xóa `pi-times`) vào từng tab của Cán bộ, Thân nhân (`PersonnelView.vue`) và Chuyến đi / Bảng tự tạo (`ChildDashboardView.vue`).
+     - Tự động bảo vệ View mặc định ("Toàn bộ" tại index 0) không cho phép xóa.
+     - Lưu trực tiếp thứ tự và cấu hình các view vào `custom_dashboards_config` (cả localStorage và server Directus).
+  3. **Bộ lọc điều kiện View dùng chung chuẩn Thống kê / Tìm kiếm nâng cao (`TableViewManagerDialog.vue`)**:
+     - Xây dựng component dùng chung `TableViewManagerDialog.vue` cho toàn bộ các bảng trong hệ thống thay thế form đơn sơ cũ.
+     - Hỗ trợ xây dựng nhiều dòng điều kiện (`conditions: [{ field, operator, value }]`) kết hợp toán tử logic `VÀ (AND)` hoặc `HOẶC (OR)`.
+     - Đầy đủ toán tử: Bằng (`equals`), Chứa từ khóa (`contains`), Không bằng (`not_equals`), Không chứa (`not_contains`), Có giá trị (`has_value`), Rỗng (`empty`), So sánh số / ngày (`gte`, `lte`, `gt`, `lt`), Đếm (`count_gte`, `count_gt`).
+     - Đánh giá trực tiếp qua động cơ chuẩn `matchCardCondition(row, card, store)` trong `dashboardMetrics.js`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
 
 
 

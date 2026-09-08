@@ -194,18 +194,62 @@
       <div class="lark-base-view-tabs-container">
         <div class="lark-base-view-tabs-strip">
           <template v-for="(card, cIdx) in activePersonnelMetricCards" :key="card.id || cIdx">
-            <button
-              type="button"
-              class="lark-base-tab-item"
+            <div
+              class="lark-tab-item-wrapper"
               :class="{ 'tab-active': activePersonnelCardIdx === cIdx }"
-              @click="selectPersonnelCard(card, cIdx)"
             >
-              <i class="pi pi-table" style="font-size: 0.82rem; color: #0284c7;"></i>
-              <span style="font-weight: 700;">{{ card.label }}</span>
-              <span :class="['lark-tab-count-pill', `pill-${card.color || 'blue'}`]">
-                {{ getPersonnelCardMetricValue(card) }}
-              </span>
-            </button>
+              <button
+                type="button"
+                class="lark-base-tab-item"
+                :class="{ 'tab-active': activePersonnelCardIdx === cIdx }"
+                @click="selectPersonnelCard(card, cIdx)"
+              >
+                <i class="pi pi-table" style="font-size: 0.82rem; color: #0284c7;"></i>
+                <span style="font-weight: 700;">{{ card.label }}</span>
+                <span :class="['lark-tab-count-pill', `pill-${card.color || 'blue'}`]">
+                  {{ getPersonnelCardMetricValue(card) }}
+                </span>
+              </button>
+
+              <!-- Thao tác View: Dời trái, Dời phải, Sửa, Xóa -->
+              <div v-if="authStore.isAdmin" class="lark-tab-actions">
+                <button
+                  v-if="cIdx > 0"
+                  type="button"
+                  class="btn-tab-action"
+                  @click.stop="moveView('personnel', cIdx, -1)"
+                  title="Dời view sang trái"
+                >
+                  <i class="pi pi-arrow-left"></i>
+                </button>
+                <button
+                  v-if="cIdx < activePersonnelMetricCards.length - 1"
+                  type="button"
+                  class="btn-tab-action"
+                  @click.stop="moveView('personnel', cIdx, 1)"
+                  title="Dời view sang phải"
+                >
+                  <i class="pi pi-arrow-right"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn-tab-action"
+                  @click.stop="openEditViewDialog('personnel', card, cIdx)"
+                  title="Sửa tên & Điều kiện lọc view này"
+                >
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button
+                  v-if="cIdx > 0"
+                  type="button"
+                  class="btn-tab-action btn-tab-delete"
+                  @click.stop="deleteView('personnel', card, cIdx)"
+                  title="Xóa Chế độ xem này"
+                >
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+            </div>
           </template>
 
           <button
@@ -760,18 +804,62 @@
       <div class="lark-base-view-tabs-container">
         <div class="lark-base-view-tabs-strip">
           <template v-for="(card, cIdx) in activeRelativeMetricCards" :key="card.id || cIdx">
-            <button
-              type="button"
-              class="lark-base-tab-item"
+            <div
+              class="lark-tab-item-wrapper"
               :class="{ 'tab-active': activeRelativeCardIdx === cIdx }"
-              @click="selectRelativeCard(card, cIdx)"
             >
-              <i class="pi pi-table" style="font-size: 0.82rem; color: #9333ea;"></i>
-              <span style="font-weight: 700;">{{ card.label }}</span>
-              <span :class="['lark-tab-count-pill', `pill-${card.color || 'purple'}`]">
-                {{ getRelativeCardMetricValue(card) }}
-              </span>
-            </button>
+              <button
+                type="button"
+                class="lark-base-tab-item"
+                :class="{ 'tab-active': activeRelativeCardIdx === cIdx }"
+                @click="selectRelativeCard(card, cIdx)"
+              >
+                <i class="pi pi-table" style="font-size: 0.82rem; color: #9333ea;"></i>
+                <span style="font-weight: 700;">{{ card.label }}</span>
+                <span :class="['lark-tab-count-pill', `pill-${card.color || 'purple'}`]">
+                  {{ getRelativeCardMetricValue(card) }}
+                </span>
+              </button>
+
+              <!-- Thao tác View: Dời trái, Dời phải, Sửa, Xóa -->
+              <div v-if="authStore.isAdmin" class="lark-tab-actions">
+                <button
+                  v-if="cIdx > 0"
+                  type="button"
+                  class="btn-tab-action"
+                  @click.stop="moveView('relatives', cIdx, -1)"
+                  title="Dời view sang trái"
+                >
+                  <i class="pi pi-arrow-left"></i>
+                </button>
+                <button
+                  v-if="cIdx < activeRelativeMetricCards.length - 1"
+                  type="button"
+                  class="btn-tab-action"
+                  @click.stop="moveView('relatives', cIdx, 1)"
+                  title="Dời view sang phải"
+                >
+                  <i class="pi pi-arrow-right"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn-tab-action"
+                  @click.stop="openEditViewDialog('relatives', card, cIdx)"
+                  title="Sửa tên & Điều kiện lọc view này"
+                >
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button
+                  v-if="cIdx > 0"
+                  type="button"
+                  class="btn-tab-action btn-tab-delete"
+                  @click.stop="deleteView('relatives', card, cIdx)"
+                  title="Xóa Chế độ xem này"
+                >
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+            </div>
           </template>
 
           <button
@@ -1384,98 +1472,17 @@
       :activeSource="mainTab === 'thannhan' || route.path === '/relatives' ? 'relatives' : 'personnel'"
     />
 
-    <!-- Dialog Thêm Chế độ xem (View) mới cho Cán bộ / Thân nhân chuẩn Lark Base -->
-    <Dialog
-      v-model:visible="isAddViewDialogOpen"
-      modal
-      :header="`➕ Thêm Chế độ xem (View) Mới cho Bảng ${addViewTargetTable === 'relatives' ? relativeTableTitle : mainTableTitle}`"
-      :style="{ width: '500px', maxWidth: '95vw' }"
-    >
-      <div style="display: flex; flex-direction: column; gap: 12px; padding: 6px 0;">
-        <div style="font-size: 0.76rem; color: #64748b; line-height: 1.4;">
-          Tạo một Chế độ xem mới cho bảng này với bộ lọc và cột hiển thị riêng biệt theo chuẩn Lark Base:
-        </div>
-
-        <div>
-          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            Tên Chế độ xem (View): <span style="color: red;">*</span>
-          </label>
-          <InputText
-            v-model="newViewForm.label"
-            placeholder="VD: Thuộc đơn vị X, Có hộ chiếu, Đã nghỉ hưu..."
-            style="width: 100%; font-size: 0.84rem;"
-            autofocus
-          />
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div>
-            <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-              Cột cần lọc:
-            </label>
-            <select
-              v-model="newViewForm.field"
-              class="settings-select"
-              style="width: 100%; font-size: 0.8rem; height: 34px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;"
-            >
-              <option value="">-- Toàn bộ bản ghi --</option>
-              <option v-for="c in activeAddViewColumns" :key="c.id" :value="c.id">
-                {{ c.label || c.id }}
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-              Toán tử điều kiện:
-            </label>
-            <select
-              v-model="newViewForm.operator"
-              class="settings-select"
-              style="width: 100%; font-size: 0.8rem; height: 34px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;"
-            >
-              <option value="equals">Bằng (=)</option>
-              <option value="contains">Chứa từ khóa</option>
-              <option value="not_equals">Không bằng (≠)</option>
-              <option value="has_value">Có giá trị (Không rỗng)</option>
-              <option value="is_empty">Rỗng (Chưa có giá trị)</option>
-            </select>
-          </div>
-        </div>
-
-        <div v-if="newViewForm.operator !== 'has_value' && newViewForm.operator !== 'is_empty'">
-          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            Giá trị lọc:
-          </label>
-          <InputText
-            v-model="newViewForm.value"
-            placeholder="Nhập giá trị cần lọc..."
-            style="width: 100%; font-size: 0.84rem;"
-          />
-        </div>
-
-        <div>
-          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            Màu sắc huy hiệu:
-          </label>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <label
-              v-for="color in ['blue', 'green', 'purple', 'amber', 'red']"
-              :key="color"
-              style="display: flex; align-items: center; gap: 4px; font-size: 0.76rem; cursor: pointer;"
-            >
-              <input type="radio" v-model="newViewForm.color" :value="color" style="cursor: pointer;" />
-              <span :class="['lark-tab-count-pill', `pill-${color}`]">{{ color }}</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <Button label="Hủy" severity="secondary" text size="small" @click="isAddViewDialogOpen = false" />
-        <Button label="Tạo Chế độ xem" icon="pi pi-check" severity="primary" size="small" :disabled="!newViewForm.label.trim()" @click="saveNewView" />
-      </template>
-    </Dialog>
+    <!-- Dialog Quản lý Chế độ xem (View) đa hình (Thêm / Sửa / Xóa / Bộ lọc điều kiện dùng chung) -->
+    <TableViewManagerDialog
+      v-model="isViewManagerOpen"
+      :mode="viewManagerMode"
+      :viewData="selectedViewForEdit"
+      :canDelete="selectedViewIdx > 0"
+      :columns="addViewTargetTable === 'relatives' ? allAvailableRelativeColumns : allAvailablePersonnelColumns"
+      :tableTitle="addViewTargetTable === 'relatives' ? relativeTableTitle : mainTableTitle"
+      @save="handleSaveView"
+      @delete="deleteView(addViewTargetTable, selectedViewForEdit, selectedViewIdx)"
+    />
 
     <!-- Dialog Tùy chỉnh Biểu tượng & Màu sắc Bảng -->
     <TableIconColorDialog
@@ -1502,6 +1509,7 @@ import ColumnHeaderMenu from '@/components/common/ColumnHeaderMenu.vue';
 import AddColumnDialog from '@/components/common/AddColumnDialog.vue';
 import TableKeyLinkDialog from '@/components/common/TableKeyLinkDialog.vue';
 import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
+import TableViewManagerDialog from '@/components/common/TableViewManagerDialog.vue';
 
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import apiClient from '@/api/client';
@@ -1733,82 +1741,191 @@ const getRelativeCardMetricValue = (card) => {
   return rList.filter((r) => matchSharedCardCondition(r, card, personnelStore)).length;
 };
 
-// State modal thêm Chế độ xem (View) mới chuẩn Lark Base
-const isAddViewDialogOpen = ref(false);
+// State Quản lý Chế độ xem (View) đa hình chuẩn Lark Base (Thêm / Sửa / Xóa / Dời vị trí)
+const isViewManagerOpen = ref(false);
+const viewManagerMode = ref('create'); // 'create' | 'edit'
+const selectedViewForEdit = ref(null);
+const selectedViewIdx = ref(-1);
 const addViewTargetTable = ref('personnel');
-const newViewForm = ref({
-  label: '',
-  field: '',
-  operator: 'equals',
-  value: '',
-  color: 'blue',
-});
 
-const openAddViewDialog = (targetTable = 'personnel') => {
-  addViewTargetTable.value = targetTable;
-  newViewForm.value = {
-    label: '',
-    field: '',
-    operator: 'equals',
-    value: '',
-    color: 'blue',
-  };
-  isAddViewDialogOpen.value = true;
-};
-
-const activeAddViewColumns = computed(() => {
-  if (addViewTargetTable.value === 'relatives') {
-    const cols = [];
-    (personnelStore.importMappingRelative || []).forEach((g) => {
-      (g.columns || []).forEach((c) => {
-        if (c.id && c.id !== 'stt') {
-          cols.push({ id: c.id, label: c.label || c.id });
-        }
-      });
-    });
-    return cols;
-  }
+const allAvailablePersonnelColumns = computed(() => {
   const cols = [];
+  const seen = new Set();
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt') {
+      if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+        seen.add(c.id);
         cols.push({ id: c.id, label: c.label || c.id });
       }
     });
   });
+  cols.push({ id: 'presenceStatus', label: 'Trạng thái hiện diện' });
   return cols;
 });
 
-const saveNewView = async () => {
-  if (!newViewForm.value.label.trim()) return;
+const allAvailableRelativeColumns = computed(() => {
+  const cols = [];
+  const seen = new Set();
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+        seen.add(c.id);
+        cols.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+  cols.push({ id: 'presenceStatus', label: 'Trạng thái hiện diện' });
+  cols.push({ id: '_parentPersonnelName', label: 'Cán bộ liên quan (Tên)' });
+  cols.push({ id: '_parentPosition', label: 'Cán bộ liên quan (Chức vụ)' });
+  cols.push({ id: '_parentDepartment', label: 'Cán bộ liên quan (Đơn vị)' });
+  return cols;
+});
+
+const openAddViewDialog = (targetTable = 'personnel') => {
+  addViewTargetTable.value = targetTable;
+  viewManagerMode.value = 'create';
+  selectedViewForEdit.value = null;
+  selectedViewIdx.value = -1;
+  isViewManagerOpen.value = true;
+};
+
+const openEditViewDialog = (targetTable, card, cIdx) => {
+  addViewTargetTable.value = targetTable;
+  viewManagerMode.value = 'edit';
+  selectedViewForEdit.value = { ...card };
+  selectedViewIdx.value = cIdx;
+  isViewManagerOpen.value = true;
+};
+
+const handleSaveView = async (savedData) => {
   const targetId = addViewTargetTable.value === 'relatives' ? 'relatives' : 'personnel';
   const currentCols = targetId === 'relatives' ? [...personnelStore.visibleRelativeColumns] : [...personnelStore.visibleColumns];
-  const newCard = {
-    id: 'view_' + Date.now(),
-    label: newViewForm.value.label.trim(),
-    field: newViewForm.value.field || null,
-    operator: newViewForm.value.operator || 'equals',
-    value: newViewForm.value.value || '',
-    color: newViewForm.value.color || 'blue',
-    columns: currentCols,
-  };
-
-  const idx = customDashboards.value.findIndex((d) => d.id === targetId);
-  if (idx !== -1) {
-    if (!customDashboards.value[idx].metricCards) {
-      customDashboards.value[idx].metricCards = [];
-    }
-    customDashboards.value[idx].metricCards.push(newCard);
-    try {
-      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
-      await saveAppSettings('custom_dashboards_config', customDashboards.value);
-    } catch (e) {}
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => d.id === targetId);
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => d.id === targetId);
   }
-  isAddViewDialogOpen.value = false;
-  if (targetId === 'relatives') {
-    activeRelativeCardIdx.value = (activeRelativeMetricCards.value?.length || 1) - 1;
+  if (idx === -1) return;
+
+  const currentDash = { ...dashboards[idx] };
+  const defaultCards = targetId === 'relatives' ? DEFAULT_UNIFIED_DASHBOARDS[1].metricCards : DEFAULT_UNIFIED_DASHBOARDS[0].metricCards;
+  const cards = currentDash.metricCards ? [...currentDash.metricCards] : [...defaultCards];
+
+  if (viewManagerMode.value === 'edit' && selectedViewIdx.value >= 0 && selectedViewIdx.value < cards.length) {
+    cards[selectedViewIdx.value] = {
+      ...cards[selectedViewIdx.value],
+      ...savedData,
+    };
   } else {
-    activePersonnelCardIdx.value = (activePersonnelMetricCards.value?.length || 1) - 1;
+    const newCard = {
+      ...savedData,
+      id: savedData.id || ('view_' + Date.now()),
+      columns: currentCols,
+    };
+    cards.push(newCard);
+    if (targetId === 'relatives') {
+      activeRelativeCardIdx.value = cards.length - 1;
+    } else {
+      activePersonnelCardIdx.value = cards.length - 1;
+    }
+  }
+
+  currentDash.metricCards = cards;
+  dashboards[idx] = currentDash;
+  customDashboards.value = dashboards;
+
+  try {
+    localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+    await saveAppSettings('custom_dashboards_config', dashboards);
+  } catch (e) {
+    console.error('Error saving view:', e);
+  }
+
+  isViewManagerOpen.value = false;
+};
+
+const deleteView = async (targetTable, card, cIdx) => {
+  if (cIdx <= 0) {
+    alert('Không thể xóa Chế độ xem mặc định (Toàn bộ)');
+    return;
+  }
+  const label = card?.label || 'này';
+  if (!confirm(`Bạn có chắc muốn xóa Chế độ xem "${label}"?`)) return;
+
+  const targetId = targetTable === 'relatives' ? 'relatives' : 'personnel';
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => d.id === targetId);
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => d.id === targetId);
+  }
+  if (idx === -1) return;
+
+  const currentDash = { ...dashboards[idx] };
+  const cards = currentDash.metricCards ? [...currentDash.metricCards] : [];
+  if (cIdx < cards.length) {
+    cards.splice(cIdx, 1);
+    currentDash.metricCards = cards;
+    dashboards[idx] = currentDash;
+    customDashboards.value = dashboards;
+
+    if (targetId === 'relatives') {
+      if (activeRelativeCardIdx.value >= cards.length) {
+        activeRelativeCardIdx.value = Math.max(0, cards.length - 1);
+      }
+    } else {
+      if (activePersonnelCardIdx.value >= cards.length) {
+        activePersonnelCardIdx.value = Math.max(0, cards.length - 1);
+      }
+    }
+
+    try {
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+      await saveAppSettings('custom_dashboards_config', dashboards);
+    } catch (e) {
+      console.error('Error deleting view:', e);
+    }
+  }
+  isViewManagerOpen.value = false;
+};
+
+const moveView = async (targetTable, cIdx, direction) => {
+  const targetIdx = cIdx + direction;
+  const targetId = targetTable === 'relatives' ? 'relatives' : 'personnel';
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => d.id === targetId);
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => d.id === targetId);
+  }
+  if (idx === -1) return;
+
+  const currentDash = { ...dashboards[idx] };
+  const cards = currentDash.metricCards ? [...currentDash.metricCards] : [];
+  if (targetIdx < 0 || targetIdx >= cards.length) return;
+
+  const temp = cards[cIdx];
+  cards[cIdx] = cards[targetIdx];
+  cards[targetIdx] = temp;
+
+  currentDash.metricCards = cards;
+  dashboards[idx] = currentDash;
+  customDashboards.value = dashboards;
+
+  if (targetId === 'relatives') {
+    if (activeRelativeCardIdx.value === cIdx) activeRelativeCardIdx.value = targetIdx;
+    else if (activeRelativeCardIdx.value === targetIdx) activeRelativeCardIdx.value = cIdx;
+  } else {
+    if (activePersonnelCardIdx.value === cIdx) activePersonnelCardIdx.value = targetIdx;
+    else if (activePersonnelCardIdx.value === targetIdx) activePersonnelCardIdx.value = cIdx;
+  }
+
+  try {
+    localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+    await saveAppSettings('custom_dashboards_config', dashboards);
+  } catch (e) {
+    console.error('Error moving view:', e);
   }
 };
 const searchQuery = ref('');

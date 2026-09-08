@@ -1212,6 +1212,58 @@ td.col-right {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
+.lark-tab-item-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.lark-tab-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: -4px;
+  padding-right: 4px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+}
+
+.lark-tab-item-wrapper.tab-active .lark-tab-actions,
+.lark-tab-item-wrapper:hover .lark-tab-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+.btn-tab-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 4px;
+  color: #64748b;
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-tab-action:hover {
+  background: #ffffff;
+  color: #0284c7;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-tab-action.btn-tab-delete:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
 .lark-base-tab-add {
   display: inline-flex;
   align-items: center;

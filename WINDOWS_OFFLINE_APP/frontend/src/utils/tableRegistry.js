@@ -17,19 +17,39 @@ import { computeColumnIndexMap } from './formatters';
  * @returns {Array<Object>} Mảng danh sách các bảng chuẩn hóa
  */
 export function getUnifiedTableDefinitions(options = {}) {
-  const {
-    personnelStore,
-    customDashboards = [],
-    systemBranding = {},
-  } = options;
+  let store = null;
+  let customDashboards = [];
+  let systemBranding = {};
 
-  const corePersonnelTitle = systemBranding?.menuLabelPersonnel || 'Cán bộ';
-  const coreRelativesTitle = systemBranding?.menuLabelRelatives || 'Thân nhân';
-  const coreTripsTitle = systemBranding?.menuLabelTrips || 'Chuyến đi';
+  if (options && (options.$id === 'personnel' || options.personnelList)) {
+    store = options;
+  } else if (options && typeof options === 'object') {
+    store = options.personnelStore || options.store || null;
+    customDashboards = options.customDashboards || [];
+    systemBranding = options.systemBranding || {};
+  }
+
+  // Tự động quét và nạp toàn bộ cấu hình bảng tự tạo từ custom_dashboards_config nếu chưa được truyền
+  if (!customDashboards || customDashboards.length === 0) {
+    try {
+      const local = localStorage.getItem('custom_dashboards_config');
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          customDashboards = parsed;
+        }
+      }
+    } catch (e) {}
+  }
+  customDashboards = ensureStandardDashboards(customDashboards);
 
   const savedTripsCfg = (customDashboards || []).find(d => d.id === 'trips');
   const savedPersonnelCfg = (customDashboards || []).find(d => d.id === 'personnel');
   const savedRelativesCfg = (customDashboards || []).find(d => d.id === 'relatives');
+
+  const corePersonnelTitle = savedPersonnelCfg?.title || systemBranding?.menuLabelPersonnel || 'Cán bộ';
+  const coreRelativesTitle = savedRelativesCfg?.title || systemBranding?.menuLabelRelatives || 'Thân nhân';
+  const coreTripsTitle = savedTripsCfg?.title || systemBranding?.menuLabelTrips || 'Chuyến đi';
 
   // Bảng 1: Chuyến đi
   const tripsTable = {
@@ -229,6 +249,7 @@ export function getUnifiedTableDefinitions(options = {}) {
         code: code,
         title: ct.title || `Bảng ${code}`,
         icon: ct.icon || 'pi-table',
+        iconColor: ct.iconColor || '#f59e0b',
         source: ct.source || 'blank',
         isCore: false,
         route: `/dashboard-topic/${ct.id}`,

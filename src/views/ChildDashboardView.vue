@@ -194,19 +194,63 @@
     <div v-if="currentDashboardConfig.displayMode !== 'appendix'" class="lark-base-view-tabs-container">
       <div class="lark-base-view-tabs-strip">
         <template v-for="(card, cIdx) in activeMetricCards" :key="card.id || cIdx">
-          <button
+          <div
             v-if="!isCardHidden(card)"
-            type="button"
-            class="lark-base-tab-item"
+            class="lark-tab-item-wrapper"
             :class="{ 'tab-active': isCardActive(card, cIdx) }"
-            @click="toggleMetricCardFilter(card, cIdx)"
           >
-            <i class="pi pi-table" style="font-size: 0.82rem; color: #0284c7;"></i>
-            <span style="font-weight: 700;">{{ getCardDisplayLabel(card) }}</span>
-            <span :class="['lark-tab-count-pill', `pill-${card.color || 'blue'}`]">
-              {{ getCardMetricValue(card) }}
-            </span>
-          </button>
+            <button
+              type="button"
+              class="lark-base-tab-item"
+              :class="{ 'tab-active': isCardActive(card, cIdx) }"
+              @click="toggleMetricCardFilter(card, cIdx)"
+            >
+              <i class="pi pi-table" style="font-size: 0.82rem; color: #0284c7;"></i>
+              <span style="font-weight: 700;">{{ getCardDisplayLabel(card) }}</span>
+              <span :class="['lark-tab-count-pill', `pill-${card.color || 'blue'}`]">
+                {{ getCardMetricValue(card) }}
+              </span>
+            </button>
+
+            <!-- Menu nút thao tác View: Dời trái, Dời phải, Sửa, Xóa (dành cho Quản trị viên) -->
+            <div v-if="authStore.isAdmin" class="lark-tab-actions">
+              <button
+                v-if="cIdx > 0"
+                type="button"
+                class="btn-tab-action"
+                @click.stop="moveView(cIdx, -1)"
+                title="Dời view sang trái"
+              >
+                <i class="pi pi-arrow-left"></i>
+              </button>
+              <button
+                v-if="cIdx < activeMetricCards.length - 1"
+                type="button"
+                class="btn-tab-action"
+                @click.stop="moveView(cIdx, 1)"
+                title="Dời view sang phải"
+              >
+                <i class="pi pi-arrow-right"></i>
+              </button>
+              <button
+                type="button"
+                class="btn-tab-action"
+                @click.stop="openEditViewDialog(card, cIdx)"
+                title="Sửa tên & Điều kiện lọc view này"
+              >
+                <i class="pi pi-pencil"></i>
+              </button>
+              <button
+                v-if="cIdx > 0"
+                type="button"
+                class="btn-tab-action btn-tab-delete"
+                @click.stop="deleteView(card, cIdx)"
+                title="Xóa Chế độ xem này"
+              >
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+          </div>
         </template>
 
         <!-- Nút Thêm Chế độ xem / Thẻ lọc mới chuẩn Lark Base (+ Add View) -->
@@ -996,98 +1040,17 @@
       @saved="handlePersonnelSaved"
     />
 
-    <!-- Dialog Thêm Chế độ xem (View) / Thẻ lọc mới chuẩn Lark Base -->
-    <Dialog
-      v-model:visible="isAddViewDialogOpen"
-      modal
-      header="➕ Thêm Chế độ xem (View) / Thẻ Lọc Mới"
-      :style="{ width: '500px', maxWidth: '95vw' }"
-    >
-      <div style="display: flex; flex-direction: column; gap: 12px; padding: 6px 0;">
-        <div style="font-size: 0.76rem; color: #64748b; line-height: 1.4;">
-          Tạo một Chế độ xem mới cho bảng này với bộ lọc và cột hiển thị riêng biệt theo chuẩn Lark Base:
-        </div>
-
-        <div>
-          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            Tên Chế độ xem (View): <span style="color: red;">*</span>
-          </label>
-          <InputText
-            v-model="newViewForm.label"
-            placeholder="VD: Đã về nước, Đi công tác Châu Âu..."
-            style="width: 100%; font-size: 0.84rem;"
-            autofocus
-          />
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div>
-            <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-              Cột cần lọc:
-            </label>
-            <select
-              v-model="newViewForm.field"
-              class="settings-select"
-              style="width: 100%; font-size: 0.8rem; height: 34px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;"
-            >
-              <option value="">-- Toàn bộ bản ghi --</option>
-              <option v-for="c in allAvailableColumnsList" :key="c.id" :value="c.id">
-                {{ c.label || c.id }}
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-              Toán tử điều kiện:
-            </label>
-            <select
-              v-model="newViewForm.operator"
-              class="settings-select"
-              style="width: 100%; font-size: 0.8rem; height: 34px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;"
-            >
-              <option value="equals">Bằng (=)</option>
-              <option value="contains">Chứa từ khóa</option>
-              <option value="not_equals">Không bằng (≠)</option>
-              <option value="has_value">Có giá trị (Không rỗng)</option>
-              <option value="is_empty">Rỗng (Chưa có giá trị)</option>
-            </select>
-          </div>
-        </div>
-
-        <div v-if="newViewForm.operator !== 'has_value' && newViewForm.operator !== 'is_empty'">
-          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            Giá trị lọc:
-          </label>
-          <InputText
-            v-model="newViewForm.value"
-            placeholder="Nhập giá trị cần lọc..."
-            style="width: 100%; font-size: 0.84rem;"
-          />
-        </div>
-
-        <div>
-          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            Màu sắc huy hiệu:
-          </label>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <label
-              v-for="color in ['blue', 'green', 'purple', 'amber', 'red']"
-              :key="color"
-              style="display: flex; align-items: center; gap: 4px; font-size: 0.76rem; cursor: pointer;"
-            >
-              <input type="radio" v-model="newViewForm.color" :value="color" style="cursor: pointer;" />
-              <span :class="['lark-tab-count-pill', `pill-${color}`]">{{ color }}</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <Button label="Hủy" severity="secondary" text size="small" @click="isAddViewDialogOpen = false" />
-        <Button label="Tạo Chế độ xem" icon="pi pi-check" severity="primary" size="small" :disabled="!newViewForm.label.trim()" @click="saveNewView" />
-      </template>
-    </Dialog>
+    <!-- Dialog Quản lý Chế độ xem (View) đa hình (Thêm / Sửa / Xóa / Bộ lọc điều kiện dùng chung) -->
+    <TableViewManagerDialog
+      v-model="isViewManagerOpen"
+      :mode="viewManagerMode"
+      :viewData="selectedViewForEdit"
+      :canDelete="selectedViewIdx > 0"
+      :columns="allAvailableColumnsList"
+      :tableTitle="currentDashboardConfig.title || 'Bảng dữ liệu'"
+      @save="handleSaveView"
+      @delete="deleteView(selectedViewForEdit, selectedViewIdx)"
+    />
 
     <!-- Advanced Word / PDF Export Dialog -->
     <AdvancedDocxExportDialog
@@ -1191,6 +1154,8 @@ import ColumnHeaderMenu from '@/components/common/ColumnHeaderMenu.vue';
 import AddColumnDialog from '@/components/common/AddColumnDialog.vue';
 import TableKeyLinkDialog from '@/components/common/TableKeyLinkDialog.vue';
 import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
+import TableViewManagerDialog from '@/components/common/TableViewManagerDialog.vue';
+import { ensureStandardDashboards } from '@/utils/tableRegistry';
 
 import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug, formatOptions } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, extractRowFieldValue } from '@/utils/dashboardMetrics';
@@ -2880,53 +2845,152 @@ const onColumnsChange = async (newCols) => {
   }
 };
 
-// ===== Lark Base View Tabs: Tạo Chế độ xem / Thẻ lọc mới =====
-const isAddViewDialogOpen = ref(false);
-const newViewForm = ref({
-  label: '',
-  field: '',
-  operator: 'equals',
-  value: '',
-  color: 'blue',
-});
+// ===== Lark Base View Tabs: Quản lý Chế độ xem (Thêm / Sửa / Xóa / Di chuyển) =====
+const isViewManagerOpen = ref(false);
+const viewManagerMode = ref('create'); // 'create' | 'edit'
+const selectedViewForEdit = ref(null);
+const selectedViewIdx = ref(-1);
 
 const openAddViewDialog = () => {
-  newViewForm.value = {
-    label: '',
-    field: '',
-    operator: 'equals',
-    value: '',
-    color: 'blue',
-  };
-  isAddViewDialogOpen.value = true;
+  viewManagerMode.value = 'create';
+  selectedViewForEdit.value = null;
+  selectedViewIdx.value = -1;
+  isViewManagerOpen.value = true;
 };
 
-const saveNewView = async () => {
-  if (!newViewForm.value.label.trim()) return;
-  const newCard = {
-    id: 'view_' + Date.now(),
-    label: newViewForm.value.label.trim(),
-    field: newViewForm.value.field || null,
-    operator: newViewForm.value.operator || 'equals',
-    value: newViewForm.value.value || '',
-    color: newViewForm.value.color || 'blue',
-    columns: [...selectedColIds.value],
-  };
+const openEditViewDialog = (card, cIdx) => {
+  viewManagerMode.value = 'edit';
+  selectedViewForEdit.value = { ...card };
+  selectedViewIdx.value = cIdx;
+  isViewManagerOpen.value = true;
+};
 
-  const idx = customDashboards.value.findIndex((d) => String(d.id) === String(topicId.value));
-  if (idx !== -1) {
-    if (!customDashboards.value[idx].metricCards) {
-      customDashboards.value[idx].metricCards = [];
-    }
-    customDashboards.value[idx].metricCards.push(newCard);
-    try {
-      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
-      await saveAppSettings('custom_dashboards_config', customDashboards.value);
-    } catch (e) {}
+const handleSaveView = async (savedData) => {
+  const tableId = currentDashboardId.value;
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
+
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
   }
-  isAddViewDialogOpen.value = false;
-  const newIdx = (activeMetricCards.value?.length || 1) - 1;
-  activeMetricCardIdx.value = newIdx >= 0 ? newIdx : 0;
+
+  if (idx === -1) return;
+
+  const currentDash = { ...dashboards[idx] };
+  const defaultCards = [
+    { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
+    { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
+    { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
+    { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
+  ];
+  const cards = currentDash.metricCards ? [...currentDash.metricCards] : [...defaultCards];
+
+  if (viewManagerMode.value === 'edit' && selectedViewIdx.value >= 0 && selectedViewIdx.value < cards.length) {
+    cards[selectedViewIdx.value] = {
+      ...cards[selectedViewIdx.value],
+      ...savedData,
+    };
+  } else {
+    const newCard = {
+      ...savedData,
+      id: savedData.id || ('view_' + Date.now()),
+      columns: [...selectedColIds.value],
+    };
+    cards.push(newCard);
+    activeMetricCardIdx.value = cards.length - 1;
+  }
+
+  currentDash.metricCards = cards;
+  dashboards[idx] = currentDash;
+  customDashboards.value = dashboards;
+
+  try {
+    localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+    await saveAppSettings('custom_dashboards_config', dashboards);
+  } catch (e) {
+    console.error('Error saving view:', e);
+  }
+
+  isViewManagerOpen.value = false;
+};
+
+const deleteView = async (card, cIdx) => {
+  if (cIdx <= 0) {
+    alert('Không thể xóa Chế độ xem mặc định (Toàn bộ)');
+    return;
+  }
+  const label = card?.label || 'này';
+  if (!confirm(`Bạn có chắc muốn xóa Chế độ xem "${label}"?`)) return;
+
+  const tableId = currentDashboardId.value;
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
+
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
+  }
+  if (idx === -1) return;
+
+  const currentDash = { ...dashboards[idx] };
+  const cards = currentDash.metricCards ? [...currentDash.metricCards] : [];
+  if (cIdx < cards.length) {
+    cards.splice(cIdx, 1);
+    currentDash.metricCards = cards;
+    dashboards[idx] = currentDash;
+    customDashboards.value = dashboards;
+
+    if (activeMetricCardIdx.value >= cards.length) {
+      activeMetricCardIdx.value = Math.max(0, cards.length - 1);
+    }
+
+    try {
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+      await saveAppSettings('custom_dashboards_config', dashboards);
+    } catch (e) {
+      console.error('Error deleting view:', e);
+    }
+  }
+  isViewManagerOpen.value = false;
+};
+
+const moveView = async (cIdx, direction) => {
+  const targetIdx = cIdx + direction;
+  const tableId = currentDashboardId.value;
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
+
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
+  }
+  if (idx === -1) return;
+
+  const currentDash = { ...dashboards[idx] };
+  const cards = currentDash.metricCards ? [...currentDash.metricCards] : [];
+  if (targetIdx < 0 || targetIdx >= cards.length) return;
+
+  const temp = cards[cIdx];
+  cards[cIdx] = cards[targetIdx];
+  cards[targetIdx] = temp;
+
+  currentDash.metricCards = cards;
+  dashboards[idx] = currentDash;
+  customDashboards.value = dashboards;
+
+  if (activeMetricCardIdx.value === cIdx) {
+    activeMetricCardIdx.value = targetIdx;
+  } else if (activeMetricCardIdx.value === targetIdx) {
+    activeMetricCardIdx.value = cIdx;
+  }
+
+  try {
+    localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+    await saveAppSettings('custom_dashboards_config', dashboards);
+  } catch (e) {
+    console.error('Error reordering views:', e);
+  }
 };
 
 const visibleColumns = computed(() => {
@@ -4462,6 +4526,9 @@ const handleRouteQueryChange = () => {
   if (route.query?.filterField && route.query?.filterValue) {
     customFilterField.value = String(route.query.filterField);
     customFilterValue.value = String(route.query.filterValue);
+  }
+  if (route.query?.action === 'new_record' || route.query?.action === 'new_trip') {
+    openAddTripDialog();
   }
 };
 

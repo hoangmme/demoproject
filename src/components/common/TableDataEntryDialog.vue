@@ -33,17 +33,12 @@
         >
           <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
             <div class="table-card-icon" :style="{ background: getTableColor(table).bg, color: getTableColor(table).color }">
-              <i :class="table.icon || 'pi pi-table'"></i>
+              <i :class="table.icon ? (table.icon.startsWith('pi-') ? `pi ${table.icon}` : table.icon) : 'pi pi-table'"></i>
             </div>
             <div style="flex: 1; min-width: 0;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span class="table-card-code" :style="{ background: getTableColor(table).badgeBg, color: getTableColor(table).badgeColor }">
-                  {{ table.code }}
-                </span>
-                <strong style="font-size: 0.86rem; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  {{ table.title }}
-                </strong>
-              </div>
+              <strong style="font-size: 0.88rem; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">
+                {{ table.title }}
+              </strong>
               <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">
                 {{ getTableSubInfo(table) }}
               </div>
@@ -58,9 +53,7 @@
     <div v-else-if="step === 2" style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
       <div style="display: flex; align-items: center; justify-content: space-between; background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 12px; border-radius: 8px;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="table-card-code" :style="{ background: getTableColor(selectedTable).badgeBg, color: getTableColor(selectedTable).badgeColor }">
-            {{ selectedTable?.code }}
-          </span>
+          <i :class="selectedTable?.icon ? (selectedTable.icon.startsWith('pi-') ? `pi ${selectedTable.icon}` : selectedTable.icon) : 'pi pi-table'" :style="{ color: selectedTable?.iconColor || '#0284c7' }"></i>
           <span style="font-weight: 700; font-size: 0.84rem; color: #1e3a8a;">
             {{ selectedTable?.title }}
           </span>
@@ -145,7 +138,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -174,9 +167,31 @@ const step = ref(1);
 const selectedTable = ref(null);
 const searchTableQuery = ref('');
 const searchPersonQuery = ref('');
+const customDashboards = ref([]);
+
+const loadDashboards = () => {
+  try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed)) customDashboards.value = parsed;
+    }
+  } catch (e) {}
+};
+loadDashboards();
+
+onMounted(() => {
+  window.addEventListener('custom-dashboards-updated', (e) => {
+    if (e.detail && Array.isArray(e.detail)) customDashboards.value = e.detail;
+    else loadDashboards();
+  });
+});
 
 const allTables = computed(() => {
-  return getUnifiedTableDefinitions(personnelStore);
+  return getUnifiedTableDefinitions({
+    personnelStore,
+    customDashboards: customDashboards.value,
+  });
 });
 
 const filteredTables = computed(() => {
@@ -203,18 +218,21 @@ const filteredPersonnel = computed(() => {
 });
 
 const getTableColor = (table) => {
-  if (!table) return { bg: '#f1f5f9', color: '#475569', badgeBg: '#f1f5f9', badgeColor: '#475569' };
-  if (table.code === 'CB-01') return { bg: '#e0f2fe', color: '#0284c7', badgeBg: '#dbeafe', badgeColor: '#1d4ed8' };
-  if (table.code === 'TN-02') return { bg: '#f3e8ff', color: '#9333ea', badgeBg: '#fae8ff', badgeColor: '#86198f' };
-  if (table.code === 'CD-03') return { bg: '#dcfce7', color: '#16a34a', badgeBg: '#d1fae5', badgeColor: '#065f46' };
-  return { bg: '#fef3c7', color: '#d97706', badgeBg: '#fef9c3', badgeColor: '#854d0e' };
+  const hex = table?.iconColor || '#0284c7';
+  return {
+    bg: `${hex}18`,
+    color: hex,
+    badgeBg: `${hex}22`,
+    badgeColor: hex,
+  };
 };
 
 const getTableSubInfo = (table) => {
-  if (table.code === 'CB-01') return `${personnelStore.personnelList.length} cán bộ · Bảng hồ sơ gốc`;
-  if (table.code === 'TN-02') return `${personnelStore.relativesList.length} thân nhân · Cần liên kết Cán bộ`;
-  if (table.code === 'CD-03') return 'Theo dõi xuất nhập cảnh · Cần liên kết Cán bộ';
-  return 'Bảng chuyên đề / tùy chỉnh tự tạo';
+  if (table.source === 'personnel') return `${personnelStore.personnelList?.length || 0} cán bộ · Bảng hồ sơ gốc`;
+  if (table.source === 'relatives') return `${personnelStore.relativesList?.length || 0} thân nhân · Cần liên kết Cán bộ`;
+  if (table.source === 'trips') return 'Theo dõi xuất nhập cảnh · Chuyến đi Cán bộ & Thân nhân';
+  if (table.source === 'blank') return `Bảng dữ liệu độc lập tự tạo (${table.getRows(personnelStore)?.length || 0} dòng)`;
+  return `Bảng chuyên đề (nguồn: ${table.source === 'personnel' ? 'Cán bộ' : (table.source === 'relatives' ? 'Thân nhân' : 'Chuyến đi')})`;
 };
 
 const handleSelectTable = (table) => {
@@ -226,7 +244,7 @@ const handleSelectTable = (table) => {
     emit('open-create-personnel');
     router.push('/personnel?action=new_personnel');
   } else {
-    // Custom table (TB-xx)
+    // Custom table (bảng tự tạo / chuyên đề)
     visible.value = false;
     router.push(`${table.route}?action=new_record`);
   }
