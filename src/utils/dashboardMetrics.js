@@ -296,6 +296,17 @@ export const buildTopicSourceList = (source, personnelStore) => {
     const presence = resolvePresence(t);
     const tripPrimaryKey = t.id || t.uniqueKey || t.code || `CD-${trips.length + 1}`;
 
+    const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
+    const directTripCccd = t[tKeyField] ?? tCustom[tKeyField] ?? t.cccdchuyendi ?? tCustom.cccdchuyendi ?? t.cccd ?? tCustom.cccd;
+    const canBoCccd = matchedPerson ? String(matchedPerson[pKeyField] ?? matchedPerson.cccdparent ?? matchedPerson.cccd ?? matchedPerson.custom_data?.[pKeyField] ?? '').trim() : '';
+    const relCccd = matchedRelative ? String(matchedRelative[rKeyField] ?? matchedRelative.cccdthannhan ?? matchedRelative.cccd ?? '').trim() : '';
+
+    const resolvedTravelerCccd = !isInternalId(directTripCccd)
+      ? String(directTripCccd).trim()
+      : (isRel ? relCccd : canBoCccd);
+
+    const resolvedParentCccd = canBoCccd || (isRel ? (matchedRelative?.cccdparent || '') : '');
+
     const resolvedPersonnelName = isRel
       ? (matchedRelative?.relativeName || matchedRelative?.name || t.relativeName || tCustom.relativeName || t.personnelName || 'Thân nhân')
       : (matchedPerson?.name || t.personnelName || t.ho_va_ten || t.name || 'Chưa liên kết cán bộ');
@@ -315,6 +326,10 @@ export const buildTopicSourceList = (source, personnelStore) => {
       _primaryKey: tripPrimaryKey,
       uniqueKey: tripKey,
       isRelative: isRel,
+      cccdchuyendi: resolvedTravelerCccd,
+      cccdparent: resolvedParentCccd,
+      cccdthannhan: isRel ? (relCccd || resolvedTravelerCccd) : '',
+      cccd: resolvedTravelerCccd || canBoCccd,
       personnelName: resolvedPersonnelName,
       personnelCode: isRel ? (matchedRelative?.code || t.code || '') : (matchedPerson?.code || t.personnelCode || t.code || ''),
       parentName: resolvedParentName,

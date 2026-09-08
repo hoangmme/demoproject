@@ -284,13 +284,13 @@
           type="button"
           class="btn-sidebar-add-record"
           @click="isDynamicDataEntryOpen = true"
-          title="Nhập liệu bản ghi mới (Chọn bảng & liên kết)"
+          title="Nhập liệu mới (Chọn bảng & liên kết)"
         >
           <i class="pi pi-plus" style="font-size: 0.65rem;"></i>
         </button>
       </div>
 
-      <a class="app-nav-item" href="javascript:void(0)" @click="isDynamicDataEntryOpen = true" title="Nhập liệu bản ghi mới cho bất kỳ bảng nào trong hệ thống">
+      <a class="app-nav-item" href="javascript:void(0)" @click="isDynamicDataEntryOpen = true" title="Nhập liệu mới cho bất kỳ bảng nào trong hệ thống">
         <i class="pi pi-plus-circle" style="color: #0284c7;"></i>
         <span>+ Nhập liệu mới</span>
       </a>
@@ -543,7 +543,7 @@
           <div style="font-size: 0.8rem; color: #991b1b; line-height: 1.45;">
             <strong>Hành động này không thể hoàn tác!</strong><br />
             Bạn đang chuẩn bị xóa toàn bộ dữ liệu của bảng <strong>"{{ deleteFixedTableTargetName }}"</strong> 
-            (Bao gồm <span style="font-weight: 700; text-decoration: underline;">{{ deleteFixedTableCount }} bản ghi</span>).
+            (Bao gồm <span style="font-weight: 700; text-decoration: underline;">{{ deleteFixedTableCount }} kết quả</span>).
           </div>
         </div>
 

@@ -293,7 +293,7 @@
         <!-- Header summary & Export button (Unified PDF/Word Export) -->
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
           <div style="font-size: 0.88rem; color: #0f172a;">
-            Tìm được <b style="color: #2563eb; font-size: 1rem;">{{ searchResults.length }}</b> bản ghi
+            Tìm được <b style="color: #2563eb; font-size: 1rem;">{{ searchResults.length }}</b> kết quả
             <span style="color: #64748b; font-size: 0.8rem; margin-left: 6px;">
               · khớp {{ criteria.length }} điều kiện, nối bằng {{ logicOperator === 'AND' ? 'VÀ' : 'HOẶC' }}
             </span>
@@ -374,7 +374,7 @@
               <tr v-if="searchResults.length === 0">
                 <td colspan="8" style="text-align: center; padding: 2.5rem; color: #94a3b8; font-size: 0.85rem;">
                   <i class="pi pi-search" style="font-size: 1.5rem; display: block; margin-bottom: 8px; opacity: 0.5;"></i>
-                  Không tìm thấy bản ghi nào khớp với điều kiện tìm kiếm. Hãy thử điều chỉnh lại bộ lọc!
+                  Không tìm thấy kết quả nào khớp với điều kiện tìm kiếm. Hãy thử điều chỉnh lại bộ lọc!
                 </td>
               </tr>
             </tbody>

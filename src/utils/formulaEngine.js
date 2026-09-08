@@ -237,6 +237,26 @@ export class FormulaEvaluator {
           continue;
         }
 
+        // Xử lý so sánh với trường rỗng/null (trường thiếu dữ liệu hoặc lookup không có kết quả)
+        if (left === null && right === null) {
+          if (op === '==') left = false;
+          else if (op === '!=') left = true;
+          else left = false;
+          continue;
+        }
+        if ((left === null && right === '') || (left === '' && right === null)) {
+          if (op === '==') left = true;
+          else if (op === '!=') left = false;
+          else left = false;
+          continue;
+        }
+        if (left === null || right === null) {
+          if (op === '==') left = false;
+          else if (op === '!=') left = true;
+          else left = false;
+          continue;
+        }
+
         // So sánh chuỗi mặc định (trim và toLowerCase an toàn)
         const sL = String(left ?? '').trim().toLowerCase();
         const sR = String(right ?? '').trim().toLowerCase();
@@ -321,19 +341,19 @@ export class FormulaEvaluator {
         const fieldName = consume().value;
         if (typeof this.fieldResolver === 'function') {
           const res = this.fieldResolver(fieldName);
-          if (res !== undefined && res !== null && res !== '') {
-            return res === '-' ? '' : res;
+          if (res !== undefined && res !== null && res !== '' && res !== '-') {
+            return res;
           }
         }
         let val = this.context[fieldName] ?? this.context[fieldName.toLowerCase()];
-        if (val !== undefined && val !== null && val !== '') {
-          return val === '-' ? '' : val;
+        if (val !== undefined && val !== null && val !== '' && val !== '-') {
+          return val;
         }
         if (typeof this.fieldResolver === 'function') {
           const res = this.fieldResolver(fieldName);
-          if (res !== undefined && res !== null) return res === '-' ? '' : res;
+          if (res !== undefined && res !== null && res !== '' && res !== '-') return res;
         }
-        return '';
+        return null;
       }
 
       // Lời gọi Hàm: IF(...), DATEDIF(...)...
@@ -355,11 +375,15 @@ export class FormulaEvaluator {
         // Nếu không có dấu ngoặc, kiểm tra xem có phải tên cột không
         if (typeof this.fieldResolver === 'function') {
           const res = this.fieldResolver(funcName);
-          if (res !== undefined && res !== null && res !== '') {
-            return res === '-' ? '' : res;
+          if (res !== undefined && res !== null && res !== '' && res !== '-') {
+            return res;
           }
         }
-        return this.context[funcName] ?? this.context[funcName.toLowerCase()] ?? funcName;
+        const cVal = this.context[funcName] ?? this.context[funcName.toLowerCase()];
+        if (cVal !== undefined && cVal !== null && cVal !== '' && cVal !== '-') {
+          return cVal;
+        }
+        return funcName;
       }
 
       consume();

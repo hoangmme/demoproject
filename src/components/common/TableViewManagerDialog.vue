@@ -77,7 +77,7 @@
 
         <!-- Danh sách điều kiện -->
         <div v-if="form.conditions.length === 0" style="padding: 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; color: #64748b; font-size: 0.76rem;">
-          Chưa đặt điều kiện nào. Chế độ xem này sẽ hiển thị <strong>toàn bộ bản ghi</strong> của bảng.
+          Chưa đặt điều kiện nào. Chế độ xem này sẽ hiển thị <strong>toàn bộ kết quả</strong> của bảng.
         </div>
 
         <div v-else style="display: flex; flex-direction: column; gap: 8px;">

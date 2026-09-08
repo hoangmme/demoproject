@@ -39,7 +39,7 @@
         <div>
           <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
             {{ currentDashboardConfig.title || 'Danh sách chuyến đi' }}
-            <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredList.length }} bản ghi</span>
+            <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredList.length }} kết quả</span>
           </h1>
         </div>
       </div>
@@ -151,7 +151,7 @@
           severity="success"
           size="small"
           @click="openAddTripDialog"
-          :title="`Thêm bản ghi mới trực tiếp vào bảng ${currentDashboardConfig.title || ''}`"
+          :title="`Thêm mới trực tiếp vào bảng ${currentDashboardConfig.title || ''}`"
           style="font-size: 0.8rem;"
         />
       </div>
@@ -242,7 +242,7 @@
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px;">
             <span style="font-weight: 700; color: #1e3a8a; font-size: 0.95rem;">{{ drillDownFilterLabel }}</span>
             <span style="font-weight: 700; color: #2563eb; background: #ffffff; padding: 2px 8px; border-radius: 12px; border: 1px solid #bfdbfe; font-size: 0.75rem;">
-              {{ filteredList.length }} bản ghi
+              {{ filteredList.length }} kết quả
             </span>
           </div>
         </div>
@@ -279,7 +279,7 @@
         :rowsPerPageOptions="[15, 30, 50, 100]"
         :selectionPageOnly="true"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
-        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} bản ghi"
+        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} kết quả"
         :loading="personnelStore.loading"
         responsiveLayout="scroll"
         stripedRows
@@ -4034,7 +4034,7 @@ const openPersonnelDetail = (trip) => {
     activePersonData.value = targetRecord;
     isPersonnelDialogOpen.value = true;
   } else {
-    alert('Không tìm thấy dữ liệu chi tiết của bản ghi!');
+    alert('Không tìm thấy dữ liệu chi tiết của mục này!');
   }
 };
 
@@ -4064,8 +4064,8 @@ const isSameTripItem = (t, trip) => {
 const handleDeleteItem = async (item) => {
   const src = currentDashboardConfig.value?.source || '';
   if (src === 'blank') {
-    const title = item.title || item.name || 'bản ghi này';
-    if (!confirm(`Bạn có chắc chắn muốn xóa bản ghi "${title}" không?`)) return;
+    const title = item.title || item.name || 'mục này';
+    if (!confirm(`Bạn có chắc chắn muốn xóa "${title}" không?`)) return;
     const tid = topicId.value;
     const list = (customTableRows.value || []).filter((r) => r.id !== item.id);
     customTableRows.value = list;
@@ -4163,7 +4163,7 @@ const handleDeleteTrip = async (trip) => {
 const handleBulkDeleteTrips = async () => {
   const count = selectedTrips.value.length;
   if (!count) return;
-  if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${count} bản ghi đã chọn không?`)) return;
+  if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${count} kết quả đã chọn không?`)) return;
 
   const src = currentDashboardConfig.value?.source || '';
   if (src === 'blank') {
@@ -4228,7 +4228,7 @@ const handleBulkDeleteTrips = async () => {
     }
     selectedTrips.value = [];
     await personnelStore.fetchPersonnel();
-    alert(`Đã xóa thành công ${count} bản ghi!`);
+    alert(`Đã xóa thành công ${count} kết quả!`);
   } catch (e) {
     console.error('Bulk delete error in ChildDashboardView:', e);
     alert('Có lỗi xảy ra khi xóa: ' + (e.message || e));

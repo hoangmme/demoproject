@@ -30,7 +30,7 @@
         <div>
           <Button
             v-if="isEdit && authStore.isAdmin"
-            label="Xóa bản ghi"
+            label="Xóa hồ sơ"
             icon="pi pi-trash"
             severity="danger"
             text
@@ -57,7 +57,7 @@
           />
           <Button label="Đóng" severity="secondary" text size="small" @click="visible = false" />
           <Button
-            label="Lưu bản ghi"
+            label="Lưu hồ sơ"
             icon="pi pi-check"
             severity="success"
             size="small"
@@ -149,7 +149,7 @@ const allTableColumns = computed(() => {
 const dialogHeader = computed(() => {
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
   const nameVal = form.value[pNameField] || form.value.name || form.value.ho_va_ten || '';
-  return isEdit.value ? `Chi tiết: ${nameVal || 'Bản ghi'}` : `Thêm bản ghi mới`;
+  return isEdit.value ? `Chi tiết: ${nameVal || 'Hồ sơ'}` : `Thêm hồ sơ mới`;
 });
 
 const safeClone = (obj) => {
@@ -289,7 +289,7 @@ const handleSave = async () => {
 
 const handleDelete = async () => {
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const nameVal = form.value[pNameField] || form.value.name || 'bản ghi này';
+  const nameVal = form.value[pNameField] || form.value.name || 'hồ sơ này';
   if (!confirm(`Bạn có chắc chắn muốn xóa "${nameVal}" không?`)) return;
   try {
     await personnelStore.deletePerson(form.value);

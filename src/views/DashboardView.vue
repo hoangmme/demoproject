@@ -275,7 +275,7 @@
                   :key="item.name"
                   class="country-column-item"
                   @click="handleChartItemClick(widget, item)"
-                  :title="`${item.name}: ${item.count} bản ghi\n(Bấm để xem danh sách chi tiết)`"
+                  :title="`${item.name}: ${item.count} kết quả\n(Bấm để xem danh sách chi tiết)`"
                   style="cursor: pointer;"
                 >
                   <span class="column-top-total">{{ item.count }}</span>
@@ -335,7 +335,7 @@
                 :key="item.name"
                 class="breakdown-row"
                 @click="handleChartItemClick(widget, item)"
-                :title="`${item.name}: ${item.count} bản ghi\n(Bấm để xem danh sách chi tiết)`"
+                :title="`${item.name}: ${item.count} kết quả\n(Bấm để xem danh sách chi tiết)`"
                 style="cursor: pointer;"
               >
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -347,7 +347,7 @@
                   </div>
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <span style="font-size: 0.78rem; font-weight: 700;" :style="{ color: widget.color || '#2e7d32' }">
-                      {{ item.count }} bản ghi
+                      {{ item.count }} kết quả
                     </span>
                     <span style="font-size: 0.68rem; color: #94a3b8;">
                       ({{ getWidgetChartData(widget).total > 0 ? Math.round((item.count / getWidgetChartData(widget).total) * 100) : 0 }}%)
@@ -808,14 +808,14 @@
           </div>
         </div>
 
-        <!-- Preview Live Số lượng bản ghi khớp -->
+        <!-- Preview Live Số lượng kết quả khớp -->
         <div style="font-size: 0.78rem; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
           <span style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
             <i class="pi pi-check-circle" style="color: #16a34a;"></i>
             Số liệu tính toán trực tiếp theo điều kiện hiện tại:
           </span>
           <span style="font-size: 1.1rem; font-weight: 800; color: #166534;">
-            {{ previewLiveCount }} bản ghi
+            {{ previewLiveCount }} kết quả
           </span>
         </div>
       </div>
@@ -968,7 +968,7 @@
                   {{ drilldownExtraTitle || drilldownWidget?.title || 'Dữ liệu Thống kê Chi tiết' }}
                 </h3>
                 <span style="font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;">
-                  {{ filteredDrilldownList.length }} bản ghi
+                  {{ filteredDrilldownList.length }} kết quả
                 </span>
                 <span v-if="drilldownSelectedRows.length > 0" style="font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: #dbeafe; color: #1d4ed8;">
                   Đã chọn: {{ drilldownSelectedRows.length }}
@@ -1022,7 +1022,7 @@
           :rowsPerPageOptions="[15, 25, 50, 100]"
           :selectionPageOnly="true"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
-          currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} bản ghi"
+          currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} kết quả"
           responsiveLayout="scroll"
           stripedRows
           removableSort
@@ -1123,7 +1123,7 @@
       <template #footer>
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding-top: 6px;">
           <span style="font-size: 0.75rem; color: #64748b;">
-            Tổng cộng: <strong>{{ filteredDrilldownList.length }}</strong> bản ghi (Bấm vào dòng để xem chi tiết bản ghi)
+            Tổng cộng: <strong>{{ filteredDrilldownList.length }}</strong> kết quả (Bấm vào dòng để xem chi tiết)
           </span>
           <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownModalOpen = false" />
         </div>
