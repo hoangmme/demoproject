@@ -117,13 +117,11 @@
               type="checkbox"
               :value="col.id"
               :checked="modelValue.includes(col.id)"
-              :disabled="col.id === canonicalPrimaryId || col.isPrimaryField"
               @change="toggleCol(col.id)"
               style="accent-color: #2e7d32; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;"
             />
             <span class="item-text" :title="col.label || col.id">
-              <span v-if="col.id === canonicalPrimaryId || col.isPrimaryField" style="margin-right: 4px;" title="Cột chính (Cố định vị trí đầu tiên)">🔒</span>
-              <span v-else-if="showColIndex && getColIndex(col)" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.75rem;">
+              <span v-if="showColIndex && getColIndex(col)" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.75rem;">
                 Cột {{ getColIndex(col) }}:
               </span>
               {{ col.label || col.id }}
@@ -156,18 +154,18 @@
             <button
               type="button"
               class="btn-reorder"
-              :disabled="idx <= 1 || col.id === canonicalPrimaryId || col.isPrimaryField"
+              :disabled="idx === 0"
               @click.stop="moveUp(idx)"
-              :title="idx <= 1 || col.id === canonicalPrimaryId ? 'Cột đầu tiên (Cột chính) được khóa cố định vị trí' : 'Dời cột lên trước (sang trái trên bảng)'"
+              title="Dời cột lên trước (sang trái trên bảng)"
             >
               <i class="pi pi-chevron-up"></i>
             </button>
             <button
               type="button"
               class="btn-reorder"
-              :disabled="idx === 0 || idx === displayOptions.length - 1 || col.id === canonicalPrimaryId || col.isPrimaryField"
+              :disabled="idx === displayOptions.length - 1"
               @click.stop="moveDown(idx)"
-              :title="idx === 0 || col.id === canonicalPrimaryId ? 'Cột đầu tiên (Cột chính) được khóa cố định vị trí' : 'Dời cột xuống sau (sang phải trên bảng)'"
+              title="Dời cột xuống sau (sang phải trên bảng)"
             >
               <i class="pi pi-chevron-down"></i>
             </button>
@@ -288,16 +286,6 @@ const displayOptions = computed(() => {
     opts = ordered;
   }
 
-  // Khóa cứng: Cột đầu tiên (Primary Field) BẮT BUỘC luôn ở vị trí index 0
-  const pId = canonicalPrimaryId.value;
-  if (opts.length > 1 && pId) {
-    const primaryIdx = opts.findIndex((o) => o.id === pId);
-    if (primaryIdx > 0) {
-      const [primaryCol] = opts.splice(primaryIdx, 1);
-      opts.unshift(primaryCol);
-    }
-  }
-
   if (searchQuery.value && searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase();
     return opts.filter((o) => (o.label || o.id || '').toLowerCase().includes(q));
@@ -307,8 +295,7 @@ const displayOptions = computed(() => {
 });
 
 const moveUp = (idx) => {
-  // Tuyệt đối không cho phép đổi chỗ với cột chính (idx <= 1)
-  if (idx <= 1) return;
+  if (idx <= 0) return;
   const list = displayOptions.value.map((o) => o.id);
   const temp = list[idx];
   list[idx] = list[idx - 1];
@@ -322,8 +309,7 @@ const moveUp = (idx) => {
 };
 
 const moveDown = (idx) => {
-  // Tuyệt đối không cho phép di dời cột chính (idx === 0)
-  if (idx === 0 || idx >= displayOptions.value.length - 1) return;
+  if (idx < 0 || idx >= displayOptions.value.length - 1) return;
   const list = displayOptions.value.map((o) => o.id);
   const temp = list[idx];
   list[idx] = list[idx + 1];

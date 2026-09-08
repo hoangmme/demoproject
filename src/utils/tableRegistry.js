@@ -45,16 +45,6 @@ export function getUnifiedTableDefinitions(options = {}) {
     getColumns: (store) => {
       const cols = [];
       const seen = new Set();
-      // Cột liên kết Cán bộ
-      cols.push({
-        id: '_parentPersonnelName',
-        label: 'Cán bộ (Họ và tên)',
-        group: 'Liên kết',
-        format: 'text',
-        width: '180px',
-        isVirtual: true,
-      });
-      seen.add('_parentPersonnelName');
 
       (store?.importMappingTrips || []).forEach((g) => {
         (g.columns || []).forEach((c) => {
@@ -73,6 +63,19 @@ export function getUnifiedTableDefinitions(options = {}) {
           }
         });
       });
+
+      // Cột liên kết Cán bộ (mặc định để sau các cột nghiệp vụ chuyến đi)
+      if (!seen.has('_parentPersonnelName')) {
+        cols.push({
+          id: '_parentPersonnelName',
+          label: 'Cán bộ liên quan',
+          group: 'Liên kết',
+          format: 'text',
+          width: '180px',
+          isVirtual: true,
+        });
+        seen.add('_parentPersonnelName');
+      }
 
       if (!seen.has('presenceStatus')) {
         cols.push({

@@ -43,8 +43,8 @@
         <!-- 2. Đổi kiểu dữ liệu (Format) -->
         <div class="menu-field">
           <label>Kiểu dữ liệu:</label>
-          <div v-if="column?.isPrimaryField" style="font-size: 0.73rem; color: #64748b; padding: 6px 8px; background: #f1f5f9; border-radius: 6px; font-weight: 600;">
-            🔒 Văn bản (Cột định danh chính - Cố định)
+          <div v-if="column?.id === '_primaryKey'" style="font-size: 0.73rem; color: #64748b; padding: 6px 8px; background: #f1f5f9; border-radius: 6px; font-weight: 600;">
+            Mã định danh (ID Hệ thống)
           </div>
           <select v-else v-model="editFormat" class="menu-select" @change="handleFormatChange">
             <option value="text">Văn bản (Text) - Mặc định</option>
@@ -254,7 +254,7 @@
         <!-- Chèn cột & Nhân bản (Lark Base style) -->
         <div class="menu-actions" style="margin-bottom: 6px;">
           <button
-            v-if="!column?.isPrimaryField && !isFirstColumn && column?.id !== '_parentPersonnelName' && column?.id !== 'name' && column?.id !== 'ho_va_ten'"
+            v-if="column?.id !== '_primaryKey'"
             type="button"
             class="menu-action-btn"
             @click="handleInsertLeft"
@@ -294,7 +294,7 @@
           </button>
 
           <button
-            v-if="!column?.isVirtual && !column?.isPrimaryField && column?.id !== '_primaryKey' && column?.id !== 'code' && column?.id !== 'stt'"
+            v-if="!column?.isVirtual && column?.id !== '_primaryKey' && column?.id !== 'code' && column?.id !== 'stt'"
             type="button"
             class="menu-action-btn action-danger"
             @click="handleDeleteColumn"

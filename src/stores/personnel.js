@@ -74,12 +74,12 @@ export const usePersonnelStore = defineStore('personnel', {
         }
       });
 
-      // Cột Khóa chính (Unique Key / ID): Luôn đứng đầu tiên, mặc định ẩn nhưng có thể gọi ra ở chọn cột & bộ lọc
+      // Cột Khóa chính (Unique Key / ID): Mặc định ẩn nhưng có thể gọi ra ở chọn cột & bộ lọc
       if (!seen.has('_primaryKey')) {
         seen.add('_primaryKey');
-        list.unshift({
+        list.push({
           id: '_primaryKey',
-          label: '🔑 Mã định danh (Khóa chính)',
+          label: 'Mã định danh (ID)',
           width: '160px',
           tableWidth: '160px',
           isVirtual: true,
@@ -88,18 +88,12 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       }
 
-      // Đánh dấu Cột chính định danh (Primary Field)
-      const primaryCol = list.find((c) => c.id === 'name' || c.id === 'ho_va_ten' || c.id === '_parentPersonnelName');
-      if (primaryCol) {
-        primaryCol.isPrimaryField = true;
-      }
-
       if (list.length === 0) {
         return [
-          { id: '_primaryKey', label: '🔑 Mã định danh (Khóa chính)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
+          { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'code', label: 'Mã CB', width: '115px', isVirtual: true, colIndex: null },
           { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
-          { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false, isPrimaryField: true },
+          { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false },
           { id: 'birthYear', label: 'Năm sinh', colIndex: '2', width: '120px', isVirtual: false },
           { id: 'departmentId', label: 'Phòng ban', colIndex: '3', width: '160px', isVirtual: false },
           { id: 'position', label: 'Chức vụ', colIndex: '4', width: '140px', isVirtual: false },
@@ -145,12 +139,12 @@ export const usePersonnelStore = defineStore('personnel', {
         }
       });
 
-      // Cột Khóa chính (Unique Key / ID): Luôn đứng đầu tiên
+      // Cột Khóa chính (Unique Key / ID)
       if (!seen.has('_primaryKey')) {
         seen.add('_primaryKey');
-        list.unshift({
+        list.push({
           id: '_primaryKey',
-          label: '🔑 Mã định danh (Khóa chính)',
+          label: 'Mã định danh (ID)',
           width: '160px',
           tableWidth: '160px',
           isVirtual: true,
@@ -161,7 +155,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
       if (list.length === 0) {
         return [
-          { id: '_primaryKey', label: '🔑 Mã định danh (Khóa chính)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
+          { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'code', label: 'Mã định danh', width: '115px', isVirtual: true, colIndex: null },
           { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false },
           { id: 'birthYear', label: 'Năm sinh', colIndex: '2', width: '120px', isVirtual: false },
@@ -213,9 +207,9 @@ export const usePersonnelStore = defineStore('personnel', {
       // Cột Khóa chính Thân nhân (Unique Key / ID)
       if (!seen.has('_primaryKey')) {
         seen.add('_primaryKey');
-        list.unshift({
+        list.push({
           id: '_primaryKey',
-          label: '🔑 Mã định danh (Khóa chính)',
+          label: 'Mã định danh (ID)',
           width: '160px',
           tableWidth: '160px',
           isVirtual: true,
@@ -224,17 +218,11 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       }
 
-      // Đánh dấu Cột chính định danh (Primary Field) Thân nhân
-      const primaryRelCol = list.find((c) => c.id === 'relativeName' || c.id === 'name');
-      if (primaryRelCol) {
-        primaryRelCol.isPrimaryField = true;
-      }
-
       if (list.length === 0) {
         return [
-          { id: '_primaryKey', label: '🔑 Mã định danh (Khóa chính)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
+          { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'relationshipName', label: 'Mối quan hệ', colIndex: '1', width: '130px', isVirtual: false },
-          { id: 'relativeName', label: 'Họ và tên Thân nhân', colIndex: '2', width: '180px', isVirtual: false, isPrimaryField: true },
+          { id: 'relativeName', label: 'Họ và tên Thân nhân', colIndex: '2', width: '180px', isVirtual: false },
           { id: 'birthYear', label: 'Năm sinh', colIndex: '3', width: '110px', isVirtual: false },
           { id: 'currentAddress', label: 'Nơi cư trú', colIndex: '4', width: '180px', isVirtual: false },
           { id: 'occupation', label: 'Nghề nghiệp', colIndex: '5', width: '160px', isVirtual: false },
@@ -266,9 +254,9 @@ export const usePersonnelStore = defineStore('personnel', {
       // Cột Khóa chính Chuyến đi (Unique Key / ID)
       if (!seen.has('_primaryKey')) {
         seen.add('_primaryKey');
-        list.unshift({
+        list.push({
           id: '_primaryKey',
-          label: '🔑 Mã định danh (Khóa chính)',
+          label: 'Mã định danh (ID)',
           width: '160px',
           tableWidth: '160px',
           isVirtual: true,
@@ -279,7 +267,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
       if (list.length === 0) {
         return [
-          { id: '_primaryKey', label: '🔑 Mã định danh (Khóa chính)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
+          { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'cccdchuyendi', label: 'CCCD / Định danh người đi (cccdchuyendi)' },
           { id: 'countryName', label: 'Quốc gia / Nơi đến' },
           { id: 'departureDate', label: 'Ngày xuất cảnh' },

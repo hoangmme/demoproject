@@ -310,10 +310,7 @@
                     Cột {{ col.colIndex }}:
                   </span>
                   {{ col.label }}
-                  <span v-if="col.isPrimaryField" title="Cột định danh chính (Primary Field - Khóa cố định)" style="font-size: 0.72rem; margin-left: 2px;">🔒</span>
-                  <span v-else-if="isChildPrimaryKey(col.id)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
                 </span>
-                <i v-if="isNameColumn(col.id)" class="pi pi-sliders-h" style="font-size: 0.7rem; cursor: pointer; color: #94a3b8; margin-left: 2px; flex-shrink: 0;" @click.stop="toggleNameColConfig($event)" title="Tùy chỉnh nội dung cột" />
               </div>
               <button
                 type="button"
@@ -328,35 +325,9 @@
           <template #body="{ data }">
             <!-- 0. Cột Khóa chính (_primaryKey) -->
             <template v-if="col.id === '_primaryKey'">
-              <span style="display: inline-flex; align-items: center; gap: 5px; font-family: monospace; font-size: 0.76rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
-                <i class="pi pi-key" style="font-size: 0.7rem; color: #d97706;"></i>
+              <span style="display: inline-flex; align-items: center; font-family: monospace; font-size: 0.76rem; font-weight: 600; color: #475569; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
                 {{ getCellValue(data, col.id) }}
               </span>
-            </template>
-
-            <!-- 1. Cột ảo Thông tin Đối tượng / Cán bộ / Học sinh (configurable fields) -->
-            <template v-else-if="isNameColumn(col.id)">
-              <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
-                <template v-for="(opt, fIdx) in activeParentFieldsList" :key="opt.key">
-                  <div v-if="getPersonFieldValue(data, opt.key)">
-                    <!-- Dòng Họ tên / Trường chính: đậm và nổi bật -->
-                    <strong
-                      v-if="opt.key === 'name' || (fIdx === 0 && !activeParentFieldsList.some(o => o.key === 'name'))"
-                      style="color: #0f172a; font-weight: 700; font-size: 0.85rem; cursor: pointer;"
-                    >
-                      <span v-if="(data.isRelative || currentDashboardConfig.source === 'relatives') && opt.key === 'name'" style="font-size: 0.7rem; color: #64748b; font-weight: 600;">
-                        {{ getParentColPrefix() }}:
-                      </span>
-                      {{ getPersonFieldValue(data, opt.key) }}
-                    </strong>
-                    <!-- Các dòng thuộc tính tiếp theo: hiển thị rõ Tiêu đề cột + Giá trị -->
-                    <div v-else style="font-size: 0.72rem; color: #475569; line-height: 1.3;">
-                      <span style="color: #64748b; font-weight: 600;">{{ opt.label }}: </span>
-                      <span style="color: #334155;">{{ getPersonFieldValue(data, opt.key) }}</span>
-                    </div>
-                  </div>
-                </template>
-              </div>
             </template>
 
             <!-- 1c. Cột Họ và tên Thân nhân -->
@@ -2710,15 +2681,15 @@ const allAvailableColumnsList = computed(() => {
 
     // Các cột ảo: Mã cán bộ, Thông tin cán bộ, Trạng thái hiện diện
     const virtualTripCols = [
-      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
-      { id: '_parentPersonnelName', label: getParentColLabel('Thông tin cán bộ'), width: '180px' },
-      { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px' },
+      { id: '_parentPersonnelName', label: 'Cán bộ liên quan', width: '180px', format: 'text', isVirtual: true, isSystem: true },
+      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px', format: 'text', isVirtual: true, isSystem: true },
+      { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px', format: 'presence', isVirtual: true },
     ];
 
     virtualTripCols.forEach((vc) => {
       if (!seen.has(vc.id)) {
         seen.add(vc.id);
-        rawList.unshift({
+        rawList.push({
           ...vc,
           colIndex: null,
           isVirtual: true,
@@ -2749,9 +2720,9 @@ const allAvailableColumnsList = computed(() => {
 
     // Các cột ảo bổ trợ: Cán bộ liên quan, Trạng thái hiện diện, Mã cán bộ
     const virtualRelativeCols = [
-      { id: '_parentPersonnelName', label: getParentColLabel('Cán bộ liên quan'), width: '180px' },
-      { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px' },
-      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
+      { id: '_parentPersonnelName', label: 'Cán bộ liên quan', width: '180px', format: 'text', isVirtual: true, isSystem: true },
+      { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px', format: 'presence', isVirtual: true },
+      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px', format: 'text', isVirtual: true, isSystem: true },
     ];
 
     virtualRelativeCols.forEach((vc) => {
@@ -2768,7 +2739,6 @@ const allAvailableColumnsList = computed(() => {
 
     // Ưu tiên thứ tự cột hiển thị chuẩn cho thân nhân (theo đúng mã cột trong cấu hình Cài đặt)
     const prioritizedRelCols = [
-      '_parentPersonnelName',
       'relativeName',
       'relationshipName',
       '_presenceStatus',
@@ -2777,6 +2747,7 @@ const allAvailableColumnsList = computed(() => {
       'birthYearTN',
       'currentAddress',
       'occupation',
+      '_parentPersonnelName',
       '_parentPersonnelCode',
     ];
     rawList.sort((a, b) => {
@@ -2819,7 +2790,7 @@ const allAvailableColumnsList = computed(() => {
     virtualPersonnelCols.forEach((vc) => {
       if (!seen.has(vc.id)) {
         seen.add(vc.id);
-        rawList.unshift({
+        rawList.push({
           ...vc,
           colIndex: null,
           isVirtual: true,
@@ -2829,12 +2800,12 @@ const allAvailableColumnsList = computed(() => {
     });
   }
 
-  // Cột Khóa chính (Unique Key / ID): Luôn đứng đầu tiên
+  // Cột Khóa chính (Unique Key / ID)
   if (!seen.has('_primaryKey')) {
     seen.add('_primaryKey');
-    rawList.unshift({
+    rawList.push({
       id: '_primaryKey',
-      label: '🔑 Mã định danh (Khóa chính)',
+      label: 'Mã định danh (ID)',
       width: '160px',
       tableWidth: '160px',
       colIndex: null,
@@ -2968,15 +2939,10 @@ const visibleColumns = computed(() => {
       });
     }
   });
-  const primaryId = allAvailableColumnsList.value.find(c => c.id && c.id !== 'stt')?.id;
-  let filteredIds = selectedColIds.value
+  const filteredIds = selectedColIds.value
     .filter((id) => id !== 'status' && id !== 'tripStatus' && colMap.has(id));
-  if (primaryId && filteredIds.includes(primaryId)) {
-    filteredIds = [primaryId, ...filteredIds.filter((id) => id !== primaryId)];
-  }
-  return filteredIds.map((id, idx) => ({
+  return filteredIds.map((id) => ({
     ...colMap.get(id),
-    isPrimaryField: idx === 0,
   }));
 });
 
@@ -4300,10 +4266,10 @@ const initTopicColumns = async () => {
     // Đảm bảo cho bảng Thân nhân mặc định: có thông tin cán bộ, họ tên thân nhân, mối quan hệ, trạng thái hiện diện và quốc gia
     if (currentDashboardConfig.value?.source === 'relatives') {
       selectedColIds.value = selectedColIds.value.map((id) => (id === 'countryName' ? 'countryNameTN' : id));
-      const essential = ['_parentPersonnelName', 'relativeName', 'relationshipName', '_presenceStatus', 'countryNameTN'];
+      const essential = ['relativeName', 'relationshipName', '_presenceStatus', 'countryNameTN'];
       const missing = essential.filter((c) => !selectedColIds.value.includes(c));
       if (missing.length > 0) {
-        selectedColIds.value = [...missing, ...selectedColIds.value];
+        selectedColIds.value = [...selectedColIds.value, ...missing];
       }
     }
   };

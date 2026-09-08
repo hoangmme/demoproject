@@ -315,8 +315,6 @@
                 </span>
                 <span class="table-col-title-inline">
                   <span>{{ col.label }}</span>
-                  <span v-if="col.isPrimaryField" class="table-col-lock-badge" title="Cột định danh chính (Primary Field - Khóa cố định)">🔒</span>
-                  <span v-else-if="isPersonnelPrimaryKey(col.id, false)" class="table-col-key-badge" title="Khóa định danh chính (Primary Key / Cột primal)">🔑</span>
                 </span>
               </span>
               <button
@@ -332,30 +330,14 @@
           <template #body="{ data }">
             <!-- Cột Khóa chính (_primaryKey) -->
             <template v-if="col.id === '_primaryKey'">
-              <span style="display: inline-flex; align-items: center; gap: 5px; font-family: monospace; font-size: 0.76rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
-                <i class="pi pi-key" style="font-size: 0.7rem; color: #d97706;"></i>
+              <span style="display: inline-flex; align-items: center; font-family: monospace; font-size: 0.76rem; font-weight: 600; color: #475569; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
                 {{ getDisplayValue(data, col.id) }}
               </span>
             </template>
 
-            <!-- Cột ảo Thông tin cán bộ / Đối tượng chính (configurable fields) -->
+            <!-- Cột hệ thống / Thông tin cán bộ liên quan -->
             <template v-else-if="col.id === '_parentPersonnelName'">
-              <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
-                <template v-for="(opt, fIdx) in activeParentFieldsList" :key="opt.key">
-                  <div v-if="getPersonFieldValue(data, opt.key)">
-                    <strong
-                      v-if="opt.key === 'name' || (fIdx === 0 && !activeParentFieldsList.some(o => o.key === 'name'))"
-                      style="color: #1f2937; font-weight: 700; font-size: 0.85rem;"
-                    >
-                      {{ getPersonFieldValue(data, opt.key) }}
-                    </strong>
-                    <div v-else style="font-size: 0.72rem; color: #4b5563; line-height: 1.3;">
-                      <span style="color: #64748b; font-weight: 600;">{{ opt.label }}: </span>
-                      <span>{{ getPersonFieldValue(data, opt.key) }}</span>
-                    </div>
-                  </div>
-                </template>
-              </div>
+              <span>{{ getPersonFieldValue(data, 'name') || data.name || '-' }}</span>
             </template>
 
             <!-- Name column -->
@@ -977,8 +959,6 @@
                 </span>
                 <span class="table-col-title-inline">
                   <span>{{ col.label }}</span>
-                  <span v-if="col.isPrimaryField" class="table-col-lock-badge" title="Cột định danh chính (Primary Field - Khóa cố định)">🔒</span>
-                  <span v-else-if="isPersonnelPrimaryKey(col.id, true)" class="table-col-key-badge" title="Khóa định danh chính (Primary Key / Cột primal)">🔑</span>
                 </span>
               </span>
               <button
@@ -2275,18 +2255,7 @@ const activeColumns = computed(() => {
     return '160px';
   };
 
-  // Đảm bảo Cột chính (Primary Field) luôn đứng ở vị trí đầu tiên [0]
-  const configuredFirstCol = personnelStore.importMappingPersonnel?.[0]?.columns?.find(c => c.id && c.id !== 'stt')?.id || 'name';
-  const primaryId = (map['_parentPersonnelName'] && personnelStore.visibleColumns.includes('_parentPersonnelName'))
-    ? '_parentPersonnelName'
-    : configuredFirstCol;
-
-  let orderedIds = personnelStore.visibleColumns.filter((id) => map[id]);
-  if (orderedIds.includes(primaryId)) {
-    orderedIds = [primaryId, ...orderedIds.filter((id) => id !== primaryId)];
-  } else if (map[primaryId]) {
-    orderedIds.unshift(primaryId);
-  }
+  const orderedIds = personnelStore.visibleColumns.filter((id) => map[id]);
 
   return orderedIds.map((id) => {
     const cfg = map[id];
@@ -2301,7 +2270,6 @@ const activeColumns = computed(() => {
       format: cfg.format || 'text',
       required: Boolean(cfg.required),
       options: cfg.options || '',
-      isPrimaryField: cfg.id === primaryId,
     };
   });
 });
@@ -2423,14 +2391,8 @@ const activeRelativeColumns = computed(() => {
     });
   });
 
-  const primaryRelId = (personnelStore.importMappingRelative?.[0]?.columns?.find(c => c.id && c.id !== 'stt')?.id) || 'relativeName';
-  let filteredIds = (personnelStore.visibleRelativeColumns || [])
-    .filter((id) => id !== '_parentPersonnelName' && id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo');
-  if (filteredIds.includes(primaryRelId)) {
-    filteredIds = [primaryRelId, ...filteredIds.filter((id) => id !== primaryRelId)];
-  } else if (map[primaryRelId]) {
-    filteredIds.unshift(primaryRelId);
-  }
+  const filteredIds = (personnelStore.visibleRelativeColumns || [])
+    .filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo');
 
   return filteredIds.map((id) => {
     const cfg = map[id];
@@ -2445,11 +2407,10 @@ const activeRelativeColumns = computed(() => {
         tableWidth: cfg.tableWidth || null,
         required: Boolean(cfg.required),
         options: cfg.options || '',
-        isPrimaryField: cfg.id === primaryRelId,
       };
     }
     const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
-    return found ? { ...found, colIndex: idxText, isPrimaryField: found.id === primaryRelId } : { id, label: id, width: '160px', colIndex: idxText, isPrimaryField: id === primaryRelId };
+    return found ? { ...found, colIndex: idxText } : { id, label: id, width: '160px', colIndex: idxText };
   });
 });
 
