@@ -364,36 +364,17 @@
             </template>
 
 
-            <!-- 2. Đơn vị công tác -->
-            <template v-else-if="col.id === 'departmentName' || col.id === 'departmentId' || col.id === 'don_vi_cong_tac' || col.id === 'don_vi'">
-              <span>{{ getDepartmentValue(data) !== '-' ? getDepartmentValue(data) : (getCellValue(data, col.id) !== '-' ? getCellValue(data, col.id) : '-') }}</span>
+            <!-- 2. Cột ngày tháng định dạng chuẩn (bất kể mã cột) -->
+            <template v-else-if="col.format === 'date' || col.id === 'departureDate' || col.id === 'approvedDepartureDate' || col.id === 'arrivalDate' || col.id === 'approvedArrivalDate'">
+              <span>{{ formatDisplayDate(getCellValue(data, col.id)) }}</span>
             </template>
 
-            <!-- 3. Ngày xuất cảnh & Ngày nhập cảnh / về -->
-            <template v-else-if="col.id === 'departureDate' || col.id === 'approvedDepartureDate' || col.id === 'arrivalDate' || col.id === 'approvedArrivalDate'">
-              <span>{{ formatDisplayDate(data[col.id] || getCellValue(data, col.id)) }}</span>
-            </template>
-
-            <!-- 5. Số quyết định -->
+            <!-- 3. Số quyết định -->
             <template v-else-if="col.id === 'decisionNumber' || col.id === 'decision'">
-              <span v-if="data.decisionNumber" class="code-badge-decision">
-                {{ data.decisionNumber }}
+              <span v-if="getCellValue(data, col.id) && getCellValue(data, col.id) !== '-'" class="code-badge-decision">
+                {{ getCellValue(data, col.id) }}
               </span>
               <span v-else style="color: #94a3b8;">-</span>
-            </template>
-
-            <!-- 6. Quốc gia -->
-            <template v-else-if="col.id === 'countryName' || col.id === 'country' || col.id === 'countryNameTN' || col.id === 'quoc_gia_xuat_canh'">
-              <span style="font-weight: 600; color: #1e293b;">
-                {{ data[col.id] || getCellValue(data, col.id) }}
-              </span>
-            </template>
-
-            <!-- 7. Nguồn kinh phí -->
-            <template v-else-if="col.id === 'fundingName' || col.id === 'funding' || col.id === 'nguon_kinh_phi' || col.id === 'kinh_phi'">
-              <span class="badge-funding">
-                {{ getFundingValue(data) }}
-              </span>
             </template>
 
             <!-- Text + File Loop column -->
@@ -1748,28 +1729,7 @@ const activeMetricCards = computed(() => {
 // Sử dụng resolvePresence làm chuẩn chung từ formatters.js
 const getTripPresence = (t) => resolvePresence(t);
 
-// Robust funding extractor across all database keys/aliases
-const getFundingValue = (item) => {
-  if (!item) return '-';
-  const val = (
-    item.fundingName ||
-    item.funding ||
-    item.nguon_kinh_phi ||
-    item.kinh_phi ||
-    item.nguonKinhPhi ||
-    item.kinhPhi ||
-    item.rawTrip?.fundingName ||
-    item.rawTrip?.funding ||
-    item.rawTrip?.nguon_kinh_phi ||
-    item.rawTrip?.kinh_phi ||
-    item.custom_data?.fundingName ||
-    item.custom_data?.funding ||
-    item.custom_data?.nguon_kinh_phi ||
-    item.custom_data?.kinh_phi ||
-    ''
-  );
-  return (val && String(val).trim() !== '' && String(val).trim() !== '-') ? String(val).trim() : '-';
-};
+
 
 const isCardHidden = (card) => {
   if (!card) return false;
@@ -1894,14 +1854,8 @@ const hasDrillDownFilter = computed(() => {
   return !!(
     route.query?.card ||
     route.query?.title ||
-    route.query?.country ||
-    route.query?.funding ||
-    route.query?.department ||
     (route.query?.filterField && route.query?.filterValue) ||
-    customFilterField.value ||
-    selectedCountry.value ||
-    selectedFunding.value ||
-    selectedDepartment.value
+    customFilterField.value
   );
 });
 
@@ -1915,15 +1869,6 @@ const drillDownFilterLabel = computed(() => {
     const foundCard = activeMetricCards.value?.find((c) => c.id === cardId || c.label === cardId);
     if (foundCard) parts.push(foundCard.label);
     else parts.push(cardId);
-  }
-  if (route.query?.country || selectedCountry.value) {
-    parts.push(`Quốc gia: "${route.query?.country || selectedCountry.value}"`);
-  }
-  if (route.query?.funding || selectedFunding.value) {
-    parts.push(`Kinh phí: "${route.query?.funding || selectedFunding.value}"`);
-  }
-  if (route.query?.department || selectedDepartment.value) {
-    parts.push(`Đơn vị: "${route.query?.department || selectedDepartment.value}"`);
   }
   const fField = route.query?.filterField || customFilterField.value;
   const fVal = route.query?.filterValue || customFilterValue.value;
@@ -3297,29 +3242,6 @@ const availableYears = computed(() => {
   return Array.from(set).sort((a, b) => b - a);
 });
 
-const availableCountries = computed(() => {
-  const set = new Set();
-  currentSourceList.value.forEach((t) => {
-    if (t.countryName && t.countryName !== '-') set.add(t.countryName);
-  });
-  return Array.from(set).sort();
-});
-
-const availableDepartments = computed(() => {
-  const set = new Set();
-  currentSourceList.value.forEach((t) => {
-    if (t.departmentName) set.add(t.departmentName);
-  });
-  return Array.from(set).sort();
-});
-
-const availableFundings = computed(() => {
-  const set = new Set();
-  currentSourceList.value.forEach((t) => {
-    if (t.fundingName && t.fundingName !== '-') set.add(t.fundingName);
-  });
-  return Array.from(set).sort();
-});
 
 // Filtered List
 const filteredList = computed(() => {
@@ -3377,54 +3299,23 @@ const filteredList = computed(() => {
     });
   }
 
-  // 4. Lọc theo Quốc gia (country / countryName / quoc_gia_xuat_canh)
-  const targetCountry = route.query?.country || selectedCountry.value;
-  if (targetCountry) {
-    const tC = String(targetCountry).trim().toLowerCase();
-    list = list.filter((row) => {
-      const c1 = String(row.countryName || '').trim().toLowerCase();
-      const c2 = String(extractRowFieldValue(row, 'countryName', personnelStore) || '').trim().toLowerCase();
-      const c3 = String(extractRowFieldValue(row, 'quoc_gia_xuat_canh', personnelStore) || '').trim().toLowerCase();
-      return c1 === tC || c2 === tC || c3 === tC || c1.includes(tC) || c2.includes(tC) || c3.includes(tC);
-    });
-  }
-
-  // 5. Lọc theo Kinh phí
-  const targetFunding = route.query?.funding || selectedFunding.value;
-  if (targetFunding) {
-    const tF = String(targetFunding).trim().toLowerCase();
-    list = list.filter((row) => {
-      const f1 = String(row.fundingName || '').trim().toLowerCase();
-      const f2 = String(extractRowFieldValue(row, 'fundingName', personnelStore) || '').trim().toLowerCase();
-      const f3 = String(extractRowFieldValue(row, 'nguon_kinh_phi', personnelStore) || '').trim().toLowerCase();
-      return f1 === tF || f2 === tF || f3 === tF || f1.includes(tF) || f2.includes(tF) || f3.includes(tF);
-    });
-  }
-
-  // 6. Lọc theo Đơn vị
-  const targetDept = route.query?.department || selectedDepartment.value;
-  if (targetDept) {
-    const tD = String(targetDept).trim().toLowerCase();
-    list = list.filter((row) => {
-      const d1 = String(row.departmentName || '').trim().toLowerCase();
-      const d2 = String(extractRowFieldValue(row, 'departmentName', personnelStore) || '').trim().toLowerCase();
-      return d1 === tD || d2 === tD || d1.includes(tD) || d2.includes(tD);
-    });
-  }
-
-  // 7. Lọc theo ô tìm kiếm nhanh (searchQuery)
+  // 4. Lọc theo ô tìm kiếm nhanh (searchQuery) - 100% ĐỘNG THEO TẤT CẢ CỘT ĐANG HIỂN THỊ
   const q = String(searchQuery.value || '').trim().toLowerCase();
   if (q) {
+    const cols = visibleColumns.value || [];
     list = list.filter((item) => {
-      const name = String(item.personnelName || item.name || item.relativeName || '').toLowerCase();
-      const code = String(item.personnelCode || item.code || '').toLowerCase();
-      const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-      const cccd = String(item[pKeyField] ?? item.cccd ?? item.cccdparent ?? item.cccdthannhan ?? '').toLowerCase();
-      const dept = String(item.departmentName || '').toLowerCase();
-      const pos = String(item.position || item.positionName || '').toLowerCase();
-      const country = String(item.countryName || item.quoc_gia_xuat_canh || '').toLowerCase();
-      const dec = String(item.decisionNumber || item.so_quyet_dinh || '').toLowerCase();
-      return name.includes(q) || code.includes(q) || cccd.includes(q) || dept.includes(q) || pos.includes(q) || country.includes(q) || dec.includes(q);
+      if (cols.length > 0) {
+        return cols.some((col) => {
+          const val = getCellValue(item, col);
+          return val !== undefined && val !== null && val !== '' && val !== '-' && String(val).toLowerCase().includes(q);
+        });
+      }
+      // Fallback nếu danh sách cột chưa sẵn sàng
+      const allVals = [
+        ...Object.values(item),
+        ...(item.custom_data && typeof item.custom_data === 'object' ? Object.values(item.custom_data) : []),
+      ];
+      return allVals.some((v) => (typeof v === 'string' || typeof v === 'number') && String(v).toLowerCase().includes(q));
     });
   }
 
@@ -3691,62 +3582,6 @@ const getCellValue = (trip, colId) => {
   return formatGenericCellValue(rawVal, colDef || { id: colId });
 };
 
-const getDepartmentValue = (trip) => {
-  if (!trip) return '-';
-  const candidates = [
-    trip.departmentName,
-    trip.department,
-    trip.rawPerson?.departmentName,
-    trip.rawPerson?.department,
-    trip.custom_data?.departmentName,
-    trip.custom_data?.don_vi_cong_tac,
-    trip.custom_data?.don_vi,
-    trip.custom_data?.phong_ban,
-    trip.rawPerson?.custom_data?.departmentName,
-    trip.rawPerson?.custom_data?.don_vi_cong_tac,
-    trip.rawPerson?.custom_data?.don_vi,
-    trip.rawPerson?.custom_data?.phong_ban,
-    trip.departmentId ? personnelStore.getDepartmentName(trip.departmentId) : '',
-    trip.rawPerson?.departmentId ? personnelStore.getDepartmentName(trip.rawPerson.departmentId) : '',
-  ];
-
-  for (const c of candidates) {
-    if (c !== undefined && c !== null && String(c).trim() !== '' && String(c).trim() !== '-' && String(c).trim() !== 'Chưa rõ' && String(c).trim() !== 'Chưa phân bổ') {
-      return String(c).trim();
-    }
-  }
-
-  // Scan custom_data object
-  const searchInObj = (obj) => {
-    if (!obj || typeof obj !== 'object') return null;
-    let target = obj;
-    if (typeof obj === 'string') {
-      try { target = JSON.parse(obj); } catch (e) { return null; }
-    }
-    if (!target || typeof target !== 'object') return null;
-    for (const [k, v] of Object.entries(target)) {
-      const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (
-        (cleanK.includes('donvi') || cleanK.includes('phongban') || cleanK.includes('coquan') || cleanK.includes('department')) &&
-        v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-' && String(v).trim() !== 'Chưa phân bổ'
-      ) {
-        return String(v).trim();
-      }
-    }
-    return null;
-  };
-
-  const found = (
-    searchInObj(trip) ??
-    searchInObj(trip.custom_data) ??
-    searchInObj(trip.rawPerson?.custom_data) ??
-    searchInObj(trip.rawTrip?.custom_data)
-  );
-
-  if (found) return String(found).trim();
-
-  return '-';
-};
 
 const getStatusBadgeClass = (trip) => {
   if (!trip) return 'status-pill status-completed';
@@ -3870,26 +3705,18 @@ const resolveTargetPersonnel = (trip) => {
 
 const hasActiveFilters = computed(() => {
   return (
-    statusFilter.value !== 'all' ||
-    timeFilterYear.value !== 'all' ||
-    selectedCountry.value !== '' ||
-    selectedDepartment.value !== '' ||
-    selectedFunding.value !== '' ||
-    searchQuery.value.trim() !== ''
+    searchQuery.value.trim() !== '' ||
+    !!customFilterField.value
   );
 });
 
 const resetFilters = () => {
   activeMetricCardIdx.value = -1;
-  statusFilter.value = 'all';
-  timeFilterYear.value = 'all';
-  selectedCountry.value = '';
-  selectedDepartment.value = '';
-  selectedFunding.value = '';
   customFilterField.value = '';
   customFilterValue.value = '';
   searchQuery.value = '';
   currentPage.value = 1;
+  dtFirst.value = 0;
   triggerAutoSaveFilter();
 };
 

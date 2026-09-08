@@ -509,25 +509,64 @@ export const usePersonnelStore = defineStore('personnel', {
       }
     },
     getPersonnelKeyField() {
-      return this.systemKeyConfig?.personnelKeyField || 'cccdparent';
+      if (this.systemKeyConfig?.personnelKeyField) {
+        return this.systemKeyConfig.personnelKeyField;
+      }
+      const pCols = (this.importMappingPersonnel || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
+      const keyCol = pCols.find((c) => c.isKey || c.isIdentifier || c.format === 'id' || c.id === 'cccdparent' || c.id === 'cccd');
+      if (keyCol) return keyCol.id;
+      if (pCols.length > 0) return pCols[0].id;
+      return 'cccdparent';
     },
     getPersonnelNameField() {
-      return this.systemKeyConfig?.personnelNameField || 'name';
+      if (this.systemKeyConfig?.personnelNameField) {
+        return this.systemKeyConfig.personnelNameField;
+      }
+      const pCols = (this.importMappingPersonnel || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
+      const nameCol = pCols.find((c) => c.id === 'name' || c.id === 'fullName' || c.id === 'ho_va_ten' || c.label?.toLowerCase().includes('họ và tên') || c.label?.toLowerCase().includes('họ tên'));
+      if (nameCol) return nameCol.id;
+      return 'name';
     },
     getPersonnelPositionField() {
-      return this.systemKeyConfig?.personnelPositionField || 'position';
+      if (this.systemKeyConfig?.personnelPositionField) {
+        return this.systemKeyConfig.personnelPositionField;
+      }
+      const pCols = (this.importMappingPersonnel || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
+      const posCol = pCols.find((c) => c.id === 'position' || c.id === 'positionName' || c.id === 'chuc_vu' || c.label?.toLowerCase().includes('chức vụ'));
+      if (posCol) return posCol.id;
+      return 'position';
     },
     getPersonnelDepartmentField() {
-      return this.systemKeyConfig?.personnelDepartmentField || 'departmentName';
+      if (this.systemKeyConfig?.personnelDepartmentField) {
+        return this.systemKeyConfig.personnelDepartmentField;
+      }
+      const pCols = (this.importMappingPersonnel || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
+      const deptCol = pCols.find((c) => c.id === 'departmentName' || c.id === 'departmentId' || c.id === 'don_vi' || c.label?.toLowerCase().includes('đơn vị'));
+      if (deptCol) return deptCol.id;
+      return 'departmentName';
     },
     getRelativeParentKeyField() {
-      return this.systemKeyConfig?.relativeParentKeyField || 'cccdparent';
+      return this.systemKeyConfig?.relativeParentKeyField || this.getPersonnelKeyField();
     },
     getRelativeKeyField() {
-      return this.systemKeyConfig?.relativeKeyField || 'cccdthannhan';
+      if (this.systemKeyConfig?.relativeKeyField) {
+        return this.systemKeyConfig.relativeKeyField;
+      }
+      const rCols = (this.importMappingRelative || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
+      const keyCol = rCols.find((c) => c.isKey || c.isIdentifier || c.format === 'id' || c.id === 'cccdthannhan' || c.id === 'cccd');
+      if (keyCol) return keyCol.id;
+      if (rCols.length > 0) return rCols[0].id;
+      return 'cccdthannhan';
     },
     getTripKeyField() {
-      return this.systemKeyConfig?.tripKeyField || 'cccdchuyendi';
+      if (this.systemKeyConfig?.tripKeyField) {
+        return this.systemKeyConfig.tripKeyField;
+      }
+      const tCols = (this.importMappingTrips || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
+      const keyCol = tCols.find((c) => c.isKey || c.isIdentifier || c.format === 'id' || c.id === 'cccdchuyendi' || c.id === 'cccd');
+      if (keyCol) return keyCol.id;
+      if (tCols.length > 0) return tCols[0].id;
+      return 'cccdchuyendi';
     },
     findPersonByCccd(val) {
       if (!val) return null;

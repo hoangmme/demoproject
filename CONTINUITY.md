@@ -32,10 +32,14 @@
   - Không dùng các mã tiền tố nhân tạo cứng như `[CB-01]`, `[TN-02]`, `[CD-03]`. Tên bảng hiển thị thuần khiết theo tên bảng người dùng cấu hình (`table.title`).
   - Nếu cột không có giá trị dưới `column.id` được chỉ định, trả về rỗng `""` hoặc `"-"`. Không được tự tiện lấy trường khác bù vào.
 - ⛔ **KHÔNG TỰ BỊA DỮ LIỆU / KHÔNG TỰ SUY ĐOÁN**: Tuyệt đối không tự phỏng đoán hoặc giả định dữ liệu hay ý định của người dùng.
-- ⛔ **TỰ ĐỘNG HÓA LIÊN KẾT & THAM CHIẾU DỮ LIỆU**:
+- ⛔ **TỰ ĐỘNG HÓA LIÊN KẾT & THAM CHIẾU DỮ LIỆU ĐỘNG (ZERO-HARDCODING KEYS)**:
   - Bỏ nút thủ công "Khóa & Liên kết" trên thanh công cụ và giao diện cấu hình khóa thủ công ở Cài đặt chung để đơn giản hóa tối đa trải nghiệm người dùng.
-  - Hệ thống tự động phân giải tham chiếu dựa trên khóa quy chuẩn tự nhiên (`cccdparent`, `cccdthannhan`, `cccdchuyendi`).
+  - Tự động phát hiện trường khóa định danh (`getPersonnelKeyField`, `getRelativeKeyField`, `getTripKeyField`) từ danh mục cột cấu hình (`importMappingPersonnel`, `importMappingRelative`, `importMappingTrips`) qua thuộc tính `isKey`/`isIdentifier`/`format: 'id'`, hoặc vị trí cột đầu tiên nếu chưa gán nhãn, **tuyệt đối không hardcode ngầm yêu cầu tên cột phải là cccdparent/cccdthannhan/cccdchuyendi**.
   - Gỡ bỏ hoàn toàn cột tĩnh `_parentPersonnelName` ("Đối tượng liên quan") và logic gom nhóm `↳ (cùng hồ sơ liên quan)` trong Bảng Thân nhân. Bảng Thân nhân hoạt động 100% độc lập, thuần khiết theo danh mục cột cấu hình động (`importMappingRelative`).
+- ⛔ **TÌM KIẾM & BỘ LỌC ĐỘNG 100% THEO CỘT HIỂN THỊ (DYNAMIC FILTER & SEARCH ENGINE)**:
+  - Ô tìm kiếm nhanh (`searchQuery`) tại Bảng Thống kê Chuyên đề (`ChildDashboardView.vue`) và Hồ sơ Cán bộ / Thân nhân (`PersonnelView.vue`) duyệt tự động qua toàn bộ danh sách cột đang hiển thị (`visibleColumns` / `activeColumns` / `activeRelativeColumns`) qua hàm trích xuất `getCellValue(item, col)`. Người dùng cấu hình bất kỳ cột nào (tiêu chuẩn, công thức, tùy biến) thì ô tìm kiếm đều tự động tra cứu chính xác trên cột đó mà không cần hardcode tên trường.
+  - Gỡ bỏ triệt để các khối lọc cứng (`targetCountry`, `targetFunding`, `targetDept`) và các hàm suy đoán alias ngầm (`getFundingValue`, `getDepartmentValue`). Mọi drilldown lọc theo cột đều đi qua cơ chế động chuẩn `filterField` & `filterValue`.
+  - Phân loại bản ghi chuyến đi (`isTripRecord`) trong `dashboardMetrics.js` dựa thuần túy trên thuộc tính bản ghi (`_recordType === 'trip'`, `rawTrip`, `uniqueKey`), không kiểm tra cứng theo danh sách tên cột tĩnh (`departureDate`, `ngay_xuat_canh`, `countryName`, `destination`).
 - ⛔ **LAN TRUYỀN ĐỘNG THUỘC TÍNH (DYNAMIC SPREAD)**:
   - Khi tổng hợp dữ liệu (như Thân nhân kèm Chuyến đi trong `buildTopicSourceList`), toàn bộ các trường của Chuyến đi phải được bóc tách và lan truyền động (`...tripDynamicFields`) để mọi cột người dùng cấu hình trong Chuyến đi đều sẵn sàng truy xuất trực tiếp trên bản ghi.
 - ⛔ **KHI THIẾU DỮ LIỆU HOẶC KHÔNG RÕ LOGIC**: BẮT BUỘC DỪNG LẠI VÀ HỎI TRỰC TIẾP NGƯỜI DÙNG, tuyệt đối không tự ý viết code đoán mò.

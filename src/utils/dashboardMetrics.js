@@ -628,9 +628,13 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
     return isRel;
   }
 
-  // 2. Xuất cảnh trước khi có quyết định
-  if (field === 'di_truoc_khi_co_quyet_dinh') {
-    const res = computeDepartBeforeDecision(item, { formulaColDep: 'ngay_xuat_canh', formulaColDecDate: 'ngay_ban_hanh' });
+  // 2. Xuất cảnh trước khi có quyết định (nếu là formula column hoặc mã quy ước)
+  if (field === 'di_truoc_khi_co_quyet_dinh' || (colDef && colDef.format === 'formula' && colDef.formulaType === 'depart_before_decision')) {
+    const formulaCfg = (colDef && colDef.format === 'formula') ? colDef : {};
+    const res = computeDepartBeforeDecision(item, formulaCfg);
+    if (op === 'equals' || op === 'contains') {
+      return target ? (String(res.label).toLowerCase().includes(String(target).toLowerCase()) || (res.isWarning && String(target).toLowerCase().includes('cảnh báo'))) : res.isWarning;
+    }
     return res.isWarning;
   }
 
@@ -691,7 +695,7 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
   }
 
   // 4. Cột Chuyến đi đối chiếu với Thân nhân hoặc Cán bộ
-  const isTripRecord = item._recordType === 'trip' || (!Array.isArray(item.trips) && (item.departureDate || item.ngay_xuat_canh || item.countryName || item.destination || item.uniqueKey?.includes('_t_') || item.rawTrip));
+  const isTripRecord = item._recordType === 'trip' || Boolean(item.rawTrip) || Boolean(item._primaryKey?.startsWith('CD-')) || (!Array.isArray(item.trips) && !item.rawPerson && (item.uniqueKey?.includes('_t_') || item.uniqueKey?.includes('trip_')));
   const tripColIds = personnelStore ? (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id)) : [];
   const isTripField = isPresenceField(field) || tripColIds.includes(field);
   const isRelativesRecord = item.isRelative || !!item.rawRelative;
@@ -762,7 +766,7 @@ export const matchCardCondition = (item, card, personnelStore) => {
 
   if (activeConds.length > 0) {
     const logicOp = (card.logicOp || card.logicOperator || 'AND').toUpperCase();
-    const isTripRecord = item._recordType === 'trip' || (!Array.isArray(item.trips) && (item.departureDate || item.ngay_xuat_canh || item.countryName || item.destination || item.uniqueKey?.includes('_t_') || item.rawTrip));
+    const isTripRecord = item._recordType === 'trip' || Boolean(item.rawTrip) || Boolean(item._primaryKey?.startsWith('CD-')) || (!Array.isArray(item.trips) && !item.rawPerson && (item.uniqueKey?.includes('_t_') || item.uniqueKey?.includes('trip_')));
 
     if (logicOp === 'OR') {
       return activeConds.some((cond) => matchSingleCondition(item, cond, personnelStore));

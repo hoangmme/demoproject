@@ -2527,38 +2527,25 @@ const filteredPersonnel = computed(() => {
     });
   }
 
-  // 2. Tìm kiếm từ khóa (Search Query) theo đúng Primary Key & Key Config đã cấu hình
+  // 2. Tìm kiếm từ khóa (Search Query) 100% ĐỘNG THEO TẤT CẢ CÁC CỘT ĐANG HIỂN THỊ
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) return list;
 
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  const pNameField = personnelStore.getPersonnelNameField();
-  const pPosField = personnelStore.getPersonnelPositionField();
-  const pDeptField = personnelStore.getPersonnelDepartmentField();
-
+  const cols = activeColumns.value || [];
   return list.filter((p) => {
-    let cd = p.custom_data;
-    if (typeof cd === 'string') {
-      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+    if (cols.length > 0) {
+      const match = cols.some((col) => {
+        const val = getCellValue(p, col.id);
+        return val !== undefined && val !== null && val !== '' && val !== '-' && String(val).toLowerCase().includes(q);
+      });
+      if (match) return true;
     }
-    // CCCD Cán bộ theo Primary Key cấu hình
-    const cccd = String(p[pKeyField] ?? cd?.[pKeyField] ?? p.cccd ?? p.cccdparent ?? '').toLowerCase();
-    // Tên Cán bộ theo Cấu hình
-    const name = String(p[pNameField] ?? cd?.[pNameField] ?? p.name ?? p.fullName ?? '').toLowerCase();
-    // Chức vụ theo Cấu hình
-    const position = String(p[pPosField] ?? cd?.[pPosField] ?? p.positionName ?? p.position ?? '').toLowerCase();
-    // Đơn vị theo Cấu hình
-    const dept = String(p[pDeptField] ?? cd?.[pDeptField] ?? p.departmentName ?? (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') ?? '').toLowerCase();
-    // Mã hồ sơ
-    const code = String(p.code || p.id || '').toLowerCase();
-
-    return (
-      name.includes(q) ||
-      cccd.includes(q) ||
-      position.includes(q) ||
-      dept.includes(q) ||
-      code.includes(q)
-    );
+    const allVals = [
+      p.name, p.fullName, p.code, p.id,
+      ...(p.custom_data && typeof p.custom_data === 'object' ? Object.values(p.custom_data) : []),
+      ...Object.values(p),
+    ];
+    return allVals.some((v) => (typeof v === 'string' || typeof v === 'number') && String(v).toLowerCase().includes(q));
   });
 });
 
@@ -2637,49 +2624,21 @@ const filteredRelatives = computed(() => {
   const q = relativeSearchQuery.value.trim().toLowerCase();
   if (!q) return list;
 
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  const pNameField = personnelStore.getPersonnelNameField();
-  const pPosField = personnelStore.getPersonnelPositionField();
-  const pDeptField = personnelStore.getPersonnelDepartmentField();
-  const rParentKeyField = personnelStore.getRelativeParentKeyField();
-  const rKeyField = personnelStore.getRelativeKeyField();
-
+  const cols = activeRelativeColumns.value || [];
   return flattenedRelatives.value.filter((r) => {
-    let cd = r.custom_data;
-    if (typeof cd === 'string') {
-      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+    if (cols.length > 0) {
+      const match = cols.some((col) => {
+        const val = getRelativeCellValue(r, col.id);
+        return val !== undefined && val !== null && val !== '' && val !== '-' && String(val).toLowerCase().includes(q);
+      });
+      if (match) return true;
     }
-    const parent = r.parentPerson || {};
-    let parentCd = parent.custom_data;
-    if (typeof parentCd === 'string') {
-      try { parentCd = JSON.parse(parentCd); } catch (e) { parentCd = {}; }
-    }
-
-    // CCCD Cán bộ liên quan theo Primary Key cấu hình
-    const parentCccd = String(r[rParentKeyField] ?? cd?.[rParentKeyField] ?? parent[pKeyField] ?? parentCd?.[pKeyField] ?? r.cccdparent ?? parent.cccd ?? '').toLowerCase();
-    // CCCD Thân nhân theo Primary Key cấu hình
-    const relCccd = String(r[rKeyField] ?? cd?.[rKeyField] ?? r.cccdthannhan ?? r.cccd ?? '').toLowerCase();
-    // Họ và tên Cán bộ / Thân nhân theo cấu hình
-    const relName = String(r.relativeName || r.name || cd?.relativeName || '').toLowerCase();
-    const parentName = String(parent[pNameField] ?? parentCd?.[pNameField] ?? r.parentName ?? parent.name ?? '').toLowerCase();
-    // Chức vụ theo cấu hình
-    const position = String(parent[pPosField] ?? parentCd?.[pPosField] ?? r.parentPosition ?? parent.positionName ?? parent.position ?? r.position ?? '').toLowerCase();
-    // Đơn vị theo cấu hình
-    const dept = String(parent[pDeptField] ?? parentCd?.[pDeptField] ?? r.parentDepartment ?? parent.departmentName ?? (parent.departmentId ? personnelStore.getDepartmentName(parent.departmentId) : '') ?? r.departmentName ?? '').toLowerCase();
-
-    const relCode = String(r.code || r.id || '').toLowerCase();
-    const parentCode = String(parent.code || r.personnelCode || '').toLowerCase();
-
-    return (
-      parentCccd.includes(q) ||
-      relCccd.includes(q) ||
-      relName.includes(q) ||
-      parentName.includes(q) ||
-      position.includes(q) ||
-      dept.includes(q) ||
-      relCode.includes(q) ||
-      parentCode.includes(q)
-    );
+    const allVals = [
+      r.relativeName, r.name, r.code, r.id,
+      ...(r.custom_data && typeof r.custom_data === 'object' ? Object.values(r.custom_data) : []),
+      ...Object.values(r),
+    ];
+    return allVals.some((v) => (typeof v === 'string' || typeof v === 'number') && String(v).toLowerCase().includes(q));
   });
 });
 
