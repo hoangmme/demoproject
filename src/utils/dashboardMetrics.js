@@ -5,6 +5,7 @@ import {
   resolveVirtualColumnValue,
   computeDepartBeforeDecision,
   evaluateFormula,
+  evaluateLookup,
 } from '@/utils/formatters';
 
 /**
@@ -510,8 +511,8 @@ export const checkConditionMatch = (val, op, target) => {
 /**
  * Trích xuất giá trị trường của bản ghi an toàn
  */
-export const extractRowFieldValue = (item, field, personnelStore) => {
-  if (!item || !field) return '';
+export const extractRowFieldValue = (item, field, personnelStore, depth = 0) => {
+  if (!item || !field || depth > 5) return '';
 
   // 1. Virtual columns
   const virt = resolveVirtualColumnValue(item, field);
@@ -524,7 +525,7 @@ export const extractRowFieldValue = (item, field, personnelStore) => {
     return item.isRelative ? 'Thân nhân' : 'Cán bộ';
   }
 
-  // 2. Nếu là formula column trong bất kỳ mapping nào (Personnel, Relative, Trips)
+  // 2. Nếu là lookup hoặc formula column trong bất kỳ mapping nào (Personnel, Relative, Trips)
   if (personnelStore) {
     const allColDefs = [
       ...(personnelStore.importMappingPersonnel || []),
@@ -532,12 +533,32 @@ export const extractRowFieldValue = (item, field, personnelStore) => {
       ...(personnelStore.importMappingTrips || []),
     ].flatMap((g) => g.columns || []);
     const colDef = allColDefs.find((c) => c && c.id === field);
+
+    if (colDef && colDef.format === 'lookup') {
+      const lkVal = evaluateLookup(item, colDef, personnelStore);
+      return lkVal !== '-' ? lkVal : '';
+    }
+
     if (colDef && colDef.format === 'formula') {
       if (colDef.formulaType === 'presence_status') {
         const p = resolvePresence(item);
         return p.shortLabel || p.label || '';
       }
-      const res = evaluateFormula(item, colDef);
+      const configWithResolver = {
+        ...colDef,
+        columns: allColDefs,
+        cellResolver: (targetColId) => {
+          if (!targetColId || targetColId === field || depth > 5) return '';
+          const targetCol = allColDefs.find((c) => c && (c.id === targetColId || c.label === targetColId));
+          if (targetCol && targetCol.format === 'lookup') {
+            const lkVal = evaluateLookup(item, targetCol, personnelStore);
+            return lkVal !== '-' ? lkVal : '';
+          }
+          const val = extractRowFieldValue(item, targetCol?.id || targetColId, personnelStore, depth + 1);
+          return val !== '-' ? val : '';
+        },
+      };
+      const res = evaluateFormula(item, configWithResolver);
       return res?.label || res?.shortLabel || (res?.count !== undefined ? `${res.count} lần` : '');
     }
   }

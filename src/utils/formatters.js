@@ -1374,7 +1374,6 @@ export const evaluateLookup = (item, col, personnelStore) => {
     if (op === 'is_not_empty') return !isValEmpty(tVal);
 
     const sVal = cond.sourceField ? getProp(item, cond.sourceField) : cond.value;
-    if (isValEmpty(tVal) && isValEmpty(sVal)) return op === 'is' || op === 'same_date' || op === 'num_eq';
     if (isValEmpty(tVal) || isValEmpty(sVal)) {
       return op === 'is_not' || op === 'does_not_contain';
     }
