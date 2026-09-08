@@ -1569,6 +1569,21 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+- **Entry (2026-09-08)**: **Loại bỏ hoàn toàn biểu tượng Khóa (🔒) & Chìa khóa (🔑), Chuẩn hóa Cột Hệ thống thành Text mặc định ẩn, Khôi phục quyền tùy chọn & di chuyển Cột tự do**:
+  1. **Loại bỏ Biểu tượng Khóa (`🔒`) và Chìa khóa (`🔑`)**:
+     - Xóa bỏ toàn bộ các badge `🔒` và `🔑` xuất hiện trên tiêu đề cột ở tất cả các bảng (`PersonnelView.vue`, `ChildDashboardView.vue`, `ColumnSelector.vue`, `ColumnHeaderMenu.vue`, `personnel.js`).
+     - Xóa bỏ việc tự động gán `isPrimaryField: idx === 0` trong `ChildDashboardView.vue` và `cfg.id === primaryId` trong `PersonnelView.vue`.
+  2. **Cột Hệ thống (`_parentPersonnelName` / `_primaryKey`)**:
+     - Định dạng là text thuần túy, không tạo các khối subtitle đa dòng nhân tạo ("Cán bộ: ... / Số CCCD: ... / Mã định danh: ..."). Nếu chưa có dữ liệu thì để trống hoặc `"-"`.
+     - Mặc định ẩn hoàn toàn các cột hệ thống (`_parentPersonnelName`, `_primaryKey`), không ép đứng ở index 0, không ép vào danh sách `essential` của `finalizeColumns`. Người dùng có toàn quyền bật/gọi ra khi cần trong Cấu hình cột.
+     - Trong danh sách cột có sẵn, các cột ảo hệ thống được đẩy về cuối mảng (`push` thay vì `unshift`).
+  3. **Bộ chọn Cột Không Giới Hạn (`ColumnSelector.vue`)**:
+     - Bỏ toàn bộ vô hiệu hóa checkbox (`:disabled="false"`), người dùng có thể tự do ẩn/hiện bất kỳ cột nào.
+     - Bỏ hạn chế di chuyển cột (`moveUp` / `moveDown`), cho phép người dùng thoải mái hoán đổi vị trí mọi cột kể cả cột đầu tiên.
+     - Xóa bỏ logic cưỡng ép đưa `canonicalPrimaryId` về index 0.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/` và push git lên repository.
+
 
 
 
