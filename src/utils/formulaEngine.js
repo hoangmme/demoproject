@@ -37,8 +37,9 @@ export const getRecordFieldValue = (record, fieldKey) => {
  * Trình phân tích & Đánh giá biểu thức (Safe Recursive Evaluator)
  */
 export class FormulaEvaluator {
-  constructor(context = {}) {
+  constructor(context = {}, fieldResolver = null) {
     this.context = context; // Map key-value { [fieldId]: value, [fieldLabel]: value }
+    this.fieldResolver = fieldResolver; // Function (fieldName) => value
   }
 
   /**
@@ -236,9 +237,9 @@ export class FormulaEvaluator {
           continue;
         }
 
-        // So sánh chuỗi mặc định
-        const sL = String(left ?? '').toLowerCase();
-        const sR = String(right ?? '').toLowerCase();
+        // So sánh chuỗi mặc định (trim và toLowerCase an toàn)
+        const sL = String(left ?? '').trim().toLowerCase();
+        const sR = String(right ?? '').trim().toLowerCase();
         if (op === '==') left = sL === sR;
         else if (op === '!=') left = sL !== sR;
         else if (op === '>') left = sL > sR;
@@ -318,8 +319,21 @@ export class FormulaEvaluator {
       // Tham chiếu cột dữ liệu: {ten_cot}
       if (token.type === 'FIELD') {
         const fieldName = consume().value;
-        const val = this.context[fieldName] ?? this.context[fieldName.toLowerCase()] ?? '';
-        return val;
+        if (typeof this.fieldResolver === 'function') {
+          const res = this.fieldResolver(fieldName);
+          if (res !== undefined && res !== null && res !== '') {
+            return res === '-' ? '' : res;
+          }
+        }
+        let val = this.context[fieldName] ?? this.context[fieldName.toLowerCase()];
+        if (val !== undefined && val !== null && val !== '') {
+          return val === '-' ? '' : val;
+        }
+        if (typeof this.fieldResolver === 'function') {
+          const res = this.fieldResolver(fieldName);
+          if (res !== undefined && res !== null) return res === '-' ? '' : res;
+        }
+        return '';
       }
 
       // Lời gọi Hàm: IF(...), DATEDIF(...)...
@@ -339,6 +353,12 @@ export class FormulaEvaluator {
           return this.executeFunction(funcName, args);
         }
         // Nếu không có dấu ngoặc, kiểm tra xem có phải tên cột không
+        if (typeof this.fieldResolver === 'function') {
+          const res = this.fieldResolver(funcName);
+          if (res !== undefined && res !== null && res !== '') {
+            return res === '-' ? '' : res;
+          }
+        }
         return this.context[funcName] ?? this.context[funcName.toLowerCase()] ?? funcName;
       }
 
@@ -525,7 +545,7 @@ export class FormulaEvaluator {
  * @param {string} expression - Biểu thức công thức (VD: IF(DATEDIF({ngay_di}, TODAY(), "D") > 30, "Quá hạn", "Đúng hạn"))
  * @param {Array} columns - Danh sách cột để mapping id và label
  */
-export const evaluateCustomFormula = (record, expression, columns = []) => {
+export const evaluateCustomFormula = (record, expression, columns = [], fieldResolver = null) => {
   if (!expression || typeof expression !== 'string' || !expression.trim()) {
     return { status: 'empty', label: '', shortLabel: '', value: '' };
   }
@@ -552,14 +572,45 @@ export const evaluateCustomFormula = (record, expression, columns = []) => {
       });
     }
 
+    // Nạp rawTrip, rawPerson, rawRelative nếu có
+    if (record.rawTrip && typeof record.rawTrip === 'object') {
+      Object.keys(record.rawTrip).forEach((k) => {
+        if (context[k] === undefined) {
+          context[k] = record.rawTrip[k];
+          context[k.toLowerCase()] = record.rawTrip[k];
+        }
+      });
+    }
+    if (record.rawPerson && typeof record.rawPerson === 'object') {
+      Object.keys(record.rawPerson).forEach((k) => {
+        if (context[k] === undefined) {
+          context[k] = record.rawPerson[k];
+          context[k.toLowerCase()] = record.rawPerson[k];
+        }
+      });
+    }
+    if (record.rawRelative && typeof record.rawRelative === 'object') {
+      Object.keys(record.rawRelative).forEach((k) => {
+        if (context[k] === undefined) {
+          context[k] = record.rawRelative[k];
+          context[k.toLowerCase()] = record.rawRelative[k];
+        }
+      });
+    }
+
     // Nạp theo tên nhãn hiển thị (label) của cột
     if (Array.isArray(columns)) {
       columns.forEach((c) => {
         if (c && c.id) {
-          const val = getRecordFieldValue(record, c.id);
-          context[c.id] = val;
-          context[c.id.toLowerCase()] = val;
-          if (c.label) {
+          let val = getRecordFieldValue(record, c.id);
+          if ((val === undefined || val === null || val === '') && typeof fieldResolver === 'function') {
+            val = fieldResolver(c.id);
+          }
+          if (val !== undefined && val !== null) {
+            context[c.id] = val;
+            context[c.id.toLowerCase()] = val;
+          }
+          if (c.label && val !== undefined && val !== null) {
             context[c.label] = val;
             context[c.label.toLowerCase()] = val;
           }
@@ -568,7 +619,7 @@ export const evaluateCustomFormula = (record, expression, columns = []) => {
     }
   }
 
-  const evaluator = new FormulaEvaluator(context);
+  const evaluator = new FormulaEvaluator(context, fieldResolver);
   const result = evaluator.evaluate(expression);
 
   return {

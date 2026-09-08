@@ -559,7 +559,12 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
   const fType = formulaConfig.formulaType || 'presence_status';
 
   if (fType === 'custom_expression' || formulaConfig.formulaExpression) {
-    return evaluateCustomFormula(record, formulaConfig.formulaExpression, formulaConfig.columns || []);
+    return evaluateCustomFormula(
+      record,
+      formulaConfig.formulaExpression,
+      formulaConfig.columns || [],
+      formulaConfig.cellResolver || formulaConfig.fieldResolver
+    );
   }
 
   switch (fType) {

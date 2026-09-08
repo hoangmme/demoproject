@@ -3686,8 +3686,8 @@ const getCheckboxFileLoopItems = (data, colId) => {
   });
 };
 
-const getCellValue = (trip, colId) => {
-  if (!trip || !colId) return '-';
+const getCellValue = (trip, colId, depth = 0) => {
+  if (!trip || !colId || depth > 5) return '-';
 
   // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
   const vVal = resolveVirtualColumnValue(trip, colId);
@@ -3740,7 +3740,16 @@ const getCellValue = (trip, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
-    const result = evaluateFormula(trip, colDef);
+    const configWithResolver = {
+      ...colDef,
+      columns: allAvailableColumnsList.value || [],
+      cellResolver: (targetColId) => {
+        if (!targetColId || targetColId === colId) return '';
+        const cell = getCellValue(trip, targetColId, depth + 1);
+        return cell !== '-' ? cell : '';
+      },
+    };
+    const result = evaluateFormula(trip, configWithResolver);
     return result?.label || result?.shortLabel || '-';
   }
   if (colDef && colDef.format === 'lookup') {

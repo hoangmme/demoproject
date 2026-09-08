@@ -475,7 +475,14 @@
 import { ref, computed, watch } from "vue";
 import { usePersonnelStore } from "@/stores/personnel";
 import { saveAppSettings } from "@/api/settings";
-import { formWidthOptions, lookupOperators, evaluateCustomFormula, formulaFunctionsCatalog } from "@/utils/formatters";
+import {
+  formWidthOptions,
+  lookupOperators,
+  evaluateCustomFormula,
+  evaluateLookup,
+  getRecordFieldValue,
+  formulaFunctionsCatalog,
+} from "@/utils/formatters";
 
 const props = defineProps({
   visible: {
@@ -640,7 +647,15 @@ const sampleRow = computed(() => {
 const formulaPreviewResult = computed(() => {
   if (!editFormulaExpression.value) return '(chưa có)';
   try {
-    const res = evaluateCustomFormula(sampleRow.value, editFormulaExpression.value, currentTableCols.value);
+    const resolver = (targetColId) => {
+      const c = (currentTableCols.value || []).find((col) => col.id === targetColId || col.label === targetColId);
+      if (c && c.format === 'lookup') {
+        const val = evaluateLookup(sampleRow.value, c, personnelStore);
+        return val !== '-' ? val : '';
+      }
+      return getRecordFieldValue(sampleRow.value, targetColId);
+    };
+    const res = evaluateCustomFormula(sampleRow.value, editFormulaExpression.value, currentTableCols.value, resolver);
     if (!res) return '(trống)';
     const val = (res && typeof res === 'object' && 'label' in res) ? res.label : res;
     if (val === null || val === undefined || val === '') return '(trống)';
