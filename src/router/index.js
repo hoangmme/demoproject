@@ -60,6 +60,12 @@ const routes = [
     meta: { title: 'Thống kê', requiresAuth: true },
   },
   {
+    path: '/dashboard/:id',
+    name: 'CustomDashboard',
+    component: DashboardView,
+    meta: { title: 'Thống kê', requiresAuth: true },
+  },
+  {
     path: '/pl1',
     redirect: '/dashboard',
   },

@@ -7,8 +7,13 @@
           <i class="pi pi-chart-bar" style="font-size: 1.2rem;"></i>
         </div>
         <div>
-          <h2 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0;">Thống kê</h2>
-          <span style="font-size: 0.76rem; color: #64748b;">Tổng quan tình hình cán bộ, xuất nhập cảnh, thân nhân & các chỉ số chuyên đề</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h2 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0;">{{ currentDashboardTitle }}</h2>
+            <span v-if="dashboardId !== 'root'" style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
+              Trang tùy chỉnh
+            </span>
+          </div>
+          <span style="font-size: 0.76rem; color: #64748b;">{{ currentDashboardDescription }}</span>
         </div>
       </div>
 
@@ -48,10 +53,31 @@
       </div>
     </div>
 
+    <!-- Trạng thái trống khi Trang chưa có nhóm thống kê -->
+    <div
+      v-if="!customGroups || customGroups.length === 0"
+      style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; background: #ffffff; border-radius: 12px; border: 2px dashed #cbd5e1; text-align: center; margin-bottom: 1.5rem;"
+    >
+      <div style="width: 56px; height: 56px; border-radius: 16px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+        <i class="pi pi-chart-pie" style="font-size: 1.75rem;"></i>
+      </div>
+      <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0 0 6px 0;">Trang Thống kê này chưa có Nhóm thống kê nào</h3>
+      <p style="font-size: 0.8rem; color: #64748b; max-width: 480px; margin: 0 0 16px 0; line-height: 1.45;">
+        Hãy bấm nút bên dưới để tạo nhóm thống kê đầu tiên cho trang này (ví dụ: Thống kê tình hình xuất nhập cảnh, Thống kê Đảng viên...).
+      </p>
+      <Button
+        icon="pi pi-plus"
+        label="Thêm Nhóm Thống kê Mới"
+        severity="success"
+        size="small"
+        @click="openAddGroupDialog"
+      />
+    </div>
+
     <!-- ========================================================= -->
     <!-- 1. CUSTOM DASHBOARD GROUPS (USER CONFIGURED - AT TOP)     -->
     <!-- ========================================================= -->
-    <div class="dashboard-groups-flex-container" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: stretch; width: 100%;">
+    <div v-else class="dashboard-groups-flex-container" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; align-items: stretch; width: 100%;">
       <div
         v-for="(group, gIdx) in customGroups"
         :key="group.id || gIdx"
@@ -915,47 +941,197 @@
       :allPersonnel="drilldownAllPersonnel"
     />
 
-    <!-- Dialog Tùy chọn Cột cho Drilldown Popup -->
+    <!-- POPUP XEM CHI TIẾT DỮ LIỆU THỐNG KÊ (DRILLDOWN FULL COLUMNS MODAL) -->
     <Dialog
-      v-model:visible="isDrilldownColDialogOpen"
+      v-model:visible="isDrilldownModalOpen"
       modal
-      :header="`Tùy chọn Cột hiển thị: ${isRelativeView ? 'Thân nhân ở Nước ngoài' : 'Cán bộ / Chuyến đi'}`"
-      :style="{ width: '580px', maxWidth: '96vw' }"
+      :style="{ width: '95vw', maxWidth: '1520px' }"
+      :contentStyle="{ maxHeight: '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '0 16px 16px 16px' }"
     >
-      <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 6px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-          <span style="font-size: 0.78rem; color: #64748b;">
-            Tích chọn các cột bạn muốn hiển thị trong bảng chi tiết này:
-          </span>
-          <div style="display: flex; gap: 6px;">
-            <Button label="Chọn tất cả" text size="small" style="font-size: 0.72rem; padding: 2px 6px;" @click="selectAllDrilldownCols" />
-            <Button label="Mặc định" text severity="secondary" size="small" style="font-size: 0.72rem; padding: 2px 6px;" @click="resetDefaultDrilldownCols" />
+      <template #header>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding-right: 12px; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center;">
+              <i class="pi pi-table" style="font-size: 1.15rem;"></i>
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <h3 style="font-size: 0.98rem; font-weight: 700; color: #0f172a; margin: 0;">
+                  {{ drilldownExtraTitle || drilldownWidget?.title || 'Dữ liệu Thống kê Chi tiết' }}
+                </h3>
+                <span style="font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;">
+                  {{ filteredDrilldownList.length }} bản ghi
+                </span>
+                <span v-if="drilldownSelectedRows.length > 0" style="font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: #dbeafe; color: #1d4ed8;">
+                  Đã chọn: {{ drilldownSelectedRows.length }}
+                </span>
+              </div>
+              <span style="font-size: 0.74rem; color: #64748b;">
+                Nguồn dữ liệu: <strong>{{ getSourceLabel(drilldownSourceType) }}</strong>
+              </span>
+            </div>
+          </div>
+
+          <!-- Actions Toolbar inside Drilldown Header -->
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <!-- Tìm kiếm nhanh -->
+            <div style="position: relative; width: 220px;">
+              <i class="pi pi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #94a3b8;"></i>
+              <input
+                v-model="drilldownSearchText"
+                type="text"
+                placeholder="Tìm trong danh sách..."
+                style="width: 100%; height: 32px; padding: 4px 28px 4px 30px; font-size: 0.78rem; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; background: #f8fafc;"
+              />
+              <i
+                v-if="drilldownSearchText"
+                class="pi pi-times"
+                style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #94a3b8; cursor: pointer;"
+                @click="drilldownSearchText = ''"
+              />
+            </div>
+
+            <!-- Xuất Excel -->
+            <Button
+              icon="pi pi-file-excel"
+              label="Xuất Excel"
+              severity="success"
+              size="small"
+              outlined
+              @click="exportDrilldownExcel"
+              style="font-size: 0.78rem; height: 32px;"
+            />
+
+            <!-- Xuất PDF -->
+            <Button
+              icon="pi pi-file-pdf"
+              label="Xuất PDF"
+              severity="danger"
+              size="small"
+              outlined
+              @click="openDrilldownDocxExport"
+              style="font-size: 0.78rem; height: 32px;"
+            />
           </div>
         </div>
+      </template>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 360px; overflow-y: auto; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa;">
-          <label
-            v-for="col in currentDrilldownAllAvailableCols"
+      <!-- Table Container with Horizontal and Vertical Scroll -->
+      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <DataTable
+          v-model:selection="drilldownSelectedRows"
+          :value="filteredDrilldownList"
+          dataKey="uniqueKey"
+          paginator
+          :rows="25"
+          :rowsPerPageOptions="[15, 25, 50, 100]"
+          :selectionPageOnly="true"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+          currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} bản ghi"
+          responsiveLayout="scroll"
+          stripedRows
+          removableSort
+          class="p-datatable-sm custom-datatable"
+          :tableStyle="{ minWidth: 'max-content', width: '100%' }"
+          @page="e => drilldownDtFirst = e.first"
+          scrollable
+          scrollHeight="flex"
+        >
+          <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '46px', minWidth: '46px' }" :bodyStyle="{ width: '46px', minWidth: '46px' }" />
+
+          <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
+            <template #body="{ index }">
+              <span style="font-weight: 600; color: #4b5563;">{{ drilldownDtFirst + index + 1 }}</span>
+            </template>
+          </Column>
+
+          <!-- Dynamic Columns -->
+          <Column
+            v-for="col in drilldownColumns"
             :key="col.id"
-            style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; cursor: pointer; padding: 6px 8px; border-radius: 6px; background: #ffffff; border: 1px solid #f1f5f9;"
+            :field="col.id"
+            :header="col.label"
+            :headerStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
+            :bodyStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
           >
-            <input
-              type="checkbox"
-              :value="col.id"
-              v-model="tempSelectedDrilldownCols"
-              style="cursor: pointer; accent-color: #16a34a; width: 15px; height: 15px;"
-            />
-            <span style="color: #334155; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="col.label">
-              {{ col.label }}
-            </span>
-          </label>
-        </div>
+            <template #body="{ data }">
+              <!-- Trạng thái hiện diện -->
+              <template v-if="col.id === 'presenceStatus' || col.id === '_presenceStatus' || col.id === 'trang_thai_hien_dien' || col.id === 'status' || col.format === 'presence'">
+                <span
+                  class="presence-badge"
+                  :style="{
+                    backgroundColor: getPresenceBadge(data).bgColor,
+                    color: getPresenceBadge(data).color,
+                    borderColor: getPresenceBadge(data).borderColor,
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    padding: '3px 8px',
+                    borderRadius: '12px',
+                    fontSize: '0.72rem',
+                    fontWeight: '600',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    whiteSpace: 'nowrap',
+                  }"
+                >
+                  <i :class="['pi', getPresenceBadge(data).icon]" style="font-size: 0.7rem;"></i>
+                  {{ getPresenceBadge(data).text }}
+                </span>
+              </template>
+
+              <!-- Họ tên Cán bộ (dòng to, đậm, click xem chi tiết) -->
+              <template v-else-if="col.id === '_parentPersonnelName' || col.id === 'name' || col.id === 'ho_va_ten'">
+                <strong
+                  style="color: #0284c7; font-weight: 700; font-size: 0.82rem; cursor: pointer; text-decoration: underline;"
+                  @click="handleDrilldownRowDetail(data)"
+                  title="Xem hồ sơ cán bộ"
+                >
+                  {{ getRowFieldValue(data, col.id) || '-' }}
+                </strong>
+              </template>
+
+              <!-- Cột thông thường -->
+              <template v-else>
+                <span style="font-size: 0.78rem; color: #334155; line-height: 1.35; word-break: break-word;">
+                  {{ getRowFieldValue(data, col.id) || '-' }}
+                </span>
+              </template>
+            </template>
+          </Column>
+
+          <!-- Action column: [Chi tiết] -->
+          <Column
+            header="Hồ sơ"
+            headerClass="col-center"
+            bodyClass="col-center"
+            frozen
+            alignFrozen="right"
+            :headerStyle="{ width: '85px', minWidth: '85px', background: '#f8fafc' }"
+            :bodyStyle="{ width: '85px', minWidth: '85px', background: '#ffffff' }"
+          >
+            <template #body="{ data }">
+              <Button
+                icon="pi pi-eye"
+                label="Xem"
+                size="small"
+                severity="secondary"
+                outlined
+                @click="handleDrilldownRowDetail(data)"
+                style="font-size: 0.72rem; padding: 3px 8px;"
+                v-tooltip.top="'Xem chi tiết hồ sơ'"
+              />
+            </template>
+          </Column>
+        </DataTable>
       </div>
 
       <template #footer>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
-          <Button label="Hủy" severity="secondary" text size="small" @click="isDrilldownColDialogOpen = false" />
-          <Button label="Lưu & Áp dụng" icon="pi pi-check" severity="success" size="small" @click="saveDrilldownCols" />
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding-top: 6px;">
+          <span style="font-size: 0.75rem; color: #64748b;">
+            Tổng cộng: <strong>{{ filteredDrilldownList.length }}</strong> bản ghi (Cuộn ngang để xem đầy đủ các cột)
+          </span>
+          <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownModalOpen = false" />
         </div>
       </template>
     </Dialog>
@@ -964,10 +1140,12 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
@@ -977,223 +1155,271 @@ import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatu
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
+const route = useRoute();
 const router = useRouter();
 const personnelStore = usePersonnelStore();
 
 // =========================================================================
-// DRILLDOWN COLUMN CUSTOMIZATION & TARGET CRITERION HIGHLIGHT
+// QUẢN LÝ NHẬN DIỆN HỆ THỐNG & BRANDING
 // =========================================================================
-const isDrilldownColDialogOpen = ref(false);
-const tempSelectedDrilldownCols = ref([]);
-const customDrilldownColsPersonnel = ref([]);
-const customDrilldownColsRelatives = ref([]);
-const drilldownTargetCriterion = ref(null);
-const drilldownCategory = ref('personnel');
-const drilldownHasDualTabs = ref(false);
-const drilldownActiveTab = ref('personnel');
+const systemBranding = ref({
+  menuLabelDashboard: 'Thống kê',
+});
 
-const loadDrilldownColSettings = async () => {
+const loadSystemBranding = async () => {
   try {
-    const pCols = await getAppSettings('dashboard_drilldown_cols_personnel');
-    if (pCols && Array.isArray(pCols)) customDrilldownColsPersonnel.value = pCols;
-    const rCols = await getAppSettings('dashboard_drilldown_cols_relatives');
-    if (rCols && Array.isArray(rCols)) customDrilldownColsRelatives.value = rCols;
-  } catch (e) {
-    console.error('Error loading drilldown col settings:', e);
-  }
-};
-loadDrilldownColSettings();
-
-const isRelativeView = computed(() => {
-  return drilldownCategory.value === 'relatives' || (drilldownHasDualTabs.value && drilldownActiveTab.value === 'relatives');
-});
-
-const currentDrilldownAllAvailableCols = computed(() => {
-  if (isRelativeView.value) {
-    const baseList = [{ id: 'code', label: 'Mã Thân nhân' }, { id: 'cccd_can_bo', label: 'CCCD Cán bộ' }];
-    (allAvailableRelativeColumns.value || []).forEach((c) => {
-      if (!baseList.some((x) => x.id === c.id)) {
-        baseList.push({ id: c.id, label: c.label.replace(/^\[Cột\s*[^\]]+\]\s*/i, '') });
-      }
-    });
-    return baseList;
-  }
-  const baseList = [{ id: 'code', label: 'Mã Cán bộ' }, { id: 'name', label: 'Họ và tên' }];
-  (allAvailableColumns.value || []).forEach((c) => {
-    if (!baseList.some((x) => x.id === c.id)) {
-      baseList.push({ id: c.id, label: c.label.replace(/^\[Cột\s*[^\]]+\]\s*/i, '') });
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (parsed) systemBranding.value = { ...systemBranding.value, ...parsed };
     }
-  });
-  return baseList;
+    const saved = await getAppSettings('system_branding_config', null);
+    if (saved && typeof saved === 'object') {
+      systemBranding.value = { ...systemBranding.value, ...saved };
+    }
+  } catch (e) {}
+};
+
+const onSystemBrandingUpdated = (e) => {
+  if (e && e.detail) {
+    systemBranding.value = { ...systemBranding.value, ...e.detail };
+  } else {
+    loadSystemBranding();
+  }
+};
+
+// =========================================================================
+// QUẢN LÝ CÁC TRANG DASHBOARD & ROUTE PARAM (:id)
+// =========================================================================
+const customDashboardPages = ref([]);
+
+const loadCustomDashboardPages = async () => {
+  try {
+    const local = localStorage.getItem('custom_dashboard_pages');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed)) customDashboardPages.value = parsed;
+    }
+    const db = await getAppSettings('custom_dashboard_pages', null);
+    if (db && Array.isArray(db)) {
+      customDashboardPages.value = db;
+      try { localStorage.setItem('custom_dashboard_pages', JSON.stringify(db)); } catch (e) {}
+    }
+  } catch (e) {}
+};
+
+const dashboardId = computed(() => route.params.id || 'root');
+const groupsStorageKey = computed(() => dashboardId.value === 'root' ? 'dashboard_custom_groups' : `dashboard_custom_groups_${dashboardId.value}`);
+
+const currentCustomDashboardPage = computed(() => {
+  if (dashboardId.value === 'root') return null;
+  return (customDashboardPages.value || []).find((p) => p.id === dashboardId.value);
 });
 
-const shouldShowDrilldownCriterion = computed(() => {
-  if (!drilldownTargetCriterion.value || !drilldownTargetCriterion.value.columnId) return false;
-  const colId = drilldownTargetCriterion.value.columnId;
-  const cols = isRelativeView.value ? drilldownDisplayRelativeColumns.value : drilldownDisplayPersonnelColumns.value;
-  return !cols.some((c) => c.id === colId);
+const currentDashboardTitle = computed(() => {
+  if (dashboardId.value === 'root') {
+    return systemBranding.value.menuLabelDashboard || 'Thống kê';
+  }
+  return currentCustomDashboardPage.value?.title || 'Trang Thống kê';
 });
 
-const openDrilldownColDialog = () => {
-  if (isRelativeView.value) {
-    tempSelectedDrilldownCols.value = customDrilldownColsRelatives.value.length > 0
-      ? [...customDrilldownColsRelatives.value]
-      : (personnelStore.visibleRelativeColumns || []).filter(
-          (id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo'
-        );
-  } else {
-    tempSelectedDrilldownCols.value = customDrilldownColsPersonnel.value.length > 0
-      ? [...customDrilldownColsPersonnel.value]
-      : (personnelStore.visibleColumns || []).filter((id) => id !== 'stt' && id !== 'code' && id !== 'name');
+const currentDashboardDescription = computed(() => {
+  if (dashboardId.value === 'root') {
+    return 'Tổng quan tình hình cán bộ, xuất nhập cảnh, thân nhân & các chỉ số chuyên đề';
   }
-  isDrilldownColDialogOpen.value = true;
-};
+  return currentCustomDashboardPage.value?.description || 'Báo cáo thống kê trực quan và phân tích dữ liệu';
+});
 
-const selectAllDrilldownCols = () => {
-  tempSelectedDrilldownCols.value = currentDrilldownAllAvailableCols.value.map((c) => c.id);
-};
+// =========================================================================
+// POPUP DIALOG CHI TIẾT DỮ LIỆU THỐNG KÊ (DRILLDOWN POPUP MODAL)
+// =========================================================================
+const isDrilldownModalOpen = ref(false);
+const drilldownWidget = ref(null);
+const drilldownExtraTitle = ref('');
+const drilldownSourceType = ref('trips');
+const drilldownRawList = ref([]);
+const drilldownSearchText = ref('');
+const drilldownDtFirst = ref(0);
+const drilldownSelectedRows = ref([]);
+const isDocxExportOpen = ref(false);
 
-const resetDefaultDrilldownCols = () => {
-  if (isRelativeView.value) {
-    tempSelectedDrilldownCols.value = (personnelStore.visibleRelativeColumns || []).filter(
-      (id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo'
-    );
-  } else {
-    tempSelectedDrilldownCols.value = (personnelStore.visibleColumns || []).filter(
-      (id) => id !== 'stt' && id !== 'code' && id !== 'name'
-    );
-  }
-};
+const drilldownColumns = computed(() => {
+  const src = drilldownSourceType.value || 'trips';
+  const cols = [];
 
-const saveDrilldownCols = async () => {
-  if (isRelativeView.value) {
-    customDrilldownColsRelatives.value = [...tempSelectedDrilldownCols.value];
-    try {
-      await saveAppSettings('dashboard_drilldown_cols_relatives', customDrilldownColsRelatives.value);
-    } catch (e) {}
-  } else {
-    customDrilldownColsPersonnel.value = [...tempSelectedDrilldownCols.value];
-    try {
-      await saveAppSettings('dashboard_drilldown_cols_personnel', customDrilldownColsPersonnel.value);
-    } catch (e) {}
-  }
-  isDrilldownColDialogOpen.value = false;
-};
-
-const drilldownDisplayPersonnelColumns = computed(() => {
-  const map = {};
-  (personnelStore.importMappingPersonnel || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id) map[c.id] = c;
+  if (src === 'trips' || src === 'trip') {
+    // 1. Cán bộ liên quan
+    cols.push({
+      id: '_parentPersonnelName',
+      label: 'Cán bộ (Họ và tên)',
+      width: '180px',
+      isVirtual: true,
     });
-  });
-
-  const selectedIds = customDrilldownColsPersonnel.value.length > 0
-    ? [...customDrilldownColsPersonnel.value]
-    : (personnelStore.visibleColumns || []).filter((id) => id !== 'stt' && id !== 'code' && id !== 'name');
-
-  const baseCols = selectedIds.map((id) => {
-    if (id === 'code') return { id: 'code', label: 'Mã CB' };
-    const cfg = map[id];
-    if (cfg && cfg.label) return { ...cfg, id: cfg.id, label: cfg.label };
-    const found = personnelStore.allAvailableColumns.find((c) => c.id === id);
-    return found ? { ...found } : { id, label: id };
-  });
-
-  // Tự động đính kèm cột dữ liệu được bấm vào ở cuối bảng nếu chưa có (chỉ cho view Cán bộ không phải Trips)
-  if (drilldownCategory.value === 'personnel' && drilldownTargetCriterion.value && drilldownTargetCriterion.value.columnId) {
-    const targetId = drilldownTargetCriterion.value.columnId;
-    const exists = baseCols.some((c) => c.id === targetId);
-    if (!exists) {
-      const cfg = map[targetId];
-      baseCols.push({
-        id: targetId,
-        label: drilldownTargetCriterion.value.label || cfg?.label || targetId,
-        isDynamicTargetCol: true,
+    // 2. Toàn bộ các cột chuyến đi từ cấu hình importMappingTrips
+    (personnelStore.importMappingTrips || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
+          cols.push({
+            id: c.id,
+            label: c.label || c.id,
+            width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
+            format: c.format,
+            formulaType: c.formulaType,
+          });
+        }
+      });
+    });
+    // 3. Trạng thái hiện diện nếu chưa có
+    if (!cols.some((c) => c.id === 'presenceStatus' || c.id === '_presenceStatus' || c.id === 'trang_thai_hien_dien')) {
+      cols.push({
+        id: 'presenceStatus',
+        label: 'Trạng thái hiện diện',
+        width: '170px',
+        isVirtual: true,
+      });
+    }
+  } else if (src === 'relatives' || src === 'relative') {
+    (personnelStore.importMappingRelative || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
+          cols.push({
+            id: c.id,
+            label: c.label || c.id,
+            width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
+            format: c.format,
+            formulaType: c.formulaType,
+          });
+        }
+      });
+    });
+    if (!cols.some((c) => c.id === '_parentPersonnelName' || c.id === 'parentPersonnelName' || c.id === 'parentName')) {
+      cols.push({
+        id: '_parentPersonnelName',
+        label: 'Cán bộ liên quan',
+        width: '180px',
+        isVirtual: true,
+      });
+    }
+  } else if (src === 'personnel') {
+    (personnelStore.importMappingPersonnel || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
+          cols.push({
+            id: c.id,
+            label: c.label || c.id,
+            width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
+            format: c.format,
+            formulaType: c.formulaType,
+          });
+        }
+      });
+    });
+  } else {
+    // Custom table
+    const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === src);
+    if (customTable) {
+      const customCols = customTable.customColumns || customTable.columns || [];
+      customCols.forEach((c) => {
+        if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
+          cols.push({
+            id: c.id,
+            label: c.label || c.id,
+            width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
+            format: c.format,
+          });
+        }
+      });
+    }
+    if (cols.length === 0) {
+      (personnelStore.importMappingTrips || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
+            cols.push({ id: c.id, label: c.label || c.id, width: '160px' });
+          }
+        });
       });
     }
   }
 
-  return baseCols;
+  return cols;
 });
 
-const drilldownDisplayRelativeColumns = computed(() => {
-  const map = {};
-  (personnelStore.importMappingRelative || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id) map[c.id] = c;
+const filteredDrilldownList = computed(() => {
+  const list = drilldownRawList.value || [];
+  const q = drilldownSearchText.value?.trim().toLowerCase();
+  if (!q) return list;
+
+  const cols = drilldownColumns.value;
+  return list.filter((row) => {
+    return cols.some((col) => {
+      const val = getRowFieldValue(row, col.id);
+      return val && String(val).toLowerCase().includes(q);
     });
   });
+});
 
-  const selectedIds = customDrilldownColsRelatives.value.length > 0
-    ? [...customDrilldownColsRelatives.value]
-    : (personnelStore.visibleRelativeColumns || []).filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo');
+const drilldownSelectedPersonnel = computed(() => {
+  const selected = drilldownSelectedRows.value || [];
+  const list = selected.length > 0 ? selected : filteredDrilldownList.value;
+  const personMap = new Map();
+  const pKeyField = personnelStore.getPersonnelKeyField();
 
-  const baseCols = selectedIds.map((id) => {
-    if (id === 'code') return { id: 'code', label: 'Mã TN' };
-    if (id === 'cccd_can_bo') return { id: 'cccd_can_bo', label: 'CCCD Cán bộ' };
-    const cfg = map[id];
-    if (cfg && cfg.label) return { ...cfg, id: cfg.id, label: cfg.label };
-    const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
-    return found ? { ...found } : { id, label: id };
+  list.forEach((r) => {
+    let p = r.rawPerson;
+    if (!p) {
+      const pKey = r[pKeyField] || r.parentCccd || r.cccdparent || r.cccd || r.id;
+      p = (personnelStore.personnelList || []).find(
+        (x) => x[pKeyField] === pKey || x.cccdparent === pKey || x.cccd === pKey || x.id === pKey
+      );
+    }
+    if (p && p.id && !personMap.has(p.id)) {
+      personMap.set(p.id, p);
+    }
   });
 
-  // Tự động đính kèm cột dữ liệu được bấm vào ở cuối bảng nếu chưa có
-  if (drilldownTargetCriterion.value && drilldownTargetCriterion.value.columnId) {
-    const targetId = drilldownTargetCriterion.value.columnId;
-    const exists = baseCols.some((c) => c.id === targetId);
-    if (!exists) {
-      const cfg = map[targetId];
-      baseCols.push({
-        id: targetId,
-        label: drilldownTargetCriterion.value.label || cfg?.label || targetId,
-        isDynamicTargetCol: true,
-      });
-    }
+  return Array.from(personMap.values());
+});
+
+const drilldownAllPersonnel = computed(() => {
+  return personnelStore.personnelList || [];
+});
+
+const openDrilldownDocxExport = () => {
+  isDocxExportOpen.value = true;
+};
+
+const exportDrilldownExcel = () => {
+  const list = drilldownSelectedRows.value.length > 0 ? drilldownSelectedRows.value : filteredDrilldownList.value;
+  if (!list || list.length === 0) {
+    alert('Không có dữ liệu để xuất Excel!');
+    return;
   }
 
-  return baseCols;
-});
-
-const activePersonnelColumns = computed(() => {
-  const map = {};
-  (personnelStore.importMappingPersonnel || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id) map[c.id] = c;
+  const cols = drilldownColumns.value;
+  const exportData = list.map((row, idx) => {
+    const item = { 'STT': idx + 1 };
+    cols.forEach((col) => {
+      item[col.label] = getRowFieldValue(row, col.id) || '';
     });
+    return item;
   });
 
-  return (personnelStore.visibleColumns || [])
-    .filter((id) => id !== 'stt' && id !== 'code' && id !== 'name')
-    .map((id) => {
-      const cfg = map[id];
-      if (cfg && cfg.label) {
-        return { id: cfg.id, label: cfg.label };
-      }
-      const found = personnelStore.allAvailableColumns.find((c) => c.id === id);
-      return found || { id, label: id };
-    });
-});
+  const rawTitle = drilldownExtraTitle.value || drilldownWidget.value?.title || 'Du_Lieu';
+  const cleanTitle = rawTitle.replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_');
+  const fileName = `Thong_Ke_${cleanTitle}_${new Date().toISOString().slice(0, 10)}`;
+  exportToExcel(exportData, fileName, 'Dữ liệu thống kê');
+};
 
-const activeRelativeColumns = computed(() => {
-  const map = {};
-  (personnelStore.importMappingRelative || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id) map[c.id] = c;
-    });
-  });
-
-  return (personnelStore.visibleRelativeColumns || [])
-    .filter((id) => id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo')
-    .map((id) => {
-      const cfg = map[id];
-      if (cfg && cfg.label) {
-        return { id: cfg.id, label: cfg.label };
-      }
-      const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
-      return found || { id, label: id };
-    });
-});
+const handleDrilldownRowDetail = (row) => {
+  const src = drilldownSourceType.value;
+  if (src === 'trips' || src === 'trip') {
+    openTripDetail(row);
+  } else if (src === 'relatives' || src === 'relative') {
+    openRelativeDetail(row);
+  } else {
+    openPersonnelDetail(row);
+  }
+};
 
 const getDisplayValue = (row, colId) => {
   if (!row || !colId) return '-';
@@ -1268,9 +1494,12 @@ const dialogTargetRelativeCode = ref('');
 
 const openPersonnelDetail = (p) => {
   if (!p) return;
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  const targetCccd = p[pKeyField] ?? p.cccdparent ?? p.cccd ?? p.id;
   const target = (personnelStore.personnelList || []).find(
-    (x) => x.id === p.id || x.code === p.code || (p.cccdparent && (x.cccdparent === p.cccdparent || x.cccd === p.cccdparent))
-  ) || p;
+    (x) => x.id === p.id || x.code === p.code || 
+           (targetCccd && (x[pKeyField] === targetCccd || x.cccdparent === targetCccd || x.cccd === targetCccd))
+  ) || p.rawPerson || p;
   selectedPersonForDialog.value = target;
   dialogInitialTab.value = 0;
   dialogTargetRelativeCode.value = '';
@@ -1279,13 +1508,27 @@ const openPersonnelDetail = (p) => {
 
 const openTripDetail = (t) => {
   if (!t) return;
-  const p = (personnelStore.personnelList || []).find(
-    (x) => x.id === t.personnelId || x.code === t.personnelId || x.code === t.personnelCode || x.name === t.personnelName
-  );
+  let p = t.rawPerson || null;
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  if (!p) {
+    const pCccd = t[pKeyField] ?? t.parentCccd ?? t.cccdparent ?? t.cccd_can_bo;
+    if (pCccd) {
+      p = (personnelStore.personnelList || []).find(
+        (x) => (x[pKeyField] && String(x[pKeyField]).trim() === String(pCccd).trim()) ||
+               (x.cccdparent && String(x.cccdparent).trim() === String(pCccd).trim()) ||
+               (x.cccd && String(x.cccd).trim() === String(pCccd).trim())
+      );
+    }
+  }
+  if (!p) {
+    p = (personnelStore.personnelList || []).find(
+      (x) => x.id === t.personnelId || x.code === t.personnelId || x.code === t.personnelCode || x.name === t.personnelName
+    );
+  }
   if (p) {
     selectedPersonForDialog.value = p;
-    dialogInitialTab.value = 2; // Tab 3: Chuyến đi
-    dialogTargetRelativeCode.value = '';
+    dialogInitialTab.value = t.isRelative ? 1 : 2;
+    dialogTargetRelativeCode.value = t.isRelative ? (t.rawRelative?.code || '') : '';
     isPersonDialogOpen.value = true;
   }
 };
@@ -1293,10 +1536,11 @@ const openTripDetail = (t) => {
 const openRelativeDetail = (r) => {
   if (!r) return;
   let parent = r.rawPerson || null;
-  if (!parent && (r.cccd_can_bo || r.cccdparent || r.parentCccd)) {
-    const targetCccd = String(r.cccd_can_bo || r.cccdparent || r.parentCccd).trim();
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  if (!parent && (r.cccd_can_bo || r.cccdparent || r.parentCccd || r[pKeyField])) {
+    const targetCccd = String(r[pKeyField] || r.cccd_can_bo || r.cccdparent || r.parentCccd).trim();
     parent = (personnelStore.personnelList || []).find(
-      (p) => String(p.cccdparent || p.cccd || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim() === targetCccd
+      (p) => String(p[pKeyField] || p.cccdparent || p.cccd || p.custom_data?.[pKeyField] || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim() === targetCccd
     );
   }
   if (!parent && r.personnelId) {
@@ -1448,18 +1692,21 @@ const loadDeletedTopicGroupIds = async () => {
 
 const loadCustomGroups = async () => {
   try {
-    const local = localStorage.getItem('dashboard_custom_groups');
+    const storageKey = groupsStorageKey.value;
+    const local = localStorage.getItem(storageKey);
     if (local !== null && local !== undefined) {
       const parsed = JSON.parse(local);
       if (Array.isArray(parsed)) {
         customGroups.value = parsed;
       }
+    } else {
+      customGroups.value = [];
     }
-    const dbGroups = await getAppSettings('dashboard_custom_groups');
+    const dbGroups = await getAppSettings(storageKey);
     if (dbGroups !== null && dbGroups !== undefined && Array.isArray(dbGroups)) {
       customGroups.value = dbGroups;
       try {
-        localStorage.setItem('dashboard_custom_groups', JSON.stringify(dbGroups));
+        localStorage.setItem(storageKey, JSON.stringify(dbGroups));
       } catch (e) {}
     }
 
@@ -1477,10 +1724,12 @@ const loadCustomGroups = async () => {
 
 const saveCustomGroupsToDb = async () => {
   try {
-    localStorage.setItem('dashboard_custom_groups', JSON.stringify(customGroups.value));
+    const storageKey = groupsStorageKey.value;
+    localStorage.setItem(storageKey, JSON.stringify(customGroups.value));
   } catch (e) {}
   try {
-    await saveAppSettings('dashboard_custom_groups', customGroups.value);
+    const storageKey = groupsStorageKey.value;
+    await saveAppSettings(storageKey, customGroups.value);
   } catch (e) {
     console.error('Error saving custom groups to DB:', e);
   }
@@ -3143,100 +3392,79 @@ function computeWidgetCount(widget) {
   return filtered.length;
 };
 
-const handleWidgetClick = (widget) => {
+const openDrilldownForWidget = (widget, extraCondition = null) => {
   const source = widget.source || 'trips';
-  const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
-  if (customTable) {
-    router.push(`/dashboard-topic/${customTable.id}`);
-    return;
-  }
+  let list = getSourceList(source);
 
+  // Chuẩn hóa conditions của widget
   const conds = (Array.isArray(widget.conditions) && widget.conditions.length > 0)
-    ? widget.conditions
+    ? [...widget.conditions]
     : (Array.isArray(widget.criteria) && widget.criteria.length > 0
-        ? widget.criteria
+        ? [...widget.criteria]
         : (widget.field || widget.columnId
             ? [{ field: widget.field || widget.columnId, operator: widget.operator || widget.countCondition || 'has_value', value: widget.value || widget.countValue || '' }]
             : []));
 
+  if (extraCondition) {
+    conds.push(extraCondition);
+  }
+
   const activeConds = conds.filter((c) => c && c.field && String(c.field).trim() !== '');
 
-  const searchFilter = {
-    criteria: activeConds.length > 0 ? activeConds.map((c, idx) => ({
-      id: c.id || `crit_${Date.now()}_${idx}`,
-      field: c.field,
-      operator: c.operator || 'has_value',
-      value: c.value !== undefined ? c.value : '',
-    })) : [
-      { id: 'crit_1', field: 'trang_thai_hien_dien', operator: 'has_value', value: '' }
-    ],
-    logicOperator: widget.logicOp || 'AND',
-    title: widget.title || 'Thống kê',
-  };
-
-  try {
-    localStorage.setItem('advanced_search_current_filter', JSON.stringify(searchFilter));
-  } catch (e) {}
-
-  router.push({
-    path: '/advanced-search',
-    query: {
-      fromWidget: String(Date.now()),
-      title: widget.title,
+  let filtered = list;
+  if (activeConds.length > 0) {
+    const cardLike = {
+      ...widget,
+      conditions: activeConds,
+      logicOp: widget.logicOp || widget.logicOperator || 'AND',
+    };
+    filtered = list.filter((row) => matchSharedCardCondition(row, cardLike, personnelStore));
+  } else if (widget.topicId && !extraCondition) {
+    const topic = (availableTopicDashboards.value || []).find((t) => t.id === widget.topicId);
+    if (topic) {
+      const topicCard = (topic.metricCards || []).find((c) => c.id === widget.cardId) || (topic.metricCards || [])[0];
+      if (topicCard && topicCard.condition && topicCard.condition !== 'all') {
+        filtered = list.filter((row) => matchSharedCardCondition(row, topicCard, personnelStore));
+      }
     }
-  });
+  }
+
+  if (widget.isUnique) {
+    const seen = new Set();
+    const uniqueResult = [];
+    filtered.forEach((r) => {
+      const cccd = r.cccd || r.rawPerson?.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
+      if (cccd && !seen.has(cccd)) {
+        seen.add(cccd);
+        uniqueResult.push(r);
+      }
+    });
+    filtered = uniqueResult;
+  }
+
+  drilldownWidget.value = widget;
+  drilldownExtraTitle.value = extraCondition ? `${widget.title}: "${extraCondition.value}"` : (widget.title || 'Thống kê');
+  drilldownSourceType.value = source;
+  drilldownRawList.value = filtered;
+  drilldownSearchText.value = '';
+  drilldownDtFirst.value = 0;
+  drilldownSelectedRows.value = [];
+  isDrilldownModalOpen.value = true;
+};
+
+const handleWidgetClick = (widget) => {
+  openDrilldownForWidget(widget);
 };
 
 const handleChartItemClick = (widget, item) => {
-  const source = widget.source || 'trips';
-  const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
-  if (customTable) {
-    router.push(`/dashboard-topic/${customTable.id}`);
-    return;
-  }
-
   const groupField = item?.field || widget.columnId || (widget.source === 'personnel' ? 'departmentName' : 'countryName');
   const groupVal = item?.name || '';
-
-  const conds = (Array.isArray(widget.conditions) && widget.conditions.length > 0)
-    ? [...widget.conditions]
-    : [];
-
-  const searchCriteria = conds.filter((c) => c && c.field && String(c.field).trim() !== '').map((c, idx) => ({
-    id: c.id || `crit_${Date.now()}_${idx}`,
-    field: c.field,
-    operator: c.operator || 'has_value',
-    value: c.value !== undefined ? c.value : '',
-  }));
-
-  if (groupField && groupVal) {
-    searchCriteria.push({
-      id: `crit_group_${Date.now()}`,
-      field: groupField,
-      operator: 'equals',
-      value: groupVal,
-    });
-  }
-
-  const searchFilter = {
-    criteria: searchCriteria.length > 0 ? searchCriteria : [
-      { id: 'crit_1', field: groupField, operator: 'equals', value: groupVal }
-    ],
-    logicOperator: 'AND',
-    title: `${widget.title || 'Thống kê'}: "${groupVal}"`,
-  };
-
-  try {
-    localStorage.setItem('advanced_search_current_filter', JSON.stringify(searchFilter));
-  } catch (e) {}
-
-  router.push({
-    path: '/advanced-search',
-    query: {
-      fromWidget: String(Date.now()),
-      title: `${widget.title || 'Thống kê'}: "${groupVal}"`,
-    }
-  });
+  const extraCondition = (groupField && groupVal) ? {
+    field: groupField,
+    operator: 'equals',
+    value: groupVal,
+  } : null;
+  openDrilldownForWidget(widget, extraCondition);
 };
 
 const computeWidgetChartData = (widget) => {
@@ -3734,8 +3962,23 @@ const handleCustomDashboardsUpdated = async (e) => {
   await loadAllCustomTablesData();
 };
 
+watch(
+  () => route.params.id,
+  async () => {
+    await loadCustomDashboardPages();
+    await loadCustomGroups();
+    if (dashboardId.value === 'root' && (!customGroups.value || customGroups.value.length === 0)) {
+      await reconcileGroupsWithTopics(true);
+    }
+  }
+);
+
 onMounted(async () => {
   window.addEventListener('custom-dashboards-updated', handleCustomDashboardsUpdated);
+  window.addEventListener('custom-dashboard-pages-updated', loadCustomDashboardPages);
+  window.addEventListener('system-branding-updated', onSystemBrandingUpdated);
+  loadSystemBranding();
+  await loadCustomDashboardPages();
   await Promise.all([
     personnelStore.loadSettings(),
     personnelStore.fetchPersonnel(),
@@ -3744,14 +3987,16 @@ onMounted(async () => {
     loadCustomGroups(),
     loadDeletedTopicGroupIds(),
   ]);
-  // Chỉ tự động khởi tạo nhóm ban đầu nếu chưa từng có cấu hình nào
-  if (!customGroups.value || customGroups.value.length === 0) {
+  // Chỉ tự động khởi tạo nhóm ban đầu cho Dashboard chính nếu chưa từng có cấu hình nào
+  if (dashboardId.value === 'root' && (!customGroups.value || customGroups.value.length === 0)) {
     await reconcileGroupsWithTopics(true);
   }
 });
 
 onUnmounted(() => {
   window.removeEventListener('custom-dashboards-updated', handleCustomDashboardsUpdated);
+  window.removeEventListener('custom-dashboard-pages-updated', loadCustomDashboardPages);
+  window.removeEventListener('system-branding-updated', onSystemBrandingUpdated);
 });
 </script>
 

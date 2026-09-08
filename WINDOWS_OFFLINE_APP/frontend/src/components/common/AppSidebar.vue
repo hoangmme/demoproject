@@ -59,38 +59,37 @@
         </button>
       </div>
 
-      <!-- Danh sách các nhóm thống kê con (Dashboard Groups) nếu có -->
-      <template v-if="sidebarDashboardGroups.length > 0">
+      <!-- Danh sách các Trang Thống kê tự tạo (Custom Dashboards) -->
+      <template v-if="customDashboardPages.length > 0">
         <div
-          v-for="grp in sidebarDashboardGroups"
-          :key="grp.id"
+          v-for="dash in customDashboardPages"
+          :key="dash.id"
           class="sidebar-item-row"
         >
-          <a
-            href="javascript:void(0)"
+          <router-link
+            :to="`/dashboard/${dash.id}`"
             class="app-nav-item"
-            @click="navigateToDashboardGroup(grp)"
-            :title="grp.title"
+            :title="dash.title"
           >
-            <i class="pi pi-chart-bar" style="color: #0284c7;"></i>
+            <i :class="dash.icon ? `pi ${dash.icon}` : 'pi pi-chart-pie'" style="color: #0284c7;"></i>
             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              {{ grp.title }}
+              {{ dash.title }}
             </span>
-          </a>
+          </router-link>
           <div class="sidebar-item-actions">
             <button
               type="button"
               class="sidebar-item-action-btn"
-              @click.stop="openEditGroupDialog(grp)"
-              title="Đổi tên nhóm thống kê"
+              @click.stop="openEditDashboardPageDialog(dash)"
+              title="Đổi tên trang thống kê này"
             >
               <i class="pi pi-pencil"></i>
             </button>
             <button
               type="button"
               class="sidebar-item-action-btn action-btn-danger"
-              @click.stop="confirmDeleteGroup(grp)"
-              title="Xóa nhóm thống kê này"
+              @click.stop="confirmDeleteDashboardPage(dash)"
+              title="Xóa trang thống kê này"
             >
               <i class="pi pi-trash"></i>
             </button>
@@ -549,41 +548,41 @@
       </template>
     </Dialog>
 
-    <!-- Dialog Thêm Khối Thống Kê Mới từ Sidebar -->
+    <!-- Dialog Thêm Trang Thống Kê Mới từ Sidebar -->
     <Dialog
-      v-model:visible="isAddDashboardGroupDialogOpen"
+      v-model:visible="isAddDashboardPageDialogOpen"
       modal
-      header="Thêm Khối Thống kê Mới (Dashboard)"
+      header="Tạo Trang Thống kê Mới (Dashboard)"
       :style="{ width: '480px' }"
     >
       <div style="display: flex; flex-direction: column; gap: 14px; padding: 8px 0;">
         <div class="field-item">
           <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
-            Tên Khối Thống kê <span style="color: #ef4444;">*</span>
+            Tên Trang Thống kê <span style="color: #ef4444;">*</span>
           </label>
           <InputText
-            v-model="newDashboardGroupForm.title"
-            placeholder="VD: Thống kê Xuất nhập cảnh, Học sinh giỏi..."
+            v-model="newDashboardPageForm.title"
+            placeholder="VD: Thống kê Đảng & Đoàn thể, Thống kê Quý III..."
             style="width: 100%; font-size: 0.85rem;"
             autofocus
-            @keyup.enter="saveNewDashboardGroup"
+            @keyup.enter="saveNewDashboardPage"
           />
         </div>
         <div class="field-item">
           <label style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
-            Mô tả / Ghi chú (Tùy chọn):
+            Mô tả tóm tắt (Tùy chọn):
           </label>
           <InputText
-            v-model="newDashboardGroupForm.description"
-            placeholder="Mô tả mục đích của khối thống kê..."
+            v-model="newDashboardPageForm.description"
+            placeholder="Mô tả mục đích của trang thống kê..."
             style="width: 100%; font-size: 0.85rem;"
           />
         </div>
       </div>
       <template #footer>
         <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
-          <Button label="Hủy" severity="secondary" text size="small" @click="isAddDashboardGroupDialogOpen = false" />
-          <Button label="Tạo Khối Thống kê" icon="pi pi-check" severity="primary" size="small" @click="saveNewDashboardGroup" />
+          <Button label="Hủy" severity="secondary" text size="small" @click="isAddDashboardPageDialogOpen = false" />
+          <Button label="Tạo Trang Thống kê" icon="pi pi-check" severity="primary" size="small" @click="saveNewDashboardPage" />
         </div>
       </template>
     </Dialog>
@@ -616,17 +615,17 @@
 
         <div
           class="create-choice-card"
-          @click="isAddChooserDialogOpen = false; openAddDashboardGroupDialog();"
+          @click="isAddChooserDialogOpen = false; openAddDashboardPageDialog();"
         >
           <div class="choice-icon-box" style="background: #eff6ff; color: #2563eb;">
             <i class="pi pi-chart-pie" style="font-size: 1.25rem;"></i>
           </div>
           <div style="flex: 1;">
             <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 2px;">
-              Khối Thống kê mới (Dashboard)
+              Trang Thống kê mới (Dashboard)
             </div>
             <div style="font-size: 0.76rem; color: #64748b; line-height: 1.35;">
-              Tạo khối biểu đồ, thẻ chỉ số KPI tổng hợp và phân tích dữ liệu trực quan
+              Tạo trang biểu đồ, thẻ chỉ số KPI tổng hợp và phân tích dữ liệu trực quan
             </div>
           </div>
           <i class="pi pi-chevron-right" style="color: #94a3b8; font-size: 0.8rem;"></i>
@@ -663,61 +662,59 @@ const totalTripsCount = computed(() => {
   return buildTopicSourceList('trips', personnelStore).length;
 });
 
-// Quản lý các nhóm Thống kê trên Sidebar
-const sidebarDashboardGroups = ref([]);
+// Quản lý các Trang Thống kê tự tạo trên Sidebar (Custom Dashboards)
+const customDashboardPages = ref([]);
 
-const loadDashboardGroups = async () => {
+const loadCustomDashboardPages = async () => {
   try {
-    const local = localStorage.getItem('dashboard_custom_groups');
+    const local = localStorage.getItem('custom_dashboard_pages');
     if (local) {
       const parsed = JSON.parse(local);
-      if (Array.isArray(parsed)) sidebarDashboardGroups.value = parsed;
+      if (Array.isArray(parsed)) customDashboardPages.value = parsed;
     }
-    const db = await getAppSettings('dashboard_custom_groups', null);
+    const db = await getAppSettings('custom_dashboard_pages', null);
     if (db && Array.isArray(db)) {
-      sidebarDashboardGroups.value = db;
-      try { localStorage.setItem('dashboard_custom_groups', JSON.stringify(db)); } catch (e) {}
+      customDashboardPages.value = db;
+      try { localStorage.setItem('custom_dashboard_pages', JSON.stringify(db)); } catch (e) {}
     }
   } catch (e) {}
 };
 
-const navigateToDashboardGroup = (grp) => {
-  router.push({ path: '/dashboard', hash: `#group-${grp.id}` });
-};
-
-// Quản lý Tạo khối thống kê mới
-const isAddDashboardGroupDialogOpen = ref(false);
-const newDashboardGroupForm = ref({
+// Quản lý Tạo Trang Thống kê mới từ Sidebar
+const isAddDashboardPageDialogOpen = ref(false);
+const newDashboardPageForm = ref({
   title: '',
   description: '',
 });
 
-const openAddDashboardGroupDialog = () => {
-  newDashboardGroupForm.value = {
+const openAddDashboardPageDialog = () => {
+  newDashboardPageForm.value = {
     title: '',
     description: '',
   };
-  isAddDashboardGroupDialogOpen.value = true;
+  isAddDashboardPageDialogOpen.value = true;
 };
 
-const saveNewDashboardGroup = async () => {
-  if (!newDashboardGroupForm.value.title?.trim()) {
-    alert('Vui lòng nhập tên Khối Thống kê!');
+const saveNewDashboardPage = async () => {
+  if (!newDashboardPageForm.value.title?.trim()) {
+    alert('Vui lòng nhập tên Trang Thống kê!');
     return;
   }
-  const newGroup = {
-    id: 'g_' + Date.now(),
-    title: newDashboardGroupForm.value.title.trim(),
-    description: newDashboardGroupForm.value.description || '',
-    widgets: [],
+  const newId = 'dash_' + Date.now();
+  const newPage = {
+    id: newId,
+    title: newDashboardPageForm.value.title.trim(),
+    description: newDashboardPageForm.value.description || '',
+    icon: 'pi-chart-pie',
+    createdAt: new Date().toISOString(),
   };
-  const list = [...sidebarDashboardGroups.value, newGroup];
-  sidebarDashboardGroups.value = list;
-  try { localStorage.setItem('dashboard_custom_groups', JSON.stringify(list)); } catch (e) {}
-  await saveAppSettings('dashboard_custom_groups', list);
-  window.dispatchEvent(new CustomEvent('dashboard-groups-updated', { detail: list }));
-  isAddDashboardGroupDialogOpen.value = false;
-  router.push('/dashboard');
+  const list = [...customDashboardPages.value, newPage];
+  customDashboardPages.value = list;
+  try { localStorage.setItem('custom_dashboard_pages', JSON.stringify(list)); } catch (e) {}
+  await saveAppSettings('custom_dashboard_pages', list);
+  window.dispatchEvent(new CustomEvent('custom-dashboard-pages-updated', { detail: list }));
+  isAddDashboardPageDialogOpen.value = false;
+  router.push(`/dashboard/${newId}`);
 };
 
 // Quản lý Đổi tên & Xóa Bảng / Thống kê
@@ -737,8 +734,8 @@ const getRenameModalTitle = () => {
   if (type === 'fixed_dashboard') {
     return `Đổi tên Menu Thống kê`;
   }
-  if (type === 'dashboard_group') {
-    return `Đổi tên Khối Thống kê "${currentTitle}"`;
+  if (type === 'custom_dashboard_page') {
+    return `Đổi tên Trang Thống kê "${currentTitle}"`;
   }
   return 'Đổi tên';
 };
@@ -779,12 +776,12 @@ const openEditTableDialog = (dash) => {
   isRenameDialogOpen.value = true;
 };
 
-const openEditGroupDialog = (grp) => {
+const openEditDashboardPageDialog = (dash) => {
   renameForm.value = {
-    type: 'dashboard_group',
-    targetId: grp.id,
-    currentTitle: grp.title,
-    newTitle: grp.title,
+    type: 'custom_dashboard_page',
+    targetId: dash.id,
+    currentTitle: dash.title,
+    newTitle: dash.title,
   };
   isRenameDialogOpen.value = true;
 };
@@ -819,15 +816,15 @@ const saveRename = async () => {
       await saveAppSettings('custom_dashboards_config', list);
       window.dispatchEvent(new CustomEvent('custom-dashboards-updated', { detail: list }));
     }
-  } else if (type === 'dashboard_group') {
-    const list = [...sidebarDashboardGroups.value];
-    const idx = list.findIndex((g) => g.id === targetId);
+  } else if (type === 'custom_dashboard_page') {
+    const list = [...customDashboardPages.value];
+    const idx = list.findIndex((d) => d.id === targetId);
     if (idx !== -1) {
       list[idx] = { ...list[idx], title: newName };
-      sidebarDashboardGroups.value = list;
-      try { localStorage.setItem('dashboard_custom_groups', JSON.stringify(list)); } catch (e) {}
-      await saveAppSettings('dashboard_custom_groups', list);
-      window.dispatchEvent(new CustomEvent('dashboard-groups-updated', { detail: list }));
+      customDashboardPages.value = list;
+      try { localStorage.setItem('custom_dashboard_pages', JSON.stringify(list)); } catch (e) {}
+      await saveAppSettings('custom_dashboard_pages', list);
+      window.dispatchEvent(new CustomEvent('custom-dashboard-pages-updated', { detail: list }));
     }
   }
 
@@ -857,13 +854,18 @@ const confirmDeleteTable = async (dash) => {
   }
 };
 
-const confirmDeleteGroup = async (grp) => {
-  if (!confirm(`Bạn có chắc chắn muốn xóa khối thống kê "${grp.title}" không?`)) return;
-  const list = sidebarDashboardGroups.value.filter((g) => g.id !== grp.id);
-  sidebarDashboardGroups.value = list;
-  try { localStorage.setItem('dashboard_custom_groups', JSON.stringify(list)); } catch (e) {}
-  await saveAppSettings('dashboard_custom_groups', list);
-  window.dispatchEvent(new CustomEvent('dashboard-groups-updated', { detail: list }));
+const confirmDeleteDashboardPage = async (dash) => {
+  if (!confirm(`Bạn có chắc chắn muốn xóa trang thống kê "${dash.title}" không?`)) return;
+  const list = customDashboardPages.value.filter((d) => d.id !== dash.id);
+  customDashboardPages.value = list;
+  try { localStorage.setItem('custom_dashboard_pages', JSON.stringify(list)); } catch (e) {}
+  await saveAppSettings('custom_dashboard_pages', list);
+  try { localStorage.removeItem(`dashboard_custom_groups_${dash.id}`); } catch (e) {}
+  window.dispatchEvent(new CustomEvent('custom-dashboard-pages-updated', { detail: list }));
+
+  if (route.params.id === dash.id) {
+    router.push('/dashboard');
+  }
 };
 
 // Quản lý Xóa 3 Bảng chính (Cán bộ, Thân nhân, Chuyến đi)
@@ -1267,17 +1269,17 @@ onMounted(() => {
   loadSystemBranding();
   loadSidebarBg();
   loadSidebarData();
-  loadDashboardGroups();
+  loadCustomDashboardPages();
   window.addEventListener('sidebar-bg-updated', loadSidebarBg);
   window.addEventListener('custom-dashboards-updated', loadSidebarData);
-  window.addEventListener('dashboard-groups-updated', loadDashboardGroups);
+  window.addEventListener('custom-dashboard-pages-updated', loadCustomDashboardPages);
   window.addEventListener('system-branding-updated', onSystemBrandingUpdated);
 });
 
 onUnmounted(() => {
   window.removeEventListener('sidebar-bg-updated', loadSidebarBg);
   window.removeEventListener('custom-dashboards-updated', loadSidebarData);
-  window.removeEventListener('dashboard-groups-updated', loadDashboardGroups);
+  window.removeEventListener('custom-dashboard-pages-updated', loadCustomDashboardPages);
   window.removeEventListener('system-branding-updated', onSystemBrandingUpdated);
 });
 </script>

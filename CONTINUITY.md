@@ -1431,8 +1431,25 @@
   - Cập nhật `allSearchableGroupsForWidget` & `availableColumnsForWidgetSource`: Khi chọn bảng tự tạo, tự động đẩy nhóm cột của bảng đó lên đầu danh mục để dễ dàng chọn cột gom nhóm phân loại biểu đồ và cấu hình các điều kiện lọc.
   - Cập nhật `handleWidgetClick`: Khi nhấn vào khối thống kê tạo từ bảng tùy chỉnh, tự động điều hướng trực tiếp sang bảng đó (`/dashboard-topic/${customTable.id}`).
   - Lắng nghe sự kiện `custom-dashboards-updated` trên `window` để tự động làm mới danh sách bảng thống kê ngay khi người dùng vừa tạo bảng mới.
+### 13. CẤU TRÚC PHÂN TẦNG THỐNG KÊ & POPUP XEM DỮ LIỆU FULL CỘT (DRILLDOWN MODAL)
+- **Vấn đề đã giải quyết**:
+  1. **Tách biệt Thứ bậc Thống kê (Dashboard Hierarchy)**:
+     - Chuẩn phân tầng: `Thống kê (Dashboard Page) > Nhóm thống kê (Dashboard Group) > Thống kê Widget (Stat Cards / Charts)`.
+     - Nhóm thống kê tạo bên trong một Trang Dashboard chỉ nằm cục bộ trong trang đó, tuyệt đối KHÔNG đẩy ra menu Sidebar bên ngoài.
+     - Nút `+ -> Trang Thống kê mới (Dashboard)` trên Sidebar tạo một trang Thống kê độc lập mới (`/dashboard/:id`) lưu vào `custom_dashboard_pages`, hiển thị ở menu bên dưới "Thống kê" và quản lý các nhóm/widget riêng biệt thông qua `groupsStorageKey` (`dashboard_custom_groups_${id}`).
+  2. **Popup Modal xem Dữ liệu Full Cột (Drilldown Modal thay thế chuyển trang Tìm kiếm nâng cao)**:
+     - Khi ấn vào bất kỳ Thẻ đếm chỉ số (Stat Card) hoặc phần tử của Biểu đồ (Bar/Slice) trên Dashboard, hệ thống KHÔNG chuyển hướng sang `/advanced-search` nữa mà mở ngay một Popup Dialog toàn màn hình (`isDrilldownModalOpen`).
+     - Hiển thị đầy đủ 100% các cột cấu hình của bảng nguồn dữ liệu tương ứng (Chuyến đi, Cán bộ, Thân nhân, hoặc Bảng tự tạo) kèm cuộn ngang `overflow-x: auto` mượt mà (`min-width: max-content`).
+     - Hỗ trợ đầy đủ:
+       - Ô tìm kiếm lọc dữ liệu tức thì trong danh sách kết quả.
+       - Cột STT chuẩn phân trang (`drilldownDtFirst + index + 1`).
+       - Cột Trạng thái hiện diện dạng huy hiệu màu trực quan.
+       - Nút `[Xem]` mở trực tiếp `PersonnelDialog` xem chi tiết hồ sơ Cán bộ/Thân nhân.
+       - Nút `[Xuất Excel]` xuất trực tiếp file Excel theo các cột đang hiển thị.
+       - Nút `[Xuất PDF]` mở `AdvancedDocxExportDialog` xuất file Word/PDF.
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP`.
+
 
 
 
