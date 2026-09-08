@@ -1653,6 +1653,26 @@
      - Thay thế toàn bộ code trùng lặp ở `PersonnelView.vue` và `ChildDashboardView.vue` bằng component `ExportImportMenu`.
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+- **Entry (2026-09-08)**: **Khắc Phục Nút Setup Tab View `[ ⋮ ]` (`pi pi-ellipsis-v`) Bị Đè / Bấm Không Hiện Menu**:
+  1. **Nguyên nhân gốc rễ**:
+     - `.lark-base-view-tabs-strip` có CSS `overflow-x: auto;`. Theo W3C CSS spec, khi một trục là `auto` thì trục kia tự động thành `auto/scroll` (không thể `visible`). Do đó dropdown `.lark-tab-dropdown-menu` bung ra phía dưới thanh tab (cao ~36px) bị cắt cụt (clipped) và ẩn hoàn toàn.
+     - Thiếu bối cảnh xếp chồng (stacking context): Bảng DataTable (`.app-card`) bên dưới có `position: relative`, trong khi container thanh tab không có `position: relative` & `z-index`, khiến menu nếu tràn xuống sẽ bị bảng bên dưới đè lên trên.
+     - Cơ chế bắt sự kiện click toàn cục: `window.addEventListener('click', closeTabMenu)` đóng menu ngay cả khi sự kiện click xuất phát từ chính nút bấm hoặc menu nếu chưa kịp xử lý.
+  2. **Giải pháp đã thực hiện**:
+     - `src/assets/styles/main.css`:
+       - Đổi `overflow-x: auto` thành `overflow: visible` trên `.lark-base-view-tabs-strip`.
+       - Thiết lập `position: relative; z-index: 100;` cho `.lark-base-view-tabs-container` để luôn nằm trên các thành phần bên dưới.
+       - Thêm `.lark-tab-item-wrapper.menu-open { z-index: 1100; }`.
+       - Cấp `position: relative; z-index: 10;` cho `.lark-tab-actions`.
+       - Nâng `z-index` của `.lark-tab-dropdown-menu` lên `9999` với bóng đổ nổi và viền sắc nét.
+       - Thêm `pointer-events: none;` cho icon `i` bên trong `.btn-tab-action` để tránh nuốt click.
+     - `PersonnelView.vue` & `ChildDashboardView.vue`:
+       - Thêm `@click.stop.prevent="toggleTabMenu(...)"` và `@mousedown.stop` vào nút `.btn-tab-setup`.
+       - Nâng cấp `handleGlobalTabMenuClick` kiểm tra `closest('.lark-tab-actions')`, `closest('.btn-tab-setup')`, `closest('.lark-tab-dropdown-menu')` trước khi đóng menu, ngăn ngừa tuyệt đối xung đột sự kiện.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% không lỗi.
+- **Status**: Done [Reversible].
 
 
 

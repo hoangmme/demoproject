@@ -1174,6 +1174,8 @@ td.col-right {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 6px 10px;
+  position: relative;
+  z-index: 100;
 }
 
 .lark-base-view-tabs-strip {
@@ -1181,7 +1183,7 @@ td.col-right {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .lark-base-tab-item {
@@ -1220,6 +1222,10 @@ td.col-right {
   transition: all 0.15s ease;
 }
 
+.lark-tab-item-wrapper.menu-open {
+  z-index: 1100;
+}
+
 .lark-tab-actions {
   display: inline-flex;
   align-items: center;
@@ -1228,6 +1234,8 @@ td.col-right {
   padding-right: 4px;
   opacity: 0;
   visibility: hidden;
+  position: relative;
+  z-index: 10;
   transition: opacity 0.15s ease;
 }
 
@@ -1236,6 +1244,7 @@ td.col-right {
 .lark-tab-item-wrapper.menu-open .lark-tab-actions {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 .btn-tab-action {
@@ -1251,7 +1260,14 @@ td.col-right {
   color: #64748b;
   font-size: 0.72rem;
   cursor: pointer;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
   transition: all 0.15s ease;
+}
+
+.btn-tab-action i {
+  pointer-events: none;
 }
 
 .btn-tab-action:hover {
@@ -1274,14 +1290,14 @@ td.col-right {
 /* Lark Tab Floating Dropdown Menu */
 .lark-tab-dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   right: 0;
-  z-index: 1050;
+  z-index: 9999;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
-  min-width: 195px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
   padding: 5px 0;
   display: flex;
   flex-direction: column;

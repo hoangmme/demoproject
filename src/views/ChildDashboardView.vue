@@ -180,7 +180,8 @@
                 type="button"
                 class="btn-tab-action btn-tab-setup"
                 :class="{ active: activeTabMenuKey === `card_${cIdx}` }"
-                @click.stop="toggleTabMenu('card', cIdx)"
+                @click.stop.prevent="toggleTabMenu('card', cIdx)"
+                @mousedown.stop
                 title="Tùy chọn Chế độ xem"
               >
                 <i class="pi pi-ellipsis-v"></i>
@@ -1234,6 +1235,12 @@ const toggleTabMenu = (type, idx) => {
 };
 const closeTabMenu = () => {
   activeTabMenuKey.value = null;
+};
+const handleGlobalTabMenuClick = (e) => {
+  if (e?.target && (e.target.closest('.lark-tab-actions') || e.target.closest('.btn-tab-setup') || e.target.closest('.lark-tab-dropdown-menu'))) {
+    return;
+  }
+  closeTabMenu();
 };
 
 // ===== Name Column Config (Linh hoạt cho mọi mô hình: Cán bộ, Học sinh, Nhân sự...) =====
@@ -4664,14 +4671,14 @@ onMounted(async () => {
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
   window.addEventListener('table-show-col-index-changed', onColIndexChanged);
   window.addEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
-  window.addEventListener('click', closeTabMenu);
+  window.addEventListener('click', handleGlobalTabMenuClick);
 });
 
 onUnmounted(() => {
   window.removeEventListener('table-row-height-changed', onRowHeightChanged);
   window.removeEventListener('table-show-col-index-changed', onColIndexChanged);
   window.removeEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
-  window.removeEventListener('click', closeTabMenu);
+  window.removeEventListener('click', handleGlobalTabMenuClick);
 });
 </script>
 

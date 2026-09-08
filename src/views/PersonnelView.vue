@@ -179,7 +179,8 @@
                   type="button"
                   class="btn-tab-action btn-tab-setup"
                   :class="{ active: activeTabMenuKey === `personnel_${cIdx}` }"
-                  @click.stop="toggleTabMenu('personnel', cIdx)"
+                  @click.stop.prevent="toggleTabMenu('personnel', cIdx)"
+                  @mousedown.stop
                   title="Tùy chọn Chế độ xem"
                 >
                   <i class="pi pi-ellipsis-v"></i>
@@ -744,7 +745,8 @@
                   type="button"
                   class="btn-tab-action btn-tab-setup"
                   :class="{ active: activeTabMenuKey === `relatives_${cIdx}` }"
-                  @click.stop="toggleTabMenu('relatives', cIdx)"
+                  @click.stop.prevent="toggleTabMenu('relatives', cIdx)"
+                  @mousedown.stop
                   title="Tùy chọn Chế độ xem"
                 >
                   <i class="pi pi-ellipsis-v"></i>
@@ -1742,6 +1744,12 @@ const toggleTabMenu = (type, idx) => {
 const closeTabMenu = () => {
   activeTabMenuKey.value = null;
 };
+const handleGlobalTabMenuClick = (e) => {
+  if (e?.target && (e.target.closest('.lark-tab-actions') || e.target.closest('.btn-tab-setup') || e.target.closest('.lark-tab-dropdown-menu'))) {
+    return;
+  }
+  closeTabMenu();
+};
 
 const openEditViewDialog = (targetTable, card, cIdx) => {
   addViewTargetTable.value = targetTable;
@@ -2155,14 +2163,14 @@ onMounted(async () => {
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
   window.addEventListener('table-show-col-index-changed', onColIndexChanged);
   window.addEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
-  window.addEventListener('click', closeTabMenu);
+  window.addEventListener('click', handleGlobalTabMenuClick);
 });
 
 onUnmounted(() => {
   window.removeEventListener('table-row-height-changed', onRowHeightChanged);
   window.removeEventListener('table-show-col-index-changed', onColIndexChanged);
   window.removeEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
-  window.removeEventListener('click', closeTabMenu);
+  window.removeEventListener('click', handleGlobalTabMenuClick);
 });
 
 watch(
