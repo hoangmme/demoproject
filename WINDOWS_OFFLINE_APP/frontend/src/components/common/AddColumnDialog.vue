@@ -48,9 +48,62 @@
           <option value="checkbox_file_loop">Hộp kiểm kèm Tệp đính kèm</option>
           <option value="file">Tệp đính kèm (File / Ảnh / PDF)</option>
           <option value="lookup">🔗 Tham chiếu tự động (Lookup - Lấy dữ liệu từ bảng liên kết)</option>
-          <option value="formula">⚡ Công thức tính toán (Formula)</option>
+          <option value="formula">⚡ Công thức Nâng cao (Formula - Lark Base / Teable)</option>
           <option value="rollup">📊 Tính toán tổng hợp (Rollup)</option>
         </select>
+
+        <!-- Quick selection pills for easy discovery -->
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+          <button
+            type="button"
+            :class="['format-pill-btn', form.format === 'formula' ? 'active-formula' : '']"
+            @click="selectFormat('formula')"
+          >
+            ⚡ Công thức Nâng cao
+          </button>
+          <button
+            type="button"
+            :class="['format-pill-btn', form.format === 'lookup' ? 'active-lookup' : '']"
+            @click="selectFormat('lookup')"
+          >
+            🔗 Tham chiếu
+          </button>
+          <button
+            type="button"
+            :class="['format-pill-btn', form.format === 'text' ? 'active-standard' : '']"
+            @click="selectFormat('text')"
+          >
+            📝 Văn bản
+          </button>
+          <button
+            type="button"
+            :class="['format-pill-btn', form.format === 'number' ? 'active-standard' : '']"
+            @click="selectFormat('number')"
+          >
+            🔢 Số
+          </button>
+          <button
+            type="button"
+            :class="['format-pill-btn', form.format === 'date' ? 'active-standard' : '']"
+            @click="selectFormat('date')"
+          >
+            📅 Ngày tháng
+          </button>
+          <button
+            type="button"
+            :class="['format-pill-btn', form.format === 'dropdown' ? 'active-standard' : '']"
+            @click="selectFormat('dropdown')"
+          >
+            ▼ Danh mục
+          </button>
+          <button
+            type="button"
+            :class="['format-pill-btn', form.format === 'checkbox_file_loop' ? 'active-standard' : '']"
+            @click="selectFormat('checkbox_file_loop')"
+          >
+            📎 Tệp đính kèm
+          </button>
+        </div>
       </div>
 
       <!-- Tùy chọn nếu là Dropdown -->
@@ -218,16 +271,16 @@
         <div style="font-size: 0.76rem; font-weight: 700; color: #86198f; display: flex; align-items: center; justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: 6px;">
             <i class="pi pi-bolt"></i>
-            <span>Cấu hình Công thức Tính toán (Formula)</span>
+            <span>⚡ Cấu hình Công thức Nâng cao (Lark Base & Teable Formula)</span>
           </div>
-          <span style="font-size: 0.65rem; background: #fae8ff; color: #86198f; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Teable & Lark</span>
+          <span style="font-size: 0.65rem; background: #fae8ff; color: #86198f; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Teable & Lark Engine</span>
         </div>
         <div>
           <label style="font-size: 0.72rem; font-weight: 700; color: #701a75; display: block; margin-bottom: 3px;">
             Loại công thức:
           </label>
           <select v-model="form.formulaType" class="dialog-select">
-            <option value="custom_expression">⚡ Biểu thức Công thức Tự do (Lark Base / Teable)</option>
+            <option value="custom_expression">⚡ Biểu thức Công thức Tự do Nâng cao (Lark Base / Teable)</option>
             <option value="presence_status">Trạng thái Hiện diện (Trong nước / Nước ngoài)</option>
             <option value="overdue_status">Quá hạn chưa về (So sánh Ngày về với Deadline/Hôm nay)</option>
             <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
@@ -410,6 +463,13 @@ const form = ref({
   formulaType: 'custom_expression',
   formulaExpression: '',
 });
+
+const selectFormat = (fmt) => {
+  form.value.format = fmt;
+  if (fmt === 'formula' && !form.value.formulaType) {
+    form.value.formulaType = 'custom_expression';
+  }
+};
 
 watch(
   () => props.visible,
@@ -696,5 +756,41 @@ const handleSave = async () => {
 .formula-fn-item:hover {
   background: #fae8ff;
   border-color: #d946ef;
+}
+
+.format-pill-btn {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.format-pill-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.format-pill-btn.active-formula {
+  background: #701a75;
+  color: #ffffff;
+  border-color: #701a75;
+  box-shadow: 0 1px 3px rgba(112, 26, 117, 0.3);
+}
+.format-pill-btn.active-lookup {
+  background: #1d4ed8;
+  color: #ffffff;
+  border-color: #1d4ed8;
+  box-shadow: 0 1px 3px rgba(29, 78, 216, 0.3);
+}
+.format-pill-btn.active-standard {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
 }
 </style>

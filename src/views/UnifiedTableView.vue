@@ -1136,6 +1136,7 @@ import Column from 'primevue/column';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
+import { syncCollectionFields, createDirectusField } from '@/api/fields';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ColumnSelector from '@/components/common/ColumnSelector.vue';
@@ -1477,6 +1478,35 @@ const openAddColumnDialog = () => {
   isAddColumnDialogOpen.value = true;
 };
 
+// ===== Lark Base: Đồng bộ Cấu hình Cột xuống Mọi Khóa DB & Directus =====
+const persistTableMapping = async (src, mappingData) => {
+  if (src === 'blank') {
+    try {
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+    } catch (e) {}
+    return;
+  }
+  let keys = ['mapping_config_trips', 'import_mapping_trips', 'importMappingTrips'];
+  if (src === 'relatives') {
+    keys = ['mapping_config_relative', 'import_mapping_relative', 'importMappingRelative'];
+    personnelStore.importMappingRelative = mappingData;
+  } else if (src === 'personnel') {
+    keys = ['mapping_config_personnel', 'import_mapping_personnel', 'importMappingPersonnel'];
+    personnelStore.importMappingPersonnel = mappingData;
+  } else {
+    personnelStore.importMappingTrips = mappingData;
+  }
+  try {
+    await Promise.all(keys.map((k) => {
+      try { localStorage.setItem(k, JSON.stringify(mappingData)); } catch (e) {}
+      return saveAppSettings(k, mappingData);
+    }));
+  } catch (err) {
+    console.error('persistTableMapping error:', err);
+  }
+};
+
 const saveNewColumn = async (colPayload) => {
   if (!colPayload?.label?.trim()) {
     alert('Vui lòng nhập Tên cột!');
@@ -1529,13 +1559,10 @@ const saveNewColumn = async (colPayload) => {
       return;
     }
 
-    let mappingKey = 'import_mapping_trips';
     let mappingRef = personnelStore.importMappingTrips;
     if (src === 'relatives') {
-      mappingKey = 'import_mapping_relative';
       mappingRef = personnelStore.importMappingRelative;
     } else if (src === 'personnel') {
-      mappingKey = 'import_mapping_personnel';
       mappingRef = personnelStore.importMappingPersonnel;
     }
 
@@ -1560,8 +1587,13 @@ const saveNewColumn = async (colPayload) => {
       mappingRef[0].columns.push(colPayload);
     }
 
-    // Lưu cấu hình mapping xuống DB
-    await saveAppSettings(mappingKey, mappingRef);
+    // Lưu đồng bộ toàn diện vào TẤT CẢ các khóa cấu hình (mapping_config_* & import_mapping_*)
+    await persistTableMapping(src, mappingRef);
+
+    // Đồng bộ tạo cột vật lý trên Directus ngay lập tức
+    try {
+      createDirectusField('personnels', colPayload).catch(() => {});
+    } catch (e) {}
 
     // Tự động kích hoạt hiển thị cột mới trên bảng hiện tại
     if (!selectedColIds.value.includes(colPayload.id)) {
@@ -2126,11 +2158,11 @@ const getTargetMappingRef = () => {
   if (src === 'blank') {
     const tid = topicId.value;
     const cDash = customDashboards.value.find((d) => d.id === tid);
-    return { key: 'custom_dashboards_config', mapping: [{ group: 'Cột bảng', columns: cDash?.customColumns || [] }], isBlank: true, cDash };
+    return { key: 'custom_dashboards_config', mapping: [{ group: 'Cột bảng', columns: cDash?.customColumns || [] }], isBlank: true, cDash, src };
   }
-  if (src === 'relatives') return { key: 'import_mapping_relative', mapping: personnelStore.importMappingRelative };
-  if (src === 'personnel') return { key: 'import_mapping_personnel', mapping: personnelStore.importMappingPersonnel };
-  return { key: 'import_mapping_trips', mapping: personnelStore.importMappingTrips };
+  if (src === 'relatives') return { key: 'import_mapping_relative', mapping: personnelStore.importMappingRelative, src };
+  if (src === 'personnel') return { key: 'import_mapping_personnel', mapping: personnelStore.importMappingPersonnel, src };
+  return { key: 'import_mapping_trips', mapping: personnelStore.importMappingTrips, src };
 };
 
 const onChildRenameColumn = async ({ colId, newLabel }) => {
@@ -2142,7 +2174,7 @@ const onChildRenameColumn = async ({ colId, newLabel }) => {
     } catch (e) {}
     return;
   }
-  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
+  const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
   if (isBlank && cDash) {
     const col = (cDash.customColumns || []).find((c) => c.id === colId);
     if (col) {
@@ -2166,12 +2198,12 @@ const onChildRenameColumn = async ({ colId, newLabel }) => {
     if (found) break;
   }
   if (found) {
-    await saveAppSettings(key, mapping);
+    await persistTableMapping(src, mapping);
   }
 };
 
 const onChildChangeColumnRequired = async ({ colId, required }) => {
-  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
+  const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
   if (isBlank && cDash) {
     const col = (cDash.customColumns || []).find((c) => c.id === colId);
     if (col) {
@@ -2195,12 +2227,23 @@ const onChildChangeColumnRequired = async ({ colId, required }) => {
     if (found) break;
   }
   if (found) {
-    await saveAppSettings(key, mapping);
+    await persistTableMapping(src, mapping);
   }
 };
 
 const onChildChangeColumnFormat = async ({ colId, newFormat }) => {
-  const { key, mapping } = getTargetMappingRef();
+  const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.format = newFormat;
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
   let found = false;
   for (const g of (mapping || [])) {
     for (const c of (g.columns || [])) {
@@ -2213,13 +2256,29 @@ const onChildChangeColumnFormat = async ({ colId, newFormat }) => {
     if (found) break;
   }
   if (found) {
-    await saveAppSettings(key, mapping);
+    await persistTableMapping(src, mapping);
   }
 };
 
 const onChildChangeColumnLookup = async (payload) => {
   const { colId, lookupTarget, lookupLinkCol, lookupField, lookupConditions, lookupLogicOp, lookupDisplay, lookupJoinSeparator, lookupFormat } = payload;
-  const { key, mapping } = getTargetMappingRef();
+  const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const c = (cDash.customColumns || []).find((col) => col.id === colId);
+    if (c) {
+      c.format = 'lookup';
+      c.lookupTarget = lookupTarget;
+      c.lookupLinkCol = lookupLinkCol;
+      c.lookupField = lookupField;
+      if (lookupConditions !== undefined) c.lookupConditions = lookupConditions;
+      if (lookupLogicOp !== undefined) c.lookupLogicOp = lookupLogicOp;
+      if (lookupDisplay !== undefined) c.lookupDisplay = lookupDisplay;
+      if (lookupJoinSeparator !== undefined) c.lookupJoinSeparator = lookupJoinSeparator;
+      if (lookupFormat !== undefined) c.lookupFormat = lookupFormat;
+      await persistTableMapping('blank', customDashboards.value);
+    }
+    return;
+  }
   let found = false;
   for (const g of (mapping || [])) {
     for (const c of (g.columns || [])) {
@@ -2412,7 +2471,7 @@ const getColWidthStyle = (col) => {
 };
 
 const onChildChangeColumnFormWidth = async ({ colId, formWidth }) => {
-  const { key, mapping } = getTargetMappingRef();
+  const { key, mapping, src } = getTargetMappingRef();
   let found = false;
   for (const g of (mapping || [])) {
     for (const c of (g.columns || [])) {
@@ -2425,13 +2484,13 @@ const onChildChangeColumnFormWidth = async ({ colId, formWidth }) => {
     if (found) break;
   }
   if (found) {
-    await saveAppSettings(key, mapping);
+    await persistTableMapping(src, mapping);
     alert('Đã cập nhật độ rộng form chi tiết cho cột này!');
   }
 };
 
 const onChildDeleteColumnFromTable = async (colId) => {
-  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
+  const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
   let found = false;
 
   if (isBlank && cDash) {
@@ -2470,7 +2529,7 @@ const onChildDeleteColumnFromTable = async (colId) => {
   if (found) {
     selectedColIds.value = selectedColIds.value.filter((id) => id !== colId);
     await onColumnsChange();
-    await saveAppSettings(key, mapping);
+    await persistTableMapping(src, mapping);
     window.dispatchEvent(new CustomEvent('custom-dashboards-updated'));
     alert('Đã xóa cột thành công khỏi bảng!');
   }
@@ -2520,7 +2579,7 @@ const onInsertChildColRight = (col) => {
 };
 
 const onDuplicateChildCol = async (col) => {
-  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
+  const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
   const copyId = col.id + '_copy_' + Math.random().toString(36).substring(2, 6);
   const copyCol = {
     ...col,
@@ -2554,7 +2613,7 @@ const onDuplicateChildCol = async (col) => {
     if (!inserted && mapping && mapping[0]) {
       mapping[0].columns.push(copyCol);
     }
-    await saveAppSettings(key, mapping);
+    await persistTableMapping(src, mapping);
   }
 
   const curIdx = selectedColIds.value.indexOf(col.id);
@@ -2568,7 +2627,7 @@ const onDuplicateChildCol = async (col) => {
 };
 
 const onChildChangeFormulaType = async ({ colId, formulaType, formulaExpression }) => {
-  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
+  const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
   if (isBlank && cDash) {
     const col = (cDash.customColumns || []).find((c) => c.id === colId);
     if (col) {
@@ -2594,7 +2653,7 @@ const onChildChangeFormulaType = async ({ colId, formulaType, formulaExpression 
     if (found) break;
   }
   if (found) {
-    await saveAppSettings(key, mapping);
+    await persistTableMapping(src, mapping);
   }
 };
 

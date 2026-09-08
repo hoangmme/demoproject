@@ -435,20 +435,50 @@ export const usePersonnelStore = defineStore('personnel', {
       this.departments = await getDepartments();
     },
     async loadSettings() {
-      const [pMap, rMap, tMap, keyCfg, sTrips] = await Promise.all([
+      const [
+        pMap, rMap, tMap, keyCfg, sTrips,
+        pMapAlt, rMapAlt, tMapAlt,
+        pMapAlt2, rMapAlt2, tMapAlt2
+      ] = await Promise.all([
         getAppSettings('mapping_config_personnel', null),
         getAppSettings('mapping_config_relative', null),
         getAppSettings('mapping_config_trips', null),
         getAppSettings('system_key_config', null),
         getAppSettings('standalone_trips', []),
+        getAppSettings('import_mapping_personnel', null),
+        getAppSettings('import_mapping_relative', null),
+        getAppSettings('import_mapping_trips', null),
+        getAppSettings('importMappingPersonnel', null),
+        getAppSettings('importMappingRelative', null),
+        getAppSettings('importMappingTrips', null),
       ]);
 
       this.standaloneTrips = Array.isArray(sTrips) ? sTrips : [];
 
-      this.importMappingPersonnel = pMap || [];
+      // Chọn cấu hình mapping đầy đủ nhất, bảo toàn các cột tùy biến mới tạo
+      const resolveBestMapping = (candidates) => {
+        let best = null;
+        let maxCols = -1;
+        for (const c of candidates) {
+          if (Array.isArray(c) && c.length > 0) {
+            const colCount = c.reduce((sum, g) => sum + (Array.isArray(g.columns) ? g.columns.length : 0), 0);
+            if (colCount > maxCols) {
+              maxCols = colCount;
+              best = c;
+            }
+          }
+        }
+        return best;
+      };
 
-      if (rMap && rMap.length > 0) {
-        this.importMappingRelative = rMap;
+      const resolvedP = resolveBestMapping([pMapAlt, pMapAlt2, pMap]);
+      const resolvedR = resolveBestMapping([rMapAlt, rMapAlt2, rMap]);
+      const resolvedT = resolveBestMapping([tMapAlt, tMapAlt2, tMap]);
+
+      this.importMappingPersonnel = resolvedP || [];
+
+      if (resolvedR && resolvedR.length > 0) {
+        this.importMappingRelative = resolvedR;
       } else {
         this.importMappingRelative = [
           {
@@ -471,8 +501,8 @@ export const usePersonnelStore = defineStore('personnel', {
         ];
       }
 
-      if (tMap && tMap.length > 0) {
-        this.importMappingTrips = tMap;
+      if (resolvedT && resolvedT.length > 0) {
+        this.importMappingTrips = resolvedT;
       } else {
         this.importMappingTrips = [
           {

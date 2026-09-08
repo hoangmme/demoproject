@@ -46,18 +46,66 @@
           <div v-if="column?.id === '_primaryKey'" style="font-size: 0.73rem; color: #64748b; padding: 6px 8px; background: #f1f5f9; border-radius: 6px; font-weight: 600;">
             Mã định danh (ID Hệ thống)
           </div>
-          <select v-else v-model="editFormat" class="menu-select" @change="handleFormatChange">
-            <option value="text">Văn bản (Text) - Mặc định</option>
-            <option value="number">Số (Number)</option>
-            <option value="date">Ngày tháng (Date)</option>
-            <option value="dropdown">Danh mục lựa chọn (Dropdown / Single Select)</option>
-            <option value="checkbox">Hộp kiểm đơn (Checkbox)</option>
-            <option value="checkbox_file_loop">Hộp kiểm kèm Tệp (Checkbox + File)</option>
-            <option value="file">Tệp đính kèm (Attachment / File / Ảnh / PDF)</option>
-            <option value="lookup">🔗 Tham chiếu tự động (Lookup - Lấy dữ liệu từ bảng liên kết)</option>
-            <option value="formula">⚡ Công thức tính toán (Formula)</option>
-            <option value="rollup">📊 Tính toán tổng hợp (Rollup)</option>
-          </select>
+          <template v-else>
+            <select v-model="editFormat" class="menu-select" @change="handleFormatChange">
+              <option value="text">Văn bản (Text) - Mặc định</option>
+              <option value="number">Số (Number)</option>
+              <option value="date">Ngày tháng (Date)</option>
+              <option value="dropdown">Danh mục lựa chọn (Dropdown / Single Select)</option>
+              <option value="checkbox">Hộp kiểm đơn (Checkbox)</option>
+              <option value="checkbox_file_loop">Hộp kiểm kèm Tệp (Checkbox + File)</option>
+              <option value="file">Tệp đính kèm (Attachment / File / Ảnh / PDF)</option>
+              <option value="lookup">🔗 Tham chiếu tự động (Lookup - Lấy dữ liệu từ bảng liên kết)</option>
+              <option value="formula">⚡ Công thức Nâng cao (Formula - Lark Base / Teable)</option>
+              <option value="rollup">📊 Tính toán tổng hợp (Rollup)</option>
+            </select>
+
+            <!-- Quick format selector pills -->
+            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+              <button
+                type="button"
+                :class="['menu-format-pill', editFormat === 'formula' ? 'active-formula' : '']"
+                @click="setMenuFormat('formula')"
+              >
+                ⚡ Công thức Nâng cao
+              </button>
+              <button
+                type="button"
+                :class="['menu-format-pill', editFormat === 'lookup' ? 'active-lookup' : '']"
+                @click="setMenuFormat('lookup')"
+              >
+                🔗 Tham chiếu
+              </button>
+              <button
+                type="button"
+                :class="['menu-format-pill', editFormat === 'text' ? 'active-std' : '']"
+                @click="setMenuFormat('text')"
+              >
+                📝 Văn bản
+              </button>
+              <button
+                type="button"
+                :class="['menu-format-pill', editFormat === 'number' ? 'active-std' : '']"
+                @click="setMenuFormat('number')"
+              >
+                🔢 Số
+              </button>
+              <button
+                type="button"
+                :class="['menu-format-pill', editFormat === 'date' ? 'active-std' : '']"
+                @click="setMenuFormat('date')"
+              >
+                📅 Ngày
+              </button>
+              <button
+                type="button"
+                :class="['menu-format-pill', editFormat === 'dropdown' ? 'active-std' : '']"
+                @click="setMenuFormat('dropdown')"
+              >
+                ▼ Danh mục
+              </button>
+            </div>
+          </template>
         </div>
 
         <!-- Cấu hình Tham chiếu Lookup nếu là lookup (Lark Base Style) -->
@@ -213,15 +261,15 @@
           <div style="font-size: 0.76rem; font-weight: 700; color: #86198f; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 5px;">
               <i class="pi pi-bolt"></i>
-              <span>Cấu hình Công thức (Formula)</span>
+              <span>⚡ Cấu hình Công thức Nâng cao (Lark Base & Teable Formula)</span>
             </div>
-            <span style="font-size: 0.65rem; background: #fae8ff; color: #86198f; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Teable & Lark</span>
+            <span style="font-size: 0.65rem; background: #fae8ff; color: #86198f; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Teable & Lark Engine</span>
           </div>
 
           <div>
             <label style="font-size: 0.7rem; color: #701a75; font-weight: 600; margin-bottom: 2px;">Loại công thức:</label>
             <select v-model="editFormulaType" class="menu-select" @change="handleSaveFormulaType">
-              <option value="custom_expression">⚡ Biểu thức Công thức Tự do (Lark Base / Teable)</option>
+              <option value="custom_expression">⚡ Biểu thức Công thức Tự do Nâng cao (Lark Base / Teable)</option>
               <option value="presence_status">Trạng thái Hiện diện (Trong nước / Nước ngoài)</option>
               <option value="overdue_status">Quá hạn chưa về (So sánh Ngày về với Deadline/Hôm nay)</option>
               <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
@@ -706,6 +754,14 @@ const handleSaveFormulaType = () => {
   });
 };
 
+const setMenuFormat = (fmt) => {
+  editFormat.value = fmt;
+  if (fmt === 'formula' && !editFormulaType.value) {
+    editFormulaType.value = 'custom_expression';
+  }
+  handleFormatChange();
+};
+
 const handleFormatChange = () => {
   emit("change-format", { colId: props.column.id, newFormat: editFormat.value });
   if (editFormat.value === 'lookup') {
@@ -1107,5 +1163,41 @@ const handleFilterByCol = () => {
 .formula-fn-item:hover {
   background: #fae8ff;
   border-color: #d946ef;
+}
+
+.menu-format-pill {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.menu-format-pill:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.menu-format-pill.active-formula {
+  background: #701a75;
+  color: #ffffff;
+  border-color: #701a75;
+  box-shadow: 0 1px 2px rgba(112, 26, 117, 0.3);
+}
+.menu-format-pill.active-lookup {
+  background: #1d4ed8;
+  color: #ffffff;
+  border-color: #1d4ed8;
+  box-shadow: 0 1px 2px rgba(29, 78, 216, 0.3);
+}
+.menu-format-pill.active-std {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
 }
 </style>

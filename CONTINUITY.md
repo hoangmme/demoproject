@@ -1895,8 +1895,25 @@
        - Đồng bộ 100% các tệp sang `WINDOWS_OFFLINE_APP/frontend/src/`.
        - `npm run build` thành công 100% (0 lỗi, 557ms). Toàn bộ 10 bài kiểm thử đơn vị logic công thức (Test suite) đều vượt qua.
   4. **Trạng thái**: Done [Reversible].
-
-
-
-
-
+- **Entry (2026-09-08)**: **Sửa Triệt Để Lỗi Mất Cột Tùy Chỉnh Khi Tải Lại Trang & Nổi Bật Công Thức Nâng Cao (Lark Base / Teable)**:
+  1. **Vấn đề & Chỉ đạo của người dùng**:
+     - *Lỗi mất cột khi reload*: Cột tùy chỉnh tạo thành công có hiển thị trên bảng, nhưng khi load lại trang (F5/Cmd+R) thì bị mất.
+     - *Nổi bật công thức nâng cao*: Người dùng không nhìn thấy công thức nâng cao ở đâu lúc tạo cột mới. Yêu cầu làm rõ ràng, trực quan.
+     - *Định hướng chiến lược*: Tập trung 100% online trên Directus (`https://api.hscb.online`), tạo cột vật lý trên Directus schema, sẵn sàng hoạt động như Lark Base engine no-code tùy biến dữ liệu linh hoạt.
+  2. **Nguyên nhân gốc rễ lỗi mất cột**:
+     - `UnifiedTableView.vue` trước đây lưu cấu hình cột vào `import_mapping_*`, trong khi `personnelStore.loadSettings()` khi khởi động / reload trang lại chỉ đọc từ `mapping_config_*`. Do `mapping_config_*` không được cập nhật, Pinia store bị ghi đè lại bởi mảng cũ, khiến `visibleColumns` và `allAvailableColumnsList` mất định nghĩa cột vừa tạo.
+  3. **Giải pháp kiến trúc đã thực hiện**:
+     - **Đồng bộ hóa Đa Khóa Cấu hình (Multi-Key Synchronous Persistence)**:
+       - Tại `src/stores/personnel.js`, cập nhật `loadSettings()` truy vấn song song tất cả các khóa ứng viên (`mapping_config_*`, `import_mapping_*`, `importMapping*`). Bổ sung thuật toán `resolveBestMapping(candidates)` tự động ưu tiên cấu hình chứa nhiều cột nhất và mới nhất.
+       - Tại `src/views/UnifiedTableView.vue`, triển khai `persistTableMapping(src, mappingData)` ghi đồng thời vào cả 3 khóa DB Directus và localStorage.
+       - Cập nhật toàn bộ các sự kiện thay đổi cột (`saveNewColumn`, `onChildRenameColumn`, `onChildChangeColumnRequired`, `onChildChangeColumnFormat`, `onChildChangeColumnLookup`, `onChildChangeColumnOptions`, `onChildChangeColumnFormWidth`, `onChildDeleteColumnFromTable`, `onDuplicateChildCol`, `onChildChangeFormulaType`) sử dụng `persistTableMapping`.
+       - Tích hợp `createDirectusField('personnels', colPayload)` tự động tạo schema vật lý trên Directus server online.
+     - **Làm Nổi Bật Tính Năng Công Thức Nâng Cao (Prominent Advanced Formula Discovery)**:
+       - Tại `AddColumnDialog.vue` và `ColumnHeaderMenu.vue`, cập nhật nhãn rõ ràng: `⚡ Công thức Nâng cao (Formula - Lark Base / Teable)`.
+       - Bổ sung dãy nút chọn nhanh (Quick-Select Format Pills) ngay dưới mục Kiểu dữ liệu (`[⚡ Công thức Nâng cao]`, `[🔗 Tham chiếu]`, `[📝 Văn bản]`, `[🔢 Số]`, `[📅 Ngày tháng]`, `[▼ Danh mục]`, `[📎 Tệp đính kèm]`).
+       - Bấm vào `[⚡ Công thức Nâng cao]` sẽ tự động chọn kiểu `formula` và mở ngay trình soạn thảo biểu thức tự do với tabs Chèn Cột `{...}`, Chèn Hàm `fn()`, và Live Preview trực tiếp.
+       - Tiêu đề khung cấu hình công thức được cập nhật sang `⚡ Cấu hình Công thức Nâng cao (Lark Base & Teable Formula)`.
+  4. **Đồng bộ & Kiểm tra**:
+     - Đồng bộ toàn bộ các tệp sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` hoàn thành với 0 lỗi (568ms).
+  5. **Trạng thái**: Done [Reversible].
