@@ -226,20 +226,6 @@ export const getRecordFieldValue = (row, colId) => {
     try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
   }
   if (cd && typeof cd === 'object' && cd[colId] !== undefined && cd[colId] !== null && cd[colId] !== '') return cd[colId];
-  // 3. In rawTrip / rawPerson
-  if (row.rawTrip && row.rawTrip[colId] !== undefined && row.rawTrip[colId] !== null && row.rawTrip[colId] !== '') return row.rawTrip[colId];
-  if (row.rawPerson && row.rawPerson[colId] !== undefined && row.rawPerson[colId] !== null && row.rawPerson[colId] !== '') return row.rawPerson[colId];
-  // 4. In rawTrip.custom_data / rawPerson.custom_data
-  let rtcd = row.rawTrip?.custom_data;
-  if (typeof rtcd === 'string') {
-    try { rtcd = JSON.parse(rtcd); } catch (e) { rtcd = {}; }
-  }
-  if (rtcd && typeof rtcd === 'object' && rtcd[colId] !== undefined && rtcd[colId] !== null && rtcd[colId] !== '') return rtcd[colId];
-  let rpcd = row.rawPerson?.custom_data;
-  if (typeof rpcd === 'string') {
-    try { rpcd = JSON.parse(rpcd); } catch (e) { rpcd = {}; }
-  }
-  if (rpcd && typeof rpcd === 'object' && rpcd[colId] !== undefined && rpcd[colId] !== null && rpcd[colId] !== '') return rpcd[colId];
   return null;
 };
 
@@ -1427,20 +1413,14 @@ export const evaluateLookup = (item, col, personnelStore) => {
   if (target === 'personnel') {
     if (personnelStore?.personnelList?.length) {
       candidatePool = personnelStore.personnelList;
-    } else if (item.rawPerson) {
-      candidatePool = [item.rawPerson];
     }
   } else if (target === 'relatives') {
     if (personnelStore?.relativesList?.length) {
       candidatePool = personnelStore.relativesList;
-    } else if (item.rawRelative) {
-      candidatePool = [item.rawRelative];
     }
   } else if (target === 'trips') {
     if (personnelStore?.tripsList?.length) {
       candidatePool = personnelStore.tripsList;
-    } else if (Array.isArray(item.trips) && item.trips.length > 0) {
-      candidatePool = item.trips;
     } else if (personnelStore?.personnelList) {
       candidatePool = personnelStore.personnelList.flatMap((p) => (Array.isArray(p.trips) ? p.trips : []));
     }
@@ -1476,16 +1456,15 @@ export const evaluateLookup = (item, col, personnelStore) => {
     return values.length > 0 ? String(values[0]) : '-';
   }
 
-  // 3. Fallback ngược về Khóa liên kết cũ (lookupLinkCol) - Đảm bảo 100% tương thích
+  // 3. Khóa liên kết (lookupLinkCol)
   if (target === 'personnel') {
-    let parent = item.rawPerson;
-    if (!parent && personnelStore) {
-      const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-      const linkCol = col.lookupLinkCol;
-      const parentKey = linkCol ? getProp(item, linkCol) : (item.cccdparent || item.parentCccd || item[pKeyField]);
-      if (parentKey) {
-        parent = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(parentKey) : null;
-      }
+    if (!personnelStore) return '-';
+    let parent = null;
+    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+    const linkCol = col.lookupLinkCol;
+    const parentKey = linkCol ? getProp(item, linkCol) : (item.cccdparent || item.parentCccd || item[pKeyField]);
+    if (parentKey) {
+      parent = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(parentKey) : null;
     }
     if (parent) {
       const val = getProp(parent, field);

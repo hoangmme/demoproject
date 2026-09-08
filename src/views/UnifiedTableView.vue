@@ -1012,7 +1012,6 @@
       v-model="isPersonnelDialogOpen"
       :personData="activePersonData"
       :columns="allAvailableColumnsList"
-      :targetType="currentDashboardConfig?.source || 'auto'"
       @saved="handlePersonnelSaved"
       @deleted="handlePersonnelSaved"
     />
@@ -3704,23 +3703,17 @@ const getCellValue = (trip, colId, depth = 0) => {
   const rKeyField = personnelStore.getRelativeKeyField();
 
   if (colId === tKeyField || colId === 'cccdchuyendi' || colId === 'cccd_chuyen_di' || colId === 'cccd_nguoi_di') {
-    const directVal = trip[tKeyField] ?? trip.cccdchuyendi ?? trip.rawTrip?.[tKeyField] ?? trip.rawTrip?.cccdchuyendi ?? trip[colId];
+    const directVal = trip[tKeyField] ?? trip.cccdchuyendi ?? trip[colId];
     if (!isInternalId(directVal)) return String(directVal).trim();
-    if (trip.isRelative) {
-      const rCccd = trip[rKeyField] ?? trip.cccdthannhan ?? trip.rawRelative?.[rKeyField] ?? trip.rawRelative?.cccdthannhan;
-      if (!isInternalId(rCccd)) return String(rCccd).trim();
-    }
-    const canBoCccd = trip.rawPerson?.[pKeyField] ?? trip.rawPerson?.custom_data?.[pKeyField] ?? trip.parentCccd ?? trip.cccdparent;
-    if (!isInternalId(canBoCccd)) return String(canBoCccd).trim();
     return '-';
   }
   if (colId === pKeyField || colId === 'cccdparent' || colId === 'cccd_can_bo') {
-    const canBoCccd = trip.parentCccd ?? trip.cccdparent ?? trip.rawPerson?.[pKeyField] ?? trip.rawPerson?.custom_data?.[pKeyField];
+    const canBoCccd = trip[pKeyField] ?? trip.cccdparent ?? trip[colId];
     if (!isInternalId(canBoCccd)) return String(canBoCccd).trim();
     return '-';
   }
   if (colId === rKeyField || colId === 'cccdthannhan' || colId === 'cccd_than_nhan') {
-    const rCccd = trip[rKeyField] ?? trip.cccdthannhan ?? trip.rawRelative?.[rKeyField] ?? trip.rawRelative?.cccdthannhan;
+    const rCccd = trip[rKeyField] ?? trip.cccdthannhan ?? trip[colId];
     if (!isInternalId(rCccd)) return String(rCccd).trim();
     return '-';
   }
@@ -3761,75 +3754,9 @@ const getCellValue = (trip, colId, depth = 0) => {
     return evaluateRollup(trip, colDef, personnelStore);
   }
 
-  // 2. Identify column origin strictly from import mappings
-  const tripColIds = (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id));
-  const relColIds = (personnelStore.importMappingRelative || []).flatMap((g) => (g.columns || []).map((c) => c.id));
-  const perColIds = (personnelStore.importMappingPersonnel || []).flatMap((g) => (g.columns || []).map((c) => c.id));
-
-  let rawVal = undefined;
-
-  if (tripColIds.includes(colId)) {
-    // Cột thuộc Bảng Chuyến đi
-    if (trip.isRelative || currentDashboardConfig.value?.source === 'relatives') {
-      // Đối tượng là Thân nhân -> đọc từ chuyến đi mới nhất theo departureDate
-      const trips = Array.isArray(trip.trips) ? trip.trips : [];
-      let latestTrip = null;
-      let latestDep = -Infinity;
-      for (const t of trips) {
-        const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-        const depRaw = t.departureDate || tCustom.departureDate || t.ngay_xuat_canh || tCustom.ngay_xuat_canh || '';
-        const dep = parseDateValue(depRaw);
-        const time = dep ? dep.getTime() : 0;
-        if (time >= latestDep) {
-          latestDep = time;
-          latestTrip = { ...tCustom, ...t };
-        }
-      }
-      if (latestTrip) {
-        rawVal = latestTrip[colId];
-      }
-    } else if (currentDashboardConfig.value?.source === 'personnel') {
-      // Đối tượng là Cán bộ -> chỉ đọc trong danh sách chuyến đi thực tế (trip.trips)
-      const trips = Array.isArray(trip.trips) ? trip.trips : [];
-      for (const t of trips) {
-        const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-        const v = t[colId] !== undefined ? t[colId] : tCustom[colId];
-        if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
-          rawVal = v;
-          break;
-        }
-      }
-    } else {
-      // Đối tượng là Bản ghi Chuyến đi
-      const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
-      const rtcd = typeof trip.rawTrip?.custom_data === 'string' ? JSON.parse(trip.rawTrip.custom_data || '{}') : (trip.rawTrip?.custom_data || {});
-      rawVal = trip[colId] !== undefined ? trip[colId] : (tcd[colId] ?? trip.rawTrip?.[colId] ?? rtcd[colId]);
-    }
-  } else if (relColIds.includes(colId)) {
-    // Cột thuộc Bảng Thân nhân
-    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
-    const rrcd = typeof trip.rawRelative?.custom_data === 'string' ? JSON.parse(trip.rawRelative.custom_data || '{}') : (trip.rawRelative?.custom_data || {});
-    if (trip.isRelative || currentDashboardConfig.value?.source === 'relatives') {
-      rawVal = trip[colId] !== undefined ? trip[colId] : (tcd[colId] ?? trip.rawRelative?.[colId] ?? rrcd[colId]);
-    } else if (trip.rawRelative) {
-      rawVal = trip.rawRelative[colId] !== undefined ? trip.rawRelative[colId] : (rrcd[colId]);
-    }
-  } else if (perColIds.includes(colId)) {
-    // Cột thuộc Bảng Cán bộ
-    const p = trip.rawPerson || trip;
-    const pcd = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p.custom_data || {});
-    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
-    rawVal = p[colId] !== undefined ? p[colId] : (pcd[colId] ?? trip[colId] ?? tcd[colId]);
-  } else {
-    // Cột thông thường / fallback trực tiếp
-    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
-    const rtcd = typeof trip.rawTrip?.custom_data === 'string' ? JSON.parse(trip.rawTrip.custom_data || '{}') : (trip.rawTrip?.custom_data || {});
-    const rrcd = typeof trip.rawRelative?.custom_data === 'string' ? JSON.parse(trip.rawRelative.custom_data || '{}') : (trip.rawRelative?.custom_data || {});
-    const p = trip.rawPerson;
-    const pcd = typeof p?.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p?.custom_data || {});
-    rawVal = trip[colId] !== undefined ? trip[colId] : (tcd[colId] ?? trip.rawTrip?.[colId] ?? rtcd[colId] ?? trip.rawRelative?.[colId] ?? rrcd[colId] ?? p?.[colId] ?? pcd[colId]);
-  }
-
+  // 2. Direct property or in custom_data (KHÔNG fallback ngầm sang rawPerson)
+  const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
+  const rawVal = trip[colId] !== undefined ? trip[colId] : tcd[colId];
   return formatGenericCellValue(rawVal, colDef || { id: colId });
 };
 
@@ -4030,31 +3957,10 @@ const saveColumnSelection = async () => {
 };
 
 // Actions
-const openPersonnelDetail = (trip) => {
-  const src = currentDashboardConfig.value?.source || '';
-  let targetRecord = null;
-  if (src === 'relatives') {
-    targetRecord = trip.rawRelative || trip;
-  } else if (src === 'trips') {
-    targetRecord = trip.rawTrip || trip;
-  } else if (src === 'personnel') {
-    targetRecord = trip.rawPerson || trip;
-  } else {
-    if (trip.rawRelative || trip._recordType === 'relative' || trip.relationshipName || trip.cccdthannhan || trip.relativeName) {
-      targetRecord = trip.rawRelative || trip;
-    } else if (trip.rawTrip || trip._recordType === 'trip' || trip.departureDate || trip.ngay_xuat_canh) {
-      targetRecord = trip.rawTrip || trip;
-    } else {
-      targetRecord = trip.rawPerson || trip;
-    }
-  }
-
-  if (targetRecord) {
-    activePersonData.value = targetRecord;
-    isPersonnelDialogOpen.value = true;
-  } else {
-    alert('Không tìm thấy dữ liệu chi tiết của mục này!');
-  }
+const openPersonnelDetail = (record) => {
+  if (!record) return;
+  activePersonData.value = record;
+  isPersonnelDialogOpen.value = true;
 };
 
 const isSameTripItem = (t, trip) => {

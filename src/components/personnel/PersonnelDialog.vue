@@ -109,10 +109,6 @@ const props = defineProps({
     type: String,
     default: '',
   },
-  targetType: {
-    type: String,
-    default: 'auto',
-  },
 });
 
 const emit = defineEmits(['update:modelValue', 'saved', 'deleted']);
@@ -134,45 +130,21 @@ const form = ref({});
 
 const isEdit = computed(() => Boolean(form.value.id || form.value.uniqueKey));
 
-const effectiveTargetType = computed(() => {
-  if (props.targetType && props.targetType !== 'auto') {
-    if (props.targetType === 'relatives') return 'relative';
-    if (props.targetType === 'trips') return 'trip';
-    return props.targetType;
-  }
-  const data = props.personData || form.value || {};
-  if (
-    data._recordType === 'relative' ||
-    data.rawRelative ||
-    Boolean(data.relationshipName || data.cccdthannhan || data.relativeName || data.birthYearTN)
-  ) {
-    return 'relative';
-  }
-  if (
-    data._recordType === 'trip' ||
-    data.rawTrip ||
-    Boolean(data.departureDate || data.ngay_xuat_canh || data.destination)
-  ) {
-    return 'trip';
-  }
-  return 'personnel';
-});
-
 const allTableColumns = computed(() => {
   if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
     return props.columns.filter((c) => !c.isVirtual && c.id !== 'stt');
   }
-  let mappingSource = personnelStore.importMappingPersonnel || [];
-  if (effectiveTargetType.value === 'relative') {
-    mappingSource = personnelStore.importMappingRelative || [];
-  } else if (effectiveTargetType.value === 'trip') {
-    mappingSource = personnelStore.importMappingTrips || [];
-  }
-
+  const allGroups = [
+    ...(personnelStore.importMappingPersonnel || []),
+    ...(personnelStore.importMappingRelative || []),
+    ...(personnelStore.importMappingTrips || []),
+  ];
   const list = [];
-  (mappingSource || []).forEach((grp) => {
+  const seen = new Set();
+  allGroups.forEach((grp) => {
     (grp.columns || []).forEach((col) => {
-      if (col && col.id && col.id !== 'stt' && !col.isVirtual) {
+      if (col && col.id && col.id !== 'stt' && !col.isVirtual && !seen.has(col.id)) {
+        seen.add(col.id);
         list.push(col);
       }
     });
@@ -181,18 +153,9 @@ const allTableColumns = computed(() => {
 });
 
 const dialogHeader = computed(() => {
-  if (effectiveTargetType.value === 'relative') {
-    const nameVal = form.value.relativeName || form.value.name || form.value.ho_va_ten || '';
-    return isEdit.value ? `Chi tiết Thân nhân: ${nameVal || 'Hồ sơ'}` : `Thêm thân nhân mới`;
-  }
-  if (effectiveTargetType.value === 'trip') {
-    const tripDest = form.value.countryName || form.value.quoc_gia_xuat_canh || form.value.destination || '';
-    const nameVal = form.value.personnelName || form.value.relativeName || form.value.name || '';
-    return isEdit.value ? `Chi tiết Chuyến đi: ${tripDest || 'Chuyến đi'} (${nameVal})` : `Thêm chuyến đi mới`;
-  }
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const nameVal = form.value[pNameField] || form.value.name || form.value.ho_va_ten || '';
-  return isEdit.value ? `Chi tiết Cán bộ: ${nameVal || 'Hồ sơ'}` : `Thêm cán bộ mới`;
+  const nameVal = form.value[pNameField] || form.value.name || form.value.relativeName || form.value.personnelName || form.value.countryName || form.value.title || form.value.id || '';
+  return isEdit.value ? `Chi tiết: ${nameVal || 'Kết quả'}` : `Thêm mới kết quả`;
 });
 
 const safeClone = (obj) => {
@@ -256,13 +219,7 @@ watch(
 );
 
 const executeSave = async (payload) => {
-  if (effectiveTargetType.value === 'relative') {
-    return await personnelStore.saveRelative(payload);
-  } else if (effectiveTargetType.value === 'trip') {
-    return await personnelStore.saveTrip(payload);
-  } else {
-    return await personnelStore.savePerson(payload);
-  }
+  return await personnelStore.saveRecord(payload);
 };
 
 const triggerAutoSave = () => {
@@ -341,39 +298,15 @@ const handleSave = async () => {
 };
 
 const handleDelete = async () => {
-  if (effectiveTargetType.value === 'relative') {
-    const nameVal = form.value.relativeName || form.value.name || 'thân nhân này';
-    if (!confirm(`Bạn có chắc chắn muốn xóa thân nhân "${nameVal}" không?`)) return;
-    try {
-      await personnelStore.deleteRelative(form.value);
-      emit('deleted', form.value);
-      visible.value = false;
-    } catch (e) {
-      alert('Lỗi xóa thân nhân: ' + (e.message || e));
-    }
-    return;
-  }
-  if (effectiveTargetType.value === 'trip') {
-    const cName = form.value.countryName || form.value.quoc_gia_xuat_canh || 'chuyến đi này';
-    if (!confirm(`Bạn có chắc chắn muốn xóa chuyến đi "${cName}" không?`)) return;
-    try {
-      await personnelStore.deleteTrip(form.value);
-      emit('deleted', form.value);
-      visible.value = false;
-    } catch (e) {
-      alert('Lỗi xóa chuyến đi: ' + (e.message || e));
-    }
-    return;
-  }
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const nameVal = form.value[pNameField] || form.value.name || 'hồ sơ này';
-  if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ cán bộ "${nameVal}" không?`)) return;
+  const nameVal = form.value[pNameField] || form.value.name || form.value.relativeName || form.value.title || form.value.id || 'kết quả này';
+  if (!confirm(`Bạn có chắc chắn muốn xóa "${nameVal}" không?`)) return;
   try {
-    await personnelStore.deletePerson(form.value);
+    await personnelStore.deleteRecord(form.value);
     emit('deleted', form.value);
     visible.value = false;
   } catch (e) {
-    alert('Lỗi xóa hồ sơ: ' + (e.message || e));
+    alert('Lỗi xóa: ' + (e.message || e));
   }
 };
 </script>

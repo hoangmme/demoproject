@@ -1962,5 +1962,31 @@
         - `openPersonnelDetail(trip)`: Kiểm tra nguồn bảng `src === 'relatives'` để ưu tiên `trip.rawRelative || trip`, đảm bảo click vào thân nhân mở đúng form thân nhân.
    4. **Kiểm thử & Triển khai**:
       - `npm run build` thành công 100% (0 lỗi, 575ms).
+- **Entry (2026-09-08)**: **Triệt Tiêu Hoàn Toàn Phân Loại Đa Hình Và Mọi Fallback Ngầm (Zero Polymorphic Enums & Zero Hidden Fallbacks)**:
+   1. **Yêu cầu & Phản hồi của người dùng**:
+      - *"personnel | relative | trip là cũ rồi đéo cần đa hình hóa làm gì, ấn cái gì thì sửa cái đó thôi."*
+      - *"Check kỹ xem có chỗ nào fallback ngầm nữa, xóa hết đi chứ."*
+      - *"Cột test (lookup cccd) không hiển thị dữ liệu mà cột điều kiện IF lại đánh dấu là Cán bộ >>> dữ liệu không trùng khớp giữa chi tiết và bảng do fallback ngầm."*
+   2. **Nguyên nhân gốc rễ**:
+      - `PersonnelDialog.vue`: Tồn tại nhánh phân loại đa hình cứng (`targetType: 'personnel' | 'relative' | 'trip'`). Người dùng muốn kiến trúc pure flat table/record: truyền record nào thì sửa đúng record đó theo columns của bảng đó, không gán nhãn đối tượng giả tạo.
+      - `UnifiedTableView.vue` (line 4032): `const targetRecord = trip.rawPerson || trip.rawRelative || trip.rawTrip || trip;` khiến mọi click vào dòng Thân nhân/Chuyến đi đều bị cướp quyền và mở Cán bộ vì `rawPerson` luôn tồn tại.
+      - `DashboardView.vue` (`getDisplayValue` & `getRowFieldValue`): Không xử lý cột `lookup` và `rollup`, khiến cột `test` (lookup) hiển thị `-` trên bảng; đồng thời gọi `evaluateFormula` không truyền `columns` và `cellResolver`.
+      - `formulaEngine.js` (`getRecordFieldValue` & `evaluateCustomFormula`): Tự động nạp toàn bộ thuộc tính của `rawPerson`, `rawRelative`, `rawTrip` vào context tính toán công thức, và fallback sang `record.rawPerson` khi trường rỗng. Điều này làm cho công thức IF đọc được giá trị từ `rawPerson` trong khi cột thực tế trên bảng lại trống.
+      - `dashboardMetrics.js` (`extractRowFieldValue`): Kiểm tra fallback sang `item.rawPerson[field]`, `item.activeTrip[field]`, `item.rawRelative[field]`, làm sai lệch kết quả lọc và thống kê.
+      - `formatters.js` (`evaluateLookup`): Gán cứng `let parent = item.rawPerson` trong nhánh liên kết cũ và gán `candidatePool = [item.rawPerson]`, bỏ qua việc đối chiếu khóa liên kết thực tế của dòng.
+      - `AdvancedSearchView.vue` (`openDetail` & `getItemFieldValue`): Gán `activePersonData = item.rawPerson` và fallback sang `rawPerson` khi kiểm tra điều kiện.
+   3. **Giải pháp kiến trúc đã triển khai**:
+      - **Ấn cái gì sửa cái đó (Pure Record Editor)**:
+        - `PersonnelDialog.vue`: Bỏ hoàn toàn prop `targetType` và các nhánh switch-case đa hình. Nhận trực tiếp `:personData="record"` và `:columns="columns"`. Form hiển thị đúng các trường do bảng truyền vào.
+        - Lưu dữ liệu bằng `personnelStore.saveRecord(payload)` và xóa bằng `personnelStore.deleteRecord(record)`. Store tự động định tuyến lưu vào đúng bảng dữ liệu mà không cần caller phải khai báo loại đối tượng.
+      - **Xóa bỏ 100% Fallback ngầm**:
+        - `formulaEngine.js`: Xóa bỏ việc nạp `rawPerson`, `rawRelative`, `rawTrip` vào context và hàm `getRecordFieldValue`. Công thức chỉ đánh giá trên trường thực tế của record và `custom_data` (kèm `cellResolver` động).
+        - `dashboardMetrics.js`: Xóa bỏ các nhánh fallback sang `rawPerson`, `activeTrip`, `rawRelative` trong `extractRowFieldValue`.
+        - `formatters.js`: Xóa bỏ fallback sang `rawPerson` trong `candidatePool` và `evaluateLookup`. Khóa liên kết `lookupLinkCol` phải tìm kiếm chính xác qua CCCD/khóa định danh trong `personnelStore`.
+        - `DashboardView.vue`: Bổ sung xử lý đầy đủ `lookup` và `rollup` trong `getDisplayValue` và `getRowFieldValue`; truyền `cellResolver` đệ quy an toàn cho `evaluateFormula`.
+        - `AdvancedSearchView.vue`: `openDetail` gán trực tiếp `activePersonData.value = JSON.parse(JSON.stringify(item))`; loại bỏ fallback `rawPerson`/`rawTrip` trong `getItemFieldValue`.
+   4. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 547ms).
    5. **Trạng thái**: Done [Reversible].
+
 

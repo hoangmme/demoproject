@@ -1214,14 +1214,11 @@
       </template>
     </Dialog>
 
-    <!-- Detailed Personnel / Relative / Trip Dialog -->
+    <!-- Record Edit Dialog -->
     <PersonnelDialog
       v-model="isPersonDialogOpen"
       :personData="selectedPersonForDialog"
       :columns="selectedColumnsForDialog"
-      :targetType="dialogTargetType"
-      :initialTab="dialogInitialTab"
-      :targetRelativeCode="dialogTargetRelativeCode"
       @saved="onPersonSaved"
       @deleted="onPersonSaved"
     />
@@ -1260,7 +1257,7 @@ import { useAuthStore } from '@/stores/auth';
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import {
@@ -1534,19 +1531,15 @@ const openPersonnelDetailFromRecord = () => {
   if (!selectedDrilldownRow.value) return;
   const row = selectedDrilldownRow.value;
   isDrilldownRecordDetailOpen.value = false;
-  if (row.rawTrip || row._recordType === 'trip' || drilldownSourceType.value === 'trips') {
-    openTripDetail(row);
-  } else if (row.rawRelative || row._recordType === 'relative' || row.relationshipName || row.cccdthannhan || row.relativeName || drilldownSourceType.value === 'relatives') {
-    openRelativeDetail(row);
-  } else {
-    openPersonnelDetail(row);
-  }
+  selectedPersonForDialog.value = row;
+  selectedColumnsForDialog.value = (drilldownColumns.value || []).filter((c) => !c.isVirtual && c.id !== 'stt');
+  isPersonDialogOpen.value = true;
 };
 
-const getDisplayValue = (row, colId) => {
-  if (!row || !colId) return '-';
+const getDisplayValue = (row, colId, depth = 0) => {
+  if (!row || !colId || depth > 3) return '-';
 
-  // Check if column is a Formula Column
+  // Check if column is a Formula / Lookup / Rollup Column
   const allMap = {};
   (personnelStore.importMappingTrips || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
@@ -1560,8 +1553,23 @@ const getDisplayValue = (row, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
-    const result = evaluateFormula(row, colDef);
+    const configWithResolver = {
+      ...colDef,
+      columns: Object.values(allMap),
+      cellResolver: (targetColId) => {
+        if (!targetColId || targetColId === colId) return '';
+        const cell = getDisplayValue(row, targetColId, depth + 1);
+        return cell !== '-' ? cell : '';
+      },
+    };
+    const result = evaluateFormula(row, configWithResolver);
     return result?.label || result?.shortLabel || '-';
+  }
+  if (colDef && colDef.format === 'lookup') {
+    return evaluateLookup(row, colDef, personnelStore);
+  }
+  if (colDef && colDef.format === 'rollup') {
+    return evaluateRollup(row, colDef, personnelStore);
   }
 
   const val = getRowFieldValue(row, colId);
@@ -1611,76 +1619,15 @@ const getPersonnelForTrip = (t) => {
   return personnelStore.personnelList.find((p) => p.id === t.personnelId || (t.personnelCode && p.code === t.personnelCode)) || {};
 };
 
-// Dialog state for personnel & relative detail
+// Dialog state for editing records
 const isPersonDialogOpen = ref(false);
 const selectedPersonForDialog = ref(null);
-const dialogTargetType = ref('personnel');
 const selectedColumnsForDialog = ref([]);
-const dialogInitialTab = ref(0);
-const dialogTargetRelativeCode = ref('');
 
 const openPersonnelDetail = (p) => {
   if (!p) return;
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  const targetCccd = p[pKeyField] ?? p.cccdparent ?? p.cccd ?? p.id;
-  const target = (personnelStore.personnelList || []).find(
-    (x) => x.id === p.id || x.code === p.code || 
-           (targetCccd && (x[pKeyField] === targetCccd || x.cccdparent === targetCccd || x.cccd === targetCccd))
-  ) || p.rawPerson || p;
-  selectedPersonForDialog.value = target;
-  dialogTargetType.value = 'personnel';
-
-  const pCols = [];
-  (personnelStore.importMappingPersonnel || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c && c.id && c.id !== 'stt' && !c.isVirtual) {
-        pCols.push(c);
-      }
-    });
-  });
-  selectedColumnsForDialog.value = pCols;
-  dialogInitialTab.value = 0;
-  dialogTargetRelativeCode.value = '';
-  isPersonDialogOpen.value = true;
-};
-
-const openTripDetail = (t) => {
-  if (!t) return;
-  const trip = t.rawTrip || t;
-  selectedPersonForDialog.value = trip;
-  dialogTargetType.value = 'trip';
-
-  const tripCols = [];
-  (personnelStore.importMappingTrips || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c && c.id && c.id !== 'stt' && !c.isVirtual) {
-        tripCols.push(c);
-      }
-    });
-  });
-  selectedColumnsForDialog.value = tripCols;
-  dialogInitialTab.value = 0;
-  dialogTargetRelativeCode.value = '';
-  isPersonDialogOpen.value = true;
-};
-
-const openRelativeDetail = (r) => {
-  if (!r) return;
-  const rel = r.rawRelative || r;
-  selectedPersonForDialog.value = rel;
-  dialogTargetType.value = 'relative';
-
-  const relCols = [];
-  (personnelStore.importMappingRelative || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c && c.id && c.id !== 'stt' && !c.isVirtual) {
-        relCols.push(c);
-      }
-    });
-  });
-  selectedColumnsForDialog.value = relCols;
-  dialogInitialTab.value = 0;
-  dialogTargetRelativeCode.value = rel.code || '';
+  selectedPersonForDialog.value = p;
+  selectedColumnsForDialog.value = (drilldownColumns.value || []).filter((c) => !c.isVirtual && c.id !== 'stt');
   isPersonDialogOpen.value = true;
 };
 
@@ -2558,23 +2505,17 @@ const getRowFieldValue = (row, colId) => {
   const rKeyField = personnelStore.getRelativeKeyField();
 
   if (colId === tKeyField || colId === 'cccdchuyendi' || colId === 'cccd_chuyen_di' || colId === 'cccd_nguoi_di') {
-    const directVal = row[tKeyField] ?? row.cccdchuyendi ?? row.rawTrip?.[tKeyField] ?? row.rawTrip?.cccdchuyendi ?? row[colId];
+    const directVal = row[tKeyField] ?? row.cccdchuyendi ?? row[colId];
     if (!isInternalId(directVal)) return String(directVal).trim();
-    if (row.isRelative) {
-      const rCccd = row[rKeyField] ?? row.cccdthannhan ?? row.rawRelative?.[rKeyField] ?? row.rawRelative?.cccdthannhan;
-      if (!isInternalId(rCccd)) return String(rCccd).trim();
-    }
-    const canBoCccd = row.rawPerson?.[pKeyField] ?? row.rawPerson?.custom_data?.[pKeyField] ?? row.parentCccd ?? row.cccdparent;
-    if (!isInternalId(canBoCccd)) return String(canBoCccd).trim();
     return '-';
   }
   if (colId === pKeyField || colId === 'cccdparent' || colId === 'cccd_can_bo') {
-    const canBoCccd = row.parentCccd ?? row.cccdparent ?? row.rawPerson?.[pKeyField] ?? row.rawPerson?.custom_data?.[pKeyField];
+    const canBoCccd = row[pKeyField] ?? row.cccdparent ?? row[colId];
     if (!isInternalId(canBoCccd)) return String(canBoCccd).trim();
     return '-';
   }
   if (colId === rKeyField || colId === 'cccdthannhan' || colId === 'cccd_than_nhan') {
-    const rCccd = row[rKeyField] ?? row.cccdthannhan ?? row.rawRelative?.[rKeyField] ?? row.rawRelative?.cccdthannhan;
+    const rCccd = row[rKeyField] ?? row.cccdthannhan ?? row[colId];
     if (!isInternalId(rCccd)) return String(rCccd).trim();
     return '-';
   }
@@ -2597,8 +2538,25 @@ const getRowFieldValue = (row, colId) => {
       const p = resolvePresence(row);
       return p.label || '-';
     }
-    const res = evaluateFormula(row, colDef);
+    const configWithResolver = {
+      ...colDef,
+      columns: Object.values(allMap),
+      cellResolver: (targetColId) => {
+        if (!targetColId || targetColId === colId) return '';
+        const cell = getRowFieldValue(row, targetColId);
+        return cell !== '-' ? cell : '';
+      },
+    };
+    const res = evaluateFormula(row, configWithResolver);
     return res?.label || res?.shortLabel || '';
+  }
+  if (colDef && colDef.format === 'lookup') {
+    const lkVal = evaluateLookup(row, colDef, personnelStore);
+    return lkVal !== '-' ? lkVal : '';
+  }
+  if (colDef && colDef.format === 'rollup') {
+    const rlVal = evaluateRollup(row, colDef, personnelStore);
+    return rlVal !== '-' ? rlVal : '';
   }
 
   if (colId === '_presenceStatus' || colId === 'presenceStatus' || colId === 'status' || colId === 'tripStatus' || colId === 'trang_thai_hien_dien' || colId === 'trangThaiHienDien') {
@@ -2610,81 +2568,9 @@ const getRowFieldValue = (row, colId) => {
     return row.isRelative ? 'Thân nhân' : 'Cán bộ';
   }
 
-  // 2. Identify column origin strictly from import mappings
-  const tripColIds = (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id));
-  const relColIds = (personnelStore.importMappingRelative || []).flatMap((g) => (g.columns || []).map((c) => c.id));
-  const perColIds = (personnelStore.importMappingPersonnel || []).flatMap((g) => (g.columns || []).map((c) => c.id));
-
-  let raw = undefined;
-
-  if (tripColIds.includes(colId)) {
-    // Cột thuộc Bảng Chuyến đi
-    if (row.isRelative || row.rawRelative) {
-      // Đối tượng là Thân nhân -> đọc từ chuyến đi mới nhất theo departureDate
-      const trips = Array.isArray(row.trips) ? row.trips : [];
-      let latestTrip = null;
-      let latestDep = -Infinity;
-      for (const t of trips) {
-        const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-        const depRaw = t.departureDate || tCustom.departureDate || t.ngay_xuat_canh || tCustom.ngay_xuat_canh || '';
-        const dep = parseDateValue(depRaw);
-        const time = dep ? dep.getTime() : 0;
-        if (time >= latestDep) {
-          latestDep = time;
-          latestTrip = { ...tCustom, ...t };
-        }
-      }
-      if (latestTrip) {
-        raw = latestTrip[colId];
-      }
-    } else if (row.trips && Array.isArray(row.trips) && !row.departureDate && !row.countryName) {
-      // Đối tượng là Cán bộ có mảng chuyến đi -> đọc từ chuyến đi mới nhất
-      let latestTrip = null;
-      let latestDep = -Infinity;
-      for (const t of row.trips) {
-        const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-        const depRaw = t.departureDate || tCustom.departureDate || t.ngay_xuat_canh || tCustom.ngay_xuat_canh || '';
-        const dep = parseDateValue(depRaw);
-        const time = dep ? dep.getTime() : 0;
-        if (time >= latestDep) {
-          latestDep = time;
-          latestTrip = { ...tCustom, ...t };
-        }
-      }
-      if (latestTrip) {
-        raw = latestTrip[colId];
-      }
-    } else {
-      // Bản ghi là Chuyến đi
-      const rcd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data || '{}') : (row.custom_data || {});
-      const rtcd = typeof row.rawTrip?.custom_data === 'string' ? JSON.parse(row.rawTrip.custom_data || '{}') : (row.rawTrip?.custom_data || {});
-      raw = row[colId] !== undefined ? row[colId] : (rcd[colId] ?? row.rawTrip?.[colId] ?? rtcd[colId]);
-    }
-  } else if (relColIds.includes(colId)) {
-    // Cột thuộc Bảng Thân nhân
-    const rcd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data || '{}') : (row.custom_data || {});
-    const rrcd = typeof row.rawRelative?.custom_data === 'string' ? JSON.parse(row.rawRelative.custom_data || '{}') : (row.rawRelative?.custom_data || {});
-    if (row.isRelative || row.rawRelative) {
-      raw = row[colId] !== undefined ? row[colId] : (rcd[colId] ?? row.rawRelative?.[colId] ?? rrcd[colId]);
-    } else if (row.rawRelative) {
-      raw = row.rawRelative[colId] !== undefined ? row.rawRelative[colId] : (rrcd[colId]);
-    }
-  } else if (perColIds.includes(colId)) {
-    // Cột thuộc Bảng Cán bộ
-    const p = row.rawPerson || row;
-    const pcd = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p.custom_data || {});
-    const rcd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data || '{}') : (row.custom_data || {});
-    raw = p[colId] !== undefined ? p[colId] : (pcd[colId] ?? row[colId] ?? rcd[colId]);
-  } else {
-    // Cột trực tiếp
-    const rcd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data || '{}') : (row.custom_data || {});
-    const rtcd = typeof row.rawTrip?.custom_data === 'string' ? JSON.parse(row.rawTrip.custom_data || '{}') : (row.rawTrip?.custom_data || {});
-    const rrcd = typeof row.rawRelative?.custom_data === 'string' ? JSON.parse(row.rawRelative.custom_data || '{}') : (row.rawRelative?.custom_data || {});
-    const p = row.rawPerson;
-    const pcd = typeof p?.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p?.custom_data || {});
-    raw = row[colId] !== undefined ? row[colId] : (rcd[colId] ?? row.rawTrip?.[colId] ?? rtcd[colId] ?? row.rawRelative?.[colId] ?? rrcd[colId] ?? p?.[colId] ?? pcd[colId]);
-  }
-
+  // 2. Direct property or in custom_data (KHÔNG fallback ngầm sang rawPerson)
+  const rcd = typeof row.custom_data === 'string' ? JSON.parse(row.custom_data || '{}') : (row.custom_data || {});
+  const raw = row[colId] !== undefined ? row[colId] : rcd[colId];
   return formatGenericCellValue(raw, colDef || { id: colId });
 };
 

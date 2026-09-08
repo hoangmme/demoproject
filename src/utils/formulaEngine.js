@@ -18,18 +18,6 @@ export const getRecordFieldValue = (record, fieldKey) => {
   if (cd && cd[fieldKey] !== undefined && cd[fieldKey] !== null) {
     return cd[fieldKey];
   }
-  if (record.rawPerson) {
-    const v = getRecordFieldValue(record.rawPerson, fieldKey);
-    if (v !== undefined) return v;
-  }
-  if (record.rawRelative) {
-    const v = getRecordFieldValue(record.rawRelative, fieldKey);
-    if (v !== undefined) return v;
-  }
-  if (record.rawTrip) {
-    const v = getRecordFieldValue(record.rawTrip, fieldKey);
-    if (v !== undefined) return v;
-  }
   return undefined;
 };
 
@@ -596,31 +584,6 @@ export const evaluateCustomFormula = (record, expression, columns = [], fieldRes
       });
     }
 
-    // Nạp rawTrip, rawPerson, rawRelative nếu có
-    if (record.rawTrip && typeof record.rawTrip === 'object') {
-      Object.keys(record.rawTrip).forEach((k) => {
-        if (context[k] === undefined) {
-          context[k] = record.rawTrip[k];
-          context[k.toLowerCase()] = record.rawTrip[k];
-        }
-      });
-    }
-    if (record.rawPerson && typeof record.rawPerson === 'object') {
-      Object.keys(record.rawPerson).forEach((k) => {
-        if (context[k] === undefined) {
-          context[k] = record.rawPerson[k];
-          context[k.toLowerCase()] = record.rawPerson[k];
-        }
-      });
-    }
-    if (record.rawRelative && typeof record.rawRelative === 'object') {
-      Object.keys(record.rawRelative).forEach((k) => {
-        if (context[k] === undefined) {
-          context[k] = record.rawRelative[k];
-          context[k.toLowerCase()] = record.rawRelative[k];
-        }
-      });
-    }
 
     // Nạp theo tên nhãn hiển thị (label) của cột
     if (Array.isArray(columns)) {

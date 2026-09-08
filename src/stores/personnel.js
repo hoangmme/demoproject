@@ -1149,6 +1149,54 @@ export const usePersonnelStore = defineStore('personnel', {
         this.loading = false;
       }
     },
+    async saveRecord(record) {
+      if (!record) return null;
+      if (record._recordType === 'relative' || record.rawRelative || record.relationshipName || record.cccdthannhan || (record.code && String(record.code).startsWith('TN-'))) {
+        return await this.saveRelative(record);
+      }
+      if (record._recordType === 'trip' || record.rawTrip || record.departureDate || record.ngay_xuat_canh || record.destination || record.quoc_gia_xuat_canh) {
+        return await this.saveTrip(record);
+      }
+      const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
+      if (p) {
+        return await this.savePerson(record);
+      }
+      for (const pers of this.personnelList) {
+        if (Array.isArray(pers.relatives) && pers.relatives.some((r) => r.id === record.id || r.code === record.code)) {
+          return await this.saveRelative(record);
+        }
+      }
+      for (const pers of this.personnelList) {
+        if (Array.isArray(pers.trips) && pers.trips.some((t) => t.id === record.id || t.uniqueKey === record.uniqueKey)) {
+          return await this.saveTrip(record);
+        }
+      }
+      return await this.savePerson(record);
+    },
+    async deleteRecord(record) {
+      if (!record) return;
+      if (record._recordType === 'relative' || record.rawRelative || record.relationshipName || record.cccdthannhan || (record.code && String(record.code).startsWith('TN-'))) {
+        return await this.deleteRelative(record);
+      }
+      if (record._recordType === 'trip' || record.rawTrip || record.departureDate || record.ngay_xuat_canh || record.destination || record.quoc_gia_xuat_canh) {
+        return await this.deleteTrip(record);
+      }
+      const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
+      if (p) {
+        return await this.deletePerson(record);
+      }
+      for (const pers of this.personnelList) {
+        if (Array.isArray(pers.relatives) && pers.relatives.some((r) => r.id === record.id || r.code === record.code)) {
+          return await this.deleteRelative(record);
+        }
+      }
+      for (const pers of this.personnelList) {
+        if (Array.isArray(pers.trips) && pers.trips.some((t) => t.id === record.id || t.uniqueKey === record.uniqueKey)) {
+          return await this.deleteTrip(record);
+        }
+      }
+      return await this.deletePerson(record);
+    },
     toggleColumn(colId) {
       if (this.visibleColumns.includes(colId)) {
         if (this.visibleColumns.length <= 1) return;
