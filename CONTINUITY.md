@@ -1737,4 +1737,20 @@
   5. **Đồng bộ & Kiểm chứng**:
      - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` thành công 100% (0 lỗi, 575ms).
+- **Entry (2026-09-08)**: **Tối Ưu Hiển Thị Định Dạng Hộp Kiểm Đính Kèm (Checkbox + File / Loop): Xuống Hàng Nội Dung Văn Bản**:
+  1. **Vấn đề người dùng phản ánh**:
+     - Cột định dạng "Hộp kiểm kèm Tệp" (`checkbox_file_loop` / `checkbox_file`), ví dụ cột "KỶ LUẬT", khi hiển thị trong ô bảng dữ liệu: huy hiệu lựa chọn (ví dụ: `[Đảng, Chính quyền]`) và nội dung văn bản (ví dụ: `Khiển trách (Quyết định kỷ luật...)`) bị dồn ép chung trên cùng 1 hàng flex ngang.
+     - Do huy hiệu chiếm chiều ngang, phần khoảng trống còn lại quá hẹp khiến nội dung văn bản bị ép xuống từng ký tự dọc (K-h-i-ể-n...).
+  2. **Giải pháp bố cục 2 tầng (Two-Row Hierarchy) đã thực hiện (`ChildDashboardView.vue`, `PersonnelView.vue`)**:
+     - Cấu trúc lại hiển thị từng mục trong ô bảng:
+       - **Hàng 1 (Huy hiệu & Thao tác)**: Chứa icon trạng thái (`pi-check-circle` / `pi-circle`), badge lựa chọn (`[Đảng, Chính quyền]`) và nút bấm xem tệp đính kèm (`[📎 Tệp]`). Bố trí dạng `display: flex; align-items: center; flex-wrap: wrap; gap: 6px;`.
+       - **Hàng 2 (Nội dung văn bản - Xuống hàng)**: Chứa toàn bộ nội dung text chi tiết, hiển thị trọn vẹn 100% bề rộng khả dụng của ô (`padding-left: 18px; word-break: break-word; line-height: 1.35; color: #1e293b;`). Văn bản ngắt dòng theo từ tự nhiên, rõ ràng, không bao giờ bị dồn ép ký tự.
+     - Đồng bộ cả 4 vị trí render bảng:
+       - Bảng Thống kê Chuyên đề (`ChildDashboardView.vue`) cho cả cột động và cột đối chiếu đơn (`activeCardSingleCol`).
+       - Bảng Cán bộ (`PersonnelView.vue`) cho `checkbox_file` và `checkbox_file_loop`.
+       - Bảng Thân nhân (`PersonnelView.vue`) cho cả `checkbox_file_loop` và `checkbox_file`.
+     - Tối ưu độ rộng mặc định (`getColWidth` & `allAvailableColumnsList`): Tự động cấp độ rộng mặc định `250px` cho cột dạng `checkbox_file_loop` và `checkbox_file` nếu người dùng chưa cài đặt `tableWidth` riêng, tạo không gian hiển thị rộng rãi, thoáng mắt.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 602ms).
 - **Status**: Done [Reversible].

@@ -411,20 +411,21 @@
 
             <!-- Checkbox + File (Không loop) -->
             <template v-else-if="col.format === 'checkbox_file'">
-              <div v-if="getCheckboxFileItem(data, col.id).hasValue" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.76rem; line-height: 1.35;">
-                <span v-if="getCheckboxFileItem(data, col.id).text" style="color: #1e293b; font-weight: 600;">
+              <div v-if="getCheckboxFileItem(data, col.id).hasValue" style="display: flex; flex-direction: column; gap: 3px; font-size: 0.76rem; line-height: 1.35;">
+                <div v-if="getCheckboxFileItem(data, col.id).file && (getCheckboxFileItem(data, col.id).file.url || getCheckboxFileItem(data, col.id).file.id)" style="display: flex; align-items: center; gap: 6px;">
+                  <a
+                    :href="getFileUrl(getCheckboxFileItem(data, col.id).file)"
+                    target="_blank"
+                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                    title="Mở xem tệp"
+                  >
+                    <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                    <span>{{ getCheckboxFileItem(data, col.id).file.name || 'Tệp' }}</span>
+                  </a>
+                </div>
+                <div v-if="getCheckboxFileItem(data, col.id).text" style="color: #1e293b; font-weight: 600; word-break: break-word; line-height: 1.35;">
                   {{ getCheckboxFileItem(data, col.id).text }}
-                </span>
-                <a
-                  v-if="getCheckboxFileItem(data, col.id).file && (getCheckboxFileItem(data, col.id).file.url || getCheckboxFileItem(data, col.id).file.id)"
-                  :href="getFileUrl(getCheckboxFileItem(data, col.id).file)"
-                  target="_blank"
-                  style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
-                  title="Mở xem tệp"
-                >
-                  <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
-                  <span>{{ getCheckboxFileItem(data, col.id).file.name || 'Tệp' }}</span>
-                </a>
+                </div>
               </div>
               <span v-else>-</span>
             </template>
@@ -435,31 +436,36 @@
                 <div
                   v-for="(it, iIdx) in getCheckboxFileLoopItems(data, col.id)"
                   :key="iIdx"
-                  style="display: flex; align-items: flex-start; gap: 6px; font-size: 0.76rem; line-height: 1.4;"
+                  style="display: flex; flex-direction: column; gap: 2px; font-size: 0.76rem; line-height: 1.4;"
                 >
-                  <i
-                    :class="it.checked ? 'pi pi-check-circle' : 'pi pi-circle'"
-                    :style="{ fontSize: '0.75rem', color: it.checked ? '#16a34a' : '#94a3b8', flexShrink: 0, marginTop: '3px' }"
-                  ></i>
-                  <span
-                    v-if="it.selectedOptions && it.selectedOptions.length"
-                    style="background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; line-height: 1.3;"
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <i
+                      :class="it.checked ? 'pi pi-check-circle' : 'pi pi-circle'"
+                      :style="{ fontSize: '0.75rem', color: it.checked ? '#16a34a' : '#94a3b8', flexShrink: 0 }"
+                    ></i>
+                    <span
+                      v-if="it.selectedOptions && it.selectedOptions.length"
+                      style="background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; line-height: 1.3;"
+                    >
+                      {{ Array.isArray(it.selectedOptions) ? it.selectedOptions.join(', ') : it.selectedOptions }}
+                    </span>
+                    <a
+                      v-if="it.file && (it.file.url || it.file.id)"
+                      :href="getFileUrl(it.file)"
+                      target="_blank"
+                      style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                      title="Mở xem tệp"
+                    >
+                      <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                      <span>{{ it.file.name || 'Tệp' }}</span>
+                    </a>
+                  </div>
+                  <div
+                    v-if="it.text || (!it.selectedOptions || !it.selectedOptions.length)"
+                    style="padding-left: 18px; word-break: break-word; line-height: 1.35; color: #1e293b;"
                   >
-                    {{ Array.isArray(it.selectedOptions) ? it.selectedOptions.join(', ') : it.selectedOptions }}
-                  </span>
-                  <span style="flex: 1; min-width: 0; word-break: break-word; color: #1e293b;">
-                    {{ it.text || (it.selectedOptions && it.selectedOptions.length ? '' : '(Chưa nhập tên)') }}
-                  </span>
-                  <a
-                    v-if="it.file && (it.file.url || it.file.id)"
-                    :href="getFileUrl(it.file)"
-                    target="_blank"
-                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap; flex-shrink: 0;"
-                    title="Mở xem tệp"
-                  >
-                    <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
-                    <span>{{ it.file.name || 'Tệp' }}</span>
-                  </a>
+                    {{ it.text || '(Chưa nhập tên)' }}
+                  </div>
                 </div>
               </div>
               <span v-else>-</span>
@@ -915,36 +921,63 @@
                 {{ getDisplayValue(data, col.id) }}
               </span>
             </template>
+            <!-- Checkbox + File (Không loop) - Thân nhân -->
+            <template v-else-if="col.format === 'checkbox_file'">
+              <div v-if="getCheckboxFileItem(data, col.id).hasValue" style="display: flex; flex-direction: column; gap: 3px; font-size: 0.76rem; line-height: 1.35;">
+                <div v-if="getCheckboxFileItem(data, col.id).file && (getCheckboxFileItem(data, col.id).file.url || getCheckboxFileItem(data, col.id).file.id)" style="display: flex; align-items: center; gap: 6px;">
+                  <a
+                    :href="getFileUrl(getCheckboxFileItem(data, col.id).file)"
+                    target="_blank"
+                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                    title="Mở xem tệp"
+                  >
+                    <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                    <span>{{ getCheckboxFileItem(data, col.id).file.name || 'Tệp' }}</span>
+                  </a>
+                </div>
+                <div v-if="getCheckboxFileItem(data, col.id).text" style="color: #1e293b; font-weight: 600; word-break: break-word; line-height: 1.35;">
+                  {{ getCheckboxFileItem(data, col.id).text }}
+                </div>
+              </div>
+              <span v-else>-</span>
+            </template>
+
+            <!-- Checkbox + File Loop - Thân nhân -->
             <template v-else-if="col.format === 'checkbox_file_loop'">
               <div v-if="getCheckboxFileLoopItems(data, col.id).length > 0" style="display: flex; flex-direction: column; gap: 6px;">
                 <div
                   v-for="(it, iIdx) in getCheckboxFileLoopItems(data, col.id)"
                   :key="iIdx"
-                  style="display: flex; align-items: flex-start; gap: 6px; font-size: 0.76rem; line-height: 1.4;"
+                  style="display: flex; flex-direction: column; gap: 2px; font-size: 0.76rem; line-height: 1.4;"
                 >
-                  <i
-                    :class="it.checked ? 'pi pi-check-circle' : 'pi pi-circle'"
-                    :style="{ fontSize: '0.75rem', color: it.checked ? '#16a34a' : '#94a3b8', flexShrink: 0, marginTop: '3px' }"
-                  ></i>
-                  <span
-                    v-if="it.selectedOptions && it.selectedOptions.length"
-                    style="background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; line-height: 1.3;"
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <i
+                      :class="it.checked ? 'pi pi-check-circle' : 'pi pi-circle'"
+                      :style="{ fontSize: '0.75rem', color: it.checked ? '#16a34a' : '#94a3b8', flexShrink: 0 }"
+                    ></i>
+                    <span
+                      v-if="it.selectedOptions && it.selectedOptions.length"
+                      style="background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; line-height: 1.3;"
+                    >
+                      {{ Array.isArray(it.selectedOptions) ? it.selectedOptions.join(', ') : it.selectedOptions }}
+                    </span>
+                    <a
+                      v-if="it.file && (it.file.url || it.file.id)"
+                      :href="getFileUrl(it.file)"
+                      target="_blank"
+                      style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap;"
+                      title="Mở xem tệp"
+                    >
+                      <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
+                      <span>{{ it.file.name || 'Tệp' }}</span>
+                    </a>
+                  </div>
+                  <div
+                    v-if="it.text || (!it.selectedOptions || !it.selectedOptions.length)"
+                    style="padding-left: 18px; word-break: break-word; line-height: 1.35; color: #1e293b;"
                   >
-                    {{ Array.isArray(it.selectedOptions) ? it.selectedOptions.join(', ') : it.selectedOptions }}
-                  </span>
-                  <span style="flex: 1; min-width: 0; word-break: break-word; color: #1e293b;">
-                    {{ it.text || (it.selectedOptions && it.selectedOptions.length ? '' : '(Chưa nhập tên)') }}
-                  </span>
-                  <a
-                    v-if="it.file && (it.file.url || it.file.id)"
-                    :href="getFileUrl(it.file)"
-                    target="_blank"
-                    style="display: inline-flex; align-items: center; gap: 3px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 500; white-space: nowrap; flex-shrink: 0;"
-                    title="Mở xem tệp"
-                  >
-                    <i class="pi pi-paperclip" style="font-size: 0.68rem;"></i>
-                    <span>{{ it.file.name || 'Tệp' }}</span>
-                  </a>
+                    {{ it.text || '(Chưa nhập tên)' }}
+                  </div>
                 </div>
               </div>
               <span v-else>-</span>
@@ -2259,7 +2292,8 @@ const activeColumns = computed(() => {
     });
   });
 
-  const getColWidth = (id) => {
+  const getColWidth = (id, format) => {
+    if (format === 'checkbox_file_loop' || format === 'checkbox_file') return '250px';
     if (id === 'name') return '190px';
     if (id === 'cccd') return '135px';
     if (id === 'birthYear') return '115px';
@@ -2280,7 +2314,7 @@ const activeColumns = computed(() => {
       id: cfg.id,
       label: cfg.label || cfg.id,
       colIndex: idxText,
-      width: cfg.tableWidth || getColWidth(cfg.id),
+      width: cfg.tableWidth ? (cfg.tableWidth + 'px') : getColWidth(cfg.id, cfg.format),
       tableWidth: cfg.tableWidth || null,
       format: cfg.format || 'text',
       required: Boolean(cfg.required),
@@ -2418,8 +2452,9 @@ const activeRelativeColumns = computed(() => {
         id: cfg.id,
         label: cfg.label,
         colIndex: idxText,
-        width: cfg.tableWidth || '160px',
+        width: cfg.tableWidth ? (cfg.tableWidth + 'px') : (cfg.format === 'checkbox_file_loop' || cfg.format === 'checkbox_file' ? '250px' : '160px'),
         tableWidth: cfg.tableWidth || null,
+        format: cfg.format || 'text',
         required: Boolean(cfg.required),
         options: cfg.options || '',
       };
