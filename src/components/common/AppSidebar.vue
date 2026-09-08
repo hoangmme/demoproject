@@ -1054,7 +1054,7 @@ const saveNewTable = async () => {
   const isBlank = (newTableForm.value.source || 'blank') === 'blank';
   const newTable = {
     id: newId,
-    code: `TB-${String((dynamicDashboards.value || []).length + 1).padStart(2, '0')}`,
+    code: '',
     title: newTableForm.value.title.trim(),
     source: isBlank ? 'blank' : newTableForm.value.source,
     icon: newTableForm.value.icon || 'pi-table',
@@ -1101,7 +1101,7 @@ const selectedQuickTripTargetKey = ref('');
 const DEFAULT_DASHBOARDS = [
   {
     id: 'trips',
-    code: 'CD-03',
+    code: '',
     title: 'Danh sách Chuyến đi',
     icon: 'pi-send',
     source: 'trips',

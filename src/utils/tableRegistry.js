@@ -54,7 +54,7 @@ export function getUnifiedTableDefinitions(options = {}) {
   // Bảng 1: Chuyến đi
   const tripsTable = {
     id: 'trips',
-    code: 'CD-03',
+    code: '',
     title: coreTripsTitle,
     icon: savedTripsCfg?.icon || 'pi-send',
     iconColor: savedTripsCfg?.iconColor || '#10b981',
@@ -112,7 +112,7 @@ export function getUnifiedTableDefinitions(options = {}) {
     getSearchableGroups: (store) => {
       const colMap = computeColumnIndexMap(store?.importMappingTrips || []);
       return (store?.importMappingTrips || []).map((g) => ({
-        name: `[${tripsTable.code}] ${coreTripsTitle} - ${g.group || 'Thông tin'}`,
+        name: `${coreTripsTitle}${g.group ? ' - ' + g.group : ''}`,
         columns: (g.columns || []).filter((c) => c.id && c.id !== 'stt').map((c) => ({
           id: c.id,
           rawId: c.id,
@@ -162,7 +162,7 @@ export function getUnifiedTableDefinitions(options = {}) {
     getSearchableGroups: (store) => {
       const colMap = computeColumnIndexMap(store?.importMappingPersonnel || []);
       return (store?.importMappingPersonnel || []).map((g) => ({
-        name: `[${personnelTable.code}] ${corePersonnelTitle} - ${g.group || 'Thông tin'}`,
+        name: `${corePersonnelTitle}${g.group ? ' - ' + g.group : ''}`,
         columns: (g.columns || []).filter((c) => c.id && c.id !== 'stt').map((c) => ({
           id: c.id,
           rawId: c.id,
@@ -180,7 +180,7 @@ export function getUnifiedTableDefinitions(options = {}) {
   // Bảng 3: Thân nhân
   const relativesTable = {
     id: 'relatives',
-    code: 'TN-02',
+    code: '',
     title: coreRelativesTitle,
     icon: savedRelativesCfg?.icon || 'pi-heart',
     iconColor: savedRelativesCfg?.iconColor || '#a855f7',
@@ -223,7 +223,7 @@ export function getUnifiedTableDefinitions(options = {}) {
     getSearchableGroups: (store) => {
       const colMap = computeColumnIndexMap(store?.importMappingRelative || []);
       return (store?.importMappingRelative || []).map((g) => ({
-        name: `[${relativesTable.code}] ${coreRelativesTitle} - ${g.group || 'Thông tin'}`,
+        name: `${coreRelativesTitle}${g.group ? ' - ' + g.group : ''}`,
         columns: (g.columns || []).filter((c) => c.id && c.id !== 'stt').map((c) => ({
           id: c.id,
           rawId: c.id,
@@ -242,11 +242,11 @@ export function getUnifiedTableDefinitions(options = {}) {
   const customList = (customDashboards || [])
     .filter((d) => d && d.id && d.id !== 'trips' && d.id !== 'personnel' && d.id !== 'relatives')
     .map((ct, idx) => {
-      const code = ct.code || `TB-${String(idx + 1).padStart(2, '0')}`;
+      const title = ct.title || `Bảng ${idx + 1}`;
       return {
         id: ct.id,
-        code: code,
-        title: ct.title || `Bảng ${code}`,
+        code: ct.code || '',
+        title: title,
         icon: ct.icon || 'pi-table',
         iconColor: ct.iconColor || '#f59e0b',
         source: ct.source || 'blank',
@@ -294,7 +294,7 @@ export function getUnifiedTableDefinitions(options = {}) {
             return customCols.filter((c) => c.id && c.id !== 'stt').map((c) => ({
               id: c.id,
               label: c.label || c.id,
-              group: ct.title,
+              group: title,
               format: c.format || 'text',
               width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
               tableWidth: c.tableWidth || null,
@@ -311,7 +311,7 @@ export function getUnifiedTableDefinitions(options = {}) {
           const customCols = ct.customColumns || ct.columns || [];
           if (customCols.length > 0) {
             return [{
-              name: `[${code}] ${ct.title}`,
+              name: title,
               columns: customCols.filter((c) => c.id && c.id !== 'stt').map((c, cIdx) => ({
                 id: c.id,
                 rawId: c.id,

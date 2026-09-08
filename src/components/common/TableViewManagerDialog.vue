@@ -104,7 +104,7 @@
                 :key="col.id"
                 :value="col.id"
               >
-                {{ col.colIndex ? `Cột ${col.colIndex}: ` : (col.isVirtual ? '✨ ' : '') }}{{ col.label || col.id }}
+                {{ (col.isVirtual ? '✨ ' : '') }}{{ col.label || col.id }}
               </option>
             </select>
 

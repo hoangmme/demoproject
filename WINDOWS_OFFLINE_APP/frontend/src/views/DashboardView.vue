@@ -536,7 +536,7 @@
             <label class="field-label" style="font-weight: 700; color: #1e293b;">1. Nguồn Dữ liệu Thống kê <span style="color: #ef4444;">*</span></label>
             <select v-model="widgetForm.source" class="settings-select" style="width: 100%; font-weight: 600;" @change="onWidgetSourceChange">
               <option v-for="t in allUnifiedTables" :key="t.id" :value="t.id">
-                📋 {{ t.code ? `[${t.code}] ` : '' }}{{ t.title }}
+                📋 {{ t.title }}
               </option>
             </select>
           </div>
@@ -561,7 +561,7 @@
             <option value="">-- Mặc định (theo Quốc gia / Đơn vị) --</option>
             <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
               <option v-for="c in grp.columns" :key="c.id" :value="c.id">
-                {{ c.colIndex ? `Cột ${c.colIndex}: ` : (c.isVirtual ? '⚡ ' : '') }}{{ c.label }}
+                {{ (c.isVirtual ? '⚡ ' : '') }}{{ c.label || c.id }}
               </option>
             </optgroup>
           </select>
@@ -617,7 +617,7 @@
                   <option value="">-- Toàn bộ (Không lọc cột) --</option>
                   <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
                     <option v-for="c in grp.columns" :key="c.id" :value="c.id">
-                      {{ c.colIndex ? `Cột ${c.colIndex}: ` : (c.isVirtual ? '⚡ ' : '') }}{{ c.label }}
+                      {{ (c.isVirtual ? '⚡ ' : '') }}{{ c.label || c.id }}
                     </option>
                   </optgroup>
                 </select>
@@ -2178,7 +2178,7 @@ const availableTopicDashboards = ref([]);
 const DEFAULT_TOPIC_DASHBOARDS = [
   {
     id: 'trips',
-    code: 'CD-03',
+    code: '',
     title: 'Danh sách Chuyến đi',
     source: 'trips',
     icon: 'pi-send',
@@ -3871,6 +3871,7 @@ const handleCustomDashboardsUpdated = async (e) => {
   } else {
     await loadTopicDashboards();
   }
+  await personnelStore.loadSettings();
   await loadAllCustomTablesData();
 };
 

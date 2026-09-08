@@ -1675,7 +1675,7 @@ const currentDashboardConfig = computed(() => {
   if (currentDashboardId.value === 'trips' || route.path === '/trips') {
     return {
       id: 'trips',
-      code: 'CD-03',
+      code: '',
       title: 'Danh sách Chuyến đi',
       source: 'trips',
       icon: 'pi-send',
@@ -2327,8 +2327,33 @@ const onChildChangeColumnFormWidth = async ({ colId, formWidth }) => {
 };
 
 const onChildDeleteColumnFromTable = async (colId) => {
-  const { key, mapping } = getTargetMappingRef();
+  const { key, mapping, isBlank, cDash } = getTargetMappingRef();
   let found = false;
+
+  if (isBlank && cDash) {
+    if (Array.isArray(cDash.customColumns)) {
+      const initLen = cDash.customColumns.length;
+      cDash.customColumns = cDash.customColumns.filter((c) => c.id !== colId);
+      if (cDash.customColumns.length < initLen) found = true;
+    }
+    if (Array.isArray(cDash.columns)) {
+      const initLen = cDash.columns.length;
+      cDash.columns = cDash.columns.filter((c) => c.id !== colId);
+      if (cDash.columns.length < initLen) found = true;
+    }
+    if (found) {
+      selectedColIds.value = selectedColIds.value.filter((id) => id !== colId);
+      await onColumnsChange();
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+        window.dispatchEvent(new CustomEvent('custom-dashboards-updated'));
+      } catch (e) {}
+      alert('Đã xóa cột thành công khỏi bảng!');
+    }
+    return;
+  }
+
   for (const g of (mapping || [])) {
     if (Array.isArray(g.columns)) {
       const initLen = g.columns.length;
@@ -2342,6 +2367,7 @@ const onChildDeleteColumnFromTable = async (colId) => {
     selectedColIds.value = selectedColIds.value.filter((id) => id !== colId);
     await onColumnsChange();
     await saveAppSettings(key, mapping);
+    window.dispatchEvent(new CustomEvent('custom-dashboards-updated'));
     alert('Đã xóa cột thành công khỏi bảng!');
   }
 };

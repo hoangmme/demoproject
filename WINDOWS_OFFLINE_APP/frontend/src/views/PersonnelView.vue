@@ -3348,6 +3348,7 @@ const onDeleteColumnFromTable = async (colId) => {
       await saveAppSettings('personnel_visible_columns', personnelStore.visibleColumns);
     }
     await saveAppSettings(mappingKey, mapping);
+    window.dispatchEvent(new CustomEvent('custom-dashboards-updated'));
     alert('Đã xóa cột thành công khỏi bảng!');
   }
 };

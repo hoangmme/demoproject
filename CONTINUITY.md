@@ -1673,6 +1673,20 @@
      - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` thành công 100% không lỗi.
 - **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Xóa Triệt Để Cột Đã Xóa Khỏi Thống Kê, Bỏ Toàn Bộ Mã Bảng Tĩnh ([TB-02], [CB-01]...), Làm Sạch Nhãn Cột Dropdown**:
+  1. **Khắc phục lỗi xóa cột ở bảng nhưng Thống kê vẫn gọi được**:
+     - *Nguyên nhân*: Hàm `onChildDeleteColumnFromTable` trong `ChildDashboardView.vue` trước đây chỉ lọc `g.columns` trên đối tượng tạm thời, bỏ qua cấu trúc bảng tùy chỉnh `isBlank && cDash`. Do đó `cDash.customColumns` và `cDash.columns` không bao giờ bị xóa và không được lưu vào `custom_dashboards_config`, đồng thời không phát sự kiện `custom-dashboards-updated` cho Thống kê.
+     - *Giải pháp*: Xử lý riêng trường hợp `isBlank && cDash`, lọc trực tiếp trên `cDash.customColumns` và `cDash.columns`, lưu lại `custom_dashboards_config` và phát `window.dispatchEvent(new CustomEvent('custom-dashboards-updated'))`. Ở `PersonnelView.vue` cũng phát sự kiện tương ứng khi xóa cột bảng Cán bộ/Thân nhân.
+  2. **Bỏ toàn bộ mã bảng tĩnh nhân tạo (`[TB-02]`, `[CD-03]`, `[CB-01]`, `[TN-02]`)**:
+     - *Nguyên nhân*: `tableRegistry.js` tự động gắn `[${code}]` trước tên bảng khi tạo các nhóm tìm kiếm (`getSearchableGroups`), tạo ra `📋 [TB-02] Test`.
+     - *Giải pháp*: Xóa bỏ hoàn toàn việc ghép mã tĩnh, hiển thị thuần khiết theo tên bảng thực tế của người dùng (`Test`, `Cán bộ`, `Chuyến đi`, `Thân nhân`) đúng theo Quy tắc 4 của CONTINUITY.md.
+  3. **Làm sạch thứ tự cột trong các menu chọn (Dropdown Selectors)**:
+     - Bỏ tiền tố `Cột X: ` trong toàn bộ các dropdown chọn cột (`DashboardView.vue`, `TableViewManagerDialog.vue`, `AdvancedSearchView.vue`), chỉ hiển thị tên cột thuần khiết `{{ c.label || c.id }}` (kèm `⚡ ` / `✨ ` cho cột ảo).
+     - Quy tắc hiển thị số thứ tự cột: Số thứ tự cột (`Cột 1`, `Cột 2`...) chỉ hiển thị trên Header của Bảng dữ liệu khi người dùng chủ động bật công tắc "Hiện số thứ tự cột" (`showColIndex`).
+  4. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi).
+- **Status**: Done [Reversible].
 
 
 
