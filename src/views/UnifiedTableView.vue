@@ -2105,10 +2105,14 @@ const addChildColTargetIndex = ref(-1);
 const openChildColMenu = (event, col) => {
   const thElem = event.currentTarget.closest('th') || event.currentTarget.closest('.table-col-header-wrap') || event.currentTarget;
   const thRect = thElem.getBoundingClientRect();
-  childColMenuPosition.value = {
-    x: Math.max(10, Math.min(thRect.left, window.innerWidth - 320)),
-    y: thRect.bottom + 4,
-  };
+  const menuWidth = 360;
+  const menuHeight = 520;
+  const x = Math.max(10, Math.min(thRect.left, window.innerWidth - menuWidth - 20));
+  let y = thRect.bottom + 4;
+  if (y + menuHeight > window.innerHeight) {
+    y = Math.max(10, window.innerHeight - menuHeight - 10);
+  }
+  childColMenuPosition.value = { x, y };
   selectedChildMenuCol.value = col;
   isChildColMenuVisible.value = true;
 };
@@ -2563,12 +2567,13 @@ const onDuplicateChildCol = async (col) => {
   alert(`Đã nhân bản cột thành công: "${copyCol.label}"!`);
 };
 
-const onChildChangeFormulaType = async ({ colId, formulaType }) => {
+const onChildChangeFormulaType = async ({ colId, formulaType, formulaExpression }) => {
   const { key, mapping, isBlank, cDash } = getTargetMappingRef();
   if (isBlank && cDash) {
     const col = (cDash.customColumns || []).find((c) => c.id === colId);
     if (col) {
       col.formulaType = formulaType;
+      if (formulaExpression !== undefined) col.formulaExpression = formulaExpression;
       try {
         localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
         await saveAppSettings('custom_dashboards_config', customDashboards.value);
@@ -2581,6 +2586,7 @@ const onChildChangeFormulaType = async ({ colId, formulaType }) => {
     for (const c of (g.columns || [])) {
       if (c.id === colId) {
         c.formulaType = formulaType;
+        if (formulaExpression !== undefined) c.formulaExpression = formulaExpression;
         found = true;
         break;
       }
@@ -2833,6 +2839,7 @@ const allAvailableColumnsList = computed(() => {
           const rawIdx = colMap[c.id];
           const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
           rawList.push({
+            ...c,
             id: c.id,
             label: c.label || c.id,
             colIndex: idxText,
@@ -2853,6 +2860,7 @@ const allAvailableColumnsList = computed(() => {
           const rawIdx = colMap[c.id];
           const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
           rawList.push({
+            ...c,
             id: c.id,
             label: c.label || c.id,
             colIndex: idxText,
@@ -2874,6 +2882,7 @@ const allAvailableColumnsList = computed(() => {
           const rawIdx = colMap[c.id];
           const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
           rawList.push({
+            ...c,
             id: c.id,
             label: c.label || c.id,
             colIndex: idxText,

@@ -208,15 +208,20 @@
           </div>
         </div>
 
-        <!-- Cấu hình Công thức nếu là formula -->
+        <!-- Cấu hình Công thức nếu là formula (Teable & Lark Base Style) -->
         <div v-if="editFormat === 'formula'" class="menu-field" style="background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 8px; padding: 10px; margin-top: 6px;">
-          <div style="font-size: 0.76rem; font-weight: 700; color: #86198f; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
-            <i class="pi pi-bolt"></i>
-            <span>Cấu hình Công thức (Formula)</span>
+          <div style="font-size: 0.76rem; font-weight: 700; color: #86198f; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <i class="pi pi-bolt"></i>
+              <span>Cấu hình Công thức (Formula)</span>
+            </div>
+            <span style="font-size: 0.65rem; background: #fae8ff; color: #86198f; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Teable & Lark</span>
           </div>
+
           <div>
             <label style="font-size: 0.7rem; color: #701a75; font-weight: 600; margin-bottom: 2px;">Loại công thức:</label>
             <select v-model="editFormulaType" class="menu-select" @change="handleSaveFormulaType">
+              <option value="custom_expression">⚡ Biểu thức Công thức Tự do (Lark Base / Teable)</option>
               <option value="presence_status">Trạng thái Hiện diện (Trong nước / Nước ngoài)</option>
               <option value="overdue_status">Quá hạn chưa về (So sánh Ngày về với Deadline/Hôm nay)</option>
               <option value="date_delta">So sánh 2 cột ngày (Sớm / Muộn / Đúng lịch)</option>
@@ -224,6 +229,76 @@
               <option value="depart_before_decision">Đi khi chưa có cấp thẩm quyền quyết định</option>
               <option value="trips_count_in_year">Số lần xuất cảnh trong năm</option>
             </select>
+          </div>
+
+          <!-- Trình soạn thảo Biểu thức Tự do (Custom Expression Editor) -->
+          <div v-if="editFormulaType === 'custom_expression'" style="margin-top: 8px;">
+            <label style="font-size: 0.68rem; color: #701a75; font-weight: 700; display: block; margin-bottom: 3px;">
+              Biểu thức tính toán (Formula Expression):
+            </label>
+            <textarea
+              v-model="editFormulaExpression"
+              class="menu-input"
+              style="width: 100%; height: 72px; font-family: monospace; font-size: 0.72rem; padding: 6px; line-height: 1.4; resize: vertical; background: #ffffff;"
+              placeholder='VD: IF(DATEDIF({ngay_xuat_canh}, TODAY(), "D") > 30, "⚠️ Quá hạn", "Bình thường")'
+              @blur="handleSaveFormulaType"
+            ></textarea>
+
+            <!-- Tab chọn Chèn Cột hoặc Chèn Hàm -->
+            <div style="display: flex; gap: 4px; margin-top: 6px;">
+              <button
+                type="button"
+                :class="['btn-formula-tab', formulaTab === 'fields' ? 'active' : '']"
+                @click="formulaTab = 'fields'"
+              >
+                <i class="pi pi-list" style="font-size: 0.65rem;"></i> Chèn Cột ({...})
+              </button>
+              <button
+                type="button"
+                :class="['btn-formula-tab', formulaTab === 'functions' ? 'active' : '']"
+                @click="formulaTab = 'functions'"
+              >
+                <i class="pi pi-code" style="font-size: 0.65rem;"></i> Chèn Hàm (fn)
+              </button>
+            </div>
+
+            <!-- Panel Danh sách Cột -->
+            <div v-if="formulaTab === 'fields'" style="max-height: 110px; overflow-y: auto; background: #ffffff; border: 1px solid #f0abfc; border-radius: 4px; padding: 4px; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px;">
+              <span
+                v-for="c in currentTableCols"
+                :key="c.id"
+                class="formula-pill-field"
+                @click="insertIntoFormula('{' + c.id + '}')"
+                :title="'Mã cột: ' + c.id + '\nBấm để chèn vào công thức'"
+              >
+                + {{ c.label || c.id }}
+              </span>
+            </div>
+
+            <!-- Panel Danh sách Hàm -->
+            <div v-if="formulaTab === 'functions'" style="max-height: 125px; overflow-y: auto; background: #ffffff; border: 1px solid #f0abfc; border-radius: 4px; padding: 4px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+              <div
+                v-for="fn in formulaFunctionsCatalog"
+                :key="fn.name"
+                class="formula-fn-item"
+                @click="insertIntoFormula(fn.name + '()')"
+                :title="fn.desc + '\nVí dụ: ' + fn.example"
+              >
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <strong style="color: #701a75; font-size: 0.72rem;">{{ fn.name }}</strong>
+                  <span style="font-size: 0.62rem; color: #94a3b8;">{{ fn.category }}</span>
+                </div>
+                <div style="font-size: 0.64rem; color: #64748b; font-family: monospace;">{{ fn.syntax }}</div>
+              </div>
+            </div>
+
+            <!-- Live Preview -->
+            <div style="margin-top: 6px; background: #fae8ff; border: 1px solid #f0abfc; border-radius: 4px; padding: 5px 8px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.68rem; color: #701a75; font-weight: 600;">Xem trước (Dòng 1):</span>
+              <span style="font-size: 0.72rem; font-weight: 700; color: #86198f; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ formulaPreviewResult }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -400,7 +475,7 @@
 import { ref, computed, watch } from "vue";
 import { usePersonnelStore } from "@/stores/personnel";
 import { saveAppSettings } from "@/api/settings";
-import { formWidthOptions, lookupOperators } from "@/utils/formatters";
+import { formWidthOptions, lookupOperators, evaluateCustomFormula, formulaFunctionsCatalog } from "@/utils/formatters";
 
 const props = defineProps({
   visible: {
@@ -457,6 +532,8 @@ const personnelStore = usePersonnelStore();
 const editLabel = ref("");
 const editFormat = ref("text");
 const editFormulaType = ref("presence_status");
+const editFormulaExpression = ref("");
+const formulaTab = ref("fields");
 const editOptions = ref("");
 const editFormWidth = ref("50");
 const editRequired = ref(false);
@@ -548,10 +625,39 @@ watch(
       editLookupDisplay.value = col.lookupDisplay || "value";
       editLookupFormat.value = col.lookupFormat || "default";
       editFormulaType.value = col.formulaType || "presence_status";
+      editFormulaExpression.value = col.formulaExpression || "";
     }
   },
   { immediate: true }
 );
+
+const sampleRow = computed(() => {
+  if (props.tableSource === 'trips') return personnelStore.tripsList?.[0] || {};
+  if (props.tableSource === 'relatives') return personnelStore.relativesList?.[0] || {};
+  return personnelStore.personnelList?.[0] || {};
+});
+
+const formulaPreviewResult = computed(() => {
+  if (!editFormulaExpression.value) return '(chưa có)';
+  try {
+    const res = evaluateCustomFormula(sampleRow.value, editFormulaExpression.value, currentTableCols.value);
+    if (!res) return '(trống)';
+    const val = (res && typeof res === 'object' && 'label' in res) ? res.label : res;
+    if (val === null || val === undefined || val === '') return '(trống)';
+    return String(val);
+  } catch (e) {
+    return 'Lỗi: ' + e.message;
+  }
+});
+
+const insertIntoFormula = (text) => {
+  if (!editFormulaExpression.value) {
+    editFormulaExpression.value = text;
+  } else {
+    editFormulaExpression.value += ' ' + text;
+  }
+  handleSaveFormulaType();
+};
 
 const addLookupCondition = () => {
   const defaultTarget = targetLookupCols.value?.[0]?.id || '';
@@ -596,6 +702,7 @@ const handleSaveFormulaType = () => {
   emit("change-formula-type", {
     colId: props.column.id,
     formulaType: editFormulaType.value,
+    formulaExpression: editFormulaExpression.value,
   });
 };
 
@@ -943,5 +1050,62 @@ const handleFilterByCol = () => {
   border-color: #dc2626;
   background: #fef2f2;
   color: #dc2626;
+}
+
+.btn-formula-tab {
+  flex: 1;
+  padding: 3px 6px;
+  font-size: 0.68rem;
+  border: 1px solid #e9d5ff;
+  background: #ffffff;
+  color: #7e22ce;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+.btn-formula-tab:hover {
+  background: #fdf4ff;
+  border-color: #c084fc;
+}
+.btn-formula-tab.active {
+  background: #86198f;
+  border-color: #86198f;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.formula-pill-field {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: #fdf4ff;
+  border: 1px solid #e879f9;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  color: #86198f;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.formula-pill-field:hover {
+  background: #f0abfc;
+  color: #701a75;
+}
+
+.formula-fn-item {
+  padding: 4px 6px;
+  border: 1px solid #f5d0fe;
+  background: #fdf4ff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.formula-fn-item:hover {
+  background: #fae8ff;
+  border-color: #d946ef;
 }
 </style>

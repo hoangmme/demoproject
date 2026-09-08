@@ -1,3 +1,6 @@
+import { evaluateCustomFormula, formulaFunctionsCatalog } from './formulaEngine.js';
+export { evaluateCustomFormula, formulaFunctionsCatalog };
+
 export const formatDate = (val) => {
   if (val === undefined || val === null || val === '') return '';
   if (val instanceof Date) {
@@ -554,6 +557,10 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
   if (!record || !formulaConfig) return { status: 'unknown', label: '', shortLabel: '' };
 
   const fType = formulaConfig.formulaType || 'presence_status';
+
+  if (fType === 'custom_expression' || formulaConfig.formulaExpression) {
+    return evaluateCustomFormula(record, formulaConfig.formulaExpression, formulaConfig.columns || []);
+  }
 
   switch (fType) {
     case 'presence_status': {

@@ -1865,7 +1865,37 @@
   3. **Đồng bộ & Kiểm chứng**:
      - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` thành công 100% (0 lỗi, 547ms).
-- **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Sửa Lỗi Hiển Thị Cấu Hình Lookup & Triển Khai Động Cơ Công Thức Nâng Cao (Teable & Lark Base Formula Engine)**:
+  1. **Vấn đề & Yêu cầu của người dùng**:
+     - *Lỗi cấu hình Lookup*: Khi nhấn sửa cột (Edit Column), cấu hình Lookup cũ không được hiển thị lại trên dropdown / cột bảng đích báo `-- Chọn cột lấy --`.
+     - *Nâng cấp Động cơ Công thức*: Thiết kế hệ thống cột công thức tính toán tự do tương tự Lark Suite và Teable (cho phép gõ biểu thức tự do, tham chiếu `{col_id}`, sử dụng các hàm Logic, Ngày tháng, Văn bản, Số học, chèn cột/hàm bằng 1 click, và xem trước kết quả trực tiếp).
+  2. **Nguyên nhân gốc rễ lỗi Lookup**:
+     - Trong `UnifiedTableView.vue` hàm tính toán `allAvailableColumnsList`, logic cũ chỉ copy chọn lọc các trường `{ id, label, colIndex, width, tableWidth, format, isVirtual }` mà bỏ sót `c.lookupTarget`, `c.lookupField`, `c.lookupConditions`, `c.lookupLogicOp`, `c.lookupDisplay`, `c.formulaExpression`. Khi mở menu `openChildColMenu`, prop `column` bị thiếu các thuộc tính này dẫn đến form menu bị reset về rỗng.
+     - Đồng thời, popover menu mở ở các cột cuối trang có thể bị tràn ra dưới đáy màn hình.
+  3. **Giải pháp kiến trúc đã thực hiện**:
+     - **Sửa Lỗi Lookup & Popover**:
+       - Tại `UnifiedTableView.vue` (`allAvailableColumnsList`), sử dụng object spread `...c` để giữ lại 100% tất cả thuộc tính của cột (lookup, formula, options, formWidth...).
+       - Tại `openChildColMenu`, bổ sung thuật toán giới hạn tọa độ thông minh (`Math.min(y, window.innerHeight - menuHeight - 16)`), chống tràn popover khỏi cạnh dưới màn hình.
+     - **Động cơ Công thức Nâng Cao (Formula Engine - Safe Recursive Evaluator)**:
+       - Tạo `src/utils/formulaCatalog.js`: Danh mục các hàm chuẩn Lark Base / Teable phân nhóm theo danh mục (Logic: `IF, AND, OR, NOT, ISBLANK, SWITCH`; Ngày tháng: `TODAY, NOW, DATEDIF, DATEADD, YEAR, MONTH, DAY, DATE`; Văn bản: `CONCATENATE, UPPER, LOWER, TRIM, LEN, LEFT, RIGHT, MID, SUBSTITUTE`; Số học: `ROUND, INT, ABS, MAX, MIN, SUM, AVERAGE`).
+       - Tạo `src/utils/formulaEngine.js`: Trình phân tích từ vựng (Tokenizer) và đánh giá biểu thức đệ quy an toàn (Recursive AST/Precedence Evaluator), hỗ trợ:
+         - Toán tử số học `+ - * / %`, toán tử nối chuỗi `&`, toán tử so sánh `== != > < >= <=`, toán tử logic `&& || AND OR`.
+         - Tham chiếu trường an toàn `{field_id}` hoặc `{Tên Cột}` lấy từ record hoặc `custom_data`.
+         - Không sử dụng `eval()` hay `Function()` mất an toàn.
+       - Tích hợp vào `src/utils/formatters.js`: `evaluateFormula(record, formulaConfig)` tự động nhận diện `custom_expression` hoặc `formulaExpression` và trả về kết quả chuẩn `{ status: 'custom', label, shortLabel, value }`.
+     - **Giao diện Soạn thảo Công thức Trực quan (Formula Editor UI)**:
+       - Bổ sung vào cả `ColumnHeaderMenu.vue` và `AddColumnDialog.vue`:
+         - Lựa chọn `⚡ Biểu thức Công thức Tự do (Lark Base / Teable)`.
+         - Textarea soạn thảo biểu thức với placeholder mẫu.
+         - Tab `Chèn Cột ({...})` hiển thị các thẻ pill tên cột của bảng hiện tại, bấm là tự động chèn `{col_id}` vào biểu thức.
+         - Tab `Chèn Hàm (fn)` liệt kê danh mục hàm kèm cú pháp, mô tả và ví dụ, bấm là tự động chèn `TÊN_HÀM()`.
+         - Khung Xem trước Trực tiếp (Live Preview) đánh giá ngay lập tức trên dòng mẫu đầu tiên (`Dòng 1`).
+     - **Tuân thủ quy tắc kiến trúc (500-Line Rule & Dual Deployment)**:
+       - Tách danh mục hàm sang `formulaCatalog.js` để kiểm soát độ dài file `formulaEngine.js`.
+       - Đồng bộ 100% các tệp sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+       - `npm run build` thành công 100% (0 lỗi, 557ms). Toàn bộ 10 bài kiểm thử đơn vị logic công thức (Test suite) đều vượt qua.
+  4. **Trạng thái**: Done [Reversible].
+
 
 
 

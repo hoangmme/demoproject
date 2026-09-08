@@ -1,0 +1,223 @@
+/**
+ * Danh mục các hàm hỗ trợ theo chuẩn Teable & Lark Base
+ * Dùng để hiển thị danh sách trợ giúp và click-to-insert trong UI Editor
+ */
+export const formulaFunctionsCatalog = [
+  // Logic
+  {
+    category: 'Logic',
+    name: 'IF',
+    syntax: 'IF(điều_kiện, giá_trị_nếu_đúng, giá_trị_nếu_sai)',
+    desc: 'Trả về giá trị nếu điều kiện đúng, hoặc giá trị khác nếu sai.',
+    example: 'IF({so_ngay} > 30, "Quá hạn", "Đúng hạn")',
+  },
+  {
+    category: 'Logic',
+    name: 'AND',
+    syntax: 'AND(điều_kiện_1, điều_kiện_2, ...)',
+    desc: 'Trả về TRUE nếu tất cả các điều kiện đều đúng.',
+    example: 'AND({tuoi} >= 18, {co_ho_chieu} = "Có")',
+  },
+  {
+    category: 'Logic',
+    name: 'OR',
+    syntax: 'OR(điều_kiện_1, điều_kiện_2, ...)',
+    desc: 'Trả về TRUE nếu có ít nhất một điều kiện đúng.',
+    example: 'OR({quoc_gia} = "Mỹ", {quoc_gia} = "Pháp")',
+  },
+  {
+    category: 'Logic',
+    name: 'NOT',
+    syntax: 'NOT(điều_kiện)',
+    desc: 'Đảo ngược giá trị logic (TRUE thành FALSE và ngược lại).',
+    example: 'NOT(ISBLANK({so_quyet_dinh}))',
+  },
+  {
+    category: 'Logic',
+    name: 'ISBLANK',
+    syntax: 'ISBLANK(giá_trị)',
+    desc: 'Kiểm tra xem ô dữ liệu có đang trống hay không.',
+    example: 'IF(ISBLANK({so_quyet_dinh}), "Chưa có QĐ", "Đã có QĐ")',
+  },
+  {
+    category: 'Logic',
+    name: 'SWITCH',
+    syntax: 'SWITCH(biểu_thức, trường_hợp_1, kết_quả_1, trường_hợp_2, kết_quả_2, ..., mặc_định)',
+    desc: 'So khớp biểu thức với từng trường hợp và trả về kết quả tương ứng.',
+    example: 'SWITCH({chuc_vu}, "Trưởng phòng", "Cấp 1", "Phó phòng", "Cấp 2", "Cấp 3")',
+  },
+
+  // Ngày tháng
+  {
+    category: 'Ngày tháng',
+    name: 'TODAY',
+    syntax: 'TODAY()',
+    desc: 'Trả về ngày hôm nay (00:00:00).',
+    example: 'DATEDIF({ngay_xuat_canh}, TODAY(), "D")',
+  },
+  {
+    category: 'Ngày tháng',
+    name: 'NOW',
+    syntax: 'NOW()',
+    desc: 'Trả về ngày và thời gian hiện tại.',
+    example: 'NOW()',
+  },
+  {
+    category: 'Ngày tháng',
+    name: 'DATEDIF',
+    syntax: 'DATEDIF(ngày_bắt_đầu, ngày_kết_thúc, "D" | "M" | "Y")',
+    desc: 'Tính khoảng cách giữa 2 ngày theo đơn vị: "D" (ngày), "M" (tháng), "Y" (năm).',
+    example: 'DATEDIF({ngay_xuat_canh}, {ngay_nhap_canh}, "D")',
+  },
+  {
+    category: 'Ngày tháng',
+    name: 'DATEADD',
+    syntax: 'DATEADD(ngày, số_lượng, "D" | "M" | "Y")',
+    desc: 'Cộng hoặc trừ ngày tháng theo đơn vị.',
+    example: 'DATEADD({ngay_xuat_canh}, 30, "D")',
+  },
+  {
+    category: 'Ngày tháng',
+    name: 'YEAR',
+    syntax: 'YEAR(ngày)',
+    desc: 'Lấy ra năm (số 4 chữ số) từ ngày.',
+    example: 'YEAR({ngay_xuat_canh})',
+  },
+  {
+    category: 'Ngày tháng',
+    name: 'MONTH',
+    syntax: 'MONTH(ngày)',
+    desc: 'Lấy ra tháng (1 - 12) từ ngày.',
+    example: 'MONTH({ngay_xuat_canh})',
+  },
+  {
+    category: 'Ngày tháng',
+    name: 'DAY',
+    syntax: 'DAY(ngày)',
+    desc: 'Lấy ra ngày trong tháng (1 - 31).',
+    example: 'DAY({ngay_sinh})',
+  },
+  {
+    category: 'Ngày tháng',
+    name: 'DATE',
+    syntax: 'DATE(năm, tháng, ngày)',
+    desc: 'Tạo một ngày tháng từ các thành phần năm, tháng, ngày.',
+    example: 'DATE(2026, 12, 31)',
+  },
+
+  // Văn bản
+  {
+    category: 'Văn bản',
+    name: 'CONCATENATE',
+    syntax: 'CONCATENATE(chuỗi_1, chuỗi_2, ...)',
+    desc: 'Ghép nối nhiều chuỗi văn bản lại với nhau (hoặc dùng toán tử &).',
+    example: 'CONCATENATE({ho_ten}, " - ", {don_vi})',
+  },
+  {
+    category: 'Văn bản',
+    name: 'UPPER',
+    syntax: 'UPPER(chuỗi)',
+    desc: 'Chuyển toàn bộ văn bản thành CHỮ HOA.',
+    example: 'UPPER({ho_ten})',
+  },
+  {
+    category: 'Văn bản',
+    name: 'LOWER',
+    syntax: 'LOWER(chuỗi)',
+    desc: 'Chuyển toàn bộ văn bản thành chữ thường.',
+    example: 'LOWER({email})',
+  },
+  {
+    category: 'Văn bản',
+    name: 'TRIM',
+    syntax: 'TRIM(chuỗi)',
+    desc: 'Cắt bỏ khoảng trắng thừa ở đầu và cuối chuỗi.',
+    example: 'TRIM({so_quyet_dinh})',
+  },
+  {
+    category: 'Văn bản',
+    name: 'LEN',
+    syntax: 'LEN(chuỗi)',
+    desc: 'Đếm độ dài ký tự của chuỗi văn bản.',
+    example: 'LEN({cccd})',
+  },
+  {
+    category: 'Văn bản',
+    name: 'LEFT',
+    syntax: 'LEFT(chuỗi, số_ký_tự)',
+    desc: 'Trích xuất số lượng ký tự từ bên trái chuỗi.',
+    example: 'LEFT({cccd}, 3)',
+  },
+  {
+    category: 'Văn bản',
+    name: 'RIGHT',
+    syntax: 'RIGHT(chuỗi, số_ký_tự)',
+    desc: 'Trích xuất số lượng ký tự từ bên phải chuỗi.',
+    example: 'RIGHT({cccd}, 4)',
+  },
+  {
+    category: 'Văn bản',
+    name: 'MID',
+    syntax: 'MID(chuỗi, vị_trí_bắt_đầu, số_ký_tự)',
+    desc: 'Trích xuất đoạn văn bản từ vị trí bắt đầu (bắt đầu từ 1).',
+    example: 'MID({so_quyet_dinh}, 1, 5)',
+  },
+  {
+    category: 'Văn bản',
+    name: 'SUBSTITUTE',
+    syntax: 'SUBSTITUTE(chuỗi, chuỗi_cũ, chuỗi_mới)',
+    desc: 'Thay thế tất cả lần xuất hiện của chuỗi cũ bằng chuỗi mới.',
+    example: 'SUBSTITUTE({so_quyet_dinh}, "/", "-")',
+  },
+
+  // Toán học & Số
+  {
+    category: 'Số học',
+    name: 'ROUND',
+    syntax: 'ROUND(số, số_chữ_số_thập_phân)',
+    desc: 'Làm tròn số theo số lượng chữ số thập phân.',
+    example: 'ROUND({diem_so}, 2)',
+  },
+  {
+    category: 'Số học',
+    name: 'INT',
+    syntax: 'INT(số)',
+    desc: 'Lấy phần nguyên của một số (làm tròn xuống).',
+    example: 'INT({so_ngay})',
+  },
+  {
+    category: 'Số học',
+    name: 'ABS',
+    syntax: 'ABS(số)',
+    desc: 'Lấy giá trị tuyệt đối của số.',
+    example: 'ABS({chenh_lech})',
+  },
+  {
+    category: 'Số học',
+    name: 'MAX',
+    syntax: 'MAX(số_1, số_2, ...)',
+    desc: 'Tìm số lớn nhất trong danh sách.',
+    example: 'MAX({ngay_1}, {ngay_2})',
+  },
+  {
+    category: 'Số học',
+    name: 'MIN',
+    syntax: 'MIN(số_1, số_2, ...)',
+    desc: 'Tìm số nhỏ nhất trong danh sách.',
+    example: 'MIN({ngay_1}, {ngay_2})',
+  },
+  {
+    category: 'Số học',
+    name: 'SUM',
+    syntax: 'SUM(số_1, số_2, ...)',
+    desc: 'Tính tổng các giá trị số.',
+    example: 'SUM({phi_1}, {phi_2})',
+  },
+  {
+    category: 'Số học',
+    name: 'AVERAGE',
+    syntax: 'AVERAGE(số_1, số_2, ...)',
+    desc: 'Tính trung bình cộng các giá trị số.',
+    example: 'AVERAGE({diem_1}, {diem_2})',
+  },
+];
