@@ -535,16 +535,9 @@
           <div class="field-item">
             <label class="field-label" style="font-weight: 700; color: #1e293b;">1. Nguồn Dữ liệu Thống kê <span style="color: #ef4444;">*</span></label>
             <select v-model="widgetForm.source" class="settings-select" style="width: 100%; font-weight: 600;" @change="onWidgetSourceChange">
-              <optgroup label="📌 Bảng dữ liệu hệ thống">
-                <option value="trips">✈️ Bảng Chuyến đi nước ngoài (Trips)</option>
-                <option value="personnel">👤 Bảng Hồ sơ Cán bộ (Personnel)</option>
-                <option value="relatives">👨‍👩‍👧 Bảng Thân nhân (Relatives)</option>
-              </optgroup>
-              <optgroup v-if="customTablesList.length > 0" label="📋 Bảng dữ liệu tự tạo">
-                <option v-for="t in customTablesList" :key="t.id" :value="t.id">
-                  📋 {{ t.code ? `[${t.code}] ` : '' }}{{ t.title }}
-                </option>
-              </optgroup>
+              <option v-for="t in allUnifiedTables" :key="t.id" :value="t.id">
+                📋 {{ t.code ? `[${t.code}] ` : '' }}{{ t.title }}
+              </option>
             </select>
           </div>
 
@@ -1154,6 +1147,13 @@ import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getS
 import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
+import {
+  getUnifiedTableDefinitions,
+  getUnifiedTableRows,
+  getUnifiedTableColumns,
+  getUnifiedTableLabel,
+  findUnifiedTable,
+} from '@/utils/tableRegistry';
 
 const route = useRoute();
 const router = useRouter();
@@ -1231,6 +1231,17 @@ const currentDashboardDescription = computed(() => {
 });
 
 // =========================================================================
+// REGISTRY TOÀN BỘ CÁC BẢNG TRONG HỆ THỐNG (UNIFIED TABLE REGISTRY)
+// =========================================================================
+const allUnifiedTables = computed(() => {
+  return getUnifiedTableDefinitions({
+    personnelStore,
+    customDashboards: availableTopicDashboards.value,
+    systemBranding: systemBranding.value,
+  });
+});
+
+// =========================================================================
 // POPUP DIALOG CHI TIẾT DỮ LIỆU THỐNG KÊ (DRILLDOWN POPUP MODAL)
 // =========================================================================
 const isDrilldownModalOpen = ref(false);
@@ -1245,103 +1256,11 @@ const isDocxExportOpen = ref(false);
 
 const drilldownColumns = computed(() => {
   const src = drilldownSourceType.value || 'trips';
-  const cols = [];
-
-  if (src === 'trips' || src === 'trip') {
-    // 1. Cán bộ liên quan
-    cols.push({
-      id: '_parentPersonnelName',
-      label: 'Cán bộ (Họ và tên)',
-      width: '180px',
-      isVirtual: true,
-    });
-    // 2. Toàn bộ các cột chuyến đi từ cấu hình importMappingTrips
-    (personnelStore.importMappingTrips || []).forEach((g) => {
-      (g.columns || []).forEach((c) => {
-        if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
-          cols.push({
-            id: c.id,
-            label: c.label || c.id,
-            width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
-            format: c.format,
-            formulaType: c.formulaType,
-          });
-        }
-      });
-    });
-    // 3. Trạng thái hiện diện nếu chưa có
-    if (!cols.some((c) => c.id === 'presenceStatus' || c.id === '_presenceStatus' || c.id === 'trang_thai_hien_dien')) {
-      cols.push({
-        id: 'presenceStatus',
-        label: 'Trạng thái hiện diện',
-        width: '170px',
-        isVirtual: true,
-      });
-    }
-  } else if (src === 'relatives' || src === 'relative') {
-    (personnelStore.importMappingRelative || []).forEach((g) => {
-      (g.columns || []).forEach((c) => {
-        if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
-          cols.push({
-            id: c.id,
-            label: c.label || c.id,
-            width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
-            format: c.format,
-            formulaType: c.formulaType,
-          });
-        }
-      });
-    });
-    if (!cols.some((c) => c.id === '_parentPersonnelName' || c.id === 'parentPersonnelName' || c.id === 'parentName')) {
-      cols.push({
-        id: '_parentPersonnelName',
-        label: 'Cán bộ liên quan',
-        width: '180px',
-        isVirtual: true,
-      });
-    }
-  } else if (src === 'personnel') {
-    (personnelStore.importMappingPersonnel || []).forEach((g) => {
-      (g.columns || []).forEach((c) => {
-        if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
-          cols.push({
-            id: c.id,
-            label: c.label || c.id,
-            width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
-            format: c.format,
-            formulaType: c.formulaType,
-          });
-        }
-      });
-    });
-  } else {
-    // Custom table
-    const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === src);
-    if (customTable) {
-      const customCols = customTable.customColumns || customTable.columns || [];
-      customCols.forEach((c) => {
-        if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
-          cols.push({
-            id: c.id,
-            label: c.label || c.id,
-            width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
-            format: c.format,
-          });
-        }
-      });
-    }
-    if (cols.length === 0) {
-      (personnelStore.importMappingTrips || []).forEach((g) => {
-        (g.columns || []).forEach((c) => {
-          if (c.id && c.id !== 'stt' && !cols.some((x) => x.id === c.id)) {
-            cols.push({ id: c.id, label: c.label || c.id, width: '160px' });
-          }
-        });
-      });
-    }
-  }
-
-  return cols;
+  return getUnifiedTableColumns(src, {
+    personnelStore,
+    customDashboards: availableTopicDashboards.value,
+    systemBranding: systemBranding.value,
+  });
 });
 
 const filteredDrilldownList = computed(() => {
@@ -2573,49 +2492,20 @@ const cachedSourcePersonnel = computed(() => buildTopicSourceList('personnel', p
 const cachedSourceRelatives = computed(() => buildTopicSourceList('relatives', personnelStore));
 
 const getSourceList = (source) => {
-  if (source === 'personnel') return cachedSourcePersonnel.value || [];
-  if (source === 'relatives' || source === 'relative') return cachedSourceRelatives.value || [];
-  if (source === 'trips' || source === 'trip') return cachedSourceTrips.value || [];
+  const rows = getUnifiedTableRows(source, {
+    personnelStore,
+    customDashboards: availableTopicDashboards.value,
+    customTableRowsMap: customTableRowsMap.value,
+    systemBranding: systemBranding.value,
+  });
+  if (rows && rows.length > 0) return rows;
 
-  // Hỗ trợ Bảng dữ liệu tự tạo (Custom Tables) & Chuyên đề tùy chỉnh
+  // Nếu là bảng tự tạo (blank) chưa nạp vào RAM, gọi nạp bất đồng bộ
   const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
-  if (customTable) {
-    if (customTable.source === 'blank') {
-      if (customTableRowsMap.value[source] && Array.isArray(customTableRowsMap.value[source])) {
-        return customTableRowsMap.value[source];
-      }
-      try {
-        const local = localStorage.getItem(`custom_table_rows_${source}`);
-        if (local) {
-          const parsed = JSON.parse(local);
-          if (Array.isArray(parsed)) {
-            const mapped = parsed.map((r, idx) => ({ ...r, uniqueKey: r.uniqueKey || r.id || `row_${idx}` }));
-            customTableRowsMap.value[source] = mapped;
-            return mapped;
-          }
-        }
-      } catch (e) {}
-      loadCustomTableRowsForDashboard(source);
-      return [];
-    } else {
-      const baseSource = customTable.source || 'trips';
-      const baseList = baseSource === 'personnel'
-        ? (cachedSourcePersonnel.value || [])
-        : (baseSource === 'relatives' ? (cachedSourceRelatives.value || []) : (cachedSourceTrips.value || []));
-
-      const firstCard = (customTable.metricCards || [])[0];
-      if (firstCard && firstCard.condition && firstCard.condition !== 'all') {
-        return baseList.filter((row) => matchSharedCardCondition(row, firstCard, personnelStore));
-      }
-      if (Array.isArray(customTable.scopeConditions) && customTable.scopeConditions.length > 0) {
-        const scopeCard = { conditions: customTable.scopeConditions, logicOp: customTable.scopeLogicOp || 'AND' };
-        return baseList.filter((row) => matchSharedCardCondition(row, scopeCard, personnelStore));
-      }
-      return baseList;
-    }
+  if (customTable && customTable.source === 'blank' && !customTableRowsMap.value[source]) {
+    loadCustomTableRowsForDashboard(source);
   }
-
-  return cachedSourceTrips.value || [];
+  return rows || [];
 };
 
 
@@ -2795,141 +2685,40 @@ const getCardMetricValueForTopic = (card, topic) => {
   return computeMetricCardCount(actualCard, fullList, firstCard, personnelStore);
 };
 
-// Dynamic Searchable Groups for Query Criteria Builder (Matches Advanced Search)
+// Dynamic Searchable Groups for Query Criteria Builder (Unified Table Registry)
 const allSearchableGroupsForWidget = computed(() => {
+  const selectedSource = widgetForm.value.source || 'trips';
+  const allTables = allUnifiedTables.value || [];
+
+  // Tìm bảng đang chọn để ưu tiên hiển thị lên đầu
+  const currentTable = allTables.find((t) => t.id === selectedSource || t.source === selectedSource);
+  const otherTables = allTables.filter((t) => t !== currentTable);
+
   const groups = [];
 
-  // 0. Nếu widgetForm.source là bảng tự tạo -> Đưa nhóm cột của bảng này lên đầu tiên
-  const selectedCustom = (availableTopicDashboards.value || []).find((d) => d && d.id === widgetForm.value.source);
-  if (selectedCustom) {
-    if (selectedCustom.source === 'blank') {
-      const customCols = (selectedCustom.customColumns || []).map((c, idx) => ({
-        id: c.id,
-        rawId: c.id,
-        label: c.label || c.id,
-        colIndex: idx + 1,
-        isVirtual: false,
-        format: c.format,
-        options: c.options,
-      }));
-      if (customCols.length > 0) {
-        groups.push({
-          name: `📋 Cột Bảng "${selectedCustom.title}"`,
-          columns: customCols,
-        });
-        return groups;
-      }
-    }
+  // 1. Nhóm cột của Bảng đang chọn
+  if (currentTable && typeof currentTable.getSearchableGroups === 'function') {
+    const activeGroups = currentTable.getSearchableGroups(personnelStore);
+    activeGroups.forEach((g) => {
+      groups.push({
+        ...g,
+        name: `🎯 Bảng đang chọn: ${g.name}`,
+      });
+    });
   }
 
-  // Bổ sung các nhóm cột của các bảng tự tạo khác
-  const otherCustoms = (availableTopicDashboards.value || []).filter((d) => d && d.source === 'blank' && d.id !== widgetForm.value.source);
-  otherCustoms.forEach((dash) => {
-    if (dash.customColumns && dash.customColumns.length > 0) {
-      groups.push({
-        name: `📋 Bảng tự tạo: ${dash.code ? '[' + dash.code + '] ' : ''}${dash.title}`,
-        columns: dash.customColumns.map((c, idx) => ({
-          id: c.id,
-          rawId: c.id,
-          label: c.label || c.id,
-          colIndex: idx + 1,
-          isVirtual: false,
-          format: c.format,
-          options: c.options,
-        })),
+  // 2. Nhóm cột của các Bảng khác trong hệ thống để tham chiếu chéo
+  otherTables.forEach((t) => {
+    if (typeof t.getSearchableGroups === 'function') {
+      const tGroups = t.getSearchableGroups(personnelStore);
+      tGroups.forEach((g) => {
+        groups.push({
+          ...g,
+          name: `📋 ${g.name}`,
+        });
       });
     }
   });
-
-  // Group 1: Bảng Sự kiện / Chuyến đi (From importMappingTrips)
-  const tripCols = [];
-  const seenTrip = new Set();
-  const tripColMap = computeColumnIndexMap(personnelStore.importMappingTrips || []);
-  (personnelStore.importMappingTrips || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt' && !seenTrip.has(c.id)) {
-        seenTrip.add(c.id);
-        const rawIdx = tripColMap[c.id];
-        const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
-        tripCols.push({
-          id: c.id,
-          rawId: c.id,
-          label: c.label || c.id,
-          colIndex: idxText,
-          isVirtual: false,
-          format: c.format,
-          options: c.options,
-        });
-      }
-    });
-  });
-
-  if (tripCols.length > 0) {
-    groups.push({
-      name: '1. Cột Bảng Sự kiện / Chuyến đi',
-      columns: tripCols,
-    });
-  }
-
-  // Group 2: Bảng Chính (From importMappingPersonnel)
-  const pCols = [];
-  const seenP = new Set();
-  const pColMap = computeColumnIndexMap(personnelStore.importMappingPersonnel || []);
-  (personnelStore.importMappingPersonnel || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt' && !seenP.has(c.id)) {
-        seenP.add(c.id);
-        const rawIdx = pColMap[c.id];
-        const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
-        pCols.push({
-          id: c.id,
-          rawId: c.id,
-          label: c.label || c.id,
-          colIndex: idxText,
-          isVirtual: false,
-          format: c.format,
-          options: c.options,
-        });
-      }
-    });
-  });
-
-  if (pCols.length > 0) {
-    groups.push({
-      name: '2. Cột Bảng Cán bộ (Hồ sơ)',
-      columns: pCols,
-    });
-  }
-
-  // Group 3: Bảng Phụ (From importMappingRelative)
-  const relCols = [];
-  const seenRel = new Set();
-  const relColMap = computeColumnIndexMap(personnelStore.importMappingRelative || []);
-  (personnelStore.importMappingRelative || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt' && !seenRel.has(c.id)) {
-        seenRel.add(c.id);
-        const rawIdx = relColMap[c.id];
-        const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
-        relCols.push({
-          id: c.id,
-          rawId: c.id,
-          label: c.label || c.id,
-          colIndex: idxText,
-          isVirtual: false,
-          format: c.format,
-          options: c.options,
-        });
-      }
-    });
-  });
-
-  if (relCols.length > 0) {
-    groups.push({
-      name: '3. Cột Bảng Phụ',
-      columns: relCols,
-    });
-  }
 
   return groups;
 });
@@ -3332,12 +3121,11 @@ const getChartWidgets = (group) => {
 };
 
 const getSourceLabel = (source) => {
-  if (source === 'personnel') return 'Cán bộ';
-  if (source === 'relatives') return 'Thân nhân';
-  if (source === 'trips') return 'Chuyến đi';
-  const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
-  if (customTable) return customTable.title || 'Bảng tự tạo';
-  return 'Dữ liệu';
+  return getUnifiedTableLabel(source, {
+    personnelStore,
+    customDashboards: availableTopicDashboards.value,
+    systemBranding: systemBranding.value,
+  });
 };
 
 const getLightColor = (hex = '#2e7d32') => {
@@ -3555,71 +3343,17 @@ const getWidgetChartData = (widget) => {
 
 const availableColumnsForWidgetSource = computed(() => {
   const source = widgetForm.value.source;
-
-  // Hỗ trợ Bảng dữ liệu tự tạo
-  const customTable = (availableTopicDashboards.value || []).find((d) => d && d.id === source);
-  if (customTable) {
-    if (customTable.source === 'blank') {
-      const cols = customTable.customColumns || [];
-      return cols.map((c, idx) => ({
-        id: c.id,
-        rawLabel: c.label || c.id,
-        label: `[Cột ${idx + 1}] ${c.label || c.id} (${c.id})`,
-      }));
-    } else {
-      const baseSource = customTable.source || 'trips';
-      if (baseSource === 'trips') return allAvailableTripColumns.value;
-      const mapping = baseSource === 'relatives' ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel;
-      const colMap = computeColumnIndexMap(mapping);
-      const list = [];
-      (mapping || []).forEach((g) => {
-        (g.columns || []).forEach((c) => {
-          if (c.id && c.label) {
-            const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
-            const grp = g.group ? `[${g.group}] ` : '';
-            list.push({
-              id: c.id,
-              rawLabel: c.label,
-              label: `${colNum}${grp}${c.label} (${c.id})`,
-            });
-          }
-        });
-      });
-      return list;
-    }
-  }
-
-  if (source === 'trips') return allAvailableTripColumns.value;
-  const mapping = source === 'relatives' ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel;
-  const colMap = computeColumnIndexMap(mapping);
-  const list = [];
-
-  // Thêm các cột ảo hệ thống (Trạng thái hiện diện, Đối tượng)
-  list.push({
-    id: 'presenceStatus',
-    rawLabel: 'Trạng thái hiện diện',
-    label: '⚡ [Bộ lọc] Trạng thái hiện diện (Trong nước / Nước ngoài / Quá hạn)',
-  });
-  list.push({
-    id: 'isRelative',
-    rawLabel: 'Đối tượng (Cán bộ / Thân nhân)',
-    label: '⚡ [Bộ lọc] Đối tượng (Cán bộ hay Thân nhân)',
+  const cols = getUnifiedTableColumns(source, {
+    personnelStore,
+    customDashboards: availableTopicDashboards.value,
+    systemBranding: systemBranding.value,
   });
 
-  (mapping || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.label) {
-        const colNum = colMap[c.id] ? `[${colMap[c.id]}] ` : '';
-        const grp = g.group ? `[${g.group}] ` : '';
-        list.push({
-          id: c.id,
-          rawLabel: c.label,
-          label: `${colNum}${grp}${c.label} (${c.id})`,
-        });
-      }
-    });
-  });
-  return list;
+  return cols.map((c, idx) => ({
+    id: c.id,
+    rawLabel: c.label || c.id,
+    label: `[Cột ${idx + 1}] ${c.group ? '[' + c.group + '] ' : ''}${c.label || c.id} (${c.id})`,
+  }));
 });
 
 const allAvailableRelativeColumns = computed(() => {
