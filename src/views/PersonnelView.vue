@@ -843,64 +843,6 @@
           </template>
         </Column>
 
-        <!-- Cột Đối tượng liên quan / Hồ sơ chính (Có thể ẩn/hiện, đổi tên, cấu hình trường con) -->
-        <Column
-          v-if="personnelStore.visibleRelativeColumns.includes('_parentPersonnelName') || personnelStore.visibleRelativeColumns.includes('parentName')"
-          field="parentName"
-          :headerStyle="{ width: '220px', minWidth: '220px' }"
-        >
-          <template #header>
-            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
-              <span class="table-col-header-wrap">
-                {{ getCustomColLabel('_parentPersonnelName', 'Đối tượng liên quan') }}
-              </span>
-              <div style="display: inline-flex; align-items: center; gap: 2px;">
-                <button
-                  type="button"
-                  class="btn-col-menu-trigger"
-                  @click.stop="openNameColModal"
-                  title="Chọn các trường thông tin hiển thị (Họ tên, CCCD/Mã, Chức vụ, Đơn vị...)"
-                  style="opacity: 0.85;"
-                >
-                  <i class="pi pi-sliders-h" style="font-size: 0.72rem; color: #4338ca;"></i>
-                </button>
-                <button
-                  type="button"
-                  class="btn-col-menu-trigger"
-                  @click.stop="openColMenu($event, { id: '_parentPersonnelName', label: getCustomColLabel('_parentPersonnelName', 'Đối tượng liên quan'), isVirtual: true })"
-                  title="Tùy chỉnh cột này (Đổi tên, ẩn cột...)"
-                >
-                  <i class="pi pi-cog" style="font-size: 0.72rem;"></i>
-                </button>
-              </div>
-            </div>
-          </template>
-          <template #body="{ data }">
-            <div v-if="isFirstRelativeOfParent(data)">
-              <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
-                <template v-for="(opt, fIdx) in activeParentFieldsList" :key="opt.key">
-                  <div v-if="getPersonFieldValue(data.parentPerson || data, opt.key)">
-                    <strong
-                      v-if="opt.key === 'name' || (fIdx === 0 && !activeParentFieldsList.some(o => o.key === 'name'))"
-                      style="cursor: pointer; color: #1f2937; font-weight: 700; font-size: 0.85rem;"
-                      @click="data.parentPerson && openEditDialog(data.parentPerson)"
-                    >
-                      {{ getPersonFieldValue(data.parentPerson || data, opt.key) }}
-                    </strong>
-                    <div v-else style="font-size: 0.72rem; color: #4b5563; line-height: 1.3;">
-                      <span style="color: #64748b; font-weight: 600;">{{ opt.label }}: </span>
-                      <span>{{ getPersonFieldValue(data.parentPerson || data, opt.key) }}</span>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-            <div v-else style="padding-left: 10px; color: #94a3b8; font-size: 0.74rem; display: flex; align-items: center; gap: 4px;">
-              <span style="color: #cbd5e1;">↳</span> <span style="font-style: italic; color: #94a3b8;">(cùng hồ sơ liên quan)</span>
-            </div>
-          </template>
-        </Column>
-
         <!-- Cột ưu tiên từ Thống kê / Widget -->
         <Column
           v-if="routeFilterField"

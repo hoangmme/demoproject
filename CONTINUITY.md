@@ -33,8 +33,9 @@
   - Nếu cột không có giá trị dưới `column.id` được chỉ định, trả về rỗng `""` hoặc `"-"`. Không được tự tiện lấy trường khác bù vào.
 - ⛔ **KHÔNG TỰ BỊA DỮ LIỆU / KHÔNG TỰ SUY ĐOÁN**: Tuyệt đối không tự phỏng đoán hoặc giả định dữ liệu hay ý định của người dùng.
 - ⛔ **TỰ ĐỘNG HÓA LIÊN KẾT & THAM CHIẾU DỮ LIỆU**:
-  - Bỏ nút thủ công "Khóa & Liên kết" trên thanh công cụ để đơn giản hóa tối đa trải nghiệm người dùng.
-  - Hệ thống tự động phân giải tham chiếu dựa trên khóa chính tự động `personnelStore.getPersonnelKeyField()`.
+  - Bỏ nút thủ công "Khóa & Liên kết" trên thanh công cụ và giao diện cấu hình khóa thủ công ở Cài đặt chung để đơn giản hóa tối đa trải nghiệm người dùng.
+  - Hệ thống tự động phân giải tham chiếu dựa trên khóa quy chuẩn tự nhiên (`cccdparent`, `cccdthannhan`, `cccdchuyendi`).
+  - Gỡ bỏ hoàn toàn cột tĩnh `_parentPersonnelName` ("Đối tượng liên quan") và logic gom nhóm `↳ (cùng hồ sơ liên quan)` trong Bảng Thân nhân. Bảng Thân nhân hoạt động 100% độc lập, thuần khiết theo danh mục cột cấu hình động (`importMappingRelative`).
 - ⛔ **LAN TRUYỀN ĐỘNG THUỘC TÍNH (DYNAMIC SPREAD)**:
   - Khi tổng hợp dữ liệu (như Thân nhân kèm Chuyến đi trong `buildTopicSourceList`), toàn bộ các trường của Chuyến đi phải được bóc tách và lan truyền động (`...tripDynamicFields`) để mọi cột người dùng cấu hình trong Chuyến đi đều sẵn sàng truy xuất trực tiếp trên bản ghi.
 - ⛔ **KHI THIẾU DỮ LIỆU HOẶC KHÔNG RÕ LOGIC**: BẮT BUỘC DỪNG LẠI VÀ HỎI TRỰC TIẾP NGƯỜI DÙNG, tuyệt đối không tự ý viết code đoán mò.

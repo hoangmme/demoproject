@@ -4,10 +4,10 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
       <div>
         <h1 style="font-size: 1.35rem; font-weight: 700; color: #1f2937; margin: 0;">
-          Cài đặt Chung & Khóa Liên kết
+          Cài đặt Chung & Nhận diện Hệ thống
         </h1>
         <p style="font-size: 0.85rem; color: #6b7280; margin: 4px 0 0 0;">
-          Cấu hình khóa định danh (CCCD), liên kết dữ liệu giữa các bảng, quản lý thẻ tag và nhận diện hệ thống.
+          Tùy biến Logo, Tiêu đề cơ quan, Tên các Menu và Nhận diện thương hiệu hệ thống.
         </p>
       </div>
 
@@ -60,173 +60,8 @@
       </div>
     </div>
 
-    <!-- Tabs Navigation (Segmented Pill Style) -->
-    <div style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content; margin-bottom: 1.25rem; flex-wrap: wrap;">
-      <button
-        type="button"
-        class="segmented-tab-btn"
-        :class="{ 'tab-active': activeTab === 'keys' }"
-        @click="activeTab = 'keys'"
-      >
-        <i class="pi pi-key"></i>
-        <span>Khóa Định danh & Liên kết (CCCD)</span>
-      </button>
-
-      <button
-        type="button"
-        class="segmented-tab-btn"
-        :class="{ 'tab-active': activeTab === 'general' }"
-        @click="activeTab = 'general'"
-      >
-        <i class="pi pi-shield"></i>
-        <span>Cài đặt Chung & Nhận diện</span>
-      </button>
-    </div>
-
-    <!-- Main Content: Tab Khóa Định Danh & Khóa Liên Kết (CCCD) -->
-    <div v-if="activeTab === 'keys'" class="app-card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
-      <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
-        <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
-          <i class="pi pi-key" style="color: #dc2626; font-size: 1.15rem;"></i>
-          Cấu hình Khóa Định Danh & Khóa Liên Kết giữa các Bảng dữ liệu
-        </h3>
-        <p style="font-size: 0.78rem; color: #64748b; margin: 4px 0 0 0;">
-          Thiết lập cột khóa duy nhất (Primary Key) của Cán bộ và các cột khóa liên kết để tự động nối thân nhân, chuyến đi với cán bộ tương ứng qua số CCCD / Mã định danh.
-        </p>
-      </div>
-
-      <!-- Khối 1: Bảng Cán bộ -->
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
-              <i class="pi pi-user" style="color: #dc2626; font-size: 1.1rem;"></i>
-            </div>
-            <div>
-              <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">
-                1. Bảng Cán bộ — Khóa Định danh Duy nhất (Primary Unique Key):
-              </div>
-              <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">
-                Dùng để định danh chống trùng lặp cán bộ và làm khóa móc nối liên kết với thân nhân và chuyến đi.
-              </div>
-            </div>
-          </div>
-          <div style="min-width: 280px;">
-            <select v-model="personnelKeyField" class="custom-key-select">
-              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                {{ col.label }} (mã: {{ col.id }})
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Vai trò cốt lõi: Họ tên, Chức vụ, Đơn vị -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
-          <div>
-            <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
-              <i class="pi pi-user" style="color: #2563eb;"></i> Cột Họ và tên chính:
-            </span>
-            <select v-model="personnelNameField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
-              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                {{ col.label }} (mã: {{ col.id }})
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
-              <i class="pi pi-briefcase" style="color: #059669;"></i> Cột Chức vụ (hiển thị kèm):
-            </span>
-            <select v-model="personnelPositionField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
-              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                {{ col.label }} (mã: {{ col.id }})
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <span style="font-size: 0.73rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 4px;">
-              <i class="pi pi-building" style="color: #7c3aed;"></i> Cột Đơn vị công tác (hiển thị kèm):
-            </span>
-            <select v-model="personnelDepartmentField" class="custom-key-select" style="margin-top: 4px; font-size: 0.78rem;">
-              <option v-for="col in availablePersonnelCols" :key="col.id" :value="col.id">
-                {{ col.label }} (mã: {{ col.id }})
-              </option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Khối 2: Bảng Thân nhân -->
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
-        <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-          <div style="width: 36px; height: 36px; border-radius: 8px; background: #e0f2fe; display: flex; align-items: center; justify-content: center;">
-            <i class="pi pi-users" style="color: #0284c7; font-size: 1.1rem;"></i>
-          </div>
-          <div>
-            <div>2. Bảng Thân nhân — Khóa Liên kết Cán bộ & Khóa Định danh Thân nhân:</div>
-            <div style="font-size: 0.73rem; color: #64748b; font-weight: 400; margin-top: 2px;">
-              Xác định quan hệ thân nhân trực thuộc cán bộ nào và mã định danh riêng của thân nhân.
-            </div>
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="pi pi-link" style="color: #0284c7; font-size: 0.95rem;"></i>
-              <strong style="color: #1e293b; font-size: 0.82rem;">Cột Liên kết Cán bộ liên quan (Parent Link Key):</strong>
-            </div>
-            <select v-model="relativeParentKeyField" class="custom-key-select">
-              <option v-for="col in availableRelativeCols" :key="col.id" :value="col.id">
-                {{ col.label }} (mã: {{ col.id }})
-              </option>
-            </select>
-            <span style="font-size: 0.7rem; color: #64748b;">(Cột chứa số CCCD / Mã định danh của Cán bộ cha/mẹ mà thân nhân trực thuộc)</span>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="pi pi-id-card" style="color: #16a34a; font-size: 0.95rem;"></i>
-              <strong style="color: #1e293b; font-size: 0.82rem;">Cột Định danh riêng Thân nhân (Relative Unique Key):</strong>
-            </div>
-            <select v-model="relativeKeyField" class="custom-key-select">
-              <option v-for="col in availableRelativeCols" :key="col.id" :value="col.id">
-                {{ col.label }} (mã: {{ col.id }})
-              </option>
-            </select>
-            <span style="font-size: 0.7rem; color: #64748b;">(Cột chứa số CCCD / Mã định danh riêng của từng Thân nhân)</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Khối 3: Bảng Chuyến đi -->
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
-        <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-          <div style="width: 36px; height: 36px; border-radius: 8px; background: #dcfce7; display: flex; align-items: center; justify-content: center;">
-            <i class="pi pi-send" style="color: #16a34a; font-size: 1.1rem;"></i>
-          </div>
-          <div>
-            <div>3. Bảng Chuyến đi — Cột Liên kết Đối tượng chuyến đi (Trip Link Key / CCCD người đi):</div>
-            <div style="font-size: 0.73rem; color: #64748b; font-weight: 400; margin-top: 2px;">
-              Hệ thống tự động liên kết chuyến đi vào Cán bộ nếu khớp CCCD Cán bộ, hoặc vào Thân nhân nếu khớp CCCD Thân nhân.
-            </div>
-          </div>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
-          <select v-model="tripKeyField" class="custom-key-select" style="max-width: 480px;">
-            <option v-for="col in availableTripCols" :key="col.id" :value="col.id">
-              {{ col.label }} (mã: {{ col.id }})
-            </option>
-          </select>
-          <span style="font-size: 0.72rem; color: #64748b;">(Cột trong bảng Chuyến đi chứa số CCCD / Mã định danh của người đi. Tự động nhận diện vào Cán bộ hoặc Thân nhân)</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tab: Cài đặt Chung, Nhận diện Hệ thống & Ảnh nền -->
-    <div v-else-if="activeTab === 'general'" class="app-card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.75rem;">
+    <!-- Cài đặt Chung, Nhận diện Hệ thống & Ảnh nền -->
+    <div class="app-card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.75rem;">
       <!-- Khối 1: Tùy biến Nhận diện Logo, Đơn vị & Tên Menu -->
       <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 1.5rem;">
         <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
@@ -935,7 +770,7 @@ const route = useRoute();
 const router = useRouter();
 const personnelStore = usePersonnelStore();
 
-const activeTab = ref('keys');
+const activeTab = ref('general');
 const saving = ref(false);
 
 const isWizardOpen = ref(false);
@@ -2651,8 +2486,8 @@ const saveConfig = async () => {
     await saveAppSettings('system_key_config', keyConfig);
     personnelStore.systemKeyConfig = keyConfig;
 
-    if (activeTab.value === 'keys') {
-      alert('Đã lưu cấu hình Khóa định danh & Khóa liên kết thành công!');
+    if (activeTab.value === 'general') {
+      await saveSystemBranding();
       return;
     }
 
