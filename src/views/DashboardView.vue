@@ -3561,7 +3561,7 @@ const availableColumnsForWidgetSource = computed(() => {
   return cols.map((c, idx) => ({
     id: c.id,
     rawLabel: c.label || c.id,
-    label: `[Cột ${idx + 1}] ${c.group ? '[' + c.group + '] ' : ''}${c.label || c.id} (${c.id})`,
+    label: `[Cột ${idx + 1}] ${c.label || c.id} (${c.id})`,
   }));
 });
 
@@ -3572,7 +3572,6 @@ const allAvailableRelativeColumns = computed(() => {
   (personnelStore.importMappingRelative || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       currentColIdx++;
-      const grp = g.group ? `[${g.group}] ` : '';
       const subOpts = getSubOptionsList(c);
 
       if (subOpts.length > 1) {
@@ -3580,21 +3579,21 @@ const allAvailableRelativeColumns = computed(() => {
         const end = currentColIdx + subOpts.length - 1;
         list.push({
           id: c.id,
-          label: `[Cột ${start} - ${end}] ${grp}${c.label || c.id} (${c.id})`,
+          label: `[Cột ${start} - ${end}] ${c.label || c.id} (${c.id})`,
         });
         subOpts.forEach((opt, sIdx) => {
           const colNum = start + sIdx;
           list.push({
             id: c.id,
             subOpt: opt,
-            label: `  └─ [Cột ${colNum}] ${grp}${c.label || c.id}: ${opt}`,
+            label: `  └─ [Cột ${colNum}] ${c.label || c.id}: ${opt}`,
           });
         });
         currentColIdx = end;
       } else {
         list.push({
           id: c.id,
-          label: `[Cột ${currentColIdx}] ${grp}${c.label || c.id} (${c.id})`,
+          label: `[Cột ${currentColIdx}] ${c.label || c.id} (${c.id})`,
         });
       }
     });
@@ -3609,7 +3608,6 @@ const allAvailablePersonnelColumns = computed(() => {
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       currentColIdx++;
-      const grp = g.group ? `[${g.group}] ` : '';
       const subOpts = getSubOptionsList(c);
 
       if (subOpts.length > 1) {
@@ -3617,21 +3615,21 @@ const allAvailablePersonnelColumns = computed(() => {
         const end = currentColIdx + subOpts.length - 1;
         list.push({
           id: c.id,
-          label: `[Cột ${start} - ${end}] ${grp}${c.label || c.id} (${c.id})`,
+          label: `[Cột ${start} - ${end}] ${c.label || c.id} (${c.id})`,
         });
         subOpts.forEach((opt, sIdx) => {
           const colNum = start + sIdx;
           list.push({
             id: c.id,
             subOpt: opt,
-            label: `  └─ [Cột ${colNum}] ${grp}${c.label || c.id}: ${opt}`,
+            label: `  └─ [Cột ${colNum}] ${c.label || c.id}: ${opt}`,
           });
         });
         currentColIdx = end;
       } else {
         list.push({
           id: c.id,
-          label: `[Cột ${currentColIdx}] ${grp}${c.label || c.id} (${c.id})`,
+          label: `[Cột ${currentColIdx}] ${c.label || c.id} (${c.id})`,
         });
       }
     });
@@ -3646,7 +3644,6 @@ const allAvailableTripColumns = computed(() => {
   (personnelStore.importMappingTrips || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
       currentColIdx++;
-      const grp = g.group ? `[${g.group}] ` : '';
       const subOpts = getSubOptionsList(c);
 
       if (subOpts.length > 1) {
@@ -3654,21 +3651,21 @@ const allAvailableTripColumns = computed(() => {
         const end = currentColIdx + subOpts.length - 1;
         list.push({
           id: c.id,
-          label: `[Cột ${start} - ${end}] ${grp}${c.label || c.id} (${c.id})`,
+          label: `[Cột ${start} - ${end}] ${c.label || c.id} (${c.id})`,
         });
         subOpts.forEach((opt, sIdx) => {
           const colNum = start + sIdx;
           list.push({
             id: c.id,
             subOpt: opt,
-            label: `  └─ [Cột ${colNum}] ${grp}${c.label || c.id}: ${opt}`,
+            label: `  └─ [Cột ${colNum}] ${c.label || c.id}: ${opt}`,
           });
         });
         currentColIdx = end;
       } else {
         list.push({
           id: c.id,
-          label: `[Cột ${currentColIdx}] ${grp}${c.label || c.id} (${c.id})`,
+          label: `[Cột ${currentColIdx}] ${c.label || c.id} (${c.id})`,
         });
       }
     });

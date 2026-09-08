@@ -89,7 +89,7 @@ export function getUnifiedTableDefinitions(options = {}) {
         cols.push({
           id: '_parentPersonnelName',
           label: 'Cán bộ liên quan',
-          group: 'Liên kết',
+          group: coreTripsTitle,
           format: 'text',
           width: '180px',
           isVirtual: true,
@@ -101,7 +101,7 @@ export function getUnifiedTableDefinitions(options = {}) {
         cols.push({
           id: 'presenceStatus',
           label: 'Trạng thái hiện diện',
-          group: 'Trạng thái',
+          group: coreTripsTitle,
           format: 'presence',
           width: '170px',
           isVirtual: true,
@@ -111,19 +111,36 @@ export function getUnifiedTableDefinitions(options = {}) {
     },
     getSearchableGroups: (store) => {
       const colMap = computeColumnIndexMap(store?.importMappingTrips || []);
-      return (store?.importMappingTrips || []).map((g) => ({
-        name: `${coreTripsTitle}${g.group ? ' - ' + g.group : ''}`,
-        columns: (g.columns || []).filter((c) => c.id && c.id !== 'stt').map((c) => ({
-          id: c.id,
-          rawId: c.id,
-          label: c.label || c.id,
-          colIndex: colMap[c.id] ? colMap[c.id].replace(/^Cột\s+/, '') : null,
-          isVirtual: false,
-          format: c.format,
-          formulaType: c.formulaType,
-          options: c.options,
-        })),
-      })).filter((g) => g.columns.length > 0);
+      const allCols = [];
+      const seen = new Set();
+      (store?.importMappingTrips || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+            seen.add(c.id);
+            allCols.push({
+              id: c.id,
+              rawId: c.id,
+              label: c.label || c.id,
+              colIndex: colMap[c.id] ? colMap[c.id].replace(/^Cột\s+/, '') : null,
+              isVirtual: false,
+              format: c.format,
+              formulaType: c.formulaType,
+              options: c.options,
+            });
+          }
+        });
+      });
+      if (!seen.has('presenceStatus')) {
+        allCols.push({
+          id: 'presenceStatus',
+          rawId: 'presenceStatus',
+          label: 'Trạng thái hiện diện',
+          colIndex: null,
+          isVirtual: true,
+          format: 'presence',
+        });
+      }
+      return allCols.length > 0 ? [{ name: coreTripsTitle, columns: allCols }] : [];
     },
   };
 
@@ -147,7 +164,7 @@ export function getUnifiedTableDefinitions(options = {}) {
             cols.push({
               id: c.id,
               label: c.label || c.id,
-              group: g.group || 'Thông tin cán bộ',
+              group: corePersonnelTitle,
               format: c.format || 'text',
               width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
               tableWidth: c.tableWidth || null,
@@ -161,19 +178,26 @@ export function getUnifiedTableDefinitions(options = {}) {
     },
     getSearchableGroups: (store) => {
       const colMap = computeColumnIndexMap(store?.importMappingPersonnel || []);
-      return (store?.importMappingPersonnel || []).map((g) => ({
-        name: `${corePersonnelTitle}${g.group ? ' - ' + g.group : ''}`,
-        columns: (g.columns || []).filter((c) => c.id && c.id !== 'stt').map((c) => ({
-          id: c.id,
-          rawId: c.id,
-          label: c.label || c.id,
-          colIndex: colMap[c.id] ? colMap[c.id].replace(/^Cột\s+/, '') : null,
-          isVirtual: false,
-          format: c.format,
-          formulaType: c.formulaType,
-          options: c.options,
-        })),
-      })).filter((g) => g.columns.length > 0);
+      const allCols = [];
+      const seen = new Set();
+      (store?.importMappingPersonnel || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+            seen.add(c.id);
+            allCols.push({
+              id: c.id,
+              rawId: c.id,
+              label: c.label || c.id,
+              colIndex: colMap[c.id] ? colMap[c.id].replace(/^Cột\s+/, '') : null,
+              isVirtual: false,
+              format: c.format,
+              formulaType: c.formulaType,
+              options: c.options,
+            });
+          }
+        });
+      });
+      return allCols.length > 0 ? [{ name: corePersonnelTitle, columns: allCols }] : [];
     },
   };
 
@@ -198,7 +222,7 @@ export function getUnifiedTableDefinitions(options = {}) {
             cols.push({
               id: c.id,
               label: c.label || c.id,
-              group: g.group || 'Thông tin thân nhân',
+              group: coreRelativesTitle,
               format: c.format || 'text',
               width: (c.tableWidth ? c.tableWidth + 'px' : c.width) || '160px',
               tableWidth: c.tableWidth || null,
@@ -212,7 +236,7 @@ export function getUnifiedTableDefinitions(options = {}) {
         cols.push({
           id: '_parentPersonnelName',
           label: 'Cán bộ liên quan',
-          group: 'Liên kết',
+          group: coreRelativesTitle,
           format: 'text',
           width: '180px',
           isVirtual: true,
@@ -222,19 +246,36 @@ export function getUnifiedTableDefinitions(options = {}) {
     },
     getSearchableGroups: (store) => {
       const colMap = computeColumnIndexMap(store?.importMappingRelative || []);
-      return (store?.importMappingRelative || []).map((g) => ({
-        name: `${coreRelativesTitle}${g.group ? ' - ' + g.group : ''}`,
-        columns: (g.columns || []).filter((c) => c.id && c.id !== 'stt').map((c) => ({
-          id: c.id,
-          rawId: c.id,
-          label: c.label || c.id,
-          colIndex: colMap[c.id] ? colMap[c.id].replace(/^Cột\s+/, '') : null,
-          isVirtual: false,
-          format: c.format,
-          formulaType: c.formulaType,
-          options: c.options,
-        })),
-      })).filter((g) => g.columns.length > 0);
+      const allCols = [];
+      const seen = new Set();
+      (store?.importMappingRelative || []).forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
+            seen.add(c.id);
+            allCols.push({
+              id: c.id,
+              rawId: c.id,
+              label: c.label || c.id,
+              colIndex: colMap[c.id] ? colMap[c.id].replace(/^Cột\s+/, '') : null,
+              isVirtual: false,
+              format: c.format,
+              formulaType: c.formulaType,
+              options: c.options,
+            });
+          }
+        });
+      });
+      if (!seen.has('_parentPersonnelName')) {
+        allCols.push({
+          id: '_parentPersonnelName',
+          rawId: '_parentPersonnelName',
+          label: 'Cán bộ liên quan',
+          colIndex: null,
+          isVirtual: true,
+          format: 'text',
+        });
+      }
+      return allCols.length > 0 ? [{ name: coreRelativesTitle, columns: allCols }] : [];
     },
   };
 

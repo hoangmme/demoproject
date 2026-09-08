@@ -1699,13 +1699,18 @@
   3. **Đồng bộ & Kiểm chứng**:
      - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` thành công 100% (0 lỗi).
+- **Entry (2026-09-08)**: **Gỡ Bỏ Nhóm Cột Cũ (Group) Khỏi Menu Chọn Cột, Làm Phẳng 100% Danh Sách Cột Chuẩn Lark Base**:
+  1. **Vấn đề người dùng phản ánh**:
+     - Menu chọn cột trong Thống kê và Tìm kiếm nâng cao vẫn hiển thị các nhóm cũ `🎯 Bảng đang chọn: Cán bộ - Thông tin cơ bản` và `🎯 Bảng đang chọn: Cán bộ - Thông tin Lưu ý & Kỷ luật`, trong khi toàn bộ hệ thống bảng dữ liệu đã chuyển sang mô hình phẳng (Flat Table) theo chuẩn Lark Base.
+  2. **Giải pháp kiến trúc đã thực hiện (`tableRegistry.js`, `DashboardView.vue`)**:
+     - `src/utils/tableRegistry.js`:
+       - Chuẩn hóa các phương thức `getSearchableGroups` và `getColumns` của 3 bảng nòng cốt (`personnelTable`, `tripsTable`, `relativesTable`).
+       - Toàn bộ cột của mỗi bảng được gom phẳng thành 1 danh sách duy nhất thuộc tiêu đề bảng tương ứng (`Cán bộ`, `Chuyến đi`, `Thân nhân`), loại bỏ hoàn toàn các hậu tố nhóm cũ `- Thông tin cơ bản`, `- Thông tin Lưu ý & Kỷ luật`, `[Thông tin cán bộ]`, `[Thông tin thân nhân]`.
+       - Menu dropdown trong Thống kê giờ đây hiển thị thuần khiết: `🎯 Bảng đang chọn: Cán bộ`, `📋 Chuyến đi`, `📋 Thân nhân`.
+     - `src/views/DashboardView.vue`:
+       - Làm sạch các computed `availableColumnsForWidgetSource`, `allAvailableRelativeColumns`, `allAvailablePersonnelColumns`, `allAvailableTripColumns`, loại bỏ hoàn toàn việc ghép tiền tố `[grp]` hay `c.group`.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, ~622ms).
 - **Status**: Done [Reversible].
-
-
-
-
-
-
-
-
 
