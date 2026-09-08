@@ -694,44 +694,7 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
     return count >= numTarget;
   }
 
-  // 4. Cột Chuyến đi đối chiếu với Thân nhân hoặc Cán bộ
-  const isTripRecord = item._recordType === 'trip' || Boolean(item.rawTrip) || Boolean(item._primaryKey?.startsWith('CD-')) || (!Array.isArray(item.trips) && !item.rawPerson && (item.uniqueKey?.includes('_t_') || item.uniqueKey?.includes('trip_')));
-  const tripColIds = personnelStore ? (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id)) : [];
-  const isTripField = isPresenceField(field) || tripColIds.includes(field);
-  const isRelativesRecord = item.isRelative || !!item.rawRelative;
-  const isPersonnelRecord = !isTripRecord && !item.isRelative && (item.personnelId || item.code || Array.isArray(item.trips));
-
-  if (!isTripRecord && isTripField && (isRelativesRecord || isPersonnelRecord)) {
-    // 4a. Kiểm tra trực tiếp trên bản ghi
-    if (isPresenceField(field)) {
-      const pVal = resolveVirtualColumnValue(item, field) || item.presenceStatus || item._presenceStatus || '';
-      if (checkConditionMatch(pVal, op, target)) return true;
-      if (item.presenceLabel && checkConditionMatch(item.presenceLabel, op, target)) return true;
-    }
-
-    // 4b. Kiểm tra trong danh sách trips
-    const trips = Array.isArray(item.trips) ? item.trips : [];
-    if (trips.length > 0) {
-      return trips.some((t) => {
-        if (isPresenceField(field)) {
-          const tp = resolvePresence(t);
-          const tVal = tp.shortLabel || tp.label || '';
-          if (checkConditionMatch(tVal, op, target)) return true;
-          if (tp.label && checkConditionMatch(tp.label, op, target)) return true;
-          return false;
-        }
-        let tVal = extractRowFieldValue(t, field, personnelStore);
-        return checkConditionMatch(tVal, op, target);
-      });
-    }
-
-    if (isPresenceField(field)) {
-      return checkConditionMatch('Trong nước', op, target);
-    }
-    return checkConditionMatch('', op, target);
-  }
-
-  // 5. Cột thông thường
+  // 3. Toàn bộ các trường dữ liệu: trích xuất giá trị trực tiếp theo field (column.id) trên bản ghi phẳng
   const rawVal = extractRowFieldValue(item, field, personnelStore);
   return checkConditionMatch(rawVal, op, target);
 };
@@ -751,7 +714,7 @@ export const isCardAllType = (card) => {
 };
 
 /**
- * So khớp toàn bộ điều kiện của 1 thẻ thống kê
+ * So khớp toàn bộ điều kiện của 1 thẻ thống kê trên bản ghi phẳng
  */
 export const matchCardCondition = (item, card, personnelStore) => {
   if (!card) return true;
@@ -766,61 +729,11 @@ export const matchCardCondition = (item, card, personnelStore) => {
 
   if (activeConds.length > 0) {
     const logicOp = (card.logicOp || card.logicOperator || 'AND').toUpperCase();
-    const isTripRecord = item._recordType === 'trip' || Boolean(item.rawTrip) || Boolean(item._primaryKey?.startsWith('CD-')) || (!Array.isArray(item.trips) && !item.rawPerson && (item.uniqueKey?.includes('_t_') || item.uniqueKey?.includes('trip_')));
-
     if (logicOp === 'OR') {
       return activeConds.some((cond) => matchSingleCondition(item, cond, personnelStore));
     }
-
-    // logicOp === 'AND'
-    if (isTripRecord) {
-      // Đối với bản ghi chuyến đi: tất cả điều kiện phải khớp trực tiếp trên chuyến đi này
-      return activeConds.every((cond) => matchSingleCondition(item, cond, personnelStore));
-    }
-
-    // Khi item là Cán bộ hoặc Thân nhân (có mảng trips)
-    const tripColIds = personnelStore ? (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id)) : [];
-    const tripConds = activeConds.filter((c) => {
-      if (c.operator?.startsWith('count_') || c.field === 'dieu_kien_dem' || c.field === '_tripCount') return false;
-      return isPresenceField(c.field) || tripColIds.includes(c.field);
-    });
-    const generalConds = activeConds.filter((c) => !tripConds.includes(c));
-
-    // Điều kiện chung phải thỏa mãn trên Cán bộ / Thân nhân
-    const generalOk = generalConds.every((cond) => matchSingleCondition(item, cond, personnelStore));
-    if (!generalOk) return false;
-
-    // Điều kiện chuyến đi: phải có ÍT NHẤT 1 chuyến đi thỏa mãn ĐỒNG THỜI tất cả tripConds
-    if (tripConds.length > 0) {
-      const trips = Array.isArray(item.trips) ? item.trips : [];
-      if (trips.length === 0) {
-        return tripConds.every((c) => {
-          if (isPresenceField(c.field)) {
-            const p = resolvePresence(item);
-            return checkConditionMatch(p.shortLabel, c.operator, c.value) || checkConditionMatch(p.label, c.operator, c.value) || checkConditionMatch('Trong nước', c.operator, c.value);
-          }
-          return checkConditionMatch('', c.operator, c.value);
-        });
-      }
-      return trips.some((t) => {
-        return tripConds.every((c) => {
-          if (isPresenceField(c.field)) {
-            const tp = resolvePresence(t);
-            const tVal = tp.shortLabel || tp.label || '';
-            if (checkConditionMatch(tVal, c.operator, c.value)) return true;
-            if (tp.label && checkConditionMatch(tp.label, c.operator, c.value)) return true;
-            const ip = resolvePresence(item);
-            if (checkConditionMatch(ip.shortLabel, c.operator, c.value)) return true;
-            if (ip.label && checkConditionMatch(ip.label, c.operator, c.value)) return true;
-            return false;
-          }
-          const tVal = extractRowFieldValue(t, c.field, personnelStore);
-          return checkConditionMatch(tVal, c.operator, c.value);
-        });
-      });
-    }
-
-    return true;
+    // Mặc định AND: mọi điều kiện phải thỏa mãn trên bản ghi
+    return activeConds.every((cond) => matchSingleCondition(item, cond, personnelStore));
   }
 
   // Preset condition
