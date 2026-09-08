@@ -1490,6 +1490,31 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+### 16. CHUẨN HÓA LARK BASE UI/UX, NHẬP LIỆU ĐA BẢNG, HỢP NHẤT MẪU WORD & CLEANUP HỆ THỐNG
+- **Các cải tiến đã thực hiện**:
+  1. **Khắc phục triệt để lỗi Icon Ổ Khóa `🔒` Chưa Đồng Bộ**:
+     - Trong `PersonnelView.vue`: Xác định `canonicalPrimaryId` rõ ràng (`name` / `ho_va_ten` cho cán bộ, `relativeName` cho thân nhân). Tuyệt đối không gán `isPrimaryField: idx === 0` mù quáng khiến icon ổ khóa nhảy sang cột `TÊN KHÁC` khi thứ tự mảng thay đổi.
+     - Bọc tiêu đề cột và huy hiệu khóa trong `.table-col-title-inline` và `.table-col-lock-badge` với `display: inline-flex; white-space: nowrap`, chấm dứt hiện tượng chữ "🔒" bị rớt xuống dòng dưới.
+  2. **Thanh Tab Chế Độ Xem (View Tabs) & Bộ Lọc Riêng Từng Bảng (Chuẩn Lark Base)**:
+     - Tích hợp thanh View Tabs phía trên bảng (`PersonnelView.vue`, `ChildDashboardView.vue`): `[ ⊞ Toàn bộ ] [ ⊞ Thẻ lọc ... ] [ + Thêm View ]`.
+     - Cho phép tạo Chế độ xem (View) mới với bộ lọc và cột hiển thị lưu độc lập cho từng bảng.
+  3. **Đồng Bộ Nhập Liệu Đa Bảng Tinh Gọn (Dynamic Data Entry)**:
+     - Xây dựng component `TableDataEntryDialog.vue`: Modal nhập liệu duy nhất hỗ trợ toàn bộ các bảng trong hệ thống (`[CB-01]`, `[TN-02]`, `[CD-03]`, `[TB-xx]`).
+     - Tự động nhận diện trường liên kết: nếu nhập cho bảng Thân nhân hoặc Chuyến đi, cho phép tìm chọn Cán bộ chủ quản liên kết ở Bước 2.
+     - Thay thế các nút nhập liệu tĩnh ở Sidebar bằng nút duy nhất `+ Nhập liệu mới`.
+  4. **Xóa Bỏ Hoàn Toàn "Tìm Kiếm Nâng Cao"**:
+     - Xóa menu "Tìm kiếm nâng cao" khỏi Sidebar (`AppSidebar.vue`), điều hướng `/advanced-search` về `/dashboard` (`router/index.js`).
+     - Hoàn toàn không ảnh hưởng đến Thống kê hay các tính năng khác vì Drilldown Modal độc lập đã đảm nhiệm việc tra cứu chi tiết.
+  5. **Tùy Chỉnh Cột: Thêm Icon Sao Chép Mã Thẻ Tag Word (`{col_id}`)**:
+     - Trong `ColumnSelector.vue`: Thêm nút copy trực tiếp mã tag `{col.id}` cạnh tên cột với tooltip và phản hồi tức thì (`pi pi-check`).
+     - Trong `ColumnHeaderMenu.vue`: Thêm mục thao tác `📋 Sao chép mã thẻ Word ({col.id})` kèm thông báo đã sao chép.
+  6. **Tích Hợp Quản Lý Danh Sách Mẫu Word Vào Trực Tiếp Xuất PDF/Word**:
+     - Trong `AdvancedDocxExportDialog.vue`: Tích hợp đầy đủ bảng quản lý Mẫu Word (.docx): tải lên mẫu mới, xem danh sách mẫu hệ thống, đặt làm mẫu mặc định (`system_docx_templates`), tải về máy, xóa mẫu cũ, tải mẫu tham khảo.
+  7. **Xóa Tab "Bảng Tra Cứu Mã Thẻ Tag & Mẫu Word" Trong Cài Đặt Chung**:
+     - Trong `SettingsImportView.vue`: Xóa tab button và toàn bộ block HTML `activeTab === 'tags'` (giảm gần 300 dòng code thừa), vì 100% tính năng đã được hợp nhất vào Tùy chỉnh cột (sao chép tag) và Hộp thoại Xuất PDF (quản lý mẫu).
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
 
 
 

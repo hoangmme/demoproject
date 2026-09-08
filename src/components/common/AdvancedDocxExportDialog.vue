@@ -267,64 +267,132 @@
           </div>
 
           <!-- Nguồn 2: Danh sách Mẫu đã lưu & Tải lên mẫu riêng -->
-          <div v-else>
-            <!-- Danh sách các mẫu đã lưu trong hệ thống -->
-            <div v-if="savedTemplatesList.length > 0" style="margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto;">
-              <div style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-bottom: 2px;">CHỌN NHANH MẪU ĐÃ LƯU:</div>
-              <label
-                v-for="tpl in savedTemplatesList"
-                :key="tpl.id"
-                class="radio-item"
-                :class="{ 'radio-active': selectedSavedTemplateId === tpl.id }"
-                style="padding: 6px 10px; cursor: pointer;"
-                @click="selectSavedTemplate(tpl)"
-              >
-                <input
-                  type="radio"
-                  :value="tpl.id"
-                  v-model="selectedSavedTemplateId"
-                  style="accent-color: #2563eb;"
-                />
-                <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                  <i class="pi pi-file-word" style="color: #2563eb; font-size: 1rem;"></i>
-                  <span style="font-size: 0.8rem; font-weight: 600; color: #1e293b; flex: 1;">{{ (tpl.name || '').replace(/\.docx$/i, '') }}</span>
-                  <span v-if="tpl.isDefault" class="badge-fixed" style="background: #dbeafe; color: #1d4ed8;">Mặc định</span>
+          <!-- Nguồn 2: Danh sách Mẫu Word (.docx) & Quản lý mẫu chuẩn -->
+          <div v-else style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+            <!-- Header bar quản lý mẫu -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <div style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                  <i class="pi pi-file-word" style="color: #2563eb;"></i>
+                  <span>QUẢN LÝ & CHỌN MẪU WORD (.DOCX):</span>
                 </div>
-              </label>
+                <div style="font-size: 0.7rem; color: #64748b;">Chọn mẫu để xuất hoặc cài đặt mẫu mặc định cho hệ thống</div>
+              </div>
+
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <input
+                  ref="tplUploadInputRef"
+                  type="file"
+                  accept=".docx"
+                  style="display: none;"
+                  @change="handleUploadNewDocxTemplate"
+                />
+                <Button
+                  label="Tải lên Mẫu mới (.docx)"
+                  icon="pi pi-cloud-upload"
+                  severity="primary"
+                  size="small"
+                  @click="tplUploadInputRef.click()"
+                  style="font-size: 0.74rem; font-weight: 700; padding: 4px 10px;"
+                />
+                <Button
+                  label="Tải Mẫu Chuẩn Gốc"
+                  icon="pi pi-download"
+                  severity="secondary"
+                  outlined
+                  size="small"
+                  @click="downloadSampleTemplate"
+                  style="font-size: 0.74rem; padding: 4px 10px;"
+                />
+              </div>
             </div>
 
-            <!-- Khung tải lên / nạp mẫu mới -->
-            <div
-              v-if="!customTemplateBuffer"
-              class="drop-zone"
-              @click="triggerFileInput"
-              style="padding: 14px;"
-            >
-              <i class="pi pi-cloud-upload" style="font-size: 1.8rem; color: #3b82f6; margin-bottom: 4px;"></i>
-              <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">+ Tải lên tệp Mẫu Word (.docx) mới</div>
-              <div style="font-size: 0.7rem; color: #64748b;">Hệ thống sẽ điền dữ liệu theo các tag trong file</div>
+            <!-- Bảng danh sách các mẫu đã lưu -->
+            <div v-if="savedTemplatesList.length > 0" style="border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; overflow: hidden; max-height: 220px; overflow-y: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.76rem;">
+                <thead style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 1;">
+                  <tr>
+                    <th style="padding: 6px 10px; text-align: center; font-weight: 700; color: #475569; width: 45px;">Chọn</th>
+                    <th style="padding: 6px 10px; text-align: left; font-weight: 700; color: #475569;">Tên Mẫu Word</th>
+                    <th style="padding: 6px 10px; text-align: center; font-weight: 700; color: #475569; width: 130px;">Mặc định</th>
+                    <th style="padding: 6px 10px; text-align: center; font-weight: 700; color: #475569; width: 100px;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="tpl in savedTemplatesList"
+                    :key="tpl.id"
+                    :style="{ background: selectedSavedTemplateId === tpl.id ? '#eff6ff' : '#ffffff', cursor: 'pointer' }"
+                    @click="selectSavedTemplate(tpl)"
+                    style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s ease;"
+                  >
+                    <td style="padding: 6px 10px; text-align: center;" @click.stop>
+                      <input
+                        type="radio"
+                        :value="tpl.id"
+                        v-model="selectedSavedTemplateId"
+                        @change="selectSavedTemplate(tpl)"
+                        style="accent-color: #2563eb; cursor: pointer;"
+                      />
+                    </td>
+                    <td style="padding: 6px 10px;">
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="pi pi-file-word" style="color: #2563eb; font-size: 0.95rem;"></i>
+                        <div>
+                          <strong style="color: #1e293b;">{{ (tpl.name || '').replace(/\.docx$/i, '') }}</strong>
+                          <div style="font-size: 0.68rem; color: #64748b;">{{ tpl.uploadedAt || (tpl.size ? (tpl.size / 1024).toFixed(1) + ' KB' : '') }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding: 6px 10px; text-align: center;" @click.stop>
+                      <span v-if="tpl.isDefault" class="badge-pill badge-blue" style="font-size: 0.68rem; font-weight: 700; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 9999px;">
+                        ⭐ Mặc định
+                      </span>
+                      <button
+                        v-else
+                        type="button"
+                        @click.stop="setAsDefaultTemplate(tpl.id)"
+                        style="font-size: 0.68rem; padding: 2px 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; color: #475569; cursor: pointer;"
+                        title="Đặt mẫu này làm mặc định khi xuất"
+                      >
+                        Đặt mặc định
+                      </button>
+                    </td>
+                    <td style="padding: 6px 10px; text-align: center;" @click.stop>
+                      <div style="display: flex; justify-content: center; align-items: center; gap: 4px;">
+                        <button
+                          type="button"
+                          @click.stop="downloadSavedTemplate(tpl)"
+                          style="background: none; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; color: #0284c7; cursor: pointer;"
+                          title="Tải tệp này về máy"
+                        >
+                          <i class="pi pi-download" style="font-size: 0.72rem;"></i>
+                        </button>
+                        <button
+                          type="button"
+                          @click.stop="deleteSavedTemplate(tpl.id)"
+                          style="background: none; border: 1px solid #fca5a5; border-radius: 4px; padding: 2px 6px; color: #dc2626; cursor: pointer;"
+                          title="Xóa mẫu này"
+                        >
+                          <i class="pi pi-trash" style="font-size: 0.72rem;"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <!-- Trạng thái tệp mẫu tùy biến hiện tại -->
+            <!-- Khung trống khi chưa có mẫu nào -->
             <div
               v-else
-              class="uploaded-info"
-              style="padding: 8px 12px; margin-top: 6px; display: flex; align-items: center; gap: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;"
+              class="drop-zone"
+              @click="tplUploadInputRef.click()"
+              style="padding: 20px; background: #ffffff; border: 2px dashed #cbd5e1; border-radius: 8px; text-align: center; cursor: pointer;"
             >
-              <i class="pi pi-file-word" style="font-size: 1.5rem; color: #2563eb;"></i>
-              <div style="flex: 1; min-width: 0;">
-                <div class="uploaded-filename" style="font-size: 0.82rem; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ (customTemplateFileName || 'Mau_Word_tuy_bien').replace(/\.docx$/i, '') }}</div>
-                <div class="uploaded-filesize" style="color: #16a34a; font-weight: 600; font-size: 0.7rem;">Đang sử dụng mẫu này để xuất</div>
-              </div>
-              <Button
-                label="Đổi file khác"
-                icon="pi pi-refresh"
-                severity="secondary"
-                size="small"
-                outlined
-                @click="triggerFileInput"
-                style="font-size: 0.72rem; padding: 4px 8px;"
-              />
+              <i class="pi pi-cloud-upload" style="font-size: 2rem; color: #3b82f6; margin-bottom: 6px;"></i>
+              <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">Chưa có Mẫu Word (.docx) nào được tải lên</div>
+              <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Bấm vào đây để tải lên tệp mẫu Word chứa các mã tag {tag_id} của bạn</div>
             </div>
           </div>
 
@@ -883,6 +951,75 @@ const handleFileUpload = (e) => {
     await saveAppSettings('system_docx_templates', updated);
   };
   reader.readAsArrayBuffer(file);
+};
+
+const tplUploadInputRef = ref(null);
+
+const handleUploadNewDocxTemplate = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const b64 = arrayBufferToBase64(e.target.result);
+      const newTpl = {
+        id: 'tpl_' + Date.now(),
+        name: file.name,
+        size: file.size,
+        base64: b64,
+        isDefault: (savedTemplatesList.value || []).length === 0,
+        uploadedAt: new Date().toLocaleString('vi-VN'),
+      };
+      const updated = [...(savedTemplatesList.value || []), newTpl];
+      savedTemplatesList.value = updated;
+      await saveAppSettings('system_docx_templates', updated);
+      selectSavedTemplate(newTpl);
+    } catch (err) {
+      alert('Lỗi lưu mẫu: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+};
+
+const setAsDefaultTemplate = async (templateId) => {
+  const updated = (savedTemplatesList.value || []).map((t) => ({
+    ...t,
+    isDefault: t.id === templateId,
+  }));
+  savedTemplatesList.value = updated;
+  await saveAppSettings('system_docx_templates', updated);
+};
+
+const deleteSavedTemplate = async (templateId) => {
+  const tpl = (savedTemplatesList.value || []).find((t) => t.id === templateId);
+  const name = tpl?.name || 'mẫu này';
+  if (!confirm(`Bạn có chắc chắn muốn xóa tệp mẫu "${name}" khỏi hệ thống không?`)) return;
+  const updated = (savedTemplatesList.value || []).filter((t) => t.id !== templateId);
+  savedTemplatesList.value = updated;
+  await saveAppSettings('system_docx_templates', updated);
+  if (selectedSavedTemplateId.value === templateId) {
+    if (updated.length > 0) {
+      selectSavedTemplate(updated[0]);
+    } else {
+      selectedSavedTemplateId.value = '';
+      customTemplateBuffer.value = null;
+      customTemplateFileName.value = '';
+    }
+  }
+};
+
+const downloadSavedTemplate = (tpl) => {
+  if (!tpl.base64) return;
+  const byteCharacters = atob(tpl.base64);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  saveAs(blob, tpl.name || 'Mau_Word.docx');
 };
 
 const downloadSampleTemplate = async () => {

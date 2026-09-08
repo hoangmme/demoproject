@@ -1132,3 +1132,128 @@ td.col-right {
   border-radius: 6px;
 }
 
+/* Lark Base Table View Tabs Header */
+.lark-base-view-tabs-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+.lark-base-view-tabs-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  overflow-x: auto;
+}
+
+.lark-base-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.lark-base-tab-item:hover {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+
+.lark-base-tab-item.tab-active {
+  background: #ffffff;
+  color: #0284c7;
+  border-color: #bae6fd;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.lark-base-tab-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px dashed #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lark-base-tab-add:hover {
+  border-color: #0284c7;
+  color: #0284c7;
+  background: #f0f9ff;
+}
+
+.lark-tab-code-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.lark-tab-count-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.lark-tab-count-pill.pill-blue { background: #dbeafe; color: #1d4ed8; }
+.lark-tab-count-pill.pill-green { background: #dcfce7; color: #15803d; }
+.lark-tab-count-pill.pill-purple { background: #fae8ff; color: #86198f; }
+.lark-tab-count-pill.pill-amber { background: #fef3c7; color: #b45309; }
+.lark-tab-count-pill.pill-red { background: #fee2e2; color: #b91c1c; }
+
+.lark-quick-filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.lark-filter-pill-btn {
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lark-filter-pill-btn:hover {
+  border-color: #0284c7;
+  color: #0284c7;
+}
+
+.lark-filter-pill-btn.pill-active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+

@@ -278,6 +278,11 @@
 
         <!-- Actions -->
         <div class="menu-actions">
+          <button type="button" class="menu-action-btn" @click="handleCopyColumnTag">
+            <i :class="copiedTag ? 'pi pi-check' : 'pi pi-copy'" :style="{ color: copiedTag ? '#16a34a' : '#0284c7' }"></i>
+            <span>{{ copiedTag ? '✓ Đã sao chép mã {' + column?.id + '}' : 'Sao chép mã thẻ Word: {' + column?.id + '}' }}</span>
+          </button>
+
           <button type="button" class="menu-action-btn" @click="handleFilterByCol">
             <i class="pi pi-filter" style="color: #0284c7;"></i>
             <span>Lọc theo cột này</span>
@@ -585,6 +590,22 @@ const handleDeleteColumn = () => {
   if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn cột "${props.column?.label || props.column?.id}" khỏi bảng này không?`)) return;
   emit("delete-column", props.column.id);
   closeMenu();
+};
+
+const copiedTag = ref(false);
+const handleCopyColumnTag = () => {
+  if (!props.column || !props.column.id) return;
+  const tag = `{${props.column.id}}`;
+  try {
+    navigator.clipboard.writeText(tag);
+    copiedTag.value = true;
+    setTimeout(() => {
+      copiedTag.value = false;
+      closeMenu();
+    }, 1200);
+  } catch (e) {
+    console.error('Failed to copy column tag:', e);
+  }
 };
 
 const handleHideColumn = () => {

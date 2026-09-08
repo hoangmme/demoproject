@@ -25,9 +25,7 @@ const routes = [
   },
   {
     path: '/advanced-search',
-    name: 'AdvancedSearch',
-    component: AdvancedSearchView,
-    meta: { title: 'Tìm kiếm nâng cao', requiresAuth: true },
+    redirect: '/dashboard',
   },
   {
     path: '/login',

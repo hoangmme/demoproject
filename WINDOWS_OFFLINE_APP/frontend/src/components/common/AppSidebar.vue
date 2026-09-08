@@ -241,34 +241,22 @@
         </div>
       </div>
 
-      <router-link to="/advanced-search" class="app-nav-item" title="Tra cứu & Tìm kiếm nâng cao">
-        <i class="pi pi-search-plus"></i>
-        <span>Tìm kiếm nâng cao</span>
-      </router-link>
+      <!-- KHỐI NHẬP LIỆU (TINH GỌN & ĐỒNG BỘ ĐA BẢNG) -->
+      <div class="app-nav-heading" style="display: flex; align-items: center; justify-content: space-between; padding-right: 12px;">
+        <span>Nhập liệu</span>
+        <button
+          type="button"
+          class="btn-sidebar-add-record"
+          @click="isDynamicDataEntryOpen = true"
+          title="Nhập liệu bản ghi mới (Chọn bảng & liên kết)"
+        >
+          <i class="pi pi-plus" style="font-size: 0.65rem;"></i>
+        </button>
+      </div>
 
-      <!-- KHỐI NHẬP LIỆU (DANH SÁCH MENU TRỰC TIẾP TRÊN SIDEBAR) -->
-      <div class="app-nav-heading">Nhập liệu</div>
-
-      <a class="app-nav-item" href="javascript:void(0)" @click="handleInputClick('new_personnel')" :title="'Thêm bản ghi vào ' + (systemBranding.menuLabelPersonnel || 'Cán bộ')">
-        <i class="pi pi-user-plus" style="color: #0284c7;"></i>
-        <span>+ Thêm {{ (systemBranding.menuLabelPersonnel || 'Cán bộ') }}</span>
-      </a>
-
-      <!-- Thêm Thân nhân nếu có quản lý -->
-      <a v-if="personnelStore.relativesList.length > 0 || systemBranding.showSecondaryInputs" class="app-nav-item" href="javascript:void(0)" @click="openQuickRelativeDialog" :title="'Thêm ' + (systemBranding.menuLabelRelatives || 'Thân nhân')">
-        <i class="pi pi-users" style="color: #a855f7;"></i>
-        <span>+ Thêm {{ (systemBranding.menuLabelRelatives || 'Thân nhân') }}</span>
-      </a>
-
-      <!-- Nút Thêm Bảng mới trực tiếp từ Nhập liệu -->
-      <a class="app-nav-item" href="javascript:void(0)" @click="openAddTableDialog" title="Thêm Bảng / Chuyên đề mới">
-        <i class="pi pi-plus-circle" style="color: #34d399;"></i>
-        <span>+ Thêm Bảng mới</span>
-      </a>
-
-      <a v-if="systemBranding.showSecondaryInputs" class="app-nav-item" href="javascript:void(0)" @click="openQuickTripDialog" :title="'Thêm ' + (systemBranding.menuLabelTrips || 'chuyến đi')">
-        <i class="pi pi-send" style="color: #4ade80;"></i>
-        <span>Thêm {{ (systemBranding.menuLabelTrips || 'chuyến đi') }}</span>
+      <a class="app-nav-item" href="javascript:void(0)" @click="isDynamicDataEntryOpen = true" title="Nhập liệu bản ghi mới cho bất kỳ bảng nào trong hệ thống">
+        <i class="pi pi-plus-circle" style="color: #0284c7;"></i>
+        <span>+ Nhập liệu mới</span>
       </a>
 
       <div class="app-nav-heading" v-if="appendixDashboards.length > 0">Báo cáo phụ lục</div>
@@ -632,6 +620,9 @@
         </div>
       </div>
     </Dialog>
+
+    <!-- Dialog Nhập Liệu Bản Ghi Mới Đa Năng -->
+    <TableDataEntryDialog v-model="isDynamicDataEntryOpen" />
   </aside>
 </template>
 
@@ -641,6 +632,7 @@ import { useRoute, useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
+import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import { useAuthStore } from '@/stores/auth';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
@@ -650,6 +642,9 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const personnelStore = usePersonnelStore();
+
+// Dialog Nhập liệu mới đa hình
+const isDynamicDataEntryOpen = ref(false);
 
 // Dialog lựa chọn Tạo mới (Bảng vs Thống kê)
 const isAddChooserDialogOpen = ref(false);
@@ -1470,5 +1465,25 @@ onUnmounted(() => {
 .btn-heading-add:hover {
   opacity: 1;
   background: rgba(255, 255, 255, 0.12);
+}
+
+.btn-sidebar-add-record {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #94a3b8;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+.btn-sidebar-add-record:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
 }
 </style>

@@ -117,12 +117,12 @@
               type="checkbox"
               :value="col.id"
               :checked="modelValue.includes(col.id)"
-              :disabled="idx === 0 || col.isPrimaryField"
+              :disabled="col.id === canonicalPrimaryId || col.isPrimaryField"
               @change="toggleCol(col.id)"
               style="accent-color: #2e7d32; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;"
             />
             <span class="item-text" :title="col.label || col.id">
-              <span v-if="idx === 0 || col.isPrimaryField" style="margin-right: 4px;" title="Cột chính (Cố định vị trí đầu tiên)">🔒</span>
+              <span v-if="col.id === canonicalPrimaryId || col.isPrimaryField" style="margin-right: 4px;" title="Cột chính (Cố định vị trí đầu tiên)">🔒</span>
               <span v-else-if="showColIndex && getColIndex(col)" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.75rem;">
                 Cột {{ getColIndex(col) }}:
               </span>
@@ -130,8 +130,19 @@
             </span>
           </label>
 
-          <!-- Up/Down Reorder Actions -->
+          <!-- Up/Down Reorder & Copy Actions -->
           <div class="item-reorder-actions">
+            <!-- Nút Sao chép mã thẻ Word/PDF ({tag_id}) -->
+            <button
+              type="button"
+              class="btn-col-action-trigger"
+              @click.stop="copyColumnTag(col)"
+              :title="copiedColId === col.id ? 'Đã chép vào Clipboard!' : `Sao chép mã thẻ Word/PDF: {${col.id}}`"
+              :style="{ color: copiedColId === col.id ? '#16a34a' : '#64748b', borderColor: copiedColId === col.id ? '#86efac' : '#cbd5e1' }"
+            >
+              <i :class="copiedColId === col.id ? 'pi pi-check' : 'pi pi-copy'" style="font-size: 0.72rem;"></i>
+            </button>
+
             <!-- Nút Tùy chỉnh cột này (Mở menu Đổi tên, Kiểu dữ liệu, Độ rộng, Xóa...) -->
             <button
               v-if="(col.id === '_parentPersonnelName' || !col.isVirtual) && col.id !== '_primaryKey' && col.id !== 'stt'"
@@ -145,18 +156,18 @@
             <button
               type="button"
               class="btn-reorder"
-              :disabled="idx <= 1 || col.isPrimaryField"
+              :disabled="idx <= 1 || col.id === canonicalPrimaryId || col.isPrimaryField"
               @click.stop="moveUp(idx)"
-              :title="idx <= 1 ? 'Cột đầu tiên (Cột chính) được khóa cố định vị trí' : 'Dời cột lên trước (sang trái trên bảng)'"
+              :title="idx <= 1 || col.id === canonicalPrimaryId ? 'Cột đầu tiên (Cột chính) được khóa cố định vị trí' : 'Dời cột lên trước (sang trái trên bảng)'"
             >
               <i class="pi pi-chevron-up"></i>
             </button>
             <button
               type="button"
               class="btn-reorder"
-              :disabled="idx === 0 || idx === displayOptions.length - 1 || col.isPrimaryField"
+              :disabled="idx === 0 || idx === displayOptions.length - 1 || col.id === canonicalPrimaryId || col.isPrimaryField"
               @click.stop="moveDown(idx)"
-              :title="idx === 0 ? 'Cột đầu tiên (Cột chính) được khóa cố định vị trí' : 'Dời cột xuống sau (sang phải trên bảng)'"
+              :title="idx === 0 || col.id === canonicalPrimaryId ? 'Cột đầu tiên (Cột chính) được khóa cố định vị trí' : 'Dời cột xuống sau (sang phải trên bảng)'"
             >
               <i class="pi pi-chevron-down"></i>
             </button>
@@ -235,12 +246,35 @@ const getColIndex = (col) => {
   return null;
 };
 
+const canonicalPrimaryId = computed(() => {
+  const primaryOption = (props.options || []).find((o) => o.isPrimaryField)
+    || (props.options || []).find((o) => o.id === '_parentPersonnelName' || o.id === 'name' || o.id === 'relativeName')
+    || (props.options || []).find((o) => !o.isVirtual && o.id !== 'stt' && o.id !== 'code' && o.id !== '_primaryKey')
+    || props.options?.[0];
+  return primaryOption?.id || null;
+});
+
+const copiedColId = ref('');
+const copyColumnTag = (col) => {
+  if (!col || !col.id) return;
+  const tag = `{${col.id}}`;
+  try {
+    navigator.clipboard.writeText(tag);
+    copiedColId.value = col.id;
+    setTimeout(() => {
+      if (copiedColId.value === col.id) copiedColId.value = '';
+    }, 2000);
+  } catch (e) {
+    console.error('Failed to copy column tag:', e);
+  }
+};
+
 const displayOptions = computed(() => {
   let opts = [...props.options];
   if (customOrder.value.length === 0) {
     const activeSet = new Set(props.modelValue);
     const orderedActive = props.modelValue
-      .map((id) => opts.find((o) => o.id === id))
+      .map((id) => opts.find((o) => id === o.id))
       .filter(Boolean);
     const remaining = opts.filter((o) => !activeSet.has(o.id));
     opts = [...orderedActive, ...remaining];
@@ -255,8 +289,9 @@ const displayOptions = computed(() => {
   }
 
   // Khóa cứng: Cột đầu tiên (Primary Field) BẮT BUỘC luôn ở vị trí index 0
-  if (opts.length > 1) {
-    const primaryIdx = opts.findIndex((o) => o.isPrimaryField || o.id === props.options[0]?.id);
+  const pId = canonicalPrimaryId.value;
+  if (opts.length > 1 && pId) {
+    const primaryIdx = opts.findIndex((o) => o.id === pId);
     if (primaryIdx > 0) {
       const [primaryCol] = opts.splice(primaryIdx, 1);
       opts.unshift(primaryCol);

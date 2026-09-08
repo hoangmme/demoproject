@@ -1,5 +1,70 @@
 <template>
   <div class="app-content">
+    <!-- Lark Base View Tabs Header (Chuyển đổi Cán bộ / Thân nhân & Bộ lọc nhanh) -->
+    <div class="lark-base-view-tabs-container">
+      <div class="lark-base-view-tabs-strip">
+        <button
+          type="button"
+          class="lark-base-tab-item"
+          :class="{ 'tab-active': mainTab === 'canhan' }"
+          @click="mainTab = 'canhan'; router.replace({ query: { ...route.query, tab: 'canhan' } })"
+        >
+          <i class="pi pi-table" style="color: #0284c7; font-size: 0.82rem;"></i>
+          <span style="font-weight: 700;">{{ mainTableTitle }}</span>
+          <span class="lark-tab-code-badge" style="background: #dbeafe; color: #1d4ed8;">CB-01</span>
+          <span class="lark-tab-count-pill">{{ filteredPersonnel.length }}</span>
+        </button>
+
+        <button
+          type="button"
+          class="lark-base-tab-item"
+          :class="{ 'tab-active': mainTab === 'thannhan' }"
+          @click="mainTab = 'thannhan'; router.replace({ query: { ...route.query, tab: 'thannhan' } })"
+        >
+          <i class="pi pi-users" style="color: #9333ea; font-size: 0.82rem;"></i>
+          <span style="font-weight: 700;">{{ relativeTableTitle }}</span>
+          <span class="lark-tab-code-badge" style="background: #fae8ff; color: #86198f;">TN-02</span>
+          <span class="lark-tab-count-pill">{{ filteredRelatives.length }}</span>
+        </button>
+      </div>
+
+      <!-- Quick Filter Pills for Cán bộ -->
+      <div v-if="mainTab === 'canhan'" class="lark-quick-filter-pills">
+        <button
+          type="button"
+          class="lark-filter-pill-btn"
+          :class="{ 'pill-active': smartFilter === 'all' }"
+          @click="smartFilter = 'all'"
+        >
+          Tất cả ({{ personnelStore.personnelList.length }})
+        </button>
+        <button
+          type="button"
+          class="lark-filter-pill-btn"
+          :class="{ 'pill-active': smartFilter === 'has_trips' }"
+          @click="smartFilter = 'has_trips'"
+        >
+          ✈️ Có chuyến đi
+        </button>
+        <button
+          type="button"
+          class="lark-filter-pill-btn"
+          :class="{ 'pill-active': smartFilter === 'has_relatives' }"
+          @click="smartFilter = 'has_relatives'"
+        >
+          👥 Có thân nhân
+        </button>
+        <button
+          type="button"
+          class="lark-filter-pill-btn"
+          :class="{ 'pill-active': smartFilter === 'has_issues' }"
+          @click="smartFilter = 'has_issues'"
+        >
+          ⚠️ Kỷ luật / Vấn đề
+        </button>
+      </div>
+    </div>
+
     <!-- TAB 1: DANH SÁCH CÁN BỘ (CÁ NHÂN) -->
     <div v-show="mainTab === 'canhan'">
       <!-- Breadcrumb & Top Bar -->
@@ -256,9 +321,11 @@
                 <span v-if="showColIndex && col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
                   Cột {{ col.colIndex }}:
                 </span>
-                {{ col.label }}
-                <span v-if="col.isPrimaryField" title="Cột định danh chính (Primary Field - Khóa cố định)" style="font-size: 0.72rem; margin-left: 2px;">🔒</span>
-                <span v-else-if="isPersonnelPrimaryKey(col.id, false)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
+                <span class="table-col-title-inline">
+                  <span>{{ col.label }}</span>
+                  <span v-if="col.isPrimaryField" class="table-col-lock-badge" title="Cột định danh chính (Primary Field - Khóa cố định)">🔒</span>
+                  <span v-else-if="isPersonnelPrimaryKey(col.id, false)" class="table-col-key-badge" title="Khóa định danh chính (Primary Key / Cột primal)">🔑</span>
+                </span>
               </span>
               <button
                 type="button"
@@ -866,9 +933,11 @@
                 <span v-if="showColIndex && col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
                   Cột {{ col.colIndex }}:
                 </span>
-                {{ col.label }}
-                <span v-if="col.isPrimaryField" title="Cột định danh chính (Primary Field - Khóa cố định)" style="font-size: 0.72rem; margin-left: 2px;">🔒</span>
-                <span v-else-if="isPersonnelPrimaryKey(col.id, true)" title="Khóa định danh chính (Primary Key / Cột primal)" style="font-size: 0.72rem; margin-left: 2px;">🔑</span>
+                <span class="table-col-title-inline">
+                  <span>{{ col.label }}</span>
+                  <span v-if="col.isPrimaryField" class="table-col-lock-badge" title="Cột định danh chính (Primary Field - Khóa cố định)">🔒</span>
+                  <span v-else-if="isPersonnelPrimaryKey(col.id, true)" class="table-col-key-badge" title="Khóa định danh chính (Primary Key / Cột primal)">🔑</span>
+                </span>
               </span>
               <button
                 type="button"
@@ -1819,13 +1888,19 @@ const activeColumns = computed(() => {
   };
 
   // Đảm bảo Cột chính (Primary Field) luôn đứng ở vị trí đầu tiên [0]
-  const primaryId = '_parentPersonnelName';
+  const configuredFirstCol = personnelStore.importMappingPersonnel?.[0]?.columns?.find(c => c.id && c.id !== 'stt')?.id || 'name';
+  const primaryId = (map['_parentPersonnelName'] && personnelStore.visibleColumns.includes('_parentPersonnelName'))
+    ? '_parentPersonnelName'
+    : configuredFirstCol;
+
   let orderedIds = personnelStore.visibleColumns.filter((id) => map[id]);
   if (orderedIds.includes(primaryId)) {
     orderedIds = [primaryId, ...orderedIds.filter((id) => id !== primaryId)];
+  } else if (map[primaryId]) {
+    orderedIds.unshift(primaryId);
   }
 
-  return orderedIds.map((id, idx) => {
+  return orderedIds.map((id) => {
     const cfg = map[id];
     const rawIdx = colMap[cfg.id];
     const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
@@ -1838,7 +1913,7 @@ const activeColumns = computed(() => {
       format: cfg.format || 'text',
       required: Boolean(cfg.required),
       options: cfg.options || '',
-      isPrimaryField: idx === 0,
+      isPrimaryField: cfg.id === primaryId,
     };
   });
 });
@@ -1960,14 +2035,16 @@ const activeRelativeColumns = computed(() => {
     });
   });
 
-  const primaryRelId = (personnelStore.importMappingRelative?.[0]?.columns?.find(c => c.id && c.id !== 'stt')?.id) || 'name';
+  const primaryRelId = (personnelStore.importMappingRelative?.[0]?.columns?.find(c => c.id && c.id !== 'stt')?.id) || 'relativeName';
   let filteredIds = (personnelStore.visibleRelativeColumns || [])
     .filter((id) => id !== '_parentPersonnelName' && id !== 'parentName' && id !== 'parentPersonnelName' && id !== 'stt' && id !== 'code' && id !== 'cccd_can_bo');
   if (filteredIds.includes(primaryRelId)) {
     filteredIds = [primaryRelId, ...filteredIds.filter((id) => id !== primaryRelId)];
+  } else if (map[primaryRelId]) {
+    filteredIds.unshift(primaryRelId);
   }
 
-  return filteredIds.map((id, idx) => {
+  return filteredIds.map((id) => {
     const cfg = map[id];
     const rawIdx = colMap[id];
     const idxText = rawIdx ? rawIdx.replace(/^Cột\s+/, '') : null;
@@ -1980,11 +2057,11 @@ const activeRelativeColumns = computed(() => {
         tableWidth: cfg.tableWidth || null,
         required: Boolean(cfg.required),
         options: cfg.options || '',
-        isPrimaryField: idx === 0,
+        isPrimaryField: cfg.id === primaryRelId,
       };
     }
     const found = personnelStore.allAvailableRelativeColumns.find((c) => c.id === id);
-    return found ? { ...found, colIndex: idxText, isPrimaryField: idx === 0 } : { id, label: id, width: '160px', colIndex: idxText, isPrimaryField: idx === 0 };
+    return found ? { ...found, colIndex: idxText, isPrimaryField: found.id === primaryRelId } : { id, label: id, width: '160px', colIndex: idxText, isPrimaryField: id === primaryRelId };
   });
 });
 
@@ -3711,12 +3788,28 @@ const onPersonDeleted = () => {};
 }
 
 .table-col-header-wrap {
-  display: block;
-  width: 100%;
-  white-space: normal !important;
-  word-break: break-word !important;
-  overflow-wrap: break-word !important;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 100%;
   line-height: 1.35 !important;
+}
+.table-col-title-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: normal;
+  word-break: break-word;
+}
+.table-col-lock-badge,
+.table-col-key-badge {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  line-height: 1;
 }
 :deep(.p-datatable .p-datatable-thead > tr > th .p-column-title),
 :deep(.p-datatable .p-datatable-thead > tr > th .p-column-header-content) {
