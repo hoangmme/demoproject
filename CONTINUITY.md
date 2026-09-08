@@ -2,14 +2,21 @@
 
 ## PROJECT: demoproject | Hệ thống Quản lý Cán bộ & Theo dõi Chuyến đi Xuất nhập cảnh
 
-### 1. NORTH STAR & ARCHITECTURE RULES
+### 1. NORTH STAR & ARCHITECTURE RULES (PURE FLAT TABLE / RECORD PARADIGM)
+- **Kiến trúc Bảng Phẳng Thuần Túy (Pure Flat Table / Record Architecture - Teable / Lark Base Paradigm)**:
+  - Toàn bộ các bảng trong hệ thống: **Cán bộ (`personnel`)**, **Thân nhân (`relatives`)**, **Chuyến đi (`trips`)**, và các **Bảng tùy biến tự tạo (`custom tables`)** hoạt động 100% như các Bảng Phẳng Độc Lập (Flat Records).
+  - Không còn khái niệm bao bọc đa tầng hay phân loại đa hình cứng (`targetType: 'personnel' | 'relative' | 'trip'`).
+  - **Quy tắc Vàng: "Ấn dòng nào sửa dòng đó" (What You Click Is What You Edit)**:
+    - Khi người dùng bấm [Chi tiết] hoặc [Chỉnh sửa] trên bất kỳ dòng nào (ở Bảng Tổng Hợp, Drilldown Popup Dashboard, hay Tìm kiếm Nâng cao): Mở trực tiếp Form chỉnh sửa bản ghi đó (`:personData="row"`), hiển thị chính xác danh sách cột của bảng đó (`:columns="tableColumns"`).
+    - **TUYỆT ĐỐI CẤM** cướp quyền chuyển hướng sang Cán bộ chủ quản (`rawPerson`) hoặc tự ý nhảy loại form.
+    - Lưu và xóa dữ liệu qua động cơ phổ quát: `personnelStore.saveRecord(row)` và `personnelStore.deleteRecord(row)`.
 - **Core Data Storage**: Directus table `personnels`. All dynamic columns, custom fields, relative profiles (`relatives: [...]`), and trips (`trips: [...]`) are stored directly within `personnels.custom_data`.
 - **No Legacy Appendix Tables**: Legacy tables (`appendix1`, `appendix2`, `appendix3`) are completely deprecated and must NOT be queried over network.
-- **Child Dashboard (Dashboard Chuyên đề)**:
-  - Source `personnel`: Displays list of Cán bộ (`personnelStore.personnelList`).
-  - Source `relatives`: Displays list of Thân nhân (`personnelStore.relativesList`).
-  - Source `trips`: Bảng Chuyến đi độc lập dạng Flat Table. Không còn phụ thuộc vào việc lồng cứng bên trong mảng `p.trips` hay `r.trips`. Mọi chuyến đi tồn tại độc lập và được ánh xạ động (Dynamic Relational Join) tới hồ sơ Cán bộ hoặc Thân nhân thông qua điều kiện khóa (`tripKeyField === personnelKeyField` hoặc `tripKeyField === relativeKeyField`). Chuyến đi độc lập chưa khớp hồ sơ (`standaloneTrips`) vẫn được bảo toàn nguyên vẹn trên bảng flat.
-  - Action button: Always provides `[Chi tiết]` and `[Xóa]` (Admin) buttons linking directly to `PersonnelDialog` for the corresponding Cán bộ profile.
+- **Child Dashboard (Dashboard Chuyên đề) & Flat Views**:
+  - Source `personnel`: Danh sách Cán bộ (`personnelStore.personnelList`).
+  - Source `relatives`: Danh sách Thân nhân (`personnelStore.relativesList`).
+  - Source `trips`: Bảng Chuyến đi độc lập dạng Flat Table. Mọi chuyến đi tồn tại độc lập và được ánh xạ động (Dynamic Relational Join) tới hồ sơ Cán bộ hoặc Thân nhân thông qua điều kiện khóa (`tripKeyField === personnelKeyField` hoặc `tripKeyField === relativeKeyField`).
+  - Action button: Bấm [Chi tiết] hoặc [Xóa] trên dòng nào thì thao tác trực tiếp trên dòng đó.
 
 ### 2. PERFORMANCE CACHING ENGINE
 - **In-Memory & LocalStorage Multi-Tier Cache** (`src/api/settings.js`):
@@ -26,15 +33,21 @@
   - If `depDate <= now` and no `arrDate`: `Đang ở nước ngoài` (overdue if `now > approvedArrivalDate`).
 
 ### 4. NGUYÊN TẮC BẤT DI BẤT DỊCH VỀ DỮ LIỆU (STRICT DATA INTEGRITY & ZERO-GUESSING)
+- ⛔ **TRIỆT TIÊU 100% HARDCODE, DỮ LIỆU CŨ & LOGIC FALLBACK NGẦM (ZERO HARDCODE & STRICT USER-APPROVAL)**:
+  - Toàn bộ hệ thống đã chuyển đổi sang dạng Flat Table thuần túy. Mọi cấu trúc dữ liệu cũ (lồng ghép cứng, enum đa hình, mảng alias cũ) đều bị cấm.
+  - **Bất kỳ cấu trúc dữ liệu cũ, hardcode cũ hoặc logic chuyển đổi nào còn sót lại: BẮT BUỘC phải xóa bỏ hoặc đề xuất người dùng duyệt trước khi triển khai, cấm tự ý duy trì hay tự tiện viết code phỏng đoán.**
+  - **TUYỆT ĐỐI KHÔNG FALLBACK NGẦM SANG BẢN GHI KHÁC**:
+    - Khi một ô/cột không có giá trị, hiển thị `'-'` hoặc rỗng `""`. Tuyệt đối cấm lấy giá trị của bản ghi khác (như `rawPerson`, `rawRelative`, `rawTrip`) đắp vào!
+    - Trong công thức (`formulaEngine.js`), thống kê/bộ lọc (`dashboardMetrics.js`), và tra cứu (`evaluateLookup`): Tuyệt đối không nạp ngầm thuộc tính của Cán bộ vào dòng Chuyến đi hay Thân nhân. Dữ liệu giữa Bảng và Công thức/Thống kê phải khớp 1-1.
 - ⛔ **100% DỮ LIỆU ĐỘNG THEO CẤU HÌNH CỘT (`column.id`)**:
-  - Toàn bộ 3 bảng **Cán bộ (`personnel`)**, **Chuyến đi (`trips`)**, và **Thân nhân (`relatives`)** hoạt động 100% dựa trên danh mục cấu hình cột (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`).
+  - Toàn bộ bảng hoạt động 100% dựa trên danh mục cấu hình cột (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`, hoặc cấu hình bảng tự tạo).
   - **CẤM DÙNG DỮ LIỆU TĨNH / FALLBACK TĨNH**: Tuyệt đối KHÔNG sử dụng các mảng alias tĩnh gom nhóm trường (như `['quoc_gia_xuat_canh', 'countryName', 'country', ...]`, `['noi_o_hien_nay', 'currentAddress', ...]`). Cột nào cấu hình `column.id` là gì thì hệ thống truy xuất chính xác 1-1 theo `column.id` đó trên bản ghi hoặc trong `custom_data`.
   - Không dùng các mã tiền tố nhân tạo cứng như `[CB-01]`, `[TN-02]`, `[CD-03]`. Tên bảng hiển thị thuần khiết theo tên bảng người dùng cấu hình (`table.title`).
   - Nếu cột không có giá trị dưới `column.id` được chỉ định, trả về rỗng `""` hoặc `"-"`. Không được tự tiện lấy trường khác bù vào.
 - ⛔ **KHÔNG TỰ BỊA DỮ LIỆU / KHÔNG TỰ SUY ĐOÁN**: Tuyệt đối không tự phỏng đoán hoặc giả định dữ liệu hay ý định của người dùng.
 - ⛔ **TỰ ĐỘNG HÓA LIÊN KẾT & THAM CHIẾU DỮ LIỆU ĐỘNG (ZERO-HARDCODING KEYS)**:
   - Bỏ nút thủ công "Khóa & Liên kết" trên thanh công cụ và giao diện cấu hình khóa thủ công ở Cài đặt chung để đơn giản hóa tối đa trải nghiệm người dùng.
-  - Tự động phát hiện trường khóa định danh (`getPersonnelKeyField`, `getRelativeKeyField`, `getTripKeyField`) từ danh mục cột cấu hình (`importMappingPersonnel`, `importMappingRelative`, `importMappingTrips`) qua thuộc tính `isKey`/`isIdentifier`/`format: 'id'`, hoặc vị trí cột đầu tiên nếu chưa gán nhãn, **tuyệt đối không hardcode ngầm yêu cầu tên cột phải là cccdparent/cccdthannhan/cccdchuyendi**.
+  - Tự động phát hiện trường khóa định danh (`getPersonnelKeyField`, `getRelativeKeyField`, `getTripKeyField`) từ danh mục cột cấu hình qua thuộc tính `isKey`/`isIdentifier`/`format: 'id'`, hoặc vị trí cột đầu tiên nếu chưa gán nhãn, **tuyệt đối không hardcode ngầm yêu cầu tên cột phải là cccdparent/cccdthannhan/cccdchuyendi**.
   - Gỡ bỏ hoàn toàn cột tĩnh `_parentPersonnelName` ("Đối tượng liên quan") và logic gom nhóm `↳ (cùng hồ sơ liên quan)` trong Bảng Thân nhân. Bảng Thân nhân hoạt động 100% độc lập, thuần khiết theo danh mục cột cấu hình động (`importMappingRelative`).
 - ⛔ **TÌM KIẾM & BỘ LỌC ĐỘNG 100% THEO CỘT HIỂN THỊ (DYNAMIC FILTER & SEARCH ENGINE)**:
   - Ô tìm kiếm nhanh (`searchQuery`) tại Bảng Thống kê Chuyên đề (`ChildDashboardView.vue`) và Hồ sơ Cán bộ / Thân nhân (`PersonnelView.vue`) duyệt tự động qua toàn bộ danh sách cột đang hiển thị (`visibleColumns` / `activeColumns` / `activeRelativeColumns`) qua hàm trích xuất `getCellValue(item, col)`. Người dùng cấu hình bất kỳ cột nào (tiêu chuẩn, công thức, tùy biến) thì ô tìm kiếm đều tự động tra cứu chính xác trên cột đó mà không cần hardcode tên trường.
@@ -44,9 +57,8 @@
   - Khi tổng hợp dữ liệu (như Thân nhân kèm Chuyến đi trong `buildTopicSourceList`), toàn bộ các trường của Chuyến đi phải được bóc tách và lan truyền động (`...tripDynamicFields`) để mọi cột người dùng cấu hình trong Chuyến đi đều sẵn sàng truy xuất trực tiếp trên bản ghi.
 - ⛔ **KHI THIẾU DỮ LIỆU HOẶC KHÔNG RÕ LOGIC**: BẮT BUỘC DỪNG LẠI VÀ HỎI TRỰC TIẾP NGƯỜI DÙNG, tuyệt đối không tự ý viết code đoán mò.
 
-### 5. XUẤT HỒ SƠ PDF TOÀN DIỆN (DOCX/PDF EXPORT ARCHITECTURE)
-- Chuyến đi (`trips`) và Thân nhân (`relatives`) không tồn tại độc lập mà luôn liên kết chặt chẽ với Cán bộ chủ quản (`personnel`).
-- Khi xuất PDF từ bất kỳ giao diện nào (Hồ sơ Cán bộ, Tab Thân nhân, Bảng Chuyên đề hay Tìm kiếm nâng cao), hệ thống luôn tự động phân giải (`resolvePersonFromItem`) về đúng hồ sơ Cán bộ chủ quản để xuất đầy đủ và chính xác 100%.
+### 5. XUẤT HỒ SƠ PDF/DOCX
+- Xuất tài liệu phản ánh trung thực bản ghi được chọn theo cấu hình mẫu xuất, hỗ trợ liên kết thông tin khi có quan hệ khóa định danh rõ ràng.
 
 ### 6. BỘ LỌC ĐA TỪ KHÓA & ĐỐI TƯỢNG (MULTI-KEYWORD & TARGET OBJECT ENGINE)
 - **Toán tử `contains` & `equals`**: Hỗ trợ danh sách từ khóa phân tách bằng dấu phẩy `,` hoặc chấm phẩy `;` (ví dụ: `Sở, Ban, Ngành` hoặc `Xã, Phường, Đặc khu`).

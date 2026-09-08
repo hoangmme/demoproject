@@ -1542,16 +1542,29 @@ export const evaluateRollup = (item, col, personnelStore) => {
 
   let list = [];
   if (target === 'trips') {
-    list = item.trips || item.rawPerson?.trips || [];
+    if (Array.isArray(item.trips)) {
+      list = item.trips;
+    } else if (personnelStore) {
+      const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+      const keyVal = item[pKeyField] || item.cccd || item.cccdparent || item.cccdthannhan;
+      if (keyVal) {
+        const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
+        list = (personnelStore.tripsList || []).filter(
+          (t) => (t[tKeyField] || t.cccdchuyendi || t.cccd) === keyVal
+        );
+      }
+    }
   } else if (target === 'relatives') {
     if (Array.isArray(item.relatives)) {
       list = item.relatives;
     } else if (personnelStore) {
       const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
       const keyVal = item[pKeyField] || item.cccd || item.cccdparent;
-      list = (personnelStore.relativesList || []).filter(
-        (r) => (r.cccdparent || r.parentCccd) === keyVal
-      );
+      if (keyVal) {
+        list = (personnelStore.relativesList || []).filter(
+          (r) => (r.cccdparent || r.parentCccd) === keyVal
+        );
+      }
     }
   }
 
