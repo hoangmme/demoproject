@@ -68,55 +68,148 @@
         </div>
       </div>
 
-      <!-- CẤU HÌNH THAM CHIẾU TỰ ĐỘNG (LOOKUP ĐA BẢNG) -->
+      <!-- CẤU HÌNH THAM CHIẾU TỰ ĐỘNG (LOOKUP ĐA BẢNG - LARK BASE STYLE) -->
       <div v-if="form.format === 'lookup'" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
-        <div style="font-size: 0.76rem; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 6px;">
-          <i class="pi pi-link"></i>
-          <span>Cấu hình Tham chiếu Tự động (Lookup)</span>
-        </div>
-        <div style="font-size: 0.72rem; color: #3b82f6; line-height: 1.35;">
-          Tự động tra cứu và hiển thị giá trị của một cột từ bảng khác (như Họ tên, Đơn vị, Ngày tháng...) sang bảng này dựa theo Khóa định danh / Khóa liên kết mà không cần nhập trùng lặp.
-        </div>
-
-        <!-- 1. Bảng đích cần tham chiếu -->
-        <div>
-          <label style="font-size: 0.72rem; font-weight: 700; color: #1e3a8a; display: block; margin-bottom: 3px;">
-            1. Bảng cần tham chiếu đến: <span style="color: #ef4444;">*</span>
-          </label>
-          <select v-model="form.lookupTarget" class="dialog-select" @change="form.lookupField = ''">
-            <option value="personnel">Bảng Cán bộ / Hồ sơ chính</option>
-            <option value="relatives">Bảng Thân nhân</option>
-            <option value="trips">Bảng Chuyến đi</option>
-          </select>
+        <div style="font-size: 0.76rem; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-link"></i>
+            <span>Cấu hình Tham chiếu Tự động (Lookup)</span>
+          </div>
+          <span style="font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Lark Base</span>
         </div>
 
-        <!-- 2. Cột khóa liên kết trên Bảng hiện tại (Link Key) -->
+        <!-- 1. Look up data in this field: Chọn bảng đích & cột lấy dữ liệu -->
         <div>
           <label style="font-size: 0.72rem; font-weight: 700; color: #1e3a8a; display: block; margin-bottom: 3px;">
-            2. Cột khóa liên kết trên bảng này (Link Key):
+            1. Lấy dữ liệu từ bảng (Look up data in this field): <span style="color: #ef4444;">*</span>
           </label>
-          <select v-model="form.lookupLinkCol" class="dialog-select">
-            <option value="">-- Mặc định (Tự động theo Khóa liên kết chuẩn của bảng) --</option>
-            <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
-              {{ c.label }} ({{ c.id }})
-            </option>
-          </select>
-          <div style="font-size: 0.68rem; color: #64748b; margin-top: 2px;">
-            Cột trên bảng hiện tại chứa mã định danh để so khớp với bảng đích. Để mặc định nếu bảng đã có thiết lập khóa liên kết chuẩn.
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <select v-model="form.lookupTarget" class="dialog-select" @change="form.lookupField = ''">
+              <option value="personnel">Bảng Cán bộ</option>
+              <option value="relatives">Bảng Thân nhân</option>
+              <option value="trips">Bảng Chuyến đi</option>
+            </select>
+            <select v-model="form.lookupField" class="dialog-select">
+              <option value="">-- Chọn cột cần hiển thị --</option>
+              <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
+                {{ c.label }} ({{ c.id }})
+              </option>
+            </select>
           </div>
         </div>
 
-        <!-- 3. Cột dữ liệu cần lấy từ bảng đích -->
-        <div>
-          <label style="font-size: 0.72rem; font-weight: 700; color: #1e3a8a; display: block; margin-bottom: 3px;">
-            3. Cột dữ liệu cần lấy từ bảng đích: <span style="color: #ef4444;">*</span>
-          </label>
-          <select v-model="form.lookupField" class="dialog-select">
-            <option value="">-- Chọn cột cần hiển thị --</option>
-            <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
-              {{ c.label }} ({{ c.id }})
-            </option>
-          </select>
+        <!-- 2. Reference data if: Điều kiện tham chiếu đa tầng -->
+        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-size: 0.72rem; font-weight: 700; color: #1e293b; margin: 0;">
+              2. Tham chiếu dữ liệu khi (Reference data if):
+            </label>
+            <!-- Logic Operator (AND / OR) -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 0.68rem; color: #64748b;">Khớp:</span>
+              <select
+                v-model="form.lookupLogicOp"
+                class="dialog-select"
+                style="width: 85px; height: 26px; font-size: 0.7rem; padding: 0 6px; font-weight: 700; color: #0369a1; background: #f0f9ff;"
+              >
+                <option value="AND">AND (Tất cả)</option>
+                <option value="OR">OR (Bất kỳ)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Danh sách điều kiện -->
+          <div v-if="form.lookupConditions && form.lookupConditions.length > 0" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+            <div
+              v-for="(cond, cIdx) in form.lookupConditions"
+              :key="cIdx"
+              style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px;"
+            >
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 0.68rem; font-weight: 700; color: #475569;">
+                  Điều kiện {{ cIdx + 1 }}:
+                </span>
+                <button
+                  type="button"
+                  @click="removeLookupCondition(cIdx)"
+                  style="border: none; background: transparent; color: #ef4444; cursor: pointer; font-size: 0.75rem; padding: 0 4px;"
+                  title="Xóa điều kiện này"
+                >
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <!-- Cột bảng đích -->
+                <select v-model="cond.targetField" class="dialog-select" style="font-size: 0.74rem;">
+                  <option value="">-- Chọn cột ở Bảng đích --</option>
+                  <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
+                    {{ c.label }} ({{ c.id }})
+                  </option>
+                </select>
+
+                <div style="display: grid; grid-template-columns: 140px 1fr; gap: 6px; align-items: center;">
+                  <!-- Toán tử so sánh -->
+                  <select v-model="cond.operator" class="dialog-select" style="font-size: 0.72rem;">
+                    <option v-for="op in lookupOperators" :key="op.value" :value="op.value">
+                      {{ op.label }}
+                    </option>
+                  </select>
+
+                  <!-- Cột bảng hiện tại -->
+                  <select
+                    v-if="cond.operator !== 'is_empty' && cond.operator !== 'is_not_empty'"
+                    v-model="cond.sourceField"
+                    class="dialog-select"
+                    style="font-size: 0.74rem;"
+                  >
+                    <option value="">-- Chọn cột ở Bảng này --</option>
+                    <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
+                      {{ c.label }} ({{ c.id }})
+                    </option>
+                  </select>
+                  <span v-else style="font-size: 0.7rem; color: #94a3b8; font-style: italic; text-align: center;">
+                    (Không cần cột so khớp)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else style="font-size: 0.7rem; color: #64748b; font-style: italic; margin-bottom: 8px;">
+            Chưa có điều kiện nào. Dữ liệu sẽ tự động dùng Khóa liên kết mặc định của bảng.
+          </div>
+
+          <button
+            type="button"
+            @click="addLookupCondition"
+            style="width: 100%; border: 1px dashed #3b82f6; background: #f0fdf4; color: #1d4ed8; padding: 6px 10px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600;"
+          >
+            <i class="pi pi-plus" style="font-size: 0.7rem;"></i>
+            <span>+ Thêm điều kiện (Add Condition)</span>
+          </button>
+        </div>
+
+        <!-- 3. Hiển thị dữ liệu & Định dạng -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div>
+            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 700; display: block; margin-bottom: 3px;">
+              Hiển thị dữ liệu (Display data as):
+            </label>
+            <select v-model="form.lookupDisplay" class="dialog-select">
+              <option value="value">Giá trị (Bản ghi đầu tiên)</option>
+              <option value="join">Gộp tất cả (, )</option>
+              <option value="count">Đếm số lượng</option>
+              <option value="array">Nhiều dòng</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 700; display: block; margin-bottom: 3px;">
+              Định dạng (Field format):
+            </label>
+            <select v-model="form.lookupFormat" class="dialog-select">
+              <option value="default">Mặc định</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -139,39 +232,20 @@
         </div>
       </div>
 
-      <!-- 3. Độ rộng cột: Bảng (px) & Form chi tiết (%) -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 4px; border-top: 1px solid #f1f5f9;">
-        <div>
-          <label style="font-size: 0.75rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            Độ rộng trên Bảng (px):
-          </label>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <input
-              v-model.number="form.tableWidth"
-              type="number"
-              min="80"
-              max="600"
-              step="10"
-              class="dialog-input"
-              style="text-align: center;"
-            />
-            <span style="font-size: 0.72rem; color: #64748b;">px</span>
-          </div>
-        </div>
-        <div>
-          <label style="font-size: 0.75rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
-            Độ rộng trong Form Chi tiết (%):
-          </label>
-          <select v-model="form.width" class="dialog-select">
-            <option v-for="opt in formWidthOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-        </div>
+      <!-- 3. Độ rộng trong Form Chi tiết (%) -->
+      <div style="padding-top: 4px; border-top: 1px solid #f1f5f9;">
+        <label style="font-size: 0.75rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
+          Độ rộng trong Form Chi tiết (%):
+        </label>
+        <select v-model="form.width" class="dialog-select">
+          <option v-for="opt in formWidthOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
       </div>
 
-      <!-- 5. Bắt buộc nhập liệu (Required) & Khóa chính (Primary Key) -->
-      <div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;">
+      <!-- 5. Bắt buộc nhập liệu (Required) -->
+      <div style="padding-top: 4px;">
         <div>
           <label style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
             Quy tắc nhập liệu khi lưu:
@@ -185,22 +259,6 @@
           >
             <i :class="form.required ? 'pi pi-check-square' : 'pi pi-stop'" style="font-size: 0.95rem;"></i>
             <span>★ Bắt buộc</span>
-          </button>
-        </div>
-
-        <div>
-          <label style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
-            Khóa định danh chính (Cột primal):
-          </label>
-          <button
-            type="button"
-            class="btn-primary-key-toggle"
-            :class="{ 'is-primary-key': form.isPrimaryKey }"
-            @click="form.isPrimaryKey = !form.isPrimaryKey"
-            title="Đặt cột mới này làm Khóa chính của bảng"
-          >
-            <i class="pi pi-key" style="font-size: 0.92rem;"></i>
-            <span>{{ form.isPrimaryKey ? '🔑 Khóa chính của bảng' : '🔑 Đặt làm Khóa chính' }}</span>
           </button>
         </div>
       </div>
@@ -225,8 +283,8 @@ import { ref, computed, watch } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
-import { saveAppSettings } from '@/api/settings';
-import { generateSlug, formWidthOptions } from '@/utils/formatters';
+
+import { generateSlug, formWidthOptions, lookupOperators } from '@/utils/formatters';
 
 const props = defineProps({
   visible: {
@@ -264,13 +322,15 @@ const form = ref({
   id: '',
   format: 'text',
   options: '',
-  tableWidth: 160,
   width: '50',
   required: false,
-  isPrimaryKey: false,
   lookupTarget: 'personnel',
   lookupLinkCol: '',
   lookupField: '',
+  lookupConditions: [],
+  lookupLogicOp: 'AND',
+  lookupDisplay: 'value',
+  lookupFormat: 'default',
   formulaType: 'presence_status',
 });
 
@@ -283,13 +343,15 @@ watch(
         id: '',
         format: 'text',
         options: '',
-        tableWidth: 160,
         width: '50',
         required: false,
-        isPrimaryKey: false,
         lookupTarget: 'personnel',
         lookupLinkCol: '',
         lookupField: '',
+        lookupConditions: [],
+        lookupLogicOp: 'AND',
+        lookupDisplay: 'value',
+        lookupFormat: 'default',
         formulaType: 'presence_status',
       };
     }
@@ -344,6 +406,25 @@ const targetLookupCols = computed(() => {
   return availablePersonnelCols.value;
 });
 
+const addLookupCondition = () => {
+  const defaultTarget = targetLookupCols.value?.[0]?.id || '';
+  const defaultSource = currentTableCols.value?.[0]?.id || '';
+  if (!Array.isArray(form.value.lookupConditions)) {
+    form.value.lookupConditions = [];
+  }
+  form.value.lookupConditions.push({
+    targetField: defaultTarget,
+    operator: 'is',
+    sourceField: defaultSource,
+  });
+};
+
+const removeLookupCondition = (index) => {
+  if (Array.isArray(form.value.lookupConditions)) {
+    form.value.lookupConditions.splice(index, 1);
+  }
+};
+
 const onLabelInput = () => {
   if (form.value.label) {
     form.value.id = generateSlug(form.value.label);
@@ -370,7 +451,6 @@ const handleSave = async () => {
       id: form.value.id.trim(),
       label: form.value.label.trim(),
       format: form.value.format || 'text',
-      tableWidth: Number(form.value.tableWidth) || 160,
       width: String(form.value.width || '50'),
       required: Boolean(form.value.required),
       options: form.value.options ? form.value.options.trim() : '',
@@ -378,25 +458,16 @@ const handleSave = async () => {
         lookupTarget: form.value.lookupTarget || 'personnel',
         lookupLinkCol: form.value.lookupLinkCol || '',
         lookupField: form.value.lookupField,
+        lookupConditions: form.value.lookupConditions || [],
+        lookupLogicOp: form.value.lookupLogicOp || 'AND',
+        lookupDisplay: form.value.lookupDisplay || 'value',
+        lookupFormat: form.value.lookupFormat || 'default',
       } : {}),
       ...(form.value.format === 'formula' ? {
         formulaType: form.value.formulaType || 'presence_status',
       } : {}),
       targetIndex: props.targetIndex,
     };
-
-    if (form.value.isPrimaryKey) {
-      const keyConfig = { ...(personnelStore.systemKeyConfig || {}) };
-      if (props.tableSource === 'relatives') {
-        keyConfig.relativeKeyField = form.value.id.trim();
-      } else if (props.tableSource === 'trips') {
-        keyConfig.tripKeyField = form.value.id.trim();
-      } else {
-        keyConfig.personnelKeyField = form.value.id.trim();
-      }
-      personnelStore.systemKeyConfig = keyConfig;
-      await saveAppSettings('system_key_config', keyConfig);
-    }
 
     emit('save', colPayload);
     dialogVisible.value = false;
@@ -470,30 +541,5 @@ const handleSave = async () => {
   color: #dc2626;
 }
 
-.btn-primary-key-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #64748b;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
 
-.btn-primary-key-toggle:hover {
-  background: #fffbeb;
-  border-color: #f59e0b;
-  color: #b45309;
-}
-
-.btn-primary-key-toggle.is-primary-key {
-  border-color: #f59e0b;
-  background: #fef3c7;
-  color: #b45309;
-}
 </style>

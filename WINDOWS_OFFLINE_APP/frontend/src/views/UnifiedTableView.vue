@@ -2213,7 +2213,8 @@ const onChildChangeColumnFormat = async ({ colId, newFormat }) => {
   }
 };
 
-const onChildChangeColumnLookup = async ({ colId, lookupTarget, lookupLinkCol, lookupField }) => {
+const onChildChangeColumnLookup = async (payload) => {
+  const { colId, lookupTarget, lookupLinkCol, lookupField, lookupConditions, lookupLogicOp, lookupDisplay, lookupJoinSeparator, lookupFormat } = payload;
   const { key, mapping } = getTargetMappingRef();
   let found = false;
   for (const g of (mapping || [])) {
@@ -2223,6 +2224,11 @@ const onChildChangeColumnLookup = async ({ colId, lookupTarget, lookupLinkCol, l
         c.lookupTarget = lookupTarget;
         c.lookupLinkCol = lookupLinkCol;
         c.lookupField = lookupField;
+        if (lookupConditions !== undefined) c.lookupConditions = lookupConditions;
+        if (lookupLogicOp !== undefined) c.lookupLogicOp = lookupLogicOp;
+        if (lookupDisplay !== undefined) c.lookupDisplay = lookupDisplay;
+        if (lookupJoinSeparator !== undefined) c.lookupJoinSeparator = lookupJoinSeparator;
+        if (lookupFormat !== undefined) c.lookupFormat = lookupFormat;
         found = true;
         break;
       }
@@ -2239,6 +2245,11 @@ const onChildChangeColumnLookup = async ({ colId, lookupTarget, lookupLinkCol, l
       c.lookupTarget = lookupTarget;
       c.lookupLinkCol = lookupLinkCol;
       c.lookupField = lookupField;
+      if (lookupConditions !== undefined) c.lookupConditions = lookupConditions;
+      if (lookupLogicOp !== undefined) c.lookupLogicOp = lookupLogicOp;
+      if (lookupDisplay !== undefined) c.lookupDisplay = lookupDisplay;
+      if (lookupJoinSeparator !== undefined) c.lookupJoinSeparator = lookupJoinSeparator;
+      if (lookupFormat !== undefined) c.lookupFormat = lookupFormat;
       await saveAppSettings('custom_dashboards_config', personnelStore.customDashboards);
     }
   }

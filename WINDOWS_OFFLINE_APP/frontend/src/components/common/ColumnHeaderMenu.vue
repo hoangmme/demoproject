@@ -60,43 +60,151 @@
           </select>
         </div>
 
-        <!-- Cấu hình Tham chiếu Lookup nếu là lookup -->
+        <!-- Cấu hình Tham chiếu Lookup nếu là lookup (Lark Base Style) -->
         <div v-if="editFormat === 'lookup'" class="menu-field" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; margin-top: 6px;">
-          <div style="font-size: 0.76rem; font-weight: 700; color: #1d4ed8; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
-            <i class="pi pi-link"></i>
-            <span>Cấu hình Tham chiếu (Lookup)</span>
-          </div>
-          <div style="font-size: 0.7rem; color: #3b82f6; line-height: 1.35; margin-bottom: 6px;">
-            Tự động tra cứu và hiển thị giá trị của một cột từ bảng khác sang bảng này dựa trên Khóa định danh / Khóa liên kết.
-          </div>
-          
-          <div style="margin-bottom: 6px;">
-            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Bảng đích cần lấy:</label>
-            <select v-model="editLookupTarget" class="menu-select" @change="editLookupField = ''; handleSaveLookup()">
-              <option value="personnel">Bảng Cán bộ / Hồ sơ chính</option>
-              <option value="relatives">Bảng Thân nhân</option>
-              <option value="trips">Bảng Chuyến đi</option>
-            </select>
+          <div style="font-size: 0.76rem; font-weight: 700; color: #1d4ed8; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <i class="pi pi-link"></i>
+              <span>Cấu hình Tham chiếu (Lookup)</span>
+            </div>
+            <span style="font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Lark Base</span>
           </div>
 
-          <div style="margin-bottom: 6px;">
-            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Cột lấy dữ liệu từ bảng đích:</label>
-            <select v-model="editLookupField" class="menu-select" @change="handleSaveLookup">
-              <option value="">-- Chọn cột cần hiển thị --</option>
-              <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
-                {{ c.label }} ({{ c.id }})
-              </option>
-            </select>
+          <!-- 1. Look up data in this field: Chọn bảng đích & cột lấy dữ liệu -->
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 700; display: block; margin-bottom: 3px;">
+              Lấy dữ liệu từ bảng (Look up data in this field):
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <select v-model="editLookupTarget" class="menu-select" @change="editLookupField = ''; handleSaveLookup()">
+                <option value="personnel">Bảng Cán bộ</option>
+                <option value="relatives">Bảng Thân nhân</option>
+                <option value="trips">Bảng Chuyến đi</option>
+              </select>
+              <select v-model="editLookupField" class="menu-select" @change="handleSaveLookup">
+                <option value="">-- Chọn cột lấy --</option>
+                <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
+                  {{ c.label }} ({{ c.id }})
+                </option>
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 600; margin-bottom: 2px;">Khóa liên kết (Tùy chọn):</label>
-            <input
-              v-model="editLookupLinkCol"
-              class="menu-input"
-              placeholder="Mặc định: Khóa liên kết chuẩn của bảng"
-              @blur="handleSaveLookup"
-            />
+          <!-- 2. Reference data if: Điều kiện tham chiếu đa tầng -->
+          <div style="margin-bottom: 8px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 0.7rem; color: #1e293b; font-weight: 700;">
+                Tham chiếu khi (Reference data if):
+              </span>
+              <!-- Logic Operator (AND / OR) -->
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <span style="font-size: 0.66rem; color: #64748b;">Khớp:</span>
+                <select
+                  v-model="editLookupLogicOp"
+                  class="menu-select"
+                  style="width: 76px; height: 22px; font-size: 0.68rem; padding: 0 4px; font-weight: 700; color: #0369a1; background: #f0f9ff;"
+                  @change="handleSaveLookup"
+                >
+                  <option value="AND">AND (Tất cả)</option>
+                  <option value="OR">OR (Bất kỳ)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Danh sách từng điều kiện -->
+            <div v-if="editLookupConditions && editLookupConditions.length > 0" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px;">
+              <div
+                v-for="(cond, cIdx) in editLookupConditions"
+                :key="cIdx"
+                style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px;"
+              >
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="font-size: 0.66rem; font-weight: 700; color: #475569;">
+                    ĐK {{ cIdx + 1 }}:
+                  </span>
+                  <button
+                    type="button"
+                    @click="removeLookupCondition(cIdx)"
+                    style="border: none; background: transparent; color: #ef4444; cursor: pointer; font-size: 0.72rem; padding: 0 4px;"
+                    title="Xóa điều kiện này"
+                  >
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <!-- Bảng đích Field -->
+                  <select v-model="cond.targetField" class="menu-select" style="font-size: 0.7rem; height: 26px; padding: 0 4px;" @change="handleSaveLookup">
+                    <option value="">-- Cột bảng đích --</option>
+                    <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
+                      {{ c.label }} ({{ c.id }})
+                    </option>
+                  </select>
+
+                  <div style="display: grid; grid-template-columns: 110px 1fr; gap: 4px; align-items: center;">
+                    <!-- Toán tử (Operator) -->
+                    <select v-model="cond.operator" class="menu-select" style="font-size: 0.68rem; height: 26px; padding: 0 2px;" @change="handleSaveLookup">
+                      <option v-for="op in lookupOperators" :key="op.value" :value="op.value">
+                        {{ op.label }}
+                      </option>
+                    </select>
+
+                    <!-- Cột bảng hiện tại (Field in current table) -->
+                    <select
+                      v-if="cond.operator !== 'is_empty' && cond.operator !== 'is_not_empty'"
+                      v-model="cond.sourceField"
+                      class="menu-select"
+                      style="font-size: 0.7rem; height: 26px; padding: 0 4px;"
+                      @change="handleSaveLookup"
+                    >
+                      <option value="">-- Cột bảng này --</option>
+                      <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
+                        {{ c.label }} ({{ c.id }})
+                      </option>
+                    </select>
+                    <span v-else style="font-size: 0.65rem; color: #94a3b8; font-style: italic; text-align: center;">
+                      (Không cần cột so sánh)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Khi chưa có điều kiện nào: Nút thêm -->
+            <div v-else style="font-size: 0.68rem; color: #64748b; font-style: italic; margin-bottom: 6px;">
+              Chưa có điều kiện nào. Dữ liệu sẽ dùng Khóa liên kết mặc định của bảng.
+            </div>
+
+            <button
+              type="button"
+              @click="addLookupCondition"
+              style="width: 100%; border: 1px dashed #3b82f6; background: #f0fdf4; color: #1d4ed8; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 600;"
+            >
+              <i class="pi pi-plus" style="font-size: 0.68rem;"></i>
+              <span>+ Thêm điều kiện (Add Condition)</span>
+            </button>
+          </div>
+
+          <!-- 3. Display data as & Field format -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <label style="font-size: 0.68rem; color: #1e3a8a; font-weight: 600; display: block; margin-bottom: 2px;">
+                Hiển thị dữ liệu (Display as):
+              </label>
+              <select v-model="editLookupDisplay" class="menu-select" style="font-size: 0.7rem;" @change="handleSaveLookup">
+                <option value="value">Giá trị (Khớp đầu tiên)</option>
+                <option value="join">Gộp tất cả (, )</option>
+                <option value="count">Đếm số lượng</option>
+                <option value="array">Nhiều dòng</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.68rem; color: #1e3a8a; font-weight: 600; display: block; margin-bottom: 2px;">
+                Định dạng (Field format):
+              </label>
+              <select v-model="editLookupFormat" class="menu-select" style="font-size: 0.7rem;" @change="handleSaveLookup">
+                <option value="default">Mặc định</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -292,7 +400,7 @@
 import { ref, computed, watch } from "vue";
 import { usePersonnelStore } from "@/stores/personnel";
 import { saveAppSettings } from "@/api/settings";
-import { formWidthOptions } from "@/utils/formatters";
+import { formWidthOptions, lookupOperators } from "@/utils/formatters";
 
 const props = defineProps({
   visible: {
@@ -356,6 +464,10 @@ const editRequired = ref(false);
 const editLookupTarget = ref("personnel");
 const editLookupLinkCol = ref("");
 const editLookupField = ref("");
+const editLookupConditions = ref([]);
+const editLookupLogicOp = ref("AND");
+const editLookupDisplay = ref("value");
+const editLookupFormat = ref("default");
 
 const availablePersonnelCols = computed(() => {
   const list = [];
@@ -385,6 +497,12 @@ const availableTripCols = computed(() => {
     });
   });
   return list;
+});
+
+const currentTableCols = computed(() => {
+  if (props.tableSource === 'relatives') return availableRelativeCols.value;
+  if (props.tableSource === 'trips') return availableTripCols.value;
+  return availablePersonnelCols.value;
 });
 
 const targetLookupCols = computed(() => {
@@ -423,11 +541,33 @@ watch(
       editLookupTarget.value = col.lookupTarget || "personnel";
       editLookupLinkCol.value = col.lookupLinkCol || "";
       editLookupField.value = col.lookupField || "";
+      editLookupConditions.value = Array.isArray(col.lookupConditions)
+        ? JSON.parse(JSON.stringify(col.lookupConditions))
+        : (col.lookupLinkCol ? [{ targetField: col.lookupLinkCol, operator: 'is', sourceField: col.lookupLinkCol }] : []);
+      editLookupLogicOp.value = col.lookupLogicOp || "AND";
+      editLookupDisplay.value = col.lookupDisplay || "value";
+      editLookupFormat.value = col.lookupFormat || "default";
       editFormulaType.value = col.formulaType || "presence_status";
     }
   },
   { immediate: true }
 );
+
+const addLookupCondition = () => {
+  const defaultTarget = targetLookupCols.value?.[0]?.id || '';
+  const defaultSource = currentTableCols.value?.[0]?.id || '';
+  editLookupConditions.value.push({
+    targetField: defaultTarget,
+    operator: 'is',
+    sourceField: defaultSource,
+  });
+  handleSaveLookup();
+};
+
+const removeLookupCondition = (index) => {
+  editLookupConditions.value.splice(index, 1);
+  handleSaveLookup();
+};
 
 const closeMenu = () => {
   emit("update:visible", false);
@@ -445,6 +585,10 @@ const handleSaveLookup = () => {
     lookupTarget: editLookupTarget.value,
     lookupLinkCol: editLookupLinkCol.value.trim(),
     lookupField: editLookupField.value,
+    lookupConditions: editLookupConditions.value,
+    lookupLogicOp: editLookupLogicOp.value,
+    lookupDisplay: editLookupDisplay.value,
+    lookupFormat: editLookupFormat.value,
   });
 };
 
@@ -632,7 +776,8 @@ const handleFilterByCol = () => {
 
 .column-header-menu-popover {
   position: absolute;
-  width: 300px;
+  width: 360px;
+  max-width: 95vw;
   max-height: 85vh;
   overflow-y: auto;
   background: #ffffff;

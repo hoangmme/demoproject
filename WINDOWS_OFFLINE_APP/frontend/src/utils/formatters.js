@@ -1303,11 +1303,36 @@ export const formatOptions = [
   { label: 'Hộp kiểm + Tệp đính kèm (Loop)', value: 'checkbox_file_loop' },
 ];
 
+export const lookupOperators = [
+  // Nhóm So sánh Chuỗi / Cơ bản
+  { value: 'is', label: 'is (bằng / khớp)' },
+  { value: 'is_not', label: 'is not (khác)' },
+  { value: 'contains', label: 'contains (chứa ký tự)' },
+  { value: 'does_not_contain', label: 'does not contain (không chứa)' },
+  { value: 'is_empty', label: 'is empty (rỗng / chưa có dữ liệu)' },
+  { value: 'is_not_empty', label: 'is not empty (không rỗng / có dữ liệu)' },
+
+  // Nhóm So sánh Ngày tháng (Date)
+  { value: 'before', label: 'Trước ngày ( < )' },
+  { value: 'after', label: 'Sau ngày ( > )' },
+  { value: 'on_or_before', label: 'Từ ngày trở về trước ( <= )' },
+  { value: 'on_or_after', label: 'Từ ngày trở đi ( >= )' },
+  { value: 'same_date', label: 'Cùng ngày ( = )' },
+
+  // Nhóm So sánh Số / Số ngày (Days / Number)
+  { value: 'gt', label: 'Lớn hơn > (số / số ngày)' },
+  { value: 'gte', label: 'Lớn hơn hoặc bằng >= (số / số ngày)' },
+  { value: 'lt', label: 'Nhỏ hơn < (số / số ngày)' },
+  { value: 'lte', label: 'Nhỏ hơn hoặc bằng <= (số / số ngày)' },
+  { value: 'num_eq', label: 'Bằng = (số / số ngày)' },
+];
+
 /**
  * Đánh giá giá trị cột Tham chiếu tự động (Lookup)
  * Hỗ trợ tra cứu đa bảng: Cán bộ (personnel), Thân nhân (relatives), Chuyến đi (trips)
+ * Hỗ trợ đa điều kiện (Multi-condition matching với AND/OR), so sánh ngày tháng và số ngày, nhiều chế độ hiển thị
  * @param {Object} item - Bản ghi hiện tại (chuyến đi, thân nhân, cán bộ...)
- * @param {Object} col - Cấu hình cột lookup (chứa lookupTarget, lookupField, lookupLinkCol)
+ * @param {Object} col - Cấu hình cột lookup
  * @param {Object} personnelStore - Store dữ liệu cán bộ
  */
 export const evaluateLookup = (item, col, personnelStore) => {
@@ -1326,7 +1351,121 @@ export const evaluateLookup = (item, col, personnelStore) => {
     return cd?.[key];
   };
 
-  // 1. Tham chiếu đến Bảng Cán bộ (personnel)
+  const isValEmpty = (v) => v === undefined || v === null || String(v).trim() === '' || String(v).trim() === '-';
+
+  const matchCondition = (candidate, cond) => {
+    if (!cond || !cond.targetField) return true;
+    const tVal = getProp(candidate, cond.targetField);
+    const op = cond.operator || 'is';
+
+    if (op === 'is_empty') return isValEmpty(tVal);
+    if (op === 'is_not_empty') return !isValEmpty(tVal);
+
+    const sVal = cond.sourceField ? getProp(item, cond.sourceField) : cond.value;
+    if (isValEmpty(tVal) && isValEmpty(sVal)) return op === 'is' || op === 'same_date' || op === 'num_eq';
+    if (isValEmpty(tVal) || isValEmpty(sVal)) {
+      return op === 'is_not' || op === 'does_not_contain';
+    }
+
+    const strT = String(tVal).trim().toLowerCase();
+    const strS = String(sVal).trim().toLowerCase();
+
+    // 1. Chuỗi cơ bản
+    if (op === 'is') return strT === strS;
+    if (op === 'is_not') return strT !== strS;
+    if (op === 'contains') return strT.includes(strS);
+    if (op === 'does_not_contain') return !strT.includes(strS);
+
+    // 2. Ngày tháng (Date)
+    if (['before', 'after', 'on_or_before', 'on_or_after', 'same_date'].includes(op)) {
+      const dtT = parseDateValue(tVal);
+      const dtS = parseDateValue(sVal);
+      if (dtT && dtS) {
+        const timeT = dtT.getTime();
+        const timeS = dtS.getTime();
+        if (op === 'before') return timeT < timeS;
+        if (op === 'after') return timeT > timeS;
+        if (op === 'on_or_before') return timeT <= timeS;
+        if (op === 'on_or_after') return timeT >= timeS;
+        if (op === 'same_date') {
+          return dtT.getFullYear() === dtS.getFullYear() &&
+                 dtT.getMonth() === dtS.getMonth() &&
+                 dtT.getDate() === dtS.getDate();
+        }
+      }
+    }
+
+    // 3. Số / Số ngày (Numeric / Days)
+    if (['gt', 'gte', 'lt', 'lte', 'num_eq'].includes(op)) {
+      const numT = parseFloat(String(tVal).replace(/[^0-9.-]+/g, ''));
+      const numS = parseFloat(String(sVal).replace(/[^0-9.-]+/g, ''));
+      if (!isNaN(numT) && !isNaN(numS)) {
+        if (op === 'gt') return numT > numS;
+        if (op === 'gte') return numT >= numS;
+        if (op === 'lt') return numT < numS;
+        if (op === 'lte') return numT <= numS;
+        if (op === 'num_eq') return numT === numS;
+      }
+    }
+
+    return strT === strS;
+  };
+
+  // 1. Thu thập danh sách ứng viên (candidate pool) theo target table
+  let candidatePool = [];
+  if (target === 'personnel') {
+    if (personnelStore?.personnelList?.length) {
+      candidatePool = personnelStore.personnelList;
+    } else if (item.rawPerson) {
+      candidatePool = [item.rawPerson];
+    }
+  } else if (target === 'relatives') {
+    if (personnelStore?.relativesList?.length) {
+      candidatePool = personnelStore.relativesList;
+    } else if (item.rawRelative) {
+      candidatePool = [item.rawRelative];
+    }
+  } else if (target === 'trips') {
+    if (personnelStore?.tripsList?.length) {
+      candidatePool = personnelStore.tripsList;
+    } else if (Array.isArray(item.trips) && item.trips.length > 0) {
+      candidatePool = item.trips;
+    } else if (personnelStore?.personnelList) {
+      candidatePool = personnelStore.personnelList.flatMap((p) => (Array.isArray(p.trips) ? p.trips : []));
+    }
+  }
+
+  // 2. Kiểm tra nếu có cấu hình điều kiện mới (lookupConditions)
+  const conditions = Array.isArray(col.lookupConditions) ? col.lookupConditions.filter(c => c && c.targetField) : [];
+  if (conditions.length > 0) {
+    const isOr = String(col.lookupLogicOp || 'AND').toUpperCase() === 'OR';
+    const matched = candidatePool.filter(cand => {
+      if (isOr) {
+        return conditions.some(c => matchCondition(cand, c));
+      }
+      return conditions.every(c => matchCondition(cand, c));
+    });
+
+    const displayMode = col.lookupDisplay || 'value';
+    if (displayMode === 'count') {
+      return matched.length;
+    }
+
+    const values = matched
+      .map(m => getProp(m, field))
+      .filter(v => v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-');
+
+    if (displayMode === 'join') {
+      return values.length > 0 ? values.join(col.lookupJoinSeparator || ', ') : '-';
+    }
+    if (displayMode === 'array') {
+      return values.length > 0 ? values.join('\n') : '-';
+    }
+    // Mặc định: 'value' (bản ghi đầu tiên)
+    return values.length > 0 ? String(values[0]) : '-';
+  }
+
+  // 3. Fallback ngược về Khóa liên kết cũ (lookupLinkCol) - Đảm bảo 100% tương thích
   if (target === 'personnel') {
     let parent = item.rawPerson;
     if (!parent && personnelStore) {
@@ -1344,7 +1483,6 @@ export const evaluateLookup = (item, col, personnelStore) => {
     return '-';
   }
 
-  // 2. Tham chiếu đến Bảng Thân nhân (relatives)
   if (target === 'relatives') {
     if (!personnelStore) return '-';
     const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
@@ -1365,7 +1503,6 @@ export const evaluateLookup = (item, col, personnelStore) => {
     return '-';
   }
 
-  // 3. Tham chiếu đến Bảng Chuyến đi (trips)
   if (target === 'trips') {
     if (!personnelStore) return '-';
     const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';

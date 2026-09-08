@@ -1847,6 +1847,24 @@
   3. **Đồng bộ & Kiểm chứng**:
      - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` thành công 100% (0 lỗi, 529ms, giảm ~22 kB bundle).
+- **Entry (2026-09-08)**: **Nâng cấp Cột Tham chiếu (Lookup) Kiểu Lark Base & Xóa Bỏ Cấu hình Thừa**:
+  1. **Chỉ đạo của người dùng**:
+     - Xóa bỏ "Độ rộng trên Bảng (px):" và "Khóa định danh chính (Cột primal):" trong dialog thêm cột mới (`AddColumnDialog.vue`).
+     - Nâng cấp tính năng Lookup theo chuẩn Lark Base:
+       - Hỗ trợ xây dựng đa điều kiện (Multi-condition Matching: `[Cột bảng đích] [Toán tử] [Cột bảng này]`) kèm nút `+ Thêm điều kiện (Add Condition)`.
+       - Hỗ trợ chọn logic kết hợp: **AND (Khớp tất cả)** và **OR (Khớp bất kỳ)**.
+       - Bổ sung đầy đủ toán tử so sánh ngày tháng (`before`, `after`, `on_or_before`, `on_or_after`, `same_date`) theo chuẩn `parseDateValue` và so sánh số / số ngày (`>`, `>=`, `<`, `<=`, `=`).
+       - Tùy chọn hiển thị dữ liệu: `value` (bản ghi đầu tiên), `join` (gộp dấu phẩy), `count` (đếm số lượng), `array` (nhiều dòng).
+  2. **Giải pháp kiến trúc đã thực hiện**:
+     - `AddColumnDialog.vue`: Đã xóa sạch triệt để `isPrimaryKey`, toggle button khóa chính, và trường nhập `tableWidth` trên bảng. Thay thế section Lookup bằng bộ cấu hình Lark Base đầy đủ.
+     - `ColumnHeaderMenu.vue`: Nâng cấp giao diện cấu hình Lookup popover sang chuẩn Lark Base, mở rộng độ rộng popover 360px cho thao tác thuận tiện.
+     - `src/utils/formatters.js`:
+       - Xuất `lookupOperators` với đầy đủ 3 nhóm toán tử (Chuỗi cơ bản, Ngày tháng, Số học / Số ngày).
+       - Nâng cấp `evaluateLookup(item, col, personnelStore)` hỗ trợ đa điều kiện (AND/OR), trích xuất ứng viên chuẩn xác từ store theo bảng đích, định dạng hiển thị linh hoạt, và fallback ngược 100% tương thích dữ liệu cũ.
+     - `UnifiedTableView.vue`: Cập nhật `onChildChangeColumnLookup` để lưu đầy đủ các trường cấu hình lookup mới (`lookupConditions`, `lookupLogicOp`, `lookupDisplay`, `lookupFormat`).
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 547ms).
 - **Status**: Done [Reversible].
 
 
