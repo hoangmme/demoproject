@@ -39,7 +39,7 @@
         <label style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
           Kiểu dữ liệu:
         </label>
-        <select v-model="form.format" class="dialog-select">
+        <select v-model="form.format" class="dialog-select" @change="onFormatChange">
           <option value="text">Văn bản (Text) - Mặc định</option>
           <option value="number">Số (Number)</option>
           <option value="date">Ngày tháng (Date)</option>
@@ -51,59 +51,6 @@
           <option value="formula">⚡ Công thức Nâng cao (Formula - Lark Base / Teable)</option>
           <option value="rollup">📊 Tính toán tổng hợp (Rollup)</option>
         </select>
-
-        <!-- Quick selection pills for easy discovery -->
-        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
-          <button
-            type="button"
-            :class="['format-pill-btn', form.format === 'formula' ? 'active-formula' : '']"
-            @click="selectFormat('formula')"
-          >
-            ⚡ Công thức Nâng cao
-          </button>
-          <button
-            type="button"
-            :class="['format-pill-btn', form.format === 'lookup' ? 'active-lookup' : '']"
-            @click="selectFormat('lookup')"
-          >
-            🔗 Tham chiếu
-          </button>
-          <button
-            type="button"
-            :class="['format-pill-btn', form.format === 'text' ? 'active-standard' : '']"
-            @click="selectFormat('text')"
-          >
-            📝 Văn bản
-          </button>
-          <button
-            type="button"
-            :class="['format-pill-btn', form.format === 'number' ? 'active-standard' : '']"
-            @click="selectFormat('number')"
-          >
-            🔢 Số
-          </button>
-          <button
-            type="button"
-            :class="['format-pill-btn', form.format === 'date' ? 'active-standard' : '']"
-            @click="selectFormat('date')"
-          >
-            📅 Ngày tháng
-          </button>
-          <button
-            type="button"
-            :class="['format-pill-btn', form.format === 'dropdown' ? 'active-standard' : '']"
-            @click="selectFormat('dropdown')"
-          >
-            ▼ Danh mục
-          </button>
-          <button
-            type="button"
-            :class="['format-pill-btn', form.format === 'checkbox_file_loop' ? 'active-standard' : '']"
-            @click="selectFormat('checkbox_file_loop')"
-          >
-            📎 Tệp đính kèm
-          </button>
-        </div>
       </div>
 
       <!-- Tùy chọn nếu là Dropdown -->
@@ -464,9 +411,8 @@ const form = ref({
   formulaExpression: '',
 });
 
-const selectFormat = (fmt) => {
-  form.value.format = fmt;
-  if (fmt === 'formula' && !form.value.formulaType) {
+const onFormatChange = () => {
+  if (form.value.format === 'formula' && !form.value.formulaType) {
     form.value.formulaType = 'custom_expression';
   }
 };
@@ -756,41 +702,5 @@ const handleSave = async () => {
 .formula-fn-item:hover {
   background: #fae8ff;
   border-color: #d946ef;
-}
-
-.format-pill-btn {
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  color: #334155;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.format-pill-btn:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-}
-.format-pill-btn.active-formula {
-  background: #701a75;
-  color: #ffffff;
-  border-color: #701a75;
-  box-shadow: 0 1px 3px rgba(112, 26, 117, 0.3);
-}
-.format-pill-btn.active-lookup {
-  background: #1d4ed8;
-  color: #ffffff;
-  border-color: #1d4ed8;
-  box-shadow: 0 1px 3px rgba(29, 78, 216, 0.3);
-}
-.format-pill-btn.active-standard {
-  background: #0284c7;
-  color: #ffffff;
-  border-color: #0284c7;
 }
 </style>
