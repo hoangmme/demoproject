@@ -306,9 +306,6 @@
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
               <div style="display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0;">
                 <span class="table-col-header-wrap">
-                  <span v-if="showColIndex && col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
-                    Cột {{ col.colIndex }}:
-                  </span>
                   {{ col.label }}
                 </span>
               </div>
@@ -821,9 +818,6 @@
                 style="accent-color: #1e3a8a;"
               />
               <span style="font-weight: 500; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="col.label">
-                <span v-if="col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
-                  Cột {{ col.colIndex }}:
-                </span>
                 {{ col.label }}
               </span>
             </label>
@@ -2744,25 +2738,6 @@ const allAvailableColumnsList = computed(() => {
         }
       });
     });
-
-    // Các cột ảo: Mã cán bộ, Thông tin cán bộ, Trạng thái hiện diện
-    const virtualTripCols = [
-      { id: '_parentPersonnelName', label: 'Cán bộ liên quan', width: '180px', format: 'text', isVirtual: true, isSystem: true },
-      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px', format: 'text', isVirtual: true, isSystem: true },
-      { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px', format: 'presence', isVirtual: true },
-    ];
-
-    virtualTripCols.forEach((vc) => {
-      if (!seen.has(vc.id)) {
-        seen.add(vc.id);
-        rawList.push({
-          ...vc,
-          colIndex: null,
-          isVirtual: true,
-          tableWidth: null,
-        });
-      }
-    });
   } else if (src === 'relatives') {
     const colMap = computeColumnIndexMap(personnelStore.importMappingRelative || []);
     (personnelStore.importMappingRelative || []).forEach((g) => {
@@ -2782,47 +2757,6 @@ const allAvailableColumnsList = computed(() => {
           });
         }
       });
-    });
-
-    // Các cột ảo bổ trợ: Cán bộ liên quan, Trạng thái hiện diện, Mã cán bộ
-    const virtualRelativeCols = [
-      { id: '_parentPersonnelName', label: 'Cán bộ liên quan', width: '180px', format: 'text', isVirtual: true, isSystem: true },
-      { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px', format: 'presence', isVirtual: true },
-      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px', format: 'text', isVirtual: true, isSystem: true },
-    ];
-
-    virtualRelativeCols.forEach((vc) => {
-      if (!seen.has(vc.id)) {
-        seen.add(vc.id);
-        rawList.push({
-          ...vc,
-          colIndex: null,
-          isVirtual: true,
-          tableWidth: null,
-        });
-      }
-    });
-
-    // Ưu tiên thứ tự cột hiển thị chuẩn cho thân nhân (theo đúng mã cột trong cấu hình Cài đặt)
-    const prioritizedRelCols = [
-      'relativeName',
-      'relationshipName',
-      '_presenceStatus',
-      'countryNameTN',
-      'cccdthannhan',
-      'birthYearTN',
-      'currentAddress',
-      'occupation',
-      '_parentPersonnelName',
-      '_parentPersonnelCode',
-    ];
-    rawList.sort((a, b) => {
-      const idxA = prioritizedRelCols.indexOf(a.id);
-      const idxB = prioritizedRelCols.indexOf(b.id);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return 0;
     });
   } else {
     // personnel
@@ -2844,39 +2778,6 @@ const allAvailableColumnsList = computed(() => {
           });
         }
       });
-    });
-
-    // Các cột ảo: Mã cán bộ, Thông tin cán bộ, Trạng thái hiện diện
-    const virtualPersonnelCols = [
-      { id: '_parentPersonnelCode', label: 'Mã cán bộ', width: '130px' },
-      { id: '_parentPersonnelName', label: getParentColLabel('Thông tin cán bộ'), width: '180px' },
-      { id: '_presenceStatus', label: 'Trạng thái hiện diện', width: '170px' },
-    ];
-
-    virtualPersonnelCols.forEach((vc) => {
-      if (!seen.has(vc.id)) {
-        seen.add(vc.id);
-        rawList.push({
-          ...vc,
-          colIndex: null,
-          isVirtual: true,
-          tableWidth: null,
-        });
-      }
-    });
-  }
-
-  // Cột Khóa chính (Unique Key / ID)
-  if (!seen.has('_primaryKey')) {
-    seen.add('_primaryKey');
-    rawList.push({
-      id: '_primaryKey',
-      label: 'Mã định danh (ID)',
-      width: '160px',
-      tableWidth: '160px',
-      colIndex: null,
-      isVirtual: true,
-      isPrimaryKey: true,
     });
   }
 

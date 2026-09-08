@@ -62,32 +62,6 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
-      // Cột ảo: CHỈ CÓ Mã cán bộ và Thông tin cán bộ (không có số cột nhưng vẫn hiện ở chọn cột & lọc)
-      const virtualPersonnelCols = [
-        { id: 'code', label: 'Mã cán bộ', width: '115px', isVirtual: true, colIndex: null },
-        { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
-      ];
-      virtualPersonnelCols.forEach((vc) => {
-        if (!seen.has(vc.id)) {
-          seen.add(vc.id);
-          list.push(vc);
-        }
-      });
-
-      // Cột Khóa chính (Unique Key / ID): Mặc định ẩn nhưng có thể gọi ra ở chọn cột & bộ lọc
-      if (!seen.has('_primaryKey')) {
-        seen.add('_primaryKey');
-        list.push({
-          id: '_primaryKey',
-          label: 'Mã định danh (ID)',
-          width: '160px',
-          tableWidth: '160px',
-          isVirtual: true,
-          isPrimaryKey: true,
-          colIndex: null,
-        });
-      }
-
       if (list.length === 0) {
         return [
           { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
@@ -128,31 +102,6 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
-      // Cột ảo: Mã đối tượng chính (Code)
-      const virtualPersonnelCols = [
-        { id: 'code', label: 'Mã định danh (Code)', width: '115px', isVirtual: true, colIndex: null },
-      ];
-      virtualPersonnelCols.forEach((vc) => {
-        if (!seen.has(vc.id)) {
-          seen.add(vc.id);
-          list.unshift(vc);
-        }
-      });
-
-      // Cột Khóa chính (Unique Key / ID)
-      if (!seen.has('_primaryKey')) {
-        seen.add('_primaryKey');
-        list.push({
-          id: '_primaryKey',
-          label: 'Mã định danh (ID)',
-          width: '160px',
-          tableWidth: '160px',
-          isVirtual: true,
-          isPrimaryKey: true,
-          colIndex: null,
-        });
-      }
-
       if (list.length === 0) {
         return [
           { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
@@ -192,32 +141,6 @@ export const usePersonnelStore = defineStore('personnel', {
         });
       });
 
-      // Cột ảo Thân nhân: Mã thân nhân và Thông tin đối tượng liên quan (Hồ sơ chính)
-      const virtualRelCols = [
-        { id: 'code', label: 'Mã thân nhân (Mã đối tượng)', width: '110px', isVirtual: true, colIndex: null },
-        { id: '_parentPersonnelName', label: 'Đối tượng liên quan (Hồ sơ chính)', width: '220px', isVirtual: true, colIndex: null },
-      ];
-      virtualRelCols.forEach((vc) => {
-        if (!seen.has(vc.id)) {
-          seen.add(vc.id);
-          list.unshift(vc);
-        }
-      });
-
-      // Cột Khóa chính Thân nhân (Unique Key / ID)
-      if (!seen.has('_primaryKey')) {
-        seen.add('_primaryKey');
-        list.push({
-          id: '_primaryKey',
-          label: 'Mã định danh (ID)',
-          width: '160px',
-          tableWidth: '160px',
-          isVirtual: true,
-          isPrimaryKey: true,
-          colIndex: null,
-        });
-      }
-
       if (list.length === 0) {
         return [
           { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
@@ -250,20 +173,6 @@ export const usePersonnelStore = defineStore('personnel', {
           }
         });
       });
-
-      // Cột Khóa chính Chuyến đi (Unique Key / ID)
-      if (!seen.has('_primaryKey')) {
-        seen.add('_primaryKey');
-        list.push({
-          id: '_primaryKey',
-          label: 'Mã định danh (ID)',
-          width: '160px',
-          tableWidth: '160px',
-          isVirtual: true,
-          isPrimaryKey: true,
-          colIndex: null,
-        });
-      }
 
       if (list.length === 0) {
         return [

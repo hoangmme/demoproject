@@ -4,7 +4,8 @@
     modal
     header="Xuất Hồ sơ Cán bộ (PDF)"
     :baseZIndex="16000"
-    :style="{ width: '820px', maxWidth: '95vw', zIndex: 16000 }"
+    :style="{ width: '840px', maxWidth: '96vw', zIndex: 16000 }"
+    :contentStyle="{ maxHeight: '82vh', overflowY: 'auto' }"
     :breakpoints="{ '640px': '98vw' }"
   >
     <div class="docx-export-container">
@@ -1229,6 +1230,9 @@ onMounted(() => {
   flex-direction: column;
   gap: 0.9rem;
   padding: 0.25rem;
+  max-height: calc(82vh - 80px);
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .tpl-src-btn {
@@ -1301,10 +1305,23 @@ onMounted(() => {
 .tree-container {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 260px;
+  gap: 10px;
+  max-height: 520px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+.tree-container::-webkit-scrollbar {
+  width: 6px;
+}
+.tree-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.tree-container::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
 }
 
 .btn-tree-action {
@@ -1419,6 +1436,20 @@ onMounted(() => {
   gap: 6px 8px;
   padding: 8px 10px;
   background: #ffffff;
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f8fafc;
+}
+.tree-fields-inline-wrap::-webkit-scrollbar {
+  width: 5px;
+}
+.tree-fields-inline-wrap::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+.tree-fields-inline-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 .tree-field-chip {

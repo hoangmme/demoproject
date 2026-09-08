@@ -310,9 +310,6 @@
           <template #header>
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
               <span class="table-col-header-wrap">
-                <span v-if="showColIndex && col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
-                  Cột {{ col.colIndex }}:
-                </span>
                 <span class="table-col-title-inline">
                   <span>{{ col.label }}</span>
                 </span>
@@ -954,9 +951,6 @@
           <template #header>
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
               <span class="table-col-header-wrap">
-                <span v-if="showColIndex && col.colIndex && !col.isVirtual" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.72rem;">
-                  Cột {{ col.colIndex }}:
-                </span>
                 <span class="table-col-title-inline">
                   <span>{{ col.label }}</span>
                 </span>
@@ -2315,9 +2309,7 @@ const getPersonVirtualInfo = (data) => {
 };
 
 const activeColumns = computed(() => {
-  const map = {
-    _parentPersonnelName: { id: '_parentPersonnelName', label: 'Thông tin cán bộ', tableWidth: '220px', format: 'text', isVirtual: true },
-  };
+  const map = {};
   const colMap = computeColumnIndexMap(personnelStore.importMappingPersonnel || []);
   (personnelStore.importMappingPersonnel || []).forEach((g) => {
     (g.columns || []).forEach((c) => {

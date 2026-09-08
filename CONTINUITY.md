@@ -1712,5 +1712,23 @@
   3. **Đồng bộ & Kiểm chứng**:
      - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` thành công 100% (0 lỗi, ~622ms).
+- **Entry (2026-09-08)**: **Xóa Triệt Để Tiền Tố 'Cột X:' Trên Header & Form Chi Tiết, Mở Rộng Cuộn Export PDF, Bỏ Toàn Bộ Cột Ảo Hardcode**:
+  1. **Xóa tiền tố 'Cột X:' trên Header Bảng dữ liệu (`PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - Loại bỏ hoàn toàn nhãn `Cột {{ col.colIndex }}: ` trên header của cả bảng Cán bộ, Thân nhân, và Bảng chuyên đề con.
+     - Header bảng hiển thị tên cột thuần khiết: `{{ col.label }}`.
+  2. **Xóa huy hiệu 'Cột X' trên Form Chi Tiết (`PersonnelBasicForm.vue`, `PersonnelNotesForm.vue`, `PersonnelTravelForm.vue`, `PersonnelFamilyForm.vue`)**:
+     - Loại bỏ hoàn toàn `<span class="col-num-badge">{{ colIndexMap[col.id] }}</span>`.
+     - Nhãn form hiển thị gọn gàng, tự nhiên theo đúng tên trường: `Họ và tên`, `Tên khác`, `Năm sinh`...
+  3. **Khắc phục thanh cuộn Dialog Xuất PDF (`AdvancedDocxExportDialog.vue`)**:
+     - Bổ sung `:contentStyle="{ maxHeight: '82vh', overflowY: 'auto' }"` trên Dialog.
+     - Cấp `overflow-y: auto; max-height: calc(82vh - 80px)` cho `.docx-export-container`.
+     - Nâng `max-height` của `.tree-container` lên `520px` kèm thanh cuộn mỏng rõ nét.
+     - Cấp `max-height: 220px; overflow-y: auto;` cho `.tree-fields-inline-wrap` của từng bảng (Cán bộ, Thân nhân, Chuyến đi, v.v.), cho phép người dùng cuộn mượt mà xem đầy đủ tất cả 35/35 trường không bị che khuất hay cắt cụt.
+  4. **Gỡ bỏ toàn bộ Cột ảo Hardcode (`personnel.js`, `tableRegistry.js`, `ChildDashboardView.vue`, `PersonnelView.vue`, `DashboardView.vue`, `AdvancedSearchView.vue`)**:
+     - Xóa bỏ các cột ảo nhân tạo chèn cứng: `_parentPersonnelName`, `_parentPersonnelCode`, `code`, `_primaryKey`, `_presenceStatus`, `_parentPosition`, `_parentDepartment`.
+     - Bỏ toàn bộ biểu tượng ảo `⚡ ` và `✨ ` trong dropdown.
+     - Toàn bộ danh mục cột hiện tại hoạt động 100% tự động và trung thực dựa trên cấu hình cột thực tế do người dùng thiết lập (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`, `customColumns`), tuân thủ tuyệt đối Quy tắc 4 của CONTINUITY.md.
+  5. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 575ms).
 - **Status**: Done [Reversible].
-

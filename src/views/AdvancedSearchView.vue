@@ -130,7 +130,7 @@
                     :key="col.id"
                     :value="col.id"
                   >
-                    {{ (col.isVirtual ? '✨ ' : '') }}{{ col.label }}{{ !col.isVirtual && (col.rawId || col.id) ? ` (${col.rawId || col.id})` : '' }}
+                    {{ col.label }}{{ (col.rawId || col.id) ? ` (${col.rawId || col.id})` : '' }}
                   </option>
                 </optgroup>
               </select>

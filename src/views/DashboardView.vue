@@ -561,7 +561,7 @@
             <option value="">-- Mặc định (theo Quốc gia / Đơn vị) --</option>
             <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
               <option v-for="c in grp.columns" :key="c.id" :value="c.id">
-                {{ (c.isVirtual ? '⚡ ' : '') }}{{ c.label || c.id }}
+                {{ c.label || c.id }}
               </option>
             </optgroup>
           </select>
@@ -617,7 +617,7 @@
                   <option value="">-- Toàn bộ (Không lọc cột) --</option>
                   <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
                     <option v-for="c in grp.columns" :key="c.id" :value="c.id">
-                      {{ (c.isVirtual ? '⚡ ' : '') }}{{ c.label || c.id }}
+                      {{ c.label || c.id }}
                     </option>
                   </optgroup>
                 </select>

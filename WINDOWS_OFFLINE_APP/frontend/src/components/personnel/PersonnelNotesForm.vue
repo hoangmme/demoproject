@@ -12,7 +12,6 @@
         :class="'field-item ' + getColClass(col.width)"
       >
         <label class="field-label" :title="col.label">
-          <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
           <span class="label-text">{{ col.label }}</span>
         </label>
         <DynamicField

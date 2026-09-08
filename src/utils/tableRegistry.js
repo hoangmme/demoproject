@@ -84,29 +84,6 @@ export function getUnifiedTableDefinitions(options = {}) {
         });
       });
 
-      // Cột liên kết Cán bộ (mặc định để sau các cột nghiệp vụ chuyến đi)
-      if (!seen.has('_parentPersonnelName')) {
-        cols.push({
-          id: '_parentPersonnelName',
-          label: 'Cán bộ liên quan',
-          group: coreTripsTitle,
-          format: 'text',
-          width: '180px',
-          isVirtual: true,
-        });
-        seen.add('_parentPersonnelName');
-      }
-
-      if (!seen.has('presenceStatus')) {
-        cols.push({
-          id: 'presenceStatus',
-          label: 'Trạng thái hiện diện',
-          group: coreTripsTitle,
-          format: 'presence',
-          width: '170px',
-          isVirtual: true,
-        });
-      }
       return cols;
     },
     getSearchableGroups: (store) => {
@@ -130,16 +107,6 @@ export function getUnifiedTableDefinitions(options = {}) {
           }
         });
       });
-      if (!seen.has('presenceStatus')) {
-        allCols.push({
-          id: 'presenceStatus',
-          rawId: 'presenceStatus',
-          label: 'Trạng thái hiện diện',
-          colIndex: null,
-          isVirtual: true,
-          format: 'presence',
-        });
-      }
       return allCols.length > 0 ? [{ name: coreTripsTitle, columns: allCols }] : [];
     },
   };
@@ -232,16 +199,6 @@ export function getUnifiedTableDefinitions(options = {}) {
           }
         });
       });
-      if (!seen.has('_parentPersonnelName')) {
-        cols.push({
-          id: '_parentPersonnelName',
-          label: 'Cán bộ liên quan',
-          group: coreRelativesTitle,
-          format: 'text',
-          width: '180px',
-          isVirtual: true,
-        });
-      }
       return cols;
     },
     getSearchableGroups: (store) => {
@@ -265,16 +222,6 @@ export function getUnifiedTableDefinitions(options = {}) {
           }
         });
       });
-      if (!seen.has('_parentPersonnelName')) {
-        allCols.push({
-          id: '_parentPersonnelName',
-          rawId: '_parentPersonnelName',
-          label: 'Cán bộ liên quan',
-          colIndex: null,
-          isVirtual: true,
-          format: 'text',
-        });
-      }
       return allCols.length > 0 ? [{ name: coreRelativesTitle, columns: allCols }] : [];
     },
   };

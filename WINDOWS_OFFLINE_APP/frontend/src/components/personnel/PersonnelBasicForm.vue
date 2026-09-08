@@ -15,7 +15,6 @@
         <template v-for="col in group.columns" :key="col.id">
           <div class="field-item" :class="getColClass(col.width)">
             <label class="field-label" :title="col.label">
-              <span v-if="colIndexMap[col.id]" class="col-num-badge">{{ colIndexMap[col.id] }}</span>
               <span class="label-text">{{ col.label }}</span>
               <span v-if="col.id === personnelStore.getPersonnelNameField() || col.id === personnelStore.getPersonnelKeyField()" style="color: red; margin-left: 2px;">*</span>
             </label>
