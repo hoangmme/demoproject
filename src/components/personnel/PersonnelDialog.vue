@@ -3,7 +3,8 @@
     v-model:visible="visible"
     modal
     :header="dialogHeader"
-    :style="{ width: '85vw', maxWidth: '1100px' }"
+    :baseZIndex="15000"
+    :style="{ width: '85vw', maxWidth: '1100px', zIndex: 15000 }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
     <!-- Fixed Height Contents Area -->

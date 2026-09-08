@@ -30,16 +30,6 @@
         <button type="button" class="btn-text-link" @click="deselectAll">Bỏ chọn</button>
         <span style="color: #cbd5e1;">|</span>
         <button type="button" class="btn-text-link" @click="resetOrder">Thứ tự chuẩn</button>
-        <span style="color: #cbd5e1;">|</span>
-        <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #475569; cursor: pointer; user-select: none;">
-          <input
-            type="checkbox"
-            v-model="showColIndex"
-            @change="toggleShowColIndex"
-            style="accent-color: #2e7d32; width: 13px; height: 13px; cursor: pointer;"
-          />
-          <span>Số cột</span>
-        </label>
       </div>
 
       <!-- Giới hạn chiều cao hàng tối đa (Row Height Limit - Mặc định 1 hàng) -->
@@ -121,9 +111,6 @@
               style="accent-color: #2e7d32; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;"
             />
             <span class="item-text" :title="col.label || col.id">
-              <span v-if="showColIndex && getColIndex(col)" style="color: #64748b; font-weight: 600; margin-right: 4px; font-size: 0.75rem;">
-                Cột {{ getColIndex(col) }}:
-              </span>
               {{ col.label || col.id }}
             </span>
           </label>

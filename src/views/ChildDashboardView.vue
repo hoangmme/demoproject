@@ -119,18 +119,6 @@
           </div>
         </div>
 
-        <!-- 🔑 Cấu hình Khóa Định danh & Khóa Liên Kết -->
-        <Button
-          label="Khóa & Liên kết"
-          icon="pi pi-key"
-          severity="secondary"
-          outlined
-          size="small"
-          @click="isKeyLinkDialogOpen = true"
-          title="Cấu hình Khóa Định Danh & Khóa Liên Kết giữa các Bảng dữ liệu"
-          style="font-size: 0.8rem;"
-        />
-
         <!-- 📥 Menu Xuất / Nhập Dropdown chuẩn dùng chung ExportImportMenu -->
         <ExportImportMenu
           :tableTitle="currentDashboardConfig?.title || 'Chuyến đi'"
@@ -197,21 +185,21 @@
               >
                 <i class="pi pi-ellipsis-v"></i>
               </button>
-              <div v-if="activeTabMenuKey === `card_${cIdx}`" class="lark-tab-dropdown-menu" @click.stop>
-                <button type="button" class="lark-tab-menu-item" @click="openEditViewDialog(card, cIdx); closeTabMenu()">
+              <div v-if="activeTabMenuKey === `card_${cIdx}`" class="lark-tab-dropdown-menu" @click.stop @mousedown.stop>
+                <button type="button" class="lark-tab-menu-item" @click.stop="openEditViewDialog(card, cIdx); closeTabMenu()">
                   <i class="pi pi-pencil"></i>
                   <span>Sửa tên & Điều kiện lọc</span>
                 </button>
-                <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click="moveView(cIdx, -1); closeTabMenu()">
+                <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click.stop="moveView(cIdx, -1); closeTabMenu()">
                   <i class="pi pi-arrow-left"></i>
                   <span>Dời sang trái</span>
                 </button>
-                <button v-if="cIdx < activeMetricCards.length - 1" type="button" class="lark-tab-menu-item" @click="moveView(cIdx, 1); closeTabMenu()">
+                <button v-if="cIdx < activeMetricCards.length - 1" type="button" class="lark-tab-menu-item" @click.stop="moveView(cIdx, 1); closeTabMenu()">
                   <i class="pi pi-arrow-right"></i>
                   <span>Dời sang phải</span>
                 </button>
                 <div v-if="cIdx > 0" class="lark-tab-menu-divider"></div>
-                <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item item-danger" @click="deleteView(card, cIdx); closeTabMenu()">
+                <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item item-danger" @click.stop="deleteView(card, cIdx); closeTabMenu()">
                   <i class="pi pi-trash"></i>
                   <span>Xóa Chế độ xem</span>
                 </button>

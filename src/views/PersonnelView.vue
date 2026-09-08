@@ -131,18 +131,6 @@
             </div>
           </div>
 
-          <!-- 🔑 Cấu hình Khóa Định danh & Khóa Liên Kết -->
-          <Button
-            label="Khóa & Liên kết"
-            icon="pi pi-key"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="isKeyLinkDialogOpen = true"
-            title="Cấu hình Khóa Định Danh & Khóa Liên Kết giữa các Bảng dữ liệu"
-            style="font-size: 0.8rem;"
-          />
-
           <!-- 📥 Menu Xuất / Nhập Dropdown chuẩn dùng chung ExportImportMenu -->
           <ExportImportMenu
             :tableTitle="mainTableTitle"
@@ -170,7 +158,7 @@
           <template v-for="(card, cIdx) in activePersonnelMetricCards" :key="card.id || cIdx">
             <div
               class="lark-tab-item-wrapper"
-              :class="{ 'tab-active': activePersonnelCardIdx === cIdx }"
+              :class="{ 'tab-active': activePersonnelCardIdx === cIdx, 'menu-open': activeTabMenuKey === `personnel_${cIdx}` }"
             >
               <button
                 type="button"
@@ -196,21 +184,21 @@
                 >
                   <i class="pi pi-ellipsis-v"></i>
                 </button>
-                <div v-if="activeTabMenuKey === `personnel_${cIdx}`" class="lark-tab-dropdown-menu" @click.stop>
-                  <button type="button" class="lark-tab-menu-item" @click="openEditViewDialog('personnel', card, cIdx); closeTabMenu()">
+                <div v-if="activeTabMenuKey === `personnel_${cIdx}`" class="lark-tab-dropdown-menu" @click.stop @mousedown.stop>
+                  <button type="button" class="lark-tab-menu-item" @click.stop="openEditViewDialog('personnel', card, cIdx); closeTabMenu()">
                     <i class="pi pi-pencil"></i>
                     <span>Sửa tên & Điều kiện lọc</span>
                   </button>
-                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click="moveView('personnel', cIdx, -1); closeTabMenu()">
+                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click.stop="moveView('personnel', cIdx, -1); closeTabMenu()">
                     <i class="pi pi-arrow-left"></i>
                     <span>Dời sang trái</span>
                   </button>
-                  <button v-if="cIdx < activePersonnelMetricCards.length - 1" type="button" class="lark-tab-menu-item" @click="moveView('personnel', cIdx, 1); closeTabMenu()">
+                  <button v-if="cIdx < activePersonnelMetricCards.length - 1" type="button" class="lark-tab-menu-item" @click.stop="moveView('personnel', cIdx, 1); closeTabMenu()">
                     <i class="pi pi-arrow-right"></i>
                     <span>Dời sang phải</span>
                   </button>
                   <div v-if="cIdx > 0" class="lark-tab-menu-divider"></div>
-                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item item-danger" @click="deleteView('personnel', card, cIdx); closeTabMenu()">
+                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item item-danger" @click.stop="deleteView('personnel', card, cIdx); closeTabMenu()">
                     <i class="pi pi-trash"></i>
                     <span>Xóa Chế độ xem</span>
                   </button>
@@ -708,18 +696,6 @@
             </div>
           </div>
 
-          <!-- 🔑 Cấu hình Khóa Định danh & Khóa Liên Kết Thân nhân -->
-          <Button
-            label="Khóa & Liên kết"
-            icon="pi pi-key"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="isKeyLinkDialogOpen = true"
-            title="Cấu hình Khóa Định Danh & Khóa Liên Kết giữa các Bảng dữ liệu"
-            style="font-size: 0.8rem;"
-          />
-
           <!-- 📥 Menu Xuất / Nhập Dropdown chuẩn dùng chung ExportImportMenu -->
           <ExportImportMenu
             :tableTitle="relativeTableTitle"
@@ -747,7 +723,7 @@
           <template v-for="(card, cIdx) in activeRelativeMetricCards" :key="card.id || cIdx">
             <div
               class="lark-tab-item-wrapper"
-              :class="{ 'tab-active': activeRelativeCardIdx === cIdx }"
+              :class="{ 'tab-active': activeRelativeCardIdx === cIdx, 'menu-open': activeTabMenuKey === `relatives_${cIdx}` }"
             >
               <button
                 type="button"
@@ -773,21 +749,21 @@
                 >
                   <i class="pi pi-ellipsis-v"></i>
                 </button>
-                <div v-if="activeTabMenuKey === `relatives_${cIdx}`" class="lark-tab-dropdown-menu" @click.stop>
-                  <button type="button" class="lark-tab-menu-item" @click="openEditViewDialog('relatives', card, cIdx); closeTabMenu()">
+                <div v-if="activeTabMenuKey === `relatives_${cIdx}`" class="lark-tab-dropdown-menu" @click.stop @mousedown.stop>
+                  <button type="button" class="lark-tab-menu-item" @click.stop="openEditViewDialog('relatives', card, cIdx); closeTabMenu()">
                     <i class="pi pi-pencil"></i>
                     <span>Sửa tên & Điều kiện lọc</span>
                   </button>
-                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click="moveView('relatives', cIdx, -1); closeTabMenu()">
+                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click.stop="moveView('relatives', cIdx, -1); closeTabMenu()">
                     <i class="pi pi-arrow-left"></i>
                     <span>Dời sang trái</span>
                   </button>
-                  <button v-if="cIdx < activeRelativeMetricCards.length - 1" type="button" class="lark-tab-menu-item" @click="moveView('relatives', cIdx, 1); closeTabMenu()">
+                  <button v-if="cIdx < activeRelativeMetricCards.length - 1" type="button" class="lark-tab-menu-item" @click.stop="moveView('relatives', cIdx, 1); closeTabMenu()">
                     <i class="pi pi-arrow-right"></i>
                     <span>Dời sang phải</span>
                   </button>
                   <div v-if="cIdx > 0" class="lark-tab-menu-divider"></div>
-                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item item-danger" @click="deleteView('relatives', card, cIdx); closeTabMenu()">
+                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item item-danger" @click.stop="deleteView('relatives', card, cIdx); closeTabMenu()">
                     <i class="pi pi-trash"></i>
                     <span>Xóa Chế độ xem</span>
                   </button>

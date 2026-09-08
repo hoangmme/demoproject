@@ -18,7 +18,7 @@
         <i class="pi pi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem;"></i>
         <InputText
           v-model="searchTableQuery"
-          placeholder="Tìm tên bảng, mã bảng [CB-01, TN-02, TB-xx]..."
+          placeholder="Tìm tên bảng dữ liệu..."
           style="width: 100%; padding-left: 30px; font-size: 0.8rem; height: 34px;"
         />
       </div>

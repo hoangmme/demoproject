@@ -3,7 +3,8 @@
     v-model:visible="visible"
     modal
     header="Xuất Hồ sơ Cán bộ (PDF)"
-    :style="{ width: '820px', maxWidth: '95vw' }"
+    :baseZIndex="16000"
+    :style="{ width: '820px', maxWidth: '95vw', zIndex: 16000 }"
     :breakpoints="{ '640px': '98vw' }"
   >
     <div class="docx-export-container">

@@ -917,35 +917,11 @@
       </template>
     </Dialog>
 
-    <!-- Detailed Personnel / Relative Dialog -->
-    <PersonnelDialog
-      v-model="isPersonDialogOpen"
-      :personData="selectedPersonForDialog"
-      :initialTab="dialogInitialTab"
-      :targetRelativeCode="dialogTargetRelativeCode"
-      @saved="onPersonSaved"
-      @deleted="onPersonSaved"
-    />
-
-    <!-- Advanced DOCX Export Dialog for Dashboard -->
-    <AdvancedDocxExportDialog
-      v-model="isDocxExportOpen"
-      :selectedPersonnel="drilldownSelectedPersonnel"
-      :allPersonnel="drilldownAllPersonnel"
-    />
-
-    <!-- Popup Xem trước PDF trực tiếp của từng hàng -->
-    <PdfPreviewDialog
-      v-model="showRowPdfPreview"
-      :pdf-blob="rowPreviewPdfBlob"
-      :title="rowPreviewTitle"
-      :filename="rowPreviewFileName"
-    />
-
     <!-- POPUP XEM CHI TIẾT DỮ LIỆU THỐNG KÊ (DRILLDOWN FULL COLUMNS MODAL) -->
     <Dialog
       v-model:visible="isDrilldownModalOpen"
       modal
+      :baseZIndex="10000"
       :style="{ width: '95vw', maxWidth: '1520px' }"
       :contentStyle="{ maxHeight: '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '0 16px 16px 16px' }"
     >
@@ -992,15 +968,13 @@
               />
             </div>
 
-            <!-- Xuất PDF -->
-            <Button
-              icon="pi pi-file-pdf"
-              label="Xuất PDF"
-              severity="danger"
-              size="small"
-              outlined
-              @click="openDrilldownDocxExport"
-              style="font-size: 0.78rem; height: 32px;"
+            <!-- Menu Xuất / Nhập Dropdown chuẩn dùng chung ExportImportMenu -->
+            <ExportImportMenu
+              :tableTitle="drilldownExtraTitle || drilldownWidget?.title || 'Thống kê'"
+              :selectedCount="drilldownSelectedRows.length"
+              :showImport="false"
+              @export-pdf="openDrilldownDocxExport"
+              @export-excel="exportDrilldownExcel"
             />
           </div>
         </div>
@@ -1092,9 +1066,9 @@
           <Column
             header="Thao tác"
             headerClass="col-center"
-            bodyClass="col-center"
-            :headerStyle="{ width: '110px', minWidth: '110px' }"
-            :bodyStyle="{ width: '110px', minWidth: '110px' }"
+            bodyClass="col-center col-frozen-action"
+            :headerStyle="{ width: '110px', minWidth: '110px', background: '#f8fafc !important', zIndex: 12 }"
+            :bodyStyle="{ width: '110px', minWidth: '110px', background: '#ffffff !important', zIndex: 11, boxShadow: '-4px 0 8px rgba(0, 0, 0, 0.08)' }"
             frozen
             alignFrozen="right"
           >
@@ -1216,6 +1190,31 @@
         </div>
       </template>
     </Dialog>
+
+    <!-- Detailed Personnel / Relative Dialog -->
+    <PersonnelDialog
+      v-model="isPersonDialogOpen"
+      :personData="selectedPersonForDialog"
+      :initialTab="dialogInitialTab"
+      :targetRelativeCode="dialogTargetRelativeCode"
+      @saved="onPersonSaved"
+      @deleted="onPersonSaved"
+    />
+
+    <!-- Advanced DOCX Export Dialog for Dashboard -->
+    <AdvancedDocxExportDialog
+      v-model="isDocxExportOpen"
+      :selectedPersonnel="drilldownSelectedPersonnel"
+      :allPersonnel="drilldownAllPersonnel"
+    />
+
+    <!-- Popup Xem trước PDF trực tiếp của từng hàng -->
+    <PdfPreviewDialog
+      v-model="showRowPdfPreview"
+      :pdf-blob="rowPreviewPdfBlob"
+      :title="rowPreviewTitle"
+      :filename="rowPreviewFileName"
+    />
   </div>
 </template>
 
@@ -1230,6 +1229,7 @@ import Column from 'primevue/column';
 import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
+import ExportImportMenu from '@/components/common/ExportImportMenu.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
@@ -1450,6 +1450,28 @@ const drilldownAllPersonnel = computed(() => {
 
 const openDrilldownDocxExport = () => {
   isDocxExportOpen.value = true;
+};
+
+const exportDrilldownExcel = () => {
+  const selected = drilldownSelectedRows.value || [];
+  const list = selected.length > 0 ? selected : (filteredDrilldownList.value || []);
+  const cols = drilldownColumns.value || [];
+  const title = drilldownExtraTitle.value || drilldownWidget.value?.title || 'Thong_ke_chi_tiet';
+  const cleanTitle = title.replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_');
+
+  const rows = list.map((item, idx) => {
+    const obj = { 'STT': idx + 1 };
+    cols.forEach((col) => {
+      if (col.id === 'presenceStatus' || col.id === '_presenceStatus' || col.id === 'trang_thai_hien_dien' || col.id === 'status' || col.format === 'presence') {
+        obj[col.label || col.id] = getPresenceBadge(item).text;
+      } else {
+        obj[col.label || col.id] = getDisplayValue(item, col.id);
+      }
+    });
+    return obj;
+  });
+
+  exportToExcel(rows, `${cleanTitle}_${new Date().toISOString().slice(0, 10)}`, title);
 };
 
 const selectedDrilldownRow = ref(null);

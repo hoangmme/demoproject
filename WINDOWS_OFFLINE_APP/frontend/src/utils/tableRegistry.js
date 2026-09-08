@@ -130,7 +130,6 @@ export function getUnifiedTableDefinitions(options = {}) {
   // Bảng 2: Cán bộ
   const personnelTable = {
     id: 'personnel',
-    code: 'CB-01',
     title: corePersonnelTitle,
     icon: savedPersonnelCfg?.icon || 'pi-users',
     iconColor: savedPersonnelCfg?.iconColor || '#0284c7',
@@ -369,7 +368,6 @@ export function getUnifiedTableColumns(tableId, options = {}) {
 export const DEFAULT_UNIFIED_DASHBOARDS = [
   {
     id: 'personnel',
-    code: 'CB-01',
     title: 'Cán bộ',
     description: 'Danh sách hồ sơ cán bộ',
     source: 'personnel',
@@ -385,7 +383,6 @@ export const DEFAULT_UNIFIED_DASHBOARDS = [
   },
   {
     id: 'relatives',
-    code: 'TN-02',
     title: 'Thân nhân',
     description: 'Danh sách thân nhân của cán bộ',
     source: 'relatives',
@@ -400,7 +397,6 @@ export const DEFAULT_UNIFIED_DASHBOARDS = [
   },
   {
     id: 'trips',
-    code: 'CD-03',
     title: 'Danh sách Chuyến đi',
     description: 'Tổng hợp các chuyến đi nước ngoài của cán bộ và thân nhân',
     source: 'trips',
@@ -430,12 +426,6 @@ export function ensureStandardDashboards(dashboards = []) {
       if (!result[existingIdx].metricCards || result[existingIdx].metricCards.length === 0) {
         result[existingIdx].metricCards = [...defDash.metricCards];
       }
-      if (!result[existingIdx].code) {
-        result[existingIdx].code = defDash.code;
-      }
-      if (!result[existingIdx].source) {
-        result[existingIdx].source = defDash.source;
-      }
       if (!result[existingIdx].icon) {
         result[existingIdx].icon = defDash.icon;
       }
@@ -448,10 +438,10 @@ export function ensureStandardDashboards(dashboards = []) {
 }
 
 /**
- * Lấy nhãn hiển thị chuẩn hóa cho một bảng bất kỳ: "[Mã] Tên bảng"
+ * Lấy nhãn hiển thị chuẩn hóa cho một bảng bất kỳ: "Tên bảng"
  */
 export function getUnifiedTableLabel(tableId, options = {}) {
   const table = findUnifiedTable(tableId, options);
   if (!table) return 'Dữ liệu';
-  return table.code ? `[${table.code}] ${table.title}` : table.title;
+  return table.title || 'Dữ liệu';
 }

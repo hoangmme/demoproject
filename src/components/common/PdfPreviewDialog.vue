@@ -3,7 +3,8 @@
     v-model:visible="visible"
     modal
     :header="dialogTitle"
-    :style="{ width: '92vw', maxWidth: '1120px' }"
+    :baseZIndex="20000"
+    :style="{ width: '92vw', maxWidth: '1120px', zIndex: 20000 }"
     :contentStyle="{ height: '82vh', padding: '0', display: 'flex', flexDirection: 'column' }"
     :closable="true"
     @hide="onClose"
