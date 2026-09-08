@@ -226,6 +226,23 @@ const form = ref({
   files: [],
 });
 
+const safeClone = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  try {
+    return JSON.parse(
+      JSON.stringify(obj, (key, value) => {
+        if (key === 'rawPerson' || key === 'rawRelative' || key === 'rawTrip' || key === 'parentPerson') {
+          return undefined;
+        }
+        return value;
+      })
+    );
+  } catch (e) {
+    console.warn('safeClone fallback:', e);
+    return { ...obj };
+  }
+};
+
 const initFormData = (val) => {
   if (val) {
     let cd = val.custom_data || {};
@@ -236,7 +253,7 @@ const initFormData = (val) => {
         cd = {};
       }
     }
-    const parsedVal = JSON.parse(JSON.stringify(val));
+    const parsedVal = safeClone(val);
     // Clean out custom_data and recursive keys from parsedVal and cd
     delete parsedVal.custom_data;
     delete cd.custom_data;
@@ -256,7 +273,6 @@ const initFormData = (val) => {
     };
     delete form.value.custom_data.custom_data;
   } else {
-    isEdit.value = false;
     form.value = {
       id: null,
       code: '',

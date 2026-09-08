@@ -1622,6 +1622,25 @@
      - Đồng bộ tên bảng động (`mainTableTitle`, `relativeTableTitle`, `tripsTableTitle`) từ cấu hình nhận diện thương hiệu `system_branding_config`.
      - **Sửa lỗi nhân bản bảng**: Loại trừ các bảng cốt lõi (`trips`, `personnel`, `relatives`) trong `loadCustomTables()` để không bị sinh lặp thêm Bảng 4 "Danh sách Chuyến đi".
 - **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Gọn Hóa Menu Thao Tác Tab View (Icon Setup Cực Gọn), Đồng Bộ Xuất/Nhập & Xem PDF ở Chuyến Đi, Khắc Phục Nút "Chỉnh Sửa Hồ Sơ" trong Popup**:
+  1. **Gọn Hóa Thao Tác Tab Chế Độ Xem (`PersonnelView.vue`, `ChildDashboardView.vue`, `main.css`)**:
+     - Thay thế cụm 4 icon thao tác dàn hàng ngang `[ ← ] [ → ] [ ✎ ] [ ✕ ]` làm tràn thanh tab bằng duy nhất **1 icon Setup `[ ⋮ ]` (`pi pi-ellipsis-v`)** tinh gọn, hiện đại.
+     - Khi bấm vào icon Setup, hiển thị menu thả nổi (`.lark-tab-dropdown-menu`) chứa đầy đủ các tùy chọn:
+       - `Sửa tên & Điều kiện lọc` (`pi-pencil`)
+       - `Dời sang trái` (`pi-arrow-left`, ẩn khi ở vị trí đầu)
+       - `Dời sang phải` (`pi-arrow-right`, ẩn khi ở vị trí cuối)
+       - `Xóa Chế độ xem` (`pi-trash`, màu đỏ nguy hiểm, ẩn ở view mặc định đầu tiên)
+     - Tự động đóng menu khi click ra ngoài (`window.addEventListener('click', closeTabMenu)`).
+  2. **Đồng Bộ Hoàn Toàn Module Xuất / Nhập và Xem PDF ở Bảng Chuyến Đi (`ChildDashboardView.vue`)**:
+     - Đồng bộ menu `Xuất / Nhập` ở Chuyến đi và Chuyên đề: Bổ sung tùy chọn `Import Excel Chuyến đi (Wizard 4 Bước)` (kết nối trực tiếp với `ExcelImportWizard.vue`).
+     - Tích hợp cột cố định bên phải `Thao tác` với nút `[👁️ Xem PDF]` trực tiếp trên từng dòng của DataTable Chuyến đi / Chuyên đề.
+     - Tự động phân giải cán bộ chủ quản (`resolvePersonFromItem`) và mở `PdfPreviewDialog` trực quan không cần tải về máy.
+  3. **Khắc Phục Triệt Để Lỗi Nút "Chỉnh sửa hồ sơ" trong Popup (`PersonnelDialog.vue`, `DashboardView.vue`)**:
+     - **Sửa lỗi crash cấu trúc đệ quy (Circular JSON Structure)**: `safeClone` lọc bỏ các tham chiếu vòng (`rawPerson`, `rawRelative`, `rawTrip`, `parentPerson`), ngăn chặn triệt để `TypeError: Converting circular structure to JSON` khi mở `PersonnelDialog`.
+     - **Sửa lỗi gán vào computed read-only**: Xóa bỏ câu lệnh gán `isEdit.value = false;` gây cảnh báo và đứt đoạn reactive trong `initFormData`.
+     - **Sửa điều kiện hiển thị nút**: Bỏ ràng buộc `drilldownSourceType === 'personnel'` ở footer popup xem chi tiết (`isDrilldownRecordDetailOpen`), cho phép nút `[Chỉnh sửa hồ sơ]` hoạt động với mọi bảng (Chuyến đi, Thân nhân, Cán bộ).
+     - **Điều hướng thông minh theo loại bản ghi**: Tự động chuyển hướng chính xác đến `openTripDetail` (Tab 1: Chuyến đi), `openRelativeDetail` (Tab 2: Thân nhân) hoặc `openPersonnelDetail` (Tab 0: Cán bộ).
+- **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
 

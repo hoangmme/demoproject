@@ -1204,7 +1204,7 @@
       <template #footer>
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
           <Button
-            v-if="drilldownSourceType === 'personnel' && selectedDrilldownRow?.id"
+            v-if="selectedDrilldownRow"
             label="Chỉnh sửa hồ sơ"
             icon="pi pi-user-edit"
             severity="primary"
@@ -1485,8 +1485,15 @@ const drilldownDetailGroups = computed(() => {
 
 const openPersonnelDetailFromRecord = () => {
   if (!selectedDrilldownRow.value) return;
+  const row = selectedDrilldownRow.value;
   isDrilldownRecordDetailOpen.value = false;
-  openPersonnelDetail(selectedDrilldownRow.value);
+  if (row.rawTrip || row._recordType === 'trip' || drilldownSourceType.value === 'trips') {
+    openTripDetail(row);
+  } else if (row.rawRelative || row.relationshipName || drilldownSourceType.value === 'relatives') {
+    openRelativeDetail(row);
+  } else {
+    openPersonnelDetail(row);
+  }
 };
 
 const getDisplayValue = (row, colId) => {
@@ -1595,7 +1602,7 @@ const openTripDetail = (t) => {
   }
   if (p) {
     selectedPersonForDialog.value = p;
-    dialogInitialTab.value = t.isRelative ? 1 : 2;
+    dialogInitialTab.value = t.isRelative ? 2 : 1; // 1 = Chuyến đi, 2 = Thân nhân
     dialogTargetRelativeCode.value = t.isRelative ? (t.rawRelative?.code || '') : '';
     isPersonDialogOpen.value = true;
   }
@@ -1618,7 +1625,7 @@ const openRelativeDetail = (r) => {
 
   if (parent) {
     selectedPersonForDialog.value = parent;
-    dialogInitialTab.value = 1; // Tab 2: Thân nhân
+    dialogInitialTab.value = 2; // Tab 3: Thân nhân
     dialogTargetRelativeCode.value = relCode;
     isPersonDialogOpen.value = true;
   } else {
@@ -1626,7 +1633,7 @@ const openRelativeDetail = (r) => {
       name: r.parentName || 'Cán bộ liên quan',
       relatives: [r],
     };
-    dialogInitialTab.value = 1;
+    dialogInitialTab.value = 2; // Tab 3: Thân nhân
     dialogTargetRelativeCode.value = relCode;
     isPersonDialogOpen.value = true;
   }

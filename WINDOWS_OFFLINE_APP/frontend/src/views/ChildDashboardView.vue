@@ -144,12 +144,24 @@
           />
 
           <div v-show="isDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
+            <div class="menu-action-item" @click="openImportWizard(); isDataMenuOpen = false;">
+              <div class="action-icon-box" style="background: #e0f2fe; color: #0284c7;">
+                <i class="pi pi-upload"></i>
+              </div>
+              <div>
+                <div class="menu-action-title">
+                  {{ currentDashboardConfig?.source === 'relatives' ? 'Import Excel Thân nhân (Wizard 4 Bước)' : currentDashboardConfig?.source === 'personnel' ? 'Import Excel Cán bộ (Wizard 4 Bước)' : 'Import Excel Chuyến đi (Wizard 4 Bước)' }}
+                </div>
+                <div class="menu-action-sub">Tải dữ liệu từ tệp Excel .xlsx vào hệ thống</div>
+              </div>
+            </div>
+
             <div class="menu-action-item" @click="openAdvancedDocxExport(); isDataMenuOpen = false;">
               <div class="action-icon-box" style="background: #fee2e2; color: #dc2626;">
                 <i class="pi pi-file-pdf"></i>
               </div>
               <div>
-                <div class="menu-action-title">Xuất Hồ sơ Báo cáo (PDF / Word)</div>
+                <div class="menu-action-title">{{ selectedTrips.length > 0 ? `Xuất Hồ sơ PDF (${selectedTrips.length} đã chọn)` : 'Xuất Hồ sơ Báo cáo (PDF / Word)' }}</div>
                 <div class="menu-action-sub">Xuất hồ sơ chi tiết theo mẫu chuẩn hoặc tải lên</div>
               </div>
             </div>
@@ -197,7 +209,7 @@
           <div
             v-if="!isCardHidden(card)"
             class="lark-tab-item-wrapper"
-            :class="{ 'tab-active': isCardActive(card, cIdx) }"
+            :class="{ 'tab-active': isCardActive(card, cIdx), 'menu-open': activeTabMenuKey === `card_${cIdx}` }"
           >
             <button
               type="button"
@@ -212,43 +224,36 @@
               </span>
             </button>
 
-            <!-- Menu nút thao tác View: Dời trái, Dời phải, Sửa, Xóa (dành cho Quản trị viên) -->
+            <!-- Menu nút thao tác View: Setup (Dời trái, Dời phải, Sửa, Xóa) -->
             <div v-if="authStore.isAdmin" class="lark-tab-actions">
               <button
-                v-if="cIdx > 0"
                 type="button"
-                class="btn-tab-action"
-                @click.stop="moveView(cIdx, -1)"
-                title="Dời view sang trái"
+                class="btn-tab-action btn-tab-setup"
+                :class="{ active: activeTabMenuKey === `card_${cIdx}` }"
+                @click.stop="toggleTabMenu('card', cIdx)"
+                title="Tùy chọn Chế độ xem"
               >
-                <i class="pi pi-arrow-left"></i>
+                <i class="pi pi-ellipsis-v"></i>
               </button>
-              <button
-                v-if="cIdx < activeMetricCards.length - 1"
-                type="button"
-                class="btn-tab-action"
-                @click.stop="moveView(cIdx, 1)"
-                title="Dời view sang phải"
-              >
-                <i class="pi pi-arrow-right"></i>
-              </button>
-              <button
-                type="button"
-                class="btn-tab-action"
-                @click.stop="openEditViewDialog(card, cIdx)"
-                title="Sửa tên & Điều kiện lọc view này"
-              >
-                <i class="pi pi-pencil"></i>
-              </button>
-              <button
-                v-if="cIdx > 0"
-                type="button"
-                class="btn-tab-action btn-tab-delete"
-                @click.stop="deleteView(card, cIdx)"
-                title="Xóa Chế độ xem này"
-              >
-                <i class="pi pi-times"></i>
-              </button>
+              <div v-if="activeTabMenuKey === `card_${cIdx}`" class="lark-tab-dropdown-menu" @click.stop>
+                <button type="button" class="lark-tab-menu-item" @click="openEditViewDialog(card, cIdx); closeTabMenu()">
+                  <i class="pi pi-pencil"></i>
+                  <span>Sửa tên & Điều kiện lọc</span>
+                </button>
+                <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click="moveView(cIdx, -1); closeTabMenu()">
+                  <i class="pi pi-arrow-left"></i>
+                  <span>Dời sang trái</span>
+                </button>
+                <button v-if="cIdx < activeMetricCards.length - 1" type="button" class="lark-tab-menu-item" @click="moveView(cIdx, 1); closeTabMenu()">
+                  <i class="pi pi-arrow-right"></i>
+                  <span>Dời sang phải</span>
+                </button>
+                <div v-if="cIdx > 0" class="lark-tab-menu-divider"></div>
+                <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item item-danger" @click="deleteView(card, cIdx); closeTabMenu()">
+                  <i class="pi pi-trash"></i>
+                  <span>Xóa Chế độ xem</span>
+                </button>
+              </div>
             </div>
           </div>
         </template>
@@ -780,6 +785,31 @@
           </template>
         </Column>
 
+        <!-- Cột Thao tác: Xem trực tiếp PDF (Frozen Right) -->
+        <Column
+          header="Thao tác"
+          headerClass="col-center"
+          bodyClass="col-center"
+          frozen
+          alignFrozen="right"
+          :headerStyle="{ width: '110px', minWidth: '110px', background: '#f8fafc', fontWeight: '700', zIndex: 10 }"
+          :bodyStyle="{ width: '110px', minWidth: '110px', background: '#f8fafc', zIndex: 10 }"
+        >
+          <template #body="{ data }">
+            <Button
+              icon="pi pi-eye"
+              label="Xem PDF"
+              severity="danger"
+              size="small"
+              outlined
+              :loading="rowPreviewingKey === (data.uniqueKey || data.id)"
+              @click.stop="previewPdfForRow(data)"
+              style="font-size: 0.72rem; padding: 3px 8px;"
+              title="Xem trực tiếp PDF hồ sơ cán bộ này"
+            />
+          </template>
+        </Column>
+
         <!-- ➕ Nút Thêm Cột Mới chuẩn Airtable / Lark Base / Teable -->
         <Column :headerStyle="{ width: '48px', minWidth: '48px', padding: '0', textAlign: 'center' }" :bodyStyle="{ width: '48px', minWidth: '48px', padding: '0', textAlign: 'center', background: '#f8fafc' }">
           <template #header>
@@ -1059,6 +1089,21 @@
       :allPersonnel="allPersonnelForExport"
     />
 
+    <!-- PDF Preview Dialog (Direct browser preview & print/download) -->
+    <PdfPreviewDialog
+      v-model="showRowPdfPreview"
+      :pdfBlob="rowPreviewPdfBlob"
+      :title="rowPreviewTitle"
+      :fileName="rowPreviewFileName"
+    />
+
+    <!-- Excel Import Wizard (4 Steps) -->
+    <ExcelImportWizard
+      v-model:visible="isWizardOpen"
+      :defaultTarget="wizardTarget"
+      @imported="onWizardImported"
+    />
+
     <!-- Name Column Config Popover -->
     <div v-if="showNameColConfig" class="name-col-config-overlay" @click.self="showNameColConfig = false">
       <div class="name-col-config-panel" :style="nameColConfigPos">
@@ -1155,7 +1200,10 @@ import AddColumnDialog from '@/components/common/AddColumnDialog.vue';
 import TableKeyLinkDialog from '@/components/common/TableKeyLinkDialog.vue';
 import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
 import TableViewManagerDialog from '@/components/common/TableViewManagerDialog.vue';
+import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
+import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import { ensureStandardDashboards } from '@/utils/tableRegistry';
+import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 
 import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug, formatOptions } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, extractRowFieldValue } from '@/utils/dashboardMetrics';
@@ -1167,6 +1215,75 @@ const router = useRouter();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 const isExportDocxDialogOpen = ref(false);
+
+// PDF Row Preview
+const showRowPdfPreview = ref(false);
+const rowPreviewPdfBlob = ref(null);
+const rowPreviewTitle = ref('');
+const rowPreviewFileName = ref('');
+const rowPreviewingKey = ref(null);
+
+const previewPdfForRow = async (row) => {
+  if (!row) return;
+  const rowKey = row.uniqueKey || row.id;
+  rowPreviewingKey.value = rowKey;
+
+  try {
+    const p = resolvePersonFromItem(row) || row.rawPerson || (row.name ? row : null);
+    if (!p) {
+      alert('Không tìm thấy hồ sơ cán bộ tương ứng để xuất PDF!');
+      return;
+    }
+
+    const exportOpts = {
+      includeRelatives: true,
+      includeTrips: true,
+      showColumnNumbers: false,
+    };
+    const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
+    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, p, personnelStore, authStore.currentUser, exportOpts);
+
+    rowPreviewPdfBlob.value = blob;
+    rowPreviewTitle.value = `Hồ sơ: ${p.name || p.ho_ten || 'Cán bộ'}`;
+    rowPreviewFileName.value = `Ho_so_${(p.name || p.ho_ten || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    showRowPdfPreview.value = true;
+  } catch (err) {
+    console.error('Lỗi khi xem PDF:', err);
+    alert('Không thể tạo bản xem trước PDF: ' + (err.message || err));
+  } finally {
+    rowPreviewingKey.value = null;
+  }
+};
+
+// Excel Import Wizard
+const isWizardOpen = ref(false);
+const wizardTarget = ref('trips');
+
+const openImportWizard = (target = null) => {
+  if (target) {
+    wizardTarget.value = target;
+  } else {
+    const src = currentDashboardConfig.value?.source;
+    if (src === 'relatives') wizardTarget.value = 'relative';
+    else if (src === 'personnel') wizardTarget.value = 'personnel';
+    else wizardTarget.value = 'trips';
+  }
+  isWizardOpen.value = true;
+};
+
+const onWizardImported = async () => {
+  await personnelStore.fetchPersonnel();
+};
+
+// Lark Tab Setup Menu
+const activeTabMenuKey = ref(null);
+const toggleTabMenu = (type, idx) => {
+  const key = `${type}_${idx}`;
+  activeTabMenuKey.value = activeTabMenuKey.value === key ? null : key;
+};
+const closeTabMenu = () => {
+  activeTabMenuKey.value = null;
+};
 
 // ===== Name Column Config (Linh hoạt cho mọi mô hình: Cán bộ, Học sinh, Nhân sự...) =====
 const NAME_COL_IDS = new Set(['_parentPersonnelName']);
@@ -4601,12 +4718,14 @@ onMounted(async () => {
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
   window.addEventListener('table-show-col-index-changed', onColIndexChanged);
   window.addEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
+  window.addEventListener('click', closeTabMenu);
 });
 
 onUnmounted(() => {
   window.removeEventListener('table-row-height-changed', onRowHeightChanged);
   window.removeEventListener('table-show-col-index-changed', onColIndexChanged);
   window.removeEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
+  window.removeEventListener('click', closeTabMenu);
 });
 </script>
 

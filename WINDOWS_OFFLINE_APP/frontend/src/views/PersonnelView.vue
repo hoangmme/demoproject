@@ -211,43 +211,36 @@
                 </span>
               </button>
 
-              <!-- Thao tác View: Dời trái, Dời phải, Sửa, Xóa -->
+              <!-- Thao tác View: Menu Cấu hình Setup (Dời trái, Dời phải, Sửa, Xóa) -->
               <div v-if="authStore.isAdmin" class="lark-tab-actions">
                 <button
-                  v-if="cIdx > 0"
                   type="button"
-                  class="btn-tab-action"
-                  @click.stop="moveView('personnel', cIdx, -1)"
-                  title="Dời view sang trái"
+                  class="btn-tab-action btn-tab-setup"
+                  :class="{ active: activeTabMenuKey === `personnel_${cIdx}` }"
+                  @click.stop="toggleTabMenu('personnel', cIdx)"
+                  title="Tùy chọn Chế độ xem"
                 >
-                  <i class="pi pi-arrow-left"></i>
+                  <i class="pi pi-ellipsis-v"></i>
                 </button>
-                <button
-                  v-if="cIdx < activePersonnelMetricCards.length - 1"
-                  type="button"
-                  class="btn-tab-action"
-                  @click.stop="moveView('personnel', cIdx, 1)"
-                  title="Dời view sang phải"
-                >
-                  <i class="pi pi-arrow-right"></i>
-                </button>
-                <button
-                  type="button"
-                  class="btn-tab-action"
-                  @click.stop="openEditViewDialog('personnel', card, cIdx)"
-                  title="Sửa tên & Điều kiện lọc view này"
-                >
-                  <i class="pi pi-pencil"></i>
-                </button>
-                <button
-                  v-if="cIdx > 0"
-                  type="button"
-                  class="btn-tab-action btn-tab-delete"
-                  @click.stop="deleteView('personnel', card, cIdx)"
-                  title="Xóa Chế độ xem này"
-                >
-                  <i class="pi pi-times"></i>
-                </button>
+                <div v-if="activeTabMenuKey === `personnel_${cIdx}`" class="lark-tab-dropdown-menu" @click.stop>
+                  <button type="button" class="lark-tab-menu-item" @click="openEditViewDialog('personnel', card, cIdx); closeTabMenu()">
+                    <i class="pi pi-pencil"></i>
+                    <span>Sửa tên & Điều kiện lọc</span>
+                  </button>
+                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click="moveView('personnel', cIdx, -1); closeTabMenu()">
+                    <i class="pi pi-arrow-left"></i>
+                    <span>Dời sang trái</span>
+                  </button>
+                  <button v-if="cIdx < activePersonnelMetricCards.length - 1" type="button" class="lark-tab-menu-item" @click="moveView('personnel', cIdx, 1); closeTabMenu()">
+                    <i class="pi pi-arrow-right"></i>
+                    <span>Dời sang phải</span>
+                  </button>
+                  <div v-if="cIdx > 0" class="lark-tab-menu-divider"></div>
+                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item item-danger" @click="deleteView('personnel', card, cIdx); closeTabMenu()">
+                    <i class="pi pi-trash"></i>
+                    <span>Xóa Chế độ xem</span>
+                  </button>
+                </div>
               </div>
             </div>
           </template>
@@ -821,43 +814,36 @@
                 </span>
               </button>
 
-              <!-- Thao tác View: Dời trái, Dời phải, Sửa, Xóa -->
+              <!-- Thao tác View: Menu Cấu hình Setup (Dời trái, Dời phải, Sửa, Xóa) -->
               <div v-if="authStore.isAdmin" class="lark-tab-actions">
                 <button
-                  v-if="cIdx > 0"
                   type="button"
-                  class="btn-tab-action"
-                  @click.stop="moveView('relatives', cIdx, -1)"
-                  title="Dời view sang trái"
+                  class="btn-tab-action btn-tab-setup"
+                  :class="{ active: activeTabMenuKey === `relatives_${cIdx}` }"
+                  @click.stop="toggleTabMenu('relatives', cIdx)"
+                  title="Tùy chọn Chế độ xem"
                 >
-                  <i class="pi pi-arrow-left"></i>
+                  <i class="pi pi-ellipsis-v"></i>
                 </button>
-                <button
-                  v-if="cIdx < activeRelativeMetricCards.length - 1"
-                  type="button"
-                  class="btn-tab-action"
-                  @click.stop="moveView('relatives', cIdx, 1)"
-                  title="Dời view sang phải"
-                >
-                  <i class="pi pi-arrow-right"></i>
-                </button>
-                <button
-                  type="button"
-                  class="btn-tab-action"
-                  @click.stop="openEditViewDialog('relatives', card, cIdx)"
-                  title="Sửa tên & Điều kiện lọc view này"
-                >
-                  <i class="pi pi-pencil"></i>
-                </button>
-                <button
-                  v-if="cIdx > 0"
-                  type="button"
-                  class="btn-tab-action btn-tab-delete"
-                  @click.stop="deleteView('relatives', card, cIdx)"
-                  title="Xóa Chế độ xem này"
-                >
-                  <i class="pi pi-times"></i>
-                </button>
+                <div v-if="activeTabMenuKey === `relatives_${cIdx}`" class="lark-tab-dropdown-menu" @click.stop>
+                  <button type="button" class="lark-tab-menu-item" @click="openEditViewDialog('relatives', card, cIdx); closeTabMenu()">
+                    <i class="pi pi-pencil"></i>
+                    <span>Sửa tên & Điều kiện lọc</span>
+                  </button>
+                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click="moveView('relatives', cIdx, -1); closeTabMenu()">
+                    <i class="pi pi-arrow-left"></i>
+                    <span>Dời sang trái</span>
+                  </button>
+                  <button v-if="cIdx < activeRelativeMetricCards.length - 1" type="button" class="lark-tab-menu-item" @click="moveView('relatives', cIdx, 1); closeTabMenu()">
+                    <i class="pi pi-arrow-right"></i>
+                    <span>Dời sang phải</span>
+                  </button>
+                  <div v-if="cIdx > 0" class="lark-tab-menu-divider"></div>
+                  <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item item-danger" @click="deleteView('relatives', card, cIdx); closeTabMenu()">
+                    <i class="pi pi-trash"></i>
+                    <span>Xóa Chế độ xem</span>
+                  </button>
+                </div>
               </div>
             </div>
           </template>
@@ -1789,6 +1775,15 @@ const openAddViewDialog = (targetTable = 'personnel') => {
   isViewManagerOpen.value = true;
 };
 
+const activeTabMenuKey = ref(null);
+const toggleTabMenu = (type, idx) => {
+  const key = `${type}_${idx}`;
+  activeTabMenuKey.value = activeTabMenuKey.value === key ? null : key;
+};
+const closeTabMenu = () => {
+  activeTabMenuKey.value = null;
+};
+
 const openEditViewDialog = (targetTable, card, cIdx) => {
   addViewTargetTable.value = targetTable;
   viewManagerMode.value = 'edit';
@@ -2201,12 +2196,14 @@ onMounted(async () => {
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
   window.addEventListener('table-show-col-index-changed', onColIndexChanged);
   window.addEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
+  window.addEventListener('click', closeTabMenu);
 });
 
 onUnmounted(() => {
   window.removeEventListener('table-row-height-changed', onRowHeightChanged);
   window.removeEventListener('table-show-col-index-changed', onColIndexChanged);
   window.removeEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
+  window.removeEventListener('click', closeTabMenu);
 });
 
 watch(

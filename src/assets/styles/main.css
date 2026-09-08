@@ -1232,7 +1232,8 @@ td.col-right {
 }
 
 .lark-tab-item-wrapper.tab-active .lark-tab-actions,
-.lark-tab-item-wrapper:hover .lark-tab-actions {
+.lark-tab-item-wrapper:hover .lark-tab-actions,
+.lark-tab-item-wrapper.menu-open .lark-tab-actions {
   opacity: 1;
   visibility: visible;
 }
@@ -1241,14 +1242,14 @@ td.col-right {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: none;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 4px;
   color: #64748b;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -1262,6 +1263,79 @@ td.col-right {
 .btn-tab-action.btn-tab-delete:hover {
   background: #fee2e2;
   color: #ef4444;
+}
+
+.btn-tab-action.btn-tab-setup:hover,
+.btn-tab-action.btn-tab-setup.active {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+/* Lark Tab Floating Dropdown Menu */
+.lark-tab-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1050;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
+  min-width: 195px;
+  padding: 5px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lark-tab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lark-tab-menu-item i {
+  font-size: 0.82rem;
+  color: #64748b;
+  width: 16px;
+  text-align: center;
+}
+
+.lark-tab-menu-item:hover {
+  background: #f1f5f9;
+  color: #0284c7;
+}
+
+.lark-tab-menu-item:hover i {
+  color: #0284c7;
+}
+
+.lark-tab-menu-item.item-danger {
+  color: #dc2626;
+}
+
+.lark-tab-menu-item.item-danger i {
+  color: #dc2626;
+}
+
+.lark-tab-menu-item.item-danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.lark-tab-menu-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
 }
 
 .lark-base-tab-add {
