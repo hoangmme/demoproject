@@ -1789,5 +1789,66 @@
   5. **Đồng bộ & Kiểm chứng**:
      - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` thành công 100% (0 lỗi, 560ms).
+- **Entry (2026-09-08)**: **Triển Khai Động Cơ Độ Rộng Cột 2 Tầng Chuẩn Lark Base, Xóa Bỏ Cấu Hình Chiều Cao Hàng & Tầng 3**:
+  1. **Chỉ đạo chiến lược của người dùng**:
+     - Xóa bỏ hoàn toàn cấu hình "Chiều cao hàng" khỏi "Tùy chọn cột" (`ColumnSelector.vue`) và `UnifiedTableView.vue`.
+     - Thay thế bằng Động cơ Độ rộng cột 2 tầng chuẩn Lark Base:
+       - **Ưu tiên 1 (Cao nhất)**: Người dùng nhập `px` cụ thể (ví dụ: `160px`) tại Tùy chọn cột -> Áp dụng đồng bộ cố định cho TOÀN BỘ CỘT trên bảng (`width: Xpx; minWidth: Xpx; maxWidth: Xpx`).
+       - **Ưu tiên 2 (Khi Tùy chọn cột để `Auto`)**:
+         - Cột nào người dùng đã tự dùng chuột kéo rê mép cột trên header bảng (Tầng 1 - Direct Drag Resizing) -> Nhận độ rộng thực tế đã kéo.
+         - Cột nào chưa kéo -> Tự động co giãn theo nội dung (`auto`), kèm `min-width` tối ưu (240px cho `checkbox_file_loop` / `checkbox_file`, 150px cho cột văn bản thường).
+       - **Xóa bỏ hoàn toàn Tầng 3**: Loại bỏ triệt để mục "Độ rộng hiển thị (px):" trong menu ⚙️ từng cột (`ColumnHeaderMenu.vue`), không cấu hình thừa thãi phân tán.
+  2. **Giải pháp kiến trúc đã thực hiện**:
+     - `src/components/common/ColumnSelector.vue`:
+       - Xóa bỏ hoàn toàn UI và logic "Chiều cao hàng" (`.row-height-control`, `rowHeightLimit`, `setRowHeightLimit`).
+       - Bổ sung khối UI Độ rộng cột hiện đại (`.col-width-control`): Nút chọn chế độ `Auto`, ô nhập số `Cố định: [ 160 ] px`, nút reset `Đặt lại kéo tay` khi đang ở Auto, và dòng ghi chú rõ ràng về nguyên lý ưu tiên.
+     - `src/components/common/ColumnHeaderMenu.vue`:
+       - Xóa bỏ mục số 3 "Độ rộng hiển thị (px):", `editWidth` ref, `handleSaveWidth`, và emit `change-width`.
+     - `src/views/UnifiedTableView.vue`:
+       - Bật `:resizableColumns="true"` và `columnResizeMode="expand"` trên PrimeVue `<DataTable>`.
+       - Gắn `:pt="{ headerCell: { 'data-column-id': col.id } }"` trên từng `<Column>`.
+       - Bắt sự kiện `@column-resize-end="onColumnResizeEnd"`, lưu vết độ rộng từng cột đã kéo vào `resizedColWidths` và `localStorage` / `saveAppSettings`.
+       - Triển khai hàm `getColWidthStyle(col)` tính toán style chính xác theo đúng 2 tầng ưu tiên.
+       - Gỡ bỏ hoàn toàn `table-row-clamp-*` và các event listener liên quan.
+     - `src/assets/styles/main.css`:
+       - Gỡ bỏ các class giới hạn chiều cao hàng (`.table-row-clamp-*`), cho phép nội dung ô co giãn tự nhiên.
+       - Bổ sung định dạng hiển thị cho thanh kéo PrimeVue `.p-column-resizer` (cursor `col-resize`, highlight màu xanh `#0284c7` khi hover).
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 541ms).
+- **Entry (2026-09-08)**: **Mở Rộng Toàn Diện Dải Độ Rộng Form Chi Tiết Từ 5% Đến 100%**:
+  1. **Chỉ đạo của người dùng**:
+     - Bổ sung đầy đủ dải lựa chọn độ rộng trường dữ liệu trong popup/form chi tiết từ 5%, 10%, 15%, 20%... đến 100% (bước nhảy 5% + giữ 33% 1/3 dòng).
+  2. **Giải pháp kiến trúc đã thực hiện**:
+     - `src/utils/formatters.js`:
+       - Khai báo danh mục dùng chung `formWidthOptions` đầy đủ 21 cấp độ (5% -> 100%).
+       - Xuất hàm `getColItemStyle(width)` tự động tính toán width/flex chính xác bù trừ theo gap 1rem (`calc(w% - deduction)`), đảm bảo các trường ghép dòng (VD: 20% x 5, 10% x 10, 30% + 70%...) hiển thị chuẩn xác 100% chiều ngang hàng mà không bị tràn hay thụt lùi.
+     - Đồng bộ dropdown `formWidthOptions` tại cả 3 nơi cấu hình:
+       - Menu cài đặt cột header (`ColumnHeaderMenu.vue`).
+       - Dialog thêm cột mới (`AddColumnDialog.vue`).
+       - Cấu hình chung bảng dữ liệu (`SettingsImportView.vue`).
+     - Tích hợp `getColItemStyle` trên cả 4 form chi tiết:
+       - `PersonnelBasicForm.vue`, `PersonnelFamilyForm.vue`, `PersonnelNotesForm.vue`, `PersonnelTravelForm.vue`.
+     - `src/assets/styles/main.css`:
+       - Cập nhật `.form-grid` sang cơ chế `display: flex; flex-wrap: wrap; gap: 1rem;`, cho phép các trường tỷ lệ phần trăm co giãn linh hoạt và tự động xếp chồng `100%` trên thiết bị di động (responsive).
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 537ms).
+- **Entry (2026-09-08)**: **Xóa Bỏ Vĩnh Viễn 4 Form Cũ (PersonnelBasicForm, PersonnelFamilyForm, PersonnelNotesForm, PersonnelTravelForm) - Hợp Nhất Modal Chi Tiết Flat**:
+  1. **Chỉ đạo của người dùng**:
+     - Xóa bỏ hoàn toàn 4 component form cũ (`PersonnelBasicForm.vue`, `PersonnelFamilyForm.vue`, `PersonnelNotesForm.vue`, `PersonnelTravelForm.vue`) do đây là tàn dư của mô hình lồng đối tượng cũ.
+  2. **Giải pháp kiến trúc đã thực hiện**:
+     - Xóa vĩnh viễn cả 4 file khỏi `src/components/personnel/` và `WINDOWS_OFFLINE_APP/frontend/src/components/personnel/`.
+     - Tái cấu trúc [PersonnelDialog.vue](file:///Users/hoji/Documents/code/demoproject/src/components/personnel/PersonnelDialog.vue) thành **Modal Chi tiết Bản ghi Động (Flat Record Dialog)**:
+       - Không chia tab lồng cũ (Cán bộ / Thân nhân / Chuyến đi / Kỷ luật).
+       - Nhận động danh sách cột cấu hình (`:columns="allAvailableColumnsList"`).
+       - Hiển thị toàn bộ trường dữ liệu của bản ghi bằng `<DynamicField>` trong một `.form-grid` duy nhất với `:style="getColItemStyle(col.width)"`.
+     - Cập nhật `UnifiedTableView.vue`: Khi click dòng hoặc xem chi tiết, nạp trực tiếp bản ghi (`trip.rawPerson || trip.rawRelative || trip.rawTrip || trip`) vào modal duy nhất, không phụ thuộc vào tab.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 529ms, giảm ~22 kB bundle).
 - **Status**: Done [Reversible].
+
+
+
 

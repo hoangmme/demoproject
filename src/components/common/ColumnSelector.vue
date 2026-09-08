@@ -32,49 +32,69 @@
         <button type="button" class="btn-text-link" @click="resetOrder">Thứ tự chuẩn</button>
       </div>
 
-      <!-- Giới hạn chiều cao hàng tối đa (Row Height Limit - Mặc định 1 hàng) -->
-      <div class="row-height-control">
-        <div class="row-height-title">
-          <i class="pi pi-arrows-v" style="font-size: 0.75rem; color: #0284c7;"></i>
-          <span>Chiều cao hàng:</span>
+      <!-- Cấu hình độ rộng hiển thị cột (Lark Base Column Width Engine) -->
+      <div class="col-width-control">
+        <div class="col-width-header">
+          <div class="col-width-title">
+            <i class="pi pi-arrows-h" style="font-size: 0.75rem; color: #0284c7;"></i>
+            <span>Độ rộng cột:</span>
+          </div>
+          <button
+            v-if="hasCustomDraggedWidths && widthMode === 'auto'"
+            type="button"
+            class="btn-reset-dragged"
+            @click="$emit('reset-dragged-widths')"
+            title="Xóa bỏ độ rộng từng cột đã kéo tay bằng chuột và quay về kích thước tự động mặc định"
+          >
+            <i class="pi pi-refresh" style="font-size: 0.65rem;"></i>
+            <span>Đặt lại kéo tay</span>
+          </button>
         </div>
-        <div class="row-height-btns">
+
+        <div class="col-width-body">
+          <!-- Chế độ Tự động (Auto) -->
           <button
             type="button"
-            class="btn-row-height"
-            :class="{ active: rowHeightLimit === 1 }"
-            @click="setRowHeightLimit(1)"
-            title="1 hàng (Mặc định - Cắt ngắn ...)"
+            class="btn-width-mode"
+            :class="{ active: widthMode === 'auto' }"
+            @click="selectWidthMode('auto')"
+            title="Ưu tiên 2: Tự động co giãn theo nội dung, hoặc hiển thị theo kích thước bạn tự kéo chuột (Tầng 1)"
           >
-            1 hàng
+            <i class="pi pi-table" style="font-size: 0.7rem;"></i>
+            <span>Auto</span>
           </button>
-          <button
-            type="button"
-            class="btn-row-height"
-            :class="{ active: rowHeightLimit === 2 }"
-            @click="setRowHeightLimit(2)"
-            title="Tối đa 2 hàng"
+
+          <!-- Chế độ Nhập px (Cố định toàn bộ cột - Ưu tiên cao nhất) -->
+          <div
+            class="width-px-input-wrap"
+            :class="{ active: widthMode === 'fixed' }"
+            @click="selectWidthMode('fixed')"
           >
-            2 hàng
-          </button>
-          <button
-            type="button"
-            class="btn-row-height"
-            :class="{ active: rowHeightLimit === 3 }"
-            @click="setRowHeightLimit(3)"
-            title="Tối đa 3 hàng"
-          >
-            3 hàng
-          </button>
-          <button
-            type="button"
-            class="btn-row-height"
-            :class="{ active: rowHeightLimit === 'auto' }"
-            @click="setRowHeightLimit('auto')"
-            title="Tự động (Không giới hạn)"
-          >
-            Tự động
-          </button>
+            <span class="width-px-label">Cố định:</span>
+            <input
+              ref="widthInputRef"
+              type="number"
+              v-model.number="localWidthPx"
+              min="60"
+              max="800"
+              step="10"
+              class="width-number-input"
+              title="Nhập px áp dụng đồng bộ cho toàn bộ cột (Ưu tiên cao nhất)"
+              @input="onPxInput"
+              @focus="selectWidthMode('fixed')"
+            />
+            <span class="width-px-unit">px</span>
+          </div>
+        </div>
+
+        <!-- Chú thích nguyên lý ưu tiên -->
+        <div class="col-width-hint">
+          <span v-if="widthMode === 'fixed'">
+            ⭐ <strong>Cố định {{ localWidthPx }}px</strong>: Áp dụng đồng bộ cho toàn bộ cột (Ưu tiên cao nhất).
+          </span>
+          <span v-else>
+            💡 <strong>Auto</strong>: Tự co giãn hoặc nhận kích thước tự kéo chuột trên header (Tầng 1).
+          </span>
         </div>
       </div>
 
@@ -164,7 +184,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
   modelValue: {
@@ -183,9 +203,29 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  widthMode: {
+    type: String,
+    default: 'auto', // 'auto' | 'fixed'
+  },
+  widthPx: {
+    type: Number,
+    default: 160,
+  },
+  hasCustomDraggedWidths: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['update:modelValue', 'change', 'open-col-menu']);
+const emit = defineEmits([
+  'update:modelValue',
+  'change',
+  'open-col-menu',
+  'update:widthMode',
+  'update:widthPx',
+  'change-width-setting',
+  'reset-dragged-widths',
+]);
 
 const isOpen = ref(false);
 const searchQuery = ref('');
@@ -200,21 +240,35 @@ const toggleShowColIndex = () => {
   } catch (e) {}
 };
 
-const getStoredRowHeight = () => {
-  const stored = localStorage.getItem('app_table_row_clamp');
-  if (stored === 'auto') return 'auto';
-  const num = Number(stored);
-  return num === 2 || num === 3 ? num : 1; // Mặc định là 1 hàng
+const localWidthPx = ref(props.widthPx || 160);
+const widthInputRef = ref(null);
+
+watch(
+  () => props.widthPx,
+  (newVal) => {
+    if (newVal && newVal !== localWidthPx.value) {
+      localWidthPx.value = newVal;
+    }
+  }
+);
+
+const selectWidthMode = (mode) => {
+  emit('update:widthMode', mode);
+  emit('change-width-setting', { mode, px: localWidthPx.value });
+  if (mode === 'fixed') {
+    nextTick(() => {
+      widthInputRef.value?.focus();
+    });
+  }
 };
 
-const rowHeightLimit = ref(getStoredRowHeight());
-
-const setRowHeightLimit = (val) => {
-  rowHeightLimit.value = val;
-  try {
-    localStorage.setItem('app_table_row_clamp', String(val));
-    window.dispatchEvent(new CustomEvent('table-row-height-changed', { detail: val }));
-  } catch (e) {}
+const onPxInput = () => {
+  let val = Number(localWidthPx.value);
+  if (!val || val < 40) val = 60;
+  emit('update:widthPx', val);
+  if (props.widthMode === 'fixed') {
+    emit('change-width-setting', { mode: 'fixed', px: val });
+  }
 };
 
 const selectedLabel = computed(() => {
@@ -579,16 +633,22 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-.row-height-control {
+.col-width-control {
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.col-width-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
 }
 
-.row-height-title {
+.col-width-title {
   font-size: 0.72rem;
   font-weight: 700;
   color: #334155;
@@ -597,34 +657,127 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-.row-height-btns {
-  display: flex;
-  gap: 2px;
-  background: #e2e8f0;
-  padding: 2px;
-  border-radius: 6px;
-}
-
-.btn-row-height {
-  border: none;
+.btn-reset-dragged {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   background: transparent;
-  padding: 2px 6px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #64748b;
+  border: 1px dashed #cbd5e1;
   border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.62rem;
+  color: #0284c7;
   cursor: pointer;
   transition: all 0.12s ease;
 }
 
-.btn-row-height:hover {
-  color: #0f172a;
+.btn-reset-dragged:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
 }
 
-.btn-row-height.active {
+.col-width-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-width-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #cbd5e1;
   background: #ffffff;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  height: 28px;
+}
+
+.btn-width-mode:hover {
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.btn-width-mode.active {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #38bdf8;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.1);
+}
+
+.width-px-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  height: 28px;
+}
+
+.width-px-input-wrap:hover {
+  border-color: #94a3b8;
+}
+
+.width-px-input-wrap.active {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #38bdf8;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.1);
+}
+
+.width-px-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.width-px-input-wrap.active .width-px-label {
   color: #0284c7;
   font-weight: 700;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.width-number-input {
+  width: 52px;
+  height: 22px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+  padding: 0 2px;
+}
+
+.width-number-input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 1px #0284c7;
+}
+
+.width-px-unit {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.col-width-hint {
+  font-size: 0.65rem;
+  color: #64748b;
+  line-height: 1.35;
+  background: #ffffff;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #f1f5f9;
 }
 </style>

@@ -163,11 +163,9 @@
             Độ rộng trong Form Chi tiết (%):
           </label>
           <select v-model="form.width" class="dialog-select">
-            <option value="25">Rộng: 25% (1/4 dòng)</option>
-            <option value="33">Rộng: 33% (1/3 dòng)</option>
-            <option value="50">Rộng: 50% (1/2 dòng)</option>
-            <option value="75">Rộng: 75% (3/4 dòng)</option>
-            <option value="100">Rộng: 100% (Đầy đủ hàng)</option>
+            <option v-for="opt in formWidthOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
           </select>
         </div>
       </div>
@@ -228,7 +226,7 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import { saveAppSettings } from '@/api/settings';
-import { generateSlug } from '@/utils/formatters';
+import { generateSlug, formWidthOptions } from '@/utils/formatters';
 
 const props = defineProps({
   visible: {

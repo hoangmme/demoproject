@@ -7,49 +7,21 @@
     :style="{ width: '85vw', maxWidth: '1100px', zIndex: 15000 }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
-    <!-- Fixed Height Contents Area -->
-    <div style="height: 560px; max-height: 68vh; overflow-y: auto; padding-right: 8px;">
-      <!-- 1. CÁN BỘ / HỒ SƠ CHÍNH (Chỉ hiển thị thông tin bảng này) -->
-      <div v-if="activeTab === 0" style="display: flex; flex-direction: column; gap: 1.5rem;">
-        <template v-for="(grp, gIdx) in (personnelStore.importMappingPersonnel || [])" :key="gIdx">
-          <!-- Nhóm Kỷ luật & Lưu ý chính trị -->
-          <div v-if="isNotesGroup(grp, gIdx)">
-            <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-              <i class="pi pi-exclamation-triangle" style="color: #f59e0b; font-size: 0.95rem;"></i>
-              <span>{{ grp.group || 'Lịch sử kỷ luật & Lưu ý chính trị' }}</span>
-            </h4>
-            <PersonnelNotesForm :form="form" :group="grp" />
-          </div>
-
-          <!-- Các nhóm thông tin khác (Khối A, Quá trình công tác, v.v.) -->
-          <div v-else>
-            <h4 style="font-size: 0.9rem; font-weight: 700; color: #1f2937; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-              <i :class="gIdx === 0 ? 'pi pi-user' : 'pi pi-folder'" :style="{ color: gIdx === 0 ? '#16a34a' : '#0284c7', fontSize: '0.95rem' }"></i>
-              <span>{{ grp.group || 'Thông tin bổ sung' }}</span>
-            </h4>
-            <PersonnelBasicForm
-              :form="form"
-              :departments="personnelStore.departments"
-              :group="grp"
+    <!-- Contents Area: 100% Dynamic Flat Form -->
+    <div style="max-height: 70vh; overflow-y: auto; padding: 6px 12px 16px 6px;">
+      <div class="form-grid">
+        <template v-for="col in allTableColumns" :key="col.id">
+          <div class="field-item" :style="getColItemStyle(col.width)">
+            <label class="field-label" :title="col.label">
+              <span class="label-text">{{ col.label }}</span>
+              <span v-if="col.required" style="color: red; margin-left: 2px;">*</span>
+            </label>
+            <DynamicField
+              v-model="form[col.id]"
+              :col="col"
             />
           </div>
         </template>
-      </div>
-
-      <!-- 2. CHUYẾN ĐI (Chỉ khi mở riêng chuyến đi) -->
-      <div v-else-if="activeTab === 1">
-        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px 16px;">
-          <h4 style="font-size: 0.92rem; font-weight: 700; color: #0369a1; margin-bottom: 0.75rem; border-bottom: 1px solid #bae6fd; padding-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
-            <span>Danh sách Chuyến đi nước ngoài ({{ form.trips?.length || 0 }})</span>
-          </h4>
-          <PersonnelTravelForm :form="form" />
-        </div>
-      </div>
-
-      <!-- 3. THÂN NHÂN (Chỉ khi mở riêng thân nhân) -->
-      <div v-else-if="activeTab === 2">
-        <PersonnelFamilyForm :form="form" :targetRelativeCode="targetRelativeCode" />
       </div>
     </div>
 
@@ -58,7 +30,7 @@
         <div>
           <Button
             v-if="isEdit && authStore.isAdmin"
-            label="Xóa hồ sơ"
+            label="Xóa bản ghi"
             icon="pi pi-trash"
             severity="danger"
             text
@@ -85,7 +57,7 @@
           />
           <Button label="Đóng" severity="secondary" text size="small" @click="visible = false" />
           <Button
-            label="Lưu hồ sơ"
+            label="Lưu bản ghi"
             icon="pi pi-check"
             severity="success"
             size="small"
@@ -97,7 +69,7 @@
     </template>
   </Dialog>
 
-  <!-- Advanced DOCX Export Dialog for current Person -->
+  <!-- Advanced DOCX Export Dialog for current Person / Record -->
   <AdvancedDocxExportDialog
     v-model="isDocxExportOpen"
     :targetPerson="form"
@@ -110,11 +82,9 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
-import PersonnelBasicForm from './PersonnelBasicForm.vue';
-import PersonnelTravelForm from './PersonnelTravelForm.vue';
-import PersonnelFamilyForm from './PersonnelFamilyForm.vue';
-import PersonnelNotesForm from './PersonnelNotesForm.vue';
+import DynamicField from '@/components/common/DynamicField.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
+import { getColItemStyle } from '@/utils/formatters';
 
 const isDocxExportOpen = ref(false);
 
@@ -126,6 +96,10 @@ const props = defineProps({
   personData: {
     type: Object,
     default: null,
+  },
+  columns: {
+    type: Array,
+    default: () => [],
   },
   initialTab: {
     type: Number,
@@ -141,90 +115,41 @@ const emit = defineEmits(['update:modelValue', 'saved', 'deleted']);
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 
-const computeInitialTab = (tabVal, targetRelCode) => {
-  if (targetRelCode) return 2; // Tab 3: Thân nhân
-  const n = Number(tabVal);
-  if (n === 2) return 2; // Tab 3: Thân nhân
-  if (n === 1) return 1; // Tab 2: Chuyến đi
-  return 0; // Tab 1: Cán bộ
-};
-
-const activeTab = ref(computeInitialTab(props.initialTab, props.targetRelativeCode));
 const saving = ref(false);
+const autoSaveStatus = ref('');
+let autoSaveTimer = null;
+let initialJsonSnapshot = '';
+let isSavingInternal = false;
 
 const visible = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 });
 
-const isEdit = computed(() => Boolean(form.value.id));
+const form = ref({});
 
-const isRelativeDetail = computed(() => Boolean(props.targetRelativeCode));
+const isEdit = computed(() => Boolean(form.value.id || form.value.uniqueKey));
 
-const isTripsGroup = (grp, idx) => {
-  if (!grp) return false;
-  if (grp.isMultiple && (grp.columns || []).some((c) => c.id === 'countryName' || c.id === 'decisionNumber' || c.id === 'departureDate')) return true;
-  if (grp.group && (grp.group.includes('Chuyến đi') || grp.group.includes('nước ngoài') || grp.group.includes('Khối B'))) return true;
-  return false;
-};
-
-const isNotesGroup = (grp, idx) => {
-  if (!grp) return false;
-  if (grp.group && (grp.group.includes('kỷ luật') || grp.group.includes('Lưu ý') || grp.group.includes('Khối C'))) return true;
-  if ((grp.columns || []).some((c) => c.format === 'checkbox_text' || c.id === 'politicalVerificationResult')) return true;
-  return false;
-};
-
-const hasSecondaryTabs = computed(() => {
-  return (form.value.relatives && form.value.relatives.length > 0) || Boolean(props.targetRelativeCode);
-});
-
-const showTripSection = computed(() => {
-  return (form.value.trips && form.value.trips.length > 0);
-});
-
-const customTableName = computed(() => {
-  try {
-    const local = localStorage.getItem('system_branding_config');
-    if (local) {
-      const p = JSON.parse(local);
-      if (p.menuLabelPersonnel) return p.menuLabelPersonnel;
-    }
-  } catch (e) {}
-  return 'Bản ghi';
+const allTableColumns = computed(() => {
+  if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
+    return props.columns.filter((c) => !c.isVirtual && c.id !== 'stt');
+  }
+  // Mặc định lấy toàn bộ cột cấu hình của bảng Cán bộ
+  const list = [];
+  (personnelStore.importMappingPersonnel || []).forEach((grp) => {
+    (grp.columns || []).forEach((col) => {
+      if (col && col.id && col.id !== 'stt') {
+        list.push(col);
+      }
+    });
+  });
+  return list;
 });
 
 const dialogHeader = computed(() => {
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const nameVal = form.value[pNameField] || form.value.name || '';
-  if (props.targetRelativeCode) {
-    return `Chi tiết Bản ghi phụ (${props.targetRelativeCode}) - Gốc: ${nameVal || 'Liên quan'}`;
-  }
-  return isEdit.value ? `Chỉnh sửa: ${nameVal || ''}` : `Thêm bản ghi mới (${customTableName.value})`;
-});
-
-const form = ref({
-  id: null,
-  code: '',
-  name: '',
-  otherName: '',
-  birthYear: '',
-  ethnicity: 'Kinh',
-  religion: 'Không',
-  hometown: '',
-  departmentId: null,
-  position: '',
-  thuongTru: '',
-  tamTru: '',
-  cccd: '',
-  passportPersonal: '',
-  passportOfficial: '',
-  tcctResult: '',
-  trips: [],
-  relatives: [],
-  flags: {},
-  custom_data: {},
-  files: [],
+  const nameVal = form.value[pNameField] || form.value.name || form.value.ho_va_ten || '';
+  return isEdit.value ? `Chi tiết: ${nameVal || 'Bản ghi'}` : `Thêm bản ghi mới`;
 });
 
 const safeClone = (obj) => {
@@ -239,7 +164,6 @@ const safeClone = (obj) => {
       })
     );
   } catch (e) {
-    console.warn('safeClone fallback:', e);
     return { ...obj };
   }
 };
@@ -255,7 +179,6 @@ const initFormData = (val) => {
       }
     }
     const parsedVal = safeClone(val);
-    // Clean out custom_data and recursive keys from parsedVal and cd
     delete parsedVal.custom_data;
     delete cd.custom_data;
     delete parsedVal.rawPerson;
@@ -266,57 +189,20 @@ const initFormData = (val) => {
     form.value = {
       ...cd,
       ...parsedVal,
-      trips: Array.isArray(parsedVal.trips) ? parsedVal.trips : (cd.trips || []),
-      relatives: Array.isArray(parsedVal.relatives) ? parsedVal.relatives : (cd.relatives || []),
-      flags: (typeof parsedVal.flags === 'object' && parsedVal.flags) ? parsedVal.flags : (cd.flags || {}),
-      files: Array.isArray(parsedVal.files) ? parsedVal.files : (cd.files || []),
       custom_data: { ...cd, ...parsedVal },
     };
-    delete form.value.custom_data.custom_data;
   } else {
     form.value = {
-      id: null,
-      code: '',
-      name: '',
-      otherName: '',
-      birthYear: '',
-      gender: 'Nam',
-      birthDate: '',
-      ethnicity: 'Kinh',
-      religion: 'Không',
-      hometown: '',
-      departmentId: null,
-      departmentName: '',
-      position: '',
-      positionName: '',
-      thuongTru: '',
-      tamTru: '',
-      cccd: '',
-      hcCaNhan: '',
-      hcCongVu: '',
-      kqThamTra: '',
-      passportPersonal: '',
-      passportOfficial: '',
-      tcctResult: '',
-      trips: [],
-      relatives: [],
-      flags: {},
       custom_data: {},
-      files: [],
     };
   }
   initialJsonSnapshot = JSON.stringify(form.value);
 };
 
-const autoSaveStatus = ref('');
-let autoSaveTimer = null;
-let initialJsonSnapshot = '';
-
 watch(
-  () => [props.modelValue, props.initialTab, props.targetRelativeCode, props.personData],
-  ([isOpen, tab, relCode, pData]) => {
+  () => [props.modelValue, props.personData],
+  ([isOpen, pData]) => {
     if (isOpen) {
-      activeTab.value = computeInitialTab(tab, relCode || props.targetRelativeCode);
       initFormData(pData || props.personData);
     } else {
       if (autoSaveTimer) clearTimeout(autoSaveTimer);
@@ -326,15 +212,8 @@ watch(
   { immediate: true, deep: true }
 );
 
-let isSavingInternal = false;
-
 const triggerAutoSave = () => {
-  const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-  const nameVal = form.value[pNameField] || form.value.name;
-  if (!isEdit.value || !form.value.id || !nameVal?.trim() || isSavingInternal || saving.value) return;
-  const cccdVal = form.value[pKeyField] ?? form.value.cccdparent ?? form.value.cccd;
-  if (!cccdVal || !String(cccdVal).trim()) return;
+  if (!isEdit.value || isSavingInternal || saving.value) return;
 
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
 
@@ -343,7 +222,11 @@ const triggerAutoSave = () => {
     isSavingInternal = true;
     autoSaveStatus.value = 'saving';
     try {
-      const saved = await personnelStore.savePerson(form.value);
+      const payload = {
+        ...form.value,
+        custom_data: { ...(form.value.custom_data || {}), ...form.value },
+      };
+      const saved = await personnelStore.savePerson(payload);
       initialJsonSnapshot = JSON.stringify(form.value);
       autoSaveStatus.value = 'saved';
       emit('saved', saved);
@@ -367,7 +250,6 @@ watch(
       initialJsonSnapshot = currentJson;
       return;
     }
-    // Chỉ kích hoạt tự động lưu khi CÓ SỰ THAY ĐỔI thực sự so với snapshot ban đầu
     if (currentJson !== initialJsonSnapshot) {
       triggerAutoSave();
     }
@@ -376,29 +258,26 @@ watch(
 );
 
 const handleSave = async () => {
-  const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const nameVal = form.value[pNameField] || form.value.name;
-  if (!nameVal?.trim()) {
-    alert('Vui lòng nhập Họ và tên cán bộ!');
-    activeTab.value = 0;
-    return;
-  }
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
   if (isSavingInternal || saving.value) {
-    // Chờ 300ms nếu auto-save vừa gửi đi
     await new Promise((r) => setTimeout(r, 400));
   }
   saving.value = true;
   isSavingInternal = true;
   autoSaveStatus.value = 'saving';
   try {
-    const saved = await personnelStore.savePerson(form.value);
+    const payload = {
+      ...form.value,
+      custom_data: { ...(form.value.custom_data || {}), ...form.value },
+    };
+    const saved = await personnelStore.savePerson(payload);
     initialJsonSnapshot = JSON.stringify(form.value);
     autoSaveStatus.value = 'saved';
     emit('saved', saved);
     setTimeout(() => {
       if (autoSaveStatus.value === 'saved') autoSaveStatus.value = '';
     }, 2500);
+    visible.value = false;
   } catch (e) {
     autoSaveStatus.value = '';
     alert('Lỗi lưu dữ liệu: ' + (e.message || e));
@@ -409,7 +288,9 @@ const handleSave = async () => {
 };
 
 const handleDelete = async () => {
-  if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ cán bộ: "${form.value.name}" không?`)) return;
+  const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
+  const nameVal = form.value[pNameField] || form.value.name || 'bản ghi này';
+  if (!confirm(`Bạn có chắc chắn muốn xóa "${nameVal}" không?`)) return;
   try {
     await personnelStore.deletePerson(form.value);
     emit('deleted', form.value);
@@ -419,3 +300,20 @@ const handleDelete = async () => {
   }
 };
 </script>
+
+<style scoped>
+.field-label {
+  display: flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 2px;
+}
+
+.label-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

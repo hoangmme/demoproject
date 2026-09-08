@@ -198,23 +198,25 @@ html, body {
 
 /* Form Layout Grid */
 .form-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
-.col-12 { grid-column: span 12; }
-.col-9 { grid-column: span 9; }
-.col-8 { grid-column: span 8; }
-.col-6 { grid-column: span 6; }
-.col-5 { grid-column: span 5; }
-.col-4 { grid-column: span 4; }
-.col-3 { grid-column: span 3; }
-.col-2 { grid-column: span 2; }
+.col-12 { width: 100%; flex: 0 0 100%; max-width: 100%; }
+.col-9 { width: calc(75% - 0.25rem); flex: 0 0 calc(75% - 0.25rem); max-width: calc(75% - 0.25rem); }
+.col-8 { width: calc(66.666% - 0.35rem); flex: 0 0 calc(66.666% - 0.35rem); max-width: calc(66.666% - 0.35rem); }
+.col-6 { width: calc(50% - 0.5rem); flex: 0 0 calc(50% - 0.5rem); max-width: calc(50% - 0.5rem); }
+.col-5 { width: calc(41.666% - 0.58rem); flex: 0 0 calc(41.666% - 0.58rem); max-width: calc(41.666% - 0.58rem); }
+.col-4 { width: calc(33.333% - 0.67rem); flex: 0 0 calc(33.333% - 0.67rem); max-width: calc(33.333% - 0.67rem); }
+.col-3 { width: calc(25% - 0.75rem); flex: 0 0 calc(25% - 0.75rem); max-width: calc(25% - 0.75rem); }
+.col-2 { width: calc(16.666% - 0.85rem); flex: 0 0 calc(16.666% - 0.85rem); max-width: calc(16.666% - 0.85rem); }
 
 @media (max-width: 768px) {
-  .col-9, .col-8, .col-6, .col-5, .col-4, .col-3, .col-2 {
-    grid-column: span 12;
+  .col-12, .col-9, .col-8, .col-6, .col-5, .col-4, .col-3, .col-2, .field-item {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
   }
 }
 
@@ -692,76 +694,36 @@ html, body {
   white-space: nowrap !important;
 }
 
-/* Giới hạn chiều cao hàng bảng dữ liệu (Row Height Limit - Mặc định 1 hàng) */
-.table-row-clamp-1 .p-datatable-tbody > tr > td,
-.table-row-clamp-1.p-datatable .p-datatable-tbody > tr > td {
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  vertical-align: middle !important;
+/* Định dạng kéo thả độ rộng cột (PrimeVue Column Resizer) */
+.p-datatable-thead > tr > th {
+  position: relative !important;
 }
 
-.table-row-clamp-1 .p-datatable-tbody > tr > td * {
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+.p-column-resizer {
+  position: absolute !important;
+  top: 0;
+  right: 0;
+  width: 8px !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: col-resize !important;
+  border: none !important;
+  z-index: 10 !important;
+  user-select: none !important;
 }
 
-/* 2 hàng: td bắt buộc giữ display: table-cell; chỉ clamp phần tử bên trong */
-.table-row-clamp-2 .p-datatable-tbody > tr > td,
-.table-row-clamp-2.p-datatable .p-datatable-tbody > tr > td {
-  white-space: normal !important;
-  line-height: 1.35 !important;
-  vertical-align: middle !important;
+.p-column-resizer:hover {
+  background-color: #0284c7 !important;
+  opacity: 0.7;
 }
 
-.table-row-clamp-2 .p-datatable-tbody > tr > td .inline-cell-wrapper,
-.table-row-clamp-2 .p-datatable-tbody > tr > td span:not(.badge-code):not(.p-tag):not(.pi),
-.table-row-clamp-2 .p-datatable-tbody > tr > td strong,
-.table-row-clamp-2 .p-datatable-tbody > tr > td p {
-  display: -webkit-box !important;
-  -webkit-line-clamp: 2 !important;
-  -webkit-box-orient: vertical !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  word-break: break-word !important;
-  max-height: 2.8em !important;
-}
-
-/* 3 hàng */
-.table-row-clamp-3 .p-datatable-tbody > tr > td,
-.table-row-clamp-3.p-datatable .p-datatable-tbody > tr > td {
-  white-space: normal !important;
-  line-height: 1.35 !important;
-  vertical-align: middle !important;
-}
-
-.table-row-clamp-3 .p-datatable-tbody > tr > td .inline-cell-wrapper,
-.table-row-clamp-3 .p-datatable-tbody > tr > td span:not(.badge-code):not(.p-tag):not(.pi),
-.table-row-clamp-3 .p-datatable-tbody > tr > td strong,
-.table-row-clamp-3 .p-datatable-tbody > tr > td p {
-  display: -webkit-box !important;
-  -webkit-line-clamp: 3 !important;
-  -webkit-box-orient: vertical !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  word-break: break-word !important;
-  max-height: 4.2em !important;
-}
-
-/* Tự động: Hiển thị đầy đủ */
-.table-row-clamp-auto .p-datatable-tbody > tr > td,
-.table-row-clamp-auto.p-datatable .p-datatable-tbody > tr > td {
-  white-space: normal !important;
-  overflow: visible !important;
-  vertical-align: middle !important;
-}
-
-.table-row-clamp-auto .p-datatable-tbody > tr > td * {
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-  -webkit-line-clamp: unset !important;
+.p-column-resizer-helper {
+  position: absolute !important;
+  display: none;
+  z-index: 9999 !important;
+  width: 2px !important;
+  background-color: #0284c7 !important;
 }
 
 /* Ẩn hoàn toàn icon sort / icon lọc trên header bảng */

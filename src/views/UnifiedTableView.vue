@@ -113,8 +113,13 @@
               :key="activeMetricCardIdx"
               v-model="selectedColIds"
               :options="allAvailableColumnsList"
+              :widthMode="colWidthMode"
+              :widthPx="colWidthPx"
+              :hasCustomDraggedWidths="hasCustomDraggedWidths"
               @change="onColumnsChange"
               @open-col-menu="handleChildColMenuFromSelector"
+              @change-width-setting="onColWidthSettingChange"
+              @reset-dragged-widths="onResetDraggedWidths"
             />
           </div>
         </div>
@@ -279,9 +284,11 @@
         responsiveLayout="scroll"
         stripedRows
         removableSort
+        :resizableColumns="true"
+        columnResizeMode="expand"
         class="p-datatable-sm custom-datatable"
-        :class="['table-row-clamp-' + currentRowHeightLimit]"
         :tableStyle="{ minWidth: 'max-content', width: '100%' }"
+        @column-resize-end="onColumnResizeEnd"
         @row-click="onRowClick"
         @page="e => dtFirst = e.first"
       >
@@ -299,8 +306,9 @@
           :field="col.id"
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
-          :headerStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
-          :bodyStyle="{ width: col.tableWidth || col.width || '160px', minWidth: col.tableWidth === 'auto' ? undefined : (col.tableWidth || col.width || '160px') }"
+          :pt="{ headerCell: { 'data-column-id': col.id } }"
+          :headerStyle="getColWidthStyle(col)"
+          :bodyStyle="getColWidthStyle(col)"
         >
           <template #header>
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
@@ -1003,8 +1011,7 @@
     <PersonnelDialog
       v-model="isPersonnelDialogOpen"
       :personData="activePersonData"
-      :initialTab="dialogInitialTab"
-      :targetRelativeCode="dialogTargetRelativeCode"
+      :columns="allAvailableColumnsList"
       @saved="handlePersonnelSaved"
     />
 
@@ -1087,7 +1094,6 @@
       @change-format="onChildChangeColumnFormat"
       @change-formula-type="onChildChangeFormulaType"
       @change-options="onChildChangeColumnOptions"
-      @change-width="onChildChangeColumnWidth"
       @change-form-width="onChildChangeColumnFormWidth"
       @change-required="onChildChangeColumnRequired"
       @change-lookup="onChildChangeColumnLookup"
@@ -2256,22 +2262,138 @@ const onChildChangeColumnOptions = async ({ colId, options }) => {
   }
 };
 
-const onChildChangeColumnWidth = async ({ colId, width }) => {
-  const { key, mapping } = getTargetMappingRef();
-  let found = false;
-  for (const g of (mapping || [])) {
-    for (const c of (g.columns || [])) {
-      if (c.id === colId) {
-        c.tableWidth = width;
-        found = true;
-        break;
+// ===== ĐỘNG CƠ ĐỘ RỘNG CỘT 2 TẦNG CHUẨN LARK BASE (COLUMN WIDTH ENGINE) =====
+// Tầng 1: Tự kéo rê mép cột trên header bảng (Direct Drag Resizing)
+// Tầng 2: Tùy chọn cột (Auto vs Nhập px cố định toàn bộ - Ưu tiên cao nhất)
+// Đã loại bỏ hoàn toàn Tầng 3 (cấu hình px riêng lẻ từng cột)
+
+const colWidthMode = ref('auto'); // 'auto' | 'fixed'
+const colWidthPx = ref(160); // Mặc định 160px
+const resizedColWidths = ref({}); // Map { [colId]: number } chứa độ rộng các cột đã kéo tay
+
+const hasCustomDraggedWidths = computed(() => {
+  return Object.keys(resizedColWidths.value || {}).length > 0;
+});
+
+const getColWidthStorageKey = () => {
+  const tid = topicId.value || currentDashboardConfig.value?.id || (route.path.replace('/', '') || 'default');
+  return `table_col_widths_v2_${tid}`;
+};
+
+const loadColWidthSettings = () => {
+  try {
+    const key = getColWidthStorageKey();
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      colWidthMode.value = parsed.mode === 'fixed' ? 'fixed' : 'auto';
+      colWidthPx.value = Number(parsed.px) || 160;
+      resizedColWidths.value = (parsed.resized && typeof parsed.resized === 'object') ? parsed.resized : {};
+      return;
+    }
+  } catch (e) {}
+  colWidthMode.value = 'auto';
+  colWidthPx.value = 160;
+  resizedColWidths.value = {};
+};
+
+const saveColWidthSettings = async () => {
+  try {
+    const key = getColWidthStorageKey();
+    const payload = {
+      mode: colWidthMode.value,
+      px: colWidthPx.value,
+      resized: resizedColWidths.value,
+    };
+    localStorage.setItem(key, JSON.stringify(payload));
+    await saveAppSettings(key, payload);
+  } catch (e) {}
+};
+
+const onColWidthSettingChange = async ({ mode, px }) => {
+  if (mode) colWidthMode.value = mode;
+  if (px) colWidthPx.value = Number(px) || 160;
+  await saveColWidthSettings();
+};
+
+const onResetDraggedWidths = async () => {
+  resizedColWidths.value = {};
+  await saveColWidthSettings();
+};
+
+// Bắt sự kiện khi người dùng kéo chuột điều chỉnh độ rộng cột ở Header bảng (Tầng 1)
+const onColumnResizeEnd = async (event) => {
+  try {
+    const thEl = event.element;
+    if (!thEl) return;
+
+    // Phân giải colId qua attribute data-column-id hoặc vị trí cột trong header
+    let colId = thEl.getAttribute('data-column-id');
+    if (!colId) {
+      const parent = thEl.parentElement;
+      if (parent) {
+        const thIndex = Array.from(parent.children).indexOf(thEl);
+        // Trừ 2 cột cố định đầu (selection + STT)
+        const targetCol = visibleColumns.value[thIndex - 2];
+        if (targetCol) colId = targetCol.id;
       }
     }
-    if (found) break;
+
+    if (!colId) return;
+
+    const newWidth = Math.round(thEl.getBoundingClientRect?.().width || thEl.offsetWidth);
+    if (newWidth > 40) {
+      resizedColWidths.value = {
+        ...resizedColWidths.value,
+        [colId]: newWidth,
+      };
+      // Nếu đang ở mode fixed mà người dùng kéo tay ở Tầng 1,
+      // tự động chuyển sang auto để tôn trọng độ rộng cột vừa kéo
+      colWidthMode.value = 'auto';
+      await saveColWidthSettings();
+    }
+  } catch (e) {
+    console.error('Error onColumnResizeEnd:', e);
   }
-  if (found) {
-    await saveAppSettings(key, mapping);
+};
+
+// Động cơ tính toán Style độ rộng cột theo phân cấp ưu tiên
+const getColWidthStyle = (col) => {
+  if (!col) return {};
+
+  // Ưu tiên 1 (Cao nhất): Nhập px cố định toàn bộ cột từ Tùy chọn cột
+  if (colWidthMode.value === 'fixed') {
+    const px = Math.max(60, Number(colWidthPx.value) || 160);
+    return {
+      width: `${px}px`,
+      minWidth: `${px}px`,
+      maxWidth: `${px}px`,
+    };
   }
+
+  // Ưu tiên 2 (Khi Tùy chọn cột để Auto):
+  // 2a. Nếu cột này đã từng được người dùng kéo tay bằng chuột (Tầng 1)
+  const draggedWidth = resizedColWidths.value?.[col.id];
+  if (draggedWidth && Number(draggedWidth) > 40) {
+    const px = Math.round(Number(draggedWidth));
+    return {
+      width: `${px}px`,
+      minWidth: `${px}px`,
+    };
+  }
+
+  // 2b. Nếu chưa kéo tay: Tự động co giãn (auto theo nội dung) với min-width tối ưu
+  if (col.format === 'checkbox_file_loop' || col.format === 'checkbox_file') {
+    return {
+      minWidth: '240px',
+      width: 'auto',
+    };
+  }
+
+  return {
+    minWidth: '150px',
+    width: 'auto',
+  };
 };
 
 const onChildChangeColumnFormWidth = async ({ colId, formWidth }) => {
@@ -3819,22 +3941,12 @@ const saveColumnSelection = async () => {
 
 // Actions
 const openPersonnelDetail = (trip) => {
-  const targetPerson = resolveTargetPersonnel(trip);
-  if (targetPerson) {
-    activePersonData.value = targetPerson;
-    if (trip._recordType === 'personnel' || (!trip.isRelative && !trip.departureDate && !trip.countryName && !trip.rawTrip)) {
-      dialogInitialTab.value = 0; // Tab 1: Cán bộ
-      dialogTargetRelativeCode.value = '';
-    } else if (trip.isRelative || trip._recordType === 'relative') {
-      dialogInitialTab.value = 2; // Tab 3: Thân nhân
-      dialogTargetRelativeCode.value = trip.relativeCode || trip.code || trip.id || '';
-    } else {
-      dialogInitialTab.value = 1; // Tab 2: Chuyến đi
-      dialogTargetRelativeCode.value = '';
-    }
+  const targetRecord = trip.rawPerson || trip.rawRelative || trip.rawTrip || trip;
+  if (targetRecord) {
+    activePersonData.value = targetRecord;
     isPersonnelDialogOpen.value = true;
   } else {
-    alert('Không tìm thấy hồ sơ chi tiết của cán bộ tương ứng!');
+    alert('Không tìm thấy dữ liệu chi tiết của bản ghi!');
   }
 };
 
@@ -4468,6 +4580,7 @@ watch(
     await loadCustomTableRows();
     await loadTopicFilterState();
     await loadColumnsForCurrentCard();
+    loadColWidthSettings();
     currentPage.value = 1;
     handleRouteQueryChange();
   }
@@ -4490,11 +4603,6 @@ watch(
   }
 );
 
-const currentRowHeightLimit = ref(localStorage.getItem('app_table_row_clamp') || '1');
-const onRowHeightChanged = (e) => {
-  currentRowHeightLimit.value = String(e.detail || '1');
-};
-
 const onCustomDashboardsUpdated = (e) => {
   if (e && e.detail && Array.isArray(e.detail)) {
     customDashboards.value = e.detail;
@@ -4514,17 +4622,16 @@ onMounted(async () => {
   await loadCustomTableRows();
   await loadTopicFilterState();
   await loadColumnsForCurrentCard();
+  loadColWidthSettings();
   handleRouteQueryChange();
   loadNameColConfig();
   loadCustomParentLabel();
-  window.addEventListener('table-row-height-changed', onRowHeightChanged);
   window.addEventListener('table-show-col-index-changed', onColIndexChanged);
   window.addEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
   window.addEventListener('click', handleGlobalTabMenuClick);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('table-row-height-changed', onRowHeightChanged);
   window.removeEventListener('table-show-col-index-changed', onColIndexChanged);
   window.removeEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
   window.removeEventListener('click', handleGlobalTabMenuClick);

@@ -729,7 +729,7 @@ import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { syncCollectionFields } from '@/api/fields';
 import { uploadFile, getFileUrl } from '@/api/files';
-import { computeColumnIndexMap, formatOptions } from '@/utils/formatters';
+import { computeColumnIndexMap, formatOptions, formWidthOptions } from '@/utils/formatters';
 import { DEFAULT_UNIFIED_DASHBOARDS, ensureStandardDashboards } from '@/utils/tableRegistry';
 import { createSampleDocxTemplateBlob } from '@/utils/docxExport';
 import {
@@ -1428,13 +1428,7 @@ const DEFAULT_TRIPS_MAPPING = [
 ];
 
 
-const widthOptions = [
-  { label: 'Rộng: 25%', value: '25' },
-  { label: 'Rộng: 33%', value: '33' },
-  { label: 'Rộng: 50%', value: '50' },
-  { label: 'Rộng: 75%', value: '75' },
-  { label: 'Rộng: 100%', value: '100' },
-];
+const widthOptions = formWidthOptions;
 
 const generateSlug = (str) => {
   if (!str) return 'cot_' + Date.now();

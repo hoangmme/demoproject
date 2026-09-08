@@ -1460,5 +1460,39 @@ export const evaluateRollup = (item, col, personnelStore) => {
   return '-';
 };
 
+export const formWidthOptions = [
+  { value: '5', label: 'Rộng: 5% (1/20 dòng)' },
+  { value: '10', label: 'Rộng: 10% (1/10 dòng)' },
+  { value: '15', label: 'Rộng: 15%' },
+  { value: '20', label: 'Rộng: 20% (1/5 dòng)' },
+  { value: '25', label: 'Rộng: 25% (1/4 dòng)' },
+  { value: '30', label: 'Rộng: 30%' },
+  { value: '33', label: 'Rộng: 33% (1/3 dòng)' },
+  { value: '35', label: 'Rộng: 35%' },
+  { value: '40', label: 'Rộng: 40% (2/5 dòng)' },
+  { value: '45', label: 'Rộng: 45%' },
+  { value: '50', label: 'Rộng: 50% (1/2 dòng)' },
+  { value: '55', label: 'Rộng: 55%' },
+  { value: '60', label: 'Rộng: 60% (3/5 dòng)' },
+  { value: '65', label: 'Rộng: 65%' },
+  { value: '70', label: 'Rộng: 70%' },
+  { value: '75', label: 'Rộng: 75% (3/4 dòng)' },
+  { value: '80', label: 'Rộng: 80% (4/5 dòng)' },
+  { value: '85', label: 'Rộng: 85%' },
+  { value: '90', label: 'Rộng: 90%' },
+  { value: '95', label: 'Rộng: 95%' },
+  { value: '100', label: 'Rộng: 100% (Đầy đủ hàng)' },
+];
 
-
+export const getColItemStyle = (width) => {
+  const w = parseFloat(String(width || '25').replace('%', ''));
+  if (!w || isNaN(w) || w >= 100) {
+    return { width: '100%', flex: '0 0 100%', maxWidth: '100%' };
+  }
+  const deduction = (1 - w / 100).toFixed(4);
+  return {
+    width: `calc(${w}% - ${deduction}rem)`,
+    flex: `0 0 calc(${w}% - ${deduction}rem)`,
+    maxWidth: `calc(${w}% - ${deduction}rem)`,
+  };
+};

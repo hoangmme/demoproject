@@ -130,35 +130,14 @@
           />
         </div>
 
-        <!-- 3. Độ rộng cột trên bảng -->
-        <div class="menu-field">
-          <label>Độ rộng hiển thị (px):</label>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <input
-              v-model.number="editWidth"
-              type="number"
-              min="80"
-              max="600"
-              step="10"
-              class="menu-input"
-              style="width: 90px; text-align: center;"
-            />
-            <button type="button" class="btn-save-mini" @click="handleSaveWidth">
-              Đặt
-            </button>
-          </div>
-        </div>
-
         <!-- 4. Độ rộng trong Form Chi tiết (%) -->
         <div class="menu-field">
           <label>Độ rộng trong Form Chi tiết (%):</label>
           <div style="display: flex; align-items: center; gap: 6px;">
             <select v-model="editFormWidth" class="menu-select" @change="handleSaveFormWidth">
-              <option value="25">Rộng: 25% (1/4 dòng)</option>
-              <option value="33">Rộng: 33% (1/3 dòng)</option>
-              <option value="50">Rộng: 50% (1/2 dòng)</option>
-              <option value="75">Rộng: 75% (3/4 dòng)</option>
-              <option value="100">Rộng: 100% (Đầy đủ hàng)</option>
+              <option v-for="opt in formWidthOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
             </select>
           </div>
         </div>
@@ -313,6 +292,7 @@
 import { ref, computed, watch } from "vue";
 import { usePersonnelStore } from "@/stores/personnel";
 import { saveAppSettings } from "@/api/settings";
+import { formWidthOptions } from "@/utils/formatters";
 
 const props = defineProps({
   visible: {
@@ -351,7 +331,6 @@ const emit = defineEmits([
   "change-format",
   "change-formula-type",
   "change-options",
-  "change-width",
   "change-form-width",
   "change-required",
   "change-lookup",
@@ -371,7 +350,6 @@ const editLabel = ref("");
 const editFormat = ref("text");
 const editFormulaType = ref("presence_status");
 const editOptions = ref("");
-const editWidth = ref(160);
 const editFormWidth = ref("50");
 const editRequired = ref(false);
 
@@ -440,7 +418,6 @@ watch(
       editLabel.value = col.label || "";
       editFormat.value = col.format || "text";
       editOptions.value = col.options || "";
-      editWidth.value = parseInt(col.tableWidth || col.width) || 160;
       editFormWidth.value = String(col.formWidth || col.width || "50").replace("%", "");
       editRequired.value = Boolean(col.required);
       editLookupTarget.value = col.lookupTarget || "personnel";
@@ -489,11 +466,6 @@ const handleFormatChange = () => {
 
 const handleSaveOptions = () => {
   emit("change-options", { colId: props.column.id, options: editOptions.value.trim() });
-};
-
-const handleSaveWidth = () => {
-  emit("change-width", { colId: props.column.id, width: editWidth.value });
-  closeMenu();
 };
 
 const handleSaveFormWidth = () => {
