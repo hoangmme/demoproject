@@ -132,7 +132,7 @@ const isEdit = computed(() => Boolean(form.value.id || form.value.uniqueKey));
 
 const allTableColumns = computed(() => {
   if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
-    return props.columns.filter((c) => !c.isVirtual && c.id !== 'stt');
+    return props.columns.filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
   }
   const allGroups = [
     ...(personnelStore.importMappingPersonnel || []),
@@ -143,7 +143,7 @@ const allTableColumns = computed(() => {
   const seen = new Set();
   allGroups.forEach((grp) => {
     (grp.columns || []).forEach((col) => {
-      if (col && col.id && col.id !== 'stt' && !col.isVirtual && !seen.has(col.id)) {
+      if (col && col.id && col.id !== 'stt' && !col.isVirtual && col.showInDetail !== false && !seen.has(col.id)) {
         seen.add(col.id);
         list.push(col);
       }

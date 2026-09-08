@@ -33,6 +33,7 @@ export const exportFullPersonnelExcel = (personnelList, mappingConfig, getDepart
 
   (mappingConfig || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      if (c.includeInExport === false) return;
       currentColIdx++;
       if (c.id === 'stt') {
         columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
@@ -97,6 +98,7 @@ export const exportFullRelativesExcel = (relativesList, mappingConfig) => {
 
   (mappingConfig || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      if (c.includeInExport === false) return;
       currentColIdx++;
       if (c.id === 'stt') {
         columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
@@ -161,6 +163,7 @@ export const exportFullTripsExcel = (tripsList, mappingConfig, getDepartmentName
 
   (mappingConfig || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      if (c.includeInExport === false) return;
       currentColIdx++;
       if (c.id === 'stt') {
         columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
@@ -271,6 +274,7 @@ export const getMappingHeadersList = (mappingConfig) => {
 
   (mappingConfig || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      if (c.includeInExport === false) return;
       currentColIdx++;
       if (c.id === 'stt') {
         headers.push(`[Cột ${currentColIdx}] STT`);
@@ -450,6 +454,7 @@ export const exportAllInOneDataExcel = (
   let pIdx = 0;
   (personnelMapping || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      if (c.includeInExport === false) return;
       pIdx++;
       if (c.id === 'stt') {
         pHeaders.push({ id: 'stt', header: `[Cột ${pIdx}] STT`, col: c });
@@ -481,6 +486,7 @@ export const exportAllInOneDataExcel = (
   let rIdx = 0;
   (relativeMapping || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      if (c.includeInExport === false) return;
       rIdx++;
       if (c.id === 'stt') {
         rHeaders.push({ id: 'stt', header: `[Cột ${rIdx}] STT`, col: c });
@@ -512,6 +518,7 @@ export const exportAllInOneDataExcel = (
   let tIdx = 0;
   (tripsMapping || []).forEach((g) => {
     (g.columns || []).forEach((c) => {
+      if (c.includeInExport === false) return;
       tIdx++;
       if (c.id === 'stt') {
         tHeaders.push({ id: 'stt', header: `[Cột ${tIdx}] STT`, col: c });

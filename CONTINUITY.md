@@ -2001,4 +2001,28 @@
       - `npm run build` thành công 100% (0 lỗi, 547ms).
    5. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-08)**: **Tùy Chọn Cột In PDF & Chi Tiết, Nhập Liệu Động 100%, Đồng Nhất Độ Rộng & Tối Ưu Tab Chế Độ Xem**:
+   1. **Yêu cầu của người dùng**:
+      - Tùy chọn cột: Thêm nút tick xuất hiện lúc in PDF hoặc export/import dữ liệu (mặc định tick); nút tick hiển thị ở chi tiết (mặc định tick - bỏ tick thì ẩn ở chi tiết).
+      - Nhập liệu mới đang dính logic cũ hardcode, chuyển sang dynamic đơn giản.
+      - Chiều rộng cột ở chi tiết và popup đồng nhất.
+      - Nút cài đặt của view từng bảng đang nằm ngoài với nền riêng, tối ưu lại.
+   2. **Giải pháp kiến trúc đã triển khai**:
+      - **Tùy chọn Cột (`includeInExport` & `showInDetail`)**:
+        - `ColumnHeaderMenu.vue` & `AddColumnDialog.vue`: Bổ sung 2 checkbox điều khiển trực tiếp trên Header Menu cột và hộp thoại tạo cột mới.
+        - `UnifiedTableView.vue`: Xử lý sự kiện `@change-include-export` và `@change-show-in-detail`, lưu cấu hình ngay lập tức vào Directus và LocalStorage.
+        - `PersonnelDialog.vue`: Bộ lọc `allTableColumns` tự động loại trừ các cột có `showInDetail === false`.
+        - `DashboardView.vue`: Danh sách cột trong popup drilldown và `selectedColumnsForDialog` lọc bỏ `c.showInDetail === false`.
+        - `excel.js` & `docxExport.js`: Lọc bỏ toàn bộ các cột có `col.includeInExport === false` trong các bảng xuất Excel, Mẫu nhập liệu, File Word động và Bản in PDF.
+      - **Nhập liệu Mới Động 100% (Dynamic Data Entry)**:
+        - `TableDataEntryDialog.vue`: Xóa bỏ hoàn toàn Bước 2 hardcode ("Chọn Cán bộ chủ quản liên kết") và các mô tả tĩnh. Hiển thị số lượng bản ghi động `${count} kết quả`. Khi chọn bảng, chuyển hướng linh hoạt tới route hoặc mở trực tiếp form nhập liệu với các cột của bảng đó.
+        - `UnifiedTableView.vue`: `openAddTripDialog` mở thẳng `PersonnelDialog` cho bản ghi mới với dữ liệu khởi tạo động, không qua form trung gian cũ.
+      - **Đồng Nhất Chiều Rộng Cột ở Chi Tiết và Popup**:
+        - `DashboardView.vue` (Drilldown Detail Dialog): Chuyển container sang `.form-grid` và áp dụng `:style="[getColItemStyle(col.width), ...]"` đồng bộ 100% với `PersonnelDialog.vue`, đảm bảo tỉ lệ phân chia cột (25%, 33%, 50%, 100%) hoàn toàn trùng khớp giữa popup xem nhanh và form chỉnh sửa.
+      - **Tối Ưu Nút Cài Đặt Chế Độ Xem (3-dots view settings button)**:
+        - `main.css`: Tái cấu trúc `.lark-tab-item-wrapper` thành pill liền khối duy nhất bao bọc cả tên tab và nút 3 chấm. Nút `.btn-tab-action` nằm gọn bên trong viền tab với nền trong suốt, triệt tiêu hoàn toàn khối vuông nền trắng thừa bị lồi ra ngoài.
+   3. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 549ms).
+   4. **Trạng thái**: Done [Reversible].
+
 

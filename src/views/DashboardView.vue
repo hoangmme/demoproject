@@ -1155,11 +1155,24 @@
 
       <div v-if="selectedDrilldownRow" style="display: flex; flex-direction: column; gap: 14px;">
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px;">
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">
+          <div class="form-grid">
             <div
-              v-for="col in drilldownColumns"
+              v-for="col in (drilldownColumns || []).filter(c => c.showInDetail !== false)"
               :key="col.id"
-              style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px;"
+              class="field-item"
+              :style="[
+                getColItemStyle(col.width),
+                {
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  padding: '8px 10px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '3px',
+                  boxSizing: 'border-box'
+                }
+              ]"
             >
               <span style="font-size: 0.7rem; color: #64748b; font-weight: 600;">
                 {{ col.label }}
@@ -1257,7 +1270,7 @@ import { useAuthStore } from '@/stores/auth';
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, getColItemStyle } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import {
@@ -1532,7 +1545,7 @@ const openPersonnelDetailFromRecord = () => {
   const row = selectedDrilldownRow.value;
   isDrilldownRecordDetailOpen.value = false;
   selectedPersonForDialog.value = row;
-  selectedColumnsForDialog.value = (drilldownColumns.value || []).filter((c) => !c.isVirtual && c.id !== 'stt');
+  selectedColumnsForDialog.value = (drilldownColumns.value || []).filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
   isPersonDialogOpen.value = true;
 };
 
@@ -1627,7 +1640,7 @@ const selectedColumnsForDialog = ref([]);
 const openPersonnelDetail = (p) => {
   if (!p) return;
   selectedPersonForDialog.value = p;
-  selectedColumnsForDialog.value = (drilldownColumns.value || []).filter((c) => !c.isVirtual && c.id !== 'stt');
+  selectedColumnsForDialog.value = (drilldownColumns.value || []).filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
   isPersonDialogOpen.value = true;
 };
 

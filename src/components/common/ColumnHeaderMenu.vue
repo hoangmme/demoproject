@@ -340,6 +340,31 @@
           </button>
         </div>
 
+        <!-- 5a. Tùy chọn Hiển thị & Xuất dữ liệu -->
+        <div class="menu-field" style="margin-top: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <label style="margin-bottom: 2px; font-weight: 700; color: #1e293b; font-size: 0.76rem;">Hiển thị & Xuất dữ liệu:</label>
+          
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; user-select: none;">
+            <input
+              type="checkbox"
+              v-model="editIncludeInExport"
+              @change="handleToggleIncludeExport"
+              style="accent-color: #0284c7; cursor: pointer;"
+            />
+            <span>Xuất hiện khi in PDF / Xuất & Nhập dữ liệu</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; user-select: none;">
+            <input
+              type="checkbox"
+              v-model="editShowInDetail"
+              @change="handleToggleShowInDetail"
+              style="accent-color: #0284c7; cursor: pointer;"
+            />
+            <span>Hiển thị trong Form / Popup Chi tiết</span>
+          </label>
+        </div>
+
         <!-- 5b. Đặt làm Khóa chính / Khóa liên kết của bảng -->
         <div class="menu-field" style="margin-top: 6px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 8px;">
           <label style="margin-bottom: 5px;">Khóa Định danh & Liên kết Bảng:</label>
@@ -523,6 +548,8 @@ const emit = defineEmits([
   "change-options",
   "change-form-width",
   "change-required",
+  "change-include-export",
+  "change-show-in-detail",
   "change-lookup",
   "change-name-col-field",
   "delete-column",
@@ -544,6 +571,8 @@ const formulaTab = ref("fields");
 const editOptions = ref("");
 const editFormWidth = ref("50");
 const editRequired = ref(false);
+const editIncludeInExport = ref(true);
+const editShowInDetail = ref(true);
 
 const editLookupTarget = ref("personnel");
 const editLookupLinkCol = ref("");
@@ -633,6 +662,8 @@ watch(
       editLookupFormat.value = col.lookupFormat || "default";
       editFormulaType.value = col.formulaType || "presence_status";
       editFormulaExpression.value = col.formulaExpression || "";
+      editIncludeInExport.value = col.includeInExport !== false;
+      editShowInDetail.value = col.showInDetail !== false;
     }
   },
   { immediate: true }
@@ -744,6 +775,14 @@ const handleSaveFormWidth = () => {
 const handleToggleRequired = () => {
   editRequired.value = !editRequired.value;
   emit("change-required", { colId: props.column.id, required: editRequired.value });
+};
+
+const handleToggleIncludeExport = () => {
+  emit("change-include-export", { colId: props.column.id, includeInExport: editIncludeInExport.value });
+};
+
+const handleToggleShowInDetail = () => {
+  emit("change-show-in-detail", { colId: props.column.id, showInDetail: editShowInDetail.value });
 };
 
 const isCurrentPrimaryKey = computed(() => {

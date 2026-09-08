@@ -1097,6 +1097,8 @@
       @change-options="onChildChangeColumnOptions"
       @change-form-width="onChildChangeColumnFormWidth"
       @change-required="onChildChangeColumnRequired"
+      @change-include-export="onChildChangeColumnIncludeExport"
+      @change-show-in-detail="onChildChangeColumnShowInDetail"
       @change-lookup="onChildChangeColumnLookup"
       @change-name-col-field="toggleNameColField"
       @delete-column="onChildDeleteColumnFromTable"
@@ -2232,6 +2234,64 @@ const onChildChangeColumnRequired = async ({ colId, required }) => {
   }
 };
 
+const onChildChangeColumnIncludeExport = async ({ colId, includeInExport }) => {
+  const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.includeInExport = Boolean(includeInExport);
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.includeInExport = Boolean(includeInExport);
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await persistTableMapping(src, mapping);
+  }
+};
+
+const onChildChangeColumnShowInDetail = async ({ colId, showInDetail }) => {
+  const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.showInDetail = Boolean(showInDetail);
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.showInDetail = Boolean(showInDetail);
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await persistTableMapping(src, mapping);
+  }
+};
+
 const onChildChangeColumnFormat = async ({ colId, newFormat }) => {
   const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
   if (isBlank && cDash) {
@@ -2877,6 +2937,7 @@ const allAvailableColumnsList = computed(() => {
     const effectiveCols = rawCustomCols.length > 0 ? rawCustomCols : defaultStarterCols;
     effectiveCols.forEach((c, idx) => {
       rawList.push({
+        ...c,
         id: c.id,
         label: c.label || c.id,
         colIndex: idx + 1,
@@ -4200,33 +4261,12 @@ const openAddTripDialog = () => {
     addCustomRow();
     return;
   }
-  if (src === 'personnel') {
-    activePersonData.value = null;
-    dialogInitialTab.value = 0;
-    dialogTargetRelativeCode.value = '';
-    isPersonnelDialogOpen.value = true;
-    return;
-  }
-  if (src === 'relatives') {
-    activePersonData.value = null;
-    dialogInitialTab.value = 2; // Tab 3: Thân nhân
-    dialogTargetRelativeCode.value = '';
-    isPersonnelDialogOpen.value = true;
-    return;
-  }
-  editingTripItem.value = null;
-  selectedTargetKey.value = (personnelStore.personnelList[0]?.cccd || personnelStore.personnelList[0]?.id) || '';
-  tripTargetType.value = 'personnel';
-  tripFormData.value = {
-    countryName: '',
-    departureDate: '',
-    arrivalDate: '',
-    decisionNumber: '',
-    fundingName: 'Ngân sách nhà nước',
-    purpose: '',
-    passportNumber: '',
+  const newRec = {
+    _recordType: src === 'relatives' ? 'relative' : (src === 'trips' ? 'trip' : 'personnel'),
+    custom_data: {},
   };
-  isTripFormDialogOpen.value = true;
+  activePersonData.value = newRec;
+  isPersonnelDialogOpen.value = true;
 };
 
 const saveTripForm = async () => {

@@ -3,14 +3,13 @@
     v-model:visible="visible"
     modal
     :style="{ width: '560px', maxWidth: '95vw' }"
-    :header="step === 1 ? '➕ Nhập liệu Bản ghi Mới - Chọn Bảng Dữ Liệu' : '🔗 Chọn Cán bộ Chủ quản Liên Kết'"
+    header="➕ Nhập liệu Bản ghi Mới - Chọn Bảng Dữ Liệu"
     :closable="true"
     @hide="resetState"
   >
-    <!-- BƯỚC 1: CHỌN BẢNG DỮ LIỆU -->
-    <div v-if="step === 1" style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
       <div style="font-size: 0.78rem; color: #64748b; line-height: 1.4;">
-        Chọn bảng bạn muốn thêm bản ghi mới. Hệ thống sẽ tự động điều hướng hoặc mở form nhập liệu tương ứng:
+        Chọn bảng bạn muốn thêm bản ghi mới. Hệ thống sẽ tự động mở form nhập liệu động tương ứng với cấu hình cột của bảng đó:
       </div>
 
       <!-- Ô tìm kiếm bảng -->
@@ -24,7 +23,7 @@
       </div>
 
       <!-- Danh sách bảng khả dụng -->
-      <div class="tables-grid" style="display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 2px;">
+      <div class="tables-grid" style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 2px;">
         <div
           v-for="table in filteredTables"
           :key="table.id"
@@ -44,77 +43,10 @@
               </div>
             </div>
           </div>
-          <i class="pi pi-chevron-right" style="color: #94a3b8; font-size: 0.8rem;"></i>
-        </div>
-      </div>
-    </div>
-
-    <!-- BƯỚC 2: CHỌN CÁN BỘ LIÊN KẾT (NẾU CHỌN THÂN NHÂN HOẶC CHUYẾN ĐI) -->
-    <div v-else-if="step === 2" style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
-      <div style="display: flex; align-items: center; justify-content: space-between; background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 12px; border-radius: 8px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <i :class="selectedTable?.icon ? (selectedTable.icon.startsWith('pi-') ? `pi ${selectedTable.icon}` : selectedTable.icon) : 'pi pi-table'" :style="{ color: selectedTable?.iconColor || '#0284c7' }"></i>
-          <span style="font-weight: 700; font-size: 0.84rem; color: #1e3a8a;">
-            {{ selectedTable?.title }}
-          </span>
-        </div>
-        <button
-          type="button"
-          @click="step = 1"
-          style="background: none; border: none; font-size: 0.74rem; color: #2563eb; font-weight: 600; cursor: pointer;"
-        >
-          ← Đổi bảng khác
-        </button>
-      </div>
-
-      <div style="font-size: 0.76rem; color: #475569;">
-        Bản ghi này cần liên kết với một Cán bộ trong hệ thống. Vui lòng chọn hồ sơ Cán bộ chủ quản:
-      </div>
-
-      <!-- Tìm kiếm Cán bộ -->
-      <div style="position: relative;">
-        <i class="pi pi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem;"></i>
-        <InputText
-          v-model="searchPersonQuery"
-          placeholder="Tìm tên cán bộ, CCCD, chức vụ, phòng ban..."
-          style="width: 100%; padding-left: 30px; font-size: 0.8rem; height: 34px;"
-        />
-      </div>
-
-      <!-- Danh sách Cán bộ -->
-      <div style="display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; padding-right: 2px;">
-        <div
-          v-for="person in filteredPersonnel"
-          :key="person.id"
-          class="person-select-item"
-          @click="handleSelectParentPersonnel(person)"
-        >
-          <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
-            <div style="width: 28px; height: 28px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;">
-              {{ (person.name || 'CB').charAt(0).toUpperCase() }}
-            </div>
-            <div style="flex: 1; min-width: 0;">
-              <strong style="font-size: 0.84rem; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">
-                {{ person.name }}
-              </strong>
-              <div style="font-size: 0.7rem; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap;">
-                <span v-if="person.position">Chức vụ: {{ person.position }}</span>
-                <span v-if="person.departmentId">Đơn vị: {{ person.departmentId }}</span>
-                <span v-if="person.cccd || person.cccdparent">CCCD: {{ person.cccd || person.cccdparent }}</span>
-              </div>
-            </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 0.72rem; color: #0284c7; font-weight: 600;">+ Thêm</span>
+            <i class="pi pi-chevron-right" style="color: #94a3b8; font-size: 0.75rem;"></i>
           </div>
-          <Button
-            label="Chọn"
-            size="small"
-            outlined
-            severity="primary"
-            style="font-size: 0.72rem; padding: 3px 8px;"
-          />
-        </div>
-
-        <div v-if="filteredPersonnel.length === 0" style="text-align: center; padding: 20px; color: #94a3b8; font-size: 0.78rem;">
-          Không tìm thấy cán bộ nào phù hợp.
         </div>
       </div>
     </div>
@@ -122,7 +54,7 @@
     <template #footer>
       <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <span style="font-size: 0.72rem; color: #94a3b8;">
-          {{ step === 1 ? `${filteredTables.length} bảng dữ liệu` : `${filteredPersonnel.length} cán bộ khả dụng` }}
+          {{ filteredTables.length }} bảng dữ liệu khả dụng
         </span>
         <Button
           label="Đóng"
@@ -166,7 +98,6 @@ const visible = computed({
 const step = ref(1);
 const selectedTable = ref(null);
 const searchTableQuery = ref('');
-const searchPersonQuery = ref('');
 const customDashboards = ref([]);
 
 const loadDashboards = () => {
@@ -204,18 +135,6 @@ const filteredTables = computed(() => {
   });
 });
 
-const filteredPersonnel = computed(() => {
-  const list = personnelStore.personnelList || [];
-  const q = searchPersonQuery.value.trim().toLowerCase();
-  if (!q) return list;
-  return list.filter((p) => {
-    return (p.name && p.name.toLowerCase().includes(q)) ||
-      (p.position && p.position.toLowerCase().includes(q)) ||
-      (p.departmentId && p.departmentId.toLowerCase().includes(q)) ||
-      (p.cccd && String(p.cccd).toLowerCase().includes(q)) ||
-      (p.cccdparent && String(p.cccdparent).toLowerCase().includes(q));
-  });
-});
 
 const getTableColor = (table) => {
   const hex = table?.iconColor || '#0284c7';
@@ -228,44 +147,31 @@ const getTableColor = (table) => {
 };
 
 const getTableSubInfo = (table) => {
-  if (table.source === 'personnel') return `${personnelStore.personnelList?.length || 0} cán bộ · Bảng hồ sơ gốc`;
-  if (table.source === 'relatives') return `${personnelStore.relativesList?.length || 0} thân nhân · Cần liên kết Cán bộ`;
-  if (table.source === 'trips') return 'Theo dõi xuất nhập cảnh · Chuyến đi Cán bộ & Thân nhân';
-  if (table.source === 'blank') return `Bảng dữ liệu độc lập tự tạo (${table.getRows(personnelStore)?.length || 0} dòng)`;
-  return `Bảng chuyên đề (nguồn: ${table.source === 'personnel' ? 'Cán bộ' : (table.source === 'relatives' ? 'Thân nhân' : 'Chuyến đi')})`;
+  if (table.source === 'personnel') return `${personnelStore.personnelList?.length || 0} kết quả`;
+  if (table.source === 'relatives') return `${personnelStore.relativesList?.length || 0} kết quả`;
+  if (table.source === 'trips') return `${personnelStore.tripsList?.length || 0} kết quả`;
+  const count = table.getRows ? (table.getRows(personnelStore)?.length || 0) : 0;
+  if (table.source === 'blank') return `Bảng tự tạo (${count} kết quả)`;
+  return `Bảng chuyên đề (${count} kết quả)`;
 };
 
 const handleSelectTable = (table) => {
-  selectedTable.value = table;
-  if (table.source === 'relatives' || table.source === 'trips') {
-    step.value = 2;
-  } else if (table.source === 'personnel') {
-    visible.value = false;
-    emit('open-create-personnel');
-    router.push('/personnel?action=new_personnel');
-  } else {
-    // Custom table (bảng tự tạo / chuyên đề)
-    visible.value = false;
-    router.push(`${table.route}?action=new_record`);
-  }
-};
-
-const handleSelectParentPersonnel = (person) => {
   visible.value = false;
-  if (selectedTable.value?.source === 'relatives') {
-    emit('open-create-relative', person);
-    router.push(`/personnel?tab=thannhan&action=new_relative&personnelId=${person.id}`);
-  } else if (selectedTable.value?.source === 'trips') {
-    emit('open-create-trip', person);
-    router.push(`/trips?action=new_trip&personnelId=${person.id}`);
+  selectedTable.value = table;
+  if (table.route) {
+    router.push(`${table.route}?action=new_record`);
+  } else if (table.id === 'trips' || table.source === 'trips') {
+    router.push('/trips?action=new_record');
+  } else if (table.id === 'relatives' || table.source === 'relatives') {
+    router.push('/relatives?action=new_record');
+  } else if (table.id === 'personnel' || table.source === 'personnel') {
+    router.push('/personnel?action=new_record');
   }
 };
 
 const resetState = () => {
-  step.value = 1;
   selectedTable.value = null;
   searchTableQuery.value = '';
-  searchPersonQuery.value = '';
 };
 </script>
 

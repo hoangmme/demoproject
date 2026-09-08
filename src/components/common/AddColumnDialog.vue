@@ -319,6 +319,33 @@
         </select>
       </div>
 
+      <!-- 4. Tùy chọn Hiển thị & Xuất dữ liệu -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 6px; border-top: 1px solid #f1f5f9;">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: #1e293b; cursor: pointer; user-select: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px;">
+          <input
+            type="checkbox"
+            v-model="form.includeInExport"
+            style="accent-color: #0284c7; width: 15px; height: 15px; cursor: pointer;"
+          />
+          <div>
+            <div style="font-weight: 600;">Xuất bản in / Export</div>
+            <div style="font-size: 0.65rem; color: #64748b;">In PDF, Xuất Excel/Word</div>
+          </div>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: #1e293b; cursor: pointer; user-select: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px;">
+          <input
+            type="checkbox"
+            v-model="form.showInDetail"
+            style="accent-color: #0284c7; width: 15px; height: 15px; cursor: pointer;"
+          />
+          <div>
+            <div style="font-weight: 600;">Hiển thị ở chi tiết</div>
+            <div style="font-size: 0.65rem; color: #64748b;">Xem / Sửa trong form chi tiết</div>
+          </div>
+        </label>
+      </div>
+
       <!-- 5. Bắt buộc nhập liệu (Required) -->
       <div style="padding-top: 4px;">
         <div>
@@ -407,6 +434,8 @@ const form = ref({
   format: 'text',
   options: '',
   width: '50',
+  includeInExport: true,
+  showInDetail: true,
   required: false,
   lookupTarget: 'personnel',
   lookupLinkCol: '',
@@ -435,6 +464,8 @@ watch(
         format: 'text',
         options: '',
         width: '50',
+        includeInExport: true,
+        showInDetail: true,
         required: false,
         lookupTarget: 'personnel',
         lookupLinkCol: '',
@@ -573,6 +604,8 @@ const handleSave = async () => {
       label: form.value.label.trim(),
       format: form.value.format || 'text',
       width: String(form.value.width || '50'),
+      includeInExport: form.value.includeInExport !== false,
+      showInDetail: form.value.showInDetail !== false,
       required: Boolean(form.value.required),
       options: form.value.options ? form.value.options.trim() : '',
       ...(form.value.format === 'lookup' ? {
