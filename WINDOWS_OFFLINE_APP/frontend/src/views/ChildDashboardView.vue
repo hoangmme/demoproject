@@ -131,52 +131,14 @@
           style="font-size: 0.8rem;"
         />
 
-        <!-- 📥 Menu Xuất / Nhập Dropdown chuẩn đồng bộ PersonnelView -->
-        <div class="header-menu-wrapper" @mouseenter="onMouseEnterData" @mouseleave="onMouseLeaveData">
-          <Button
-            label="Xuất / Nhập"
-            icon="pi pi-download"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="isDataMenuOpen = !isDataMenuOpen; isFilterMenuOpen = false;"
-            style="font-size: 0.8rem;"
-          />
-
-          <div v-show="isDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
-            <div class="menu-action-item" @click="openImportWizard(); isDataMenuOpen = false;">
-              <div class="action-icon-box" style="background: #e0f2fe; color: #0284c7;">
-                <i class="pi pi-upload"></i>
-              </div>
-              <div>
-                <div class="menu-action-title">
-                  {{ currentDashboardConfig?.source === 'relatives' ? 'Import Excel Thân nhân (Wizard 4 Bước)' : currentDashboardConfig?.source === 'personnel' ? 'Import Excel Cán bộ (Wizard 4 Bước)' : 'Import Excel Chuyến đi (Wizard 4 Bước)' }}
-                </div>
-                <div class="menu-action-sub">Tải dữ liệu từ tệp Excel .xlsx vào hệ thống</div>
-              </div>
-            </div>
-
-            <div class="menu-action-item" @click="openAdvancedDocxExport(); isDataMenuOpen = false;">
-              <div class="action-icon-box" style="background: #fee2e2; color: #dc2626;">
-                <i class="pi pi-file-pdf"></i>
-              </div>
-              <div>
-                <div class="menu-action-title">{{ selectedTrips.length > 0 ? `Xuất Hồ sơ PDF (${selectedTrips.length} đã chọn)` : 'Xuất Hồ sơ Báo cáo (PDF / Word)' }}</div>
-                <div class="menu-action-sub">Xuất hồ sơ chi tiết theo mẫu chuẩn hoặc tải lên</div>
-              </div>
-            </div>
-
-            <div class="menu-action-item" @click="exportExcel(); isDataMenuOpen = false;">
-              <div class="action-icon-box" style="background: #dcfce7; color: #16a34a;">
-                <i class="pi pi-file-excel"></i>
-              </div>
-              <div>
-                <div class="menu-action-title">Xuất danh sách Excel (.xlsx)</div>
-                <div class="menu-action-sub">Tải bảng dữ liệu hiện tại về máy tính</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- 📥 Menu Xuất / Nhập Dropdown chuẩn dùng chung ExportImportMenu -->
+        <ExportImportMenu
+          :tableTitle="currentDashboardConfig?.title || 'Chuyến đi'"
+          :selectedCount="selectedTrips.length"
+          @import="openImportWizard()"
+          @export-pdf="openAdvancedDocxExport()"
+          @export-excel="exportExcel"
+        />
 
         <!-- Nút Xóa các bản ghi đã chọn (Tick chọn nhiều dòng) -->
         <Button
@@ -1202,6 +1164,7 @@ import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
 import TableViewManagerDialog from '@/components/common/TableViewManagerDialog.vue';
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
+import ExportImportMenu from '@/components/common/ExportImportMenu.vue';
 import { ensureStandardDashboards } from '@/utils/tableRegistry';
 import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 
@@ -4385,30 +4348,25 @@ const handleSeedTrips = async () => {
   }
 };
 
-// Excel Export
+// Excel Export (Dynamic 100% theo các cột đang hiển thị trên bảng)
 const exportExcel = () => {
-  const exportData = filteredList.value.map((t, idx) => {
-    const row = {
-      'STT': idx + 1,
-      'Họ và tên': t.personnelName,
-      'Đối tượng': t.isRelative ? 'Thân nhân' : 'Cán bộ',
-      'Chức vụ': t.position,
-      'Đơn vị công tác': t.departmentName,
-      'Quốc gia': t.countryName,
-      'Ngày xuất cảnh': formatDisplayDate(t.departureDate),
-      'Ngày nhập cảnh': formatDisplayDate(t.arrivalDate),
-      'Số quyết định': t.decisionNumber,
-      'Nguồn kinh phí': t.fundingName,
-      'Mục đích': t.purpose,
-      'Trạng thái': getStatusLabel(t),
-    };
-    return row;
+  const list = filteredList.value || [];
+  const cols = visibleColumns.value || [];
+  const rows = list.map((item, idx) => {
+    const obj = { 'STT': dtFirst.value + idx + 1 };
+    cols.forEach((col) => {
+      const val = getCellValue(item, col.id);
+      obj[col.label || col.id] = (val !== null && val !== undefined) ? String(val).replace(/\n/g, ' ') : '-';
+    });
+    return obj;
   });
 
-  const ws = XLSX.utils.json_to_sheet(exportData);
+  const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Danh sách Chuyến đi');
-  XLSX.writeFile(wb, `Danh_sach_chuyen_di_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const sheetTitle = (currentDashboardConfig.value?.title || 'Dữ liệu').slice(0, 31);
+  XLSX.utils.book_append_sheet(wb, ws, sheetTitle);
+  const fileName = `Danh_sach_${(currentDashboardConfig.value?.title || 'Du_lieu').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  XLSX.writeFile(wb, fileName);
 };
 
 const loadCustomDashboards = async () => {

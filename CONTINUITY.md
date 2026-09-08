@@ -1641,6 +1641,18 @@
      - **Sửa điều kiện hiển thị nút**: Bỏ ràng buộc `drilldownSourceType === 'personnel'` ở footer popup xem chi tiết (`isDrilldownRecordDetailOpen`), cho phép nút `[Chỉnh sửa hồ sơ]` hoạt động với mọi bảng (Chuyến đi, Thân nhân, Cán bộ).
      - **Điều hướng thông minh theo loại bản ghi**: Tự động chuyển hướng chính xác đến `openTripDetail` (Tab 1: Chuyến đi), `openRelativeDetail` (Tab 2: Thân nhân) hoặc `openPersonnelDetail` (Tab 0: Cán bộ).
 - **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Thống Nhất 100% Template Component "Xuất / Nhập" Dùng Chung Cho Tất Cả Các Bảng (`ExportImportMenu.vue`)**:
+  1. **Nguyên nhân cốt lõi gây lệch**:
+     - Trước đây nút `Xuất / Nhập` được viết lặp lại (copy-paste HTML, CSS, và state hover) độc lập ở từng view: Bảng Cán bộ, Bảng Thân nhân (`PersonnelView.vue`) và Bảng Chuyến đi / Chuyên đề (`ChildDashboardView.vue`).
+     - Dẫn đến tình trạng lệch cấu trúc: Cán bộ và Thân nhân không có tùy chọn xuất file Excel, Chuyến đi bị lệch text và logic, style dropdown và thời gian hover lệch nhau.
+  2. **Giải pháp kiến trúc dứt điểm (Single Source of Truth)**:
+     - Tạo mới component dùng chung duy nhất: [`ExportImportMenu.vue`](file:///Users/hoji/Documents/code/demoproject/src/components/common/ExportImportMenu.vue).
+     - Toàn bộ các bảng trong hệ thống (Cán bộ, Thân nhân, Chuyến đi, và mọi bảng Chuyên đề tự tạo) đều sử dụng 1 template duy nhất này với đúng 3 tùy chọn đồng nhất 100%:
+       1. 📥 `Import Excel [Tên bảng] (Wizard 4 Bước)` (kết nối Wizard import)
+       2. 📄 `Xuất Hồ sơ [Tên bảng] (PDF / Word)` (kèm số lượng đã chọn, kết nối Advanced DOCX/PDF export)
+       3. 📊 `Xuất danh sách Excel (.xlsx)` (tự động xuất 100% các cột đang hiển thị và giá trị lọc thực tế của bảng đó ra file Excel)
+     - Thay thế toàn bộ code trùng lặp ở `PersonnelView.vue` và `ChildDashboardView.vue` bằng component `ExportImportMenu`.
+- **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
 

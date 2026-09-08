@@ -143,40 +143,14 @@
             style="font-size: 0.8rem;"
           />
 
-          <!-- 📥 Gom Import / Xuất Excel / Xuất PDF vào 1 nút Menu -->
-          <div class="header-menu-wrapper" @mouseenter="onMouseEnterData" @mouseleave="onMouseLeaveData">
-            <Button
-              label="Xuất / Nhập"
-              icon="pi pi-download"
-              severity="secondary"
-              outlined
-              size="small"
-              @click="isDataMenuOpen = !isDataMenuOpen; isFilterMenuOpen = false;"
-              style="font-size: 0.8rem;"
-            />
-
-            <div v-show="isDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
-              <div class="menu-action-item" @click="openImportWizard('personnel'); isDataMenuOpen = false;">
-                <div class="action-icon-box" style="background: #e0f2fe; color: #0284c7;">
-                  <i class="pi pi-upload"></i>
-                </div>
-                <div>
-                  <div class="menu-action-title">Import Excel Cán bộ (Wizard 4 Bước)</div>
-                  <div class="menu-action-sub">Tải dữ liệu từ tệp Excel .xlsx vào hệ thống</div>
-                </div>
-              </div>
-
-              <div class="menu-action-item" @click="openAdvancedDocxExport(null); isDataMenuOpen = false;">
-                <div class="action-icon-box" style="background: #fee2e2; color: #dc2626;">
-                  <i class="pi pi-file-pdf"></i>
-                </div>
-                <div>
-                  <div class="menu-action-title">{{ selectedPersonnel.length > 0 ? `Xuất Hồ sơ PDF (${selectedPersonnel.length} đã chọn)` : 'Xuất Hồ sơ Cán bộ (PDF)' }}</div>
-                  <div class="menu-action-sub">Xuất trích ngang, sơ yếu lý lịch cán bộ ra PDF</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- 📥 Menu Xuất / Nhập Dropdown chuẩn dùng chung ExportImportMenu -->
+          <ExportImportMenu
+            :tableTitle="mainTableTitle"
+            :selectedCount="selectedPersonnel.length"
+            @import="openImportWizard('personnel')"
+            @export-pdf="openAdvancedDocxExport(null)"
+            @export-excel="exportPersonnelExcel"
+          />
 
           <!-- Add Button -->
           <Button
@@ -746,40 +720,14 @@
             style="font-size: 0.8rem;"
           />
 
-          <!-- 📥 Gom Import / Xuất Excel Thân nhân vào 1 nút Menu -->
-          <div class="header-menu-wrapper" @mouseenter="onMouseEnterRelData" @mouseleave="onMouseLeaveRelData">
-            <Button
-              label="Xuất / Nhập"
-              icon="pi pi-download"
-              severity="secondary"
-              outlined
-              size="small"
-              @click="isRelativeDataMenuOpen = !isRelativeDataMenuOpen; isRelativeFilterMenuOpen = false;"
-              style="font-size: 0.8rem;"
-            />
-
-            <div v-show="isRelativeDataMenuOpen" class="header-menu-dropdown data-menu-dropdown">
-              <div class="menu-action-item" @click="openImportWizard('relative'); isRelativeDataMenuOpen = false;">
-                <div class="action-icon-box" style="background: #e0f2fe; color: #0284c7;">
-                  <i class="pi pi-upload"></i>
-                </div>
-                <div>
-                  <div class="menu-action-title">Import Excel Thân nhân (Wizard 4 Bước)</div>
-                  <div class="menu-action-sub">Tải dữ liệu thân nhân từ file .xlsx</div>
-                </div>
-              </div>
-
-              <div class="menu-action-item" @click="openAdvancedDocxExport(null); isRelativeDataMenuOpen = false;">
-                <div class="action-icon-box" style="background: #fee2e2; color: #dc2626;">
-                  <i class="pi pi-file-pdf"></i>
-                </div>
-                <div>
-                  <div class="menu-action-title">Xuất Hồ sơ Word / PDF theo Mẫu</div>
-                  <div class="menu-action-sub">Xuất hồ sơ kèm thông tin thân nhân</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- 📥 Menu Xuất / Nhập Dropdown chuẩn dùng chung ExportImportMenu -->
+          <ExportImportMenu
+            :tableTitle="relativeTableTitle"
+            :selectedCount="selectedPersonnel.length"
+            @import="openImportWizard('relative')"
+            @export-pdf="openAdvancedDocxExport(null)"
+            @export-excel="exportRelativeExcel"
+          />
 
           <!-- Add Relative Button -->
           <Button
@@ -1521,6 +1469,7 @@ import { getFileUrl } from '@/api/files';
 import { logActivity } from '@/api/audit';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
+import ExportImportMenu from '@/components/common/ExportImportMenu.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -1558,6 +1507,40 @@ const openImportWizard = (target = 'personnel') => {
 
 const onWizardImported = async () => {
   await personnelStore.fetchPersonnel();
+};
+
+const exportPersonnelExcel = () => {
+  const list = filteredPersonnelList.value || [];
+  const cols = activeColumns.value || [];
+  if (cols.length > 0) {
+    const rows = list.map((item, idx) => {
+      const obj = { 'STT': dtFirst.value + idx + 1 };
+      cols.forEach((col) => {
+        obj[col.label || col.id] = getDisplayValue(item, col.id);
+      });
+      return obj;
+    });
+    exportToExcel(rows, `Danh_sach_Can_bo_${new Date().toISOString().slice(0, 10)}`, 'Cán bộ');
+  } else {
+    exportFullPersonnelExcel(list, personnelStore.importMappingPersonnel, (id) => personnelStore.getDepartmentName(id));
+  }
+};
+
+const exportRelativeExcel = () => {
+  const list = filteredRelativesList.value || [];
+  const cols = activeRelativeColumns.value || [];
+  if (cols.length > 0) {
+    const rows = list.map((item, idx) => {
+      const obj = { 'STT': dtFirstRel.value + idx + 1 };
+      cols.forEach((col) => {
+        obj[col.label || col.id] = getDisplayValue(item, col.id);
+      });
+      return obj;
+    });
+    exportToExcel(rows, `Danh_sach_Than_nhan_${new Date().toISOString().slice(0, 10)}`, 'Thân nhân');
+  } else {
+    exportFullRelativesExcel(list, personnelStore.importMappingRelative, (id) => personnelStore.getDepartmentName(id));
+  }
 };
 
 const mainTab = ref('canhan'); // 'canhan' or 'thannhan'
