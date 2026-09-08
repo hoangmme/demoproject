@@ -1515,6 +1515,31 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+### 17. ĐỒNG BỘ GIAO DIỆN LARK BASE VIEW TABS & HỢP NHẤT LƯU TRỮ CẤU HÌNH ĐA BẢNG
+- **Vấn đề giải quyết**:
+  - Giao diện giữa Bảng Cán bộ/Thân nhân (`PersonnelView.vue`) và Bảng Chuyến đi/Tự tạo (`ChildDashboardView.vue`) trước đây không đồng nhất. `PersonnelView.vue` đặt tab chuyển đổi Cán bộ/Thân nhân và các filter pills tĩnh ở trên cùng (trên cả breadcrumb và header), không có nút `+ Thêm View` và bảng Thân nhân không có các View lọc.
+  - Cấu hình View bị phân mảnh thành nhiều khóa (`personnel_views_config`, `relatives_views_config`, `custom_dashboards_config`).
+- **Giải pháp thực hiện**:
+  1. **Hợp nhất Nguồn Lưu Trữ Cấu Hình vào `custom_dashboards_config`**:
+     - Toàn bộ danh mục bảng trong hệ thống (`personnel` [CB-01], `relatives` [TN-02], `trips` [CD-03], và các bảng tùy chỉnh `[TB-xx]`) đều được lưu trữ và quản lý trong `custom_dashboards_config`.
+     - Cung cấp `DEFAULT_UNIFIED_DASHBOARDS` và helper `ensureStandardDashboards` trong `src/utils/tableRegistry.js`, đảm bảo 3 bảng chuẩn luôn sẵn sàng và không bị ghi đè hay mất cấu hình.
+  2. **Đồng bộ hóa 100% Giao diện theo Chuẩn Lark Base**:
+     - Mọi bảng đều tuân thủ cấu trúc phân tầng trực quan:
+       - **Tầng 1**: Breadcrumb: `Bảng dữ liệu / [Tên bảng]`.
+       - **Tầng 2**: Header Section: `[Mã bảng] [Tên bảng] · [Số lượng bản ghi]`, bộ chuyển đổi nhanh bảng `[ ⊞ Cán bộ CB-01 ] [ 👥 Thân nhân TN-02 ]`, thanh tìm kiếm nhanh, `+ Thêm cột mới`, `Tùy chọn Cột`, `Khóa & Liên kết`, `Xuất / Nhập`, `+ Thêm bản ghi mới`.
+       - **Tầng 3**: Thanh Chế độ xem (Lark Base View Tabs strip) nằm ngay dưới Header:
+         `[ ⊞ Toàn bộ · X ] [ ⊞ Thẻ lọc 1 · Y ] [ ⊞ Thẻ lọc 2 · Z ] ... [ + Thêm View ]`.
+  3. **Nút `+ Thêm View` và Bộ Lọc Độc Lập cho Từng Bảng**:
+     - Bổ sung thanh View Tabs cho cả Bảng Cán bộ và Bảng Thân nhân.
+     - Thêm hộp thoại `isAddViewDialogOpen` cho phép quản trị viên tạo View mới: nhập Tên View, chọn Cột cần lọc, chọn Toán tử (`equals`, `contains`, `not_equals`, `has_value`, `is_empty`), nhập Giá trị lọc, chọn Màu sắc huy hiệu.
+     - Dữ liệu View mới lưu trực tiếp vào `custom_dashboards_config` và kích hoạt lọc dữ liệu tức thì.
+  4. **Lưu Cột Hiển Thị Riêng Theo Từng View**:
+     - Khi người dùng điều chỉnh hiển thị cột trong "Tùy chọn Cột", danh sách cột được lưu trữ riêng vào `card.columns` của View đang active.
+  5. **Loại trừ Trùng Lặp Sidebar**:
+     - Trong `AppSidebar.vue`, `topicDashboards` tự động loại trừ `personnel` và `relatives` để không bị trùng lặp với menu chính trên thanh điều hướng.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
 
 
 

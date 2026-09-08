@@ -1,88 +1,45 @@
 <template>
   <div class="app-content">
-    <!-- Lark Base View Tabs Header (Chuyển đổi Cán bộ / Thân nhân & Bộ lọc nhanh) -->
-    <div class="lark-base-view-tabs-container">
-      <div class="lark-base-view-tabs-strip">
-        <button
-          type="button"
-          class="lark-base-tab-item"
-          :class="{ 'tab-active': mainTab === 'canhan' }"
-          @click="mainTab = 'canhan'; router.replace({ query: { ...route.query, tab: 'canhan' } })"
-        >
-          <i class="pi pi-table" style="color: #0284c7; font-size: 0.82rem;"></i>
-          <span style="font-weight: 700;">{{ mainTableTitle }}</span>
-          <span class="lark-tab-code-badge" style="background: #dbeafe; color: #1d4ed8;">CB-01</span>
-          <span class="lark-tab-count-pill">{{ filteredPersonnel.length }}</span>
-        </button>
-
-        <button
-          type="button"
-          class="lark-base-tab-item"
-          :class="{ 'tab-active': mainTab === 'thannhan' }"
-          @click="mainTab = 'thannhan'; router.replace({ query: { ...route.query, tab: 'thannhan' } })"
-        >
-          <i class="pi pi-users" style="color: #9333ea; font-size: 0.82rem;"></i>
-          <span style="font-weight: 700;">{{ relativeTableTitle }}</span>
-          <span class="lark-tab-code-badge" style="background: #fae8ff; color: #86198f;">TN-02</span>
-          <span class="lark-tab-count-pill">{{ filteredRelatives.length }}</span>
-        </button>
-      </div>
-
-      <!-- Quick Filter Pills for Cán bộ -->
-      <div v-if="mainTab === 'canhan'" class="lark-quick-filter-pills">
-        <button
-          type="button"
-          class="lark-filter-pill-btn"
-          :class="{ 'pill-active': smartFilter === 'all' }"
-          @click="smartFilter = 'all'"
-        >
-          Tất cả ({{ personnelStore.personnelList.length }})
-        </button>
-        <button
-          type="button"
-          class="lark-filter-pill-btn"
-          :class="{ 'pill-active': smartFilter === 'has_trips' }"
-          @click="smartFilter = 'has_trips'"
-        >
-          ✈️ Có chuyến đi
-        </button>
-        <button
-          type="button"
-          class="lark-filter-pill-btn"
-          :class="{ 'pill-active': smartFilter === 'has_relatives' }"
-          @click="smartFilter = 'has_relatives'"
-        >
-          👥 Có thân nhân
-        </button>
-        <button
-          type="button"
-          class="lark-filter-pill-btn"
-          :class="{ 'pill-active': smartFilter === 'has_issues' }"
-          @click="smartFilter = 'has_issues'"
-        >
-          ⚠️ Kỷ luật / Vấn đề
-        </button>
-      </div>
+    <!-- Breadcrumb & Top Bar -->
+    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+      <span>Bảng dữ liệu</span>
+      <span>/</span>
+      <span style="color: #0f172a; font-weight: 600;">{{ mainTab === 'thannhan' ? relativeTableTitle : mainTableTitle }}</span>
     </div>
 
     <!-- TAB 1: DANH SÁCH CÁN BỘ (CÁ NHÂN) -->
     <div v-show="mainTab === 'canhan'">
-      <!-- Breadcrumb & Top Bar -->
-      <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-        <span>Bảng dữ liệu</span>
-        <span>/</span>
-        <span style="color: #0f172a; font-weight: 600;">{{ mainTableTitle }}</span>
-      </div>
-
       <!-- Header Section with Actions -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <span class="badge-code-cd">CB-01</span>
           <div>
             <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
               {{ mainTableTitle }}
               <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredPersonnel.length }} bản ghi</span>
             </h1>
+          </div>
+
+          <!-- Table Switcher Pills -->
+          <div class="lark-table-switcher-pills">
+            <button
+              type="button"
+              class="table-switch-btn switch-active"
+              @click="switchToTable('canhan')"
+            >
+              <i class="pi pi-table" style="color: #0284c7; font-size: 0.75rem;"></i>
+              <span>{{ mainTableTitle }}</span>
+              <span class="switch-badge" style="background: #dbeafe; color: #1d4ed8;">CB-01</span>
+            </button>
+            <button
+              type="button"
+              class="table-switch-btn"
+              @click="switchToTable('thannhan')"
+            >
+              <i class="pi pi-users" style="color: #9333ea; font-size: 0.75rem;"></i>
+              <span>{{ relativeTableTitle }}</span>
+              <span class="switch-badge" style="background: #fae8ff; color: #86198f;">TN-02</span>
+            </button>
           </div>
         </div>
 
@@ -226,6 +183,37 @@
             @click="openCreateDialog"
             style="font-size: 0.8rem;"
           />
+        </div>
+      </div>
+
+      <!-- Lark Base View Tabs strip for Cán bộ -->
+      <div class="lark-base-view-tabs-container">
+        <div class="lark-base-view-tabs-strip">
+          <template v-for="(card, cIdx) in activePersonnelMetricCards" :key="card.id || cIdx">
+            <button
+              type="button"
+              class="lark-base-tab-item"
+              :class="{ 'tab-active': activePersonnelCardIdx === cIdx }"
+              @click="selectPersonnelCard(card, cIdx)"
+            >
+              <i class="pi pi-table" style="font-size: 0.82rem; color: #0284c7;"></i>
+              <span style="font-weight: 700;">{{ card.label }}</span>
+              <span :class="['lark-tab-count-pill', `pill-${card.color || 'blue'}`]">
+                {{ getPersonnelCardMetricValue(card) }}
+              </span>
+            </button>
+          </template>
+
+          <button
+            v-if="authStore.isAdmin"
+            type="button"
+            class="lark-base-tab-add"
+            @click="openAddViewDialog('personnel')"
+            title="+ Thêm Chế độ xem (View) mới cho bảng Cán bộ"
+          >
+            <i class="pi pi-plus" style="font-size: 0.72rem;"></i>
+            <span>Thêm View</span>
+          </button>
         </div>
       </div>
 
@@ -611,14 +599,36 @@
       </div>
 
       <!-- Header Section with Actions -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <span class="badge-code-cd">TN-02</span>
           <div>
             <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
               {{ relativeTableTitle }}
               <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredRelatives.length }} bản ghi</span>
             </h1>
+          </div>
+
+          <!-- Table Switcher Pills -->
+          <div class="lark-table-switcher-pills">
+            <button
+              type="button"
+              class="table-switch-btn"
+              @click="switchToTable('canhan')"
+            >
+              <i class="pi pi-table" style="color: #0284c7; font-size: 0.75rem;"></i>
+              <span>{{ mainTableTitle }}</span>
+              <span class="switch-badge" style="background: #dbeafe; color: #1d4ed8;">CB-01</span>
+            </button>
+            <button
+              type="button"
+              class="table-switch-btn switch-active"
+              @click="switchToTable('thannhan')"
+            >
+              <i class="pi pi-users" style="color: #9333ea; font-size: 0.75rem;"></i>
+              <span>{{ relativeTableTitle }}</span>
+              <span class="switch-badge" style="background: #fae8ff; color: #86198f;">TN-02</span>
+            </button>
           </div>
         </div>
 
@@ -760,6 +770,37 @@
             @click="openAddRelativeDialog"
             style="font-size: 0.8rem;"
           />
+        </div>
+      </div>
+
+      <!-- Lark Base View Tabs strip for Thân nhân -->
+      <div class="lark-base-view-tabs-container">
+        <div class="lark-base-view-tabs-strip">
+          <template v-for="(card, cIdx) in activeRelativeMetricCards" :key="card.id || cIdx">
+            <button
+              type="button"
+              class="lark-base-tab-item"
+              :class="{ 'tab-active': activeRelativeCardIdx === cIdx }"
+              @click="selectRelativeCard(card, cIdx)"
+            >
+              <i class="pi pi-table" style="font-size: 0.82rem; color: #9333ea;"></i>
+              <span style="font-weight: 700;">{{ card.label }}</span>
+              <span :class="['lark-tab-count-pill', `pill-${card.color || 'purple'}`]">
+                {{ getRelativeCardMetricValue(card) }}
+              </span>
+            </button>
+          </template>
+
+          <button
+            v-if="authStore.isAdmin"
+            type="button"
+            class="lark-base-tab-add"
+            @click="openAddViewDialog('relatives')"
+            title="+ Thêm Chế độ xem (View) mới cho bảng Thân nhân"
+          >
+            <i class="pi pi-plus" style="font-size: 0.72rem;"></i>
+            <span>Thêm View</span>
+          </button>
         </div>
       </div>
 
@@ -1362,11 +1403,104 @@
       :activeSource="mainTab === 'thannhan' || route.path === '/relatives' ? 'relatives' : 'personnel'"
     />
 
+    <!-- Dialog Thêm Chế độ xem (View) mới cho Cán bộ / Thân nhân chuẩn Lark Base -->
+    <Dialog
+      v-model:visible="isAddViewDialogOpen"
+      modal
+      :header="`➕ Thêm Chế độ xem (View) Mới cho Bảng ${addViewTargetTable === 'relatives' ? relativeTableTitle : mainTableTitle}`"
+      :style="{ width: '500px', maxWidth: '95vw' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 6px 0;">
+        <div style="font-size: 0.76rem; color: #64748b; line-height: 1.4;">
+          Tạo một Chế độ xem mới cho bảng này với bộ lọc và cột hiển thị riêng biệt theo chuẩn Lark Base:
+        </div>
+
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
+            Tên Chế độ xem (View): <span style="color: red;">*</span>
+          </label>
+          <InputText
+            v-model="newViewForm.label"
+            placeholder="VD: Thuộc đơn vị X, Có hộ chiếu, Đã nghỉ hưu..."
+            style="width: 100%; font-size: 0.84rem;"
+            autofocus
+          />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
+              Cột cần lọc:
+            </label>
+            <select
+              v-model="newViewForm.field"
+              class="settings-select"
+              style="width: 100%; font-size: 0.8rem; height: 34px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;"
+            >
+              <option value="">-- Toàn bộ bản ghi --</option>
+              <option v-for="c in activeAddViewColumns" :key="c.id" :value="c.id">
+                {{ c.label || c.id }}
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
+              Toán tử điều kiện:
+            </label>
+            <select
+              v-model="newViewForm.operator"
+              class="settings-select"
+              style="width: 100%; font-size: 0.8rem; height: 34px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;"
+            >
+              <option value="equals">Bằng (=)</option>
+              <option value="contains">Chứa từ khóa</option>
+              <option value="not_equals">Không bằng (≠)</option>
+              <option value="has_value">Có giá trị (Không rỗng)</option>
+              <option value="is_empty">Rỗng (Chưa có giá trị)</option>
+            </select>
+          </div>
+        </div>
+
+        <div v-if="newViewForm.operator !== 'has_value' && newViewForm.operator !== 'is_empty'">
+          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
+            Giá trị lọc:
+          </label>
+          <InputText
+            v-model="newViewForm.value"
+            placeholder="Nhập giá trị cần lọc..."
+            style="width: 100%; font-size: 0.84rem;"
+          />
+        </div>
+
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
+            Màu sắc huy hiệu:
+          </label>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <label
+              v-for="color in ['blue', 'green', 'purple', 'amber', 'red']"
+              :key="color"
+              style="display: flex; align-items: center; gap: 4px; font-size: 0.76rem; cursor: pointer;"
+            >
+              <input type="radio" v-model="newViewForm.color" :value="color" style="cursor: pointer;" />
+              <span :class="['lark-tab-count-pill', `pill-${color}`]">{{ color }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Hủy" severity="secondary" text size="small" @click="isAddViewDialogOpen = false" />
+        <Button label="Tạo Chế độ xem" icon="pi pi-check" severity="primary" size="small" :disabled="!newViewForm.label.trim()" @click="saveNewView" />
+      </template>
+    </Dialog>
+
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -1382,6 +1516,8 @@ import apiClient from '@/api/client';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
+import { DEFAULT_UNIFIED_DASHBOARDS, ensureStandardDashboards } from '@/utils/tableRegistry';
+import { matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, computeMetricCardCount } from '@/utils/dashboardMetrics';
 import { computeColumnIndexMap, formatPersonnelCode, formatDate, formatExcelDate, computePresenceStatus, computeOverdueStatus, evaluateFormula, evaluateLookup, evaluateRollup, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
 import {
   exportToExcel,
@@ -1401,6 +1537,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 
 const route = useRoute();
+const router = useRouter();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 const mainTableTitle = computed(() => {
@@ -1447,6 +1584,15 @@ const syncTabWithRoute = () => {
   }
 };
 
+const switchToTable = (tab) => {
+  mainTab.value = tab;
+  if (tab === 'thannhan') {
+    router.replace({ path: '/relatives', query: { ...route.query, tab: 'thannhan' } });
+  } else {
+    router.replace({ path: '/personnel', query: { ...route.query, tab: 'canhan' } });
+  }
+};
+
 watch(
   () => [route.path, route.query.tab],
   () => {
@@ -1454,6 +1600,183 @@ watch(
   },
   { immediate: true }
 );
+
+// ==================== CẤU HÌNH BẢNG & CHẾ ĐỘ XEM (LARK BASE VIEW TABS) ====================
+const getInitialCustomDashboards = () => {
+  try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) return ensureStandardDashboards(parsed);
+    }
+  } catch (e) {}
+  return ensureStandardDashboards([...DEFAULT_UNIFIED_DASHBOARDS]);
+};
+
+const customDashboards = ref(getInitialCustomDashboards());
+
+const loadCustomDashboards = async () => {
+  try {
+    const saved = await getAppSettings('custom_dashboards_config', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      customDashboards.value = ensureStandardDashboards(saved);
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+    } else {
+      const local = localStorage.getItem('custom_dashboards_config');
+      if (local && (!customDashboards.value || customDashboards.value.length === 0)) {
+        customDashboards.value = ensureStandardDashboards(JSON.parse(local));
+      } else {
+        customDashboards.value = ensureStandardDashboards(customDashboards.value);
+      }
+    }
+  } catch (e) {}
+};
+
+const personnelDashboardConfig = computed(() => {
+  return (customDashboards.value || []).find((d) => d.id === 'personnel') || DEFAULT_UNIFIED_DASHBOARDS[0];
+});
+
+const relativeDashboardConfig = computed(() => {
+  return (customDashboards.value || []).find((d) => d.id === 'relatives') || DEFAULT_UNIFIED_DASHBOARDS[1];
+});
+
+const activePersonnelMetricCards = computed(() => {
+  return personnelDashboardConfig.value.metricCards || DEFAULT_UNIFIED_DASHBOARDS[0].metricCards;
+});
+
+const activeRelativeMetricCards = computed(() => {
+  return relativeDashboardConfig.value.metricCards || DEFAULT_UNIFIED_DASHBOARDS[1].metricCards;
+});
+
+const activePersonnelCardIdx = ref(0);
+const activeRelativeCardIdx = ref(0);
+
+const selectPersonnelCard = (card, idx) => {
+  activePersonnelCardIdx.value = idx;
+  if (card && card.columns && Array.isArray(card.columns) && card.columns.length > 0) {
+    personnelStore.visibleColumns = [...card.columns];
+  }
+};
+
+const selectRelativeCard = (card, idx) => {
+  activeRelativeCardIdx.value = idx;
+  if (card && card.columns && Array.isArray(card.columns) && card.columns.length > 0) {
+    personnelStore.visibleRelativeColumns = [...card.columns];
+  }
+};
+
+const getPersonnelCardMetricValue = (card) => {
+  if (!card) return 0;
+  const pList = personnelStore.personnelList || [];
+  if (card.condition === 'all' || isSharedCardAllType(card)) return pList.length;
+  if (card.field === 'has_trips' || card.id === 'has_trips') {
+    return pList.filter((p) => {
+      const cd = p.custom_data || {};
+      const trips = cd.chuyen_di || cd.xuatnhapcanh || p.trips || [];
+      return (Array.isArray(trips) && trips.length > 0) || Boolean(p.countryName || cd.countryName || cd.quoc_gia_den);
+    }).length;
+  }
+  if (card.field === 'has_relatives' || card.id === 'has_relatives') {
+    const pWithRelatives = new Set((personnelStore.relativesList || []).map((r) => r.personnelId || r.personnelCode).filter(Boolean));
+    return pList.filter((p) => pWithRelatives.has(p.id) || (p.code && pWithRelatives.has(p.code))).length;
+  }
+  if (card.field === 'has_issues' || card.id === 'has_issues') {
+    return pList.filter((p) => {
+      const cd = p.custom_data || {};
+      return Boolean(
+        p.tcctResult || p.kqThamTra || cd.tcctResult || cd.kqThamTra ||
+        cd.trongYeu || cd.thamNhung || cd.yeuToNuocNgoai || cd.van_de_chinh_tri
+      );
+    }).length;
+  }
+  return pList.filter((p) => matchSharedCardCondition(p, card, personnelStore)).length;
+};
+
+const getRelativeCardMetricValue = (card) => {
+  if (!card) return 0;
+  const rList = flattenedRelatives.value || [];
+  if (card.condition === 'all' || isSharedCardAllType(card)) return rList.length;
+  return rList.filter((r) => matchSharedCardCondition(r, card, personnelStore)).length;
+};
+
+// State modal thêm Chế độ xem (View) mới chuẩn Lark Base
+const isAddViewDialogOpen = ref(false);
+const addViewTargetTable = ref('personnel');
+const newViewForm = ref({
+  label: '',
+  field: '',
+  operator: 'equals',
+  value: '',
+  color: 'blue',
+});
+
+const openAddViewDialog = (targetTable = 'personnel') => {
+  addViewTargetTable.value = targetTable;
+  newViewForm.value = {
+    label: '',
+    field: '',
+    operator: 'equals',
+    value: '',
+    color: 'blue',
+  };
+  isAddViewDialogOpen.value = true;
+};
+
+const activeAddViewColumns = computed(() => {
+  if (addViewTargetTable.value === 'relatives') {
+    const cols = [];
+    (personnelStore.importMappingRelative || []).forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        if (c.id && c.id !== 'stt') {
+          cols.push({ id: c.id, label: c.label || c.id });
+        }
+      });
+    });
+    return cols;
+  }
+  const cols = [];
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.id && c.id !== 'stt') {
+        cols.push({ id: c.id, label: c.label || c.id });
+      }
+    });
+  });
+  return cols;
+});
+
+const saveNewView = async () => {
+  if (!newViewForm.value.label.trim()) return;
+  const targetId = addViewTargetTable.value === 'relatives' ? 'relatives' : 'personnel';
+  const currentCols = targetId === 'relatives' ? [...personnelStore.visibleRelativeColumns] : [...personnelStore.visibleColumns];
+  const newCard = {
+    id: 'view_' + Date.now(),
+    label: newViewForm.value.label.trim(),
+    field: newViewForm.value.field || null,
+    operator: newViewForm.value.operator || 'equals',
+    value: newViewForm.value.value || '',
+    color: newViewForm.value.color || 'blue',
+    columns: currentCols,
+  };
+
+  const idx = customDashboards.value.findIndex((d) => d.id === targetId);
+  if (idx !== -1) {
+    if (!customDashboards.value[idx].metricCards) {
+      customDashboards.value[idx].metricCards = [];
+    }
+    customDashboards.value[idx].metricCards.push(newCard);
+    try {
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+    } catch (e) {}
+  }
+  isAddViewDialogOpen.value = false;
+  if (targetId === 'relatives') {
+    activeRelativeCardIdx.value = (activeRelativeMetricCards.value?.length || 1) - 1;
+  } else {
+    activePersonnelCardIdx.value = (activePersonnelMetricCards.value?.length || 1) - 1;
+  }
+};
 const searchQuery = ref('');
 const relativeSearchQuery = ref('');
 const selectedPersonnel = ref([]);
@@ -1707,21 +2030,32 @@ const onColIndexChanged = (e) => {
   showColIndex.value = Boolean(e.detail);
 };
 
+const onCustomDashboardsUpdated = (e) => {
+  if (e && e.detail) {
+    customDashboards.value = ensureStandardDashboards(e.detail);
+  } else {
+    loadCustomDashboards();
+  }
+};
+
 onMounted(async () => {
   if (personnelStore.personnelList.length === 0) {
     await personnelStore.init();
   }
+  await loadCustomDashboards();
   await loadPersonnelFilterState();
   await loadNameColConfig();
   await loadCustomColLabels();
   handleRouteAction();
   window.addEventListener('table-row-height-changed', onRowHeightChanged);
   window.addEventListener('table-show-col-index-changed', onColIndexChanged);
+  window.addEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
 });
 
 onUnmounted(() => {
   window.removeEventListener('table-row-height-changed', onRowHeightChanged);
   window.removeEventListener('table-show-col-index-changed', onColIndexChanged);
+  window.removeEventListener('custom-dashboards-updated', onCustomDashboardsUpdated);
 });
 
 watch(
@@ -2097,7 +2431,32 @@ const filteredPersonnel = computed(() => {
     });
   }
 
-  // 1. Bộ lọc thông minh (Smart Filter)
+  // 1. Lọc theo Chế độ xem (Lark Base View Tab)
+  const activeCard = (activePersonnelMetricCards.value || [])[activePersonnelCardIdx.value];
+  if (activeCard && activeCard.condition !== 'all' && !isSharedCardAllType(activeCard)) {
+    if (activeCard.field === 'has_trips' || activeCard.id === 'has_trips') {
+      list = list.filter((p) => {
+        const cd = p.custom_data || {};
+        const trips = cd.chuyen_di || cd.xuatnhapcanh || p.trips || [];
+        return (Array.isArray(trips) && trips.length > 0) || Boolean(p.countryName || cd.countryName || cd.quoc_gia_den);
+      });
+    } else if (activeCard.field === 'has_relatives' || activeCard.id === 'has_relatives') {
+      const pWithRelatives = new Set((personnelStore.relativesList || []).map((r) => r.personnelId || r.personnelCode).filter(Boolean));
+      list = list.filter((p) => pWithRelatives.has(p.id) || (p.code && pWithRelatives.has(p.code)));
+    } else if (activeCard.field === 'has_issues' || activeCard.id === 'has_issues') {
+      list = list.filter((p) => {
+        const cd = p.custom_data || {};
+        return Boolean(
+          p.tcctResult || p.kqThamTra || cd.tcctResult || cd.kqThamTra ||
+          cd.trongYeu || cd.thamNhung || cd.yeuToNuocNgoai || cd.van_de_chinh_tri
+        );
+      });
+    } else {
+      list = list.filter((p) => matchSharedCardCondition(p, activeCard, personnelStore));
+    }
+  }
+
+  // 2. Bộ lọc thông minh bổ trợ (Smart Filter)
   if (smartFilter.value === 'has_decision') {
     list = list.filter((p) => {
       const cd = p.custom_data || {};
@@ -2237,6 +2596,12 @@ const filteredRelatives = computed(() => {
       if ((targetVal.includes('trong nước') || targetVal.includes('về nước') || targetVal === 'completed') && (strVal.includes('trong nước') || strVal.includes('về nước') || strVal.includes('đã về'))) return true;
       return strVal.includes(targetVal);
     });
+  }
+
+  // 1. Lọc theo Chế độ xem (Lark Base View Tab)
+  const activeRelCard = (activeRelativeMetricCards.value || [])[activeRelativeCardIdx.value];
+  if (activeRelCard && activeRelCard.condition !== 'all' && !isSharedCardAllType(activeRelCard)) {
+    list = list.filter((r) => matchSharedCardCondition(r, activeRelCard, personnelStore));
   }
 
   const q = relativeSearchQuery.value.trim().toLowerCase();
@@ -2458,6 +2823,12 @@ const onColumnsChange = async () => {
   try {
     localStorage.setItem('vue_visible_columns', JSON.stringify(personnelStore.visibleColumns));
     await saveAppSettings('vue_visible_columns', personnelStore.visibleColumns);
+    const activeCard = (activePersonnelMetricCards.value || [])[activePersonnelCardIdx.value];
+    if (activeCard) {
+      activeCard.columns = [...personnelStore.visibleColumns];
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+    }
   } catch (e) {
     console.error('Lỗi khi lưu cấu hình cột cán bộ vào DB:', e);
   }
@@ -2467,6 +2838,12 @@ const onRelativeColumnsChange = async () => {
   try {
     localStorage.setItem('vue_visible_relative_columns', JSON.stringify(personnelStore.visibleRelativeColumns));
     await saveAppSettings('vue_visible_relative_columns', personnelStore.visibleRelativeColumns);
+    const activeCard = (activeRelativeMetricCards.value || [])[activeRelativeCardIdx.value];
+    if (activeCard) {
+      activeCard.columns = [...personnelStore.visibleRelativeColumns];
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+    }
   } catch (e) {
     console.error('Lỗi khi lưu cấu hình cột thân nhân vào DB:', e);
   }

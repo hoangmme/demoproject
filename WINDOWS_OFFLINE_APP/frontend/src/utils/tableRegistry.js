@@ -333,6 +333,84 @@ export function getUnifiedTableColumns(tableId, options = {}) {
 }
 
 /**
+ * Cấu hình Mặc định cho toàn bộ Bảng trong Hệ thống (Unified Tables)
+ */
+export const DEFAULT_UNIFIED_DASHBOARDS = [
+  {
+    id: 'personnel',
+    code: 'CB-01',
+    title: 'Cán bộ',
+    description: 'Danh sách hồ sơ cán bộ',
+    source: 'personnel',
+    icon: 'pi-users',
+    metricCards: [
+      { id: 'all', label: 'Toàn bộ cán bộ', condition: 'all', color: 'blue' },
+      { id: 'has_trips', label: 'Có chuyến đi', field: 'has_trips', operator: 'has_value', color: 'green' },
+      { id: 'has_relatives', label: 'Có thân nhân', field: 'has_relatives', operator: 'has_value', color: 'purple' },
+      { id: 'has_issues', label: 'Kỷ luật / Vấn đề', field: 'has_issues', operator: 'has_value', color: 'amber' },
+    ],
+    columns: [],
+  },
+  {
+    id: 'relatives',
+    code: 'TN-02',
+    title: 'Thân nhân',
+    description: 'Danh sách thân nhân của cán bộ',
+    source: 'relatives',
+    icon: 'pi-heart',
+    metricCards: [
+      { id: 'all', label: 'Toàn bộ thân nhân', condition: 'all', color: 'blue' },
+      { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
+      { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
+    ],
+    columns: [],
+  },
+  {
+    id: 'trips',
+    code: 'CD-03',
+    title: 'Danh sách Chuyến đi',
+    description: 'Tổng hợp các chuyến đi nước ngoài của cán bộ và thân nhân',
+    source: 'trips',
+    icon: 'pi-send',
+    metricCards: [
+      { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
+      { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
+      { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
+      { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
+    ],
+    columns: [],
+  },
+];
+
+/**
+ * Đảm bảo các bảng chuẩn của hệ thống (personnel, relatives, trips) luôn sẵn sàng trong danh sách cấu hình
+ */
+export function ensureStandardDashboards(dashboards = []) {
+  if (!Array.isArray(dashboards)) dashboards = [];
+  const result = [...dashboards];
+  DEFAULT_UNIFIED_DASHBOARDS.forEach((defDash) => {
+    const existingIdx = result.findIndex((d) => d.id === defDash.id);
+    if (existingIdx === -1) {
+      result.push({ ...defDash });
+    } else {
+      if (!result[existingIdx].metricCards || result[existingIdx].metricCards.length === 0) {
+        result[existingIdx].metricCards = [...defDash.metricCards];
+      }
+      if (!result[existingIdx].code) {
+        result[existingIdx].code = defDash.code;
+      }
+      if (!result[existingIdx].source) {
+        result[existingIdx].source = defDash.source;
+      }
+      if (!result[existingIdx].icon) {
+        result[existingIdx].icon = defDash.icon;
+      }
+    }
+  });
+  return result;
+}
+
+/**
  * Lấy nhãn hiển thị chuẩn hóa cho một bảng bất kỳ: "[Mã] Tên bảng"
  */
 export function getUnifiedTableLabel(tableId, options = {}) {

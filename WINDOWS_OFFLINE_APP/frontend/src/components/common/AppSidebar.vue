@@ -1124,7 +1124,7 @@ const getInitialDashboards = () => {
 const dynamicDashboards = ref(getInitialDashboards());
 
 const topicDashboards = computed(() => {
-  return (dynamicDashboards.value || []).filter((d) => d.displayMode !== 'appendix' && d.id !== 'trips');
+  return (dynamicDashboards.value || []).filter((d) => d.displayMode !== 'appendix' && d.id !== 'trips' && d.id !== 'personnel' && d.id !== 'relatives');
 });
 
 const appendixDashboards = computed(() => {

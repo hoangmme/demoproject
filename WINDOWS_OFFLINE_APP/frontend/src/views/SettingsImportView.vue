@@ -917,6 +917,7 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { syncCollectionFields } from '@/api/fields';
 import { uploadFile, getFileUrl } from '@/api/files';
 import { computeColumnIndexMap, formatOptions } from '@/utils/formatters';
+import { DEFAULT_UNIFIED_DASHBOARDS, ensureStandardDashboards } from '@/utils/tableRegistry';
 import { createSampleDocxTemplateBlob } from '@/utils/docxExport';
 import {
   exportFullPersonnelExcel,
@@ -1658,33 +1659,17 @@ const normalizeGroupColumns = (groups) => {
 // =========================================================================
 // QUẢN LÝ DASHBOARD CHUYÊN ĐỀ (DYNAMIC TOPIC DASHBOARDS)
 // =========================================================================
-const DEFAULT_TOPIC_DASHBOARDS_CONFIG = [
-  {
-    id: 'trips',
-    code: 'CD-03',
-    title: 'Danh sách Chuyến đi',
-    description: 'Tổng hợp các chuyến đi nước ngoài của cán bộ và thân nhân',
-    source: 'trips',
-    icon: 'pi-send',
-    metricCards: [
-      { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
-      { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
-      { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
-      { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
-    ],
-    columns: [], // Để trống = Mặc định hiển thị đầy đủ toàn bộ cột khả dụng của chuyên đề
-  },
-];
+const DEFAULT_TOPIC_DASHBOARDS_CONFIG = DEFAULT_UNIFIED_DASHBOARDS;
 
 const getInitialCustomDashboards = () => {
   try {
     const local = localStorage.getItem('custom_dashboards_config');
     if (local) {
       const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return ensureStandardDashboards(parsed);
     }
   } catch (e) {}
-  return [...DEFAULT_TOPIC_DASHBOARDS_CONFIG];
+  return ensureStandardDashboards([...DEFAULT_UNIFIED_DASHBOARDS]);
 };
 
 const customDashboards = ref(getInitialCustomDashboards());
@@ -1702,12 +1687,14 @@ const loadCustomDashboards = async () => {
   try {
     const saved = await getAppSettings('custom_dashboards_config', null);
     if (saved && Array.isArray(saved) && saved.length > 0) {
-      customDashboards.value = saved;
-      localStorage.setItem('custom_dashboards_config', JSON.stringify(saved));
+      customDashboards.value = ensureStandardDashboards(saved);
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
     } else {
       const local = localStorage.getItem('custom_dashboards_config');
       if (local && (!customDashboards.value || customDashboards.value.length === 0)) {
-        customDashboards.value = JSON.parse(local);
+        customDashboards.value = ensureStandardDashboards(JSON.parse(local));
+      } else {
+        customDashboards.value = ensureStandardDashboards(customDashboards.value);
       }
     }
     // Sanitize card IDs: đảm bảo các thẻ con không bị trùng id: 'all' với thẻ gốc
