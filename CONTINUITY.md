@@ -1917,3 +1917,22 @@
      - Đồng bộ toàn bộ các tệp sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` hoàn thành với 0 lỗi (568ms).
   5. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-08)**: **Sửa Lỗi Công Thức Tham Chiếu Cột Động / Cột Tham Chiếu (Lookup) Bị Luôn Sai ({cccdchuyendi} = {test})**:
+   1. **Vấn đề & Báo cáo của người dùng**:
+      - Công thức: IF( {cccdchuyendi}={test},'Cán bộ','Thân nhân')
+      - Người dùng phản ánh: "nó chỉ hiện điều kiện sai còn điều kiện đúng k hoạt động".
+   2. **Nguyên nhân gốc rễ**:
+      - Cột {test} là cột tham chiếu (Lookup: tra cứu cccdparent trong bảng Cán bộ khớp với cccdchuyendi).
+      - Giá trị cột Lookup được tính toán động (evaluateLookup), không lưu tĩnh trong trip.
+      - Khi FormulaEvaluator chạy, {test} không tìm thấy trong context tĩnh nên trả về "".
+      - Biểu thức so sánh thành '079081023618' = '', luôn luôn FALSE, dẫn đến toàn bộ dòng đều trả về 'Thân nhân'.
+   3. **Giải pháp kiến trúc đã triển khai**:
+      - Dynamic Cell Resolver: Cung cấp callback cellResolver/fieldResolver cho FormulaEvaluator và evaluateCustomFormula để phân giải giá trị thời gian thực từ bất kỳ cột nào trên bảng (Lookup, Virtual, Computed, Formula).
+      - Bổ sung .trim() trong parseComparison để triệt tiêu khoảng trắng thừa.
+      - Chuẩn hóa '-' thành '' khi lookup không tìm thấy kết quả.
+      - getCellValue truyền cellResolver kèm depth guard (depth > 5) chống tham chiếu vòng.
+      - AddColumnDialog và ColumnHeaderMenu cập nhật formulaPreviewResult gọi evaluateLookup để xem trước trực tiếp chính xác.
+   4. **Kiểm thử & Triển khai**:
+      - npm run build thành công 100% (0 lỗi, 567ms). Đã push commit ec4ab7c lên git.
+   5. **Trạng thái**: Done [Reversible].
