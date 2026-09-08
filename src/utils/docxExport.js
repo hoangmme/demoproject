@@ -2,7 +2,8 @@ import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
-import { formatDate } from './formatters';
+import { formatDate, evaluateFormula, resolveVirtualColumnValue, resolvePresence, isPresenceField } from './formatters';
+import { getAppSettings } from '@/api/settings';
 
 /**
  * Chuyển đổi giá trị của một cột thành chuỗi hiển thị chuẩn cho file xuất (Word / PDF)
@@ -400,6 +401,26 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     }
   });
 
+  // 5b. Đánh giá các cột công thức (formula) & cột ảo (virtual) của Cán bộ
+  const pGroups = personnelStore?.importMappingPersonnel || [];
+  pGroups.forEach((grp) => {
+    (grp.columns || []).forEach((col) => {
+      if (!col.id || col.id === 'stt') return;
+      if (col.format === 'formula') {
+        const res = evaluateFormula(person, col);
+        const val = res?.label || res?.shortLabel || '';
+        if (val) {
+          data[col.id] = val;
+        }
+      } else if (col.isVirtual || col.id?.startsWith('_')) {
+        const val = resolveVirtualColumnValue(person, col.id);
+        if (val) {
+          data[col.id] = val;
+        }
+      }
+    });
+  });
+
   // 6. Danh sách Thân nhân (Loop {#than_nhan} / {#relatives})
   let rawRelatives = Array.isArray(person.relatives) && person.relatives.length > 0 ? person.relatives : (cd.relatives || []);
   if ((!rawRelatives || rawRelatives.length === 0) && personnelStore?.relativesList?.length > 0) {
@@ -458,6 +479,29 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
         relObj[`tn_${k}`] = cleanV;
       }
     });
+
+    // Đánh giá các cột công thức & cột ảo của Thân nhân
+    const rGroups = personnelStore?.importMappingRelative || [];
+    rGroups.forEach((grp) => {
+      (grp.columns || []).forEach((col) => {
+        if (!col.id || col.id === 'stt') return;
+        if (col.format === 'formula') {
+          const res = evaluateFormula(rel, col);
+          const val = res?.label || res?.shortLabel || '';
+          if (val) {
+            relObj[col.id] = val;
+            relObj[`tn_${col.id}`] = val;
+          }
+        } else if (col.isVirtual || col.id?.startsWith('_')) {
+          const val = resolveVirtualColumnValue({ ...rel, rawPerson: person }, col.id);
+          if (val) {
+            relObj[col.id] = val;
+            relObj[`tn_${col.id}`] = val;
+          }
+        }
+      });
+    });
+
     return relObj;
   });
 
@@ -640,6 +684,29 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       tripObj.label_kinhPhiDaoTao = tripObj.label_kinhPhiDaoTao || tripObj.kinhPhiDaoTao;
         tripObj.label_kinh_phi_dao_tao = tripObj.label_kinhPhiDaoTao || tripObj.kinhPhiDaoTao;
     }
+
+    // Đánh giá các cột công thức, cột ảo và trạng thái hiện diện của Chuyến đi
+    const tGroups = personnelStore?.importMappingTrips || [];
+    tGroups.forEach((grp) => {
+      (grp.columns || []).forEach((col) => {
+        if (!col.id || col.id === 'stt') return;
+        if (col.format === 'formula') {
+          const res = evaluateFormula(combinedTrip, col);
+          const val = res?.label || res?.shortLabel || '';
+          if (val) {
+            tripObj[col.id] = val;
+          }
+        } else if (col.format === 'presence' || col.id === 'presenceStatus' || col.id === '_presenceStatus' || isPresenceField(col.id)) {
+          const pRes = resolvePresence(combinedTrip);
+          tripObj[col.id] = pRes.label || pRes.shortLabel || '';
+        } else if (col.isVirtual || col.id?.startsWith('_')) {
+          const val = resolveVirtualColumnValue({ ...combinedTrip, rawPerson: person }, col.id);
+          if (val) {
+            tripObj[col.id] = val;
+          }
+        }
+      });
+    });
 
     return tripObj;
   });
@@ -907,13 +974,14 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.id = 'docx-pdf-sandbox';
   container.style.position = 'fixed';
   container.style.top = '0';
-  container.style.left = '-9999px';
+  container.style.left = '0';
   container.style.width = '794px';
   container.style.margin = '0';
   container.style.padding = '0';
   container.style.backgroundColor = '#ffffff';
   container.style.color = '#000000';
   container.style.zIndex = '-9999';
+  container.style.opacity = '0';
   container.style.pointerEvents = 'none';
   container.style.overflow = 'visible';
 
@@ -952,7 +1020,8 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   document.body.appendChild(container);
 
   try {
-    await renderAsync(docxBlob, container, null, {
+    const arrayBuffer = docxBlob instanceof ArrayBuffer ? docxBlob : await docxBlob.arrayBuffer();
+    await renderAsync(arrayBuffer, container, null, {
       inWrapper: false,
       ignoreWidth: false,
       ignoreHeight: false,
@@ -975,6 +1044,10 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       logging: false,
       windowWidth: 794,
       width: 794,
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
     });
 
     const ctx = fullCanvas.getContext('2d');
@@ -1135,6 +1208,21 @@ export async function exportSinglePersonnelDocx(templateBuffer, person, filename
   } else {
     saveAs(docxBlob, `${baseName.replace(/\.docx$/i, '')}.docx`);
   }
+}
+
+/**
+ * Tạo trực tiếp PDF Blob cho 1 cán bộ (dùng cho xem trước PDF hoặc tải trực tiếp)
+ * @param {ArrayBuffer} templateBuffer
+ * @param {Object} person
+ * @param {Object} personnelStore
+ * @param {Object} currentUser
+ * @param {Object} exportOptions
+ * @returns {Promise<Blob>}
+ */
+export async function generateSinglePersonnelPdfBlob(templateBuffer, person, personnelStore = null, currentUser = null, exportOptions = {}) {
+  const contextData = preparePersonnelDocxData(person, 0, personnelStore, currentUser, exportOptions);
+  const docxBlob = generateDocxBlob(templateBuffer, contextData);
+  return await convertDocxBlobToPdfBlob(docxBlob);
 }
 
 /**
@@ -1350,9 +1438,20 @@ export async function createDynamicDocxTemplateBlob(
     });
   });
 
+  const formatTableTitle = (title, defaultTitle) => {
+    const t = (title || defaultTitle || '').trim();
+    if (!t) return defaultTitle.toUpperCase();
+    if (/^(bảng|thông tin)/i.test(t)) return t.toUpperCase();
+    return `BẢNG ${t}`.toUpperCase();
+  };
+
+  const mainTitle = formatTableTitle(options?.tableTitles?.personnel, 'THÔNG TIN CÁN BỘ (HỒ SƠ CHÍNH)');
+  const relTitle = formatTableTitle(options?.tableTitles?.relatives, 'THÔNG TIN THÂN NHÂN LIÊN QUAN');
+  const tripTitle = formatTableTitle(options?.tableTitles?.trips, 'THÔNG TIN CHUYẾN ĐI (XUẤT NHẬP CẢNH)');
+
   if (personnelTableBody) {
     const secPrefix = romanNumerals[secIdx++] || 'I';
-    bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. THÔNG TIN CÁN BỘ (HỒ SƠ CHÍNH)</w:t></w:r></w:p>`;
+    bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. ${mainTitle}</w:t></w:r></w:p>`;
     bodyContent += personnelTableBody;
     bodyContent += `<w:p/>`;
   }
@@ -1361,7 +1460,7 @@ export async function createDynamicDocxTemplateBlob(
   if (includeRelatives) {
     const secPrefix = romanNumerals[secIdx++] || 'II';
     bodyContent += `
-      <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. THÔNG TIN THÂN NHÂN LIÊN QUAN</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. ${relTitle}</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#than_nhan}</w:t></w:r></w:p>
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Thân nhân {stt} ({relationshipName}): {name}</w:t></w:r></w:p>
     `;
@@ -1410,7 +1509,7 @@ export async function createDynamicDocxTemplateBlob(
   if (includeTrips) {
     const secPrefix = romanNumerals[secIdx++] || 'III';
     bodyContent += `
-      <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. THÔNG TIN CHUYẾN ĐI (XUẤT NHẬP CẢNH)</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. ${tripTitle}</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#xuatnhapcanh}</w:t></w:r></w:p>
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Chuyến {stt}: Quốc gia {quoc_gia} (Từ {ngay_xuat_canh} đến {ngay_nhap_canh})</w:t></w:r></w:p>
     `;
@@ -1521,3 +1620,34 @@ export async function createDynamicDocxTemplateBlob(
 export async function createSampleDocxTemplateBlob() {
   return await createDynamicDocxTemplateBlob([0, 1, 2, 3, 4], [], true, [0, 1], []);
 }
+
+/**
+ * Lấy template ArrayBuffer hiệu dụng từ options (file upload, URL, hoặc tự tạo dynamic)
+ * @param {Object} options
+ * @param {Object} personnelStore
+ * @returns {Promise<ArrayBuffer>}
+ */
+export async function getEffectiveExportTemplateBuffer(options = {}, personnelStore = null) {
+  if (options.templateFile) {
+    return await options.templateFile.arrayBuffer();
+  }
+  if (options.templateUrl) {
+    const res = await fetch(options.templateUrl);
+    return await res.arrayBuffer();
+  }
+  const dynamicBlob = await createDynamicDocxTemplateBlob(
+    options.selectedGroupIndices || [0, 1, 2, 3, 4],
+    personnelStore?.importMappingPersonnel || [],
+    options.includeRelatives !== false,
+    options.selectedRelativeGroupIndices || [0, 1],
+    personnelStore?.importMappingRelative || [],
+    options.selectedFieldIds || null,
+    options.selectedRelativeFieldIds || null,
+    options,
+    options.includeTrips !== false,
+    options.selectedTripFieldIds || null,
+    personnelStore?.importMappingTrips || []
+  );
+  return await dynamicBlob.arrayBuffer();
+}
+

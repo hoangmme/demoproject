@@ -1602,6 +1602,28 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+- **Entry (2026-09-08)**: **Khắc phục Xuất PDF Popup Thống kê, Bổ sung Xem trước PDF trực tiếp cho từng dòng & Tối ưu Giao diện Xuất Hồ sơ Bảng**:
+  1. **Khắc phục Lỗi Xuất PDF (`src/utils/docxExport.js`)**:
+     - Điều chỉnh tọa độ sandbox của `convertDocxBlobToPdfBlob`: Thay thế `left: -9999px` bằng `position: fixed; top: 0; left: 0; opacity: 0; z-index: -9999; pointer-events: none;`, giải quyết triệt để tình trạng `html2canvas` chụp ra canvas rỗng do phần tử nằm ngoài giới hạn viewport.
+     - Truyền `arrayBuffer` an toàn vào `renderAsync` và thiết lập `scrollX: 0, scrollY: 0, x: 0, y: 0` cho `html2canvas`.
+     - Tích hợp hàm `generateSinglePersonnelPdfBlob` và `getEffectiveExportTemplateBuffer`.
+     - Đánh giá tự động toàn bộ cột công thức (`col.format === 'formula'`), trạng thái hiện diện (`resolvePresence`) và cột ảo (`resolveVirtualColumnValue`) cho cả Cán bộ, Thân nhân và Chuyến đi để mọi trường được chọn đều có giá trị rõ ràng, không bị bỏ sót hoặc để trống.
+     - Mẫu Word động (`createDynamicDocxTemplateBlob`): Nhận diện tiêu đề bảng động theo cài đặt hệ thống (`tableTitles`), hiển thị chuẩn hóa tiêu đề từng phần (`I. BẢNG CÁN BỘ...`, `II. BẢNG THÂN NHÂN...`, `III. BẢNG CHUYẾN ĐI...`).
+  2. **Bổ sung Nút Xem trước PDF Trực tiếp trên Từng Dòng (`DashboardView.vue`)**:
+     - Thêm cột cố định bên phải `Thao tác` với nút `[👁️ Xem PDF]` (màu đỏ nhẹ, outlined) ở bảng xem chi tiết thống kê (Drilldown DataTable).
+     - Khi bấm vào nút này, hệ thống tự động tìm và ánh xạ về đúng hồ sơ Cán bộ chủ quản (kể cả khi đang xem danh sách Chuyến đi hay Thân nhân), sinh trực tiếp file PDF và hiển thị ngay trên modal xem trước tương tác (`PdfPreviewDialog.vue`) mà không bắt buộc phải tải tệp về máy.
+     - Tích hợp nút `[👁️ Xem trước PDF]` bên trong `AdvancedDocxExportDialog.vue` cạnh nút tải về để người dùng có thể xem trước văn bản trước khi quyết định xuất file.
+  3. **Tạo Component Xem Trước PDF Chuyên Nghiệp (`PdfPreviewDialog.vue`)**:
+     - Modal xem trước PDF toàn diện: Tích hợp iframe hiển thị PDF bản địa của trình duyệt, thanh công cụ với các thao tác `Tải về máy`, `In hồ sơ`, `Mở tab mới`, và `Đóng`.
+     - Quản lý vòng đời `URL.createObjectURL` và `URL.revokeObjectURL` tự động, ngăn ngừa rò rỉ bộ nhớ.
+  4. **Tối ưu Hóa Giao diện Xuất Hồ sơ & Khắc phục Lặp Bảng (`AdvancedDocxExportDialog.vue`)**:
+     - Mở rộng chiều rộng dialog từ `560px` lên `820px` (`max-width: 95vw`), giải quyết hoàn toàn lỗi co dúm và tràn dòng 2 tầng của huy hiệu số lượng trường (`(21/21 trường)`) và các nút chọn.
+     - Thiết lập `white-space: nowrap;` cho `.tree-badge-count` và `flex-wrap: wrap; gap: 8px;` cho `.tree-table-header`.
+     - Đồng bộ tên bảng động (`mainTableTitle`, `relativeTableTitle`, `tripsTableTitle`) từ cấu hình nhận diện thương hiệu `system_branding_config`.
+     - **Sửa lỗi nhân bản bảng**: Loại trừ các bảng cốt lõi (`trips`, `personnel`, `relatives`) trong `loadCustomTables()` để không bị sinh lặp thêm Bảng 4 "Danh sách Chuyến đi".
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+
 
 
 

@@ -934,6 +934,14 @@
       :allPersonnel="drilldownAllPersonnel"
     />
 
+    <!-- Popup Xem trước PDF trực tiếp của từng hàng -->
+    <PdfPreviewDialog
+      v-model="showRowPdfPreview"
+      :pdf-blob="rowPreviewPdfBlob"
+      :title="rowPreviewTitle"
+      :filename="rowPreviewFileName"
+    />
+
     <!-- POPUP XEM CHI TIẾT DỮ LIỆU THỐNG KÊ (DRILLDOWN FULL COLUMNS MODAL) -->
     <Dialog
       v-model:visible="isDrilldownModalOpen"
@@ -1079,6 +1087,31 @@
               </template>
             </template>
           </Column>
+
+          <!-- Thao tác xem trực tiếp PDF của từng hàng -->
+          <Column
+            header="Thao tác"
+            headerClass="col-center"
+            bodyClass="col-center"
+            :headerStyle="{ width: '110px', minWidth: '110px' }"
+            :bodyStyle="{ width: '110px', minWidth: '110px' }"
+            frozen
+            alignFrozen="right"
+          >
+            <template #body="{ data }">
+              <Button
+                icon="pi pi-eye"
+                label="Xem PDF"
+                severity="danger"
+                size="small"
+                outlined
+                :loading="rowPreviewingKey === (data.uniqueKey || data.id)"
+                @click.stop="previewPdfForRow(data)"
+                style="font-size: 0.72rem; padding: 3px 8px;"
+                title="Xem trực tiếp PDF của hồ sơ này"
+              />
+            </template>
+          </Column>
         </DataTable>
       </div>
 
@@ -1198,6 +1231,9 @@ import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
+import { useAuthStore } from '@/stores/auth';
+import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
+import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
 import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
@@ -1213,6 +1249,7 @@ import {
 const route = useRoute();
 const router = useRouter();
 const personnelStore = usePersonnelStore();
+const authStore = useAuthStore();
 
 // =========================================================================
 // QUẢN LÝ NHẬN DIỆN HỆ THỐNG & BRANDING
@@ -1343,7 +1380,9 @@ const drilldownSelectedPersonnel = computed(() => {
     if (!p) {
       const pKey = r[pKeyField] || r.parentCccd || r.cccdparent || r.cccd || r.id;
       p = (personnelStore.personnelList || []).find(
-        (x) => x[pKeyField] === pKey || x.cccdparent === pKey || x.cccd === pKey || x.id === pKey
+        (x) => (pKey && (x[pKeyField] === pKey || x.cccdparent === pKey || x.cccd === pKey || x.id === pKey)) ||
+               (r.personnelId && x.id === r.personnelId) ||
+               (r.personnelCode && x.code === r.personnelCode)
       );
     }
     if (p && p.id && !personMap.has(p.id)) {
@@ -1353,6 +1392,57 @@ const drilldownSelectedPersonnel = computed(() => {
 
   return Array.from(personMap.values());
 });
+
+const showRowPdfPreview = ref(false);
+const rowPreviewPdfBlob = ref(null);
+const rowPreviewTitle = ref('');
+const rowPreviewFileName = ref('');
+const rowPreviewingKey = ref(null);
+
+const previewPdfForRow = async (row) => {
+  if (!row) return;
+  const rowKey = row.uniqueKey || row.id;
+  rowPreviewingKey.value = rowKey;
+
+  try {
+    const pKeyField = personnelStore.getPersonnelKeyField();
+    let p = row.rawPerson;
+    if (!p) {
+      const pKey = row[pKeyField] || row.parentCccd || row.cccdparent || row.cccd || row.id;
+      p = (personnelStore.personnelList || []).find(
+        (x) => (pKey && (x[pKeyField] === pKey || x.cccdparent === pKey || x.cccd === pKey || x.id === pKey)) ||
+               (row.personnelId && x.id === row.personnelId) ||
+               (row.personnelCode && x.code === row.personnelCode)
+      );
+    }
+    if (!p) {
+      if (row.name || row.ho_ten || row.code) {
+        p = row;
+      } else {
+        alert('Không tìm thấy thông tin hồ sơ cán bộ tương ứng.');
+        return;
+      }
+    }
+
+    const exportOpts = {
+      includeRelatives: true,
+      includeTrips: true,
+      showColumnNumbers: false,
+    };
+    const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
+    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, p, personnelStore, authStore.currentUser, exportOpts);
+
+    rowPreviewPdfBlob.value = blob;
+    rowPreviewTitle.value = `Hồ sơ: ${p.name || p.ho_ten || 'Cán bộ'}`;
+    rowPreviewFileName.value = `Ho_so_${(p.name || p.ho_ten || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    showRowPdfPreview.value = true;
+  } catch (err) {
+    console.error('Lỗi khi xem PDF:', err);
+    alert('Không thể tạo file xem trước PDF: ' + (err.message || 'Lỗi không xác định'));
+  } finally {
+    rowPreviewingKey.value = null;
+  }
+};
 
 const drilldownAllPersonnel = computed(() => {
   return personnelStore.personnelList || [];

@@ -3,7 +3,7 @@
     v-model:visible="visible"
     modal
     header="Xuất Hồ sơ Cán bộ (PDF)"
-    :style="{ width: '560px', maxWidth: '95vw' }"
+    :style="{ width: '820px', maxWidth: '95vw' }"
     :breakpoints="{ '640px': '98vw' }"
   >
     <div class="docx-export-container">
@@ -104,7 +104,7 @@
                 <div class="tree-table-header">
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <i class="pi pi-user" style="color: #2563eb; font-size: 0.95rem;"></i>
-                    <span style="font-weight: 700; color: #1e293b; font-size: 0.82rem;">1. Bảng Cán bộ (Hồ sơ chính)</span>
+                    <span style="font-weight: 700; color: #1e293b; font-size: 0.82rem;">1. Bảng {{ mainTableTitle }} (Hồ sơ chính)</span>
                     <span class="tree-badge-count">({{ selectedFieldIds.length }}/{{ flatPersonnelCols.length }} trường)</span>
                   </div>
                   <div style="display: flex; gap: 6px;">
@@ -141,7 +141,7 @@
                         style="accent-color: #7c3aed; width: 15px; height: 15px;"
                       />
                       <i class="pi pi-users" style="color: #7c3aed; font-size: 0.95rem;"></i>
-                      <span style="font-weight: 700; color: #6b21a8; font-size: 0.82rem;">2. Bảng Thân nhân liên quan</span>
+                      <span style="font-weight: 700; color: #6b21a8; font-size: 0.82rem;">2. Bảng {{ relativeTableTitle }} liên quan</span>
                     </label>
                     <span class="tree-badge-count tree-badge-purple" v-if="includeRelatives">
                       ({{ selectedRelativeFieldIds.length }}/{{ flatRelativeCols.length }} trường)
@@ -184,7 +184,7 @@
                         style="accent-color: #0284c7; width: 15px; height: 15px;"
                       />
                       <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
-                      <span style="font-weight: 700; color: #0369a1; font-size: 0.82rem;">3. Bảng Chuyến đi (Xuất nhập cảnh)</span>
+                      <span style="font-weight: 700; color: #0369a1; font-size: 0.82rem;">3. Bảng {{ tripsTableTitle }} (Xuất nhập cảnh)</span>
                     </label>
                     <span class="tree-badge-count" style="background: #e0f2fe; color: #0369a1;" v-if="includeTrips">
                       ({{ selectedTripFieldIds.length }}/{{ flatTripCols.length }} trường)
@@ -427,13 +427,26 @@
       </div>
 
       <!-- FOOTER -->
-      <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 0.6rem; padding-top: 0.8rem; border-top: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 0.6rem; padding-top: 0.8rem; border-top: 1px solid #e2e8f0; flex-wrap: wrap;">
         <Button
           label="Đóng"
           size="small"
           @click="visible = false"
           class="btn-close-custom"
-          :disabled="exporting"
+          :disabled="exporting || previewingPdf"
+        />
+
+        <Button
+          v-if="outputFormat === 'pdf' && (exportScope === 'single' || (exportScope === 'selected' && selectedCount === 1))"
+          label="Xem trước PDF"
+          icon="pi pi-eye"
+          size="small"
+          severity="info"
+          outlined
+          :loading="previewingPdf"
+          @click="handlePreviewPdf"
+          :disabled="!effectiveTemplateBuffer || exporting || previewingPdf"
+          style="font-size: 0.82rem; font-weight: 600; padding: 7px 16px; border-radius: 8px;"
         />
 
         <Button
@@ -443,11 +456,19 @@
           :loading="exporting"
           @click="handleExport"
           class="btn-download-primary"
-          :disabled="!effectiveTemplateBuffer || exporting"
+          :disabled="!effectiveTemplateBuffer || exporting || previewingPdf"
         />
       </div>
     </div>
   </Dialog>
+
+  <!-- Popup Xem trước PDF -->
+  <PdfPreviewDialog
+    v-model="showPdfPreview"
+    :pdf-blob="previewPdfBlob"
+    :title="previewPdfTitle"
+    :filename="previewPdfFileName"
+  />
 </template>
 
 <script setup>
@@ -460,8 +481,10 @@ import { saveAs } from 'file-saver';
 import {
   exportSinglePersonnelDocx,
   exportMultiplePersonnelZip,
+  generateSinglePersonnelPdfBlob,
   createDynamicDocxTemplateBlob,
 } from '@/utils/docxExport';
+import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 
 const props = defineProps({
@@ -484,6 +507,40 @@ const outputFormat = ref('pdf');
 const exportScope = ref('single');
 const templateSource = ref('sample'); // 'sample' (Group) | 'upload'
 
+// Dynamic titles cho các bảng chính theo Cài đặt hệ thống
+const mainTableTitle = computed(() => {
+  try {
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      const p = JSON.parse(local);
+      if (p.menuLabelPersonnel && p.menuLabelPersonnel !== 'Bảng dữ liệu chính') return p.menuLabelPersonnel;
+    }
+  } catch (e) {}
+  return 'Cán bộ';
+});
+
+const relativeTableTitle = computed(() => {
+  try {
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      const p = JSON.parse(local);
+      if (p.menuLabelRelatives) return p.menuLabelRelatives;
+    }
+  } catch (e) {}
+  return 'Thân nhân';
+});
+
+const tripsTableTitle = computed(() => {
+  try {
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      const p = JSON.parse(local);
+      if (p.menuLabelTrips) return p.menuLabelTrips;
+    }
+  } catch (e) {}
+  return 'Chuyến đi';
+});
+
 // Group & Field selector state (Dạng phân cấp Tree)
 const selectedFieldIds = ref([]);
 const selectedRelativeFieldIds = ref([]);
@@ -501,6 +558,18 @@ const loadCustomTables = async () => {
     if (Array.isArray(raw)) {
       const tables = [];
       for (const dash of raw) {
+        if (!dash || !dash.id) continue;
+        // Bỏ qua các bảng chuẩn đã có sẵn ở Bảng 1, Bảng 2, Bảng 3
+        if (
+          dash.id === 'trips' ||
+          dash.id === 'personnel' ||
+          dash.id === 'relatives' ||
+          dash.source === 'trips' ||
+          dash.source === 'personnel' ||
+          dash.source === 'relatives'
+        ) {
+          continue;
+        }
         let cols = [];
         if (Array.isArray(dash.customColumns) && dash.customColumns.length > 0) {
           cols = dash.customColumns.map((c) => ({ id: c.id, label: c.label || c.id }));
@@ -1071,6 +1140,11 @@ const handleExport = async () => {
         columns: t.columns,
         rows: t.rows,
       })),
+      tableTitles: {
+        personnel: mainTableTitle.value,
+        relatives: relativeTableTitle.value,
+        trips: tripsTableTitle.value,
+      },
     };
     const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
     const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
@@ -1087,6 +1161,57 @@ const handleExport = async () => {
       visible.value = false;
     }
   } catch (error) { alert('Lỗi: ' + (error.message || error)); } finally { exporting.value = false; }
+};
+
+const showPdfPreview = ref(false);
+const previewPdfBlob = ref(null);
+const previewPdfTitle = ref('');
+const previewPdfFileName = ref('');
+const previewingPdf = ref(false);
+
+const handlePreviewPdf = async () => {
+  const buf = effectiveTemplateBuffer.value;
+  if (!buf) return alert('Vui lòng chọn hoặc tải lên tệp mẫu Word (.docx)');
+  const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
+  const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
+  if (!targetP) return alert('Xem trước chỉ hỗ trợ cho 1 cán bộ. Vui lòng chọn 1 cán bộ để xem trước.');
+
+  previewingPdf.value = true;
+  try {
+    const exportOptions = {
+      selectedGroupIndices: (personnelGroups.value || []).map((_, i) => i),
+      includeRelatives: includeRelatives.value,
+      selectedRelativeGroupIndices: (relativeGroups.value || []).map((_, i) => i),
+      selectedFieldIds: selectedFieldIds.value,
+      selectedRelativeFieldIds: selectedRelativeFieldIds.value,
+      includeTrips: includeTrips.value,
+      selectedTripFieldIds: selectedTripFieldIds.value,
+      showColumnNumbers: showColumnNumbers.value,
+      customTables: customTables.value.filter((t) => t.enabled && t.selectedFieldIds.length > 0).map((t) => ({
+        id: t.id,
+        title: t.title,
+        source: t.source,
+        selectedFieldIds: t.selectedFieldIds,
+        columns: t.columns,
+        rows: t.rows,
+      })),
+      tableTitles: {
+        personnel: mainTableTitle.value,
+        relatives: relativeTableTitle.value,
+        trips: tripsTableTitle.value,
+      },
+    };
+    const blob = await generateSinglePersonnelPdfBlob(buf, targetP, personnelStore, authStore.user, exportOptions);
+    previewPdfBlob.value = blob;
+    previewPdfTitle.value = `Hồ sơ: ${targetP.name || 'Cán bộ'} (${targetP.code || ''})`;
+    previewPdfFileName.value = `Ho_so_${(targetP.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    showPdfPreview.value = true;
+  } catch (err) {
+    console.error('Lỗi tạo bản xem trước PDF:', err);
+    alert('Không thể tạo bản xem trước PDF: ' + (err.message || 'Lỗi không xác định'));
+  } finally {
+    previewingPdf.value = false;
+  }
 };
 
 onMounted(() => {
@@ -1214,13 +1339,18 @@ onMounted(() => {
 }
 
 .tree-badge-count {
-  font-size: 0.7rem;
-  font-weight: normal;
-  color: #3b82f6;
-  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tree-badge-purple {
-  color: #9333ea;
+  color: #7c3aed;
+  background: #faf5ff;
 }
 
 .tree-group-box {
@@ -1266,6 +1396,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 6px 10px;
   background: #eff6ff;
   border-bottom: 1px solid #dbeafe;
