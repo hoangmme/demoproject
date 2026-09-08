@@ -601,6 +601,16 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
   const op = cond.operator || 'has_value';
   const target = cond.value || '';
 
+  let colDef = null;
+  if (personnelStore) {
+    const allColDefs = [
+      ...(personnelStore.importMappingPersonnel || []),
+      ...(personnelStore.importMappingRelative || []),
+      ...(personnelStore.importMappingTrips || []),
+    ].flatMap((g) => g.columns || []);
+    colDef = allColDefs.find((c) => c && c.id === field);
+  }
+
   // 1. Đối tượng Cán bộ / Thân nhân (isRelative)
   if (field === 'isRelative' || field === '_doiTuong' || field === 'doi_tuong') {
     const isRel = Boolean(item.isRelative || item.rawRelative);
@@ -639,16 +649,6 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
   }
 
   // 3. Special Formula Fields & Điều kiện đếm (Tần suất / Số lần xuất cảnh trong năm)
-  let colDef = null;
-  if (personnelStore) {
-    const allColDefs = [
-      ...(personnelStore.importMappingPersonnel || []),
-      ...(personnelStore.importMappingRelative || []),
-      ...(personnelStore.importMappingTrips || []),
-    ].flatMap((g) => g.columns || []);
-    colDef = allColDefs.find((c) => c && c.id === field);
-  }
-
   const isCountFormula = colDef && colDef.format === 'formula' && colDef.formulaType === 'trips_count_in_year';
   const isCountOp = op.startsWith('count_');
   const isCountField = field === 'dieu_kien_dem' || field === '_tripCount' || field.includes('so_lan') || field.includes('trips_count') || isCountFormula;

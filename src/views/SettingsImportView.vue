@@ -149,63 +149,41 @@
               </div>
             </div>
 
-            <!-- Tên hiển thị các Menu Thực thể -->
+            <!-- Tiêu đề Header chính & Màu sắc chữ -->
             <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
               <div style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                <i class="pi pi-bars" style="color: #7c3aed;"></i>
-                Tùy biến Tên Menu & Tiêu đề Bảng Dữ liệu:
+                <i class="pi pi-desktop" style="color: #1e3a8a;"></i>
+                Tiêu đề Header Hệ thống (Thanh tiêu đề trên cùng):
               </div>
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+              <div style="display: grid; grid-template-columns: 1fr 180px; gap: 12px; align-items: flex-end;">
                 <div>
-                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
-                    Tên Bảng Cán bộ trên Menu (Mặc định: Cán bộ):
-                  </label>
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Nội dung Tiêu đề Header:</label>
                   <InputText
-                    v-model="systemBranding.menuLabelPersonnel"
-                    placeholder="VD: Cán bộ / Hồ sơ học sinh / Nhân sự..."
+                    v-model="systemBranding.headerMainTitle"
+                    placeholder="DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI"
                     size="small"
                     style="width: 100%; font-size: 0.8rem;"
                   />
                 </div>
                 <div>
-                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">
-                    Tiêu đề Mục Danh sách Bảng trên Sidebar (Mặc định: Chuyên đề):
-                  </label>
-                  <InputText
-                    v-model="systemBranding.sectionLabelTopics"
-                    placeholder="VD: Chuyên đề / Danh sách Bảng / Bảng dữ liệu..."
-                    size="small"
-                    style="width: 100%; font-size: 0.8rem;"
-                  />
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Màu sắc Chữ Header:</label>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <input
+                      type="color"
+                      v-model="systemBranding.headerMainTitleColor"
+                      style="width: 36px; height: 32px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px; cursor: pointer;"
+                    />
+                    <InputText
+                      v-model="systemBranding.headerMainTitleColor"
+                      placeholder="#1e3a8a"
+                      size="small"
+                      style="width: 110px; font-size: 0.78rem; text-transform: uppercase;"
+                    />
+                  </div>
                 </div>
               </div>
-
-              <!-- Tùy chọn mở rộng: Quản lý Bảng Phụ & Bảng Sự kiện con -->
-              <div style="margin-top: 6px; padding-top: 8px; border-top: 1px dashed #cbd5e1;">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #334155; font-weight: 600; cursor: pointer;">
-                  <input type="checkbox" v-model="systemBranding.showSecondaryInputs" style="accent-color: #7c3aed; cursor: pointer;" />
-                  <span>Bật quản lý Bảng Phụ (Thân nhân / Phụ huynh) và Bảng Sự kiện con (Chuyến đi / Hoạt động) trên menu</span>
-                </label>
-                <div v-if="systemBranding.showSecondaryInputs" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 10px;">
-                  <div>
-                    <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Tên Bảng Phụ liên kết (Mặc định: Thân nhân):</label>
-                    <InputText
-                      v-model="systemBranding.menuLabelRelatives"
-                      placeholder="VD: Thân nhân / Phụ huynh"
-                      size="small"
-                      style="width: 100%; font-size: 0.8rem;"
-                    />
-                  </div>
-                  <div>
-                    <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Tên Bảng Sự kiện / Hoạt động (Mặc định: Chuyến đi):</label>
-                    <InputText
-                      v-model="systemBranding.menuLabelTrips"
-                      placeholder="VD: Chuyến đi / Khóa học / Điểm thi"
-                      size="small"
-                      style="width: 100%; font-size: 0.8rem;"
-                    />
-                  </div>
-                </div>
+              <div style="font-size: 0.7rem; color: #64748b; line-height: 1.3;">
+                Hiển thị trên thanh Header của toàn bộ ứng dụng. Mặc định: <strong>DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</strong>.
               </div>
             </div>
 
@@ -221,7 +199,7 @@
                 style="font-size: 0.78rem;"
               />
               <Button
-                label="Lưu Nhận diện & Tên Menu"
+                label="Lưu Nhận diện & Header"
                 icon="pi pi-check"
                 severity="primary"
                 size="small"
@@ -905,11 +883,13 @@ const DEFAULT_BRANDING = {
   logoUrl: '',
   orgNameLine1: 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH',
   orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
+  headerMainTitle: 'DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI',
+  headerMainTitleColor: '#1e3a8a',
   menuLabelPersonnel: 'Cán bộ',
   sectionLabelTopics: 'Bảng dữ liệu (Tables)',
   menuLabelRelatives: 'Thân nhân',
   menuLabelTrips: 'Chuyến đi',
-  showSecondaryInputs: false,
+  showSecondaryInputs: true,
 };
 
 const getInitialBranding = () => {

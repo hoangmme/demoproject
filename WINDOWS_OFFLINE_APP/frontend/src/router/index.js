@@ -3,8 +3,7 @@ import { useAuthStore } from '@/stores/auth';
 
 // Eagerly import all views for 0ms instantaneous route transitions
 import LoginView from '@/views/LoginView.vue';
-import PersonnelView from '@/views/PersonnelView.vue';
-import ChildDashboardView from '@/views/ChildDashboardView.vue';
+import UnifiedTableView from '@/views/UnifiedTableView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import SettingsImportView from '@/views/SettingsImportView.vue';
 import UserManagementView from '@/views/UserManagementView.vue';
@@ -36,19 +35,19 @@ const routes = [
   {
     path: '/personnel',
     name: 'Personnel',
-    component: PersonnelView,
+    component: UnifiedTableView,
     meta: { title: 'Bảng Cán bộ', requiresAuth: true },
   },
   {
     path: '/relatives',
     name: 'Relatives',
-    component: PersonnelView,
+    component: UnifiedTableView,
     meta: { title: 'Bảng Thân nhân', requiresAuth: true },
   },
   {
     path: '/trips',
     name: 'Trips',
-    component: ChildDashboardView,
+    component: UnifiedTableView,
     meta: { title: 'Chuyên đề', requiresAuth: true },
   },
   {
@@ -82,7 +81,7 @@ const routes = [
   {
     path: '/dashboard-topic/:id',
     name: 'DynamicTopicDashboard',
-    component: ChildDashboardView,
+    component: UnifiedTableView,
     meta: { title: 'Chuyên đề', requiresAuth: true },
   },
   {

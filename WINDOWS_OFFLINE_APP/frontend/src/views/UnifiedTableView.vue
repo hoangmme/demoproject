@@ -142,11 +142,11 @@
         <!-- Thêm Bản Ghi Mới trực tiếp vào Bảng này -->
         <Button
           icon="pi pi-plus"
-          label="Thêm Bản Ghi Mới"
+          :label="getAddButtonLabel()"
           severity="success"
           size="small"
           @click="openAddTripDialog"
-          title="Thêm bản ghi mới trực tiếp vào bảng này"
+          :title="`Thêm bản ghi mới trực tiếp vào bảng ${currentDashboardConfig.title || ''}`"
           style="font-size: 0.8rem;"
         />
       </div>
@@ -1639,48 +1639,64 @@ const allPersonnelForExport = computed(() => {
 });
 
 // Dynamic Dashboard Topic State
+const systemBranding = ref({});
+const loadSystemBranding = async () => {
+  try {
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      systemBranding.value = JSON.parse(local);
+    }
+    const saved = await getAppSettings('system_branding_config', null);
+    if (saved) {
+      systemBranding.value = saved;
+      try { localStorage.setItem('system_branding_config', JSON.stringify(saved)); } catch (e) {}
+    }
+  } catch (e) {}
+};
+
 const getInitialCustomDashboards = () => {
+  let list = [];
   try {
     const local = localStorage.getItem('custom_dashboards_config');
     if (local) {
       const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
     }
   } catch (e) {}
-  return [];
+  return ensureStandardDashboards(list);
 };
 const customDashboards = ref(getInitialCustomDashboards());
 
 const topicId = computed(() => {
-  return route.params.id || (route.path === '/trips' ? 'trips' : 'trips');
+  if (route.path === '/personnel') return 'personnel';
+  if (route.path === '/relatives') return 'relatives';
+  if (route.path === '/trips') return 'trips';
+  return route.params.id || 'trips';
 });
 const currentDashboardId = computed(() => topicId.value);
 
 const currentDashboardConfig = computed(() => {
-  const found = customDashboards.value.find((d) => d.id === currentDashboardId.value);
-  if (found) return found;
-  if (currentDashboardId.value === 'trips' || route.path === '/trips') {
+  const allConfigs = ensureStandardDashboards(customDashboards.value);
+  const found = allConfigs.find((d) => d.id === currentDashboardId.value);
+  if (found) {
+    let title = found.title;
+    if (found.id === 'personnel') title = found.title || systemBranding.value?.menuLabelPersonnel || 'Cán bộ';
+    else if (found.id === 'relatives') title = found.title || systemBranding.value?.menuLabelRelatives || 'Thân nhân';
+    else if (found.id === 'trips') title = found.title || systemBranding.value?.menuLabelTrips || 'Chuyến đi';
     return {
-      id: 'trips',
-      code: '',
-      title: 'Danh sách Chuyến đi',
-      source: 'trips',
-      icon: 'pi-send',
-      metricCards: [
-        { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
-        { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
-        { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
-        { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
-      ],
+      ...found,
+      title,
     };
   }
   return {
     id: currentDashboardId.value,
     code: '',
-    title: '',
-    source: null,
-    isPending: true,
-    metricCards: [],
+    title: 'Bảng dữ liệu',
+    source: 'trips',
+    isPending: false,
+    metricCards: [
+      { id: 'all', label: 'Toàn bộ', condition: 'all', color: 'blue' },
+    ],
   };
 });
 
@@ -2744,9 +2760,14 @@ const allAvailableColumnsList = computed(() => {
 const allColumns = computed(() => allAvailableColumnsList.value);
 const getInitialSelectedCols = () => {
   try {
-    const tid = route.params.id || (route.path === '/trips' ? 'trips' : 'trips');
+    const tid = route.path === '/personnel' ? 'personnel' : (route.path === '/relatives' ? 'relatives' : (route.path === '/trips' ? 'trips' : (route.params.id || 'trips')));
     const localKey = `child_dashboard_cols_${tid || 'default'}`;
-    const local = localStorage.getItem(localKey) || (tid === 'trips' ? localStorage.getItem('trips_dashboard_columns') : null);
+    let fallbackLocal = null;
+    if (tid === 'trips') fallbackLocal = localStorage.getItem('trips_dashboard_columns');
+    else if (tid === 'personnel') fallbackLocal = localStorage.getItem('personnel_active_columns');
+    else if (tid === 'relatives') fallbackLocal = localStorage.getItem('relative_active_columns');
+
+    const local = localStorage.getItem(localKey) || fallbackLocal;
     if (local) {
       const parsed = JSON.parse(local);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -2776,13 +2797,19 @@ const onColumnsChange = async (newCols) => {
 
   try {
     localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
-    if (isBaseline && topicId.value === 'trips') {
-      localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
+    if (isBaseline) {
+      if (topicId.value === 'trips') {
+        localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
+        await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
+      } else if (topicId.value === 'personnel') {
+        localStorage.setItem('personnel_active_columns', JSON.stringify(selectedColIds.value));
+        await saveAppSettings('personnel_active_columns', selectedColIds.value);
+      } else if (topicId.value === 'relatives') {
+        localStorage.setItem('relative_active_columns', JSON.stringify(selectedColIds.value));
+        await saveAppSettings('relative_active_columns', selectedColIds.value);
+      }
     }
     await saveAppSettings(currentKey, selectedColIds.value);
-    if (isBaseline && topicId.value === 'trips') {
-      await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
-    }
   } catch (e) {}
 
   const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
@@ -3673,6 +3700,14 @@ const resolveTargetPersonnel = (trip) => {
   if (!trip) return null;
   const pList = personnelStore.personnelList || [];
 
+  // 0. Direct personnel record or rawPerson
+  if (trip._recordType === 'personnel' || trip.rawPerson) {
+    if (trip.rawPerson) return trip.rawPerson;
+    const found = pList.find((p) => String(p.id) === String(trip.id));
+    if (found) return found;
+    return trip;
+  }
+
   // 1. By direct personnelId (matching as string to handle number/string differences)
   if (trip.personnelId !== undefined && trip.personnelId !== null) {
     const found = pList.find((p) => String(p.id) === String(trip.personnelId));
@@ -3743,9 +3778,20 @@ const resetDefaultColumns = () => {
   }
   if (currentDashboardConfig.value.columns && currentDashboardConfig.value.columns.length > 0) {
     selectedColIds.value = [...currentDashboardConfig.value.columns];
-  } else {
-    selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id);
+    return;
   }
+  const allIds = allAvailableColumnsList.value
+    .map((c) => c.id)
+    .filter((id) => id !== '_primaryKey' && id !== 'status' && id !== 'tripStatus');
+  selectedColIds.value = allIds;
+};
+
+const selectAllColumns = () => {
+  selectedColIds.value = allAvailableColumnsList.value.map((c) => c.id);
+};
+
+const deselectAllColumns = () => {
+  selectedColIds.value = [];
 };
 
 const moveSelectedColUp = (idx) => {
@@ -3776,9 +3822,12 @@ const openPersonnelDetail = (trip) => {
   const targetPerson = resolveTargetPersonnel(trip);
   if (targetPerson) {
     activePersonData.value = targetPerson;
-    if (trip.isRelative) {
+    if (trip._recordType === 'personnel' || (!trip.isRelative && !trip.departureDate && !trip.countryName && !trip.rawTrip)) {
+      dialogInitialTab.value = 0; // Tab 1: Cán bộ
+      dialogTargetRelativeCode.value = '';
+    } else if (trip.isRelative || trip._recordType === 'relative') {
       dialogInitialTab.value = 2; // Tab 3: Thân nhân
-      dialogTargetRelativeCode.value = trip.relativeCode || trip.code || '';
+      dialogTargetRelativeCode.value = trip.relativeCode || trip.code || trip.id || '';
     } else {
       dialogInitialTab.value = 1; // Tab 2: Chuyến đi
       dialogTargetRelativeCode.value = '';
@@ -4012,9 +4061,32 @@ const selectedTargetSummary = computed(() => {
 const onTargetPersonChange = () => {};
 const onTargetRelativeChange = () => {};
 
+const getAddButtonLabel = () => {
+  const src = currentDashboardConfig.value?.source || '';
+  if (src === 'personnel') return `Thêm ${currentDashboardConfig.value?.title || 'Cán bộ'}`;
+  if (src === 'relatives') return `Thêm ${currentDashboardConfig.value?.title || 'Thân nhân'}`;
+  if (src === 'trips') return `Thêm ${currentDashboardConfig.value?.title || 'Chuyến đi'}`;
+  return 'Thêm Bản Ghi Mới';
+};
+
 const openAddTripDialog = () => {
-  if (currentDashboardConfig.value?.source === 'blank') {
+  const src = currentDashboardConfig.value?.source || '';
+  if (src === 'blank') {
     addCustomRow();
+    return;
+  }
+  if (src === 'personnel') {
+    activePersonData.value = null;
+    dialogInitialTab.value = 0;
+    dialogTargetRelativeCode.value = '';
+    isPersonnelDialogOpen.value = true;
+    return;
+  }
+  if (src === 'relatives') {
+    activePersonData.value = null;
+    dialogInitialTab.value = 2; // Tab 3: Thân nhân
+    dialogTargetRelativeCode.value = '';
+    isPersonnelDialogOpen.value = true;
     return;
   }
   editingTripItem.value = null;
@@ -4183,7 +4255,12 @@ const initTopicColumns = async () => {
 
   // 1. Kiểm tra cấu hình riêng đã lưu trong DB TRƯỚC TIÊN (Ưu tiên tuyệt đối DB hệ thống)
   try {
-    const dbCols = (await getAppSettings(currentKey, null)) || (topicId.value === 'trips' ? await getAppSettings('trips_dashboard_columns', null) : null);
+    let fallbackDb = null;
+    if (topicId.value === 'trips') fallbackDb = await getAppSettings('trips_dashboard_columns', null);
+    else if (topicId.value === 'personnel') fallbackDb = await getAppSettings('personnel_active_columns', null);
+    else if (topicId.value === 'relatives') fallbackDb = await getAppSettings('relative_active_columns', null);
+
+    const dbCols = (await getAppSettings(currentKey, null)) || fallbackDb;
     if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
       const valid = sanitizeRelCols(dbCols.filter((id) => id !== 'status' && id !== 'tripStatus'));
       if (valid.length > 0) {
@@ -4199,7 +4276,12 @@ const initTopicColumns = async () => {
 
   // 2. Kiểm tra cache local nếu DB chưa kịp trả về
   try {
-    const localCols = localStorage.getItem(currentKey) || (topicId.value === 'trips' ? localStorage.getItem('trips_dashboard_columns') : null);
+    let fallbackLocal = null;
+    if (topicId.value === 'trips') fallbackLocal = localStorage.getItem('trips_dashboard_columns');
+    else if (topicId.value === 'personnel') fallbackLocal = localStorage.getItem('personnel_active_columns');
+    else if (topicId.value === 'relatives') fallbackLocal = localStorage.getItem('relative_active_columns');
+
+    const localCols = localStorage.getItem(currentKey) || fallbackLocal;
     if (localCols) {
       const parsed = JSON.parse(localCols);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -4427,6 +4509,7 @@ onMounted(async () => {
       ? personnelStore.loadSettings()
       : Promise.resolve(),
     loadCustomDashboards(),
+    loadSystemBranding(),
   ]);
   await loadCustomTableRows();
   await loadTopicFilterState();

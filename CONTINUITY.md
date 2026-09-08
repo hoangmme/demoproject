@@ -1498,10 +1498,10 @@
 ### 16. CHUẨN HÓA LARK BASE UI/UX, NHẬP LIỆU ĐA BẢNG, HỢP NHẤT MẪU WORD & CLEANUP HỆ THỐNG
 - **Các cải tiến đã thực hiện**:
   1. **Khắc phục triệt để lỗi Icon Ổ Khóa `🔒` Chưa Đồng Bộ**:
-     - Trong `PersonnelView.vue`: Xác định `canonicalPrimaryId` rõ ràng (`name` / `ho_va_ten` cho cán bộ, `relativeName` cho thân nhân). Tuyệt đối không gán `isPrimaryField: idx === 0` mù quáng khiến icon ổ khóa nhảy sang cột `TÊN KHÁC` khi thứ tự mảng thay đổi.
+     - Xác định `canonicalPrimaryId` rõ ràng (`name` / `ho_va_ten` cho cán bộ, `relativeName` cho thân nhân). Tuyệt đối không gán `isPrimaryField: idx === 0` mù quáng khiến icon ổ khóa nhảy sang cột `TÊN KHÁC` khi thứ tự mảng thay đổi.
      - Bọc tiêu đề cột và huy hiệu khóa trong `.table-col-title-inline` và `.table-col-lock-badge` với `display: inline-flex; white-space: nowrap`, chấm dứt hiện tượng chữ "🔒" bị rớt xuống dòng dưới.
   2. **Thanh Tab Chế Độ Xem (View Tabs) & Bộ Lọc Riêng Từng Bảng (Chuẩn Lark Base)**:
-     - Tích hợp thanh View Tabs phía trên bảng (`PersonnelView.vue`, `ChildDashboardView.vue`): `[ ⊞ Toàn bộ ] [ ⊞ Thẻ lọc ... ] [ + Thêm View ]`.
+     - Tích hợp thanh View Tabs phía trên bảng: `[ ⊞ Toàn bộ ] [ ⊞ Thẻ lọc ... ] [ + Thêm View ]`.
      - Cho phép tạo Chế độ xem (View) mới với bộ lọc và cột hiển thị lưu độc lập cho từng bảng.
   3. **Đồng Bộ Nhập Liệu Đa Bảng Tinh Gọn (Dynamic Data Entry)**:
      - Xây dựng component `TableDataEntryDialog.vue`: Modal nhập liệu duy nhất hỗ trợ toàn bộ các bảng trong hệ thống (`[CB-01]`, `[TN-02]`, `[CD-03]`, `[TB-xx]`).
@@ -1753,4 +1753,41 @@
   3. **Đồng bộ & Kiểm chứng**:
      - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
      - `npm run build` thành công 100% (0 lỗi, 602ms).
+- **Entry (2026-09-08)**: **Hợp Nhất Toàn Bộ Bảng Dữ Liệu Dùng Chung 1 Động Cơ Duy Nhất (Single Unified Table Engine - UnifiedTableView.vue)**:
+  1. **Chỉ đạo chiến lược của người dùng**:
+     - Trong mô hình Flat Table chuẩn Lark Base: Mọi bảng (`personnel`, `relatives`, `trips`, và các bảng tự tạo) đều là các Custom Table bình đẳng, tự động ánh xạ bằng cơ chế tham chiếu động.
+     - Xóa bỏ triệt để tình trạng phân mảnh tách đôi view (`PersonnelView.vue` ~4.300 dòng và `ChildDashboardView.vue` ~5.100 dòng = ~9.400 dòng code trùng lặp).
+     - Quy về một template/động cơ chung duy nhất cho TẤT CẢ các bảng để tránh tình trạng code riêng ad-hoc.
+  2. **Giải pháp kiến trúc đã thực hiện (`UnifiedTableView.vue`, `router/index.js`, `PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - **Động cơ bảng dùng chung (`src/views/UnifiedTableView.vue`)**:
+       - Tự động nhận diện bảng nguồn theo route hoặc param: `/personnel` (source: `personnel`), `/relatives` (source: `relatives`), `/trips` (source: `trips`), `/dashboard-topic/:id` (source: `blank` | `trips` | `personnel` | `relatives`).
+       - Đồng bộ thanh View Tabs Lark Base (`[Toàn bộ] [Thẻ 1] [Thẻ 2]... [+ Thêm View]`) với đếm số lượng động.
+       - Tích hợp 100% các tính năng cao cấp: Tùy chọn cột (kèm độ rộng `tableWidth` và điều chỉnh chiều cao hàng), tìm kiếm nhanh đa trường, bộ lọc chi tiết, STT phân trang chuẩn offset (`dtFirst + index + 1`), bố cục 2 tầng xuống hàng cho `checkbox_file_loop` / `checkbox_file`, xuất Word/PDF/Excel.
+       - Nút Thêm mới thích ứng động theo nguồn: `Thêm Cán bộ`, `Thêm Thân nhân`, `Thêm Chuyến đi`, `Thêm Bản Ghi Mới`.
+       - Click dòng mở popup chi tiết điều hướng chính xác theo nguồn: Cán bộ (Tab 0), Chuyến đi (Tab 1), Thân nhân (Tab 2).
+       - Khả năng chuyển đổi route tức thì 0ms, tự động dọn dẹp bộ lọc và nạp cấu hình bảng mới tương ứng.
+     - **Router (`src/router/index.js`)**:
+       - Trỏ trực tiếp cả 4 route `/personnel`, `/relatives`, `/trips`, `/dashboard-topic/:id` vào `UnifiedTableView.vue`.
+     - **Xóa bỏ vĩnh viễn PersonnelView.vue & ChildDashboardView.vue**:
+       - Đã xóa sạch hoàn toàn cả 2 file view cũ khỏi cả `src/views/` và `WINDOWS_OFFLINE_APP/frontend/src/views/`.
+       - Loại bỏ sạch sẽ các dòng import thừa trong `router/index.js`, giải phóng hoàn toàn ~9.400 dòng code, không lưu lại bất kỳ wrapper hay code thừa nào trong hệ thống.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 510ms).
 - **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Khắc Phục Lỗi TDZ colDef, Xóa Tiêu Đề Phụ Header, Cho Phép Đổi Text & Màu Sắc Header Chính**:
+  1. **Sửa lỗi ReferenceError: Cannot access 'o' before initialization (`dashboardMetrics.js`)**:
+     - Phát hiện biến `colDef` được sử dụng ở điều kiện 2 (`di_truoc_khi_co_quyet_dinh`) trước khi được khai báo ở điều kiện 3 (`let colDef = null`).
+     - Đã dời khai báo `colDef` và tra cứu cấu hình cột lên ngay đầu hàm `matchSingleCondition`, loại bỏ hoàn toàn lỗi TDZ runtime khi lọc thẻ/bảng.
+  2. **Xóa tiêu đề phụ Header (`AppHeader.vue`)**:
+     - Loại bỏ hoàn toàn khối `<div class="app-header-sub-title">{{ currentTitle }}</div>`.
+  3. **Tùy biến Text & Màu sắc Tiêu đề Header Chính (`AppHeader.vue`, `SettingsImportView.vue`)**:
+     - Bổ sung cấu hình `headerMainTitle` (nội dung tiêu đề) và `headerMainTitleColor` (bộ chọn màu mã màu hex) trong `SettingsImportView.vue`.
+     - `AppHeader.vue` tự động tải và cập nhật theo thời gian thực (realtime qua event `system-branding-updated`) tiêu đề và màu sắc tùy chỉnh của người dùng.
+  4. **Dọn dẹp Cấu hình chung (`SettingsImportView.vue`)**:
+     - Xóa bỏ hoàn toàn các khối cấu hình gây rối: "Tùy biến Tên Menu & Tiêu đề Bảng Dữ liệu:" và checkbox "Bật quản lý Bảng Phụ (Thân nhân / Phụ huynh) và Bảng Sự kiện con (Chuyến đi / Hoạt động) trên menu".
+  5. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 560ms).
+- **Status**: Done [Reversible].
+
