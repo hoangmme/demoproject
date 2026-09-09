@@ -2522,3 +2522,30 @@
 
 
 
+
+- **Entry (2026-09-09 - Session 22)**: **Khử Triệt Để Fallback Quốc Gia Thống Kê, Loại Bỏ Hardcode Khóa Lookup/Rollup, Cho Phép Ẩn Cột CCCD Chuyến Đi & Lookup Đa Cột**:
+    1. **Yêu cầu của người dùng**:
+       - Khử hiện tượng Quốc gia xuất cảnh đã bị xóa nhưng dòng chuyến đi vẫn hiện trong thống kê điều kiện "có dữ liệu" (has_value).
+       - Loại bỏ hoàn toàn cơ chế tự động đoán ngầm primary key trong hàm Lookup và Rollup khi người dùng chưa chọn điều kiện nối hoặc cặp cột liên kết.
+       - Cho phép ẩn/hiện cột cccdchuyendi (trước đây bị khóa không cho bỏ tick trong bộ chọn cột).
+       - Hỗ trợ cột Lookup chọn được nhiều cột dữ liệu cùng lúc (lookupFields), mỗi dữ liệu hiển thị trên một dòng riêng biệt.
+    2. **Giải pháp & Triển khai**:
+       - **Cho phép ẩn/hiện cột cccdchuyendi tự do (src/components/common/ColumnSelector.vue)**:
+         + Xóa bỏ logic props.options[0] đặc quyền bất khả xâm phạm. Người dùng có thể tự do ẩn mọi cột (chỉ cần giữ lại ít nhất 1 cột hiển thị).
+       - **Hỗ trợ Lookup chọn nhiều cột dữ liệu (ColumnHeaderMenu.vue & formatters.js)**:
+         + ColumnHeaderMenu.vue: Bổ sung danh sách checkbox nhiều cột editLookupFields, thanh công cụ "Tất cả / Bỏ chọn", và các thẻ tag hiển thị trực quan các cột được chọn.
+         + formatters.js (evaluateLookup): Trích xuất danh sách các trường trong col.lookupFields (hoặc fallback col.lookupField), ghép các giá trị bằng ký tự xuống dòng \n. Hiển thị đa dòng chuẩn xác trên bảng nhờ white-space: pre-line.
+       - **Loại bỏ đoán mò Khóa ngầm trong Lookup & Rollup (ColumnHeaderMenu.vue & formatters.js)**:
+         + ColumnHeaderMenu.vue: Bổ sung UI chọn rõ ràng "Cặp cột liên kết (Khóa nối giữa 2 bảng)" cho Rollup: Cột bảng nguồn = Cột bảng này (rollupTargetCol = rollupSourceCol).
+         + useTableColumns.js: Đồng bộ lưu các thuộc tính rollupTargetCol, rollupSourceCol, lookupFields.
+         + formatters.js (evaluateLookup & evaluateRollup):
+           * Trong Lookup: Chỉ liên kết khi có cấu hình điều kiện col.lookupConditions hoặc col.lookupLinkCol (hoặc pre-attached parent context). Xóa bỏ 100% logic tự động đoán mò pKeyField/tKeyField/rKeyField.
+           * Trong Rollup: Chỉ liên kết và gom bản ghi khi người dùng đã cấu hình cặp cột liên kết col.rollupTargetCol && col.rollupSourceCol (hoặc col.rollupLinkCol). Nếu chưa chọn: trả về 0 (cho count) hoặc "-" (cho sum/join/latest), tuyệt đối không tự ý gom ngầm.
+       - **Triệt tiêu Fallback Quốc gia cũ (DashboardView.vue, formatters.js, stores/personnel.js)**:
+         + DashboardView.vue (dòng 3898, 3966, 3980): Xóa bỏ toàn bộ các chuỗi fallback || t.countryName || t.country, chỉ đọc chính xác 1-1 từ cột được cấu hình countryColId.
+         + formatters.js (dòng 775, 788, 868-869): Xóa các chuỗi fallback alias cũ.
+         + stores/personnel.js (saveTrip): Khi người dùng cập nhật hoặc xóa trường quốc gia, tự động đồng bộ hóa và dọn sạch toàn bộ các alias (quoc_gia_xuat_canh, countryName, country, quoc_gia, quoc_gia_den) từ cả relObj.trips, pTrips, và standaloneTrips, ngăn chặn Directus/DB cũ phục hồi giá trị cũ.
+    3. **Kiểm thử & Triển khai**:
+       - npm run build thành công 100% (0 lỗi, 531ms).
+       - Đồng bộ toàn bộ assets dist/ và mã nguồn sang WINDOWS_OFFLINE_APP/frontend/.
+    4. **Trạng thái**: Done [Reversible].

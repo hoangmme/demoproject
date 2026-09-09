@@ -629,6 +629,7 @@ export function useTableColumns({
       lookupTarget,
       lookupLinkCol,
       lookupField,
+      lookupFields,
       lookupConditions,
       lookupLogicOp,
       lookupDisplay,
@@ -643,6 +644,7 @@ export function useTableColumns({
         c.lookupTarget = lookupTarget;
         c.lookupLinkCol = lookupLinkCol;
         c.lookupField = lookupField;
+        if (lookupFields !== undefined) c.lookupFields = lookupFields;
         if (lookupConditions !== undefined) c.lookupConditions = lookupConditions;
         if (lookupLogicOp !== undefined) c.lookupLogicOp = lookupLogicOp;
         if (lookupDisplay !== undefined) c.lookupDisplay = lookupDisplay;
@@ -660,6 +662,7 @@ export function useTableColumns({
           c.lookupTarget = lookupTarget;
           c.lookupLinkCol = lookupLinkCol;
           c.lookupField = lookupField;
+          if (lookupFields !== undefined) c.lookupFields = lookupFields;
           if (lookupConditions !== undefined) c.lookupConditions = lookupConditions;
           if (lookupLogicOp !== undefined) c.lookupLogicOp = lookupLogicOp;
           if (lookupDisplay !== undefined) c.lookupDisplay = lookupDisplay;
@@ -682,7 +685,10 @@ export function useTableColumns({
       rollupTarget,
       rollupLinkCol,
       rollupField,
+      rollupFunction,
       rollupOp,
+      rollupTargetCol,
+      rollupSourceCol,
       rollupConditions,
       rollupLogicOp,
       rollupFormat,
@@ -693,9 +699,12 @@ export function useTableColumns({
       if (c) {
         c.format = 'rollup';
         c.rollupTarget = rollupTarget;
-        c.rollupLinkCol = rollupLinkCol;
+        c.rollupLinkCol = rollupLinkCol || rollupSourceCol;
         c.rollupField = rollupField;
-        c.rollupOp = rollupOp;
+        c.rollupFunction = rollupFunction || rollupOp || 'count';
+        c.rollupOp = rollupOp || rollupFunction || 'count';
+        if (rollupTargetCol !== undefined) c.rollupTargetCol = rollupTargetCol;
+        if (rollupSourceCol !== undefined) c.rollupSourceCol = rollupSourceCol;
         if (rollupConditions !== undefined) c.rollupConditions = rollupConditions;
         if (rollupLogicOp !== undefined) c.rollupLogicOp = rollupLogicOp;
         if (rollupFormat !== undefined) c.rollupFormat = rollupFormat;
@@ -709,9 +718,12 @@ export function useTableColumns({
         if (c.id === colId) {
           c.format = 'rollup';
           c.rollupTarget = rollupTarget;
-          c.rollupLinkCol = rollupLinkCol;
+          c.rollupLinkCol = rollupLinkCol || rollupSourceCol;
           c.rollupField = rollupField;
-          c.rollupOp = rollupOp;
+          c.rollupFunction = rollupFunction || rollupOp || 'count';
+          c.rollupOp = rollupOp || rollupFunction || 'count';
+          if (rollupTargetCol !== undefined) c.rollupTargetCol = rollupTargetCol;
+          if (rollupSourceCol !== undefined) c.rollupSourceCol = rollupSourceCol;
           if (rollupConditions !== undefined) c.rollupConditions = rollupConditions;
           if (rollupLogicOp !== undefined) c.rollupLogicOp = rollupLogicOp;
           if (rollupFormat !== undefined) c.rollupFormat = rollupFormat;

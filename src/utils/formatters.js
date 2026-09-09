@@ -772,7 +772,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     const d = parseDateValue(rawDep);
     if (d && d.getFullYear() === targetYear) {
       count++;
-      const country = getRecordFieldValue(t, countryCol) || getRecordFieldValue(t, 'quoc_gia_xuat_canh') || getRecordFieldValue(t, 'quoc_gia') || getRecordFieldValue(t, 'quoc_gia_den') || getRecordFieldValue(t, 'country') || t.countryName || t.country || '';
+      const country = getRecordFieldValue(t, countryCol) || getRecordFieldValue(t, 'quoc_gia_xuat_canh') || t.countryName || '';
       matchedTrips.push({
         date: d,
         dateStr: formatDate(d) || formatDate(rawDep) || '',
@@ -785,7 +785,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   // Nếu bản ghi hiện tại là 1 chuyến đi nhưng personTrips rỗng hoặc chỉ có 1
   if (count === 0 && currentDepDate) {
     count = 1;
-    const country = getRecordFieldValue(record, countryCol) || getRecordFieldValue(record, 'quoc_gia_xuat_canh') || getRecordFieldValue(record, 'quoc_gia') || getRecordFieldValue(record, 'quoc_gia_den') || getRecordFieldValue(record, 'country') || record.countryName || record.country || '';
+    const country = getRecordFieldValue(record, countryCol) || getRecordFieldValue(record, 'quoc_gia_xuat_canh') || record.countryName || '';
     matchedTrips.push({
       date: currentDepDate,
       dateStr: formatDate(currentDepDate) || formatDate(rawCurrentDep) || '',
@@ -866,7 +866,7 @@ export const computeTripPresence = (t, formulaConfig = {}) => {
 
   const country = userCountryCol
     ? (getRecordFieldValue(t, userCountryCol) || '')
-    : (t.countryName || t.country || getRecordFieldValue(t, 'countryName') || getRecordFieldValue(t, 'country') || '');
+    : (getRecordFieldValue(t, 'quoc_gia_xuat_canh') || t.countryName || '');
 
   const depDate = parseDateValue(depRaw);
   const arrDate = parseDateValue(arrRaw);
@@ -1336,8 +1336,12 @@ export const lookupOperators = [
 export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
   if (!item || !col || depth > 5) return '-';
   const target = col.lookupTarget || 'personnel';
-  const field = col.lookupField;
-  if (!field) return '-';
+  
+  // Hỗ trợ chọn nhiều cột dữ liệu (lookupFields) hoặc 1 cột (lookupField)
+  const fields = Array.isArray(col.lookupFields) && col.lookupFields.length > 0
+    ? col.lookupFields
+    : (col.lookupField ? [col.lookupField] : []);
+  if (fields.length === 0) return '-';
 
   const findColumnDef = (colId) => {
     if (!colId || !personnelStore) return null;
@@ -1387,6 +1391,15 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     return obj[key] !== undefined ? obj[key] : (cd?.[key] !== undefined ? cd[key] : undefined);
   };
 
+  // Trích xuất các trường dữ liệu được chọn, mỗi dữ liệu 1 hàng
+  const extractCandidateValue = (cand) => {
+    if (!cand) return '';
+    const vals = fields
+      .map((f) => getProp(cand, f))
+      .filter((v) => v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-');
+    return vals.join('\n');
+  };
+
   const matchCondition = (cand, cond) => {
     if (!cond || !cond.targetField) return true;
     const op = cond.operator || 'is';
@@ -1412,7 +1425,7 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     if (op === 'starts_with') return strT.startsWith(strS);
     if (op === 'ends_with') return strT.endsWith(strS);
 
-    // Date/Number logic remains similar
+    // Date/Number logic
     if (['before', 'after', 'on_or_before', 'on_or_after', 'same_date'].includes(op)) {
       const dtT = parseDateValue(targetVal);
       const dtS = parseDateValue(sourceVal);
@@ -1464,7 +1477,7 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     }
   }
 
-  // 2. Kiểm tra nếu có cấu hình điều kiện mới (lookupConditions)
+  // 2. Kiểm tra nếu có cấu hình điều kiện liên kết (lookupConditions)
   const conditions = Array.isArray(col.lookupConditions) ? col.lookupConditions.filter(c => c && c.targetField) : [];
   if (conditions.length > 0) {
     const isOr = String(col.lookupLogicOp || 'AND').toUpperCase() === 'OR';
@@ -1480,175 +1493,44 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
       return matched.length;
     }
 
-    const values = matched
-      .map(m => getProp(m, field))
-      .filter(v => v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-');
-
     if (displayMode === 'join') {
+      const values = matched.map(extractCandidateValue).filter(Boolean);
       return values.length > 0 ? values.join(col.lookupJoinSeparator || ', ') : '-';
     }
     if (displayMode === 'array') {
+      const values = matched.map(extractCandidateValue).filter(Boolean);
       return values.length > 0 ? values.join('\n') : '-';
     }
     // Mặc định: 'value' (bản ghi đầu tiên)
-    return values.length > 0 ? String(values[0]) : '-';
+    return matched.length > 0 ? (extractCandidateValue(matched[0]) || '-') : '-';
   }
 
-  // 3. Khóa liên kết (Flat Relational Lookup)
-  if (target === 'personnel') {
-    if (!personnelStore && !item.rawPerson) return '-';
-    let parent = item.rawPerson || null;
-    const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : null;
-    const tKeyField = personnelStore?.getTripKeyField ? personnelStore.getTripKeyField() : null;
-    const rKeyField = personnelStore?.getRelativeKeyField ? personnelStore.getRelativeKeyField() : null;
-
-    // 1. Cột liên kết do người dùng chỉ định (nếu có)
-    const linkCol = col.lookupLinkCol;
-    if (!parent && linkCol) {
-      const linkVal = getProp(item, linkCol);
-      if (linkVal) {
-        parent = (personnelStore?.personnelList || []).find((p) => {
-          const pk = pKeyField ? getProp(p, pKeyField) : null;
-          return (pk && String(pk).trim() === String(linkVal).trim()) || String(p.id).trim() === String(linkVal).trim() || String(p.code || '').trim() === String(linkVal).trim();
-        }) || null;
+  // 3. Nếu dùng lookupLinkCol chỉ định rõ ràng
+  if (col.lookupLinkCol) {
+    const linkVal = getProp(item, col.lookupLinkCol);
+    if (linkVal) {
+      const linkStr = String(linkVal).trim().toLowerCase();
+      const matchedCand = candidatePool.find((cand) => {
+        const cId = cand.id !== undefined ? String(cand.id).trim().toLowerCase() : '';
+        const cCode = cand.code !== undefined ? String(cand.code).trim().toLowerCase() : '';
+        return (cId && cId === linkStr) || (cCode && cCode === linkStr);
+      });
+      if (matchedCand) {
+        return extractCandidateValue(matchedCand) || '-';
       }
-    }
-
-    // 2. Liên kết bản ghi phẳng qua ID quan hệ (Record ID Join)
-    if (!parent && item.personnelId && personnelStore?.personnelList) {
-      parent = personnelStore.personnelList.find((p) => String(p.id).trim() === String(item.personnelId).trim());
-    }
-
-    // 2b. Nếu là bản ghi chuyến đi của thân nhân qua relativeId
-    if (!parent && item.relativeId && personnelStore?.relativesList) {
-      const matchedRel = personnelStore.relativesList.find((r) => String(r.id).trim() === String(item.relativeId).trim());
-      if (matchedRel) {
-        if (matchedRel.personnelId && personnelStore?.personnelList) {
-          parent = personnelStore.personnelList.find((p) => String(p.id).trim() === String(matchedRel.personnelId).trim());
-        }
-        if (!parent && pKeyField && personnelStore?.personnelList) {
-          const relPKey = getProp(matchedRel, pKeyField);
-          if (relPKey) {
-            parent = personnelStore.personnelList.find((p) => {
-              const pk = getProp(p, pKeyField);
-              return pk && String(pk).trim().toLowerCase() === String(relPKey).trim().toLowerCase();
-            });
-          }
-        }
-      }
-    }
-
-    // 3. Liên kết động qua Khóa định danh bảng (Dynamic Key Matching)
-    if (!parent && personnelStore?.personnelList) {
-      // 3a. Dòng mang trực tiếp khóa của Cán bộ
-      if (pKeyField) {
-        const itemPKey = getProp(item, pKeyField);
-        if (itemPKey) {
-          parent = personnelStore.personnelList.find((p) => {
-            const pk = getProp(p, pKeyField);
-            return pk && String(pk).trim().toLowerCase() === String(itemPKey).trim().toLowerCase();
-          });
-        }
-      }
-
-      // 3b. Dòng chuyến đi: Khóa chuyến đi khớp với Khóa Cán bộ (chuyến đi của Cán bộ)
-      if (!parent && tKeyField && pKeyField) {
-        const itemTKey = getProp(item, tKeyField);
-        if (itemTKey) {
-          parent = personnelStore.personnelList.find((p) => {
-            const pk = getProp(p, pKeyField);
-            return pk && String(pk).trim().toLowerCase() === String(itemTKey).trim().toLowerCase();
-          });
-        }
-      }
-
-      // 3c. Dòng chuyến đi của Thân nhân: Khóa chuyến đi khớp với Thân nhân -> Cán bộ chủ quản
-      if (!parent && tKeyField && rKeyField) {
-        const itemTKey = getProp(item, tKeyField);
-        if (itemTKey) {
-          // Tìm thân nhân mang khóa này từ danh sách phẳng
-          const relList = personnelStore.relativesList || [];
-          const matchedRel = relList.find((r) => {
-            const rk = getProp(r, rKeyField);
-            return rk && String(rk).trim().toLowerCase() === String(itemTKey).trim().toLowerCase();
-          });
-          if (matchedRel) {
-            if (matchedRel.personnelId) {
-              parent = personnelStore.personnelList.find((p) => String(p.id).trim() === String(matchedRel.personnelId).trim());
-            } else if (pKeyField) {
-              const relPKey = getProp(matchedRel, pKeyField);
-              if (relPKey) {
-                parent = personnelStore.personnelList.find((p) => {
-                  const pk = getProp(p, pKeyField);
-                  return pk && String(pk).trim().toLowerCase() === String(relPKey).trim().toLowerCase();
-                });
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (parent) {
-      const val = getProp(parent, field);
-      return val !== undefined && val !== null && val !== '' ? String(val) : '-';
     }
     return '-';
   }
 
-  if (target === 'relatives') {
-    if (!personnelStore && !item.rawRelative) return '-';
-    let rel = item.rawRelative || null;
-    const rKeyField = personnelStore?.getRelativeKeyField ? personnelStore.getRelativeKeyField() : null;
-    const tKeyField = personnelStore?.getTripKeyField ? personnelStore.getTripKeyField() : null;
-
-    if (!rel && item.relativeId && personnelStore?.relativesList) {
-      rel = personnelStore.relativesList.find((r) => String(r.id).trim() === String(item.relativeId).trim());
-    }
-
-    const linkCol = col.lookupLinkCol;
-    const searchKey = linkCol ? getProp(item, linkCol) : (tKeyField ? getProp(item, tKeyField) : (rKeyField ? getProp(item, rKeyField) : null));
-    if (!rel && searchKey && rKeyField && personnelStore?.relativesList) {
-      rel = personnelStore.relativesList.find((r) => {
-        const k = getProp(r, rKeyField);
-        return k && String(k).trim().toLowerCase() === String(searchKey).trim().toLowerCase();
-      });
-    }
-
-    if (rel) {
-      const val = getProp(rel, field);
-      return val !== undefined && val !== null && val !== '' ? String(val) : '-';
-    }
-    return '-';
+  // 4. Nếu là đối tượng cha con đã gắn sẵn (nested/inline context)
+  if (target === 'personnel' && item.rawPerson) {
+    return extractCandidateValue(item.rawPerson) || '-';
+  }
+  if (target === 'relatives' && item.rawRelative) {
+    return extractCandidateValue(item.rawRelative) || '-';
   }
 
-  if (target === 'trips') {
-    if (!personnelStore) return '-';
-    const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : null;
-    const linkCol = col.lookupLinkCol;
-    const searchKey = linkCol ? getProp(item, linkCol) : (tKeyField ? getProp(item, tKeyField) : item.id);
-    if (!searchKey) return '-';
-
-    let targetTrip = null;
-    if (Array.isArray(item.trips)) {
-      targetTrip = item.trips.find((t) => {
-        const k = tKeyField ? getProp(t, tKeyField) : t.id;
-        return k && String(k).trim().toLowerCase() === String(searchKey).trim().toLowerCase();
-      });
-    }
-    if (!targetTrip && personnelStore.tripsList) {
-      targetTrip = personnelStore.tripsList.find((t) => {
-        const k = tKeyField ? getProp(t, tKeyField) : t.id;
-        return k && String(k).trim().toLowerCase() === String(searchKey).trim().toLowerCase();
-      });
-    }
-    if (targetTrip) {
-      const val = getProp(targetTrip, field);
-      return val !== undefined && val !== null && val !== '' ? String(val) : '-';
-    }
-    return '-';
-  }
-
+  // KHÔNG đoán mò khóa định danh (CCCD/Key) nếu người dùng chưa thiết lập điều kiện!
   return '-';
 };
 
@@ -1665,10 +1547,6 @@ export const evaluateRollup = (item, col, personnelStore) => {
   const field = col.rollupField;
   const fn = col.rollupFunction || 'count';
 
-  const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : null;
-  const rKeyField = personnelStore?.getRelativeKeyField ? personnelStore.getRelativeKeyField() : null;
-  const tKeyField = personnelStore?.getTripKeyField ? personnelStore.getTripKeyField() : null;
-
   const getSubProp = (sub, key) => {
     if (!sub || !key) return undefined;
     if (sub[key] !== undefined && sub[key] !== null && String(sub[key]).trim() !== '' && String(sub[key]).trim() !== '-') {
@@ -1684,97 +1562,52 @@ export const evaluateRollup = (item, col, personnelStore) => {
     return undefined;
   };
 
+  let candidatePool = [];
+  if (target === 'relative_trips') {
+    candidatePool = (personnelStore?.tripsList || []).filter((t) => t.isRelative === true || t.isRelative === 'true' || Boolean(t.relativeId));
+  } else if (target === 'trips') {
+    candidatePool = personnelStore?.tripsList || (Array.isArray(item.trips) ? item.trips : []);
+  } else if (target === 'relatives') {
+    candidatePool = personnelStore?.relativesList || (Array.isArray(item.relatives) ? item.relatives : []);
+  } else if (target === 'personnel') {
+    candidatePool = personnelStore?.personnelList || [];
+  }
+
   let list = [];
 
-  // Nguồn 1: Bảng Chuyến đi (Toàn bộ Chuyến đi phẳng - Flat Trips Engine)
-  if (target === 'relative_trips') {
-    // Chỉ lọc các chuyến đi của thân nhân thuộc về cán bộ này
-    const relIdSet = new Set();
-    const relKeySet = new Set();
-    (item.relatives || []).forEach((r) => {
-      if (r.id) relIdSet.add(String(r.id));
-      if (rKeyField && getSubProp(r, rKeyField)) relKeySet.add(String(getSubProp(r, rKeyField)));
-      if (r.cccdthannhan) relKeySet.add(String(r.cccdthannhan));
-    });
-
-    if (personnelStore?.relativesList && item.id) {
-      personnelStore.relativesList.forEach((r) => {
-        if (r.personnelId && String(r.personnelId) === String(item.id)) {
-          if (r.id) relIdSet.add(String(r.id));
-          if (rKeyField && getSubProp(r, rKeyField)) relKeySet.add(String(getSubProp(r, rKeyField)));
-          if (r.cccdthannhan) relKeySet.add(String(r.cccdthannhan));
-        }
+  // Khóa nối liên kết 2 bảng do người dùng chỉ định minh bạch (Target Col = Source Col)
+  if (col.rollupTargetCol && col.rollupSourceCol) {
+    const srcVal = getSubProp(item, col.rollupSourceCol);
+    if (srcVal !== undefined && srcVal !== null && String(srcVal).trim() !== '' && String(srcVal).trim() !== '-') {
+      const srcStr = String(srcVal).trim().toLowerCase();
+      list = candidatePool.filter((cand) => {
+        const targetVal = getSubProp(cand, col.rollupTargetCol);
+        if (targetVal === undefined || targetVal === null) return false;
+        return String(targetVal).trim().toLowerCase() === srcStr;
       });
+    } else {
+      list = [];
     }
-
-    const allTrips = personnelStore?.tripsList || [];
-    const pKey = pKeyField ? getSubProp(item, pKeyField) : null;
-
-    list = allTrips.filter((t) => {
-      const isRel = t.isRelative === true || t.isRelative === 'true' || Boolean(t.relativeId);
-      if (!isRel) return false;
-
-      // Khớp theo personnelId
-      if (item.id && t.personnelId && String(t.personnelId).trim() === String(item.id).trim()) return true;
-      // Khớp theo CCCD cán bộ cha
-      if (pKey && t.cccdparent && String(t.cccdparent).trim() === String(pKey).trim()) return true;
-      // Khớp theo relativeId
-      if (t.relativeId && relIdSet.has(String(t.relativeId).trim())) return true;
-      // Khớp theo CCCD thân nhân
-      const tRelKey = tKeyField ? getSubProp(t, tKeyField) : (t.cccdchuyendi || t.cccdthannhan);
-      if (tRelKey && relKeySet.has(String(tRelKey).trim())) return true;
-
-      return false;
-    });
-  } else if (target === 'trips') {
-    if (personnelStore?.tripsList) {
-      list = personnelStore.tripsList.filter((t) => {
-        if (item.id && t.personnelId && String(t.personnelId).trim() === String(item.id).trim()) return true;
-        if (item.id && t.relativeId && String(t.relativeId).trim() === String(item.id).trim()) return true;
-        if (pKeyField && tKeyField) {
-          const pKey = getSubProp(item, pKeyField);
-          const tKey = getSubProp(t, tKeyField);
-          if (pKey && tKey && String(pKey).trim() === String(tKey).trim()) return true;
-        }
-        if (rKeyField && tKeyField) {
-          const rKey = getSubProp(item, rKeyField);
-          const tKey = getSubProp(t, tKeyField);
-          if (rKey && tKey && String(rKey).trim() === String(tKey).trim()) return true;
-        }
-        return false;
+  } else if (col.rollupLinkCol) {
+    const srcVal = getSubProp(item, col.rollupLinkCol);
+    if (srcVal !== undefined && srcVal !== null && String(srcVal).trim() !== '' && String(srcVal).trim() !== '-') {
+      const srcStr = String(srcVal).trim().toLowerCase();
+      list = candidatePool.filter((cand) => {
+        const targetVal = cand.id || cand.code;
+        return targetVal && String(targetVal).trim().toLowerCase() === srcStr;
       });
-    } else if (Array.isArray(item.trips)) {
+    } else {
+      list = [];
+    }
+  } else {
+    // Chỉ xử lý nếu có mảng trực tiếp sẵn trên item (legacy inline arrays)
+    if (target === 'trips' && Array.isArray(item.trips)) {
       list = item.trips;
-    }
-  }
-  // Nguồn 3: Thân nhân
-  else if (target === 'relatives') {
-    if (personnelStore?.relativesList) {
-      list = personnelStore.relativesList.filter((r) => {
-        if (item.id && r.personnelId && r.personnelId === item.id) return true;
-        if (pKeyField) {
-          const pKey = getSubProp(item, pKeyField);
-          const rParentKey = getSubProp(r, pKeyField);
-          if (pKey && rParentKey && String(pKey).trim() === String(rParentKey).trim()) return true;
-        }
-        return false;
-      });
-    } else if (Array.isArray(item.relatives)) {
+    } else if (target === 'relatives' && Array.isArray(item.relatives)) {
       list = item.relatives;
-    }
-  }
-  // Nguồn 4: Cán bộ
-  else if (target === 'personnel') {
-    if (personnelStore?.personnelList) {
-      list = personnelStore.personnelList.filter((p) => {
-        if (item.personnelId && p.id === item.personnelId) return true;
-        if (pKeyField) {
-          const pKey = getSubProp(p, pKeyField);
-          const itemParentKey = getSubProp(item, pKeyField);
-          if (pKey && itemParentKey && String(pKey).trim() === String(itemParentKey).trim()) return true;
-        }
-        return false;
-      });
+    } else {
+      // KHÔNG đoán mò khóa ngầm nếu người dùng chưa chọn cặp cột liên kết!
+      return fn === 'count' ? 0 : '-';
     }
   }
 

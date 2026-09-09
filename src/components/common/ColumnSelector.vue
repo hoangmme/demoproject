@@ -409,39 +409,32 @@ const selectAll = () => {
 };
 
 const deselectAll = () => {
-  // Luôn giữ lại cột chính (Primary Field)
-  const primaryId = props.options[0]?.id;
-  emit('update:modelValue', primaryId ? [primaryId] : []);
-  emit('change', primaryId ? [primaryId] : []);
+  // Giữ lại 1 cột đầu tiên trong danh sách đang hiển thị để bảng không bị trống hoàn toàn
+  const firstId = displayOptions.value[0]?.id || props.options[0]?.id;
+  emit('update:modelValue', firstId ? [firstId] : []);
+  emit('change', firstId ? [firstId] : []);
 };
 
 const resetOrder = () => {
   customOrder.value = [];
-  const primaryId = props.options[0]?.id;
   const list = props.options.map((o) => o.id).filter((id) => props.modelValue.includes(id));
-  if (primaryId && !list.includes(primaryId)) {
-    list.unshift(primaryId);
-  }
   emit('update:modelValue', list);
   emit('change', list);
 };
 
 const toggleCol = (id) => {
-  const primaryId = props.options[0]?.id;
-  // Cột chính là bất khả xâm phạm, không cho bỏ chọn
-  if (id === primaryId) return;
-
   const currentList = [...displayOptions.value.map((o) => o.id)];
   const activeSet = new Set(props.modelValue);
   if (activeSet.has(id)) {
+    if (activeSet.size <= 1) {
+      alert('Bảng phải có ít nhất 1 cột hiển thị!');
+      return;
+    }
     activeSet.delete(id);
   } else {
     activeSet.add(id);
   }
   const result = currentList.filter((item) => activeSet.has(item));
-  if (primaryId && !result.includes(primaryId)) {
-    result.unshift(primaryId);
-  }
   emit('update:modelValue', result);
   emit('change', result);
 };

@@ -1065,6 +1065,22 @@ export const usePersonnelStore = defineStore('personnel', {
         delete cleanTrip.rawRelative;
         delete cleanTrip.rawTrip;
 
+        // Đồng bộ hóa triệt để và làm sạch các alias của trường Quốc gia
+        const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
+        let updatedCountryVal = undefined;
+        for (const alias of countryAliases) {
+          if (cleanTrip[alias] !== undefined) {
+            updatedCountryVal = cleanTrip[alias];
+            break;
+          }
+        }
+        if (updatedCountryVal !== undefined) {
+          const trimmedVal = String(updatedCountryVal || '').trim();
+          for (const alias of countryAliases) {
+            cleanTrip[alias] = trimmedVal;
+          }
+        }
+
         const pKeyField = this.getPersonnelKeyField ? this.getPersonnelKeyField() : 'cccdparent';
         const tKeyField = this.getTripKeyField ? this.getTripKeyField() : 'cccdchuyendi';
         const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'cccdthannhan';
@@ -1135,6 +1151,12 @@ export const usePersonnelStore = defineStore('personnel', {
               if (!relObj.trips) relObj.trips = [];
               const tIdx = relObj.trips.findIndex(isSameTrip);
               if (tIdx !== -1) {
+                if (updatedCountryVal !== undefined && !String(updatedCountryVal).trim()) {
+                  for (const alias of countryAliases) {
+                    delete relObj.trips[tIdx][alias];
+                    if (relObj.trips[tIdx].custom_data) delete relObj.trips[tIdx].custom_data[alias];
+                  }
+                }
                 relObj.trips[tIdx] = { ...relObj.trips[tIdx], ...cleanTrip };
               } else {
                 if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
@@ -1145,6 +1167,12 @@ export const usePersonnelStore = defineStore('personnel', {
               let pTrips = Array.isArray(updatedP.trips) ? [...updatedP.trips] : [];
               const tIdx = pTrips.findIndex(isSameTrip);
               if (tIdx !== -1) {
+                if (updatedCountryVal !== undefined && !String(updatedCountryVal).trim()) {
+                  for (const alias of countryAliases) {
+                    delete pTrips[tIdx][alias];
+                    if (pTrips[tIdx].custom_data) delete pTrips[tIdx].custom_data[alias];
+                  }
+                }
                 pTrips[tIdx] = { ...pTrips[tIdx], ...cleanTrip };
               } else {
                 if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
@@ -1170,6 +1198,12 @@ export const usePersonnelStore = defineStore('personnel', {
         if (Array.isArray(this.standaloneTrips)) {
           const sIdx = this.standaloneTrips.findIndex(isSameTrip);
           if (sIdx !== -1) {
+            if (updatedCountryVal !== undefined && !String(updatedCountryVal).trim()) {
+              for (const alias of countryAliases) {
+                delete this.standaloneTrips[sIdx][alias];
+                if (this.standaloneTrips[sIdx].custom_data) delete this.standaloneTrips[sIdx].custom_data[alias];
+              }
+            }
             this.standaloneTrips[sIdx] = { ...this.standaloneTrips[sIdx], ...cleanTrip };
             await saveAppSettings('standalone_trips', this.standaloneTrips);
           }

@@ -88,18 +88,58 @@
             <label style="font-size: 0.7rem; color: #1e3a8a; font-weight: 700; display: block; margin-bottom: 3px;">
               Lấy dữ liệu từ bảng (Look up data in this field):
             </label>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-              <select v-model="editLookupTarget" class="menu-select" @change="editLookupField = ''; handleSaveLookup()">
+            <div style="margin-bottom: 6px;">
+              <select v-model="editLookupTarget" class="menu-select" @change="editLookupField = ''; editLookupFields = []; handleSaveLookup()">
                 <option v-for="tbl in availableTargetTables" :key="tbl.id" :value="tbl.id">
                   {{ tbl.title }}
                 </option>
               </select>
-              <select v-model="editLookupField" class="menu-select" @change="handleSaveLookup">
-                <option value="">-- Chọn cột lấy --</option>
-                <option v-for="c in targetLookupCols" :key="c.id" :value="c.id">
-                  {{ c.label }} ({{ c.id }})
-                </option>
-              </select>
+            </div>
+
+            <!-- Bộ chọn nhiều cột dữ liệu cùng lúc (Multi-select) -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <span style="font-size: 0.68rem; color: #1e3a8a; font-weight: 700;">
+                  Chọn các cột cần lấy (mỗi dữ liệu 1 hàng):
+                </span>
+                <div style="display: flex; gap: 4px; font-size: 0.64rem;">
+                  <button type="button" @click="selectAllLookupFields" style="background: none; border: none; color: #0284c7; cursor: pointer; padding: 0;">Tất cả</button>
+                  <span style="color: #cbd5e1;">|</span>
+                  <button type="button" @click="deselectAllLookupFields" style="background: none; border: none; color: #64748b; cursor: pointer; padding: 0;">Bỏ chọn</button>
+                </div>
+              </div>
+
+              <!-- Danh sách checkbox các cột -->
+              <div style="max-height: 125px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px; display: flex; flex-direction: column; gap: 2px;">
+                <label
+                  v-for="c in targetLookupCols"
+                  :key="c.id"
+                  style="display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; cursor: pointer; font-size: 0.72rem; transition: background 0.15s ease;"
+                  :style="{ background: editLookupFields.includes(c.id) ? '#eff6ff' : 'transparent' }"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="editLookupFields.includes(c.id)"
+                    @change="toggleLookupField(c.id)"
+                    style="accent-color: #0284c7; width: 14px; height: 14px; cursor: pointer;"
+                  />
+                  <span style="font-weight: 500; color: #1e293b;">{{ c.label }}</span>
+                  <span style="font-size: 0.64rem; color: #94a3b8;">({{ c.id }})</span>
+                </label>
+                <div v-if="!targetLookupCols || targetLookupCols.length === 0" style="font-size: 0.68rem; color: #94a3b8; padding: 6px; text-align: center;">
+                  (Không có cột nào)
+                </div>
+              </div>
+              <div v-if="editLookupFields.length > 0" style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 3px;">
+                <span
+                  v-for="fId in editLookupFields"
+                  :key="fId"
+                  style="display: inline-flex; align-items: center; gap: 3px; font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 1px 6px; border-radius: 4px; font-weight: 600;"
+                >
+                  {{ getLookupColLabel(fId) }}
+                  <i class="pi pi-times" style="font-size: 0.55rem; cursor: pointer;" @click="toggleLookupField(fId)"></i>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -374,6 +414,37 @@
                 {{ c.label }} ({{ c.id }})
               </option>
             </select>
+          </div>
+
+          <!-- 4. Cặp cột khóa liên kết giữa 2 bảng -->
+          <div style="margin-bottom: 6px; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 8px;">
+            <label style="font-size: 0.68rem; color: #166534; font-weight: 700; display: block; margin-bottom: 4px;">
+              4. Cặp cột liên kết (Khóa nối giữa 2 bảng):
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 4px; align-items: center;">
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b; display: block; margin-bottom: 2px;">Cột bảng nguồn:</span>
+                <select v-model="editRollupTargetCol" class="menu-select" style="font-size: 0.7rem; height: 26px; padding: 0 4px;" @change="handleSaveRollup">
+                  <option value="">-- Cột bảng nguồn --</option>
+                  <option v-for="c in targetRollupCols" :key="c.id" :value="c.id">
+                    {{ c.label }} ({{ c.id }})
+                  </option>
+                </select>
+              </div>
+              <span style="font-weight: 700; color: #16a34a; font-size: 0.75rem; padding-top: 14px;">=</span>
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b; display: block; margin-bottom: 2px;">Cột bảng này:</span>
+                <select v-model="editRollupSourceCol" class="menu-select" style="font-size: 0.7rem; height: 26px; padding: 0 4px;" @change="handleSaveRollup">
+                  <option value="">-- Cột bảng này --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
+                    {{ c.label }} ({{ c.id }})
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div style="font-size: 0.62rem; color: #64748b; margin-top: 4px; font-style: italic;">
+              💡 <em>VD:</em> Cột [cccdchuyendi] của Chuyến đi = Cột [cccd] của Cán bộ
+            </div>
           </div>
 
           <!-- Live Preview -->
@@ -668,6 +739,7 @@ const editSuggestFillCol = ref("");
 const editLookupTarget = ref("personnel");
 const editLookupLinkCol = ref("");
 const editLookupField = ref("");
+const editLookupFields = ref([]);
 const editLookupConditions = ref([]);
 const editLookupLogicOp = ref("AND");
 const editLookupDisplay = ref("value");
@@ -676,6 +748,8 @@ const editLookupFormat = ref("default");
 const editRollupTarget = ref("trips");
 const editRollupField = ref("");
 const editRollupFunction = ref("count");
+const editRollupTargetCol = ref("");
+const editRollupSourceCol = ref("");
 
 const availablePersonnelCols = computed(() => {
   const list = [];
@@ -813,7 +887,10 @@ watch(
       editSuggestFillCol.value = col.suggestFillCol || "";
       editLookupTarget.value = col.lookupTarget || "personnel";
       editLookupLinkCol.value = col.lookupLinkCol || "";
-      editLookupField.value = col.lookupField || "";
+      editLookupFields.value = Array.isArray(col.lookupFields) && col.lookupFields.length > 0
+        ? [...col.lookupFields]
+        : (col.lookupField ? [col.lookupField] : []);
+      editLookupField.value = col.lookupField || (editLookupFields.value[0] || "");
       editLookupConditions.value = Array.isArray(col.lookupConditions)
         ? JSON.parse(JSON.stringify(col.lookupConditions))
         : (col.lookupLinkCol ? [{ targetField: col.lookupLinkCol, operator: 'is', sourceField: col.lookupLinkCol }] : []);
@@ -825,6 +902,8 @@ watch(
       editRollupTarget.value = col.rollupTarget || "trips";
       editRollupField.value = col.rollupField || "";
       editRollupFunction.value = col.rollupFunction || "count";
+      editRollupTargetCol.value = col.rollupTargetCol || "";
+      editRollupSourceCol.value = col.rollupSourceCol || col.rollupLinkCol || "";
       editIncludeInExport.value = col.includeInExport !== false && col.includeInExport !== 'false';
       editShowInDetail.value = col.showInDetail !== false && col.showInDetail !== 'false';
       editCollapseDuplicates.value = Boolean(col.collapseDuplicates);
@@ -845,6 +924,8 @@ const rollupPreviewResult = computed(() => {
       rollupTarget: editRollupTarget.value || 'trips',
       rollupField: editRollupField.value || '',
       rollupFunction: editRollupFunction.value || 'count',
+      rollupTargetCol: editRollupTargetCol.value || '',
+      rollupSourceCol: editRollupSourceCol.value || '',
     }, personnelStore);
     if (res === null || res === undefined || res === '') return '(trống)';
     return String(res);
@@ -909,12 +990,42 @@ const handleSaveRename = () => {
   closeMenu();
 };
 
+const getLookupColLabel = (colId) => {
+  const found = (targetLookupCols.value || []).find((c) => c.id === colId);
+  return found?.label || colId;
+};
+
+const toggleLookupField = (fieldId) => {
+  const set = new Set(editLookupFields.value);
+  if (set.has(fieldId)) {
+    set.delete(fieldId);
+  } else {
+    set.add(fieldId);
+  }
+  editLookupFields.value = Array.from(set);
+  editLookupField.value = editLookupFields.value[0] || '';
+  handleSaveLookup();
+};
+
+const selectAllLookupFields = () => {
+  editLookupFields.value = (targetLookupCols.value || []).map((c) => c.id);
+  editLookupField.value = editLookupFields.value[0] || '';
+  handleSaveLookup();
+};
+
+const deselectAllLookupFields = () => {
+  editLookupFields.value = [];
+  editLookupField.value = '';
+  handleSaveLookup();
+};
+
 const handleSaveLookup = () => {
   emit("change-lookup", {
     colId: props.column.id,
     lookupTarget: editLookupTarget.value,
     lookupLinkCol: editLookupLinkCol.value.trim(),
-    lookupField: editLookupField.value,
+    lookupField: editLookupFields.value[0] || editLookupField.value || '',
+    lookupFields: editLookupFields.value,
     lookupConditions: editLookupConditions.value,
     lookupLogicOp: editLookupLogicOp.value,
     lookupDisplay: editLookupDisplay.value,
@@ -936,6 +1047,9 @@ const handleSaveRollup = () => {
     rollupTarget: editRollupTarget.value,
     rollupField: editRollupField.value,
     rollupFunction: editRollupFunction.value,
+    rollupTargetCol: editRollupTargetCol.value,
+    rollupSourceCol: editRollupSourceCol.value,
+    rollupLinkCol: editRollupSourceCol.value,
   });
 };
 

@@ -3895,8 +3895,8 @@ const stats = computed(() => {
   const allTrips = (unifiedTripsList.value || []).filter((t) => !t.isRelative && !t.isRelativeTrip);
 
   allTrips.forEach((t) => {
-    const cName = String(getTripValue(t, countryColId) || t[countryColId] || t.countryName || '').trim();
-    const fName = String(getTripValue(t, fundingColId) || t[fundingColId] || t.fundingName || '').trim();
+    const cName = String(getTripValue(t, countryColId) ?? t[countryColId] ?? '').trim();
+    const fName = String(getTripValue(t, fundingColId) ?? t[fundingColId] ?? '').trim();
 
     const enrichedTrip = {
       ...t,
@@ -3963,7 +3963,7 @@ const stats = computed(() => {
     let hasAbroad = false;
     if (Array.isArray(p.trips) && p.trips.length > 0) {
       hasAbroad = p.trips.some((t) => {
-        const c = getTripValue(t, colConfig.value.country) || t.countryName || t.country;
+        const c = getTripValue(t, colConfig.value.country) ?? t[colConfig.value.country] ?? '';
         return c && String(c).trim() !== '' && String(c).trim() !== '-' && String(c).trim() !== 'Chưa rõ';
       });
     }
@@ -3977,7 +3977,7 @@ const stats = computed(() => {
   });
 
   filteredTrips.forEach((t) => {
-    const c = getTripValue(t, colConfig.value.country) || t.countryName;
+    const c = getTripValue(t, colConfig.value.country) ?? t[colConfig.value.country] ?? '';
     if (c && String(c).trim() !== '' && String(c).trim() !== '-' && String(c).trim() !== 'Chưa rõ') {
       const key = String(t.personnelId || t.personnelCode || (t.personnel && (t.personnel.id || t.personnel.code)) || t.personnelName || '');
       if (key && !abroadPersonnelSet.has(key)) {
