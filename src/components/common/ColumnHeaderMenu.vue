@@ -549,20 +549,47 @@
             <span style="font-weight: 600;">🔑 Đặt làm Khóa chính của bảng này (Primary Key)</span>
           </label>
 
-          <!-- Liên kết tới bảng khác -->
-          <div style="border-top: 1px dashed #bbf7d0; padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 0.7rem; font-weight: 600; color: #15803d;">
-              🔗 Liên kết cột này tới Bảng khác:
-            </label>
-            <select v-model="editLinkTable" class="menu-select" style="font-size: 0.72rem;" @change="editLinkColumn = ''; handleSaveLinkTable()">
-              <option value="">-- Không liên kết --</option>
-              <option v-for="t in availableTargetTables" :key="t.id" :value="t.id">
-                {{ t.title }} ({{ t.id }})
-              </option>
-            </select>
+          <!-- Liên kết tới bảng khác (Hỗ trợ liên kết đồng thời nhiều bảng / khóa chính) -->
+          <div style="border-top: 1px dashed #bbf7d0; padding-top: 6px; display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: #15803d;">
+                🔗 Liên kết cột này tới Bảng khác (Foreign Key):
+              </label>
+              <button
+                v-if="selectedLinkTables.length > 0"
+                type="button"
+                @click="clearAllLinkTables"
+                style="font-size: 0.65rem; color: #ef4444; background: transparent; border: none; cursor: pointer; text-decoration: underline;"
+              >
+                Gỡ liên kết
+              </button>
+            </div>
+            <div style="font-size: 0.64rem; color: #64748b; line-height: 1.35;">
+              Tích chọn bảng đích. Có thể chọn cùng lúc 2 hoặc nhiều bảng (VD: cột CCCD chuyến đi liên kết cả Cán bộ và Thân nhân).
+            </div>
 
-            <div v-if="editLinkTable" style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
-              <span style="font-size: 0.65rem; color: #64748b;">Cột ở bảng đích để nối:</span>
+            <!-- Danh sách bảng liên kết dạng Checklist -->
+            <div style="display: flex; flex-direction: column; gap: 4px; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 8px; max-height: 120px; overflow-y: auto;">
+              <label
+                v-for="t in availableTargetTables"
+                :key="t.id"
+                style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: #1e293b; cursor: pointer; user-select: none;"
+              >
+                <input
+                  type="checkbox"
+                  :checked="isLinkTableSelected(t.id)"
+                  @change="toggleLinkTable(t.id)"
+                  style="accent-color: #16a34a; cursor: pointer;"
+                />
+                <span :style="{ fontWeight: isLinkTableSelected(t.id) ? '700' : 'normal', color: isLinkTableSelected(t.id) ? '#15803d' : '#334155' }">
+                  {{ t.title }} <small style="color: #64748b;">({{ t.id }})</small>
+                </span>
+              </label>
+            </div>
+
+            <!-- Tùy chọn cột nối khi chỉ chọn 1 bảng -->
+            <div v-if="selectedLinkTables.length === 1" style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
+              <span style="font-size: 0.65rem; color: #64748b;">Cột ở bảng đích để nối (tùy chọn):</span>
               <select v-model="editLinkColumn" class="menu-select" style="font-size: 0.7rem;" @change="handleSaveLinkTable">
                 <option value="">-- Mặc định (Khóa chính bảng đích) --</option>
                 <option v-for="c in targetLinkCols" :key="c.id" :value="c.id">
@@ -571,7 +598,7 @@
               </select>
             </div>
             <div style="font-size: 0.63rem; color: #64748b; line-height: 1.35; margin-top: 2px;">
-              💡 Khi liên kết bảng, Form Chi tiết sẽ tự động hiển thị Tab mang tên bảng đó để bạn mở và chỉnh sửa trực tiếp.
+              💡 Khi liên kết bảng, Form Chi tiết sẽ tự động hiển thị Tab mang tên bảng đó để bạn mở và chỉnh sửa trực tiếp. Nếu không chọn bảng nào, sẽ không hiện tab thừa.
             </div>
           </div>
         </div>
@@ -597,24 +624,36 @@
 
           <template v-if="editSuggestEnabled">
             <div style="font-size: 0.7rem; color: #701a75; line-height: 1.35;">
-              Khi nhập liệu ở ô này, bạn gõ tìm kiếm theo tên hoặc mã từ bảng khác, hệ thống sẽ gợi ý và tự động điền giá trị tương ứng vào ô (dạng Flat độc lập).
+              Khi nhập liệu ở ô này, bạn gõ tìm kiếm theo tên hoặc mã từ bảng khác, hệ thống sẽ gợi ý và tự động điền giá trị tương ứng vào ô.
             </div>
 
-            <!-- Chọn Bảng nguồn gợi ý -->
-            <div style="display: flex; flex-direction: column; gap: 2px;">
-              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">1. Bảng nguồn dữ liệu gợi ý:</span>
-              <select v-model="editSuggestTarget" class="menu-select" @change="handleSuggestTargetChange">
-                <option v-for="t in availableTargetTables" :key="t.id" :value="t.id">
-                  {{ t.title }} ({{ t.id }})
-                </option>
-              </select>
+            <!-- Chọn Bảng nguồn gợi ý dạng Checklist đa chọn -->
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">1. Bảng nguồn dữ liệu gợi ý (Có thể chọn nhiều bảng):</span>
+              <div style="display: flex; flex-direction: column; gap: 4px; background: #ffffff; border: 1px solid #f0abfc; border-radius: 6px; padding: 6px 8px; max-height: 120px; overflow-y: auto;">
+                <label
+                  v-for="t in availableTargetTables"
+                  :key="t.id"
+                  style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: #1e293b; cursor: pointer; user-select: none;"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="isSuggestTargetSelected(t.id)"
+                    @change="toggleSuggestTarget(t.id)"
+                    style="accent-color: #c026d3; cursor: pointer;"
+                  />
+                  <span :style="{ fontWeight: isSuggestTargetSelected(t.id) ? '700' : 'normal', color: isSuggestTargetSelected(t.id) ? '#86198f' : '#334155' }">
+                    {{ t.title }} <small style="color: #64748b;">({{ t.id }})</small>
+                  </span>
+                </label>
+              </div>
             </div>
 
             <!-- Chọn Cột để gõ tìm kiếm -->
             <div style="display: flex; flex-direction: column; gap: 2px;">
               <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">2. Cột dùng để gõ tìm kiếm (VD: Họ và tên):</span>
               <select v-model="editSuggestSearchCol" class="menu-select" @change="handleSaveSuggest">
-                <option value="">-- Chọn cột tìm kiếm --</option>
+                <option value="">-- Mặc định (Tên / Họ và tên) --</option>
                 <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
                   {{ c.label }} ({{ c.id }})
                 </option>
@@ -625,7 +664,7 @@
             <div style="display: flex; flex-direction: column; gap: 2px;">
               <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">3. Cột lấy giá trị điền vào ô (VD: CCCD, Mã):</span>
               <select v-model="editSuggestFillCol" class="menu-select" @change="handleSaveSuggest">
-                <option value="">-- Chọn cột lấy giá trị điền --</option>
+                <option value="">-- Mặc định (Khóa chính / CCCD / Mã) --</option>
                 <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
                   {{ c.label }} ({{ c.id }})
                 </option>
@@ -883,8 +922,69 @@ const targetRollupCols = computed(() => {
   return getColumnsForTargetTable(editRollupTarget.value);
 });
 
+const selectedLinkTables = computed(() => {
+  if (!editLinkTable.value) return [];
+  return String(editLinkTable.value).split(',').map((s) => s.trim()).filter(Boolean);
+});
+
+const isLinkTableSelected = (tableId) => {
+  return selectedLinkTables.value.includes(tableId);
+};
+
+const toggleLinkTable = (tableId) => {
+  const current = new Set(selectedLinkTables.value);
+  if (current.has(tableId)) {
+    current.delete(tableId);
+  } else {
+    current.add(tableId);
+  }
+  editLinkTable.value = Array.from(current).join(',');
+  if (current.size !== 1) {
+    editLinkColumn.value = '';
+  }
+  handleSaveLinkTable();
+};
+
+const clearAllLinkTables = () => {
+  editLinkTable.value = '';
+  editLinkColumn.value = '';
+  handleSaveLinkTable();
+};
+
+const selectedSuggestTargets = computed(() => {
+  if (!editSuggestTarget.value) return ['personnel'];
+  return String(editSuggestTarget.value).split(',').map((s) => s.trim()).filter(Boolean);
+});
+
+const isSuggestTargetSelected = (tableId) => {
+  return selectedSuggestTargets.value.includes(tableId);
+};
+
+const toggleSuggestTarget = (tableId) => {
+  const current = new Set(selectedSuggestTargets.value);
+  if (current.has(tableId)) {
+    if (current.size > 1) {
+      current.delete(tableId);
+    }
+  } else {
+    current.add(tableId);
+  }
+  editSuggestTarget.value = Array.from(current).join(',');
+  handleSuggestTargetChange();
+};
+
 const suggestTargetCols = computed(() => {
-  return getColumnsForTargetTable(editSuggestTarget.value);
+  const targets = selectedSuggestTargets.value;
+  const colMap = new Map();
+  targets.forEach((tId) => {
+    const cols = getColumnsForTargetTable(tId) || [];
+    cols.forEach((c) => {
+      if (!colMap.has(c.id)) {
+        colMap.set(c.id, c);
+      }
+    });
+  });
+  return Array.from(colMap.values());
 });
 
 const handleSuggestTargetChange = () => {
@@ -925,7 +1025,10 @@ const selectedFieldCount = computed(() => {
 });
 
 const targetLinkCols = computed(() => {
-  return getColumnsForTargetTable(editLinkTable.value);
+  if (selectedLinkTables.value.length === 1) {
+    return getColumnsForTargetTable(selectedLinkTables.value[0]);
+  }
+  return [];
 });
 
 const handleToggleIsKey = () => {

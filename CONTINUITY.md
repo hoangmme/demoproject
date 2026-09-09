@@ -2625,3 +2625,26 @@
        - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
     4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-10 - Session 25)**: **Khử Triệt Để Tab Thừa Khi Chưa Gán, Hỗ Trợ Liên Kết Đa Khóa Chính/Đa Bảng & Thẻ Thông Tin Chi Tiết Cho Ô Gợi Ý Tự Điền**:
+    1. **Yêu cầu của người dùng**:
+       - *"Cột 'Gợi ý tìm kiếm & Tự điền từ bảng khác:' có liên kết với 2 primal key cùng lúc thì làm sao...?"*: Cho phép cấu hình gợi ý và liên kết một cột tới đồng thời 2 (hoặc nhiều) bảng / khóa chính (VD: Cột CCCD chuyến đi có thể thuộc về Cán bộ HOẶC thuộc về Thân nhân).
+       - *"...và tôi thấy chưa gán mà sao vẫn còn tab cũ?"*: Khắc phục triệt để hiện tượng chưa gán liên kết cột nhưng form chi tiết vẫn hiện tab cũ (Cán bộ, Thân nhân, Chuyến đi). Khi chưa gán `linkTable`: chỉ hiển thị duy nhất tab chính của bảng hiện tại, không hiện bất kỳ tab liên kết thừa nào!
+       - *"- Với 'Gợi ý tìm kiếm & Tự điền từ bảng khác:'' khi điền xong nên hiện thêm dữ liệu (hiện tại chỉ show 1 dữ liệu)"*: Khi điền hoặc chọn từ dropdown gợi ý (VD: chọn "Đoàn Hùng Vũ"), ô nhập không chỉ hiện mỗi mã CCCD trơ trọi mà phải hiển thị thẻ thông tin phong phú (Họ tên, Nguồn bảng Cán bộ/Thân nhân, Chức vụ, Đơn vị / Quan hệ) ngay bên dưới ô nhập.
+    2. **Giải pháp & Triển khai**:
+       - **Khử 100% Tab Thừa & Hỗ Trợ Multi-Table Link (`src/components/personnel/PersonnelRelatedTabs.vue`)**:
+         * Xóa bỏ hoàn toàn khối fallback cố định các bảng core `curId in (personnel, relatives, trips)` trong `isTableLinked`.
+         * Thêm hàm `checkTableMatchesLink(linkTableStr, tableId, tableSource)` hỗ trợ chuỗi danh sách bảng phân tách bằng dấu phẩy (VD: `linkTable: 'personnel,relatives'`).
+         * Chỉ khi nào cột được người dùng cấu hình `linkTable` rõ ràng thì tab đích mới xuất hiện. Khi chưa gán (`linkTable` rỗng), `isTableLinked` trả về `false`, chỉ hiển thị duy nhất tab chính (`info`), ẩn hoàn toàn thanh điều hướng tab thừa.
+         * Cập nhật `getLinkedRows` đối chiếu chính xác theo khóa chính của từng bảng đích tương ứng.
+       - **Cấu hình Đa Bảng Dạng Checklist Đa Chọn (`src/components/common/ColumnHeaderMenu.vue`)**:
+         * Mục 5c (Khóa & Liên kết Bảng): Thay dropdown đơn thành checklist checkbox cho phép tích chọn cùng lúc 1 hoặc nhiều bảng đích (VD: tích cả Cán bộ & Thân nhân); có nút "Gỡ liên kết" nhanh.
+         * Mục 5b (Gợi ý tự điền): Thay dropdown bảng nguồn thành checklist checkbox cho phép tích chọn nhiều bảng nguồn để tìm kiếm và tự điền. Cột tìm kiếm và cột lấy giá trị tự động tổng hợp từ các bảng được chọn.
+       - **Hiển Thị Thẻ Thông Tin Phong Phú Sau Khi Điền (`src/components/common/DynamicField.vue`)**:
+         * `filteredSuggestList`: Tìm kiếm trên toàn bộ các bảng nguồn đã chọn, gắn huy hiệu `[Cán bộ]`, `[Thân nhân]` hoặc tên bảng tự tạo vào từng dòng dropdown.
+         * `matchedSuggestRecord`: Tự động tìm kiếm bản ghi khớp với giá trị ô nhập (CCCD/ID) qua tất cả các bảng đích đã cấu hình.
+         * Render thẻ thông tin `suggest-matched-card` ngay dưới ô nhập: Huy hiệu bảng xanh lá, Họ tên in đậm, Giá trị mã/CCCD, Chức vụ, Phòng ban, Quan hệ (nếu là thân nhân), kèm nút `x` để xóa nhanh và chọn đối tượng khác.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 578ms).
+       - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+    4. **Trạng thái**: Done [Reversible].
+

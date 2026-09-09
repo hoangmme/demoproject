@@ -42,9 +42,14 @@
             onmouseout="this.style.background='#ffffff'"
           >
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-              <span style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">
-                {{ item.displayLabel }}
-              </span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span v-if="item.tableTag" style="font-size: 0.65rem; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 1px 5px; border-radius: 4px;">
+                  {{ item.tableTag }}
+                </span>
+                <span style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">
+                  {{ item.displayLabel }}
+                </span>
+              </div>
               <span style="font-size: 0.72rem; color: #0284c7; font-weight: 700; background: #e0f2fe; padding: 1px 6px; border-radius: 4px; font-family: monospace;">
                 {{ item.fillValue }}
               </span>
@@ -53,6 +58,49 @@
               {{ item.subInfo }}
             </div>
           </div>
+        </div>
+
+        <!-- Thẻ hiển thị thêm thông tin phong phú khi đã điền xong -->
+        <div
+          v-if="matchedSuggestRecord"
+          class="suggest-matched-card"
+          style="margin-top: 6px; padding: 6px 10px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 6px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;"
+        >
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span style="font-size: 0.66rem; font-weight: 700; color: #15803d; background: #dcfce7; padding: 1px 6px; border-radius: 4px; border: 1px solid #bbf7d0;">
+                {{ matchedSuggestRecord.tableTitle }}
+              </span>
+              <span style="font-weight: 700; color: #0f172a; font-size: 0.82rem;">
+                {{ matchedSuggestRecord.name }}
+              </span>
+              <span style="font-size: 0.72rem; color: #166534; font-family: monospace; font-weight: 600;">
+                ({{ matchedSuggestRecord.fillValue }})
+              </span>
+            </div>
+            <div style="font-size: 0.7rem; color: #475569; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px;">
+              <span v-if="matchedSuggestRecord.position" style="font-weight: 500;">
+                💼 {{ matchedSuggestRecord.position }}
+              </span>
+              <span v-if="matchedSuggestRecord.department" style="color: #64748b;">
+                🏢 {{ matchedSuggestRecord.department }}
+              </span>
+              <span v-if="matchedSuggestRecord.relation" style="color: #0284c7; font-weight: 600;">
+                👥 {{ matchedSuggestRecord.relation }}
+              </span>
+              <span v-if="matchedSuggestRecord.parentPersonName" style="color: #64748b;">
+                (Cán bộ liên quan: {{ matchedSuggestRecord.parentPersonName }})
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            @click="model = ''"
+            style="border: none; background: transparent; color: #94a3b8; cursor: pointer; padding: 2px 4px; border-radius: 4px;"
+            title="Xóa và chọn lại"
+          >
+            <i class="pi pi-times" style="font-size: 0.8rem;"></i>
+          </button>
         </div>
       </div>
 
@@ -639,50 +687,136 @@ const getRowCustomField = (row, key) => {
   return cd?.[key] ?? '';
 };
 
+const targetTablesList = computed(() => {
+  if (!props.col?.suggestTarget) return [];
+  return String(props.col.suggestTarget)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+});
+
+const getRowsForTarget = (target) => {
+  if (target === 'personnel') return personnelStore.personnelList || [];
+  if (target === 'relatives') return personnelStore.relativesList || [];
+  if (target === 'trips') return personnelStore.tripsList || [];
+  try {
+    const customRows = JSON.parse(localStorage.getItem(`custom_table_rows_${target}`) || '[]');
+    if (Array.isArray(customRows)) return customRows;
+  } catch (e) {}
+  return [];
+};
+
+const getTableDisplayName = (target) => {
+  if (target === 'personnel') return 'Cán bộ';
+  if (target === 'relatives') return 'Thân nhân';
+  if (target === 'trips') return 'Chuyến đi';
+  try {
+    const customDashboards = JSON.parse(localStorage.getItem('custom_dashboards_config') || '[]');
+    const d = customDashboards.find((x) => x.id === target || x.source === target);
+    if (d && d.title) return d.title;
+  } catch (e) {}
+  return target;
+};
+
 const filteredSuggestList = computed(() => {
   if (!props.col?.suggestEnabled || !props.col?.suggestTarget) return [];
 
-  const target = props.col.suggestTarget;
+  const targets = targetTablesList.value;
   const searchCol = props.col.suggestSearchCol || 'name';
   const fillCol = props.col.suggestFillCol || 'cccd';
-
-  let rawList = [];
-  if (target === 'personnel') rawList = personnelStore.personnelList || [];
-  else if (target === 'relatives') rawList = personnelStore.relativesList || [];
-  else if (target === 'trips') rawList = personnelStore.tripsList || [];
-  else {
-    try {
-      const customRows = JSON.parse(localStorage.getItem(`custom_table_rows_${target}`) || '[]');
-      if (Array.isArray(customRows)) rawList = customRows;
-    } catch (e) {}
-  }
-
   const query = String(model.value || '').trim().toLowerCase();
 
   const results = [];
-  for (const row of rawList) {
-    const sVal = String(getRowCustomField(row, searchCol) || row.name || row.relativeName || row.fullName || '').trim();
-    const fVal = String(getRowCustomField(row, fillCol) || row.cccd || row.cccdthannhan || row.code || row.id || '').trim();
+  for (const target of targets) {
+    const rawList = getRowsForTarget(target);
+    const tableTag = getTableDisplayName(target);
 
-    if (!query || sVal.toLowerCase().includes(query) || fVal.toLowerCase().includes(query)) {
-      const extraParts = [];
-      const dept = row.departmentName || getRowCustomField(row, 'departmentName') || '';
-      const pos = row.position || getRowCustomField(row, 'position') || '';
-      const rel = row.relationshipName || getRowCustomField(row, 'relationshipName') || '';
-      if (rel) extraParts.push(`Quan hệ: ${rel}`);
-      if (pos) extraParts.push(pos);
-      if (dept) extraParts.push(dept);
+    for (const row of rawList) {
+      const sVal = String(
+        getRowCustomField(row, searchCol) ||
+        row.name ||
+        row.relativeName ||
+        row.fullName ||
+        ''
+      ).trim();
+      const fVal = String(
+        getRowCustomField(row, fillCol) ||
+        row.cccd ||
+        row.cccdthannhan ||
+        row.code ||
+        row.id ||
+        ''
+      ).trim();
 
-      results.push({
-        displayLabel: sVal || fVal || 'Bản ghi',
-        fillValue: fVal || sVal,
-        subInfo: extraParts.join(' • '),
-      });
-      if (results.length >= 25) break;
+      if (!query || sVal.toLowerCase().includes(query) || fVal.toLowerCase().includes(query)) {
+        const extraParts = [];
+        const dept = row.departmentName || getRowCustomField(row, 'departmentName') || '';
+        const pos = row.position || getRowCustomField(row, 'position') || '';
+        const rel = row.relationshipName || getRowCustomField(row, 'relationshipName') || '';
+        if (rel) extraParts.push(`Quan hệ: ${rel}`);
+        if (pos) extraParts.push(pos);
+        if (dept) extraParts.push(dept);
+
+        results.push({
+          tableTag: targets.length > 1 ? tableTag : '',
+          displayLabel: sVal || fVal || 'Bản ghi',
+          fillValue: fVal || sVal,
+          subInfo: extraParts.join(' • '),
+        });
+        if (results.length >= 30) break;
+      }
     }
+    if (results.length >= 30) break;
   }
 
   return results;
+});
+
+const matchedSuggestRecord = computed(() => {
+  if (!props.col?.suggestEnabled || !props.col?.suggestTarget) return null;
+  const val = String(model.value || '').trim();
+  if (!val) return null;
+
+  const targets = targetTablesList.value;
+  const fillCol = props.col.suggestFillCol || 'cccd';
+  const searchCol = props.col.suggestSearchCol || 'name';
+
+  for (const target of targets) {
+    const list = getRowsForTarget(target);
+    const tableTitle = getTableDisplayName(target);
+
+    const found = list.find((row) => {
+      const fVal = String(getRowCustomField(row, fillCol) || row.cccd || row.cccdthannhan || row.code || row.id || '').trim();
+      if (fVal && fVal.toLowerCase() === val.toLowerCase()) return true;
+      const fallbackCccd = String(row.cccd || row.cccdthannhan || row.code || row.id || '').trim();
+      return fallbackCccd && fallbackCccd.toLowerCase() === val.toLowerCase();
+    });
+
+    if (found) {
+      let parentName = '';
+      if (target === 'relatives') {
+        const parentCccd = found.cccdparent || getRowCustomField(found, 'cccdparent');
+        if (parentCccd) {
+          const parent = (personnelStore.personnelList || []).find(
+            (p) => String(p.cccd || p.id).trim().toLowerCase() === String(parentCccd).trim().toLowerCase()
+          );
+          if (parent) parentName = parent.name || parent.fullName || '';
+        }
+      }
+      return {
+        tableTitle,
+        target,
+        name: String(getRowCustomField(found, searchCol) || found.name || found.relativeName || found.fullName || 'Đối tượng').trim(),
+        fillValue: val,
+        position: found.position || getRowCustomField(found, 'position') || '',
+        department: found.departmentName || getRowCustomField(found, 'departmentName') || '',
+        relation: found.relationshipName || getRowCustomField(found, 'relationshipName') || '',
+        parentPersonName: parentName,
+        code: found.code || found.id || '',
+      };
+    }
+  }
+  return null;
 });
 
 const parsedOptions = computed(() => {

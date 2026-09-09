@@ -321,6 +321,14 @@ const isColVisible = (c) => {
   return true;
 };
 
+const checkTableMatchesLink = (linkTableStr, tableId, tableSource) => {
+  if (!linkTableStr) return false;
+  const parts = String(linkTableStr).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const tId = String(tableId || '').trim().toLowerCase();
+  const tSrc = String(tableSource || '').trim().toLowerCase();
+  return (tId && parts.includes(tId)) || (tSrc && parts.includes(tSrc));
+};
+
 // Compute linked rows for any given table
 const getLinkedRows = (targetTable) => {
   if (!targetTable || !props.currentRecord) return [];
@@ -334,11 +342,11 @@ const getLinkedRows = (targetTable) => {
   const curCols = curTable?.getColumns ? curTable.getColumns(personnelStore) : [];
 
   const fkColInTarget = targetCols.find(
-    (c) => c.linkTable && (c.linkTable === curId || c.linkTable === curTable?.source)
+    (c) => checkTableMatchesLink(c.linkTable, curId, curTable?.source)
   );
   if (fkColInTarget) {
     const curKeyColId = fkColInTarget.linkColumn || getTableKeyColId(curTable);
-    const curVal = String(curRecord[curKeyColId] || curRecord.id || '').trim().toLowerCase();
+    const curVal = String(curRecord[curKeyColId] || curRecord.id || curRecord.code || '').trim().toLowerCase();
     if (curVal) {
       const allRows = targetTable.getRows(personnelStore) || [];
       return allRows.filter((r) => {
@@ -350,7 +358,7 @@ const getLinkedRows = (targetTable) => {
 
   // 2. Foreign key in curTable pointing to targetTable
   const fkColInCur = curCols.find(
-    (c) => c.linkTable && (c.linkTable === targetId || c.linkTable === targetTable.source)
+    (c) => checkTableMatchesLink(c.linkTable, targetId, targetTable.source)
   );
   if (fkColInCur) {
     const targetKeyColId = fkColInCur.linkColumn || getTableKeyColId(targetTable);
@@ -358,7 +366,7 @@ const getLinkedRows = (targetTable) => {
     if (curVal) {
       const allRows = targetTable.getRows(personnelStore) || [];
       return allRows.filter((r) => {
-        const val = String(r[targetKeyColId] || r.id || '').trim().toLowerCase();
+        const val = String(r[targetKeyColId] || r.id || r.code || '').trim().toLowerCase();
         return val && val === curVal;
       });
     }
@@ -495,20 +503,14 @@ const isTableLinked = (targetTable) => {
   const targetId = targetTable.id;
   if (curId === targetId) return false;
 
-  // Core connections
-  if ((curId === 'personnel' || curId === 'relatives' || curId === 'trips') &&
-      (targetId === 'personnel' || targetId === 'relatives' || targetId === 'trips')) {
-    return true;
-  }
-
-  // Column link checks
+  // Column link checks (Only link when explicitly configured by user via linkTable)
   const targetCols = targetTable.getColumns ? targetTable.getColumns(personnelStore) : [];
   const curCols = curTable?.getColumns ? curTable.getColumns(personnelStore) : [];
 
-  const fkTarget = targetCols.some((c) => c.linkTable && (c.linkTable === curId || c.linkTable === curTable?.source));
+  const fkTarget = targetCols.some((c) => checkTableMatchesLink(c.linkTable, curId, curTable?.source));
   if (fkTarget) return true;
 
-  const fkCur = curCols.some((c) => c.linkTable && (c.linkTable === targetId || c.linkTable === targetTable.source));
+  const fkCur = curCols.some((c) => checkTableMatchesLink(c.linkTable, targetId, targetTable.source));
   if (fkCur) return true;
 
   return false;
