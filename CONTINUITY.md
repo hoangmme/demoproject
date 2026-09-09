@@ -2645,6 +2645,35 @@
          * Render thẻ thông tin `suggest-matched-card` ngay dưới ô nhập: Huy hiệu bảng xanh lá, Họ tên in đậm, Giá trị mã/CCCD, Chức vụ, Phòng ban, Quan hệ (nếu là thân nhân), kèm nút `x` để xóa nhanh và chọn đối tượng khác.
     3. **Kiểm thử & Triển khai**:
        - `npm run build` thành công 100% (0 lỗi, 578ms).
+- **Entry (2026-09-10 - Session 26)**: **Hiển Thị Đầy Đủ UI Cấu Hình Cho Các Công Thức Tích Hợp Sẵn & Khôi Phục 100% Thân Nhân / Chuyến Đi Đã Xóa Nhầm**:
+    1. **Yêu cầu của người dùng**:
+       - *"check lại mấy công thức cũ, ko có show ui sửa"*: Khi chọn các công thức tích hợp sẵn trong cấu hình cột (như Trạng thái hiện diện, Quá hạn chưa về, So sánh 2 cột ngày, Kiểm tra điều kiện, Đi khi chưa có QĐ, Số lần xuất cảnh trong năm), giao diện bên dưới bị trống trơn, không có ô để chọn cột và sửa nhãn.
+       - *"tôi mới xóa nhầm mấy cái này khôi phục đc k... [log 5 chuyến đi / thân nhân bị xóa nhầm]"*: Khôi phục 5 bản ghi thân nhân / chuyến đi của 3 cán bộ: Lê Thị Thu (`CB-00016`), Nguyễn Văn Chương (`CB-00017`), và Nguyễn Hoài Hận (`CB-00023`).
+    2. **Giải pháp & Triển khai**:
+       - **Giao diện Cấu hình Công thức Tích hợp Sẵn (`ColumnHeaderMenu.vue` & `AddColumnDialog.vue`)**:
+         * Bổ sung đầy đủ khối UI cấu hình trực quan cho cả 6 loại công thức tích hợp:
+           1. `presence_status`: Chọn Ngày đi, Ngày về, Deadline duyệt về; tùy chỉnh nhãn Trong nước / Nước ngoài / Quá hạn.
+           2. `overdue_status`: Chọn Ngày về, Deadline duyệt về; tùy chỉnh nhãn Quá hạn / Đúng hạn / Chưa quá hạn.
+           3. `date_delta`: Chọn Cột ngày A, Cột ngày B; tùy chỉnh nhãn Sớm / Muộn / Đúng lịch; tùy chọn hiển thị số ngày chênh lệch.
+           4. `conditional_check`: Chọn Cột điều kiện, Cột kiểm tra rỗng; tùy chỉnh nhãn Cảnh báo / Hợp lệ.
+           5. `depart_before_decision`: Chọn Ngày đi, Deadline duyệt đi, Cột số QĐ; tùy chỉnh nhãn Vi phạm / Đúng quyết định.
+           6. `trips_count_in_year`: Chọn Ngày xuất cảnh để lấy năm, Năm tính toán, Đơn vị hiển thị.
+         * Nâng cấp hộp "Xem trước (Dòng 1)" dùng chung cho tất cả các loại công thức thông qua `evaluateFormula`, tính toán live trực tiếp khi người dùng thay đổi bất kỳ ô cấu hình nào.
+         * Đồng bộ hóa toàn bộ các trường cấu hình công thức trong `handleSaveFormulaType`, `useTableColumns.js` (hỗ trợ lưu cả bảng chuẩn lẫn bảng tùy biến `customDashboards`), và `AddColumnDialog.vue` (khi tạo mới cột công thức).
+       - **Khôi phục 100% Dữ liệu Đã Xóa Nhầm vào Directus Live (`https://api.hscb.online`)**:
+         * Trích xuất chính xác 100% dữ liệu gốc từ `BACKUP_DATA/personnels.json`:
+           1. `trip_1788744759341` (Đi Nga): Thuộc thân nhân **Lê Minh Phương** (`TN-00011`) của CB **Lê Thị Thu** (`CB-00016`).
+           2. `trip_1788744660440` (Đi Đức): Thuộc thân nhân **Lê Hoàng Cương** (`TN-00012`) của CB **Lê Thị Thu** (`CB-00016`).
+           3. `trip_1788744647657` (Đi Nga): Thuộc thân nhân **Nguyễn Hồng Diễm Châu** (`TN-00002`) của CB **Nguyễn Văn Chương** (`CB-00017`).
+           4. `trip_1788744654107` (Đi Mỹ): Thuộc thân nhân **Nguyễn Hồng Khang** (`TN-00004`) của CB **Nguyễn Văn Chương** (`CB-00017`).
+           5. `trip_1788744626590` (Đi Nga): Thuộc thân nhân **Nguyền Ngọc Khánh Linh** (`TN-00021`) của CB **Nguyễn Hoài Hận** (`CB-00023`).
+           * Khôi phục thêm các thân nhân / chuyến đi liên đới trong cùng hồ sơ: `TN-00001` (Nguyễn Hồng Diễm Kim), `TN-00020` (Nguyễn Ngọc Như Quỳnh), `TN-00022` (Chị: Nguyễn Ngọc Anh).
+         * Giữ nguyên 100% các chuyến đi của Cán bộ hiện có trên hệ thống live.
+         * Đã patch thành công và ghi log kiểm toán (`audit_logs`) trên server live. Đã kiểm tra đối chiếu trực tiếp dữ liệu sau khi patch đạt trạng thái hoàn hảo.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 610ms).
        - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+       - Đã commit và push mã nguồn lên nhánh `main`.
     4. **Trạng thái**: Done [Reversible].
+
 
