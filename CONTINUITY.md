@@ -2023,6 +2023,22 @@
         - `main.css`: Tái cấu trúc `.lark-tab-item-wrapper` thành pill liền khối duy nhất bao bọc cả tên tab và nút 3 chấm. Nút `.btn-tab-action` nằm gọn bên trong viền tab với nền trong suốt, triệt tiêu hoàn toàn khối vuông nền trắng thừa bị lồi ra ngoài.
    3. **Kiểm thử & Triển khai**:
       - `npm run build` thành công 100% (0 lỗi, 549ms).
-   4. **Trạng thái**: Done [Reversible].
-
-
+- **Entry (2026-09-09)**: **Triệt Tiêu Hardcode/Cột Ảo Bảng Thân Nhân & Chuẩn Hóa Bảng Phẳng Thuần Túy (Pure Flat Table Record)**:
+   1. **Yêu cầu của người dùng**:
+      - *"Ở BẢNG THÂN NHÂN CỘT NÀY VẪN HARDCODE À, CHECK LẠI XÓA HẾT MẤY CỘT HARDCODE HAY CỘT ẢO ĐI CHỨ?"*
+      - Cột "Họ và tên Thân nhân" đang bị hardcode ghép badge mối quan hệ và số CCCD TN vào cùng 1 ô, phá vỡ tính phẳng của bảng.
+   2. **Nguyên nhân gốc rễ & Rà soát**:
+      - `UnifiedTableView.vue` (lines 338-356): Tồn tại khối template riêng `col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'` ghép cứng cả `relationshipName` và `cccdthannhan` vào ô tên thân nhân.
+      - `UnifiedTableView.vue` (lines 331-336): Khối hiển thị cột ảo `_primaryKey`.
+      - `UnifiedTableView.vue` (lines 358-367): Khối huy hiệu tĩnh cho `relationshipName` / `relationship` chặn mất cơ chế inline-edit dropdown.
+      - `stores/personnel.js`: Logic `visibleRelativeColumns` tự động ép `_parentPersonnelName` vào đầu mảng cột hiển thị; `allAvailableRelativeColumns` và `allAvailablePersonnelColumns` chứa cột ảo `_primaryKey`.
+      - `formatters.js` (`resolveVirtualColumnValue`): Nhận diện nhầm `relativeName` và `relationshipName` là cột ảo dẫn đến giá trị bị chặn trước khi đọc thuộc tính thực.
+   3. **Giải pháp đã triển khai**:
+      - **Bảng phẳng chuẩn Teable/Lark Base**: 1 cột = 1 trường dữ liệu. Xóa bỏ hoàn toàn việc gộp mối quan hệ và CCCD vào cột tên.
+      - **Họ và tên thuần túy + Inline Edit**: Gom toàn bộ các cột tên (`personnelName`, `name`, `ho_va_ten`, `relativeName`...) vào một khối duy nhất, hiển thị chữ đậm thuần khiết và hỗ trợ nhấp đúp để chỉnh sửa nhanh (inline edit).
+      - **Cột Mối quan hệ**: Để `relationshipName` rơi tự nhiên vào `v-else`, tự động render text và khi nhấp đúp mở dropdown chuẩn theo tùy chọn đã cấu hình.
+      - **Hỗ trợ lưu Inline Thân nhân & Cán bộ**: Bổ sung cập nhật trực tiếp `parent.relatives` và thuộc tính cha trong `saveChildInlineEdit`.
+      - **Dọn dẹp cột ảo**: Gỡ bỏ triệt để `_primaryKey` và việc force-inject `_parentPersonnelName` trong `personnel.js`. Sửa `resolveVirtualColumnValue` để không chặn các trường thực `relativeName` và `relationshipName`.
+   4. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 531ms).
+   5. **Trạng thái**: Done [Reversible].

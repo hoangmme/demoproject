@@ -65,9 +65,6 @@ export const usePersonnelStore = defineStore('personnel', {
 
       if (list.length === 0) {
         return [
-          { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
-          { id: 'code', label: 'Mã CB', width: '115px', isVirtual: true, colIndex: null },
-          { id: '_parentPersonnelName', label: 'Thông tin cán bộ', width: '220px', isVirtual: true, colIndex: null },
           { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false },
           { id: 'birthYear', label: 'Năm sinh', colIndex: '2', width: '120px', isVirtual: false },
           { id: 'departmentId', label: 'Phòng ban', colIndex: '3', width: '160px', isVirtual: false },
@@ -105,8 +102,6 @@ export const usePersonnelStore = defineStore('personnel', {
 
       if (list.length === 0) {
         return [
-          { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
-          { id: 'code', label: 'Mã định danh', width: '115px', isVirtual: true, colIndex: null },
           { id: 'name', label: 'Họ và tên', colIndex: '1', width: '200px', isVirtual: false },
           { id: 'birthYear', label: 'Năm sinh', colIndex: '2', width: '120px', isVirtual: false },
           { id: 'departmentId', label: 'Phòng ban', colIndex: '3', width: '160px', isVirtual: false },
@@ -144,7 +139,6 @@ export const usePersonnelStore = defineStore('personnel', {
 
       if (list.length === 0) {
         return [
-          { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'relationshipName', label: 'Mối quan hệ', colIndex: '1', width: '130px', isVirtual: false },
           { id: 'relativeName', label: 'Họ và tên Thân nhân', colIndex: '2', width: '180px', isVirtual: false },
           { id: 'birthYear', label: 'Năm sinh', colIndex: '3', width: '110px', isVirtual: false },
@@ -234,16 +228,13 @@ export const usePersonnelStore = defineStore('personnel', {
 
       const getDefaultRelativeColumns = () => {
         return this.allAvailableRelativeColumns
-          .filter((c) => c.id !== '_primaryKey')
+          .filter((c) => c.id !== '_primaryKey' && c.id !== '_parentPersonnelName')
           .map((c) => c.id);
       };
 
       let savedRel = dbRelCols && Array.isArray(dbRelCols) && dbRelCols.length > 0 ? dbRelCols : null;
       if (savedRel && Array.isArray(savedRel) && savedRel.length > 0) {
         const filtered = savedRel.filter((id) => validRelativeIds.has(id));
-        if (!filtered.includes('code') && !filtered.includes('_parentPersonnelName') && !filtered.includes('parentName')) {
-          filtered.unshift('code', '_parentPersonnelName');
-        }
         if (filtered.length >= 3) {
           this.visibleRelativeColumns = filtered;
         } else {

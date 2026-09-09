@@ -1040,10 +1040,10 @@ export const resolveVirtualColumnValue = (item, colId) => {
   if (colId === '_parentDepartment' || colId === 'parentDepartment') {
     return item.rawPerson?.departmentName || item.parentDepartment || (!item.isRelative ? (item.departmentName) : '') || '';
   }
-  if (colId === '_relativeName' || colId === 'relativeName') {
+  if (colId === '_relativeName') {
     return item.isRelative ? (item.relativeName || item.name || '') : '';
   }
-  if (colId === '_relationshipName' || colId === 'relationshipName') {
+  if (colId === '_relationshipName') {
     return item.isRelative ? (item.relationshipName || item.relationship || '') : '';
   }
   return undefined;

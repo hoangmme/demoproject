@@ -328,47 +328,25 @@
             </div>
           </template>
           <template #body="{ data }">
-            <!-- 0. Cột Khóa chính (_primaryKey) -->
-            <template v-if="col.id === '_primaryKey'">
-              <span style="display: inline-flex; align-items: center; font-family: monospace; font-size: 0.76rem; font-weight: 600; color: #475569; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
-                {{ getCellValue(data, col.id) }}
-              </span>
-            </template>
-
-            <!-- 1c. Cột Họ và tên Thân nhân -->
-            <template v-else-if="col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'">
-              <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <strong style="color: #0f172a; font-weight: 700; font-size: 0.85rem;">
-                    {{ data.relativeName || data.name || '-' }}
-                  </strong>
-                  <span
-                    v-if="data.relationshipName || data.relationship"
-                    style="font-size: 0.7rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"
-                  >
-                    {{ data.relationshipName || data.relationship }}
-                  </span>
-                </div>
-                <div v-if="data.cccdthannhan || data.cccd" style="font-size: 0.72rem; color: #64748b;">
-                  CCCD TN: {{ data.cccdthannhan || data.cccd }}
-                </div>
-              </div>
-            </template>
-
-            <!-- 1d. Cột Mối quan hệ riêng -->
-            <template v-else-if="col.id === 'relationshipName' || col.id === 'relationship'">
-              <span
-                v-if="data.relationshipName || data.relationship"
-                style="display: inline-flex; align-items: center; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;"
+            <!-- 1. Cột Họ và tên (Cán bộ, Thân nhân... - chỉ hiện tên thuần túy) -->
+            <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen' || col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'">
+              <div
+                class="inline-cell-wrapper"
+                @dblclick.stop="startChildInlineEdit(data, col)"
+                :title="'Nhấp đúp để chỉnh sửa nhanh ô này'"
               >
-                {{ data.relationshipName || data.relationship }}
-              </span>
-              <span v-else style="color: #94a3b8;">-</span>
-            </template>
-
-            <!-- 1b. Cột Họ và tên gốc (chỉ hiện tên thuần túy) -->
-            <template v-else-if="col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
-              <strong style="color: #0f172a; font-weight: 700;">{{ data[col.id] || data.personnelName || data.name || '-' }}</strong>
+                <div v-if="editingChildCell?.uniqueKey === data.uniqueKey && editingChildCell?.colId === col.id" class="inline-edit-box" @click.stop>
+                  <input
+                    v-model="editingChildCell.value"
+                    class="inline-edit-input"
+                    autofocus
+                    @keyup.enter="saveChildInlineEdit"
+                    @keyup.esc="cancelChildInlineEdit"
+                    @blur="saveChildInlineEdit"
+                  />
+                </div>
+                <strong v-else style="color: #0f172a; font-weight: 700;">{{ getCellValue(data, col.id) || data[col.id] || '-' }}</strong>
+              </div>
             </template>
 
 
@@ -2765,6 +2743,15 @@ const saveChildInlineEdit = async () => {
         if (tIdx !== -1) {
           parent.trips[tIdx][colId] = value;
         }
+      }
+      if (row.id && parent.relatives) {
+        const rIdx = parent.relatives.findIndex(r => r.id === row.id || r.code === row.id);
+        if (rIdx !== -1) {
+          parent.relatives[rIdx][colId] = value;
+        }
+      }
+      if (parent.id === row.id) {
+        parent[colId] = value;
       }
       await personnelStore.savePerson(parent);
     }
