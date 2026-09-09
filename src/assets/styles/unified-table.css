@@ -693,3 +693,24 @@
   background: #f0f9ff;
   transform: scale(1.1);
 }
+
+/* Đường line mờ ngăn cách giữa các cột trong bảng */
+:deep(.p-datatable .p-datatable-thead > tr > th),
+.p-datatable .p-datatable-thead > tr > th {
+  border-right: 1px solid #e2e8f0 !important;
+}
+
+:deep(.p-datatable .p-datatable-thead > tr > th:last-child),
+.p-datatable .p-datatable-thead > tr > th:last-child {
+  border-right: none !important;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr > td),
+.p-datatable .p-datatable-tbody > tr > td {
+  border-right: 1px solid #e2e8f0 !important;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr > td:last-child),
+.p-datatable .p-datatable-tbody > tr > td:last-child {
+  border-right: none !important;
+}

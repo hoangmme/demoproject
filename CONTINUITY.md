@@ -2704,6 +2704,28 @@
        - Commit & push lên git `main`.
     4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-10 - Session 28)**: **Bổ Sung Line Mờ Ngăn Cách Giữa Các Cột & Sửa Triệt Để Lỗi Dữ Liệu "Trung Quốc" Trong Công Thức Chuyến Đi Thân Nhân**:
+    1. **Yêu cầu của người dùng**:
+       - *"bảng thiếu line mờ ngăn cách giữa các cột ấy bổ sung giúp tôi"*: Bảng chính và popup thống kê thiếu đường kẻ đứng mờ ngăn cách giữa các cột (giữa Checkbox, STT, Họ và tên, Chức vụ...), các cột bị dính liền nhìn khó phân tách ranh giới.
+       - *"check lại công thức và bảng chuyến đi, sao chuyến đi là trung quốc ???? dữ liệu tĩnh ak"*: Tại popup thống kê khi lọc Chuyến đi Thân nhân đi Mỹ, dòng của thân nhân Nguyễn Hồng Khang (cột QUỐC GIA XUẤT CẢNH là "Mỹ") nhưng cột SỐ LẦN XUẤT CẢNH TRONG NĂM lại hiển thị: `1 lần \n - Chuyến 1: Trung Quốc - 23/04/2026`. Người dùng thắc mắc có phải dữ liệu tĩnh bị hardcode không.
+    2. **Bản chất nguyên nhân & Giải pháp**:
+       - **Đường Line Mờ Ngăn Cách Giữa Các Cột (`main.css`, `unified-table.css`)**:
+         * Nguyên nhân: Trước đó `.p-datatable-thead > tr > th` và `.p-datatable-tbody > tr > td` có thuộc tính `border: none !important;` loại bỏ hoàn toàn viền đứng.
+         * Khắc phục: Bổ sung `border-right: 1px solid #e2e8f0 !important;` cho cả thẻ tiêu đề (`th`) và ô dữ liệu (`td`), đồng thời đặt `:last-child { border-right: none !important; }` để mép ngoài cùng không bị viền kép. Hiển thị line mờ trang nhã, sắc nét, đồng bộ cho toàn bộ hệ thống bảng.
+       - **Sửa Lỗi Dữ Liệu "Trung Quốc" Trong Công Thức `trips_count_in_year` (`src/utils/formatters.js`)**:
+         * Nguyên nhân gốc rễ: Trong `computeTripsCountInYear`, khi record là bản ghi chuyến đi của Thân nhân (`record.isRelative: true`), hàm kiểm tra `if (record.rawPerson?.trips)` và lấy nhầm mảng chuyến đi của **Cán bộ chủ quản Nguyễn Văn Chương** (Cán bộ Chương có chuyến đi Trung Quốc ngày 23/04/2026). Do đó, dòng của thân nhân Nguyễn Hồng Khang đã bị gán nhầm chuyến đi Trung Quốc của Cán bộ Chương thay vì chuyến đi của chính mình!
+         * Khắc phục triệt để theo Nguyên tắc North Star (Mục 4 - Strict Data Integrity & Zero-Guessing):
+           1. Phân lập dữ liệu chuyến đi theo đúng đối tượng: Nếu là Thân nhân (`record.isRelative` / `rawRelative`), chỉ lấy danh sách chuyến đi của Thân nhân đó (`rawRelative.trips` hoặc `record.trips` của thân nhân), **TUYỆT ĐỐI CẤM** fallback sang `rawPerson.trips`.
+           2. Nếu là Cán bộ, chỉ lấy chuyến đi của Cán bộ (loại bỏ chuyến đi thân nhân).
+           3. Nếu chuyến đi không có ngày xuất cảnh hợp lệ trong năm tính toán, hiển thị rỗng `'-'` (khớp 100% với các dòng chuyến đi thân nhân khác như Phạm Thị Kim, Vũ Nguyễn Tuấn Kiệt).
+           4. Khi chuyến đi có ngày xuất cảnh cụ thể, hiển thị chính xác thông tin nơi đến và ngày của chính chuyến đi đó (`- Chuyến X: [Nơi đến] - [Ngày]`), không bao giờ bị lẫn lộn giữa Cán bộ và Thân nhân.
+    3. **Kiểm thử & Triển khai**:
+       - Chạy kiểm thử tự động trên node: Kiểm tra ca Khang (Mỹ, không ngày) -> ra `'-'`, ca Khang có ngày -> ra `- Chuyến 1: Mỹ - ...`, ca Cán bộ Chương -> ra chuyến Trung Quốc trên hồ sơ Cán bộ Chương.
+       - `npm run build` thành công 100% (0 lỗi, 604ms).
+       - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+       - Commit & push lên git `main`.
+    4. **Trạng thái**: Done [Reversible].
+
 
 
 
