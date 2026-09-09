@@ -1080,13 +1080,13 @@ export function useTableColumns({
     alert(`Đã nhân bản cột thành công: "${copyCol.label}"!`);
   };
 
-  const onChildChangeFormulaType = async ({ colId, formulaType, formulaExpression }) => {
+  const onChildChangeFormulaType = async (payload) => {
+    const { colId, ...formulaProps } = payload || {};
     const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
     if (isBlank && cDash) {
       const col = (cDash.customColumns || []).find((c) => c.id === colId);
       if (col) {
-        col.formulaType = formulaType;
-        if (formulaExpression !== undefined) col.formulaExpression = formulaExpression;
+        Object.assign(col, formulaProps);
         try {
           localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
           await saveAppSettings('custom_dashboards_config', customDashboards.value);
@@ -1098,8 +1098,7 @@ export function useTableColumns({
     for (const g of mapping || []) {
       for (const c of g.columns || []) {
         if (c.id === colId) {
-          c.formulaType = formulaType;
-          if (formulaExpression !== undefined) col.formulaExpression = formulaExpression;
+          Object.assign(c, formulaProps);
           found = true;
           break;
         }

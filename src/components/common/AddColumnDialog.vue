@@ -310,14 +310,233 @@
               <div style="font-size: 0.64rem; color: #64748b; font-family: monospace;">{{ fn.syntax }}</div>
             </div>
           </div>
+        </div>
 
-          <!-- Live Preview -->
-          <div style="margin-top: 6px; background: #fae8ff; border: 1px solid #f0abfc; border-radius: 4px; padding: 5px 8px; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 0.68rem; color: #701a75; font-weight: 600;">Xem trước (Dòng 1):</span>
-            <span style="font-size: 0.72rem; font-weight: 700; color: #86198f; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              {{ formulaPreviewResult }}
-            </span>
+        <!-- 2. Trạng thái Hiện diện (presence_status) -->
+        <div v-else-if="form.formulaType === 'presence_status'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 0.7rem; color: #0284c7; line-height: 1.4; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 5px 8px;">
+            💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày xuất cảnh</strong>, <strong>Ngày nhập cảnh</strong> và <strong>Thời gian duyệt về</strong> để xác định: <em>Trong nước</em>, <em>Đang ở nước ngoài</em>, hoặc <em>Quá hạn chưa về</em>.
           </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày xuất cảnh (Đi):</span>
+              <select v-model="form.formulaDepCol" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Mặc định (departureDate) --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày nhập cảnh (Về):</span>
+              <select v-model="form.formulaArrivalCol" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Mặc định (arrivalDate) --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Thời gian duyệt về (Deadline):</span>
+            <select v-model="form.formulaApprovedArrivalCol" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+              <option value="">-- Mặc định (approvedArrivalDate) --</option>
+              <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+            </select>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Trong nước:</span>
+              <input v-model="form.formulaLabelDomestic" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Trong nước" />
+            </div>
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Nước ngoài:</span>
+              <input v-model="form.formulaLabelAbroad" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Đang ở nước ngoài" />
+            </div>
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Quá hạn:</span>
+              <input v-model="form.formulaLabelOverdue" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Quá hạn" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Quá hạn chưa về (overdue_status) -->
+        <div v-else-if="form.formulaType === 'overdue_status'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 0.7rem; color: #b91c1c; line-height: 1.4; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 5px 8px;">
+            💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày nhập cảnh thực tế</strong> với <strong>Thời gian duyệt về (Deadline)</strong>. Nếu chưa về và Today vượt Deadline → <strong>Quá hạn</strong>.
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày nhập cảnh (Về):</span>
+              <select v-model="form.formulaArrivalCol" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Mặc định (arrivalDate) --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Thời gian duyệt về:</span>
+              <select v-model="form.formulaApprovedArrivalCol" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Mặc định (approvedArrivalDate) --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Quá hạn:</span>
+              <input v-model="form.formulaLabelOverdue" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Quá hạn" />
+            </div>
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Đúng hạn:</span>
+              <input v-model="form.formulaLabelOnTime" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Đúng hạn" />
+            </div>
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Chưa quá hạn:</span>
+              <input v-model="form.formulaLabelNotYet" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Chưa quá hạn" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. So sánh 2 cột ngày (date_delta) -->
+        <div v-else-if="form.formulaType === 'date_delta'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 0.7rem; color: #0369a1; line-height: 1.4; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 5px 8px;">
+            💡 <strong>Nguyên lý:</strong> So sánh <strong>Cột Ngày A (thực tế)</strong> với <strong>Cột Ngày B (kế hoạch)</strong>. A &lt; B → <em>Sớm</em>, A &gt; B → <em>Muộn</em>, A = B → <em>Đúng lịch</em>.
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày A (Thực tế):</span>
+              <select v-model="form.formulaColA" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Chọn cột Ngày A --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày B (Kế hoạch):</span>
+              <select v-model="form.formulaColB" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Chọn cột Ngày B --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Sớm:</span>
+              <input v-model="form.formulaLabelEarly" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Sớm" />
+            </div>
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Muộn:</span>
+              <input v-model="form.formulaLabelLate" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Muộn" />
+            </div>
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Đúng lịch:</span>
+              <input v-model="form.formulaLabelOnTime" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Đúng lịch" />
+            </div>
+          </div>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: #475569; cursor: pointer; margin-top: 2px;">
+            <input type="checkbox" v-model="form.formulaShowDays" style="accent-color: #0284c7;" />
+            <span>Hiển thị kèm số ngày chênh lệch</span>
+          </label>
+        </div>
+
+        <!-- 5. Kiểm tra điều kiện (conditional_check) -->
+        <div v-else-if="form.formulaType === 'conditional_check'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 0.7rem; color: #c2410c; line-height: 1.4; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 4px; padding: 5px 8px;">
+            💡 <strong>Nguyên lý:</strong> Nếu <strong>Cột Điều kiện</strong> có dữ liệu nhưng <strong>Cột Kiểm tra</strong> rỗng → ⚠️ Cảnh báo.
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Điều kiện (Phải có):</span>
+              <select v-model="form.formulaColCondition" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Chọn cột điều kiện --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Kiểm tra (Rỗng → Cảnh báo):</span>
+              <select v-model="form.formulaColCheck" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Chọn cột kiểm tra --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Cảnh báo:</span>
+              <input v-model="form.formulaLabelWarning" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="⚠️ Cảnh báo" />
+            </div>
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Hợp lệ (Tùy chọn):</span>
+              <input v-model="form.formulaLabelOk" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Để trống nếu không cần" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Đi khi chưa có cấp thẩm quyền quyết định (depart_before_decision) -->
+        <div v-else-if="form.formulaType === 'depart_before_decision'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 0.7rem; color: #b91c1c; line-height: 1.4; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 5px 8px;">
+            💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày xuất cảnh</strong> với <strong>Thời gian duyệt đi</strong> và kiểm tra có <strong>Số quyết định</strong> hay không.
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày xuất cảnh:</span>
+              <select v-model="form.formulaDepCol" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Mặc định (departureDate) --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Thời gian duyệt đi:</span>
+              <select v-model="form.formulaApprovedDepCol" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Mặc định (approvedDepartureDate) --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Số quyết định / Quyết định:</span>
+            <select v-model="form.formulaColDecision" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+              <option value="">-- Mặc định (decisionNumber / so_quyet_dinh) --</option>
+              <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+            </select>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn khi Vi phạm:</span>
+              <input v-model="form.formulaLabelWarning" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Đi khi chưa có cấp thẩm quyền quyết định" />
+            </div>
+            <div>
+              <span style="font-size: 0.64rem; color: #64748b;">Nhãn Đúng quyết định:</span>
+              <input v-model="form.formulaLabelOnTime" class="dialog-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Đi đúng quyết định" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. Số lần xuất cảnh trong năm (trips_count_in_year) -->
+        <div v-else-if="form.formulaType === 'trips_count_in_year'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 0.7rem; color: #166534; line-height: 1.4; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 5px 8px;">
+            💡 <strong>Nguyên lý:</strong> Tự động tính tổng <strong>số lần xuất cảnh</strong> của cán bộ trong cùng một năm (dựa trên cột ngày xuất cảnh).
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày xuất cảnh để lấy năm:</span>
+              <select v-model="form.formulaDepCol" class="dialog-select" style="font-size: 0.7rem; height: 28px;">
+                <option value="">-- Mặc định (departureDate) --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Năm tính toán:</span>
+              <input v-model="form.formulaTargetYear" class="dialog-input" style="font-size: 0.7rem; height: 28px; padding: 2px 6px;" placeholder="Để trống = Năm hiện tại" />
+            </div>
+          </div>
+          <div>
+            <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Đơn vị hiển thị:</span>
+            <input v-model="form.formulaUnit" class="dialog-input" style="font-size: 0.7rem; height: 28px; padding: 2px 6px;" placeholder="Mặc định: lần" />
+          </div>
+        </div>
+
+        <!-- Live Preview chung cho tất cả công thức -->
+        <div style="margin-top: 8px; background: #fae8ff; border: 1px solid #f0abfc; border-radius: 4px; padding: 5px 8px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 0.68rem; color: #701a75; font-weight: 600;">Xem trước (Dòng 1):</span>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #86198f; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ formulaPreviewResult }}
+          </span>
         </div>
       </div>
 
@@ -488,6 +707,7 @@ import {
   formWidthOptions,
   lookupOperators,
   evaluateCustomFormula,
+  evaluateFormula,
   evaluateLookup,
   evaluateRollup,
   getRecordFieldValue,
@@ -545,6 +765,28 @@ const form = ref({
   lookupFormat: 'default',
   formulaType: 'custom_expression',
   formulaExpression: '',
+  formulaDepCol: '',
+  formulaArrivalCol: '',
+  formulaApprovedArrivalCol: '',
+  formulaApprovedDepCol: '',
+  formulaColA: '',
+  formulaColB: '',
+  formulaColCondition: '',
+  formulaColCheck: '',
+  formulaColDecision: '',
+  formulaLabelEarly: '',
+  formulaLabelLate: '',
+  formulaLabelOnTime: '',
+  formulaLabelWarning: '',
+  formulaLabelOk: '',
+  formulaLabelMissing: '',
+  formulaLabelDomestic: '',
+  formulaLabelAbroad: '',
+  formulaLabelOverdue: '',
+  formulaLabelNotYet: '',
+  formulaShowDays: false,
+  formulaTargetYear: '',
+  formulaUnit: '',
   rollupTarget: 'trips',
   rollupField: '',
   rollupFunction: 'count',
@@ -588,6 +830,28 @@ watch(
         lookupFormat: 'default',
         formulaType: 'custom_expression',
         formulaExpression: '',
+        formulaDepCol: '',
+        formulaArrivalCol: '',
+        formulaApprovedArrivalCol: '',
+        formulaApprovedDepCol: '',
+        formulaColA: '',
+        formulaColB: '',
+        formulaColCondition: '',
+        formulaColCheck: '',
+        formulaColDecision: '',
+        formulaLabelEarly: '',
+        formulaLabelLate: '',
+        formulaLabelOnTime: '',
+        formulaLabelWarning: '',
+        formulaLabelOk: '',
+        formulaLabelMissing: '',
+        formulaLabelDomestic: '',
+        formulaLabelAbroad: '',
+        formulaLabelOverdue: '',
+        formulaLabelNotYet: '',
+        formulaShowDays: false,
+        formulaTargetYear: '',
+        formulaUnit: '',
         rollupTarget: 'trips',
         rollupField: '',
         rollupFunction: 'count',
@@ -722,23 +986,60 @@ const rollupPreviewResult = computed(() => {
 });
 
 const formulaPreviewResult = computed(() => {
-  if (!form.value.formulaExpression) return '(chưa có)';
-  try {
-    const resolver = (targetColId) => {
-      const c = (currentTableCols.value || []).find((col) => col.id === targetColId || col.label === targetColId);
-      if (c && c.format === 'lookup') {
-        const val = evaluateLookup(sampleRow.value, c, personnelStore);
-        return val !== '-' ? val : '';
-      }
-      return getRecordFieldValue(sampleRow.value, targetColId);
-    };
-    const res = evaluateCustomFormula(sampleRow.value, form.value.formulaExpression, currentTableCols.value, resolver);
-    if (!res) return '(trống)';
-    const val = (res && typeof res === 'object' && 'label' in res) ? res.label : res;
-    if (val === null || val === undefined || val === '') return '(trống)';
-    return String(val);
-  } catch (e) {
-    return 'Lỗi: ' + e.message;
+  if (form.value.formulaType === 'custom_expression') {
+    if (!form.value.formulaExpression) return '(chưa có)';
+    try {
+      const resolver = (targetColId) => {
+        const c = (currentTableCols.value || []).find((col) => col.id === targetColId || col.label === targetColId);
+        if (c && c.format === 'lookup') {
+          const val = evaluateLookup(sampleRow.value, c, personnelStore);
+          return val !== '-' ? val : '';
+        }
+        return getRecordFieldValue(sampleRow.value, targetColId);
+      };
+      const res = evaluateCustomFormula(sampleRow.value, form.value.formulaExpression, currentTableCols.value, resolver);
+      if (!res) return '(trống)';
+      const val = (res && typeof res === 'object' && 'label' in res) ? res.label : res;
+      if (val === null || val === undefined || val === '') return '(trống)';
+      return String(val);
+    } catch (e) {
+      return 'Lỗi: ' + e.message;
+    }
+  } else {
+    try {
+      const dummyCol = {
+        id: form.value.id || 'preview_col',
+        format: 'formula',
+        formulaType: form.value.formulaType,
+        formulaDepCol: form.value.formulaDepCol,
+        formulaArrivalCol: form.value.formulaArrivalCol,
+        formulaApprovedArrivalCol: form.value.formulaApprovedArrivalCol,
+        formulaApprovedDepCol: form.value.formulaApprovedDepCol,
+        formulaColA: form.value.formulaColA,
+        formulaColB: form.value.formulaColB,
+        formulaColCondition: form.value.formulaColCondition,
+        formulaColCheck: form.value.formulaColCheck,
+        formulaColDecision: form.value.formulaColDecision,
+        formulaLabelEarly: form.value.formulaLabelEarly,
+        formulaLabelLate: form.value.formulaLabelLate,
+        formulaLabelOnTime: form.value.formulaLabelOnTime,
+        formulaLabelWarning: form.value.formulaLabelWarning,
+        formulaLabelOk: form.value.formulaLabelOk,
+        formulaLabelMissing: form.value.formulaLabelMissing,
+        formulaLabelDomestic: form.value.formulaLabelDomestic,
+        formulaLabelAbroad: form.value.formulaLabelAbroad,
+        formulaLabelOverdue: form.value.formulaLabelOverdue,
+        formulaLabelNotYet: form.value.formulaLabelNotYet,
+        formulaShowDays: form.value.formulaShowDays,
+        formulaTargetYear: form.value.formulaTargetYear,
+        formulaUnit: form.value.formulaUnit,
+      };
+      const res = evaluateFormula(sampleRow.value, dummyCol);
+      const val = res?.label || res?.shortLabel || res || '(trống)';
+      return String(val);
+    } catch (e) {
+      return 'Lỗi: ' + e.message;
+    }
   }
 });
 
@@ -792,6 +1093,28 @@ const handleSave = async () => {
       ...(form.value.format === 'formula' ? {
         formulaType: form.value.formulaType || 'custom_expression',
         formulaExpression: form.value.formulaExpression || '',
+        formulaDepCol: form.value.formulaDepCol || '',
+        formulaArrivalCol: form.value.formulaArrivalCol || '',
+        formulaApprovedArrivalCol: form.value.formulaApprovedArrivalCol || '',
+        formulaApprovedDepCol: form.value.formulaApprovedDepCol || '',
+        formulaColA: form.value.formulaColA || '',
+        formulaColB: form.value.formulaColB || '',
+        formulaColCondition: form.value.formulaColCondition || '',
+        formulaColCheck: form.value.formulaColCheck || '',
+        formulaColDecision: form.value.formulaColDecision || '',
+        formulaLabelEarly: form.value.formulaLabelEarly || '',
+        formulaLabelLate: form.value.formulaLabelLate || '',
+        formulaLabelOnTime: form.value.formulaLabelOnTime || '',
+        formulaLabelWarning: form.value.formulaLabelWarning || '',
+        formulaLabelOk: form.value.formulaLabelOk || '',
+        formulaLabelMissing: form.value.formulaLabelMissing || '',
+        formulaLabelDomestic: form.value.formulaLabelDomestic || '',
+        formulaLabelAbroad: form.value.formulaLabelAbroad || '',
+        formulaLabelOverdue: form.value.formulaLabelOverdue || '',
+        formulaLabelNotYet: form.value.formulaLabelNotYet || '',
+        formulaShowDays: Boolean(form.value.formulaShowDays),
+        formulaTargetYear: form.value.formulaTargetYear || '',
+        formulaUnit: form.value.formulaUnit || '',
       } : {}),
       ...(form.value.format === 'rollup' ? {
         rollupTarget: form.value.rollupTarget || 'trips',
