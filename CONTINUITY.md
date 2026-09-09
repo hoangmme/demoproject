@@ -2495,4 +2495,30 @@
        - Đồng bộ toàn bộ `dist/` và các file `src/` đã sửa sang `WINDOWS_OFFLINE_APP/frontend/`.
     4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-09 - Session 21)**: **Sửa Triệt Để Tính Năng Tùy Chọn Ẩn Cột Form Chi Tiết & Tái Cấu Trúc 100% Dynamic Cho Tab Liên Kết Thân Nhân - Cán Bộ - Chuyến Đi (Zero-Hardcode)**:
+    1. **Yêu cầu của người dùng**:
+       - Kiểm tra và sửa 2 nút tùy chọn cột: "Hiển thị trong Form / Popup Chi tiết" và "Xuất hiện khi in PDF / Xuất & Nhập dữ liệu" (khi bỏ tick vẫn xuất hiện ở chi tiết chỉnh sửa).
+       - Tab Liên Kết Thân Nhân - Cán Bộ - Chuyến Đi Trong Form Chi Tiết: Xóa bỏ triệt để hardcode cột và input form; chuyển sang 100% dynamic theo danh mục cột người dùng tự cấu hình cho từng bảng.
+    2. **Giải pháp & Triển khai**:
+       - **Sửa Triệt Để Lỗi Ẩn Cột Form Chi Tiết & Xuất Dữ Liệu**:
+         + `src/components/common/ColumnHeaderMenu.vue`:
+           * Cập nhật tức thì `props.column.showInDetail` và `props.column.includeInExport` ngay khi người dùng click checkbox, ngăn ngừa tình trạng mở lại menu bị bật ngược lại.
+           * Xử lý chặt chẽ trường hợp giá trị lưu dạng chuỗi hoặc boolean: `c.showInDetail !== false && c.showInDetail !== 'false'`.
+         + `src/composables/unified-table/useTableColumns.js`:
+           * Cập nhật đồng bộ `selectedChildMenuCol.value` khi phát emit.
+           * Gán lại tham chiếu mảng mapping và `customDashboards` bằng `JSON.parse(JSON.stringify(...))` khi persist, kích hoạt hệ thống reactivity của Vue 3 / Pinia recompute lập tức `allAvailableColumnsList`.
+         + `src/views/UnifiedTableView.vue`:
+           * Trong `allAvailableColumnsList`: Gán tường minh thuộc tính `showInDetail` và `includeInExport` cho tất cả các nguồn bảng (`trips`, `personnel`, `relatives`, `blank`).
+         + `src/components/personnel/PersonnelDialog.vue`:
+           * Tạo hàm lọc helper `isColumnVisibleInDetail(col)` loại trừ chuẩn xác các cột bị tắt tick `showInDetail`.
+       - **Tái Cấu Trúc 100% Dynamic Cho `PersonnelRelatedTabs.vue`**:
+         + **Xóa bỏ 100% Hardcode Cột**: Cả 2 bảng mini (Thân nhân & Chuyến đi) render động `v-for="col in relativeColumns"` và `v-for="col in tripColumns"`. Bất kỳ cột nào người dùng thêm vào bảng Thân nhân hoặc Chuyến đi đều tự động xuất hiện.
+         + **Xóa bỏ 100% Hardcode Form Input**: Cả 2 modal thêm/sửa con (Sub-dialogs) chuyển sang dùng `<DynamicField v-model="form[col.id]" :col="col" />` lặp qua toàn bộ danh sách cột cấu hình.
+         + **Liên kết Khóa Động Thuần Khiết**: Tự động phát hiện trường khóa từ store (`getPersonnelKeyField()`, `getRelativeParentKeyField()`, `getRelativeKeyField()`, `getTripKeyField()`), không gán tĩnh bất kỳ tên trường nào.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 548ms).
+       - Đồng bộ toàn bộ `dist/` và `src/` sang `WINDOWS_OFFLINE_APP/frontend/`.
+    4. **Trạng thái**: Done [Reversible].
+
+
 

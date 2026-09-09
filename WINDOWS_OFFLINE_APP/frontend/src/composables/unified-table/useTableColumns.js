@@ -500,12 +500,16 @@ export function useTableColumns({
   };
 
   const onChildChangeColumnIncludeExport = async ({ colId, includeInExport }) => {
+    if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
+      selectedChildMenuCol.value.includeInExport = Boolean(includeInExport);
+    }
     const { mapping, isBlank, cDash, src } = getTargetMappingRef();
     if (isBlank && cDash) {
       const col = (cDash.customColumns || []).find((c) => c.id === colId);
       if (col) {
         col.includeInExport = Boolean(includeInExport);
         try {
+          customDashboards.value = JSON.parse(JSON.stringify(customDashboards.value));
           localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
           await saveAppSettings('custom_dashboards_config', customDashboards.value);
         } catch (e) {}
@@ -524,17 +528,21 @@ export function useTableColumns({
       if (found) break;
     }
     if (found) {
-      await persistTableMapping(src, mapping);
+      await persistTableMapping(src, JSON.parse(JSON.stringify(mapping)));
     }
   };
 
   const onChildChangeColumnShowInDetail = async ({ colId, showInDetail }) => {
+    if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
+      selectedChildMenuCol.value.showInDetail = Boolean(showInDetail);
+    }
     const { mapping, isBlank, cDash, src } = getTargetMappingRef();
     if (isBlank && cDash) {
       const col = (cDash.customColumns || []).find((c) => c.id === colId);
       if (col) {
         col.showInDetail = Boolean(showInDetail);
         try {
+          customDashboards.value = JSON.parse(JSON.stringify(customDashboards.value));
           localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
           await saveAppSettings('custom_dashboards_config', customDashboards.value);
         } catch (e) {}
@@ -553,7 +561,7 @@ export function useTableColumns({
       if (found) break;
     }
     if (found) {
-      await persistTableMapping(src, mapping);
+      await persistTableMapping(src, JSON.parse(JSON.stringify(mapping)));
     }
   };
 

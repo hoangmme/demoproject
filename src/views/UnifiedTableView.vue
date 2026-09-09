@@ -1267,10 +1267,11 @@ const openAddColumnDialog = () => {
   isAddColumnDialogOpen.value = true;
 };
 
-// ===== Lark Base: Đồng bộ Cấu hình Cột xuống Mọi Khóa DB & Directus =====
 const persistTableMapping = async (src, mappingData) => {
+  const cloned = JSON.parse(JSON.stringify(mappingData || []));
   if (src === 'blank') {
     try {
+      customDashboards.value = JSON.parse(JSON.stringify(customDashboards.value));
       localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
       await saveAppSettings('custom_dashboards_config', customDashboards.value);
     } catch (e) {}
@@ -1279,17 +1280,17 @@ const persistTableMapping = async (src, mappingData) => {
   let keys = ['mapping_config_trips', 'import_mapping_trips', 'importMappingTrips'];
   if (src === 'relatives') {
     keys = ['mapping_config_relative', 'import_mapping_relative', 'importMappingRelative'];
-    personnelStore.importMappingRelative = mappingData;
+    personnelStore.importMappingRelative = cloned;
   } else if (src === 'personnel') {
     keys = ['mapping_config_personnel', 'import_mapping_personnel', 'importMappingPersonnel'];
-    personnelStore.importMappingPersonnel = mappingData;
+    personnelStore.importMappingPersonnel = cloned;
   } else {
-    personnelStore.importMappingTrips = mappingData;
+    personnelStore.importMappingTrips = cloned;
   }
   try {
     await Promise.all(keys.map((k) => {
-      try { localStorage.setItem(k, JSON.stringify(mappingData)); } catch (e) {}
-      return saveAppSettings(k, mappingData);
+      try { localStorage.setItem(k, JSON.stringify(cloned)); } catch (e) {}
+      return saveAppSettings(k, cloned);
     }));
   } catch (err) {
     console.error('persistTableMapping error:', err);
@@ -2129,6 +2130,8 @@ const allAvailableColumnsList = computed(() => {
         format: c.format || 'text',
         options: c.options || [],
         isVirtual: false,
+        showInDetail: c.showInDetail !== false && c.showInDetail !== 'false',
+        includeInExport: c.includeInExport !== false && c.includeInExport !== 'false',
       });
     });
     return rawList;
@@ -2152,6 +2155,8 @@ const allAvailableColumnsList = computed(() => {
             tableWidth: c.tableWidth || null,
             format: c.format,
             isVirtual: false,
+            showInDetail: c.showInDetail !== false && c.showInDetail !== 'false',
+            includeInExport: c.includeInExport !== false && c.includeInExport !== 'false',
           });
         }
       });
@@ -2174,6 +2179,8 @@ const allAvailableColumnsList = computed(() => {
             tableWidth: c.tableWidth || null,
             format: c.format,
             isVirtual: false,
+            showInDetail: c.showInDetail !== false && c.showInDetail !== 'false',
+            includeInExport: c.includeInExport !== false && c.includeInExport !== 'false',
           });
         }
       });
@@ -2197,6 +2204,8 @@ const allAvailableColumnsList = computed(() => {
             tableWidth: c.tableWidth || null,
             format: c.format,
             isVirtual: false,
+            showInDetail: c.showInDetail !== false && c.showInDetail !== 'false',
+            includeInExport: c.includeInExport !== false && c.includeInExport !== 'false',
           });
         }
       });

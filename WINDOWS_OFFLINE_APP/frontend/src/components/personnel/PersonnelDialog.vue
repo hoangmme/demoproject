@@ -175,9 +175,15 @@ const form = ref({});
 
 const isEdit = computed(() => Boolean(form.value.id || form.value.uniqueKey));
 
+const isColumnVisibleInDetail = (c) => {
+  if (!c || c.isVirtual || c.id === 'stt') return false;
+  if (c.showInDetail === false || c.showInDetail === 'false' || c.showInDetail === 0 || c.showInDetail === '0') return false;
+  return true;
+};
+
 const allTableColumns = computed(() => {
   if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
-    return props.columns.filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
+    return props.columns.filter(isColumnVisibleInDetail);
   }
   const allGroups = [
     ...(personnelStore.importMappingPersonnel || []),
@@ -188,7 +194,7 @@ const allTableColumns = computed(() => {
   const seen = new Set();
   allGroups.forEach((grp) => {
     (grp.columns || []).forEach((col) => {
-      if (col && col.id && col.id !== 'stt' && !col.isVirtual && col.showInDetail !== false && !seen.has(col.id)) {
+      if (col && isColumnVisibleInDetail(col) && !seen.has(col.id)) {
         seen.add(col.id);
         list.push(col);
       }

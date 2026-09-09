@@ -825,8 +825,8 @@ watch(
       editRollupTarget.value = col.rollupTarget || "trips";
       editRollupField.value = col.rollupField || "";
       editRollupFunction.value = col.rollupFunction || "count";
-      editIncludeInExport.value = col.includeInExport !== false;
-      editShowInDetail.value = col.showInDetail !== false;
+      editIncludeInExport.value = col.includeInExport !== false && col.includeInExport !== 'false';
+      editShowInDetail.value = col.showInDetail !== false && col.showInDetail !== 'false';
       editCollapseDuplicates.value = Boolean(col.collapseDuplicates);
     }
   },
@@ -967,10 +967,16 @@ const handleToggleRequired = () => {
 };
 
 const handleToggleIncludeExport = () => {
+  if (props.column) {
+    props.column.includeInExport = editIncludeInExport.value;
+  }
   emit("change-include-export", { colId: props.column.id, includeInExport: editIncludeInExport.value });
 };
 
 const handleToggleShowInDetail = () => {
+  if (props.column) {
+    props.column.showInDetail = editShowInDetail.value;
+  }
   emit("change-show-in-detail", { colId: props.column.id, showInDetail: editShowInDetail.value });
 };
 
