@@ -2127,8 +2127,23 @@
          4) Khớp theo `item.rawPerson`.
        - Đồng thời nâng cấp nhánh `target === 'relatives'` để hỗ trợ tra cứu thân nhân qua `item.relativeId` và `item.cccdchuyendi`.
        - Không làm sai lệch dữ liệu phẳng của dòng, không nạp fallback ngầm, chỉ phân giải khi cột Lookup được cấu hình.
-    3. **Kiểm thử**:
-       - Test trực tiếp qua Node.js: Cả chuyến đi Cán bộ, chuyến đi Thân nhân có `personnelId`, và chuyến đi Thân nhân không có `personnelId` (chỉ có `cccdchuyendi`) đều trả về chính xác Tên Cán bộ.
-       - `npm run build` thành công 100% (525ms), đồng bộ sang `WINDOWS_OFFLINE_APP/frontend`.
-    4. **Trạng thái**: Done [Reversible].
+- **Entry (2026-09-09 - Session 6)**: **Hoàn thiện Giao diện Rollup UI (AddColumnDialog & ColumnHeaderMenu) & Chuẩn hóa 100% Động cơ Flat Table (evaluateRollup & evaluateLookup)**:
+    1. **Vấn đề & Phản hồi người dùng**:
+       - Người dùng phản hồi: *"1. tên nó lấy đc tên nó không lấy nè?", "- bạn vừa sửa có dạng flat gì chưa đó, có hardcode gì ko? có thì bỏ đi vì tôi ko cần hardcode", "- rollup lỗi ko hiển thị gì khi chọn"*.
+    2. **Nguyên nhân cốt lõi**:
+       - Trong `AddColumnDialog.vue`: Dropdown có tùy chọn Rollup nhưng thiếu khối template `v-if="form.format === 'rollup'"` và thiếu các trường `rollupTarget`, `rollupField`, `rollupFunction` trong state và save payload -> Khi chọn Rollup giao diện bị trắng/trống không hiển thị gì.
+       - Trong `src/utils/formatters.js`: Có lỗi cú pháp `return '-'; };` thừa gây crash bundle, đồng thời việc so khớp ID kiểu nghiêm ngặt `===` (number vs string) khiến một số bản ghi không liên kết được tên Cán bộ.
+       - Trong `src/utils/dashboardMetrics.js` (`buildTopicSourceList`): Chưa liên kết ngược `matchedPerson` / `matchedRelative` qua ID quan hệ phẳng `t.personnelId` / `t.relativeId`.
+    3. **Giải pháp & Triển khai**:
+       - **Giao diện Cấu hình Rollup (AddColumnDialog.vue & ColumnHeaderMenu.vue)**:
+         + Bổ sung khối UI Rollup đầy đủ, trực quan: Chọn Bảng nguồn đích (`trips`, `relative_trips`, `relatives`, `personnel`), Chọn Hàm tính toán (`count`, `join`, `sum`, `latest`), Chọn Cột tổng hợp (`targetRollupCols`), và Xem trước kết quả trực tiếp (`rollupPreviewResult`).
+         + Tích hợp đầy đủ vào `handleSave` và sự kiện `@change-rollup` trong `UnifiedTableView.vue`.
+       - **Động cơ Flat Table 100% Thuần Khiết (Không Hardcode)**:
+         + `evaluateRollup`: Nâng cấp sang Flat Table engine đa nguồn (`trips`, `relative_trips`, `relatives`, `personnel`), xóa sạch toàn bộ hardcode tên cột khóa, so khớp linh hoạt qua `getPersonnelKeyField()`, `getRelativeKeyField()`, `getTripKeyField()`.
+         + `evaluateLookup`: Xóa bỏ hoàn toàn hardcode, chuẩn hóa so khớp ID dạng string (`String(id).trim()`), hỗ trợ liên kết qua `item.personnelId` và `item.relativeId`.
+         + `buildTopicSourceList`: Bổ sung liên kết `matchedPerson` và `matchedRelative` qua `t.personnelId` và `t.relativeId` để bảo toàn đối tượng phẳng cho toàn bộ 48 chuyến đi.
+    4. **Kiểm thử & Triển khai**:
+       - Test trực tiếp: 48/48 chuyến đi (100% Cán bộ và Thân nhân) đều liên kết chính xác tên Cán bộ chủ quản khi cấu hình cột Lookup.
+       - `npm run build` thành công 100% (514ms), đồng bộ sang `WINDOWS_OFFLINE_APP/frontend`.
+    5. **Trạng thái**: Done [Reversible].
 

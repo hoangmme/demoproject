@@ -308,6 +308,64 @@
         </div>
       </div>
 
+      <!-- CẤU HÌNH TÍNH TOÁN TỔNG HỢP (ROLLUP) -->
+      <div v-if="form.format === 'rollup'" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 0.76rem; font-weight: 700; color: #15803d; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-calculator"></i>
+            <span>📊 Cấu hình Tính toán Tổng hợp (Rollup)</span>
+          </div>
+          <span style="font-size: 0.65rem; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Flat Engine</span>
+        </div>
+
+        <!-- 1. Bảng dữ liệu liên kết nguồn -->
+        <div>
+          <label style="font-size: 0.72rem; font-weight: 700; color: #166534; display: block; margin-bottom: 3px;">
+            1. Bảng dữ liệu cần tổng hợp: <span style="color: #ef4444;">*</span>
+          </label>
+          <select v-model="form.rollupTarget" class="dialog-select" @change="form.rollupField = ''">
+            <option value="trips">Chuyến đi (Cán bộ)</option>
+            <option value="relative_trips">Chuyến đi của Thân nhân</option>
+            <option value="relatives">Bảng Thân nhân</option>
+            <option value="personnel">Bảng Cán bộ</option>
+          </select>
+        </div>
+
+        <!-- 2. Hàm tính toán (Rollup Function) -->
+        <div>
+          <label style="font-size: 0.72rem; font-weight: 700; color: #166534; display: block; margin-bottom: 3px;">
+            2. Hàm tính toán (Rollup Function): <span style="color: #ef4444;">*</span>
+          </label>
+          <select v-model="form.rollupFunction" class="dialog-select">
+            <option value="count">count() - Đếm số lượng bản ghi (VD: Đếm số thân nhân, đếm số chuyến đi)</option>
+            <option value="join">join() - Gom danh sách giá trị cách nhau dấu phẩy (VD: Danh sách các Quốc gia đã đi)</option>
+            <option value="sum">sum() - Tính tổng giá trị số</option>
+            <option value="latest">latest() - Lấy giá trị gần nhất / mới nhất</option>
+          </select>
+        </div>
+
+        <!-- 3. Cột cần tính toán / gom nhóm -->
+        <div>
+          <label style="font-size: 0.72rem; font-weight: 700; color: #166534; display: block; margin-bottom: 3px;">
+            3. Cột dữ liệu cần tổng hợp: <span v-if="form.rollupFunction !== 'count'" style="color: #ef4444;">*</span>
+          </label>
+          <select v-model="form.rollupField" class="dialog-select">
+            <option value="">{{ form.rollupFunction === 'count' ? '-- Không bắt buộc khi Đếm số lượng (count) --' : '-- Chọn cột dữ liệu --' }}</option>
+            <option v-for="c in targetRollupCols" :key="c.id" :value="c.id">
+              {{ c.label }} ({{ c.id }})
+            </option>
+          </select>
+        </div>
+
+        <!-- Live Preview -->
+        <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 0.68rem; color: #166534; font-weight: 600;">Xem trước kết quả (Dòng mẫu 1):</span>
+          <span style="font-size: 0.74rem; font-weight: 700; color: #15803d; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ rollupPreviewResult }}
+          </span>
+        </div>
+      </div>
+
       <!-- 3. Độ rộng trong Form Chi tiết (%) -->
       <div style="padding-top: 4px; border-top: 1px solid #f1f5f9;">
         <label style="font-size: 0.75rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
@@ -393,6 +451,7 @@ import {
   lookupOperators,
   evaluateCustomFormula,
   evaluateLookup,
+  evaluateRollup,
   getRecordFieldValue,
   formulaFunctionsCatalog,
 } from '@/utils/formatters';
@@ -447,6 +506,9 @@ const form = ref({
   lookupFormat: 'default',
   formulaType: 'custom_expression',
   formulaExpression: '',
+  rollupTarget: 'trips',
+  rollupField: '',
+  rollupFunction: 'count',
 });
 
 const isIdManuallyEdited = ref(false);
@@ -486,6 +548,9 @@ watch(
         lookupFormat: 'default',
         formulaType: 'custom_expression',
         formulaExpression: '',
+        rollupTarget: 'trips',
+        rollupField: '',
+        rollupFunction: 'count',
       };
     }
   }
@@ -539,6 +604,12 @@ const targetLookupCols = computed(() => {
   return availablePersonnelCols.value;
 });
 
+const targetRollupCols = computed(() => {
+  if (form.value.rollupTarget === 'relatives') return availableRelativeCols.value;
+  if (form.value.rollupTarget === 'trips' || form.value.rollupTarget === 'relative_trips') return availableTripCols.value;
+  return availablePersonnelCols.value;
+});
+
 const addLookupCondition = () => {
   const defaultTarget = targetLookupCols.value?.[0]?.id || '';
   const defaultSource = currentTableCols.value?.[0]?.id || '';
@@ -562,6 +633,20 @@ const sampleRow = computed(() => {
   if (props.tableSource === 'trips') return personnelStore.tripsList?.[0] || {};
   if (props.tableSource === 'relatives') return personnelStore.relativesList?.[0] || {};
   return personnelStore.personnelList?.[0] || {};
+});
+
+const rollupPreviewResult = computed(() => {
+  try {
+    const res = evaluateRollup(sampleRow.value, {
+      rollupTarget: form.value.rollupTarget || 'trips',
+      rollupField: form.value.rollupField || '',
+      rollupFunction: form.value.rollupFunction || 'count',
+    }, personnelStore);
+    if (res === null || res === undefined || res === '') return '(trống)';
+    return String(res);
+  } catch (e) {
+    return 'Lỗi: ' + (e.message || e);
+  }
 });
 
 const formulaPreviewResult = computed(() => {
@@ -606,6 +691,10 @@ const handleSave = async () => {
     alert('Vui lòng chọn cột dữ liệu cần lấy từ bảng đích!');
     return;
   }
+  if (form.value.format === 'rollup' && form.value.rollupFunction !== 'count' && !form.value.rollupField) {
+    alert('Vui lòng chọn cột dữ liệu cần tổng hợp!');
+    return;
+  }
 
   isSaving.value = true;
   try {
@@ -630,6 +719,11 @@ const handleSave = async () => {
       ...(form.value.format === 'formula' ? {
         formulaType: form.value.formulaType || 'custom_expression',
         formulaExpression: form.value.formulaExpression || '',
+      } : {}),
+      ...(form.value.format === 'rollup' ? {
+        rollupTarget: form.value.rollupTarget || 'trips',
+        rollupField: form.value.rollupField || '',
+        rollupFunction: form.value.rollupFunction || 'count',
       } : {}),
       targetIndex: props.targetIndex,
     };

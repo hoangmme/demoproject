@@ -1083,6 +1083,7 @@
       @change-include-export="onChildChangeColumnIncludeExport"
       @change-show-in-detail="onChildChangeColumnShowInDetail"
       @change-lookup="onChildChangeColumnLookup"
+      @change-rollup="onChildChangeColumnRollup"
       @change-name-col-field="toggleNameColField"
       @delete-column="onChildDeleteColumnFromTable"
       @hide-column="onChildHideColumn"
@@ -2359,6 +2360,39 @@ const onChildChangeColumnLookup = async (payload) => {
       if (lookupFormat !== undefined) c.lookupFormat = lookupFormat;
       await saveAppSettings('custom_dashboards_config', personnelStore.customDashboards);
     }
+  }
+};
+
+const onChildChangeColumnRollup = async (payload) => {
+  const { colId, rollupTarget, rollupField, rollupFunction } = payload;
+  const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const c = (cDash.customColumns || []).find((col) => col.id === colId);
+    if (c) {
+      c.format = 'rollup';
+      c.rollupTarget = rollupTarget;
+      c.rollupField = rollupField;
+      c.rollupFunction = rollupFunction;
+      await persistTableMapping('blank', customDashboards.value);
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.format = 'rollup';
+        c.rollupTarget = rollupTarget;
+        c.rollupField = rollupField;
+        c.rollupFunction = rollupFunction;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings(key, mapping);
   }
 };
 

@@ -302,6 +302,64 @@
           </div>
         </div>
 
+        <!-- Cấu hình Tính toán Tổng hợp nếu là rollup (Flat Rollup Engine) -->
+        <div v-if="editFormat === 'rollup'" class="menu-field" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; margin-top: 6px;">
+          <div style="font-size: 0.76rem; font-weight: 700; color: #15803d; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <i class="pi pi-calculator"></i>
+              <span>📊 Cấu hình Tính toán Tổng hợp (Rollup)</span>
+            </div>
+            <span style="font-size: 0.65rem; background: #dcfce7; color: #166534; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Flat Engine</span>
+          </div>
+
+          <!-- 1. Bảng dữ liệu nguồn -->
+          <div style="margin-bottom: 6px;">
+            <label style="font-size: 0.68rem; color: #166534; font-weight: 700; display: block; margin-bottom: 2px;">
+              1. Bảng dữ liệu nguồn:
+            </label>
+            <select v-model="editRollupTarget" class="menu-select" @change="editRollupField = ''; handleSaveRollup()">
+              <option value="trips">Chuyến đi (Cán bộ)</option>
+              <option value="relative_trips">Chuyến đi của Thân nhân</option>
+              <option value="relatives">Bảng Thân nhân</option>
+              <option value="personnel">Bảng Cán bộ</option>
+            </select>
+          </div>
+
+          <!-- 2. Hàm tính toán -->
+          <div style="margin-bottom: 6px;">
+            <label style="font-size: 0.68rem; color: #166534; font-weight: 700; display: block; margin-bottom: 2px;">
+              2. Hàm tính toán (Function):
+            </label>
+            <select v-model="editRollupFunction" class="menu-select" @change="handleSaveRollup">
+              <option value="count">count() - Đếm số lượng</option>
+              <option value="join">join() - Gom danh sách (phân tách dấu phẩy)</option>
+              <option value="sum">sum() - Tính tổng giá trị số</option>
+              <option value="latest">latest() - Lấy giá trị gần nhất</option>
+            </select>
+          </div>
+
+          <!-- 3. Cột cần tính toán -->
+          <div style="margin-bottom: 6px;">
+            <label style="font-size: 0.68rem; color: #166534; font-weight: 700; display: block; margin-bottom: 2px;">
+              3. Cột dữ liệu cần tổng hợp:
+            </label>
+            <select v-model="editRollupField" class="menu-select" @change="handleSaveRollup">
+              <option value="">{{ editRollupFunction === 'count' ? '-- Không bắt buộc khi Đếm (count) --' : '-- Chọn cột dữ liệu --' }}</option>
+              <option v-for="c in targetRollupCols" :key="c.id" :value="c.id">
+                {{ c.label }} ({{ c.id }})
+              </option>
+            </select>
+          </div>
+
+          <!-- Live Preview -->
+          <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.65rem; color: #166534; font-weight: 600;">Xem trước:</span>
+            <span style="font-size: 0.7rem; font-weight: 700; color: #15803d; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              {{ rollupPreviewResult }}
+            </span>
+          </div>
+        </div>
+
         <!-- Tùy chọn Options nếu là dropdown -->
         <div v-if="editFormat === 'dropdown' || editFormat === 'checkbox' || editFormat === 'checkbox_file_loop'" class="menu-field">
           <label>Danh sách tùy chọn (cách nhau bởi dấu phẩy):</label>
@@ -434,6 +492,7 @@ import {
   lookupOperators,
   evaluateCustomFormula,
   evaluateLookup,
+  evaluateRollup,
   getRecordFieldValue,
   formulaFunctionsCatalog,
 } from "@/utils/formatters";
@@ -480,6 +539,7 @@ const emit = defineEmits([
   "change-include-export",
   "change-show-in-detail",
   "change-lookup",
+  "change-rollup",
   "change-name-col-field",
   "delete-column",
   "hide-column",
@@ -510,6 +570,10 @@ const editLookupConditions = ref([]);
 const editLookupLogicOp = ref("AND");
 const editLookupDisplay = ref("value");
 const editLookupFormat = ref("default");
+
+const editRollupTarget = ref("trips");
+const editRollupField = ref("");
+const editRollupFunction = ref("count");
 
 const availablePersonnelCols = computed(() => {
   const list = [];
@@ -553,6 +617,12 @@ const targetLookupCols = computed(() => {
   return availablePersonnelCols.value;
 });
 
+const targetRollupCols = computed(() => {
+  if (editRollupTarget.value === 'relatives') return availableRelativeCols.value;
+  if (editRollupTarget.value === 'trips' || editRollupTarget.value === 'relative_trips') return availableTripCols.value;
+  return availablePersonnelCols.value;
+});
+
 const defaultFallbackParentFields = [
   { key: 'name', label: 'Họ và tên' },
   { key: 'cccdCB', label: 'Số CCCD / Mã định danh' },
@@ -591,6 +661,9 @@ watch(
       editLookupFormat.value = col.lookupFormat || "default";
       editFormulaType.value = col.formulaType || "presence_status";
       editFormulaExpression.value = col.formulaExpression || "";
+      editRollupTarget.value = col.rollupTarget || "trips";
+      editRollupField.value = col.rollupField || "";
+      editRollupFunction.value = col.rollupFunction || "count";
       editIncludeInExport.value = col.includeInExport !== false;
       editShowInDetail.value = col.showInDetail !== false;
     }
@@ -602,6 +675,20 @@ const sampleRow = computed(() => {
   if (props.tableSource === 'trips') return personnelStore.tripsList?.[0] || {};
   if (props.tableSource === 'relatives') return personnelStore.relativesList?.[0] || {};
   return personnelStore.personnelList?.[0] || {};
+});
+
+const rollupPreviewResult = computed(() => {
+  try {
+    const res = evaluateRollup(sampleRow.value, {
+      rollupTarget: editRollupTarget.value || 'trips',
+      rollupField: editRollupField.value || '',
+      rollupFunction: editRollupFunction.value || 'count',
+    }, personnelStore);
+    if (res === null || res === undefined || res === '') return '(trống)';
+    return String(res);
+  } catch (e) {
+    return 'Lỗi: ' + (e.message || e);
+  }
 });
 
 const formulaPreviewResult = computed(() => {
@@ -681,6 +768,15 @@ const handleSaveFormulaType = () => {
   });
 };
 
+const handleSaveRollup = () => {
+  emit("change-rollup", {
+    colId: props.column.id,
+    rollupTarget: editRollupTarget.value,
+    rollupField: editRollupField.value,
+    rollupFunction: editRollupFunction.value,
+  });
+};
+
 const handleFormatChange = () => {
   if (editFormat.value === 'formula' && !editFormulaType.value) {
     editFormulaType.value = 'custom_expression';
@@ -690,6 +786,8 @@ const handleFormatChange = () => {
     handleSaveLookup();
   } else if (editFormat.value === 'formula') {
     handleSaveFormulaType();
+  } else if (editFormat.value === 'rollup') {
+    handleSaveRollup();
   }
 };
 

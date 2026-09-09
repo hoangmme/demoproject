@@ -290,6 +290,28 @@ export const buildTopicSourceList = (source, personnelStore) => {
       }
     }
 
+    if (!matchedPerson && t.personnelId) {
+      const pid = String(t.personnelId).trim().toLowerCase();
+      if (personnelByKey.has(pid)) matchedPerson = personnelByKey.get(pid);
+      else if (personnelStore?.personnelList) matchedPerson = personnelStore.personnelList.find(p => String(p.id).trim() === String(t.personnelId).trim());
+    }
+
+    if (!matchedRelative && t.relativeId) {
+      const rid = String(t.relativeId).trim().toLowerCase();
+      if (relativeByKey.has(rid)) matchedRelative = relativeByKey.get(rid);
+      else if (personnelStore?.relativesList) matchedRelative = personnelStore.relativesList.find(r => String(r.id).trim() === String(t.relativeId).trim());
+    }
+
+    if (!matchedPerson && matchedRelative) {
+      if (matchedRelative.personnelId) {
+        const mpid = String(matchedRelative.personnelId).trim().toLowerCase();
+        if (personnelByKey.has(mpid)) matchedPerson = personnelByKey.get(mpid);
+        else if (personnelStore?.personnelList) matchedPerson = personnelStore.personnelList.find(p => String(p.id).trim() === String(matchedRelative.personnelId).trim());
+      } else if (matchedRelative.rawPerson) {
+        matchedPerson = matchedRelative.rawPerson;
+      }
+    }
+
     if (!matchedPerson && t.rawPerson) matchedPerson = t.rawPerson;
     if (!matchedRelative && t.rawRelative) matchedRelative = t.rawRelative;
 
