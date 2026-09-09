@@ -1865,29 +1865,7 @@ const getActiveCardCellValue = (row) => {
   return '-';
 };
 
-const getPersonInfo = (data) => {
-  if (!data) return { name: '-', cccdCB: '', position: '', department: '' };
 
-  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-  const posField = personnelStore.getPersonnelPositionField ? personnelStore.getPersonnelPositionField() : 'position';
-  const deptField = personnelStore.getPersonnelDepartmentField ? personnelStore.getPersonnelDepartmentField() : 'departmentName';
-
-  const isValidId = (val) => val && String(val).trim() !== '' && String(val).trim() !== '-' && !String(val).startsWith('p_') && !String(val).startsWith('cd_') && !String(val).startsWith('rel_') && !String(val).startsWith('trip_');
-
-  // Lấy thông tin Cán bộ liên quan (hoặc cán bộ chính)
-  const parentPerson = data.rawPerson || (data.cccdparent ? personnelStore.findPersonByCccd(data.cccdparent) : null);
-  const cbName = parentPerson?.name || data.parentPersonnelName || data.parentName || (!data.isRelative ? (data.personnelName || data.name) : '') || '-';
-  const cbCccd = parentPerson?.[pKeyField] || parentPerson?.cccd || parentPerson?.cccdparent || data.parentCccd || data.cccdparent || (!data.isRelative ? (data[pKeyField] || data.cccd) : '') || '';
-  const cbPos = parentPerson?.[posField] || parentPerson?.positionName || parentPerson?.position || data.parentPosition || (!data.isRelative ? (data[posField] || data.positionName || data.position) : '') || '';
-  const cbDept = parentPerson?.[deptField] || parentPerson?.departmentName || (parentPerson?.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || (!data.isRelative ? (data[deptField] || data.departmentName) : '') || '';
-
-  return {
-    name: cbName,
-    cccdCB: isValidId(cbCccd) ? `CCCD-CB: ${String(cbCccd).trim()}` : '',
-    position: cbPos && String(cbPos).trim() !== '-' && String(cbPos).trim() !== 'Chưa phân bổ' ? String(cbPos).trim() : '',
-    department: cbDept && String(cbDept).trim() !== '-' ? String(cbDept).trim() : '',
-  };
-};
 
 const getCardDisplayLabel = (card) => {
   if (!card) return '';
@@ -2574,7 +2552,8 @@ const shouldCollapseDuplicate = (data, index, col) => {
   return String(currentVal).trim().toLowerCase() === String(prevVal).trim().toLowerCase();
 };
 
-const getCellValue = (trip, colId, depth = 0) => {
+const getCellValue = (trip, colOrId, depth = 0) => {
+  const colId = typeof colOrId === 'object' && colOrId !== null ? (colOrId.id || colOrId.field) : colOrId;
   if (!trip || !colId || depth > 5) return '-';
 
   // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
@@ -2598,7 +2577,7 @@ const getCellValue = (trip, colId, depth = 0) => {
     if (c.id) allMap[c.id] = c;
   });
 
-  const colDef = allMap[colId];
+  const colDef = (typeof colOrId === 'object' && colOrId !== null && colOrId.id) ? colOrId : allMap[colId];
   if (colDef && colDef.format === 'formula') {
     const configWithResolver = {
       ...colDef,

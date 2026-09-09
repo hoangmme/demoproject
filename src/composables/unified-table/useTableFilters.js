@@ -146,8 +146,9 @@ export function useTableFilters({
       const cols = resolveList(visibleColumns);
       list = list.filter((item) => {
         if (cols.length > 0) {
-          return cols.some((col) => {
-            const val = typeof getCellValue === 'function' ? getCellValue(item, col) : item[col.id];
+          const matchedVisible = cols.some((col) => {
+            const colId = typeof col === 'object' && col !== null ? (col.id || col.field) : col;
+            const val = typeof getCellValue === 'function' ? getCellValue(item, colId) : item[colId];
             return (
               val !== undefined &&
               val !== null &&
@@ -156,16 +157,23 @@ export function useTableFilters({
               String(val).toLowerCase().includes(q)
             );
           });
+          if (matchedVisible) return true;
         }
-        // Fallback nếu danh sách cột chưa sẵn sàng
-        const allVals = [
-          ...Object.values(item),
-          ...(item.custom_data && typeof item.custom_data === 'object'
-            ? Object.values(item.custom_data)
-            : []),
+        // Đồng thời kiểm tra trên các trường định danh cơ bản của chính bản ghi (Tên, Mã, CCCD)
+        const primaryFields = [
+          item.name,
+          item.personnelName,
+          item.relativeName,
+          item.code,
+          item.personnelCode,
+          item.cccd,
+          item.cccdparent,
+          item.parentCccd,
+          item.cccdthannhan,
+          item.cccdchuyendi,
         ];
-        return allVals.some(
-          (v) => (typeof v === 'string' || typeof v === 'number') && String(v).toLowerCase().includes(q)
+        return primaryFields.some(
+          (f) => f !== undefined && f !== null && f !== '' && f !== '-' && String(f).toLowerCase().includes(q)
         );
       });
     }

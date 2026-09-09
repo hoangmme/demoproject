@@ -2744,6 +2744,33 @@
        - Commit & push lên git `main`.
     4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-10 - Session 30)**: **Sửa Lỗi Tìm Kiếm Bảng Cán Bộ, Xác Nhận Dữ Liệu Nguyễn Hoài Hận (001072041478) & Triệt Tiêu Hoàn Toàn Các Logic Fallback Ngầm**:
+    1. **Yêu cầu của người dùng**:
+       - *"sao chuyến đi có '001072041478' nguyễn hoài hận mà bảng cán bộ ko có???? check lại xem còn logic fallback nào ko xóa hết giúp tôi đi chứ, tôi rất mệt mỏi vì cứ còn fallback làm dữ liệu bị sai"*
+    2. **Bản chất nguyên nhân & Điều tra thực tế**:
+       - Cán bộ `Nguyễn Hoài Hận` (CCCD: `001072041478`, Mã: `CB-00023`) **CÓ ĐẦY ĐỦ** trong DB Directus (`/items/personnels` có 30 cán bộ).
+       - Ở Bảng Chuyến đi (`/trips`): Nguyễn Hoài Hận có chuyến đi Trung Quốc, cột `cccdchuyendi` hiển thị `001072041478` và cột Lookup `anhxatencanbo` hiển thị "Nguyễn Hoài Hận".
+       - Ở Bảng Cán bộ (`/personnel`):
+         * Cán bộ Nguyễn Hoài Hận nằm ở dòng 23 (Trang 2 của bảng khi phân trang 15 dòng/trang).
+         * Khi người dùng nhập `001072041478` vào ô tìm kiếm nhanh (`searchQuery`) để tìm: Trong `useTableFilters.js`, vòng lặp kiểm tra từng cột `col` gọi hàm `getCellValue(item, col)`. Vì `col` là một đối tượng (`object`) chứ không phải chuỗi `colId`, hàm `getCellValue` truy xuất `trip['[object Object]']` dẫn tới trả về `'-'`, khiến điều kiện `val !== '-'` luôn thất bại trên mọi cột. Kết quả là toàn bộ 30 dòng đều bị lọc mất, bảng hiển thị rỗng khiến người dùng lầm tưởng cán bộ không tồn tại!
+         * Thêm vào đó, nếu người dùng bấm vào các thẻ thống kê con của Cán bộ ("Kỷ luật", "Lịch sử chính trị", "Chính trị hiện nay"...), cán bộ Hận không có vi phạm nên không thuộc các thẻ lọc này.
+    3. **Giải pháp & Triển khai triệt để**:
+       - **Sửa Lỗi Ô Tìm Kiếm Nhanh (`useTableFilters.js` & `UnifiedTableView.vue`)**:
+         * Bóc tách chuẩn xác `colId = typeof col === 'object' && col !== null ? (col.id || col.field) : col;` trước khi đánh giá.
+         * Nâng cấp `getCellValue` trong `UnifiedTableView.vue` hỗ trợ cả tham số chuỗi `colId` lẫn đối tượng cột `colDef`, tự động lấy đúng giá trị ô bảng.
+         * Đồng thời bổ sung kiểm tra đối chiếu trên các trường định danh cơ bản của chính bản ghi (`name`, `personnelName`, `relativeName`, `code`, `personnelCode`, `cccd`, `cccdparent`, `parentCccd`, `cccdthannhan`, `cccdchuyendi`), đảm bảo tìm kiếm theo CCCD hay Tên luôn tìm ra 100% bản ghi ngay cả khi cột đó bị ẩn.
+       - **Triệt Tiêu Hoàn Toàn 100% Các Logic Fallback Ngầm Còn Sót Lại**:
+         * `src/stores/personnel.js`: Xóa bỏ hoàn toàn khối quét suy đoán phòng ban/chức vụ ngầm (`cleanK.includes('donvi') || cleanK.includes('phongban')`); xóa bỏ fallback alias `custom['Khối B: Chuyến đi nước ngoài']`.
+         * `src/utils/dashboardMetrics.js`: Xóa bỏ `custom['Khối B: Chuyến đi nước ngoài']`; trong `matchSingleCondition`, ngăn chặn tuyệt đối fallback `rawPerson.trips` khi bản ghi là Thân nhân (`item.isRelative`); trong `computeMetricCardCount`, gỡ bỏ hoàn toàn `rawPerson?.[pKeyField]` khỏi việc gom Unique.
+         * `src/views/UnifiedTableView.vue`: Xóa bỏ hàm chết `getPersonInfo` chứa fallback `findPersonByCccd(data.cccdparent)`.
+       - **Reset Bộ Lọc Đang Lưu Trên Directus**:
+         * Cập nhật `child_dashboard_filter_personnel` về `{"searchQuery": ""}` để mở bảng Cán bộ hiển thị đầy đủ 30 cán bộ.
+    4. **Kiểm thử & Triển khai**:
+       - Chạy kiểm thử node script: Tìm kiếm `001072041478` trên bảng Cán bộ trả về `true`, khớp chính xác Nguyễn Hoài Hận.
+       - `npm run build` thành công 100% (565ms, 0 lỗi).
+       - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+    5. **Trạng thái**: Done [Reversible].
+
 
 
 

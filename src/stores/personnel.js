@@ -264,7 +264,7 @@ export const usePersonnelStore = defineStore('personnel', {
           }
 
           const personCccd = String(p.cccdparent || p.cccd || custom.cccdparent || custom.cccd || '').trim();
-          const matchedTrips = p.trips || custom.trips || custom['Khối B: Chuyến đi nước ngoài'] || [];
+          const matchedTrips = p.trips || custom.trips || [];
           const matchedRelatives = p.relatives || custom.relatives || [];
           const flags = custom.flags || p.flags || {};
           const files = custom.files || p.files || [];
@@ -371,41 +371,6 @@ export const usePersonnelStore = defineStore('personnel', {
               });
             });
           }
-
-          let extractedDept = (
-            p.departmentName ||
-            (p.departmentId ? this.getDepartmentName(p.departmentId) : '') ||
-            custom.departmentName ||
-            custom.don_vi_cong_tac ||
-            custom.don_vi ||
-            custom.phong_ban ||
-            custom.donViCongTac ||
-            custom.donVi ||
-            ''
-          );
-
-          if (!extractedDept) {
-            for (const [k, v] of Object.entries(custom)) {
-              const cleanK = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
-              if (
-                (cleanK.includes('donvi') || cleanK.includes('phongban') || cleanK.includes('coquan') || cleanK.includes('department')) &&
-                v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-' && String(v).trim() !== 'Chưa phân bổ'
-              ) {
-                extractedDept = String(v).trim();
-                break;
-              }
-            }
-          }
-          const extractedPosition = (
-            p.position ||
-            p.positionName ||
-            p.chuc_vu ||
-            custom.position ||
-            custom.positionName ||
-            custom.chuc_vu ||
-            custom.chucVu ||
-            ''
-          );
 
           return {
             ...custom,
