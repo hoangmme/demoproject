@@ -1197,7 +1197,7 @@
 
           <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
             <template #body="{ index }">
-              <span style="font-weight: 600; color: #4b5563;">{{ drilldownDtFirst + index + 1 }}</span>
+              <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem;">{{ drilldownDtFirst + index + 1 }}</span>
             </template>
           </Column>
 
@@ -1221,9 +1221,9 @@
                     borderColor: getPresenceBadge(data).borderColor,
                     borderWidth: '1px',
                     borderStyle: 'solid',
-                    padding: '3px 8px',
+                    padding: '4px 10px',
                     borderRadius: '12px',
-                    fontSize: '0.72rem',
+                    fontSize: '0.92rem',
                     fontWeight: '600',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1231,21 +1231,21 @@
                     whiteSpace: 'nowrap',
                   }"
                 >
-                  <i :class="['pi', getPresenceBadge(data).icon]" style="font-size: 0.7rem;"></i>
+                  <i :class="['pi', getPresenceBadge(data).icon]" style="font-size: 0.85rem;"></i>
                   {{ getPresenceBadge(data).text }}
                 </span>
               </template>
 
               <!-- Họ tên Cán bộ / Bản ghi chính (dòng đậm) -->
               <template v-else-if="col.id === '_parentPersonnelName' || col.id === 'name' || col.id === 'ho_va_ten'">
-                <strong style="color: #0284c7; font-weight: 700; font-size: 0.82rem;">
+                <strong style="color: #0284c7; font-weight: 700; font-size: 1.18rem;">
                   {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </strong>
               </template>
 
               <!-- Cột thông thường -->
               <template v-else>
-                <span style="font-size: 0.78rem; color: #334155; line-height: 1.35; word-break: break-word;">
+                <span style="font-size: 1.15rem; color: #334155; line-height: 1.45; word-break: break-word;">
                   {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </span>
               </template>

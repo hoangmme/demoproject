@@ -300,7 +300,7 @@
         <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
         <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
           <template #body="{ index }">
-            <span style="font-weight: 600; color: #4b5563;">{{ dtFirst + index + 1 }}</span>
+            <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem;">{{ dtFirst + index + 1 }}</span>
           </template>
         </Column>
 
@@ -359,14 +359,14 @@
                     @blur="saveChildInlineEdit"
                   />
                 </div>
-                <strong v-else style="color: #0f172a; font-weight: 700;">{{ getCellValue(data, col.id) || data[col.id] || '-' }}</strong>
+                <strong v-else style="color: #0f172a; font-weight: 700; font-size: 1.18rem;">{{ getCellValue(data, col.id) || data[col.id] || '-' }}</strong>
               </div>
             </template>
 
 
             <!-- 2. Cột ngày tháng định dạng chuẩn (bất kể mã cột) -->
             <template v-else-if="col.format === 'date' || col.id === 'departureDate' || col.id === 'approvedDepartureDate' || col.id === 'arrivalDate' || col.id === 'approvedArrivalDate'">
-              <span>{{ formatDisplayDate(getCellValue(data, col.id)) }}</span>
+              <span style="font-size: 1.15rem;">{{ formatDisplayDate(getCellValue(data, col.id)) }}</span>
             </template>
 
             <!-- 3. Số quyết định -->
@@ -567,16 +567,16 @@
                 <!-- Hiển thị giá trị bình thường -->
                 <div
                   v-else-if="String(getCellValue(data, col.id)).includes('\n')"
-                  style="white-space: pre-line; line-height: 1.45; font-size: 0.78rem; color: #1e293b;"
+                  style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; color: #1e293b;"
                 >
-                  <div style="font-weight: 700; color: #0369a1;">
+                  <div style="font-weight: 700; color: #0369a1; font-size: 1.12rem;">
                     {{ String(getCellValue(data, col.id)).split('\n')[0] }}
                   </div>
-                  <div style="font-size: 0.73rem; color: #475569; margin-top: 2px;">
+                  <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
                     {{ String(getCellValue(data, col.id)).split('\n').slice(1).join('\n') }}
                   </div>
                 </div>
-                <span v-else style="word-break: break-word; line-height: 1.45;">{{ getCellValue(data, col.id) }}</span>
+                <span v-else style="word-break: break-word; line-height: 1.45; font-size: 1.15rem;">{{ getCellValue(data, col.id) }}</span>
               </div>
             </template>
             </template>
@@ -711,16 +711,16 @@
             <template v-else>
               <div
                 v-if="String(getActiveCardCellValue(data)).includes('\n')"
-                style="white-space: pre-line; line-height: 1.45; font-size: 0.78rem; text-align: left;"
+                style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; text-align: left;"
               >
-                <div style="font-weight: 700; color: #b91c1c;">
+                <div style="font-weight: 700; color: #b91c1c; font-size: 1.12rem;">
                   {{ String(getActiveCardCellValue(data)).split('\n')[0] }}
                 </div>
-                <div style="font-size: 0.73rem; color: #475569; margin-top: 2px;">
+                <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
                   {{ String(getActiveCardCellValue(data)).split('\n').slice(1).join('\n') }}
                 </div>
               </div>
-              <span v-else style="font-weight: 700; color: #b91c1c; font-size: 0.8rem;">
+              <span v-else style="font-weight: 700; color: #b91c1c; font-size: 1.15rem;">
                 {{ getActiveCardCellValue(data) }}
               </span>
             </template>

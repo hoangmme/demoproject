@@ -155,8 +155,10 @@
   - **Modal Cấu hình Widget (Khối thống kê)**:
     - Bổ sung trường chọn Chế độ xem áp dụng (`widgetForm.viewId` / `availableViewsForWidgetSource`).
     - Khi lưu, widget ghi nhớ View mặc định; khi click widget mở Drilldown Popup, popup tự động nhận diện và áp dụng ngay thứ tự cột của View đó.
-- **Tăng Kích Thước Chữ Body Lên 30% (`src/assets/styles/main.css`)**:
-  - Cấu hình `html { font-size: 130%; }` và `body { font-size: 1rem; }` tăng đồng bộ 30% toàn bộ kích thước chữ của các thành phần trong hệ thống (nội dung bảng dữ liệu, ô nhập liệu, thẻ thống kê, form modal...).
+- **Tăng Kích Thước Chữ Body Bảng Dữ Liệu Rõ Nét (`src/assets/styles/main.css`, `UnifiedTableView.vue`, `DashboardView.vue`)**:
+  - Cấu hình `html { font-size: 130%; }` và `body { font-size: 1rem; }` tăng 30% toàn bộ kích thước chữ cơ sở.
+  - Tăng trực tiếp kích thước font chữ Thân bảng (`.p-datatable-tbody > tr > td`, `.p-datatable-sm .p-datatable-tbody > tr > td`) từ `0.82rem` lên `1.15rem !important;` (tên in đậm `1.18rem !important;`, STT `1.12rem !important;`), tiêu đề cột `0.98rem !important;`.
+  - Cập nhật toàn bộ các thẻ text cell trong `UnifiedTableView.vue` và `DashboardView.vue` lên `1.05rem - 1.18rem`, loại bỏ triệt để các mức font nhỏ (`0.76rem - 0.82rem`) giúp các dòng dữ liệu to rõ, sắc nét, dễ đọc trên mọi màn hình.
   - Mở rộng nhẹ độ rộng sidebar lên `285px` để bố cục chữ menu và tiêu đề cơ quan hiển thị thoáng đẹp, sắc nét.
 
 ### 14. TÙY CHỈNH MÀU CHỮ MENU SIDEBAR (AppSidebar.vue, SettingsImportView.vue)

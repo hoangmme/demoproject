@@ -616,19 +616,21 @@ html, body {
   width: 100% !important;
 }
 
-.p-datatable-thead > tr > th {
+.p-datatable-thead > tr > th,
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable.p-datatable-sm .p-datatable-thead > tr > th {
   background: #f9fafb !important;
   color: #4b5563 !important;
-  font-size: 0.78rem !important;
+  font-size: 0.98rem !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
-  padding: 0.65rem 0.75rem !important;
+  padding: 0.75rem 0.85rem !important;
   border: none !important;
   border-bottom: 1px solid #e5e7eb !important;
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
-  line-height: 1.35 !important;
+  line-height: 1.4 !important;
 }
 
 .p-datatable-thead > tr > th .p-column-title,
@@ -636,7 +638,7 @@ html, body {
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
-  line-height: 1.35 !important;
+  line-height: 1.4 !important;
 }
 
 .p-datatable-thead > tr > th.p-sortable-column {
@@ -651,7 +653,7 @@ html, body {
 }
 
 .p-datatable-thead > tr > th.p-sortable-column .p-sortable-column-icon {
-  font-size: 0.72rem !important;
+  font-size: 0.85rem !important;
   color: #94a3b8 !important;
   margin-left: 6px !important;
   vertical-align: middle !important;
@@ -669,17 +671,30 @@ html, body {
   transform: scale(1.18) !important;
 }
 
-.p-datatable-tbody > tr > td {
-  padding: 0.65rem 0.75rem !important;
+.p-datatable-tbody > tr > td,
+.p-datatable .p-datatable-tbody > tr > td,
+.p-datatable.p-datatable-sm .p-datatable-tbody > tr > td {
+  padding: 0.75rem 0.85rem !important;
   border: none !important;
   border-bottom: 1px solid #f3f4f6 !important;
-  font-size: 0.82rem !important;
-  color: #374151 !important;
+  font-size: 1.15rem !important;
+  color: #1e293b !important;
   vertical-align: middle !important;
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
-  line-height: 1.45 !important;
+  line-height: 1.5 !important;
+}
+
+.p-datatable-tbody > tr > td strong,
+.p-datatable .p-datatable-tbody > tr > td strong,
+.clickable-name {
+  font-size: 1.18rem !important;
+}
+
+.p-datatable-tbody > tr > td.col-center,
+.p-datatable .p-datatable-tbody > tr > td.col-center {
+  font-size: 1.12rem !important;
 }
 
 /* Cho phép nội dung bảng xuống dòng tự nhiên khi dài */
