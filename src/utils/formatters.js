@@ -1504,6 +1504,28 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     if (parentKey) {
       parent = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(parentKey) : null;
     }
+    if (!parent && personnelStore.personnelList) {
+      if (item.personnelId) {
+        parent = personnelStore.personnelList.find((p) => p.id === item.personnelId);
+      }
+      if (!parent && (item.cccdchuyendi || item.cccd)) {
+        const checkKey = item.cccdchuyendi || item.cccd;
+        parent = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(checkKey) : null;
+      }
+      if (!parent && item.cccdchuyendi) {
+        const travelerCccd = String(item.cccdchuyendi).trim().toLowerCase();
+        parent = personnelStore.personnelList.find((p) => {
+          const pRels = Array.isArray(p.relatives) ? p.relatives : [];
+          return pRels.some((r) => {
+            const rCccd = String(r.cccdthannhan || r.cccd || '').trim().toLowerCase();
+            return rCccd && rCccd === travelerCccd;
+          });
+        });
+      }
+      if (!parent && item.rawPerson) {
+        parent = item.rawPerson;
+      }
+    }
     if (parent) {
       const val = getProp(parent, field);
       return val !== undefined && val !== null && val !== '' ? String(val) : '-';
@@ -1515,14 +1537,20 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     if (!personnelStore) return '-';
     const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
     const linkCol = col.lookupLinkCol;
-    const searchKey = linkCol ? getProp(item, linkCol) : (item.cccdthannhan || item[rKeyField] || item.cccd);
-    if (!searchKey) return '-';
+    const searchKey = linkCol ? getProp(item, linkCol) : (item.cccdthannhan || item.cccdchuyendi || item[rKeyField] || item.cccd);
+    if (!searchKey && !item.relativeId) return '-';
 
     const relativesList = personnelStore.relativesList || [];
-    const rel = relativesList.find((r) => {
-      const k = getProp(r, rKeyField) ?? r.cccdthannhan ?? r.cccd;
-      return String(k).trim() === String(searchKey).trim();
-    });
+    let rel = null;
+    if (item.relativeId) {
+      rel = relativesList.find((r) => r.id === item.relativeId);
+    }
+    if (!rel && searchKey) {
+      rel = relativesList.find((r) => {
+        const k = getProp(r, rKeyField) ?? r.cccdthannhan ?? r.cccd;
+        return String(k).trim() === String(searchKey).trim();
+      });
+    }
 
     if (rel) {
       const val = getProp(rel, field);

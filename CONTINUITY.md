@@ -2115,3 +2115,20 @@
     4. **Kiểm thử & Triển khai**:
        - `npm run build` thành công 100% (0 lỗi, 505ms).
     5. **Trạng thái**: Done [Hard to Reverse / Data Migrated].
+
+- **Entry (2026-09-09 - Session 5)**: **Nâng cấp Động cơ Tham chiếu (evaluateLookup) Nhận diện Cán bộ Chủ quản cho Bảng Chuyến đi**:
+    1. **Yêu cầu của người dùng**:
+       - Tạo 1 cột trên Bảng Chuyến đi sao cho: Nếu dòng chuyến đi là Cán bộ thì hiển thị tên Cán bộ, nếu là Thân nhân thì hiển thị tên Cán bộ chủ quản liên quan.
+    2. **Giải pháp kiến trúc**:
+       - Nâng cấp hàm `evaluateLookup` (`src/utils/formatters.js`): Khi cột có `lookupTarget === 'personnel'` (Bảng Cán bộ), hệ thống tự động nhận diện Cán bộ chủ quản theo thứ tự ưu tiên quan hệ:
+         1) Khớp theo `item.personnelId === p.id` (ID cán bộ gắn kèm bản ghi chuyến đi).
+         2) Khớp theo CCCD cán bộ (`p.cccd === (item.cccdparent || item.cccdchuyendi)`).
+         3) Khớp theo quan hệ Thân nhân: Tìm Cán bộ có thân nhân trong `p.relatives` mang CCCD khớp với CCCD người đi (`cccdthannhan === item.cccdchuyendi`).
+         4) Khớp theo `item.rawPerson`.
+       - Đồng thời nâng cấp nhánh `target === 'relatives'` để hỗ trợ tra cứu thân nhân qua `item.relativeId` và `item.cccdchuyendi`.
+       - Không làm sai lệch dữ liệu phẳng của dòng, không nạp fallback ngầm, chỉ phân giải khi cột Lookup được cấu hình.
+    3. **Kiểm thử**:
+       - Test trực tiếp qua Node.js: Cả chuyến đi Cán bộ, chuyến đi Thân nhân có `personnelId`, và chuyến đi Thân nhân không có `personnelId` (chỉ có `cccdchuyendi`) đều trả về chính xác Tên Cán bộ.
+       - `npm run build` thành công 100% (525ms), đồng bộ sang `WINDOWS_OFFLINE_APP/frontend`.
+    4. **Trạng thái**: Done [Reversible].
+
