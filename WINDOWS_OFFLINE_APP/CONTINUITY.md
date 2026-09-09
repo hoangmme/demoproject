@@ -2463,3 +2463,36 @@
        - Đồng bộ toàn bộ `dist/` và `src/` sang `WINDOWS_OFFLINE_APP/frontend/`.
     4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-09 - Session 20)**: **Tích Hợp Tab Liên Kết Thân Nhân - Cán Bộ - Chuyến Đi (Pure Flat Paradigm), Khắc Phục Lỗi Mạng ERR_CONNECTION_CLOSED / Offline Caching, Sửa ReferenceError getUnifiedTableDefinitions & Thu Gọn Icon Bút Drilldown**:
+    1. **Yêu cầu của người dùng**:
+       - Làm tab liên kết Thân nhân và Cán bộ trong Form Chi tiết (`PersonnelDialog.vue`), trong đó cả Cán bộ và Thân nhân đều có dữ liệu Chuyến đi: làm sao liên kết mà KHÔNG ảnh hưởng dữ liệu dạng bảng (Flat Table), áp dụng thay đổi linh hoạt (nếu sau này tự thêm bảng mới).
+       - Sửa lỗi `ReferenceError: getUnifiedTableDefinitions is not defined` (xuất hiện ở `AddColumnDialog.vue`).
+       - Xử lý lỗi kết nối `AxiosError: Network Error / net::ERR_CONNECTION_CLOSED` tới `api.hscb.online` khi tải cài đặt app mà không làm xóa sạch dữ liệu localStorage khi reload.
+       - Ở popup thống kê (drilldown): đổi nút "Chỉnh sửa" thành chỉ icon cây bút chì gọn gàng (`pi-pencil`, 100px).
+    2. **Giải pháp & Triển khai**:
+       - **Tách Component `src/components/personnel/PersonnelRelatedTabs.vue`**:
+         + Modular, tự chứa (self-contained), bảo toàn quy tắc 500 dòng cho `PersonnelDialog.vue`.
+         + Cung cấp thanh điều hướng Tab:
+           * Với Cán bộ: `Thông tin Cán bộ` (Flat Form hiện tại), `Thân nhân liên kết (kèm số lượng)`, `Chuyến đi nước ngoài (kèm số lượng)`.
+           * Với Thân nhân: `Thông tin Thân nhân`, `Cán bộ chủ quản` (hiển thị thẻ cán bộ kèm nút chuyển sang xem hồ sơ CB), `Chuyến đi của thân nhân`.
+         + Bảng Thân nhân mini: Hiển thị mối quan hệ, họ tên, năm sinh, CCCD, nơi ở, số chuyến đi; hỗ trợ Thêm / Sửa / Xóa thân nhân trực tiếp qua sub-dialog.
+         + Bảng Chuyến đi mini: Lọc được `Tất cả` | `Cán bộ` | `Thân nhân`, hiển thị huy hiệu người đi, quốc gia, ngày đi/về, trạng thái hiện diện (badge), hỗ trợ Thêm / Sửa / Xóa chuyến đi trực tiếp qua sub-dialog.
+         + **Pure Flat Record Paradigm**: Dữ liệu lưu phẳng 100%, liên kết qua mã định danh tự nhiên (`cccd`, `cccdparent`, `cccdthannhan`, `cccdchuyendi`), không tạo schema phức tạp, sẵn sàng hỗ trợ các bảng tự tạo sau này.
+       - **Tích hợp vào `src/components/personnel/PersonnelDialog.vue`**:
+         + Khai báo `activeTab = ref('info')`, liên kết `v-model="activeTab"` với `PersonnelRelatedTabs`.
+         + Bao bọc Form nhập liệu phẳng hiện tại bằng `v-show="activeTab === 'info'"`. Khi ở tab `relatives` hoặc `trips`, form phẳng ẩn đi và nhường chỗ cho bảng danh sách liên kết.
+         + Xử lý sự kiện `@refresh="handleTabRefresh"` và `@switchRecord="handleSwitchRecord"`.
+         + Tự động ẩn các nút Lưu/Xóa/Xuất PDF ở footer khi đang ở các sub-tab liên kết (vì các sub-tab đã có nút Thêm/Sửa/Xóa riêng).
+       - **Sửa lỗi `ReferenceError: getUnifiedTableDefinitions is not defined` (`src/components/common/AddColumnDialog.vue`)**:
+         + Bổ sung import `getUnifiedTableDefinitions` từ `@/utils/tableRegistry`.
+       - **Khắc phục lỗi mạng / Cải tiến Offline Caching (`src/api/settings.js`)**:
+         + Xóa bỏ triệt để đoạn mã nguy hiểm ở đầu module scope tự ý xóa sạch cache `app_setting_*` và `custom_dashboards_*` trên `localStorage` mỗi lần tải trang.
+         + Thêm timeout 5s và fallback êm ái sang `localStorage` khi mất mạng hoặc backend Directus bị ngắt kết nối (`ERR_CONNECTION_CLOSED`), không spam log và không gián đoạn app.
+       - **Thu gọn Nút Chỉnh sửa trên Popup Thống kê (`src/views/DashboardView.vue`)**:
+         + Đổi nút thành icon bút `icon="pi pi-pencil"`, bỏ label chữ, thêm style tròn `rounded` 28x28px, thu hẹp cột thao tác từ `150px` xuống `100px`.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 564ms).
+       - Đồng bộ toàn bộ `dist/` và các file `src/` đã sửa sang `WINDOWS_OFFLINE_APP/frontend/`.
+    4. **Trạng thái**: Done [Reversible].
+
+

@@ -1265,8 +1265,8 @@
             header="Thao tác"
             headerClass="col-center"
             bodyClass="col-center col-frozen-action"
-            :headerStyle="{ width: '150px', minWidth: '150px', background: '#f8fafc !important', zIndex: 12 }"
-            :bodyStyle="{ width: '150px', minWidth: '150px', background: '#ffffff !important', zIndex: 11, boxShadow: '-4px 0 8px rgba(0, 0, 0, 0.08)' }"
+            :headerStyle="{ width: '100px', minWidth: '100px', background: '#f8fafc !important', zIndex: 12 }"
+            :bodyStyle="{ width: '100px', minWidth: '100px', background: '#ffffff !important', zIndex: 11, boxShadow: '-4px 0 8px rgba(0, 0, 0, 0.08)' }"
             frozen
             alignFrozen="right"
           >
@@ -1274,12 +1274,12 @@
               <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
                 <Button
                   icon="pi pi-pencil"
-                  label="Chỉnh sửa"
                   severity="info"
                   size="small"
                   outlined
+                  rounded
                   @click.stop="openPersonnelDetail(data)"
-                  style="font-size: 0.72rem; padding: 3px 7px;"
+                  style="width: 28px; height: 28px; padding: 0;"
                   title="Chỉnh sửa trực tiếp bản ghi này"
                 />
                 <Button

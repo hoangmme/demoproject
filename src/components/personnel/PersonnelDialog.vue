@@ -25,8 +25,18 @@
       </div>
     </template>
 
+    <!-- Tab navigation & Linked Relatives / Trips Content -->
+    <PersonnelRelatedTabs
+      v-if="isEdit && (recordSource === 'personnel' || recordSource === 'relatives')"
+      v-model="activeTab"
+      :currentRecord="form"
+      :recordSource="recordSource"
+      @refresh="handleTabRefresh"
+      @switchRecord="handleSwitchRecord"
+    />
+
     <!-- Contents Area: 100% Dynamic Flat Form -->
-    <div style="max-height: 70vh; overflow-y: auto; padding: 6px 12px 16px 6px;">
+    <div v-show="activeTab === 'info'" style="max-height: 70vh; overflow-y: auto; padding: 6px 12px 16px 6px;">
       <div class="form-grid">
         <template v-for="col in allTableColumns" :key="col.id">
           <div class="field-item" :style="getColItemStyle(col.formWidth || col.width)">
@@ -47,7 +57,7 @@
       <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
         <div>
           <Button
-            v-if="isEdit && authStore.isAdmin"
+            v-if="isEdit && authStore.isAdmin && activeTab === 'info'"
             label="Xóa hồ sơ"
             icon="pi pi-trash"
             severity="danger"
@@ -57,15 +67,15 @@
           />
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-          <span v-if="autoSaveStatus === 'saving'" style="font-size: 0.75rem; color: #0284c7; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
+          <span v-if="activeTab === 'info' && autoSaveStatus === 'saving'" style="font-size: 0.75rem; color: #0284c7; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
             <i class="pi pi-spin pi-spinner"></i> Đang lưu...
           </span>
-          <span v-else-if="autoSaveStatus === 'saved'" style="font-size: 0.75rem; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
+          <span v-else-if="activeTab === 'info' && autoSaveStatus === 'saved'" style="font-size: 0.75rem; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
             <i class="pi pi-check-circle"></i> Đã lưu thành công
           </span>
 
           <Button
-            v-if="isEdit"
+            v-if="isEdit && activeTab === 'info'"
             label="Xuất Hồ sơ PDF"
             icon="pi pi-file-pdf"
             severity="secondary"
@@ -75,6 +85,7 @@
           />
           <Button label="Đóng" severity="secondary" text size="small" @click="visible = false" />
           <Button
+            v-if="activeTab === 'info'"
             label="Lưu hồ sơ"
             icon="pi pi-check"
             severity="success"
@@ -109,10 +120,12 @@ import { useAuthStore } from '@/stores/auth';
 import DynamicField from '@/components/common/DynamicField.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
+import PersonnelRelatedTabs from '@/components/personnel/PersonnelRelatedTabs.vue';
 import { getColItemStyle } from '@/utils/formatters';
 
 const isDocxExportOpen = ref(false);
 const isDynamicDataEntryOpen = ref(false);
+const activeTab = ref('info');
 
 const recordSource = computed(() => {
   if (form.value._recordType === 'trip') return 'trips';
@@ -247,6 +260,7 @@ watch(
   () => [props.modelValue, props.personData],
   ([isOpen, pData]) => {
     if (isOpen) {
+      activeTab.value = 'info';
       initFormData(pData || props.personData);
     } else {
       if (autoSaveTimer) clearTimeout(autoSaveTimer);
@@ -348,6 +362,18 @@ const handleDelete = async () => {
     visible.value = false;
   } catch (e) {
     alert('Lỗi xóa: ' + (e.message || e));
+  }
+};
+
+const handleTabRefresh = async () => {
+  await personnelStore.fetchPersonnel();
+  emit('saved', form.value);
+};
+
+const handleSwitchRecord = (newPerson) => {
+  if (newPerson) {
+    initFormData(newPerson);
+    activeTab.value = 'info';
   }
 };
 </script>

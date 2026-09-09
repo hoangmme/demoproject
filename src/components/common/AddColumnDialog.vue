@@ -481,6 +481,7 @@ import { ref, computed, watch } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
+import { getUnifiedTableDefinitions } from '@/utils/tableRegistry';
 
 import {
   generateSlug,
