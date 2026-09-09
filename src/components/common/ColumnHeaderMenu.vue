@@ -529,6 +529,53 @@
           </label>
         </div>
 
+        <!-- 5c. Khóa chính & Liên kết Bảng (Primary Key & Table Link) -->
+        <div class="menu-field" style="margin-top: 6px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: 700; color: #166534; font-size: 0.76rem; display: flex; align-items: center; gap: 5px;">
+              <i class="pi pi-key" style="color: #15803d;"></i>
+              Khóa & Liên kết Bảng:
+            </span>
+          </div>
+
+          <!-- Đặt làm khóa chính -->
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.75rem; color: #1e293b; cursor: pointer; user-select: none;">
+            <input
+              type="checkbox"
+              v-model="editIsKey"
+              @change="handleToggleIsKey"
+              style="accent-color: #16a34a; cursor: pointer;"
+            />
+            <span style="font-weight: 600;">🔑 Đặt làm Khóa chính của bảng này (Primary Key)</span>
+          </label>
+
+          <!-- Liên kết tới bảng khác -->
+          <div style="border-top: 1px dashed #bbf7d0; padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+            <label style="font-size: 0.7rem; font-weight: 600; color: #15803d;">
+              🔗 Liên kết cột này tới Bảng khác:
+            </label>
+            <select v-model="editLinkTable" class="menu-select" style="font-size: 0.72rem;" @change="editLinkColumn = ''; handleSaveLinkTable()">
+              <option value="">-- Không liên kết --</option>
+              <option v-for="t in availableTargetTables" :key="t.id" :value="t.id">
+                {{ t.title }} ({{ t.id }})
+              </option>
+            </select>
+
+            <div v-if="editLinkTable" style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
+              <span style="font-size: 0.65rem; color: #64748b;">Cột ở bảng đích để nối:</span>
+              <select v-model="editLinkColumn" class="menu-select" style="font-size: 0.7rem;" @change="handleSaveLinkTable">
+                <option value="">-- Mặc định (Khóa chính bảng đích) --</option>
+                <option v-for="c in targetLinkCols" :key="c.id" :value="c.id">
+                  {{ c.label }} ({{ c.id }})
+                </option>
+              </select>
+            </div>
+            <div style="font-size: 0.63rem; color: #64748b; line-height: 1.35; margin-top: 2px;">
+              💡 Khi liên kết bảng, Form Chi tiết sẽ tự động hiển thị Tab mang tên bảng đó để bạn mở và chỉnh sửa trực tiếp.
+            </div>
+          </div>
+        </div>
+
         <!-- 5b. Gợi ý tự điền từ bảng khác (Autocomplete / Suggest Lookup) -->
         <div
           v-if="editFormat === 'text' || editFormat === 'id' || !editFormat"
@@ -703,6 +750,8 @@ const emit = defineEmits([
   "change-required",
   "change-include-export",
   "change-show-in-detail",
+  "change-key",
+  "change-link-table",
   "change-lookup",
   "change-rollup",
   "change-collapse-duplicates",
@@ -730,6 +779,9 @@ const editRequired = ref(false);
 const editIncludeInExport = ref(true);
 const editShowInDetail = ref(true);
 const editCollapseDuplicates = ref(false);
+const editIsKey = ref(false);
+const editLinkTable = ref("");
+const editLinkColumn = ref("");
 
 const editSuggestEnabled = ref(false);
 const editSuggestTarget = ref("personnel");
@@ -872,6 +924,32 @@ const selectedFieldCount = computed(() => {
   return effectiveParentFieldOptions.value.filter(opt => Boolean(props.nameColFields?.[opt.key])).length;
 });
 
+const targetLinkCols = computed(() => {
+  return getColumnsForTargetTable(editLinkTable.value);
+});
+
+const handleToggleIsKey = () => {
+  if (props.column) {
+    props.column.isKey = editIsKey.value;
+  }
+  emit("change-key", {
+    colId: props.column?.id,
+    isKey: editIsKey.value,
+  });
+};
+
+const handleSaveLinkTable = () => {
+  if (props.column) {
+    props.column.linkTable = editLinkTable.value;
+    props.column.linkColumn = editLinkColumn.value;
+  }
+  emit("change-link-table", {
+    colId: props.column?.id,
+    linkTable: editLinkTable.value,
+    linkColumn: editLinkColumn.value,
+  });
+};
+
 watch(
   () => props.column,
   (col) => {
@@ -907,6 +985,9 @@ watch(
       editIncludeInExport.value = col.includeInExport !== false && col.includeInExport !== 'false';
       editShowInDetail.value = col.showInDetail !== false && col.showInDetail !== 'false';
       editCollapseDuplicates.value = Boolean(col.collapseDuplicates);
+      editIsKey.value = Boolean(col.isKey);
+      editLinkTable.value = col.linkTable || "";
+      editLinkColumn.value = col.linkColumn || "";
     }
   },
   { immediate: true }

@@ -594,6 +594,78 @@ export function useTableColumns({
     }
   };
 
+  const onChildChangeColumnKey = async ({ colId, isKey }) => {
+    if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
+      selectedChildMenuCol.value.isKey = Boolean(isKey);
+    }
+    const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+    if (isBlank && cDash) {
+      (cDash.customColumns || []).forEach((c) => {
+        if (c.id === colId) c.isKey = Boolean(isKey);
+        else if (isKey) c.isKey = false;
+      });
+      try {
+        customDashboards.value = JSON.parse(JSON.stringify(customDashboards.value));
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+      return;
+    }
+    for (const g of mapping || []) {
+      for (const c of g.columns || []) {
+        if (c.id === colId) {
+          c.isKey = Boolean(isKey);
+        } else if (isKey) {
+          c.isKey = false;
+        }
+      }
+    }
+    await persistTableMapping(src, JSON.parse(JSON.stringify(mapping)));
+    if (isKey && personnelStore.saveKeyConfig) {
+      const cfg = { ...(personnelStore.systemKeyConfig || {}) };
+      if (src === 'personnel') cfg.personnelKeyField = colId;
+      else if (src === 'relatives') cfg.relativeKeyField = colId;
+      else if (src === 'trips') cfg.tripKeyField = colId;
+      await personnelStore.saveKeyConfig(cfg);
+    }
+  };
+
+  const onChildChangeColumnLinkTable = async ({ colId, linkTable, linkColumn }) => {
+    if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
+      selectedChildMenuCol.value.linkTable = linkTable || '';
+      selectedChildMenuCol.value.linkColumn = linkColumn || '';
+    }
+    const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+    if (isBlank && cDash) {
+      const col = (cDash.customColumns || []).find((c) => c.id === colId);
+      if (col) {
+        col.linkTable = linkTable || '';
+        col.linkColumn = linkColumn || '';
+        try {
+          customDashboards.value = JSON.parse(JSON.stringify(customDashboards.value));
+          localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+          await saveAppSettings('custom_dashboards_config', customDashboards.value);
+        } catch (e) {}
+      }
+      return;
+    }
+    for (const g of mapping || []) {
+      for (const c of g.columns || []) {
+        if (c.id === colId) {
+          c.linkTable = linkTable || '';
+          c.linkColumn = linkColumn || '';
+          break;
+        }
+      }
+    }
+    await persistTableMapping(src, JSON.parse(JSON.stringify(mapping)));
+    if (src === 'relatives' && linkTable === 'personnel' && personnelStore.saveKeyConfig) {
+      const cfg = { ...(personnelStore.systemKeyConfig || {}) };
+      cfg.relativeParentKeyField = colId;
+      await personnelStore.saveKeyConfig(cfg);
+    }
+  };
+
   const onChildChangeColumnFormat = async ({ colId, newFormat }) => {
     const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
     if (isBlank && cDash) {
@@ -1181,6 +1253,8 @@ export function useTableColumns({
     onInsertChildColRight,
     onDuplicateChildCol,
     onChildChangeFormulaType,
+    onChildChangeColumnKey,
+    onChildChangeColumnLinkTable,
     NAME_COL_IDS,
     isNameColumn,
     isChildPrimaryKey,

@@ -1,0 +1,20 @@
+{
+  "departments": [],
+  "personnels": [],
+  "appendix1": [],
+  "appendix2": [],
+  "appendix3": [],
+  "app_settings": [],
+  "audit_logs": [],
+  "files": [],
+  "directus_users": [
+    {
+      "id": "admin-1",
+      "first_name": "Quản trị viên",
+      "last_name": "",
+      "email": "admin@demo.com",
+      "role": "admin",
+      "status": "active"
+    }
+  ]
+}

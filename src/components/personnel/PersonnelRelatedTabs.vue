@@ -18,342 +18,235 @@
       </button>
     </div>
 
-    <!-- Tab Contents Area -->
-    <div class="related-tabs-content">
-      <!-- TAB 1: THÂN NHÂN LIÊN KẾT (Dành cho hồ sơ Cán bộ) -->
-      <div v-if="currentTab === 'relatives'" class="tab-pane">
-        <div class="pane-toolbar">
-          <div class="pane-title-area">
-            <span class="pane-title">Danh sách Thân nhân ({{ relatedRelatives.length }})</span>
-            <span class="pane-subtitle">Các thân nhân có quan hệ gia đình gắn với cán bộ này</span>
-          </div>
+    <!-- Linked Table Content Area (Direct inline editing, Zero modal nesting) -->
+    <div v-if="currentTab !== 'info' && currentLinkedTable" class="tab-pane">
+      <!-- Toolbar Header -->
+      <div class="pane-toolbar">
+        <div class="pane-title-area">
+          <span class="pane-title">
+            <i :class="currentLinkedTable.icon || 'pi pi-table'" style="color: #0284c7; margin-right: 4px;"></i>
+            {{ currentLinkedTable.title }} ({{ currentLinkedRows.length }})
+          </span>
+          <span class="pane-subtitle">
+            Dữ liệu {{ currentLinkedTable.title }} được liên kết với hồ sơ này
+          </span>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
           <Button
-            label="Thêm Thân nhân"
+            :label="'Thêm ' + currentLinkedTable.title"
             icon="pi pi-plus"
             size="small"
             severity="success"
-            @click="openAddRelative"
+            @click="openAddNewLinkedRecord"
             class="pane-add-btn"
           />
         </div>
+      </div>
 
-        <!-- Bảng danh sách thân nhân động 100% theo cột người dùng cấu hình -->
-        <div v-if="relatedRelatives.length > 0" class="mini-table-wrapper">
-          <table class="custom-mini-table">
-            <thead>
-              <tr>
-                <th style="width: 45px;" class="col-center">STT</th>
-                <th
-                  v-for="col in relativeColumns"
-                  :key="col.id"
-                  :style="{ width: col.tableWidth ? col.tableWidth + 'px' : (col.width || '150px'), minWidth: '100px' }"
-                >
-                  {{ col.label }}
-                </th>
-                <th style="width: 110px;" class="col-center">Chuyến đi</th>
-                <th style="width: 80px;" class="col-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(rel, idx) in relatedRelatives" :key="rel.id || rel.code || idx">
-                <td class="col-center idx-cell">{{ idx + 1 }}</td>
-                <td v-for="col in relativeColumns" :key="col.id">
-                  {{ getRecordCellValue(rel, col) }}
-                </td>
-                <td class="col-center">
-                  <span class="trip-count-pill" :class="{ 'has-trips': getRelativeTripCount(rel) > 0 }">
-                    <i class="pi pi-send"></i>
-                    {{ getRelativeTripCount(rel) }} chuyến
-                  </span>
-                </td>
-                <td class="col-center">
-                  <div class="table-actions">
-                    <button
-                      type="button"
-                      class="btn-action-icon edit"
-                      title="Chỉnh sửa thân nhân"
-                      @click="openEditRelative(rel)"
-                    >
-                      <i class="pi pi-pencil"></i>
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-action-icon delete"
-                      title="Xóa thân nhân này"
-                      @click="deleteRelative(rel)"
-                    >
-                      <i class="pi pi-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div v-else class="empty-state-box">
-          <i class="pi pi-users empty-icon"></i>
-          <p class="empty-text">Chưa có thông tin thân nhân nào được liên kết với cán bộ này.</p>
-          <Button
-            label="Thêm Thân nhân đầu tiên"
-            icon="pi pi-plus"
-            size="small"
-            severity="info"
-            outlined
-            @click="openAddRelative"
-          />
+      <!-- Record Switcher Pills (If more than 1 linked record) -->
+      <div v-if="currentLinkedRows.length > 1" class="record-selector-bar">
+        <span class="selector-label">Chọn bản ghi:</span>
+        <div class="selector-pills">
+          <button
+            v-for="(row, idx) in currentLinkedRows"
+            :key="row.id || row.uniqueKey || idx"
+            type="button"
+            class="selector-pill-btn"
+            :class="{ active: !isAddingNew && isSameRow(selectedRecord, row) }"
+            @click="selectRecordToEdit(row)"
+          >
+            <i class="pi pi-user" style="font-size: 0.72rem;"></i>
+            <span>{{ idx + 1 }}. {{ getRecordDisplayName(row, currentLinkedTable) }}</span>
+          </button>
+          <button
+            type="button"
+            class="selector-pill-btn add-btn"
+            :class="{ active: isAddingNew }"
+            @click="openAddNewLinkedRecord"
+          >
+            <i class="pi pi-plus"></i>
+            <span>+ Thêm mới</span>
+          </button>
         </div>
       </div>
 
-      <!-- TAB 2: CÁN BỘ CHỦ QUẢN (Dành cho hồ sơ Thân nhân) -->
-      <div v-else-if="currentTab === 'parent'" class="tab-pane">
-        <div class="pane-toolbar">
-          <div class="pane-title-area">
-            <span class="pane-title">Hồ sơ Cán bộ liên quan</span>
-            <span class="pane-subtitle">Thông tin cán bộ chủ quản mà thân nhân này trực thuộc</span>
-          </div>
-        </div>
-
-        <div v-if="parentPerson" class="parent-profile-card">
-          <div class="parent-avatar-box">
-            <i class="pi pi-user parent-avatar-icon"></i>
-          </div>
-          <div class="parent-details">
-            <h4 class="parent-name">{{ parentPerson[personnelNameField] || parentPerson.name || parentPerson.fullName || 'Cán bộ' }}</h4>
-            <div class="parent-meta-grid">
-              <div v-for="col in keyPersonnelCols" :key="col.id" class="meta-item">
-                <span class="meta-label">{{ col.label }}:</span>
-                <span class="meta-val">{{ getRecordCellValue(parentPerson, col) }}</span>
-              </div>
-            </div>
-            <div class="parent-card-actions">
-              <Button
-                label="Xem chi tiết hồ sơ Cán bộ này"
-                icon="pi pi-external-link"
-                size="small"
-                severity="info"
-                outlined
-                @click="$emit('switchRecord', parentPerson)"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="empty-state-box">
-          <i class="pi pi-info-circle empty-icon"></i>
-          <p class="empty-text">Chưa liên kết được hồ sơ cán bộ chủ quản. Vui lòng kiểm tra lại trường liên kết ({{ relParentKey }}).</p>
-        </div>
-      </div>
-
-      <!-- TAB 3: CHUYẾN ĐI NƯỚC NGOÀI (Cho cả Cán bộ và Thân nhân) -->
-      <div v-else-if="currentTab === 'trips'" class="tab-pane">
-        <div class="pane-toolbar">
-          <div class="pane-title-area">
-            <span class="pane-title">Lịch sử Chuyến đi Nước ngoài ({{ displayTrips.length }})</span>
-            <span class="pane-subtitle">
-              {{ recordSource === 'personnel' ? 'Bao gồm chuyến đi của Cán bộ và chuyến đi của Thân nhân' : 'Toàn bộ chuyến đi của thân nhân này' }}
+      <!-- INLINE EDIT / CREATE FORM (Zero modal popup) -->
+      <div v-if="selectedRecord || isAddingNew" class="inline-edit-card">
+        <div class="edit-card-header">
+          <span class="edit-title">
+            <i :class="isAddingNew ? 'pi pi-plus-circle' : 'pi pi-pencil'"></i>
+            {{ isAddingNew ? ('Thêm mới ' + currentLinkedTable.title) : ('Chỉnh sửa ' + currentLinkedTable.title + ': ' + getRecordDisplayName(selectedRecord, currentLinkedTable)) }}
+          </span>
+          <div class="header-right-actions">
+            <span v-if="saveSuccessBanner" class="save-toast-msg">
+              <i class="pi pi-check-circle"></i> Đã lưu thành công!
             </span>
-          </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <!-- Phân loại chuyến đi khi xem Cán bộ -->
-            <div v-if="recordSource === 'personnel' && relatedRelatives.length > 0" class="trip-filter-pills">
-              <button
-                type="button"
-                class="filter-pill"
-                :class="{ active: tripFilterType === 'all' }"
-                @click="tripFilterType = 'all'"
-              >
-                Tất cả ({{ relatedTrips.length }})
-              </button>
-              <button
-                type="button"
-                class="filter-pill"
-                :class="{ active: tripFilterType === 'personnel' }"
-                @click="tripFilterType = 'personnel'"
-              >
-                Cán bộ ({{ countPersonnelTrips }})
-              </button>
-              <button
-                type="button"
-                class="filter-pill"
-                :class="{ active: tripFilterType === 'relative' }"
-                @click="tripFilterType = 'relative'"
-              >
-                Thân nhân ({{ countRelativeTrips }})
-              </button>
-            </div>
-
             <Button
-              label="Thêm Chuyến đi"
-              icon="pi pi-plus"
+              v-if="!isAddingNew && isParentPerson(selectedRecord)"
+              label="Mở toàn màn hình"
+              icon="pi pi-external-link"
               size="small"
-              severity="success"
-              @click="openAddTrip"
-              class="pane-add-btn"
+              severity="info"
+              outlined
+              @click="$emit('switchRecord', selectedRecord)"
+              style="font-size: 0.72rem; padding: 2px 8px; height: 26px;"
             />
           </div>
         </div>
 
-        <!-- Bảng danh sách chuyến đi động 100% theo cột người dùng cấu hình -->
-        <div v-if="displayTrips.length > 0" class="mini-table-wrapper">
-          <table class="custom-mini-table">
-            <thead>
-              <tr>
-                <th style="width: 45px;" class="col-center">STT</th>
-                <th v-if="recordSource === 'personnel'" style="width: 150px;">Người xuất cảnh</th>
-                <th
-                  v-for="col in tripColumns"
-                  :key="col.id"
-                  :style="{ width: col.tableWidth ? col.tableWidth + 'px' : (col.width || '150px'), minWidth: '100px' }"
-                >
-                  {{ col.label }}
-                </th>
-                <th style="width: 80px;" class="col-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(t, idx) in displayTrips" :key="t.uniqueKey || t.id || idx">
-                <td class="col-center idx-cell">{{ idx + 1 }}</td>
-                <td v-if="recordSource === 'personnel'">
-                  <span v-if="t._isPersonnelTrip" class="person-type-tag person">
-                    <i class="pi pi-user"></i> Cán bộ
-                  </span>
-                  <span v-else class="person-type-tag relative">
-                    <i class="pi pi-heart"></i>
-                    {{ t._relativeInfo?.relativeName || t.relativeName || 'Thân nhân' }}
-                  </span>
-                </td>
-                <td v-for="col in tripColumns" :key="col.id">
-                  {{ getRecordCellValue(t, col) }}
-                </td>
-                <td class="col-center">
-                  <div class="table-actions">
-                    <button
-                      type="button"
-                      class="btn-action-icon edit"
-                      title="Chỉnh sửa chuyến đi"
-                      @click="openEditTrip(t)"
-                    >
-                      <i class="pi pi-pencil"></i>
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-action-icon delete"
-                      title="Xóa chuyến đi này"
-                      @click="deleteTrip(t)"
-                    >
-                      <i class="pi pi-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div v-else class="empty-state-box">
-          <i class="pi pi-send empty-icon"></i>
-          <p class="empty-text">Chưa có chuyến đi nước ngoài nào trong danh sách này.</p>
-          <Button
-            label="Thêm Chuyến đi mới"
-            icon="pi pi-plus"
-            size="small"
-            severity="info"
-            outlined
-            @click="openAddTrip"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- SUB-DIALOG: THÊM / SỬA THÂN NHÂN (100% DYNAMIC THEO CỘT BẢNG) -->
-    <Dialog
-      v-model:visible="isRelativeFormOpen"
-      modal
-      :header="editingRelative?.id ? 'Chỉnh sửa Thân nhân' : 'Thêm Thân nhân mới'"
-      :style="{ width: '80vw', maxWidth: '850px' }"
-      :baseZIndex="20000"
-    >
-      <div style="max-height: 65vh; overflow-y: auto; padding: 4px 8px;">
-        <div class="form-grid">
-          <template v-for="col in relativeColumns" :key="col.id">
-            <div class="field-item" :style="getColItemStyle(col.formWidth || col.width)">
-              <label class="field-label" :title="col.label">
-                <span class="label-text">{{ col.label }}</span>
-                <span v-if="col.required" style="color: red; margin-left: 2px;">*</span>
-              </label>
-              <DynamicField
-                v-model="relForm[col.id]"
-                :col="col"
-              />
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <template #footer>
-        <Button label="Hủy" severity="secondary" text size="small" @click="isRelativeFormOpen = false" />
-        <Button label="Lưu Thân nhân" icon="pi pi-check" severity="success" size="small" :loading="isSavingSub" @click="saveRelativeForm" />
-      </template>
-    </Dialog>
-
-    <!-- SUB-DIALOG: THÊM / SỬA CHUYẾN ĐI (100% DYNAMIC THEO CỘT BẢNG) -->
-    <Dialog
-      v-model:visible="isTripFormOpen"
-      modal
-      :header="editingTrip?.id ? 'Chỉnh sửa Chuyến đi' : 'Thêm Chuyến đi mới'"
-      :style="{ width: '80vw', maxWidth: '850px' }"
-      :baseZIndex="20000"
-    >
-      <div style="max-height: 65vh; overflow-y: auto; padding: 4px 8px;">
-        <!-- Chọn người thực hiện khi thêm chuyến từ Cán bộ -->
-        <div v-if="recordSource === 'personnel'" style="margin-bottom: 12px; background: #f8fafc; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px;">
-          <label style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">
-            Người thực hiện chuyến đi <span style="color: red;">*</span>
+        <!-- Special Person picker if adding Trip under Personnel -->
+        <div v-if="isTripUnderPersonnel" class="trip-person-picker">
+          <label class="field-label">
+            <span class="label-text">Người thực hiện chuyến đi <span style="color: red;">*</span></span>
           </label>
-          <select v-model="tripTargetPersonType" class="sub-select-person" style="width: 100%; height: 34px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0 8px; background: #fff;">
-            <option value="personnel">👤 Chính Cán bộ này ({{ currentRecord[personnelNameField] || currentRecord.name || 'Cán bộ' }})</option>
+          <select
+            v-model="activeSubTripPersonType"
+            class="custom-sub-select"
+            @change="syncTripPersonToForm"
+          >
+            <option value="personnel">
+              👤 Chính Cán bộ này ({{ currentRecord[personnelNameField] || currentRecord.name || 'Cán bộ' }})
+            </option>
             <option
-              v-for="r in relatedRelatives"
-              :key="r.id || r[relKeyField] || r.cccdthannhan"
-              :value="'rel_' + (r.id || r[relKeyField] || r.cccdthannhan)"
+              v-for="r in linkedRelativesForTrip"
+              :key="r.id || r.cccdthannhan"
+              :value="'rel_' + (r.id || r.cccdthannhan)"
             >
               👥 Thân nhân: {{ r[relativeNameField] || r.relativeName || r.name }} ({{ r.relationshipName || 'Thân nhân' }})
             </option>
           </select>
         </div>
 
+        <!-- Dynamic Form Fields of Target Table -->
         <div class="form-grid">
-          <template v-for="col in tripColumns" :key="col.id">
+          <template v-for="col in currentLinkedCols" :key="col.id">
             <div class="field-item" :style="getColItemStyle(col.formWidth || col.width)">
               <label class="field-label" :title="col.label">
                 <span class="label-text">{{ col.label }}</span>
                 <span v-if="col.required" style="color: red; margin-left: 2px;">*</span>
               </label>
               <DynamicField
-                v-model="tripForm[col.id]"
+                v-model="editForm[col.id]"
                 :col="col"
               />
             </div>
           </template>
         </div>
+
+        <!-- Form Actions Footer -->
+        <div class="edit-card-footer">
+          <div class="footer-left">
+            <Button
+              v-if="!isAddingNew && selectedRecord"
+              label="Xóa bản ghi này"
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              size="small"
+              @click="handleDeleteLinkedRecord(selectedRecord)"
+            />
+          </div>
+          <div class="footer-right">
+            <Button
+              v-if="isAddingNew && currentLinkedRows.length > 0"
+              label="Hủy"
+              severity="secondary"
+              text
+              size="small"
+              @click="cancelAddNew"
+            />
+            <Button
+              :label="isAddingNew ? ('Tạo ' + currentLinkedTable.title) : 'Lưu thay đổi'"
+              icon="pi pi-check"
+              severity="success"
+              size="small"
+              :loading="isSaving"
+              @click="handleSaveLinkedRecord"
+            />
+          </div>
+        </div>
       </div>
 
-      <template #footer>
-        <Button label="Hủy" severity="secondary" text size="small" @click="isTripFormOpen = false" />
-        <Button label="Lưu Chuyến đi" icon="pi pi-check" severity="success" size="small" :loading="isSavingSub" @click="saveTripForm" />
-      </template>
-    </Dialog>
+      <!-- Empty State if 0 records and not adding -->
+      <div v-else-if="currentLinkedRows.length === 0" class="empty-state-box">
+        <i :class="currentLinkedTable.icon || 'pi pi-inbox'" class="empty-icon"></i>
+        <p class="empty-text">Chưa có bản ghi {{ currentLinkedTable.title }} nào được liên kết.</p>
+        <Button
+          :label="'Thêm ' + currentLinkedTable.title + ' đầu tiên'"
+          icon="pi pi-plus"
+          size="small"
+          severity="info"
+          outlined
+          @click="openAddNewLinkedRecord"
+        />
+      </div>
+
+      <!-- Mini Table of All Linked Records (Quick Overview) -->
+      <div v-if="currentLinkedRows.length > 1" class="mini-table-section">
+        <span class="mini-table-title">Danh sách tổng quan ({{ currentLinkedRows.length }} bản ghi):</span>
+        <div class="mini-table-wrapper">
+          <table class="custom-mini-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;" class="col-center">STT</th>
+                <th
+                  v-for="col in displayOverviewCols"
+                  :key="col.id"
+                  :style="{ width: col.tableWidth ? col.tableWidth + 'px' : (col.width || '150px'), minWidth: '100px' }"
+                >
+                  {{ col.label }}
+                </th>
+                <th style="width: 80px;" class="col-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(row, idx) in currentLinkedRows"
+                :key="row.id || row.uniqueKey || idx"
+                :class="{ 'row-active': isSameRow(selectedRecord, row) }"
+              >
+                <td class="col-center idx-cell">{{ idx + 1 }}</td>
+                <td v-for="col in displayOverviewCols" :key="col.id">
+                  {{ getRecordCellValue(row, col) }}
+                </td>
+                <td class="col-center">
+                  <div class="table-actions">
+                    <button
+                      type="button"
+                      class="btn-action-icon edit"
+                      title="Chỉnh sửa bản ghi này"
+                      @click="selectRecordToEdit(row)"
+                    >
+                      <i class="pi pi-pencil"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-action-icon delete"
+                      title="Xóa bản ghi này"
+                      @click="handleDeleteLinkedRecord(row)"
+                    >
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
 import DynamicField from '@/components/common/DynamicField.vue';
 import { usePersonnelStore } from '@/stores/personnel';
+import { getUnifiedTableDefinitions, findUnifiedTable } from '@/utils/tableRegistry';
 import { formatDate, evaluateFormula, getColItemStyle } from '@/utils/formatters';
+import { saveAppSettings } from '@/api/settings';
 
 const props = defineProps({
   currentRecord: {
@@ -362,7 +255,11 @@ const props = defineProps({
   },
   recordSource: {
     type: String,
-    default: 'personnel', // 'personnel' | 'relatives' | 'trips' | 'blank'
+    default: 'personnel',
+  },
+  tableId: {
+    type: String,
+    default: '',
   },
   modelValue: {
     type: String,
@@ -378,89 +275,335 @@ const currentTab = computed({
   set: (val) => emit('update:modelValue', val),
 });
 
-const tripFilterType = ref('all');
-const isSavingSub = ref(false);
+// Form and selection state
+const selectedRecord = ref(null);
+const isAddingNew = ref(false);
+const editForm = ref({});
+const isSaving = ref(false);
+const saveSuccessBanner = ref(false);
+const activeSubTripPersonType = ref('personnel');
 
-// Sub Dialog States
-const isRelativeFormOpen = ref(false);
-const editingRelative = ref(null);
-const relForm = ref({});
-
-const isTripFormOpen = ref(false);
-const editingTrip = ref(null);
-const tripTargetPersonType = ref('personnel');
-const tripForm = ref({});
-
-// Trường khóa động (Zero-Hardcode)
-const pKeyField = computed(() => personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent');
-const relParentKey = computed(() => personnelStore.getRelativeParentKeyField ? personnelStore.getRelativeParentKeyField() : 'cccdparent');
-const relKeyField = computed(() => personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan');
-const tripKeyField = computed(() => personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi');
-const personnelNameField = computed(() => personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name');
+// Dynamic key helpers
+const pKeyField = computed(() => (personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent'));
+const relParentKey = computed(() => (personnelStore.getRelativeParentKeyField ? personnelStore.getRelativeParentKeyField() : 'cccdparent'));
+const relKeyField = computed(() => (personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'id'));
+const tripKeyField = computed(() => (personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi'));
+const personnelNameField = computed(() => (personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name'));
 const relativeNameField = computed(() => {
   const rCols = (personnelStore.importMappingRelative || []).flatMap((g) => g.columns || []);
   const nCol = rCols.find((c) => c.id === 'relativeName' || c.id === 'name' || c.label?.toLowerCase().includes('họ và tên') || c.label?.toLowerCase().includes('họ tên'));
   return nCol ? nCol.id : 'relativeName';
 });
 
-// Helper kiểm tra cột hiển thị hợp lệ
+// All registered tables
+const allTables = computed(() => getUnifiedTableDefinitions({ personnelStore }));
+
+// Current active table
+const currentTable = computed(() => {
+  const tid = props.tableId || props.recordSource || 'personnel';
+  return findUnifiedTable(tid, { personnelStore }) || allTables.value.find((t) => t.id === 'personnel') || null;
+});
+
+const getTableKeyColId = (table) => {
+  if (!table) return 'id';
+  const cols = table.getColumns ? table.getColumns(personnelStore) : [];
+  const keyCol = cols.find((c) => c.isKey);
+  if (keyCol) return keyCol.id;
+  if (table.id === 'personnel' || table.source === 'personnel') return pKeyField.value;
+  if (table.id === 'relatives' || table.source === 'relatives') return relKeyField.value;
+  if (table.id === 'trips' || table.source === 'trips') return tripKeyField.value;
+  return 'id';
+};
+
 const isColVisible = (c) => {
   if (!c || c.isVirtual || c.id === 'stt') return false;
   if (c.showInDetail === false || c.showInDetail === 'false' || c.showInDetail === 0 || c.showInDetail === '0') return false;
   return true;
 };
 
-// Cột Thân nhân hoàn toàn ĐỘNG theo importMappingRelative
-const relativeColumns = computed(() => {
-  const cols = [];
-  const seen = new Set();
-  (personnelStore.importMappingRelative || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c && c.id && isColVisible(c) && !seen.has(c.id)) {
-        seen.add(c.id);
-        cols.push(c);
+// Compute linked rows for any given table
+const getLinkedRows = (targetTable) => {
+  if (!targetTable || !props.currentRecord) return [];
+  const curTable = currentTable.value;
+  const curRecord = props.currentRecord;
+  const curId = curTable?.id || props.recordSource || 'personnel';
+  const targetId = targetTable.id;
+
+  // 1. Foreign key in targetTable pointing to curTable
+  const targetCols = targetTable.getColumns ? targetTable.getColumns(personnelStore) : [];
+  const curCols = curTable?.getColumns ? curTable.getColumns(personnelStore) : [];
+
+  const fkColInTarget = targetCols.find(
+    (c) => c.linkTable && (c.linkTable === curId || c.linkTable === curTable?.source)
+  );
+  if (fkColInTarget) {
+    const curKeyColId = fkColInTarget.linkColumn || getTableKeyColId(curTable);
+    const curVal = String(curRecord[curKeyColId] || curRecord.id || '').trim().toLowerCase();
+    if (curVal) {
+      const allRows = targetTable.getRows(personnelStore) || [];
+      return allRows.filter((r) => {
+        const val = String(r[fkColInTarget.id] || '').trim().toLowerCase();
+        return val && val === curVal;
+      });
+    }
+  }
+
+  // 2. Foreign key in curTable pointing to targetTable
+  const fkColInCur = curCols.find(
+    (c) => c.linkTable && (c.linkTable === targetId || c.linkTable === targetTable.source)
+  );
+  if (fkColInCur) {
+    const targetKeyColId = fkColInCur.linkColumn || getTableKeyColId(targetTable);
+    const curVal = String(curRecord[fkColInCur.id] || '').trim().toLowerCase();
+    if (curVal) {
+      const allRows = targetTable.getRows(personnelStore) || [];
+      return allRows.filter((r) => {
+        const val = String(r[targetKeyColId] || r.id || '').trim().toLowerCase();
+        return val && val === curVal;
+      });
+    }
+  }
+
+  // 3. Fallback built-in core relationships
+  // 3a. Personnel -> Relatives
+  if (curId === 'personnel' && targetId === 'relatives') {
+    const pId = String(curRecord.id || curRecord.code || '').trim();
+    const pVal = String(curRecord[pKeyField.value] || curRecord.cccd || '').trim().toLowerCase();
+    const seen = new Set();
+    const res = [];
+    (curRecord.relatives || []).forEach((r) => {
+      const k = r.id || r.code || r.uniqueKey;
+      if (k && !seen.has(k)) { seen.add(k); res.push(r); }
+    });
+    (personnelStore.relativesList || []).forEach((r) => {
+      const k = r.id || r.code || r.uniqueKey;
+      if (k && seen.has(k)) return;
+      const matchId = pId && r.personnelId && String(r.personnelId).trim() === pId;
+      const rParentVal = String(r[relParentKey.value] || r.cccdparent || '').trim().toLowerCase();
+      const matchVal = pVal && rParentVal && rParentVal === pVal;
+      if (matchId || matchVal) {
+        if (k) seen.add(k);
+        res.push(r);
       }
     });
-  });
-  return cols;
-});
+    return res;
+  }
 
-// Cột Chuyến đi hoàn toàn ĐỘNG theo importMappingTrips
-const tripColumns = computed(() => {
-  const cols = [];
-  const seen = new Set();
-  (personnelStore.importMappingTrips || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c && c.id && isColVisible(c) && !seen.has(c.id)) {
-        seen.add(c.id);
-        cols.push(c);
+  // 3b. Personnel -> Trips
+  if (curId === 'personnel' && targetId === 'trips') {
+    const pId = String(curRecord.id || curRecord.code || '').trim();
+    const pVal = String(curRecord[pKeyField.value] || curRecord.cccd || '').trim().toLowerCase();
+    const rels = getLinkedRows({ id: 'relatives', source: 'relatives', getRows: () => personnelStore.relativesList || [], getColumns: () => [] });
+    const relKeySet = new Set(rels.map((r) => String(r[relKeyField.value] || r.cccdthannhan || r.cccd || '').trim().toLowerCase()).filter(Boolean));
+    const relIdSet = new Set(rels.map((r) => String(r.id || '').trim()).filter(Boolean));
+    const res = [];
+    const seen = new Set();
+    (personnelStore.tripsList || []).forEach((t, idx) => {
+      const uKey = t.uniqueKey || t.id || `trip_${idx}`;
+      if (seen.has(uKey)) return;
+      const tVal = String(t[tripKeyField.value] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
+      const matchPersonId = pId && t.personnelId && String(t.personnelId).trim() === pId;
+      const matchPersonVal = pVal && tVal && tVal === pVal && !t.isRelative;
+      const matchRelId = t.relativeId && relIdSet.has(String(t.relativeId).trim());
+      const matchRelVal = tVal && relKeySet.has(tVal);
+      if (matchPersonId || matchPersonVal || matchRelId || matchRelVal) {
+        seen.add(uKey);
+        const isPers = !t.isRelative && (matchPersonId || matchPersonVal);
+        res.push({
+          ...t,
+          _isPersonnelTrip: isPers,
+          _relativeInfo: isPers ? null : (rels.find((r) => (r.id && r.id === t.relativeId) || (tVal && String(r[relKeyField.value] || r.cccdthannhan || r.cccd).trim().toLowerCase() === tVal)) || null),
+        });
       }
     });
-  });
-  return cols;
-});
+    return res;
+  }
 
-// Cột Cán bộ
-const personnelColumns = computed(() => {
-  const cols = [];
-  const seen = new Set();
-  (personnelStore.importMappingPersonnel || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c && c.id && isColVisible(c) && !seen.has(c.id)) {
-        seen.add(c.id);
-        cols.push(c);
+  // 3c. Relatives -> Personnel
+  if (curId === 'relatives' && targetId === 'personnel') {
+    const pId = curRecord.personnelId;
+    const pVal = curRecord[relParentKey.value] || curRecord.cccdparent;
+    const p = (personnelStore.personnelList || []).find((pers) => {
+      if (pId && (String(pers.id).trim() === String(pId).trim() || String(pers.code).trim() === String(pId).trim())) return true;
+      if (pVal) {
+        const c = String(pers[pKeyField.value] || pers.cccd || '').trim().toLowerCase();
+        if (c && c === String(pVal).trim().toLowerCase()) return true;
+      }
+      return false;
+    }) || curRecord.rawPerson;
+    return p ? [p] : [];
+  }
+
+  // 3d. Relatives -> Trips
+  if (curId === 'relatives' && targetId === 'trips') {
+    const relId = String(curRecord.id || curRecord.code || '').trim();
+    const relVal = String(curRecord[relKeyField.value] || curRecord.cccdthannhan || curRecord.cccd || '').trim().toLowerCase();
+    const res = [];
+    const seen = new Set();
+    (personnelStore.tripsList || []).forEach((t, idx) => {
+      const uKey = t.uniqueKey || t.id || `trip_${idx}`;
+      if (seen.has(uKey)) return;
+      const tVal = String(t[tripKeyField.value] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
+      const matchId = relId && t.relativeId && String(t.relativeId).trim() === relId;
+      const matchVal = relVal && tVal && tVal === relVal;
+      if (matchId || matchVal) {
+        seen.add(uKey);
+        res.push(t);
       }
     });
+    return res;
+  }
+
+  // 3e. Trips -> Personnel
+  if (curId === 'trips' && targetId === 'personnel') {
+    const pId = curRecord.personnelId;
+    const tVal = String(curRecord[tripKeyField.value] || curRecord.cccdchuyendi || curRecord.cccd || '').trim().toLowerCase();
+    const p = (personnelStore.personnelList || []).find((pers) => {
+      if (pId && String(pers.id).trim() === String(pId).trim()) return true;
+      if (tVal) {
+        const c = String(pers[pKeyField.value] || pers.cccd || '').trim().toLowerCase();
+        if (c && c === tVal) return true;
+      }
+      return false;
+    }) || curRecord.rawPerson;
+    return p ? [p] : [];
+  }
+
+  // 3f. Trips -> Relatives
+  if (curId === 'trips' && targetId === 'relatives') {
+    const rId = curRecord.relativeId;
+    const tVal = String(curRecord[tripKeyField.value] || curRecord.cccdchuyendi || curRecord.cccd || '').trim().toLowerCase();
+    const r = (personnelStore.relativesList || []).find((rel) => {
+      if (rId && String(rel.id).trim() === String(rId).trim()) return true;
+      if (tVal) {
+        const c = String(rel[relKeyField.value] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
+        if (c && c === tVal) return true;
+      }
+      return false;
+    }) || curRecord.rawRelative;
+    return r ? [r] : [];
+  }
+
+  return [];
+};
+
+// Check whether target table is linked to current table
+const isTableLinked = (targetTable) => {
+  if (!targetTable) return false;
+  const curTable = currentTable.value;
+  const curId = curTable?.id || props.recordSource || 'personnel';
+  const targetId = targetTable.id;
+  if (curId === targetId) return false;
+
+  // Core connections
+  if ((curId === 'personnel' || curId === 'relatives' || curId === 'trips') &&
+      (targetId === 'personnel' || targetId === 'relatives' || targetId === 'trips')) {
+    return true;
+  }
+
+  // Column link checks
+  const targetCols = targetTable.getColumns ? targetTable.getColumns(personnelStore) : [];
+  const curCols = curTable?.getColumns ? curTable.getColumns(personnelStore) : [];
+
+  const fkTarget = targetCols.some((c) => c.linkTable && (c.linkTable === curId || c.linkTable === curTable?.source));
+  if (fkTarget) return true;
+
+  const fkCur = curCols.some((c) => c.linkTable && (c.linkTable === targetId || c.linkTable === targetTable.source));
+  if (fkCur) return true;
+
+  return false;
+};
+
+// Available Tabs
+const availableTabs = computed(() => {
+  const tabs = [
+    {
+      id: 'info',
+      label: currentTable.value?.title || 'Thông tin chính',
+      icon: currentTable.value?.icon || 'pi pi-id-card',
+    },
+  ];
+
+  (allTables.value || []).forEach((t) => {
+    if (isTableLinked(t)) {
+      const rows = getLinkedRows(t);
+      tabs.push({
+        id: t.id,
+        label: t.title,
+        icon: t.icon || 'pi pi-table',
+        count: rows.length,
+        table: t,
+      });
+    }
   });
-  return cols;
+
+  return tabs;
 });
 
-const keyPersonnelCols = computed(() => personnelColumns.value.slice(0, 6));
+// Currently selected linked table
+const currentLinkedTable = computed(() => {
+  if (currentTab.value === 'info') return null;
+  return availableTabs.value.find((t) => t.id === currentTab.value)?.table || null;
+});
 
-// Trích xuất giá trị ô hiển thị động đa hình
+// Rows of currently selected linked table
+const currentLinkedRows = computed(() => {
+  if (!currentLinkedTable.value) return [];
+  return getLinkedRows(currentLinkedTable.value);
+});
+
+// Columns of currently selected linked table
+const currentLinkedCols = computed(() => {
+  if (!currentLinkedTable.value) return [];
+  return (currentLinkedTable.value.getColumns(personnelStore) || []).filter(isColVisible);
+});
+
+const displayOverviewCols = computed(() => {
+  return currentLinkedCols.value.slice(0, 6);
+});
+
+const isTripUnderPersonnel = computed(() => {
+  const curId = currentTable.value?.id || props.recordSource;
+  return curId === 'personnel' && currentLinkedTable.value?.id === 'trips';
+});
+
+const linkedRelativesForTrip = computed(() => {
+  if (!isTripUnderPersonnel.value) return [];
+  const relTable = allTables.value.find((t) => t.id === 'relatives');
+  return relTable ? getLinkedRows(relTable) : [];
+});
+
+const isSameRow = (r1, r2) => {
+  if (!r1 || !r2) return false;
+  if (r1.id && r2.id && String(r1.id) === String(r2.id)) return true;
+  if (r1.uniqueKey && r2.uniqueKey && String(r1.uniqueKey) === String(r2.uniqueKey)) return true;
+  return r1 === r2;
+};
+
+const isParentPerson = (record) => {
+  const curId = currentTable.value?.id || props.recordSource;
+  return curId === 'relatives' && currentLinkedTable.value?.id === 'personnel' && record;
+};
+
+const getRecordDisplayName = (record, table) => {
+  if (!record) return 'Bản ghi';
+  if (table?.id === 'personnel' || table?.source === 'personnel') {
+    return record[personnelNameField.value] || record.name || record.fullName || record.code || 'Cán bộ';
+  }
+  if (table?.id === 'relatives' || table?.source === 'relatives') {
+    return record[relativeNameField.value] || record.relativeName || record.name || record.code || 'Thân nhân';
+  }
+  if (table?.id === 'trips' || table?.source === 'trips') {
+    const dest = record.countryName || record.country || record.quoc_gia_xuat_canh || '';
+    const date = record.departureDate || record.ngay_xuat_canh || '';
+    return dest ? `${dest} (${formatDate(date) || date})` : 'Chuyến đi';
+  }
+  return record.title || record.name || record.label || record.code || record.id || 'Bản ghi';
+};
+
 const getRecordCellValue = (item, col) => {
   if (!item || !col) return '-';
-  const val = item[col.id] !== undefined ? item[col.id] : (item.custom_data?.[col.id]);
+  const val = item[col.id] !== undefined ? item[col.id] : item.custom_data?.[col.id];
   if (col.format === 'formula') {
     const res = evaluateFormula(item, col);
     return res?.label || res?.shortLabel || res || '-';
@@ -473,361 +616,561 @@ const getRecordCellValue = (item, col) => {
   return String(val);
 };
 
-// Danh sách thân nhân của Cán bộ này (khớp liên kết động)
-const relatedRelatives = computed(() => {
-  if (props.recordSource !== 'personnel') return [];
-  const pId = String(props.currentRecord.id || props.currentRecord.code || '').trim();
-  const pVal = String(props.currentRecord[pKeyField.value] || props.currentRecord.cccd || props.currentRecord.cccdparent || '').trim().toLowerCase();
+const selectRecordToEdit = (row) => {
+  selectedRecord.value = row;
+  isAddingNew.value = false;
+  saveSuccessBanner.value = false;
+  editForm.value = { ...row, ...(row.custom_data || {}) };
 
-  const rels = [];
-  const seen = new Set();
-
-  const directRels = Array.isArray(props.currentRecord.relatives) ? props.currentRecord.relatives : [];
-  directRels.forEach((r, idx) => {
-    const key = r.id || r.code || r.uniqueKey || `rel_direct_${idx}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      rels.push(r);
+  if (isTripUnderPersonnel.value) {
+    if (row._isPersonnelTrip || !row.isRelative) {
+      activeSubTripPersonType.value = 'personnel';
+    } else {
+      const tVal = String(row[tripKeyField.value] || row.cccdchuyendi || '').trim();
+      const matched = linkedRelativesForTrip.value.find((r) => (row.relativeId && r.id === row.relativeId) || (tVal && String(r[relKeyField.value] || r.cccdthannhan).trim() === tVal));
+      activeSubTripPersonType.value = matched ? 'rel_' + (matched.id || matched[relKeyField.value] || matched.cccdthannhan) : 'personnel';
     }
-  });
+  }
+};
 
-  (personnelStore.relativesList || []).forEach((r, idx) => {
-    const rKey = r.id || r.code || r.uniqueKey || `rel_${idx}`;
-    if (seen.has(rKey)) return;
+const openAddNewLinkedRecord = () => {
+  isAddingNew.value = true;
+  selectedRecord.value = null;
+  saveSuccessBanner.value = false;
 
-    const matchId = pId && r.personnelId && (String(r.personnelId).trim() === pId);
-    const rParentVal = String(r[relParentKey.value] || r.cccdparent || '').trim().toLowerCase();
-    const matchVal = pVal && rParentVal && (rParentVal === pVal);
-    if (matchId || matchVal) {
-      seen.add(rKey);
-      rels.push(r);
+  const targetTable = currentLinkedTable.value;
+  if (!targetTable) return;
+
+  const initialForm = {};
+  const curTable = currentTable.value;
+  const curRecord = props.currentRecord;
+  const curId = curTable?.id || props.recordSource || 'personnel';
+  const targetId = targetTable.id;
+
+  const targetCols = targetTable.getColumns ? targetTable.getColumns(personnelStore) : [];
+  const curCols = curTable?.getColumns ? curTable.getColumns(personnelStore) : [];
+
+  // 1. Foreign key in targetTable
+  const fkColInTarget = targetCols.find((c) => c.linkTable && (c.linkTable === curId || c.linkTable === curTable?.source));
+  if (fkColInTarget) {
+    const curKeyColId = fkColInTarget.linkColumn || getTableKeyColId(curTable);
+    initialForm[fkColInTarget.id] = curRecord[curKeyColId] || curRecord.id || '';
+  }
+
+  // 2. Foreign key in curTable
+  const fkColInCur = curCols.find((c) => c.linkTable && (c.linkTable === targetId || c.linkTable === targetTable.source));
+  if (fkColInCur) {
+    const targetKeyColId = fkColInCur.linkColumn || getTableKeyColId(targetTable);
+    if (curRecord[fkColInCur.id]) {
+      initialForm[targetKeyColId] = curRecord[fkColInCur.id];
     }
-  });
-
-  return rels;
-});
-
-// Cán bộ chủ quản (khi xem Thân nhân)
-const parentPerson = computed(() => {
-  if (props.recordSource !== 'relatives') return null;
-  const pId = props.currentRecord.personnelId;
-  const pVal = props.currentRecord[relParentKey.value] || props.currentRecord.cccdparent || props.currentRecord.parentCccd;
-
-  return (personnelStore.personnelList || []).find((p) => {
-    if (pId && (String(p.id).trim() === String(pId).trim() || String(p.code).trim() === String(pId).trim())) return true;
-    if (pVal) {
-      const c = String(p[pKeyField.value] || p.cccd || p.cccdparent || '').trim().toLowerCase();
-      if (c && c === String(pVal).trim().toLowerCase()) return true;
-    }
-    return false;
-  }) || props.currentRecord.rawPerson || null;
-});
-
-// Toàn bộ chuyến đi liên quan (khớp liên kết động)
-const relatedTrips = computed(() => {
-  if (props.recordSource === 'personnel') {
-    const pId = String(props.currentRecord.id || props.currentRecord.code || '').trim();
-    const pVal = String(props.currentRecord[pKeyField.value] || props.currentRecord.cccd || props.currentRecord.cccdparent || '').trim().toLowerCase();
-
-    const relKeySet = new Set(
-      relatedRelatives.value.map((r) => String(r[relKeyField.value] || r.cccdthannhan || r.cccd || '').trim().toLowerCase()).filter(Boolean)
-    );
-    const relIdSet = new Set(
-      relatedRelatives.value.map((r) => String(r.id || '').trim()).filter(Boolean)
-    );
-
-    const trips = [];
-    const seen = new Set();
-
-    (personnelStore.tripsList || []).forEach((t, idx) => {
-      const uKey = t.uniqueKey || t.id || `trip_${idx}`;
-      if (seen.has(uKey)) return;
-
-      const tVal = String(t[tripKeyField.value] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
-      const matchPersonId = pId && t.personnelId && String(t.personnelId).trim() === pId;
-      const matchPersonVal = pVal && tVal && tVal === pVal && !t.isRelative;
-
-      const matchRelId = t.relativeId && relIdSet.has(String(t.relativeId).trim());
-      const matchRelVal = tVal && relKeySet.has(tVal);
-
-      if (matchPersonId || matchPersonVal || matchRelId || matchRelVal) {
-        seen.add(uKey);
-        const isPers = !t.isRelative && (matchPersonId || matchPersonVal);
-        trips.push({
-          ...t,
-          _isPersonnelTrip: isPers,
-          _relativeInfo: isPers ? null : (relatedRelatives.value.find((r) => (r.id && r.id === t.relativeId) || (tVal && String(r[relKeyField.value] || r.cccdthannhan || r.cccd).trim().toLowerCase() === tVal)) || null),
-        });
-      }
-    });
-
-    return trips;
   }
 
-  if (props.recordSource === 'relatives') {
-    const relId = String(props.currentRecord.id || props.currentRecord.code || '').trim();
-    const relVal = String(props.currentRecord[relKeyField.value] || props.currentRecord.cccdthannhan || props.currentRecord.cccd || '').trim().toLowerCase();
-
-    const trips = [];
-    const seen = new Set();
-
-    (personnelStore.tripsList || []).forEach((t, idx) => {
-      const uKey = t.uniqueKey || t.id || `trip_${idx}`;
-      if (seen.has(uKey)) return;
-
-      const tVal = String(t[tripKeyField.value] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
-      const matchId = relId && t.relativeId && String(t.relativeId).trim() === relId;
-      const matchVal = relVal && tVal && tVal === relVal;
-
-      if (matchId || matchVal) {
-        seen.add(uKey);
-        trips.push(t);
-      }
-    });
-
-    return trips;
+  // 3. Built-in defaults
+  if (curId === 'personnel' && targetId === 'relatives') {
+    initialForm.personnelId = curRecord.id || curRecord.code || '';
+    initialForm[relParentKey.value] = curRecord[pKeyField.value] || curRecord.cccd || '';
+    initialForm.parentName = curRecord[personnelNameField.value] || curRecord.name || '';
+  } else if (curId === 'personnel' && targetId === 'trips') {
+    initialForm.personnelId = curRecord.id || curRecord.code || '';
+    initialForm[tripKeyField.value] = curRecord[pKeyField.value] || curRecord.cccd || '';
+    initialForm.fullName = curRecord[personnelNameField.value] || curRecord.name || '';
+    activeSubTripPersonType.value = 'personnel';
+  } else if (curId === 'relatives' && targetId === 'trips') {
+    initialForm.relativeId = curRecord.id || curRecord.code || '';
+    initialForm[tripKeyField.value] = curRecord[relKeyField.value] || curRecord.cccdthannhan || curRecord.cccd || '';
+    initialForm.isRelative = true;
+    initialForm.relativeName = curRecord[relativeNameField.value] || curRecord.name || '';
+  } else if (curId === 'relatives' && targetId === 'personnel') {
+    initialForm[pKeyField.value] = curRecord[relParentKey.value] || curRecord.cccdparent || '';
   }
 
-  return [];
-});
-
-const countPersonnelTrips = computed(() => relatedTrips.value.filter((t) => t._isPersonnelTrip).length);
-const countRelativeTrips = computed(() => relatedTrips.value.filter((t) => !t._isPersonnelTrip).length);
-
-const displayTrips = computed(() => {
-  if (props.recordSource !== 'personnel') return relatedTrips.value;
-  if (tripFilterType.value === 'personnel') return relatedTrips.value.filter((t) => t._isPersonnelTrip);
-  if (tripFilterType.value === 'relative') return relatedTrips.value.filter((t) => !t._isPersonnelTrip);
-  return relatedTrips.value;
-});
-
-// Danh sách các tab hiển thị
-const availableTabs = computed(() => {
-  const tabs = [
-    {
-      id: 'info',
-      label: props.recordSource === 'personnel' ? 'Thông tin Cán bộ' : (props.recordSource === 'relatives' ? 'Thông tin Thân nhân' : 'Thông tin chi tiết'),
-      icon: 'pi pi-id-card',
-    },
-  ];
-
-  if (props.recordSource === 'personnel') {
-    tabs.push({
-      id: 'relatives',
-      label: 'Thân nhân liên kết',
-      icon: 'pi pi-users',
-      count: relatedRelatives.value.length,
-    });
-    tabs.push({
-      id: 'trips',
-      label: 'Chuyến đi nước ngoài',
-      icon: 'pi pi-send',
-      count: relatedTrips.value.length,
-    });
-  } else if (props.recordSource === 'relatives') {
-    tabs.push({
-      id: 'parent',
-      label: 'Cán bộ chủ quản',
-      icon: 'pi pi-user',
-    });
-    tabs.push({
-      id: 'trips',
-      label: 'Chuyến đi của thân nhân',
-      icon: 'pi pi-send',
-      count: relatedTrips.value.length,
-    });
-  }
-
-  return tabs;
-});
-
-const getRelativeTripCount = (rel) => {
-  const rId = String(rel.id || rel.code || '').trim();
-  const rVal = String(rel[relKeyField.value] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
-  return (personnelStore.tripsList || []).filter((t) => {
-    if (rId && t.relativeId && String(t.relativeId).trim() === rId) return true;
-    const tVal = String(t[tripKeyField.value] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
-    return rVal && tVal && rVal === tVal;
-  }).length;
+  editForm.value = initialForm;
 };
 
-// CRUD Thân nhân động
-const openAddRelative = () => {
-  editingRelative.value = null;
-  relForm.value = {};
-  isRelativeFormOpen.value = true;
-};
-
-const openEditRelative = (rel) => {
-  editingRelative.value = rel;
-  relForm.value = { ...rel, ...(rel.custom_data || {}) };
-  isRelativeFormOpen.value = true;
-};
-
-const saveRelativeForm = async () => {
-  isSavingSub.value = true;
-  try {
-    const pVal = props.currentRecord[pKeyField.value] || props.currentRecord.cccdparent || props.currentRecord.cccd || '';
-    let payload = {
-      ...relForm.value,
-      _recordType: 'relative',
-      [relParentKey.value]: pVal,
-      personnelId: props.currentRecord.id || props.currentRecord.code || '',
-    };
-    if (editingRelative.value?.id) payload.id = editingRelative.value.id;
-
-    await personnelStore.saveRecord(payload);
-    await personnelStore.fetchPersonnel();
-    isRelativeFormOpen.value = false;
-    emit('refresh');
-  } catch (e) {
-    alert('Lỗi lưu thân nhân: ' + (e.message || e));
-  } finally {
-    isSavingSub.value = false;
-  }
-};
-
-const deleteRelative = async (rel) => {
-  const nameVal = rel[relativeNameField.value] || rel.relativeName || rel.name || 'thân nhân này';
-  if (!confirm(`Bạn có chắc muốn xóa thân nhân: "${nameVal}" không?`)) return;
-  try {
-    const relToDelete = {
-      ...rel,
-      personnelId: rel.personnelId || props.personData?.id,
-      parentPersonnelName: rel.parentPersonnelName || props.personData?.name,
-      parentCccd: rel.parentCccd || props.personData?.cccd,
-      rawPerson: props.personData || rel.rawPerson,
-    };
-    await personnelStore.deleteRelative(relToDelete);
-    await personnelStore.fetchPersonnel();
-    emit('refresh');
-  } catch (e) {
-    alert('Lỗi xóa thân nhân: ' + (e.message || e));
-  }
-};
-
-// CRUD Chuyến đi động
-const openAddTrip = () => {
-  editingTrip.value = null;
-  tripForm.value = {};
-  tripTargetPersonType.value = 'personnel';
-  isTripFormOpen.value = true;
-};
-
-const openEditTrip = (t) => {
-  editingTrip.value = t;
-  tripForm.value = { ...t, ...(t.custom_data || {}) };
-  if (t._isPersonnelTrip || !t.isRelative) {
-    tripTargetPersonType.value = 'personnel';
+const cancelAddNew = () => {
+  isAddingNew.value = false;
+  if (currentLinkedRows.value.length > 0) {
+    selectRecordToEdit(currentLinkedRows.value[0]);
   } else {
-    const tVal = String(t[tripKeyField.value] || t.cccdchuyendi || '').trim();
-    const matched = relatedRelatives.value.find((r) => (t.relativeId && r.id === t.relativeId) || (tVal && String(r[relKeyField.value] || r.cccdthannhan).trim() === tVal));
-    tripTargetPersonType.value = matched ? 'rel_' + (matched.id || matched[relKeyField.value] || matched.cccdthannhan) : 'personnel';
+    selectedRecord.value = null;
   }
-  isTripFormOpen.value = true;
 };
 
-const saveTripForm = async () => {
-  isSavingSub.value = true;
-  try {
-    let payload = {
-      ...tripForm.value,
-      _recordType: 'trip',
-    };
-    if (editingTrip.value?.id) payload.id = editingTrip.value.id;
-    if (editingTrip.value?.uniqueKey) payload.uniqueKey = editingTrip.value.uniqueKey;
+const syncTripPersonToForm = () => {
+  if (!isTripUnderPersonnel.value) return;
+  const pType = activeSubTripPersonType.value;
+  if (pType === 'personnel') {
+    editForm.value.isRelative = false;
+    editForm.value.personnelId = props.currentRecord.id;
+    editForm.value[tripKeyField.value] = props.currentRecord[pKeyField.value] || props.currentRecord.cccd || '';
+    delete editForm.value.relativeId;
+    delete editForm.value.relativeName;
+  } else if (pType && pType.startsWith('rel_')) {
+    const rId = pType.replace('rel_', '');
+    const r = linkedRelativesForTrip.value.find((rel) => String(rel.id) === rId || String(rel[relKeyField.value] || rel.cccdthannhan) === rId);
+    editForm.value.isRelative = true;
+    editForm.value.personnelId = props.currentRecord.id;
+    editForm.value.relativeId = r?.id || rId;
+    editForm.value.relativeName = r?.[relativeNameField.value] || r?.relativeName || r?.name || '';
+    editForm.value[tripKeyField.value] = r?.[relKeyField.value] || r?.cccdthannhan || r?.cccd || '';
+  }
+};
 
-    if (props.recordSource === 'personnel') {
-      if (tripTargetPersonType.value === 'personnel') {
-        payload.isRelative = false;
-        payload.personnelId = props.currentRecord.id;
-        payload[tripKeyField.value] = props.currentRecord[pKeyField.value] || props.currentRecord.cccd || props.currentRecord.cccdparent || '';
-        delete payload.relativeId;
-      } else if (tripTargetPersonType.value.startsWith('rel_')) {
-        const targetRelId = tripTargetPersonType.value.replace('rel_', '');
-        const targetRel = relatedRelatives.value.find((r) => String(r.id) === targetRelId || String(r[relKeyField.value] || r.cccdthannhan) === targetRelId);
-        payload.isRelative = true;
-        payload.personnelId = props.currentRecord.id;
-        payload.relativeId = targetRel?.id || targetRelId;
-        payload.relativeName = targetRel?.[relativeNameField.value] || targetRel?.relativeName || targetRel?.name || '';
-        payload[tripKeyField.value] = targetRel?.[relKeyField.value] || targetRel?.cccdthannhan || targetRel?.cccd || '';
+const handleSaveLinkedRecord = async () => {
+  const targetTable = currentLinkedTable.value;
+  if (!targetTable) return;
+
+  isSaving.value = true;
+  try {
+    const payload = {
+      ...editForm.value,
+      custom_data: { ...(editForm.value.custom_data || {}), ...editForm.value },
+    };
+
+    if (targetTable.id === 'personnel' || targetTable.source === 'personnel') {
+      await personnelStore.savePerson(payload);
+    } else if (targetTable.id === 'relatives' || targetTable.source === 'relatives') {
+      payload._recordType = 'relative';
+      await personnelStore.saveRelative(payload);
+    } else if (targetTable.id === 'trips' || targetTable.source === 'trips') {
+      payload._recordType = 'trip';
+      syncTripPersonToForm();
+      await personnelStore.saveTrip(payload);
+    } else {
+      // Custom table save
+      const tid = targetTable.id;
+      payload._tableId = tid;
+      let rows = [];
+      try {
+        const local = localStorage.getItem(`custom_table_rows_${tid}`);
+        if (local) rows = JSON.parse(local);
+      } catch (e) {}
+      if (!Array.isArray(rows)) rows = [];
+
+      if (isAddingNew.value) {
+        const newId = payload.id || ('row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6));
+        payload.id = newId;
+        payload.uniqueKey = newId;
+        payload.createdAt = payload.createdAt || new Date().toISOString().slice(0, 10);
+        rows.push(payload);
+      } else {
+        const idx = rows.findIndex((r) => String(r.id) === String(payload.id) || String(r.uniqueKey) === String(payload.uniqueKey));
+        if (idx >= 0) {
+          rows[idx] = { ...rows[idx], ...payload };
+        } else {
+          rows.push(payload);
+        }
       }
-    } else if (props.recordSource === 'relatives') {
-      payload.isRelative = true;
-      payload.relativeId = props.currentRecord.id;
-      payload.personnelId = props.currentRecord.personnelId;
-      payload[tripKeyField.value] = props.currentRecord[relKeyField.value] || props.currentRecord.cccdthannhan || props.currentRecord.cccd || '';
+      localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(rows));
+      await saveAppSettings(`custom_table_rows_${tid}`, rows);
     }
 
-    await personnelStore.saveRecord(payload);
     await personnelStore.fetchPersonnel();
-    isTripFormOpen.value = false;
     emit('refresh');
-  } catch (e) {
-    alert('Lỗi lưu chuyến đi: ' + (e.message || e));
+
+    saveSuccessBanner.value = true;
+    setTimeout(() => {
+      saveSuccessBanner.value = false;
+    }, 2500);
+
+    isAddingNew.value = false;
+    selectedRecord.value = payload;
+  } catch (err) {
+    alert('Lỗi lưu: ' + (err.message || err));
   } finally {
-    isSavingSub.value = false;
+    isSaving.value = false;
   }
 };
 
-const deleteTrip = async (trip) => {
-  const dest = trip.countryName || trip.destination || trip.quoc_gia_xuat_canh || trip.id || '';
-  if (!confirm(`Bạn có chắc muốn xóa chuyến đi: "${dest}" không?`)) return;
+const handleDeleteLinkedRecord = async (record) => {
+  const targetTable = currentLinkedTable.value;
+  if (!targetTable || !record) return;
+
+  const displayName = getRecordDisplayName(record, targetTable);
+  if (!confirm(`Bạn có chắc muốn xóa "${displayName}" khỏi ${targetTable.title}?`)) return;
+
   try {
-    await personnelStore.deleteTrip(trip);
+    if (targetTable.id === 'personnel' || targetTable.source === 'personnel') {
+      await personnelStore.deletePerson(record);
+    } else if (targetTable.id === 'relatives' || targetTable.source === 'relatives') {
+      await personnelStore.deleteRelative(record);
+    } else if (targetTable.id === 'trips' || targetTable.source === 'trips') {
+      await personnelStore.deleteTrip(record);
+    } else {
+      const tid = targetTable.id;
+      let rows = [];
+      try {
+        const local = localStorage.getItem(`custom_table_rows_${tid}`);
+        if (local) rows = JSON.parse(local);
+      } catch (e) {}
+      if (Array.isArray(rows)) {
+        rows = rows.filter((r) => String(r.id) !== String(record.id) && String(r.uniqueKey) !== String(record.uniqueKey));
+        localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(rows));
+        await saveAppSettings(`custom_table_rows_${tid}`, rows);
+      }
+    }
+
     await personnelStore.fetchPersonnel();
     emit('refresh');
-  } catch (e) {
-    alert('Lỗi xóa chuyến đi: ' + (e.message || e));
+
+    selectedRecord.value = null;
+    isAddingNew.value = false;
+  } catch (err) {
+    alert('Lỗi xóa: ' + (err.message || err));
   }
 };
+
+// Automatically select record or open add-new when switching to a linked tab
+watch(
+  () => [currentTab.value, currentLinkedRows.value.length],
+  ([tab, len]) => {
+    if (tab === 'info' || !currentLinkedTable.value) {
+      selectedRecord.value = null;
+      isAddingNew.value = false;
+      return;
+    }
+    if (len === 0) {
+      openAddNewLinkedRecord();
+    } else if (!selectedRecord.value && !isAddingNew.value) {
+      selectRecordToEdit(currentLinkedRows.value[0]);
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
-.personnel-related-tabs-container { width: 100%; }
-.related-tabs-nav { display: flex; align-items: center; gap: 6px; border-bottom: 2px solid #e2e8f0; padding: 0 4px; margin-bottom: 12px; }
-.tab-nav-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; background: transparent; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 0.84rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s ease; border-radius: 6px 6px 0 0; }
-.tab-nav-btn:hover { color: #0284c7; background: #f8fafc; }
-.tab-nav-btn.active { color: #0284c7; border-bottom-color: #0284c7; background: #f0f9ff; font-weight: 700; }
-.tab-counter-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; background: #e2e8f0; color: #475569; }
-.tab-counter-badge.has-items { background: #dbeafe; color: #1d4ed8; }
-.pane-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px 12px 4px; gap: 12px; flex-wrap: wrap; }
-.pane-title-area { display: flex; flex-direction: column; gap: 2px; }
-.pane-title { font-size: 0.95rem; font-weight: 700; color: #1e293b; }
-.pane-subtitle { font-size: 0.74rem; color: #64748b; }
-.trip-filter-pills { display: inline-flex; background: #f1f5f9; padding: 2px; border-radius: 8px; gap: 2px; }
-.filter-pill { border: none; background: transparent; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; color: #64748b; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; }
-.filter-pill.active { background: #ffffff; color: #0284c7; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
-.mini-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; max-height: 480px; }
-.custom-mini-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left; }
-.custom-mini-table th { background: #f8fafc; color: #475569; font-weight: 700; padding: 9px 12px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
-.custom-mini-table td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
-.custom-mini-table tr:hover td { background: #f8fafc; }
-.col-center { text-align: center; }
-.idx-cell { font-weight: 600; color: #94a3b8; }
-.table-actions { display: flex; gap: 4px; justify-content: center; }
-.btn-action-icon { width: 26px; height: 26px; border-radius: 4px; border: 1px solid transparent; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.76rem; transition: all 0.15s ease; }
-.btn-action-icon.edit { color: #0284c7; }
-.btn-action-icon.edit:hover { background: #e0f2fe; border-color: #bae6fd; }
-.btn-action-icon.delete { color: #ef4444; }
-.btn-action-icon.delete:hover { background: #fee2e2; border-color: #fecaca; }
-.trip-count-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; background: #f1f5f9; color: #64748b; }
-.trip-count-pill.has-trips { background: #dcfce7; color: #15803d; }
-.person-type-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 10px; }
-.person-type-tag.person { background: #e0f2fe; color: #0369a1; }
-.person-type-tag.relative { background: #f3e8ff; color: #7e22ce; }
-.empty-state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 36px 16px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; gap: 10px; }
-.empty-icon { font-size: 2rem; color: #94a3b8; }
-.empty-text { font-size: 0.82rem; color: #64748b; margin: 0; }
-.parent-profile-card { display: flex; gap: 16px; padding: 16px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; align-items: flex-start; }
-.parent-avatar-box { width: 48px; height: 48px; border-radius: 50%; background: #0284c7; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
-.parent-details { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.parent-name { font-size: 1.05rem; font-weight: 700; color: #0369a1; margin: 0; }
-.parent-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
-.meta-item { display: flex; flex-direction: column; gap: 2px; }
-.meta-label { font-size: 0.7rem; color: #64748b; font-weight: 600; }
-.meta-val { font-size: 0.82rem; color: #1e293b; font-weight: 600; }
-.parent-card-actions { margin-top: 8px; }
-.field-label { display: flex; align-items: center; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 2px; }
-.label-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.personnel-related-tabs-container {
+  width: 100%;
+}
+.related-tabs-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 0 4px;
+  margin-bottom: 12px;
+}
+.tab-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 6px 6px 0 0;
+}
+.tab-nav-btn:hover {
+  color: #0284c7;
+  background: #f8fafc;
+}
+.tab-nav-btn.active {
+  color: #0284c7;
+  border-bottom-color: #0284c7;
+  background: #f0f9ff;
+  font-weight: 700;
+}
+.tab-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #475569;
+}
+.tab-counter-badge.has-items {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.pane-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 4px 10px 4px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pane-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pane-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+}
+.pane-subtitle {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+/* Selector bar */
+.record-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.selector-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+}
+.selector-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.selector-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.selector-pill-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.selector-pill-btn.active {
+  background: #0284c7;
+  color: #fff;
+  border-color: #0284c7;
+}
+.selector-pill-btn.add-btn {
+  border-style: dashed;
+  color: #16a34a;
+  border-color: #86efac;
+}
+.selector-pill-btn.add-btn:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+.selector-pill-btn.add-btn.active {
+  background: #16a34a;
+  color: #fff;
+  border-color: #16a34a;
+}
+
+/* Inline Edit Card */
+.inline-edit-card {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.edit-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.edit-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.save-toast-msg {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #16a34a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.trip-person-picker {
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+}
+.custom-sub-select {
+  width: 100%;
+  height: 32px;
+  font-size: 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 0 8px;
+  background: #fff;
+  margin-top: 3px;
+}
+.edit-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+.footer-left,
+.footer-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Mini Table */
+.mini-table-section {
+  margin-top: 16px;
+}
+.mini-table-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475569;
+  display: block;
+  margin-bottom: 6px;
+}
+.mini-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  max-height: 280px;
+}
+.custom-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+  text-align: left;
+}
+.custom-mini-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 7px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.custom-mini-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+.custom-mini-table tr:hover td {
+  background: #f8fafc;
+}
+.custom-mini-table tr.row-active td {
+  background: #eff6ff;
+  font-weight: 600;
+}
+.col-center {
+  text-align: center;
+}
+.idx-cell {
+  font-weight: 600;
+  color: #94a3b8;
+}
+.table-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+.btn-action-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  transition: all 0.15s ease;
+}
+.btn-action-icon.edit {
+  color: #0284c7;
+}
+.btn-action-icon.edit:hover {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+}
+.btn-action-icon.delete {
+  color: #ef4444;
+}
+.btn-action-icon.delete:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.empty-state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 16px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  text-align: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.empty-icon {
+  font-size: 1.8rem;
+  color: #94a3b8;
+}
+.empty-text {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0;
+}
+.field-label {
+  display: flex;
+  align-items: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 2px;
+}
+.label-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 </style>

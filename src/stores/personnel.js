@@ -612,20 +612,20 @@ export const usePersonnelStore = defineStore('personnel', {
         return this.systemKeyConfig.relativeKeyField;
       }
       const rCols = (this.importMappingRelative || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
-      const keyCol = rCols.find((c) => c.isKey || c.isIdentifier || c.format === 'id' || c.id === 'cccdthannhan' || c.id === 'cccd');
+      const keyCol = rCols.find((c) => c.isKey || c.isIdentifier || c.format === 'id');
       if (keyCol) return keyCol.id;
       if (rCols.length > 0) return rCols[0].id;
-      return 'cccdthannhan';
+      return 'id';
     },
     getTripKeyField() {
       if (this.systemKeyConfig?.tripKeyField) {
         return this.systemKeyConfig.tripKeyField;
       }
       const tCols = (this.importMappingTrips || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
-      const keyCol = tCols.find((c) => c.isKey || c.isIdentifier || c.format === 'id' || c.id === 'cccdchuyendi' || c.id === 'cccd');
+      const keyCol = tCols.find((c) => c.isKey || c.isIdentifier || c.format === 'id');
       if (keyCol) return keyCol.id;
       if (tCols.length > 0) return tCols[0].id;
-      return 'cccdchuyendi';
+      return 'id';
     },
     findPersonByCccd(val) {
       if (!val) return null;
@@ -865,7 +865,8 @@ export const usePersonnelStore = defineStore('personnel', {
         const targetParentCccd = String(rel.cccdparent || rel.parentCccd || rel.rawPerson?.cccd || rel.rawPerson?.cccdparent || '').trim().toLowerCase();
         const targetRelId = rel.id ? String(rel.id).trim() : '';
         const targetRelUniqueKey = rel.uniqueKey ? String(rel.uniqueKey).trim() : '';
-        const targetRelCccd = String(rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
+        const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'id';
+        const targetRelKeyVal = String(rel[rKeyField] || rel.id || '').trim().toLowerCase();
         const targetRelName = String(rel.relativeName || rel.name || rel.ho_va_ten || '').trim().toLowerCase();
         const targetRelRelationship = String(rel.relationshipName || rel.relationship || '').trim().toLowerCase();
         const targetRelBirthYear = String(rel.birthYear || rel.nam_sinh || rel.yearOfBirth || '').trim();
@@ -880,9 +881,9 @@ export const usePersonnelStore = defineStore('personnel', {
           if (targetRelId && r.id && String(r.id).trim() === targetRelId) return true;
           // 3. Exact uniqueKey match
           if (targetRelUniqueKey && r.uniqueKey && String(r.uniqueKey).trim() === targetRelUniqueKey) return true;
-          // 4. Exact CCCD thân nhân match (if both present and not empty)
-          const rCccd = String(r.cccdthannhan || r.cccd || '').trim().toLowerCase();
-          if (rCccd && targetRelCccd && rCccd === targetRelCccd) return true;
+          // 4. Exact dynamic key match (if both present and not empty)
+          const rKeyVal = String(r[rKeyField] || r.id || '').trim().toLowerCase();
+          if (rKeyVal && targetRelKeyVal && rKeyVal === targetRelKeyVal) return true;
           // 5. Exact index in parent's relatives array
           if (targetRelIdx !== null && idx === targetRelIdx) return true;
           // 6. Exact match on Name + Relationship + BirthYear (if both have values)
@@ -1020,13 +1021,15 @@ export const usePersonnelStore = defineStore('personnel', {
         const targetParentCccd = String(relData.cccdparent || relData.parentCccd || relData.cccd_can_bo || relData.rawPerson?.cccd || '').trim().toLowerCase();
         const targetRelId = relData.id ? String(relData.id).trim() : '';
 
+        const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'id';
+        const targetRelKeyVal = String(relData[rKeyField] || relData.id || '').trim().toLowerCase();
+
         const isSameRel = (r) => {
           if (!r || !relData) return false;
           if (r === relData || r === relData.rawRelative) return true;
           if (targetRelId && r.id && String(r.id).trim() === targetRelId) return true;
-          const c1 = String(r.cccdthannhan || r.cccd || '').trim();
-          const c2 = String(relData.cccdthannhan || relData.cccd || '').trim();
-          if (c1 && c2 && c1.toLowerCase() === c2.toLowerCase()) return true;
+          const rKeyVal = String(r[rKeyField] || r.id || '').trim().toLowerCase();
+          if (rKeyVal && targetRelKeyVal && rKeyVal === targetRelKeyVal) return true;
           const n1 = String(r.relativeName || r.name || r.ho_va_ten || '').trim().toLowerCase();
           const n2 = String(relData.relativeName || relData.name || relData.ho_va_ten || '').trim().toLowerCase();
           const s1 = String(r.relationshipName || r.relationship || '').trim().toLowerCase();
@@ -1175,9 +1178,9 @@ export const usePersonnelStore = defineStore('personnel', {
           }
         }
 
-        const pKeyField = this.getPersonnelKeyField ? this.getPersonnelKeyField() : 'cccdparent';
-        const tKeyField = this.getTripKeyField ? this.getTripKeyField() : 'cccdchuyendi';
-        const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'cccdthannhan';
+        const pKeyField = this.getPersonnelKeyField ? this.getPersonnelKeyField() : 'id';
+        const tKeyField = this.getTripKeyField ? this.getTripKeyField() : 'id';
+        const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'id';
 
         const tripKeyVal = String(
           cleanTrip[tKeyField] ??
@@ -1386,7 +1389,26 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     async saveRecord(record) {
       if (!record) throw new Error('Không có dữ liệu để lưu!');
-      if (record._recordType === 'blank' || String(record.id || '').startsWith('row_')) {
+      if (record._recordType === 'blank' || String(record.id || '').startsWith('row_') || record._tableId) {
+        const tid = record._tableId || record.tableId;
+        if (tid) {
+          let rows = [];
+          try {
+            const local = localStorage.getItem(`custom_table_rows_${tid}`);
+            if (local) rows = JSON.parse(local);
+          } catch (e) {}
+          if (!Array.isArray(rows)) rows = [];
+          const idx = rows.findIndex((r) => String(r.id) === String(record.id) || String(r.uniqueKey) === String(record.uniqueKey));
+          if (idx >= 0) {
+            rows[idx] = { ...rows[idx], ...record };
+          } else {
+            rows.push(record);
+          }
+          try {
+            localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(rows));
+            await saveAppSettings(`custom_table_rows_${tid}`, rows);
+          } catch (e) {}
+        }
         return record;
       }
       if (record._recordType === 'relative' || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
@@ -1413,6 +1435,24 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     async deleteRecord(record) {
       if (!record) return;
+      if (record._recordType === 'blank' || String(record.id || '').startsWith('row_') || record._tableId) {
+        const tid = record._tableId || record.tableId;
+        if (tid) {
+          let rows = [];
+          try {
+            const local = localStorage.getItem(`custom_table_rows_${tid}`);
+            if (local) rows = JSON.parse(local);
+          } catch (e) {}
+          if (Array.isArray(rows)) {
+            rows = rows.filter((r) => String(r.id) !== String(record.id) && String(r.uniqueKey) !== String(record.uniqueKey));
+            try {
+              localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(rows));
+              await saveAppSettings(`custom_table_rows_${tid}`, rows);
+            } catch (e) {}
+          }
+        }
+        return;
+      }
       if (record._recordType === 'relative' || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
         return await this.deleteRelative(record);
       }

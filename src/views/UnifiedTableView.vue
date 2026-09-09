@@ -534,7 +534,7 @@
                     {{ String(getCellValue(data, col.id)).split('\n').slice(1).join('\n') }}
                   </div>
                 </div>
-                <span v-else style="word-break: break-word; line-height: 1.45; font-size: 1.15rem;">{{ getCellValue(data, col.id) }}</span>
+                <span v-else style="word-break: break-word; line-height: 1.45; font-size: 1.15rem; white-space: pre-line;">{{ getCellValue(data, col.id) }}</span>
               </div>
             </template>
             </template>
@@ -963,6 +963,7 @@
       v-model="isPersonnelDialogOpen"
       :personData="activePersonData"
       :columns="allAvailableColumnsList"
+      :tableId="currentDashboardConfig?.id || topicId"
       @saved="handlePersonnelSaved"
       @deleted="handlePersonnelSaved"
     />
@@ -1067,6 +1068,8 @@
       @insert-left="onInsertChildColLeft"
       @insert-right="onInsertChildColRight"
       @duplicate-column="onDuplicateChildCol"
+      @change-key="onChildChangeColumnKey"
+      @change-link-table="onChildChangeColumnLinkTable"
       @open-key-config="isKeyLinkDialogOpen = true"
     />
 
@@ -2261,6 +2264,8 @@ const {
   onInsertChildColRight,
   onDuplicateChildCol,
   onChildChangeFormulaType,
+  onChildChangeColumnKey,
+  onChildChangeColumnLinkTable,
   NAME_COL_IDS,
   isNameColumn,
   isChildPrimaryKey,

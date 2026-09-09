@@ -1246,14 +1246,14 @@
 
               <!-- Họ tên Cán bộ / Bản ghi chính (dòng đậm) -->
               <template v-else-if="col.id === '_parentPersonnelName' || col.id === 'name' || col.id === 'ho_va_ten'">
-                <strong style="color: #0284c7; font-weight: 700; font-size: 1.18rem;">
+                <strong style="color: #0284c7; font-weight: 700; font-size: 1.18rem; white-space: pre-line; display: inline-block; line-height: 1.45; text-align: left;">
                   {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </strong>
               </template>
 
               <!-- Cột thông thường -->
               <template v-else>
-                <span style="font-size: 1.15rem; color: #334155; line-height: 1.45; word-break: break-word;">
+                <span style="font-size: 1.15rem; color: #334155; line-height: 1.45; word-break: break-word; white-space: pre-line; display: inline-block; text-align: left;">
                   {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </span>
               </template>
@@ -1316,6 +1316,7 @@
       v-model="isPersonDialogOpen"
       :personData="selectedPersonForDialog"
       :columns="selectedColumnsForDialog"
+      :tableId="dialogTableId"
       @saved="onPersonSaved"
       @deleted="onPersonSaved"
     />
@@ -1928,6 +1929,7 @@ const getPersonnelForTrip = (t) => {
 const isPersonDialogOpen = ref(false);
 const selectedPersonForDialog = ref(null);
 const selectedColumnsForDialog = ref([]);
+const dialogTableId = ref('');
 
 const openPersonnelDetail = (p) => {
   if (!p) return;
@@ -1935,6 +1937,7 @@ const openPersonnelDetail = (p) => {
   const src = p._recordType === 'relative' || p.relationshipName
     ? 'relatives'
     : (p._recordType === 'trip' || p.departureDate || p.destination || p.decisionNumber ? 'trips' : (drilldownSourceType.value || 'personnel'));
+  dialogTableId.value = src;
 
   // Luôn nạp ĐẦY ĐỦ các cột của bảng nguồn cho Form Chỉnh sửa (không bị giới hạn theo 5 cột của View)
   const allCols = getUnifiedTableColumns(src, {

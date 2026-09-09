@@ -2585,3 +2585,43 @@
        - `npm run build` thành công 100% (0 lỗi, 549ms).
        - Đồng bộ toàn bộ assets `dist/` và mã nguồn sang `WINDOWS_OFFLINE_APP/frontend/`.
     5. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-10 - Session 24)**: **Động Hóa 100% Tab Liên Kết Theo Tên Bảng, Setup Khóa Chính & Liên Kết Cột, Chỉnh Sửa Trực Tiếp Không Lồng Modal (Zero-Hardcode)**:
+    1. **Yêu cầu của người dùng**:
+       - Khử sạch hardcode khóa thân nhân `cccdthannhan` trong store và formatters.
+       - Sửa lỗi bảng thống kê popup drilldown bị dồn text theo hàng ngang trong khi bảng Chuyến đi xuống dòng đẹp.
+       - Tự setup liên kết giữa các bảng qua cấu hình cột:
+         * Ở cấu hình cột của Bảng A: tự chọn 1 cột làm Khóa chính (Primary Key).
+         * Ở cấu hình cột của Bảng B: tự chọn 1 cột để liên kết tới Bảng A và chọn cột đích để nối.
+         * Ở Form Chỉnh sửa chi tiết: tự động hiển thị tên Tab theo đúng TÊN BẢNG (Bảng A, Bảng B, Cán bộ, Thân nhân, Chuyến đi,...), tuyệt đối không hardcode nhãn cố định.
+         * "Ấn vào thì mở tab chỉnh sửa thôi ko cần thêm mấy logic phức tạp khác": hiển thị danh sách bản ghi liên kết + form chỉnh sửa trực tiếp phẳng (`<DynamicField>`), lưu và xóa trực tiếp mà không lồng sub-modal rườm rà.
+    2. **Giải pháp & Triển khai**:
+       - **Triệt tiêu hardcode khóa `cccdthannhan` (`src/stores/personnel.js`)**:
+         * Thay thế toàn bộ fallback tĩnh `'cccdthannhan'` bằng `'id'` trong `saveRelative`, `deleteRelative`, `saveTrip`, `getRelativeKeyField`, `getTripKeyField`.
+       - **Sửa wrap text hiển thị cho Popup Drilldown (`DashboardView.vue`, `UnifiedTableView.vue`)**:
+         * Bổ sung `white-space: pre-line; display: inline-block; line-height: 1.45;` cho template ô hiển thị popup thống kê.
+       - **Cấu hình Khóa chính & Liên kết Bảng trên Header Cột (`ColumnHeaderMenu.vue`, `useTableColumns.js`)**:
+         * Thêm mục "5c. Khóa & Liên kết Bảng":
+           + Checkbox `editIsKey`: Đặt làm Khóa chính của bảng này.
+           + Dropdown `editLinkTable`: Liên kết cột này tới Bảng khác (lấy động từ `getUnifiedTableDefinitions`).
+           + Dropdown `editLinkColumn`: Cột ở bảng đích để nối (lấy động từ `targetLinkCols`).
+         * Tự động lưu và đồng bộ thuộc tính `column.isKey`, `column.linkTable`, `column.linkColumn` vào cấu hình bảng (`customDashboards` hoặc `importMapping`) và cập nhật `systemKeyConfig`.
+       - **Hỗ trợ Lưu & Xóa phổ quát mọi bảng (`src/stores/personnel.js`)**:
+         * Nâng cấp `saveRecord` và `deleteRecord` để lưu và cập nhật trực tiếp cả bảng tự tạo (`blank` / `_tableId`) vào `localStorage` và `saveAppSettings('custom_table_rows_' + tid)`.
+       - **Tái cấu trúc Tab Liên kết Động 100% & Chỉnh Sửa Trực Tiếp Phẳng (`src/components/personnel/PersonnelRelatedTabs.vue`, `PersonnelDialog.vue`)**:
+         * Bỏ hoàn toàn logic 3 tab tĩnh (`relatives`, `parent`, `trips`).
+         * Quét toàn bộ `allTables` qua `getUnifiedTableDefinitions`:
+           + Tab 1: Thông tin bảng hiện tại (`currentTable.title`).
+           + Tab liên kết: Mọi bảng có quan hệ khóa ngoại hai chiều (`linkTable`) hoặc quan hệ cốt lõi đều được hiển thị động theo đúng `table.title` (Ví dụ: "Bảng A", "Bảng B", "Cán bộ", "Thân nhân", "Chuyến đi").
+           + Hiển thị huy hiệu số lượng bản ghi liên kết (`count`).
+         * Khi bấm vào Tab:
+           + Mở thẳng giao diện chỉnh sửa trực tiếp phẳng với `<DynamicField>` theo toàn bộ cột của bảng đó (`currentLinkedCols`).
+           + Nếu có nhiều bản ghi: cung cấp thanh pill selector chuyển đổi giữa các bản ghi nhanh chóng kèm nút "+ Thêm mới".
+           + Nút "Lưu thay đổi", "Hủy", và "Xóa bản ghi" thao tác trực tiếp, tự động làm mới store.
+           + Gỡ bỏ hoàn toàn 2 sub-dialogs `<Dialog v-model:visible="isRelativeFormOpen">` và `<Dialog v-model:visible="isTripFormOpen">`.
+         * Cho phép mở tabs liên kết cho mọi nguồn dữ liệu (`personnel`, `relatives`, `trips`, bảng tự tạo) trong `PersonnelDialog.vue`.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 619ms).
+       - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+    4. **Trạng thái**: Done [Reversible].
+

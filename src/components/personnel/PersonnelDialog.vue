@@ -25,12 +25,13 @@
       </div>
     </template>
 
-    <!-- Tab navigation & Linked Relatives / Trips Content -->
+    <!-- Tab navigation & Linked Relatives / Trips / Custom Tables Content -->
     <PersonnelRelatedTabs
-      v-if="isEdit && (recordSource === 'personnel' || recordSource === 'relatives')"
+      v-if="isEdit"
       v-model="activeTab"
       :currentRecord="form"
       :recordSource="recordSource"
+      :tableId="recordSource"
       @refresh="handleTabRefresh"
       @switchRecord="handleSwitchRecord"
     />
@@ -128,8 +129,11 @@ const isDynamicDataEntryOpen = ref(false);
 const activeTab = ref('info');
 
 const recordSource = computed(() => {
+  if (props.tableId) return props.tableId;
+  if (form.value._tableId) return form.value._tableId;
   if (form.value._recordType === 'trip') return 'trips';
   if (form.value._recordType === 'relative') return 'relatives';
+  if (form.value._recordType === 'blank') return 'blank';
   return 'personnel';
 });
 
@@ -141,6 +145,10 @@ const props = defineProps({
   personData: {
     type: Object,
     default: null,
+  },
+  tableId: {
+    type: String,
+    default: '',
   },
   columns: {
     type: Array,
@@ -240,6 +248,9 @@ const initFormData = (val) => {
       }
     }
     const parsedVal = safeClone(val);
+    if (props.tableId && !parsedVal._tableId) {
+      parsedVal._tableId = props.tableId;
+    }
     delete parsedVal.custom_data;
     delete cd.custom_data;
     delete parsedVal.rawPerson;
