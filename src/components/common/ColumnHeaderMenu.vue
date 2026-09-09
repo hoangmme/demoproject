@@ -458,6 +458,64 @@
           </label>
         </div>
 
+        <!-- 5b. Gợi ý tự điền từ bảng khác (Autocomplete / Suggest Lookup) -->
+        <div
+          v-if="editFormat === 'text' || editFormat === 'id' || !editFormat"
+          class="menu-field"
+          style="margin-top: 6px; background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 8px;"
+        >
+          <label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; font-weight: 700; color: #86198f; font-size: 0.76rem; cursor: pointer;">
+            <span style="display: flex; align-items: center; gap: 6px;">
+              <i class="pi pi-sparkles" style="color: #c026d3;"></i>
+              Gợi ý tìm kiếm & Tự điền từ bảng khác:
+            </span>
+            <input
+              type="checkbox"
+              v-model="editSuggestEnabled"
+              @change="handleSaveSuggest"
+              style="accent-color: #c026d3; cursor: pointer; width: 16px; height: 16px;"
+            />
+          </label>
+
+          <template v-if="editSuggestEnabled">
+            <div style="font-size: 0.7rem; color: #701a75; line-height: 1.35;">
+              Khi nhập liệu ở ô này, bạn gõ tìm kiếm theo tên hoặc mã từ bảng khác, hệ thống sẽ gợi ý và tự động điền giá trị tương ứng vào ô (dạng Flat độc lập).
+            </div>
+
+            <!-- Chọn Bảng nguồn gợi ý -->
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">1. Bảng nguồn dữ liệu gợi ý:</span>
+              <select v-model="editSuggestTarget" class="menu-select" @change="handleSuggestTargetChange">
+                <option v-for="t in availableTargetTables" :key="t.id" :value="t.id">
+                  {{ t.title }} ({{ t.id }})
+                </option>
+              </select>
+            </div>
+
+            <!-- Chọn Cột để gõ tìm kiếm -->
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">2. Cột dùng để gõ tìm kiếm (VD: Họ và tên):</span>
+              <select v-model="editSuggestSearchCol" class="menu-select" @change="handleSaveSuggest">
+                <option value="">-- Chọn cột tìm kiếm --</option>
+                <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
+                  {{ c.label }} ({{ c.id }})
+                </option>
+              </select>
+            </div>
+
+            <!-- Chọn Cột lấy giá trị điền vào ô -->
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">3. Cột lấy giá trị điền vào ô (VD: CCCD, Mã):</span>
+              <select v-model="editSuggestFillCol" class="menu-select" @change="handleSaveSuggest">
+                <option value="">-- Chọn cột lấy giá trị điền --</option>
+                <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
+                  {{ c.label }} ({{ c.id }})
+                </option>
+              </select>
+            </div>
+          </template>
+        </div>
+
         <div class="menu-divider"></div>
 
         <!-- Chèn cột & Nhân bản (Lark Base style) -->
@@ -578,6 +636,7 @@ const emit = defineEmits([
   "change-rollup",
   "change-collapse-duplicates",
   "change-name-col-field",
+  "change-suggest",
   "delete-column",
   "hide-column",
   "filter-column",
@@ -600,6 +659,11 @@ const editRequired = ref(false);
 const editIncludeInExport = ref(true);
 const editShowInDetail = ref(true);
 const editCollapseDuplicates = ref(false);
+
+const editSuggestEnabled = ref(false);
+const editSuggestTarget = ref("personnel");
+const editSuggestSearchCol = ref("");
+const editSuggestFillCol = ref("");
 
 const editLookupTarget = ref("personnel");
 const editLookupLinkCol = ref("");
@@ -693,6 +757,29 @@ const targetRollupCols = computed(() => {
   return getColumnsForTargetTable(editRollupTarget.value);
 });
 
+const suggestTargetCols = computed(() => {
+  return getColumnsForTargetTable(editSuggestTarget.value);
+});
+
+const handleSuggestTargetChange = () => {
+  const cols = suggestTargetCols.value || [];
+  const foundName = cols.find((c) => c.id === 'name' || c.id === 'relativeName' || c.id === 'fullName' || c.id === 'title' || (c.label && c.label.toLowerCase().includes('tên')));
+  editSuggestSearchCol.value = foundName?.id || (cols[0]?.id || '');
+  const foundCccd = cols.find((c) => c.id === 'cccd' || c.id === 'cccdthannhan' || c.id === 'code' || (c.label && c.label.toLowerCase().includes('cccd')));
+  editSuggestFillCol.value = foundCccd?.id || (cols[1]?.id || cols[0]?.id || '');
+  handleSaveSuggest();
+};
+
+const handleSaveSuggest = () => {
+  emit("change-suggest", {
+    colId: props.column.id,
+    suggestEnabled: editSuggestEnabled.value,
+    suggestTarget: editSuggestTarget.value,
+    suggestSearchCol: editSuggestSearchCol.value,
+    suggestFillCol: editSuggestFillCol.value,
+  });
+};
+
 const defaultFallbackParentFields = [
   { key: 'name', label: 'Họ và tên' },
   { key: 'cccdCB', label: 'Số CCCD / Mã định danh' },
@@ -720,6 +807,10 @@ watch(
       editOptions.value = col.options || "";
       editFormWidth.value = String(col.formWidth || col.width || "50").replace("%", "");
       editRequired.value = Boolean(col.required);
+      editSuggestEnabled.value = Boolean(col.suggestEnabled);
+      editSuggestTarget.value = col.suggestTarget || "personnel";
+      editSuggestSearchCol.value = col.suggestSearchCol || "";
+      editSuggestFillCol.value = col.suggestFillCol || "";
       editLookupTarget.value = col.lookupTarget || "personnel";
       editLookupLinkCol.value = col.lookupLinkCol || "";
       editLookupField.value = col.lookupField || "";

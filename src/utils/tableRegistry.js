@@ -368,6 +368,7 @@ export const DEFAULT_UNIFIED_DASHBOARDS = [
     metricCards: [
       { id: 'all', label: 'Toàn bộ cán bộ', condition: 'all', color: 'blue' },
       { id: 'has_trips', label: 'Có chuyến đi', field: 'has_trips', operator: 'has_value', color: 'green' },
+      { id: 'relatives_abroad', label: 'Có thân nhân đi nước ngoài', field: 'so_chuyen_di_than_nhan', operator: 'gte', value: '1', color: 'teal' },
       { id: 'has_relatives', label: 'Có thân nhân', field: 'has_relatives', operator: 'has_value', color: 'purple' },
       { id: 'has_issues', label: 'Kỷ luật / Vấn đề', field: 'has_issues', operator: 'has_value', color: 'amber' },
     ],

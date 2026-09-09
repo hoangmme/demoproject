@@ -1,8 +1,64 @@
 <template>
   <div class="dynamic-field-wrapper">
-    <!-- 1. Text -->
-    <template v-if="col.format === 'text' || !col.format">
+    <!-- 1. Text / ID / Suggest -->
+    <template v-if="col.format === 'text' || col.format === 'id' || !col.format">
+      <!-- Suggest Autocomplete Mode -->
+      <div v-if="col.suggestEnabled && col.suggestTarget" class="suggest-input-wrap" style="position: relative; width: 100%;">
+        <div style="position: relative; display: flex; align-items: center; width: 100%;">
+          <InputText
+            v-model="model"
+            :placeholder="col.placeholder || ('Nhập tìm kiếm ' + (col.label || '') + '...')"
+            size="small"
+            class="w-full"
+            style="padding-right: 28px;"
+            @input="onSuggestInput"
+            @focus="onSuggestFocus"
+            @blur="onSuggestBlur"
+          />
+          <button
+            v-if="model"
+            type="button"
+            @click="model = ''"
+            style="position: absolute; right: 8px; border: none; background: transparent; color: #94a3b8; cursor: pointer; padding: 2px;"
+            title="Xóa giá trị"
+          >
+            <i class="pi pi-times" style="font-size: 0.72rem;"></i>
+          </button>
+        </div>
+
+        <!-- Dropdown Gợi ý Autocomplete -->
+        <div
+          v-if="isSuggestOpen && filteredSuggestList.length > 0"
+          class="suggest-dropdown-menu"
+          style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 240px; overflow-y: auto; background: #ffffff; border: 1.5px solid #0284c7; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1); z-index: 9999; padding: 4px 0;"
+        >
+          <div
+            v-for="(item, idx) in filteredSuggestList"
+            :key="idx"
+            class="suggest-item"
+            @mousedown.prevent="selectSuggestItem(item)"
+            style="padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 2px; transition: background 0.15s;"
+            onmouseover="this.style.background='#f0f9ff'"
+            onmouseout="this.style.background='#ffffff'"
+          >
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <span style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">
+                {{ item.displayLabel }}
+              </span>
+              <span style="font-size: 0.72rem; color: #0284c7; font-weight: 700; background: #e0f2fe; padding: 1px 6px; border-radius: 4px; font-family: monospace;">
+                {{ item.fillValue }}
+              </span>
+            </div>
+            <div v-if="item.subInfo" style="font-size: 0.68rem; color: #64748b;">
+              {{ item.subInfo }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Regular InputText -->
       <InputText
+        v-else
         v-model="model"
         :placeholder="col.placeholder || ('Nhập ' + (col.label || ''))"
         size="small"
@@ -532,6 +588,7 @@ import Button from 'primevue/button';
 import AppDatePicker from './AppDatePicker.vue';
 import PersonnelAttachments from '@/components/personnel/PersonnelAttachments.vue';
 import { uploadFile, getFileUrl } from '@/api/files';
+import { usePersonnelStore } from '@/stores/personnel';
 
 const props = defineProps({
   modelValue: {
@@ -545,10 +602,87 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+const personnelStore = usePersonnelStore();
 
 const model = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
+});
+
+// ===== Autocomplete Suggestion Logic =====
+const isSuggestOpen = ref(false);
+
+const onSuggestInput = () => {
+  isSuggestOpen.value = true;
+};
+const onSuggestFocus = () => {
+  isSuggestOpen.value = true;
+};
+const onSuggestBlur = () => {
+  setTimeout(() => {
+    isSuggestOpen.value = false;
+  }, 200);
+};
+
+const selectSuggestItem = (item) => {
+  model.value = item.fillValue;
+  isSuggestOpen.value = false;
+};
+
+const getRowCustomField = (row, key) => {
+  if (!row || !key) return '';
+  if (row[key] !== undefined && row[key] !== null) return row[key];
+  let cd = row.custom_data;
+  if (typeof cd === 'string') {
+    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+  }
+  return cd?.[key] ?? '';
+};
+
+const filteredSuggestList = computed(() => {
+  if (!props.col?.suggestEnabled || !props.col?.suggestTarget) return [];
+
+  const target = props.col.suggestTarget;
+  const searchCol = props.col.suggestSearchCol || 'name';
+  const fillCol = props.col.suggestFillCol || 'cccd';
+
+  let rawList = [];
+  if (target === 'personnel') rawList = personnelStore.personnelList || [];
+  else if (target === 'relatives') rawList = personnelStore.relativesList || [];
+  else if (target === 'trips') rawList = personnelStore.tripsList || [];
+  else {
+    try {
+      const customRows = JSON.parse(localStorage.getItem(`custom_table_rows_${target}`) || '[]');
+      if (Array.isArray(customRows)) rawList = customRows;
+    } catch (e) {}
+  }
+
+  const query = String(model.value || '').trim().toLowerCase();
+
+  const results = [];
+  for (const row of rawList) {
+    const sVal = String(getRowCustomField(row, searchCol) || row.name || row.relativeName || row.fullName || '').trim();
+    const fVal = String(getRowCustomField(row, fillCol) || row.cccd || row.cccdthannhan || row.code || row.id || '').trim();
+
+    if (!query || sVal.toLowerCase().includes(query) || fVal.toLowerCase().includes(query)) {
+      const extraParts = [];
+      const dept = row.departmentName || getRowCustomField(row, 'departmentName') || '';
+      const pos = row.position || getRowCustomField(row, 'position') || '';
+      const rel = row.relationshipName || getRowCustomField(row, 'relationshipName') || '';
+      if (rel) extraParts.push(`Quan hệ: ${rel}`);
+      if (pos) extraParts.push(pos);
+      if (dept) extraParts.push(dept);
+
+      results.push({
+        displayLabel: sVal || fVal || 'Bản ghi',
+        fillValue: fVal || sVal,
+        subInfo: extraParts.join(' • '),
+      });
+      if (results.length >= 25) break;
+    }
+  }
+
+  return results;
 });
 
 const parsedOptions = computed(() => {

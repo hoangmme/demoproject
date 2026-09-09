@@ -1053,6 +1053,7 @@
       @change-formula-type="onChildChangeFormulaType"
       @change-options="onChildChangeColumnOptions"
       @change-form-width="onChildChangeColumnFormWidth"
+      @change-suggest="onChildChangeColumnSuggest"
       @change-required="onChildChangeColumnRequired"
       @change-include-export="onChildChangeColumnIncludeExport"
       @change-show-in-detail="onChildChangeColumnShowInDetail"
@@ -2120,7 +2121,8 @@ const allAvailableColumnsList = computed(() => {
         id: c.id,
         label: c.label || c.id,
         colIndex: idx + 1,
-        width: c.width || '160px',
+        formWidth: c.formWidth || (c.width && !String(c.width).includes('px') ? c.width : '50'),
+        width: c.tableWidth ? (c.tableWidth + 'px') : (c.width || '160px'),
         tableWidth: c.tableWidth || null,
         format: c.format || 'text',
         options: c.options || [],
@@ -2143,6 +2145,7 @@ const allAvailableColumnsList = computed(() => {
             id: c.id,
             label: c.label || c.id,
             colIndex: idxText,
+            formWidth: c.formWidth || (c.width && !String(c.width).includes('px') ? c.width : '50'),
             width: c.tableWidth ? (c.tableWidth + 'px') : (c.width || (c.format === 'checkbox_file_loop' || c.format === 'checkbox_file' ? '250px' : '150px')),
             tableWidth: c.tableWidth || null,
             format: c.format,
@@ -2164,6 +2167,7 @@ const allAvailableColumnsList = computed(() => {
             id: c.id,
             label: c.label || c.id,
             colIndex: idxText,
+            formWidth: c.formWidth || (c.width && !String(c.width).includes('px') ? c.width : '50'),
             width: c.tableWidth ? (c.tableWidth + 'px') : (c.width || (c.format === 'checkbox_file_loop' || c.format === 'checkbox_file' ? '250px' : '150px')),
             tableWidth: c.tableWidth || null,
             format: c.format,
@@ -2186,6 +2190,7 @@ const allAvailableColumnsList = computed(() => {
             id: c.id,
             label: c.label || c.id,
             colIndex: idxText,
+            formWidth: c.formWidth || (c.width && !String(c.width).includes('px') ? c.width : '50'),
             width: c.tableWidth ? (c.tableWidth + 'px') : (c.width || (c.format === 'checkbox_file_loop' || c.format === 'checkbox_file' ? '250px' : '150px')),
             tableWidth: c.tableWidth || null,
             format: c.format,
@@ -2238,6 +2243,7 @@ const {
   onChildChangeColumnRollup,
   onChildChangeColumnOptions,
   onChildChangeColumnFormWidth,
+  onChildChangeColumnSuggest,
   onChildDeleteColumnFromTable,
   onChildHideColumn,
   onInsertChildColLeft,

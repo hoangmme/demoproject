@@ -1687,7 +1687,46 @@ export const evaluateRollup = (item, col, personnelStore) => {
   let list = [];
 
   // Nguồn 1: Bảng Chuyến đi (Toàn bộ Chuyến đi phẳng - Flat Trips Engine)
-  if (target === 'trips' || target === 'relative_trips') {
+  if (target === 'relative_trips') {
+    // Chỉ lọc các chuyến đi của thân nhân thuộc về cán bộ này
+    const relIdSet = new Set();
+    const relKeySet = new Set();
+    (item.relatives || []).forEach((r) => {
+      if (r.id) relIdSet.add(String(r.id));
+      if (rKeyField && getSubProp(r, rKeyField)) relKeySet.add(String(getSubProp(r, rKeyField)));
+      if (r.cccdthannhan) relKeySet.add(String(r.cccdthannhan));
+    });
+
+    if (personnelStore?.relativesList && item.id) {
+      personnelStore.relativesList.forEach((r) => {
+        if (r.personnelId && String(r.personnelId) === String(item.id)) {
+          if (r.id) relIdSet.add(String(r.id));
+          if (rKeyField && getSubProp(r, rKeyField)) relKeySet.add(String(getSubProp(r, rKeyField)));
+          if (r.cccdthannhan) relKeySet.add(String(r.cccdthannhan));
+        }
+      });
+    }
+
+    const allTrips = personnelStore?.tripsList || [];
+    const pKey = pKeyField ? getSubProp(item, pKeyField) : null;
+
+    list = allTrips.filter((t) => {
+      const isRel = t.isRelative === true || t.isRelative === 'true' || Boolean(t.relativeId);
+      if (!isRel) return false;
+
+      // Khớp theo personnelId
+      if (item.id && t.personnelId && String(t.personnelId).trim() === String(item.id).trim()) return true;
+      // Khớp theo CCCD cán bộ cha
+      if (pKey && t.cccdparent && String(t.cccdparent).trim() === String(pKey).trim()) return true;
+      // Khớp theo relativeId
+      if (t.relativeId && relIdSet.has(String(t.relativeId).trim())) return true;
+      // Khớp theo CCCD thân nhân
+      const tRelKey = tKeyField ? getSubProp(t, tKeyField) : (t.cccdchuyendi || t.cccdthannhan);
+      if (tRelKey && relKeySet.has(String(tRelKey).trim())) return true;
+
+      return false;
+    });
+  } else if (target === 'trips') {
     if (personnelStore?.tripsList) {
       list = personnelStore.tripsList.filter((t) => {
         if (item.id && t.personnelId && String(t.personnelId).trim() === String(item.id).trim()) return true;
@@ -1803,7 +1842,10 @@ export const formWidthOptions = [
 ];
 
 export const getColItemStyle = (width) => {
-  const w = parseFloat(String(width || '25').replace('%', ''));
+  if (typeof width === 'string' && width.includes('px')) {
+    return { width: 'calc(50% - 0.5rem)', flex: '0 0 calc(50% - 0.5rem)', maxWidth: 'calc(50% - 0.5rem)' };
+  }
+  const w = parseFloat(String(width || '50').replace('%', ''));
   if (!w || isNaN(w) || w >= 100) {
     return { width: '100%', flex: '0 0 100%', maxWidth: '100%' };
   }

@@ -2407,3 +2407,41 @@
        - Đồng bộ toàn bộ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
     4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-09 - Session 18)**: **5 Tối Ưu Hệ Thống Toàn Diện: Drilldown Chỉnh Sửa Trực Tiếp Đầy Đủ Cột, Flat Autocomplete Picker Tự Điền, Thống Kê Cán Bộ Có Thân Nhân Đi Nước Ngoài, Sửa Lỗi Độ Rộng Cột Form Chi Tiết & Khắc Phục Lỗi Giật Cột Drilldown**:
+    1. **Yêu cầu của người dùng**:
+       - Mục 1: Popup thống kê khi ấn xem thì hiện bảng xem hồ sơ trung gian chỉ đọc -> Xóa bỏ bảng này, chuyển trực tiếp sang chỉnh sửa hồ sơ.
+       - Mục 2: Autocomplete / Gợi ý tìm kiếm: Khi nhập CCCD (hoặc bất kỳ cột nào ở bảng bất kỳ), cho phép tìm kiếm theo Tên (từ bảng Cán bộ, Thân nhân, hoặc bảng khác), chọn tên thì tự động điền CCCD; tuân thủ hoàn toàn mô hình Flat Table, không hardcode, người dùng tự cấu hình cột nguồn và cột điền vào.
+       - Mục 3: Tạo khối thống kê lọc: "Số cán bộ có thân nhân đi nước ngoài" (dạng flat không hardcode, tự động tạo cột dữ liệu Rollup và widget thống kê để kiểm tra).
+       - Mục 4: Cấu hình Độ rộng cột trong Form Chi tiết (chỉnh sửa) chưa hoạt động.
+       - Mục 5: Popup drilldown thống kê thỉnh thoảng bị giật số cột (từ 5 cột theo View nhảy ra 30 cột rồi giật lại) -> Khắc phục triệt để và đảm bảo khi mở Form Chỉnh sửa luôn hiển thị 100% đầy đủ các cột của bảng.
+    2. **Giải pháp & Triển khai**:
+       - **Mục 1 & 5 (Xóa Modal Xem Chỉ Đọc, Drilldown Edit Trực Tiếp, Form Chi Tiết Đầy Đủ Cột, Sửa Lỗi Giật Cột)**:
+         + `src/views/DashboardView.vue`:
+           * Xóa bỏ modal trung gian `isDrilldownRecordDetailOpen`. Nút hành động trên bảng drilldown đổi thành nút "Chỉnh sửa" (pencil), click vào dòng hoặc click icon chỉnh sửa lập tức gọi `openPersonnelDetail(data)`.
+           * Trong `openPersonnelDetail`: Luôn nạp **100% đầy đủ các cột** của bảng nguồn (`allCols` từ `getUnifiedTableColumns(drilldownTableId.value)`), không truyền danh sách cột view của drilldown (tránh form bị giới hạn theo 5 cột của view).
+           * Khắc phục triệt để lỗi giật cột: Loại bỏ đoạn code async IIFE cũ truy vấn Directus DB `getAppSettings` với các key fallback (`personnel_active_columns` / `trips_dashboard_columns` vốn chứa 30 cột) đè lên cấu hình View được chọn. Bảng drilldown giữ nguyên vẹn chính xác các cột theo cấu hình View.
+       - **Mục 4 (Sửa Cấu Hình Độ Rộng Cột Form Chi Tiết)**:
+         + `src/utils/formatters.js`: Trong `getColItemStyle`, thêm kiểm tra chuỗi `px`. Nếu chuỗi chứa `px` (độ rộng cột bảng như `160px`), không parse thành % (trước đây `parseFloat('160px') = 160 >= 100` khiến mọi cột bung 100% dòng).
+         + `src/components/personnel/PersonnelDialog.vue`: Cập nhật `:style="getColItemStyle(col.formWidth || col.width)"`.
+         + `src/views/UnifiedTableView.vue`: Khi map `allAvailableColumnsList`, bảo toàn `formWidth: c.formWidth || (c.width && !String(c.width).includes('px') ? c.width : '50')`.
+         + `src/composables/unified-table/useTableColumns.js`: Trong `onChildChangeColumnFormWidth`, lưu đồng bộ cả `c.formWidth` và `c.width`, hỗ trợ cả bảng hệ thống lẫn bảng tự tạo.
+       - **Mục 2 (Autocomplete / Gợi Ý Tự Điền Dạng Flat Thuần Túy)**:
+         + `src/components/common/ColumnHeaderMenu.vue`:
+           * Thêm khối cấu hình "5b. Gợi ý tìm kiếm & Tự điền từ bảng khác": Bật/tắt `suggestEnabled`, chọn Bảng nguồn (`suggestTarget`: Cán bộ, Thân nhân, Chuyến đi, hoặc bảng tùy biến), chọn Cột tìm kiếm (`suggestSearchCol`), chọn Cột lấy giá trị điền vào (`suggestFillCol`).
+           * Phát emit `@change-suggest` và đồng bộ vào column mapping.
+         + `src/composables/unified-table/useTableColumns.js`: Thêm handler `onChildChangeColumnSuggest` lưu cấu hình gợi ý tự động vào mapping của bảng hệ thống và bảng tự tạo.
+         + `src/components/common/DynamicField.vue`:
+           * Bổ sung giao diện Autocomplete Dropdown khi cột có `suggestEnabled && suggestTarget`.
+           * Khi người dùng gõ phím: Tìm kiếm linh hoạt theo cả Cột tìm kiếm (Tên) và Cột điền (CCCD), hiển thị danh sách gợi ý kèm thông tin phụ trợ (Đơn vị, Chức vụ, Mối quan hệ).
+           * Khi chọn mục: Tự điền giá trị của `suggestFillCol` vào trường dữ liệu dạng Flat text thuần túy. Người dùng vẫn hoàn toàn tự do gõ tay hoặc sửa lại theo ý muốn.
+       - **Mục 3 (Cột Dữ Liệu Rollup & Khối Thống Kê Cán Bộ Có Thân Nhân Đi Nước Ngoài)**:
+         + `src/utils/formatters.js`: Nâng cấp `evaluateRollup` xử lý `target === 'relative_trips'` cho hồ sơ Cán bộ: Tự động đối chiếu liên kết (`personnelId`, `cccdparent`, `relativeId`, `cccdthannhan`) để đếm chính xác số chuyến đi nước ngoài của thân nhân cán bộ đó.
+         + `src/stores/personnel.js`: Tự động đảm bảo cột dữ liệu Rollup `so_chuyen_di_than_nhan` (nhãn: "Số chuyến đi của thân nhân", format: "rollup", rollupTarget: "relative_trips", rollupFunction: "count", formWidth: "50", width: "180px", tableWidth: 180) luôn có sẵn trong `importMappingPersonnel`.
+         + `src/utils/dashboardMetrics.js`: Bổ sung `evaluateRollup` vào `extractRowFieldValue` và nhận diện `isRollup` trong `matchSingleCondition`, cho phép toàn bộ hệ thống (Dashboard, Thẻ KPI, Bộ lọc) lọc trực tiếp theo cột Rollup.
+         + `src/utils/tableRegistry.js` & `src/views/DashboardView.vue`:
+           * Bổ sung thẻ/widget thống kê `Cán bộ có thân nhân đi nước ngoài` (nguồn `personnel`, điều kiện `so_chuyen_di_than_nhan >= 1`, màu teal, icon `pi-users`) vào `DEFAULT_UNIFIED_DASHBOARDS`, `DEFAULT_TOPIC_DASHBOARDS`, và tự động khởi tạo trong `loadCustomGroups`.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 547ms).
+       - Đồng bộ toàn bộ `dist/` và các file `src/` đã sửa sang `WINDOWS_OFFLINE_APP/frontend/`.
+    4. **Trạng thái**: Done [Reversible].
+

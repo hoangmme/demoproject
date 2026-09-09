@@ -457,6 +457,40 @@ export const usePersonnelStore = defineStore('personnel', {
       const resolvedT = resolveBestMapping([tMapAlt, tMapAlt2, tMap]);
 
       this.importMappingPersonnel = resolvedP || [];
+      if (!this.importMappingPersonnel || this.importMappingPersonnel.length === 0) {
+        this.importMappingPersonnel = [
+          {
+            group: 'Thông tin Cán bộ',
+            isMultiple: false,
+            columns: [
+              { id: 'name', label: 'Họ và tên', width: '25', format: 'text', required: true },
+              { id: 'birthYear', label: 'Năm sinh', width: '25', format: 'number' },
+              { id: 'departmentId', label: 'Phòng ban / Đơn vị', width: '25', format: 'dropdown' },
+              { id: 'position', label: 'Chức vụ', width: '25', format: 'text' },
+              { id: 'cccdparent', label: 'Số CCCD', width: '25', format: 'text' },
+            ],
+          },
+        ];
+      }
+      // Bảo đảm có sẵn cột Rollup số chuyến đi thân nhân (Flat Table Paradigm)
+      const hasRelativeTripRollup = (this.importMappingPersonnel || []).some((g) =>
+        (g.columns || []).some((c) => c && c.id === 'so_chuyen_di_than_nhan')
+      );
+      if (!hasRelativeTripRollup && this.importMappingPersonnel.length > 0) {
+        const targetGroup = this.importMappingPersonnel[0];
+        if (targetGroup && Array.isArray(targetGroup.columns)) {
+          targetGroup.columns.push({
+            id: 'so_chuyen_di_than_nhan',
+            label: 'Số chuyến đi của thân nhân',
+            format: 'rollup',
+            rollupTarget: 'relative_trips',
+            rollupFunction: 'count',
+            formWidth: '50',
+            width: '180px',
+            tableWidth: 180,
+          });
+        }
+      }
 
       if (resolvedR && resolvedR.length > 0) {
         this.importMappingRelative = resolvedR;

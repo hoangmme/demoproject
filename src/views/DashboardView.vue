@@ -1264,14 +1264,14 @@
             <template #body="{ data }">
               <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
                 <Button
-                  icon="pi pi-eye"
-                  label="Chi tiết"
+                  icon="pi pi-pencil"
+                  label="Chỉnh sửa"
                   severity="info"
                   size="small"
                   outlined
-                  @click.stop="handleDrilldownRowClick(data)"
+                  @click.stop="openPersonnelDetail(data)"
                   style="font-size: 0.72rem; padding: 3px 7px;"
-                  title="Xem chi tiết bản ghi này"
+                  title="Chỉnh sửa trực tiếp bản ghi này"
                 />
                 <Button
                   icon="pi pi-file-pdf"
@@ -1293,130 +1293,11 @@
       <template #footer>
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding-top: 6px;">
           <span style="font-size: 0.75rem; color: #64748b;">
-            Tổng cộng: <strong>{{ filteredDrilldownList.length }}</strong> kết quả (Bấm vào dòng để xem chi tiết)
+            Tổng cộng: <strong>{{ filteredDrilldownList.length }}</strong> kết quả (Bấm vào dòng để chỉnh sửa trực tiếp)
           </span>
           <div style="display: flex; align-items: center; gap: 8px;">
             <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownModalOpen = false" />
           </div>
-        </div>
-      </template>
-    </Dialog>
-
-    <!-- POPUP XEM CHI TIẾT BẢN GHI ĐA HÌNH (UNIFIED RECORD DETAIL MODAL) -->
-    <Dialog
-      v-model:visible="isDrilldownRecordDetailOpen"
-      modal
-      :style="{ width: '85vw', maxWidth: '1000px' }"
-      :contentStyle="{ maxHeight: '78vh', overflowY: 'auto', padding: '16px' }"
-    >
-      <template #header>
-        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding-right: 12px; gap: 12px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 38px; height: 38px; border-radius: 8px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center;">
-              <i class="pi pi-id-card" style="font-size: 1.2rem;"></i>
-            </div>
-            <div>
-              <h3 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0;">
-                Chi tiết Bản ghi: {{ getRecordTitle(selectedDrilldownRow) }}
-              </h3>
-              <span style="font-size: 0.74rem; color: #64748b;">
-                Bảng dữ liệu: <strong>{{ getSourceLabel(drilldownSourceType) }}</strong>
-              </span>
-            </div>
-          </div>
-
-          <!-- Nút Nhập liệu mới trong Popup Chi tiết -->
-          <Button
-            icon="pi pi-plus"
-            label="Nhập liệu"
-            severity="success"
-            size="small"
-            @click="isDynamicDataEntryOpen = true"
-            title="Nhập liệu mới (Đồng bộ danh sách bảng như mục Nhập liệu ở menu)"
-            style="font-size: 0.78rem; height: 32px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;"
-          />
-        </div>
-      </template>
-
-      <div v-if="selectedDrilldownRow" style="display: flex; flex-direction: column; gap: 14px;">
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px;">
-          <div class="form-grid">
-            <div
-              v-for="col in (drilldownColumns || []).filter(c => c.showInDetail !== false)"
-              :key="col.id"
-              class="field-item"
-              :style="[
-                getColItemStyle(col.width),
-                {
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  padding: '8px 10px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '3px',
-                  boxSizing: 'border-box'
-                }
-              ]"
-            >
-              <span style="font-size: 0.7rem; color: #64748b; font-weight: 600;">
-                {{ col.label }}
-              </span>
-              <div>
-                <template v-if="col.id === 'presenceStatus' || col.id === '_presenceStatus' || col.format === 'presence'">
-                  <span
-                    class="presence-badge"
-                    :style="{
-                      backgroundColor: getPresenceBadge(selectedDrilldownRow).bgColor,
-                      color: getPresenceBadge(selectedDrilldownRow).color,
-                      borderColor: getPresenceBadge(selectedDrilldownRow).borderColor,
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      fontSize: '0.72rem',
-                      fontWeight: '600',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }"
-                  >
-                    <i :class="['pi', getPresenceBadge(selectedDrilldownRow).icon]" style="font-size: 0.7rem;"></i>
-                    {{ getPresenceBadge(selectedDrilldownRow).text }}
-                  </span>
-                </template>
-                <template v-else>
-                  <span style="font-size: 0.82rem; font-weight: 600; color: #0f172a; word-break: break-word;">
-                    {{ getRowFieldValue(selectedDrilldownRow, col.id, col) || '-' }}
-                  </span>
-                </template>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <Button
-              v-if="selectedDrilldownRow"
-              label="Chỉnh sửa hồ sơ"
-              icon="pi pi-user-edit"
-              severity="primary"
-              size="small"
-              @click="openPersonnelDetailFromRecord"
-            />
-            <Button
-              icon="pi pi-plus"
-              label="Nhập liệu"
-              severity="success"
-              size="small"
-              @click="isDynamicDataEntryOpen = true"
-              style="font-size: 0.78rem;"
-            />
-          </div>
-          <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownRecordDetailOpen = false" />
         </div>
       </template>
     </Dialog>
@@ -1685,48 +1566,18 @@ const onDrilldownViewChange = async () => {
   drilldownDtFirst.value = 0;
   drilldownSelectedRows.value = [];
 
-  let loadedCols = null;
-  try {
-    const local = localStorage.getItem(`child_dashboard_cols_${tid}_${vId}`);
-    if (local) {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        loadedCols = parsed.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
-      }
-    }
-  } catch (e) {}
-
-  if (!loadedCols) {
-    const allDashboards = ensureStandardDashboards(availableTopicDashboards.value);
-    const topic = allDashboards.find((t) => t.id === tid);
-    const card = topic?.metricCards?.find((c) => c.id === vId);
-    if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
-      loadedCols = card.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
-    }
+  let loadedCols = getSetupColumnIdsForTable(tid, vId);
+  if (loadedCols && loadedCols.length > 0) {
+    drilldownSavedColIds.value = loadedCols;
   }
 
-  if (!loadedCols) {
-    loadedCols = getSetupColumnIdsForTable(tid, vId);
-  }
-
-  drilldownSavedColIds.value = loadedCols;
-
   try {
-    const keysToCheck = [`child_dashboard_cols_${tid}_${vId}`];
-    if (vId === 'all') {
-      keysToCheck.push(`child_dashboard_cols_${tid}`);
-      if (tid === 'trips') keysToCheck.push('trips_dashboard_columns');
-      else if (tid === 'personnel') keysToCheck.push('personnel_active_columns');
-      else if (tid === 'relatives') keysToCheck.push('relative_active_columns');
-    }
-    for (const k of keysToCheck) {
-      const dbVal = await getAppSettings(k, null);
-      if (Array.isArray(dbVal) && dbVal.length > 0) {
-        const sanitized = dbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
-        if (sanitized.length > 0) {
-          drilldownSavedColIds.value = sanitized;
-          break;
-        }
+    const key = `child_dashboard_cols_${tid}_${vId}`;
+    const dbVal = await getAppSettings(key, null);
+    if (Array.isArray(dbVal) && dbVal.length > 0) {
+      const sanitized = dbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
+      if (sanitized.length > 0) {
+        drilldownSavedColIds.value = sanitized;
       }
     }
   } catch (e) {}
@@ -1900,8 +1751,7 @@ const isDrilldownRecordDetailOpen = ref(false);
 
 const handleDrilldownRowClick = (row) => {
   if (!row) return;
-  selectedDrilldownRow.value = row;
-  isDrilldownRecordDetailOpen.value = true;
+  openPersonnelDetail(row);
 };
 
 const getRecordTitle = (row) => {
@@ -1928,11 +1778,7 @@ const drilldownDetailGroups = computed(() => {
 
 const openPersonnelDetailFromRecord = () => {
   if (!selectedDrilldownRow.value) return;
-  const row = selectedDrilldownRow.value;
-  isDrilldownRecordDetailOpen.value = false;
-  selectedPersonForDialog.value = row;
-  selectedColumnsForDialog.value = (drilldownColumns.value || []).filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
-  isPersonDialogOpen.value = true;
+  openPersonnelDetail(selectedDrilldownRow.value);
 };
 
 const getDisplayValue = (row, colId, depth = 0) => {
@@ -2026,7 +1872,17 @@ const selectedColumnsForDialog = ref([]);
 const openPersonnelDetail = (p) => {
   if (!p) return;
   selectedPersonForDialog.value = p;
-  selectedColumnsForDialog.value = (drilldownColumns.value || []).filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
+  const src = p._recordType === 'relative' || p.relationshipName
+    ? 'relatives'
+    : (p._recordType === 'trip' || p.departureDate || p.destination || p.decisionNumber ? 'trips' : (drilldownSourceType.value || 'personnel'));
+
+  // Luôn nạp ĐẦY ĐỦ các cột của bảng nguồn cho Form Chỉnh sửa (không bị giới hạn theo 5 cột của View)
+  const allCols = getUnifiedTableColumns(src, {
+    personnelStore,
+    customDashboards: availableTopicDashboards.value,
+    systemBranding: systemBranding.value,
+  });
+  selectedColumnsForDialog.value = (allCols || []).filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
   isPersonDialogOpen.value = true;
 };
 
@@ -2186,6 +2042,40 @@ const loadCustomGroups = async () => {
         Object.assign(w, hydrated);
       });
     });
+
+    // Đảm bảo khối Thống kê: "Cán bộ có thân nhân đi nước ngoài" luôn có mặt
+    const hasRelativeTripWidget = (customGroups.value || []).some((grp) =>
+      (grp.widgets || []).some((w) => w && (w.field === 'so_chuyen_di_than_nhan' || w.columnId === 'so_chuyen_di_than_nhan' || w.title?.toLowerCase().includes('thân nhân đi nước ngoài')))
+    );
+    if (!hasRelativeTripWidget && customGroups.value && customGroups.value.length > 0) {
+      let pGroup = (customGroups.value || []).find((g) =>
+        g.topicId === 'personnel' || (g.title && g.title.toLowerCase().includes('cán bộ'))
+      );
+      if (!pGroup) pGroup = customGroups.value[0];
+      if (pGroup) {
+        if (!Array.isArray(pGroup.widgets)) pGroup.widgets = [];
+        pGroup.widgets.push({
+          id: `w_personnel_relatives_abroad_${Date.now()}`,
+          title: 'Cán bộ có thân nhân đi nước ngoài',
+          source: 'personnel',
+          displayType: 'count',
+          field: 'so_chuyen_di_than_nhan',
+          columnId: 'so_chuyen_di_than_nhan',
+          operator: 'gte',
+          value: '1',
+          conditions: [
+            {
+              field: 'so_chuyen_di_than_nhan',
+              operator: 'gte',
+              value: '1',
+            },
+          ],
+          widthPercent: 25,
+          color: '#0d9488',
+          icon: 'pi-users',
+        });
+      }
+    }
   } catch (e) {
     console.error('Error loading custom groups:', e);
   }
@@ -2559,6 +2449,24 @@ const DEFAULT_TOPIC_DASHBOARDS = [
       { id: 'completed', label: 'Đã về nước', condition: 'completed', color: 'green' },
       { id: 'abroad', label: 'Đang ở nước ngoài', condition: 'abroad', color: 'amber' },
       { id: 'overdue', label: 'Quá hạn chưa về', condition: 'overdue', color: 'red' },
+    ],
+  },
+  {
+    id: 'personnel',
+    code: '',
+    title: 'Thống kê Cán bộ',
+    source: 'personnel',
+    icon: 'pi-users',
+    metricCards: [
+      { id: 'all', label: 'Toàn bộ cán bộ', condition: 'all', color: 'blue' },
+      {
+        id: 'relatives_abroad',
+        label: 'Cán bộ có thân nhân đi nước ngoài',
+        field: 'so_chuyen_di_than_nhan',
+        operator: 'gte',
+        value: '1',
+        color: 'teal',
+      },
     ],
   },
 ];
@@ -3481,25 +3389,19 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
   const tid = widget.topicId || source;
   const targetViewId = widget.viewId || widget.cardId || 'all';
   drilldownSelectedViewId.value = targetViewId;
-  drilldownSavedColIds.value = getSetupColumnIdsForTable(tid, targetViewId);
+  const initialCols = getSetupColumnIdsForTable(tid, targetViewId);
+  if (initialCols && initialCols.length > 0) {
+    drilldownSavedColIds.value = initialCols;
+  }
 
   (async () => {
     try {
-      const keysToCheck = [];
-      if (targetViewId) keysToCheck.push(`child_dashboard_cols_${tid}_${targetViewId}`);
-      keysToCheck.push(`child_dashboard_cols_${tid}`);
-      if (tid === 'trips') keysToCheck.push('trips_dashboard_columns');
-      else if (tid === 'personnel') keysToCheck.push('personnel_active_columns');
-      else if (tid === 'relatives') keysToCheck.push('relative_active_columns');
-
-      for (const k of keysToCheck) {
-        const dbVal = await getAppSettings(k, null);
-        if (Array.isArray(dbVal) && dbVal.length > 0) {
-          const sanitized = dbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
-          if (sanitized.length > 0) {
-            drilldownSavedColIds.value = sanitized;
-            break;
-          }
+      const k = `child_dashboard_cols_${tid}_${targetViewId}`;
+      const dbVal = await getAppSettings(k, null);
+      if (Array.isArray(dbVal) && dbVal.length > 0) {
+        const sanitized = dbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
+        if (sanitized.length > 0) {
+          drilldownSavedColIds.value = sanitized;
         }
       }
     } catch (e) {}

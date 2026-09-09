@@ -6,6 +6,7 @@ import {
   computeDepartBeforeDecision,
   evaluateFormula,
   evaluateLookup,
+  evaluateRollup,
 } from '@/utils/formatters';
 
 /**
@@ -545,6 +546,11 @@ export const extractRowFieldValue = (item, field, personnelStore, depth = 0) => 
       return lkVal !== '-' ? lkVal : '';
     }
 
+    if (colDef && colDef.format === 'rollup') {
+      const rlVal = evaluateRollup(item, colDef, personnelStore);
+      return rlVal !== '-' ? rlVal : '';
+    }
+
     if (colDef && colDef.format === 'formula') {
       if (colDef.formulaType === 'presence_status') {
         const p = resolvePresence(item);
@@ -641,10 +647,11 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
     return res.isWarning;
   }
 
-  // 3. Special Formula Fields & Điều kiện đếm (Tần suất / Số lần xuất cảnh trong năm)
+  // 3. Special Formula Fields & Điều kiện đếm (Tần suất / Số lần xuất cảnh trong năm / Rollup)
   const isCountFormula = colDef && colDef.format === 'formula' && colDef.formulaType === 'trips_count_in_year';
+  const isRollup = colDef && colDef.format === 'rollup';
   const isCountOp = op.startsWith('count_');
-  const isCountField = field === 'dieu_kien_dem' || field === '_tripCount' || field.includes('so_lan') || field.includes('trips_count') || isCountFormula;
+  const isCountField = field === 'dieu_kien_dem' || field === '_tripCount' || field.includes('so_lan') || field.includes('trips_count') || isCountFormula || isRollup;
 
   if (isCountOp || isCountField) {
     let count = NaN;

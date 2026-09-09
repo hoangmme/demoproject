@@ -29,7 +29,7 @@
     <div style="max-height: 70vh; overflow-y: auto; padding: 6px 12px 16px 6px;">
       <div class="form-grid">
         <template v-for="col in allTableColumns" :key="col.id">
-          <div class="field-item" :style="getColItemStyle(col.width)">
+          <div class="field-item" :style="getColItemStyle(col.formWidth || col.width)">
             <label class="field-label" :title="col.label">
               <span class="label-text">{{ col.label }}</span>
               <span v-if="col.required" style="color: red; margin-left: 2px;">*</span>

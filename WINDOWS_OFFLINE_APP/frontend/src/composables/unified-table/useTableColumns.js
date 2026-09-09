@@ -748,21 +748,99 @@ export function useTableColumns({
   };
 
   const onChildChangeColumnFormWidth = async ({ colId, formWidth }) => {
-    const { key, mapping, src } = getTargetMappingRef();
+    const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
     let found = false;
-    for (const g of mapping || []) {
-      for (const c of g.columns || []) {
+
+    if (isBlank && cDash) {
+      if (Array.isArray(cDash.customColumns)) {
+        for (const c of cDash.customColumns) {
+          if (c.id === colId) {
+            c.formWidth = String(formWidth);
+            c.width = String(formWidth);
+            found = true;
+            break;
+          }
+        }
+      }
+      if (Array.isArray(cDash.columns)) {
+        for (const c of cDash.columns) {
+          if (c.id === colId) {
+            c.formWidth = String(formWidth);
+            c.width = String(formWidth);
+            found = true;
+            break;
+          }
+        }
+      }
+      if (found) {
+        try {
+          localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+          await saveAppSettings('custom_dashboards_config', customDashboards.value);
+          window.dispatchEvent(new CustomEvent('custom-dashboards-updated'));
+        } catch (e) {}
+      }
+    } else {
+      for (const g of mapping || []) {
+        for (const c of g.columns || []) {
+          if (c.id === colId) {
+            c.formWidth = String(formWidth);
+            c.width = String(formWidth);
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+      if (found) {
+        await persistTableMapping(src, mapping);
+      }
+    }
+
+    if (found) {
+      alert('Đã cập nhật độ rộng form chi tiết cho cột này!');
+    }
+  };
+
+  const onChildChangeColumnSuggest = async ({ colId, suggestEnabled, suggestTarget, suggestSearchCol, suggestFillCol }) => {
+    const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
+    let found = false;
+
+    if (isBlank && cDash) {
+      const allCols = [...(cDash.customColumns || []), ...(cDash.columns || [])];
+      for (const c of allCols) {
         if (c.id === colId) {
-          c.width = String(formWidth);
+          c.suggestEnabled = suggestEnabled;
+          c.suggestTarget = suggestTarget;
+          c.suggestSearchCol = suggestSearchCol;
+          c.suggestFillCol = suggestFillCol;
           found = true;
           break;
         }
       }
-      if (found) break;
-    }
-    if (found) {
-      await persistTableMapping(src, mapping);
-      alert('Đã cập nhật độ rộng form chi tiết cho cột này!');
+      if (found) {
+        try {
+          localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+          await saveAppSettings('custom_dashboards_config', customDashboards.value);
+          window.dispatchEvent(new CustomEvent('custom-dashboards-updated'));
+        } catch (e) {}
+      }
+    } else {
+      for (const g of mapping || []) {
+        for (const c of g.columns || []) {
+          if (c.id === colId) {
+            c.suggestEnabled = suggestEnabled;
+            c.suggestTarget = suggestTarget;
+            c.suggestSearchCol = suggestSearchCol;
+            c.suggestFillCol = suggestFillCol;
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+      if (found) {
+        await persistTableMapping(src, mapping);
+      }
     }
   };
 
@@ -1076,6 +1154,7 @@ export function useTableColumns({
     onChildChangeColumnRollup,
     onChildChangeColumnOptions,
     onChildChangeColumnFormWidth,
+    onChildChangeColumnSuggest,
     onChildDeleteColumnFromTable,
     onChildHideColumn,
     onInsertChildColLeft,
