@@ -691,7 +691,14 @@ const deleteRelative = async (rel) => {
   const nameVal = rel[relativeNameField.value] || rel.relativeName || rel.name || 'thân nhân này';
   if (!confirm(`Bạn có chắc muốn xóa thân nhân: "${nameVal}" không?`)) return;
   try {
-    await personnelStore.deleteRelative(rel);
+    const relToDelete = {
+      ...rel,
+      personnelId: rel.personnelId || props.personData?.id,
+      parentPersonnelName: rel.parentPersonnelName || props.personData?.name,
+      parentCccd: rel.parentCccd || props.personData?.cccd,
+      rawPerson: props.personData || rel.rawPerson,
+    };
+    await personnelStore.deleteRelative(relToDelete);
     await personnelStore.fetchPersonnel();
     emit('refresh');
   } catch (e) {

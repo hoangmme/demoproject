@@ -275,6 +275,13 @@ export const usePersonnelStore = defineStore('personnel', {
             const rKeyField = this.systemKeyConfig?.relativeKeyField || 'cccdthannhan';
 
             matchedRelatives.forEach((r, rIdx) => {
+              if (!r.id || String(r.id).trim() === '' || String(r.id) === 'undefined') {
+                r.id = `rel_${Date.now()}_${Math.random().toString(36).slice(2, 9)}_${rIdx}`;
+              }
+              r.personnelId = p.id;
+              r.parentPersonnelName = p.name || '';
+              r.uniqueKey = r.id;
+
               let rCustom = {};
               if (r.custom_data) {
                 try {
@@ -315,9 +322,16 @@ export const usePersonnelStore = defineStore('personnel', {
               allRelatives.push({
                 ...rCustom,
                 ...r,
+                id: r.id,
+                uniqueKey: r.id,
                 trips: relTrips,
                 personnelId: p.id,
                 personnelCode: p.code || '',
+                parentPersonnelName: p.name || '',
+                parentCccd: personCccd,
+                relativeIndex: rIdx,
+                rawRelative: r,
+                rawPerson: p,
                 code: r.code || `TN-${String(allRelatives.length + 1).padStart(5, '0')}`,
               });
             });
@@ -847,48 +861,126 @@ export const usePersonnelStore = defineStore('personnel', {
       if (!rel) return;
       this.loading = true;
       try {
-        const isSameRel = (r) => {
-          if (!r || !rel) return false;
+        const targetParentId = rel.personnelId || rel.rawPerson?.id;
+        const targetParentCccd = String(rel.cccdparent || rel.parentCccd || rel.rawPerson?.cccd || rel.rawPerson?.cccdparent || '').trim().toLowerCase();
+        const targetRelId = rel.id ? String(rel.id).trim() : '';
+        const targetRelUniqueKey = rel.uniqueKey ? String(rel.uniqueKey).trim() : '';
+        const targetRelCccd = String(rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
+        const targetRelName = String(rel.relativeName || rel.name || rel.ho_va_ten || '').trim().toLowerCase();
+        const targetRelRelationship = String(rel.relationshipName || rel.relationship || '').trim().toLowerCase();
+        const targetRelBirthYear = String(rel.birthYear || rel.nam_sinh || rel.yearOfBirth || '').trim();
+        const targetRelIdx = rel.relativeIndex !== undefined ? Number(rel.relativeIndex) : (rel._relativeIndex !== undefined ? Number(rel._relativeIndex) : null);
+
+        // Helper: Strict check if relative item in personnel matches target rel
+        const isSameRelItem = (r, idx) => {
+          if (!r) return false;
+          // 1. Exact object reference
           if (r === rel || r === rel.rawRelative) return true;
-          if (r.id && rel.id && String(r.id) === String(rel.id)) return true;
-          if (r.code && rel.code && String(r.code) === String(rel.code)) return true;
-          const c1 = String(r.cccdthannhan || r.cccd || '').trim();
-          const c2 = String(rel.cccdthannhan || rel.cccd || '').trim();
-          if (c1 && c2 && c1 === c2) return true;
-          const n1 = String(r.relativeName || r.name || '').trim().toLowerCase();
-          const n2 = String(rel.relativeName || rel.name || '').trim().toLowerCase();
-          const s1 = String(r.relationshipName || r.relationship || '').trim().toLowerCase();
-          const s2 = String(rel.relationshipName || rel.relationship || '').trim().toLowerCase();
-          if (n1 && n2 && n1 === n2 && s1 && s2 && s1 === s2) return true;
-          if (n1 && n2 && n1 === n2 && (c1 || c2 ? c1 === c2 : true)) return true;
+          // 2. Exact unique ID match (most robust)
+          if (targetRelId && r.id && String(r.id).trim() === targetRelId) return true;
+          // 3. Exact uniqueKey match
+          if (targetRelUniqueKey && r.uniqueKey && String(r.uniqueKey).trim() === targetRelUniqueKey) return true;
+          // 4. Exact CCCD thân nhân match (if both present and not empty)
+          const rCccd = String(r.cccdthannhan || r.cccd || '').trim().toLowerCase();
+          if (rCccd && targetRelCccd && rCccd === targetRelCccd) return true;
+          // 5. Exact index in parent's relatives array
+          if (targetRelIdx !== null && idx === targetRelIdx) return true;
+          // 6. Exact match on Name + Relationship + BirthYear (if both have values)
+          const rName = String(r.relativeName || r.name || r.ho_va_ten || '').trim().toLowerCase();
+          const rRel = String(r.relationshipName || r.relationship || '').trim().toLowerCase();
+          const rBirth = String(r.birthYear || r.nam_sinh || r.yearOfBirth || '').trim();
+          if (rName && targetRelName && rName === targetRelName) {
+            if (rRel && targetRelRelationship && rRel === targetRelRelationship) {
+              if (targetRelBirthYear && rBirth) {
+                return targetRelBirthYear === rBirth;
+              }
+              return true;
+            }
+          }
           return false;
         };
 
-        for (const p of this.personnelList) {
-          let custom = {};
-          if (p.custom_data) {
-            try {
-              custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
-            } catch (e) {}
+        // Find the target parent personnel
+        let targetPerson = null;
+        // Priority 1: Match by parent ID
+        if (targetParentId) {
+          targetPerson = this.personnelList.find((p) => String(p.id) === String(targetParentId));
+        }
+        // Priority 2: Match by parent CCCD
+        if (!targetPerson && targetParentCccd) {
+          targetPerson = this.personnelList.find((p) => {
+            const pCccd = String(p.cccd || p.cccdparent || '').trim().toLowerCase();
+            return pCccd && pCccd === targetParentCccd;
+          });
+        }
+        // Priority 3: Search within personnel who actually contain this relative by strict ID or object reference
+        if (!targetPerson) {
+          targetPerson = this.personnelList.find((p) => {
+            let custom = {};
+            if (p.custom_data) {
+              try { custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data; } catch (e) {}
+            }
+            const rels = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(custom.relatives) ? custom.relatives : []);
+            return rels.some((r, idx) => {
+              if (r === rel || r === rel.rawRelative) return true;
+              if (targetRelId && r.id && String(r.id).trim() === targetRelId) return true;
+              return false;
+            });
+          });
+        }
+
+        if (!targetPerson) {
+          throw new Error(`Không tìm thấy hồ sơ cán bộ chủ quản tương ứng để xóa thân nhân "${rel.relativeName || rel.name || ''}"!`);
+        }
+
+        // Clone and delete from target person
+        const updatedP = JSON.parse(JSON.stringify(targetPerson));
+        let custom = {};
+        if (updatedP.custom_data) {
+          try { custom = typeof updatedP.custom_data === 'string' ? JSON.parse(updatedP.custom_data) : updatedP.custom_data; } catch (e) {}
+        }
+        let relsInP = Array.isArray(updatedP.relatives) ? updatedP.relatives : (Array.isArray(custom.relatives) ? custom.relatives : []);
+
+        const initialCount = relsInP.length;
+        // Remove the matched relative
+        let filteredRels = relsInP.filter((r, idx) => !isSameRelItem(r, idx));
+
+        if (filteredRels.length === initialCount) {
+          // If no item was removed, try fallback by matching relativeName if only 1 relative has that name in this personnel
+          const sameNameIndices = [];
+          relsInP.forEach((r, idx) => {
+            const rName = String(r.relativeName || r.name || r.ho_va_ten || '').trim().toLowerCase();
+            if (rName && targetRelName && rName === targetRelName) sameNameIndices.push(idx);
+          });
+          if (sameNameIndices.length === 1) {
+            relsInP.splice(sameNameIndices[0], 1);
           }
-          const relsInP = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(custom.relatives) ? custom.relatives : []);
-          const isTargetP = relsInP.some(isSameRel) || (rel.personnelId && String(p.id) === String(rel.personnelId)) || (rel.cccdparent && (p.cccd === rel.cccdparent || p.cccdparent === rel.cccdparent));
-          
-          if (isTargetP) {
-            const updatedP = JSON.parse(JSON.stringify(p));
-            updatedP.relatives = relsInP.filter((r) => !isSameRel(r));
-            custom.relatives = updatedP.relatives;
-            updatedP.custom_data = custom;
-            await this.savePerson(updatedP);
-            break;
+        } else {
+          relsInP = filteredRels;
+        }
+
+        updatedP.relatives = relsInP;
+        custom.relatives = relsInP;
+
+        // Also clean up any trips associated with this relative in updatedP.trips
+        if (targetRelId && Array.isArray(updatedP.trips)) {
+          updatedP.trips = updatedP.trips.filter((t) => {
+            const relId = t.relativeId || t.relId;
+            return !relId || String(relId).trim() !== targetRelId;
+          });
+          if (Array.isArray(custom.trips)) {
+            custom.trips = updatedP.trips;
           }
         }
 
-        if (rel.id) {
-          await apiClient.delete(`/items/appendix2/${rel.id}`).catch(() => {});
+        updatedP.custom_data = custom;
+        await this.savePerson(updatedP);
+
+        if (targetRelId) {
+          await apiClient.delete(`/items/appendix2/${targetRelId}`).catch(() => {});
         }
 
-        await logActivity('Xóa Thân nhân', `Xóa thân nhân: ${rel.relativeName || rel.name || rel.id}`).catch(() => {});
+        await logActivity('Xóa Thân nhân', `Xóa thân nhân: ${rel.relativeName || rel.name || targetRelId} (thuộc cán bộ ${targetPerson.name || targetPerson.id})`).catch(() => {});
         await this.fetchPersonnel();
       } catch (e) {
         console.error('Error deleting relative:', e);
@@ -897,31 +989,24 @@ export const usePersonnelStore = defineStore('personnel', {
         this.loading = false;
       }
     },
-    async deleteMultipleRelatives(ids) {
-      if (!ids || ids.length === 0) return;
+    async deleteMultipleRelatives(itemsOrIds) {
+      if (!itemsOrIds || itemsOrIds.length === 0) return;
       this.loading = true;
       try {
-        const idSet = new Set(ids.map((x) => String(x)));
-        for (const p of this.personnelList) {
-          if (Array.isArray(p.relatives)) {
-            const hasMatch = p.relatives.some((r) => idSet.has(String(r.id)) || idSet.has(String(r.code)) || idSet.has(String(r.cccdthannhan)) || idSet.has(String(r.cccd)));
-            if (hasMatch) {
-              const updatedP = JSON.parse(JSON.stringify(p));
-              updatedP.relatives = updatedP.relatives.filter((r) => !idSet.has(String(r.id)) && !idSet.has(String(r.code)) && !idSet.has(String(r.cccdthannhan)) && !idSet.has(String(r.cccd)));
-              await this.savePerson(updatedP);
+        for (const item of itemsOrIds) {
+          if (typeof item === 'object' && item !== null) {
+            await this.deleteRelative(item);
+          } else {
+            const foundRel = (this.relativesList || []).find((r) => String(r.id) === String(item) || String(r.uniqueKey) === String(item));
+            if (foundRel) {
+              await this.deleteRelative(foundRel);
             }
           }
         }
-
-        try {
-          await apiClient.delete('/items/appendix2', { data: ids });
-        } catch (e) {
-          await Promise.allSettled(ids.map((id) => apiClient.delete(`/items/appendix2/${id}`)));
-        }
-        await logActivity('Xóa nhiều Thân nhân', `Xóa hàng loạt ${ids.length} thân nhân`).catch(() => {});
+        await logActivity('Xóa nhiều Thân nhân', `Xóa hàng loạt ${itemsOrIds.length} thân nhân`).catch(() => {});
         await this.fetchPersonnel();
       } catch (e) {
-        console.error('Error deleting multiple relatives:', e);
+        console.error('Error in deleteMultipleRelatives:', e);
         throw e;
       } finally {
         this.loading = false;
@@ -931,20 +1016,22 @@ export const usePersonnelStore = defineStore('personnel', {
       if (!relData) return null;
       this.loading = true;
       try {
+        const targetParentId = relData.personnelId || relData.rawPerson?.id;
+        const targetParentCccd = String(relData.cccdparent || relData.parentCccd || relData.cccd_can_bo || relData.rawPerson?.cccd || '').trim().toLowerCase();
+        const targetRelId = relData.id ? String(relData.id).trim() : '';
+
         const isSameRel = (r) => {
           if (!r || !relData) return false;
           if (r === relData || r === relData.rawRelative) return true;
-          if (r.id && relData.id && String(r.id) === String(relData.id)) return true;
-          if (r.code && relData.code && String(r.code) === String(relData.code)) return true;
+          if (targetRelId && r.id && String(r.id).trim() === targetRelId) return true;
           const c1 = String(r.cccdthannhan || r.cccd || '').trim();
           const c2 = String(relData.cccdthannhan || relData.cccd || '').trim();
-          if (c1 && c2 && c1 === c2) return true;
-          const n1 = String(r.relativeName || r.name || '').trim().toLowerCase();
-          const n2 = String(relData.relativeName || relData.name || '').trim().toLowerCase();
+          if (c1 && c2 && c1.toLowerCase() === c2.toLowerCase()) return true;
+          const n1 = String(r.relativeName || r.name || r.ho_va_ten || '').trim().toLowerCase();
+          const n2 = String(relData.relativeName || relData.name || relData.ho_va_ten || '').trim().toLowerCase();
           const s1 = String(r.relationshipName || r.relationship || '').trim().toLowerCase();
           const s2 = String(relData.relationshipName || relData.relationship || '').trim().toLowerCase();
           if (n1 && n2 && n1 === n2 && s1 && s2 && s1 === s2) return true;
-          if (n1 && n2 && n1 === n2 && (c1 || c2 ? c1 === c2 : true)) return true;
           return false;
         };
 
@@ -953,6 +1040,10 @@ export const usePersonnelStore = defineStore('personnel', {
         delete cleanRelData.rawRelative;
         delete cleanRelData.rawTrip;
         delete cleanRelData.uniqueKey;
+
+        if (!cleanRelData.id || String(cleanRelData.id).trim() === '' || String(cleanRelData.id) === 'undefined') {
+          cleanRelData.id = `rel_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        }
 
         // Clean custom_data
         if (cleanRelData.custom_data) {
@@ -978,25 +1069,28 @@ export const usePersonnelStore = defineStore('personnel', {
           }
         }
 
-        // Find parent person
-        const pKeyField = this.getPersonnelKeyField();
+        // Find parent person: Prioritize personnelId, then cccdparent
         let targetPerson = null;
-
-        for (const p of this.personnelList) {
-          let custom = {};
-          if (p.custom_data) {
-            try { custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data; } catch (e) {}
-          }
-          const relsInP = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(custom.relatives) ? custom.relatives : []);
-          const hasRel = relsInP.some(isSameRel);
-          const pCccd = String(p[pKeyField] || p.cccdparent || p.cccd || custom[pKeyField] || custom.cccdparent || custom.cccd || '').trim();
-          const targetParentCccd = String(cleanRelData.cccdparent || cleanRelData.parentCccd || cleanRelData.cccd_can_bo || cleanRelData[pKeyField] || '').trim();
-          const matchesParent = (cleanRelData.personnelId && (String(p.id) === String(cleanRelData.personnelId) || String(p.code) === String(cleanRelData.personnelId))) ||
-                                (targetParentCccd && pCccd && targetParentCccd.toLowerCase() === pCccd.toLowerCase());
-
-          if (hasRel || matchesParent) {
-            targetPerson = p;
-            break;
+        if (targetParentId) {
+          targetPerson = this.personnelList.find((p) => String(p.id) === String(targetParentId) || String(p.code) === String(targetParentId));
+        }
+        if (!targetPerson && targetParentCccd) {
+          targetPerson = this.personnelList.find((p) => {
+            const pCccd = String(p.cccd || p.cccdparent || '').trim().toLowerCase();
+            return pCccd && pCccd === targetParentCccd;
+          });
+        }
+        if (!targetPerson) {
+          for (const p of this.personnelList) {
+            let custom = {};
+            if (p.custom_data) {
+              try { custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data; } catch (e) {}
+            }
+            const relsInP = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(custom.relatives) ? custom.relatives : []);
+            if (relsInP.some(isSameRel)) {
+              targetPerson = p;
+              break;
+            }
           }
         }
 

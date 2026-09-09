@@ -2549,3 +2549,39 @@
        - npm run build thành công 100% (0 lỗi, 531ms).
        - Đồng bộ toàn bộ assets dist/ và mã nguồn sang WINDOWS_OFFLINE_APP/frontend/.
     4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 23)**: **Sửa Triệt Để Lỗi Xóa Nhầm Thân Nhân & Chuẩn Hóa 100% ID Duy Nhất Cho Thân Nhân Trong Hệ Thống**:
+    1. **Yêu cầu của người dùng**:
+       - Người dùng phản ánh: khi chọn xóa thân nhân 26 ("chọn xóa thân nhân 26"), hệ thống thông báo "Đã xóa thân nhân thành công!" nhưng không xóa dòng 26 mà lại xóa một hàng thân nhân khác.
+    2. **Nguyên nhân gốc rễ**:
+       - **Lỗi 1: Khớp nhầm Cán bộ chủ quản trong `deleteRelative` (`src/stores/personnel.js`)**:
+         + Trước đây, `deleteRelative` lặp qua toàn bộ danh sách `personnelList` và kiểm tra `const isTargetP = relsInP.some(isSameRel) || ...`.
+         + Hàm `isSameRel` kiểm tra `if (r.code && rel.code && r.code === rel.code) return true;`.
+         + Dữ liệu thực tế có nhiều thân nhân mang mã trùng nhau (như `TN-00001`, `TN-00002` xuất hiện ở nhiều cán bộ). Khi xóa một thân nhân mang mã trùng hoặc thiếu ID, `isSameRel` lập tức khớp với cán bộ đầu tiên trong danh sách có thân nhân mang mã đó, dẫn đến việc xóa nhầm thân nhân của cán bộ khác và gọi `break;`!
+       - **Lỗi 2: Mất `personnelId` và thiếu ID trong `buildTopicSourceList` (`src/utils/dashboardMetrics.js`)**:
+         + Khi ghép `tripDynamicFields`, trường `personnelId` của chuyến đi đè lên bản ghi, trong khi đối tượng trả về không gắn tường minh `id: r.id` và `personnelId: parentPerson?.id`. Khi truyền `item` vào `deleteRelative(item)`, `item.personnelId` bị `undefined`, khiến store phải đoán mò cán bộ chủ quản.
+       - **Lỗi 3: Dữ liệu DB cũ thiếu ID duy nhất**:
+         + 10/28 thân nhân trong Directus DB có `id: undefined`; một số thân nhân có ID bắt đầu bằng `trip_`; 2 thân nhân có ID trùng lặp.
+    3. **Giải pháp & Triển khai**:
+       - **Tái cấu trúc `deleteRelative` trong `src/stores/personnel.js` (Chính xác 100%)**:
+         + Bước 1: Xác định chính xác Cán bộ chủ quản (`targetParentId = rel.personnelId || rel.rawPerson?.id` hoặc qua `targetParentCccd`).
+         + Chỉ thao tác xóa BÊN TRONG Cán bộ đích. Tuyệt đối không xóa trên bất kỳ cán bộ nào khác.
+         + Bước 2: Khớp bản ghi thân nhân cần xóa (`isSameRelItem`) dựa trên: Tham chiếu đối tượng (`r === rel`), ID duy nhất (`r.id === targetRelId`), uniqueKey, CCCD, hoặc relativeIndex / Họ tên + Quan hệ + Năm sinh. Tuyệt đối KHÔNG dùng mã `code` đơn độc để so khớp xóa.
+         + Xóa đồng bộ chuyến đi liên kết của thân nhân đó trong `p.trips` (nếu có).
+         + Lưu bản ghi cán bộ qua `savePerson` và refresh `fetchPersonnel()`.
+       - **Cập nhật `deleteMultipleRelatives` trong `src/stores/personnel.js`**:
+         + Ủy quyền từng bản ghi cần xóa cho `deleteRelative(item)` xử lý chuẩn xác, loại bỏ hoàn toàn việc lọc theo `code`.
+       - **Cập nhật `fetchPersonnel` trong `src/stores/personnel.js`**:
+         + Tự động cấp ID duy nhất vĩnh viễn (`rel_...`) nếu bản ghi thiếu ID; gán tường minh `personnelId`, `parentPersonnelName`, `uniqueKey`, `relativeIndex`, `rawRelative`, `rawPerson`.
+       - **Cập nhật `buildTopicSourceList` trong `src/utils/dashboardMetrics.js`**:
+         + Xóa bỏ `personnelId`, `id`, `uniqueKey`, `_recordType` khỏi `tripDynamicFields` để không đè lên thân nhân.
+         + Gán tường minh và bất biến: `id: r.id`, `uniqueKey`, `personnelId: parentPerson?.id || r.personnelId`, `parentPersonnelName`, `parentCccd`, `relativeIndex`, `rawRelative`, `rawPerson`.
+       - **Cập nhật `deleteRelative` trong `PersonnelRelatedTabs.vue`**:
+         + Bổ sung `personnelId` và `rawPerson` trước khi gọi store.
+       - **Dọn dẹp & Chuẩn hóa toàn bộ Thân nhân trong Directus DB**:
+         + Cấp ID duy nhất `rel_...` cho tất cả thân nhân thiếu ID hoặc trùng ID.
+         + Đánh lại mã `code` tuần tự và duy nhất 100% từ `TN-00001` đến `TN-00026`.
+    4. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 549ms).
+       - Đồng bộ toàn bộ assets `dist/` và mã nguồn sang `WINDOWS_OFFLINE_APP/frontend/`.
+    5. **Trạng thái**: Done [Reversible].

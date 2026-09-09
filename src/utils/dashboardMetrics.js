@@ -118,6 +118,7 @@ export const buildTopicSourceList = (source, personnelStore) => {
         delete tripDynamicFields.uniqueKey;
         delete tripDynamicFields._recordType;
         delete tripDynamicFields.isRelative;
+        delete tripDynamicFields.personnelId;
         delete tripDynamicFields.custom_data;
         delete tripDynamicFields.trips;
         delete tripDynamicFields.rawPerson;
@@ -128,8 +129,13 @@ export const buildTopicSourceList = (source, personnelStore) => {
         ...rCustom,
         ...r,
         ...tripDynamicFields,
+        id: r.id,
+        uniqueKey: r.id || r.uniqueKey || `rel_${idx}`,
+        personnelId: parentPerson?.id || r.personnelId,
+        parentPersonnelName: parentPerson?.name || r.parentPersonnelName || '',
+        parentCccd: parentPerson?.cccd || parentPerson?.cccdparent || r.cccdparent || '',
+        relativeIndex: r.relativeIndex ?? idx,
         _recordType: 'relative',
-        uniqueKey: r.id || `rel_${idx}`,
         isRelative: true,
         trips: relTrips,
         activeTrip: primaryTrip,
@@ -138,13 +144,12 @@ export const buildTopicSourceList = (source, personnelStore) => {
         relativeName: r.relativeName || r.name || 'Thân nhân',
         relationshipName: r.relationshipName || r.relationship || '',
         parentName: parentPerson?.name || '',
-        parentPersonnelName: parentPerson?.name || '',
         parentPosition: parentPerson?.positionName || parentPerson?.position || '',
         cccdparent: r.cccdparent || parentPerson?.cccd || parentPerson?.cccdparent || '',
         cccdthannhan: r.cccdthannhan || r.cccd || '',
         departmentName: parentPerson?.departmentName || (parentPerson?.departmentId && personnelStore.getDepartmentName ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || '',
-        rawPerson: parentPerson || r,
-        rawRelative: r,
+        rawPerson: parentPerson || r.rawPerson || r,
+        rawRelative: r.rawRelative || r,
         custom_data: rCustom,
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
