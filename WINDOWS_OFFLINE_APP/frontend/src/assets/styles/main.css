@@ -20,12 +20,17 @@
   box-sizing: border-box;
 }
 
+html {
+  font-size: 130%; /* Tăng size chữ body / toàn bộ giao diện lên 30% */
+}
+
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
   font-family: var(--font-family);
+  font-size: 1rem;
   background-color: var(--app-bg);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -46,7 +51,7 @@ html, body {
 }
 
 .app-sidebar {
-  width: 275px;
+  width: 285px;
   background-color: var(--sidebar-bg, #889962);
   color: var(--sidebar-text-color, #000000);
   display: flex;
@@ -611,19 +616,21 @@ html, body {
   width: 100% !important;
 }
 
-.p-datatable-thead > tr > th {
+.p-datatable-thead > tr > th,
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable.p-datatable-sm .p-datatable-thead > tr > th {
   background: #f9fafb !important;
   color: #4b5563 !important;
-  font-size: 0.78rem !important;
+  font-size: 0.98rem !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
-  padding: 0.65rem 0.75rem !important;
+  padding: 0.75rem 0.85rem !important;
   border: none !important;
   border-bottom: 1px solid #e5e7eb !important;
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
-  line-height: 1.35 !important;
+  line-height: 1.4 !important;
 }
 
 .p-datatable-thead > tr > th .p-column-title,
@@ -631,7 +638,7 @@ html, body {
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
-  line-height: 1.35 !important;
+  line-height: 1.4 !important;
 }
 
 .p-datatable-thead > tr > th.p-sortable-column {
@@ -646,7 +653,7 @@ html, body {
 }
 
 .p-datatable-thead > tr > th.p-sortable-column .p-sortable-column-icon {
-  font-size: 0.72rem !important;
+  font-size: 0.85rem !important;
   color: #94a3b8 !important;
   margin-left: 6px !important;
   vertical-align: middle !important;
@@ -664,17 +671,30 @@ html, body {
   transform: scale(1.18) !important;
 }
 
-.p-datatable-tbody > tr > td {
-  padding: 0.65rem 0.75rem !important;
+.p-datatable-tbody > tr > td,
+.p-datatable .p-datatable-tbody > tr > td,
+.p-datatable.p-datatable-sm .p-datatable-tbody > tr > td {
+  padding: 0.75rem 0.85rem !important;
   border: none !important;
   border-bottom: 1px solid #f3f4f6 !important;
-  font-size: 0.82rem !important;
-  color: #374151 !important;
+  font-size: 1.15rem !important;
+  color: #1e293b !important;
   vertical-align: middle !important;
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
-  line-height: 1.45 !important;
+  line-height: 1.5 !important;
+}
+
+.p-datatable-tbody > tr > td strong,
+.p-datatable .p-datatable-tbody > tr > td strong,
+.clickable-name {
+  font-size: 1.18rem !important;
+}
+
+.p-datatable-tbody > tr > td.col-center,
+.p-datatable .p-datatable-tbody > tr > td.col-center {
+  font-size: 1.12rem !important;
 }
 
 /* Cho phép nội dung bảng xuống dòng tự nhiên khi dài */
@@ -1147,53 +1167,67 @@ td.col-right {
   flex-wrap: wrap;
   overflow: visible;
 }
-
-.lark-base-tab-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: #475569;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-}
-
-.lark-base-tab-item:hover {
-  background: #ffffff;
-  color: #0f172a;
-  border-color: #e2e8f0;
-}
-
-.lark-base-tab-item.tab-active {
-  background: #ffffff;
-  color: #0284c7;
-  border-color: #bae6fd;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
 .lark-tab-item-wrapper {
   position: relative;
   display: inline-flex;
   align-items: center;
   border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
   transition: all 0.15s ease;
+}
+
+.lark-tab-item-wrapper:hover {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+.lark-tab-item-wrapper.tab-active {
+  background: #ffffff;
+  border-color: #bae6fd;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .lark-tab-item-wrapper.menu-open {
   z-index: 1100;
+  background: #ffffff;
+  border-color: #bae6fd;
+}
+
+.lark-base-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 6px 0 0 6px;
+  border: none !important;
+  background: transparent !important;
+  color: #475569;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  user-select: none;
+}
+
+.lark-tab-item-wrapper:not(:has(.lark-tab-actions)) .lark-base-tab-item {
+  padding-right: 12px;
+  border-radius: 6px;
+}
+
+.lark-tab-item-wrapper.tab-active .lark-base-tab-item {
+  color: #0284c7;
+}
+
+.lark-tab-item-wrapper:hover .lark-base-tab-item {
+  color: #0f172a;
 }
 
 .lark-tab-actions {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  margin-left: -4px;
-  padding-right: 4px;
+  margin: 0;
+  padding: 0 6px 0 2px;
   opacity: 0;
   visibility: hidden;
   position: relative;
@@ -1213,11 +1247,11 @@ td.col-right {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
-  background: rgba(255, 255, 255, 0.9);
+  background: transparent;
   border-radius: 4px;
   color: #64748b;
   font-size: 0.72rem;
@@ -1232,21 +1266,15 @@ td.col-right {
   pointer-events: none;
 }
 
-.btn-tab-action:hover {
-  background: #ffffff;
+.btn-tab-action:hover,
+.btn-tab-action.active {
+  background: rgba(2, 132, 199, 0.12);
   color: #0284c7;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .btn-tab-action.btn-tab-delete:hover {
   background: #fee2e2;
   color: #ef4444;
-}
-
-.btn-tab-action.btn-tab-setup:hover,
-.btn-tab-action.btn-tab-setup.active {
-  background: #e0f2fe;
-  color: #0284c7;
 }
 
 /* Lark Tab Floating Dropdown Menu */

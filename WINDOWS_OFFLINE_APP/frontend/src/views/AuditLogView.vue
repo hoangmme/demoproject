@@ -22,7 +22,7 @@
         paginator
         :rows="15"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
-        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} bản ghi"
+        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} kết quả"
         responsiveLayout="scroll"
         stripedRows
         class="p-datatable-sm"

@@ -293,7 +293,7 @@
         <!-- Header summary & Export button (Unified PDF/Word Export) -->
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
           <div style="font-size: 0.88rem; color: #0f172a;">
-            Tìm được <b style="color: #2563eb; font-size: 1rem;">{{ searchResults.length }}</b> bản ghi
+            Tìm được <b style="color: #2563eb; font-size: 1rem;">{{ searchResults.length }}</b> kết quả
             <span style="color: #64748b; font-size: 0.8rem; margin-left: 6px;">
               · khớp {{ criteria.length }} điều kiện, nối bằng {{ logicOperator === 'AND' ? 'VÀ' : 'HOẶC' }}
             </span>
@@ -374,7 +374,7 @@
               <tr v-if="searchResults.length === 0">
                 <td colspan="8" style="text-align: center; padding: 2.5rem; color: #94a3b8; font-size: 0.85rem;">
                   <i class="pi pi-search" style="font-size: 1.5rem; display: block; margin-bottom: 8px; opacity: 0.5;"></i>
-                  Không tìm thấy bản ghi nào khớp với điều kiện tìm kiếm. Hãy thử điều chỉnh lại bộ lọc!
+                  Không tìm thấy kết quả nào khớp với điều kiện tìm kiếm. Hãy thử điều chỉnh lại bộ lọc!
                 </td>
               </tr>
             </tbody>
@@ -1041,53 +1041,39 @@ const getItemFieldValue = (item, f) => {
   // Direct check on item
   let raw = item[f];
   if (raw === undefined || raw === null || raw === '' || raw === '-') {
-    raw = item.rawTrip?.[f];
-  }
-  if (raw === undefined || raw === null || raw === '' || raw === '-') {
-    raw = item.rawPerson?.[f];
-  }
-  if (raw === undefined || raw === null || raw === '' || raw === '-') {
     raw = item.custom_data?.[f];
   }
   if (raw === undefined || raw === null || raw === '' || raw === '-') {
-    if (item.rawTrip?.custom_data) {
+    if (item.custom_data) {
       try {
-        const cd = typeof item.rawTrip.custom_data === 'string' ? JSON.parse(item.rawTrip.custom_data) : item.rawTrip.custom_data;
-        raw = cd?.[f];
-      } catch (e) {}
-    }
-  }
-  if (raw === undefined || raw === null || raw === '' || raw === '-') {
-    if (item.rawPerson?.custom_data) {
-      try {
-        const cd = typeof item.rawPerson.custom_data === 'string' ? JSON.parse(item.rawPerson.custom_data) : item.rawPerson.custom_data;
+        const cd = typeof item.custom_data === 'string' ? JSON.parse(item.custom_data) : item.custom_data;
         raw = cd?.[f];
       } catch (e) {}
     }
   }
 
-  // Fallback aliases for known semantic fields
+  // Fallback aliases for known semantic fields on item directly
   if (raw === undefined || raw === null || raw === '' || raw === '-') {
     if (f === 'so_quyet_dinh' || f === 'so_qd_di' || f === 'decisionNumber' || f === 'soQuyetDinh') {
-      raw = item.decisionNumber || item.rawTrip?.decisionNumber || item.so_quyet_dinh || item.rawTrip?.so_quyet_dinh;
+      raw = item.decisionNumber || item.so_quyet_dinh;
     } else if (f === 'quoc_gia_xuat_canh' || f === 'countryName' || f === 'country') {
-      raw = item.countryName || item.rawTrip?.countryName || item.rawTrip?.quoc_gia_xuat_canh || item.country;
+      raw = item.countryName || item.country;
     } else if (f === 'nguon_kinh_phi' || f === 'fundingName' || f === 'funding' || f === 'funding2') {
-      raw = item.fundingName || item.rawTrip?.fundingName || item.rawTrip?.nguon_kinh_phi || item.funding || item.funding2;
+      raw = item.fundingName || item.nguon_kinh_phi || item.funding || item.funding2;
     } else if (f === 'muc_dich_xuat_canh' || f === 'purpose') {
-      raw = item.purpose || item.rawTrip?.purpose || item.rawTrip?.muc_dich_xuat_canh;
+      raw = item.purpose || item.muc_dich_xuat_canh;
     } else if (f === 'ngay_xuat_canh' || f === 'departureDate') {
-      raw = item.departureDate || item.rawTrip?.departureDate || item.rawTrip?.ngay_xuat_canh;
+      raw = item.departureDate || item.ngay_xuat_canh;
     } else if (f === 'ngay_nhap_canh' || f === 'arrivalDate') {
-      raw = item.arrivalDate || item.rawTrip?.arrivalDate || item.rawTrip?.ngay_nhap_canh;
+      raw = item.arrivalDate || item.ngay_nhap_canh;
     } else if (f === 'ngay_ban_hanh' || f === 'decisionDate') {
-      raw = item.decisionDate || item.rawTrip?.decisionDate || item.rawTrip?.ngay_ban_hanh;
+      raw = item.decisionDate || item.ngay_ban_hanh;
     } else if (f === 'co_quan_ban_hanh' || f === 'decisionIssuer') {
-      raw = item.decisionIssuer || item.rawTrip?.decisionIssuer || item.rawTrip?.co_quan_ban_hanh;
+      raw = item.decisionIssuer || item.co_quan_ban_hanh;
     } else if (f === 'cccd' || f === 'cccdparent') {
-      raw = item.cccd || item.cccdparent || item.rawPerson?.cccd || item.rawPerson?.cccdparent;
+      raw = item.cccd || item.cccdparent;
     } else if (f === 'name' || f === 'personnelName') {
-      raw = item.personnelName || item.name || item.rawPerson?.name;
+      raw = item.personnelName || item.name;
     }
   }
 
@@ -1248,10 +1234,9 @@ const loadPresets = async () => {
 };
 
 const openDetail = (item) => {
-  if (item.rawPerson) {
-    activePersonData.value = JSON.parse(JSON.stringify(item.rawPerson));
-    isPersonnelDialogOpen.value = true;
-  }
+  if (!item) return;
+  activePersonData.value = JSON.parse(JSON.stringify(item));
+  isPersonnelDialogOpen.value = true;
 };
 
 const handlePersonnelSaved = async () => {

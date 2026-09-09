@@ -66,8 +66,21 @@
             <div style="display: flex; align-items: center; gap: 5px;">
               <i class="pi pi-link"></i>
               <span>Cấu hình Tham chiếu (Lookup)</span>
+              <i
+                class="pi pi-info-circle"
+                style="font-size: 0.8rem; color: #2563eb; cursor: help;"
+                title="Lookup lấy giá trị 1 ô từ Bảng khác sang Bảng hiện tại theo liên kết hồ sơ"
+              ></i>
             </div>
             <span style="font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Lark Base</span>
+          </div>
+
+          <!-- Hộp giải thích cách hoạt động của Lookup với icon ! -->
+          <div style="background: #ffffff; border: 1px solid #bfdbfe; border-left: 3px solid #2563eb; border-radius: 6px; padding: 5px 8px; font-size: 0.7rem; color: #1e40af; line-height: 1.4; display: flex; gap: 6px; align-items: flex-start; margin-bottom: 8px;">
+            <div style="width: 16px; height: 16px; border-radius: 50%; background: #dbeafe; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.7rem; flex-shrink: 0; line-height: 1;">!</div>
+            <div>
+              <strong>Cách Lookup hoạt động:</strong> Lấy 1 cột từ Bảng khác sang Bảng này. <em>VD:</em> Bảng Chuyến đi lấy Tên Cán bộ / Đơn vị từ Bảng Cán bộ.
+            </div>
           </div>
 
           <!-- 1. Look up data in this field: Chọn bảng đích & cột lấy dữ liệu -->
@@ -77,9 +90,9 @@
             </label>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
               <select v-model="editLookupTarget" class="menu-select" @change="editLookupField = ''; handleSaveLookup()">
-                <option value="personnel">Bảng Cán bộ</option>
-                <option value="relatives">Bảng Thân nhân</option>
-                <option value="trips">Bảng Chuyến đi</option>
+                <option v-for="tbl in availableTargetTables" :key="tbl.id" :value="tbl.id">
+                  {{ tbl.title }}
+                </option>
               </select>
               <select v-model="editLookupField" class="menu-select" @change="handleSaveLookup">
                 <option value="">-- Chọn cột lấy --</option>
@@ -302,6 +315,76 @@
           </div>
         </div>
 
+        <!-- Cấu hình Tính toán Tổng hợp nếu là rollup (Flat Rollup Engine) -->
+        <div v-if="editFormat === 'rollup'" class="menu-field" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; margin-top: 6px;">
+          <div style="font-size: 0.76rem; font-weight: 700; color: #15803d; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <i class="pi pi-calculator"></i>
+              <span>📊 Cấu hình Tính toán Tổng hợp (Rollup)</span>
+              <i
+                class="pi pi-info-circle"
+                style="font-size: 0.8rem; color: #16a34a; cursor: help;"
+                title="Rollup gom và tính toán trên nhiều dòng từ Bảng khác liên kết với dòng này"
+              ></i>
+            </div>
+            <span style="font-size: 0.65rem; background: #dcfce7; color: #166534; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Flat Engine</span>
+          </div>
+
+          <!-- Hộp giải thích cách hoạt động của Rollup với icon ! -->
+          <div style="background: #ffffff; border: 1px solid #bbf7d0; border-left: 3px solid #16a34a; border-radius: 6px; padding: 5px 8px; font-size: 0.7rem; color: #166534; line-height: 1.4; display: flex; gap: 6px; align-items: flex-start; margin-bottom: 8px;">
+            <div style="width: 16px; height: 16px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.7rem; flex-shrink: 0; line-height: 1;">!</div>
+            <div>
+              <strong>Cách Rollup hoạt động:</strong> Thu thập nhiều dòng liên kết từ Bảng khác và tính toán ra 1 ô. <em>VD:</em> Đếm số chuyến đi (<code>count</code>), gom danh sách nước đi (<code>join</code>), tính tổng kinh phí (<code>sum</code>).
+            </div>
+          </div>
+
+          <!-- 1. Bảng dữ liệu nguồn -->
+          <div style="margin-bottom: 6px;">
+            <label style="font-size: 0.68rem; color: #166534; font-weight: 700; display: block; margin-bottom: 2px;">
+              1. Bảng dữ liệu nguồn:
+            </label>
+            <select v-model="editRollupTarget" class="menu-select" @change="editRollupField = ''; handleSaveRollup()">
+              <option v-for="tbl in availableTargetTables" :key="tbl.id" :value="tbl.id">
+                {{ tbl.title }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 2. Hàm tính toán -->
+          <div style="margin-bottom: 6px;">
+            <label style="font-size: 0.68rem; color: #166534; font-weight: 700; display: block; margin-bottom: 2px;">
+              2. Hàm tính toán (Function):
+            </label>
+            <select v-model="editRollupFunction" class="menu-select" @change="handleSaveRollup">
+              <option value="count">count() - Đếm số lượng</option>
+              <option value="join">join() - Gom danh sách (phân tách dấu phẩy)</option>
+              <option value="sum">sum() - Tính tổng giá trị số</option>
+              <option value="latest">latest() - Lấy giá trị gần nhất</option>
+            </select>
+          </div>
+
+          <!-- 3. Cột cần tính toán -->
+          <div style="margin-bottom: 6px;">
+            <label style="font-size: 0.68rem; color: #166534; font-weight: 700; display: block; margin-bottom: 2px;">
+              3. Cột dữ liệu cần tổng hợp:
+            </label>
+            <select v-model="editRollupField" class="menu-select" @change="handleSaveRollup">
+              <option value="">{{ editRollupFunction === 'count' ? '-- Không bắt buộc khi Đếm (count) --' : '-- Chọn cột dữ liệu --' }}</option>
+              <option v-for="c in targetRollupCols" :key="c.id" :value="c.id">
+                {{ c.label }} ({{ c.id }})
+              </option>
+            </select>
+          </div>
+
+          <!-- Live Preview -->
+          <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.65rem; color: #166534; font-weight: 600;">Xem trước:</span>
+            <span style="font-size: 0.7rem; font-weight: 700; color: #15803d; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              {{ rollupPreviewResult }}
+            </span>
+          </div>
+        </div>
+
         <!-- Tùy chọn Options nếu là dropdown -->
         <div v-if="editFormat === 'dropdown' || editFormat === 'checkbox' || editFormat === 'checkbox_file_loop'" class="menu-field">
           <label>Danh sách tùy chọn (cách nhau bởi dấu phẩy):</label>
@@ -340,75 +423,39 @@
           </button>
         </div>
 
-        <!-- 5b. Đặt làm Khóa chính / Khóa liên kết của bảng -->
-        <div class="menu-field" style="margin-top: 6px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 8px;">
-          <label style="margin-bottom: 5px;">Khóa Định danh & Liên kết Bảng:</label>
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <!-- Nút Khóa chính (Primary Unique Key) -->
-            <button
-              type="button"
-              class="btn-primary-key-toggle"
-              :class="{ 'is-primary-key': isCurrentPrimaryKey }"
-              @click="handleSetPrimaryKey"
-              :title="isCurrentPrimaryKey ? 'Cột này đang là Khóa chính (Primary Key) của bảng' : 'Đặt cột này làm Khóa chính của bảng'"
-            >
-              <i class="pi pi-key" style="font-size: 0.92rem;"></i>
-              <span>{{ isCurrentPrimaryKey ? '🔑 Khóa chính (Đang áp dụng)' : '🔑 Đặt làm Khóa chính' }}</span>
-            </button>
+        <!-- 5a. Tùy chọn Hiển thị & Xuất dữ liệu -->
+        <div class="menu-field" style="margin-top: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <label style="margin-bottom: 2px; font-weight: 700; color: #1e293b; font-size: 0.76rem;">Hiển thị & Xuất dữ liệu:</label>
+          
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; user-select: none;">
+            <input
+              type="checkbox"
+              v-model="editIncludeInExport"
+              @change="handleToggleIncludeExport"
+              style="accent-color: #0284c7; cursor: pointer;"
+            />
+            <span>Xuất hiện khi in PDF / Xuất & Nhập dữ liệu</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; user-select: none;">
+            <input
+              type="checkbox"
+              v-model="editShowInDetail"
+              @change="handleToggleShowInDetail"
+              style="accent-color: #0284c7; cursor: pointer;"
+            />
+            <span>Hiển thị trong Form / Popup Chi tiết</span>
+          </label>
 
-            <!-- Nút Khóa liên kết (nếu ở bảng Thân nhân hoặc Chuyến đi) -->
-            <button
-              v-if="tableSource === 'relatives' || tableSource === 'trips'"
-              type="button"
-              class="btn-primary-key-toggle"
-              :class="{ 'is-primary-key': isCurrentLinkKey }"
-              @click="handleSetLinkKey"
-              :title="isCurrentLinkKey ? 'Cột này đang là Khóa liên kết của bảng' : 'Đặt cột này làm Khóa liên kết của bảng'"
-            >
-              <i class="pi pi-link" style="font-size: 0.92rem;"></i>
-              <span>{{ isCurrentLinkKey ? '🔗 Khóa liên kết (Đang áp dụng)' : '🔗 Đặt làm Khóa liên kết' }}</span>
-            </button>
-
-            <!-- Nút mở Hộp thoại Toàn diện -->
-            <button
-              type="button"
-              class="btn-open-all-keys"
-              @click="$emit('open-key-config'); closeMenu();"
-              style="display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 5px 8px; border: 1px dashed #cbd5e1; border-radius: 4px; background: #ffffff; font-size: 0.72rem; color: #475569; cursor: pointer;"
-            >
-              <i class="pi pi-sliders-h" style="font-size: 0.75rem; color: #2563eb;"></i>
-              <span>Cấu hình Khóa & Liên kết Bảng...</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 6. Cấu hình Cột ảo Thông tin Đối tượng / Cán bộ / Học sinh (nếu là _parentPersonnelName) -->
-        <div v-if="column?.id === '_parentPersonnelName'" class="menu-field" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-top: 6px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <label style="font-weight: 700; color: #1e293b; margin: 0;">Các trường hiển thị trong cột:</label>
-            <span style="font-size: 0.7rem; color: #2563eb; font-weight: 700;">{{ selectedFieldCount }} trường</span>
-          </div>
-          <div style="font-size: 0.68rem; color: #64748b; margin-bottom: 8px; line-height: 1.35;">
-            Linh hoạt theo mô hình (Cán bộ, Học sinh, Nhân sự...). Tick chọn các cột từ hồ sơ chính để hiển thị gộp vào cột này:
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; padding-right: 4px; border: 1px solid #f1f5f9; border-radius: 6px; padding: 6px; background: #ffffff;">
-            <label
-              v-for="opt in effectiveParentFieldOptions"
-              :key="opt.key"
-              style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; padding: 3px 6px; border-radius: 4px; user-select: none;"
-              :style="nameColFields[opt.key] ? 'background: #eff6ff; font-weight: 600; color: #1d4ed8;' : ''"
-            >
-              <input
-                type="checkbox"
-                :checked="Boolean(nameColFields[opt.key])"
-                @change="handleToggleParentField(opt.key)"
-                style="accent-color: #2563eb; cursor: pointer; flex-shrink: 0;"
-              />
-              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="opt.label">
-                {{ opt.label }}
-              </span>
-            </label>
-          </div>
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; user-select: none; background: #f0f9ff; border: 1px solid #bae6fd; padding: 4px 6px; border-radius: 4px;">
+            <input
+              type="checkbox"
+              v-model="editCollapseDuplicates"
+              @change="handleToggleCollapseDuplicates"
+              style="accent-color: #0284c7; cursor: pointer;"
+            />
+            <span style="font-weight: 600; color: #0369a1;">Gộp / Ẩn giá trị lặp liên tiếp (Dấu lặp ″)</span>
+          </label>
         </div>
 
         <div class="menu-divider"></div>
@@ -475,7 +522,16 @@
 import { ref, computed, watch } from "vue";
 import { usePersonnelStore } from "@/stores/personnel";
 import { saveAppSettings } from "@/api/settings";
-import { formWidthOptions, lookupOperators, evaluateCustomFormula, formulaFunctionsCatalog } from "@/utils/formatters";
+import {
+  formWidthOptions,
+  lookupOperators,
+  evaluateCustomFormula,
+  evaluateLookup,
+  evaluateRollup,
+  getRecordFieldValue,
+  formulaFunctionsCatalog,
+} from "@/utils/formatters";
+import { getUnifiedTableDefinitions } from "@/utils/tableRegistry";
 
 const props = defineProps({
   visible: {
@@ -516,7 +572,11 @@ const emit = defineEmits([
   "change-options",
   "change-form-width",
   "change-required",
+  "change-include-export",
+  "change-show-in-detail",
   "change-lookup",
+  "change-rollup",
+  "change-collapse-duplicates",
   "change-name-col-field",
   "delete-column",
   "hide-column",
@@ -537,6 +597,9 @@ const formulaTab = ref("fields");
 const editOptions = ref("");
 const editFormWidth = ref("50");
 const editRequired = ref(false);
+const editIncludeInExport = ref(true);
+const editShowInDetail = ref(true);
+const editCollapseDuplicates = ref(false);
 
 const editLookupTarget = ref("personnel");
 const editLookupLinkCol = ref("");
@@ -545,6 +608,10 @@ const editLookupConditions = ref([]);
 const editLookupLogicOp = ref("AND");
 const editLookupDisplay = ref("value");
 const editLookupFormat = ref("default");
+
+const editRollupTarget = ref("trips");
+const editRollupField = ref("");
+const editRollupFunction = ref("count");
 
 const availablePersonnelCols = computed(() => {
   const list = [];
@@ -576,16 +643,54 @@ const availableTripCols = computed(() => {
   return list;
 });
 
+const customDashboards = ref([]);
+const loadDashboards = () => {
+  try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed)) customDashboards.value = parsed;
+    }
+  } catch (e) {}
+};
+loadDashboards();
+
+const availableTargetTables = computed(() => {
+  const list = getUnifiedTableDefinitions({
+    personnelStore,
+    customDashboards: customDashboards.value,
+  });
+  return list.map((t) => ({
+    id: t.source || t.id,
+    tableId: t.id,
+    title: t.title || t.id,
+    source: t.source,
+  }));
+});
+
 const currentTableCols = computed(() => {
   if (props.tableSource === 'relatives') return availableRelativeCols.value;
   if (props.tableSource === 'trips') return availableTripCols.value;
   return availablePersonnelCols.value;
 });
 
+const getColumnsForTargetTable = (targetId) => {
+  if (targetId === 'relatives') return availableRelativeCols.value;
+  if (targetId === 'trips' || targetId === 'relative_trips') return availableTripCols.value;
+  if (targetId === 'personnel') return availablePersonnelCols.value;
+  const cust = (customDashboards.value || []).find((d) => d.id === targetId || d.source === targetId);
+  if (cust && Array.isArray(cust.customColumns)) {
+    return cust.customColumns.map((c) => ({ id: c.id, label: c.label || c.id }));
+  }
+  return availableTripCols.value;
+};
+
 const targetLookupCols = computed(() => {
-  if (editLookupTarget.value === 'relatives') return availableRelativeCols.value;
-  if (editLookupTarget.value === 'trips') return availableTripCols.value;
-  return availablePersonnelCols.value;
+  return getColumnsForTargetTable(editLookupTarget.value);
+});
+
+const targetRollupCols = computed(() => {
+  return getColumnsForTargetTable(editRollupTarget.value);
 });
 
 const defaultFallbackParentFields = [
@@ -626,6 +731,12 @@ watch(
       editLookupFormat.value = col.lookupFormat || "default";
       editFormulaType.value = col.formulaType || "presence_status";
       editFormulaExpression.value = col.formulaExpression || "";
+      editRollupTarget.value = col.rollupTarget || "trips";
+      editRollupField.value = col.rollupField || "";
+      editRollupFunction.value = col.rollupFunction || "count";
+      editIncludeInExport.value = col.includeInExport !== false;
+      editShowInDetail.value = col.showInDetail !== false;
+      editCollapseDuplicates.value = Boolean(col.collapseDuplicates);
     }
   },
   { immediate: true }
@@ -637,10 +748,32 @@ const sampleRow = computed(() => {
   return personnelStore.personnelList?.[0] || {};
 });
 
+const rollupPreviewResult = computed(() => {
+  try {
+    const res = evaluateRollup(sampleRow.value, {
+      rollupTarget: editRollupTarget.value || 'trips',
+      rollupField: editRollupField.value || '',
+      rollupFunction: editRollupFunction.value || 'count',
+    }, personnelStore);
+    if (res === null || res === undefined || res === '') return '(trống)';
+    return String(res);
+  } catch (e) {
+    return 'Lỗi: ' + (e.message || e);
+  }
+});
+
 const formulaPreviewResult = computed(() => {
   if (!editFormulaExpression.value) return '(chưa có)';
   try {
-    const res = evaluateCustomFormula(sampleRow.value, editFormulaExpression.value, currentTableCols.value);
+    const resolver = (targetColId) => {
+      const c = (currentTableCols.value || []).find((col) => col.id === targetColId || col.label === targetColId);
+      if (c && c.format === 'lookup') {
+        const val = evaluateLookup(sampleRow.value, c, personnelStore);
+        return val !== '-' ? val : '';
+      }
+      return getRecordFieldValue(sampleRow.value, targetColId);
+    };
+    const res = evaluateCustomFormula(sampleRow.value, editFormulaExpression.value, currentTableCols.value, resolver);
     if (!res) return '(trống)';
     const val = (res && typeof res === 'object' && 'label' in res) ? res.label : res;
     if (val === null || val === undefined || val === '') return '(trống)';
@@ -706,6 +839,15 @@ const handleSaveFormulaType = () => {
   });
 };
 
+const handleSaveRollup = () => {
+  emit("change-rollup", {
+    colId: props.column.id,
+    rollupTarget: editRollupTarget.value,
+    rollupField: editRollupField.value,
+    rollupFunction: editRollupFunction.value,
+  });
+};
+
 const handleFormatChange = () => {
   if (editFormat.value === 'formula' && !editFormulaType.value) {
     editFormulaType.value = 'custom_expression';
@@ -715,6 +857,8 @@ const handleFormatChange = () => {
     handleSaveLookup();
   } else if (editFormat.value === 'formula') {
     handleSaveFormulaType();
+  } else if (editFormat.value === 'rollup') {
+    handleSaveRollup();
   }
 };
 
@@ -731,66 +875,16 @@ const handleToggleRequired = () => {
   emit("change-required", { colId: props.column.id, required: editRequired.value });
 };
 
-const isCurrentPrimaryKey = computed(() => {
-  if (!props.column?.id) return false;
-  const colId = props.column.id;
-  const src = props.tableSource;
-  if (src === 'relatives') {
-    return personnelStore.getRelativeKeyField() === colId;
-  }
-  if (src === 'trips') {
-    return personnelStore.getTripKeyField() === colId;
-  }
-  return personnelStore.getPersonnelKeyField() === colId;
-});
-
-const isCurrentLinkKey = computed(() => {
-  if (!props.column?.id) return false;
-  const colId = props.column.id;
-  const src = props.tableSource;
-  if (src === 'relatives') {
-    return personnelStore.getRelativeParentKeyField() === colId;
-  }
-  if (src === 'trips') {
-    return personnelStore.getTripKeyField() === colId;
-  }
-  return false;
-});
-
-const handleSetPrimaryKey = async () => {
-  if (!props.column?.id) return;
-  const colId = props.column.id;
-  const src = props.tableSource;
-  const keyConfig = {
-    ...(personnelStore.systemKeyConfig || {}),
-  };
-  if (src === 'relatives') {
-    keyConfig.relativeKeyField = colId;
-  } else if (src === 'trips') {
-    keyConfig.tripKeyField = colId;
-  } else {
-    keyConfig.personnelKeyField = colId;
-  }
-  personnelStore.systemKeyConfig = keyConfig;
-  await saveAppSettings('system_key_config', keyConfig);
-  alert(`Đã thiết lập cột "${props.column.label || colId}" làm Khóa chính (Primary Key / Cột primal) của bảng!`);
+const handleToggleIncludeExport = () => {
+  emit("change-include-export", { colId: props.column.id, includeInExport: editIncludeInExport.value });
 };
 
-const handleSetLinkKey = async () => {
-  if (!props.column?.id) return;
-  const colId = props.column.id;
-  const src = props.tableSource;
-  const keyConfig = {
-    ...(personnelStore.systemKeyConfig || {}),
-  };
-  if (src === 'relatives') {
-    keyConfig.relativeParentKeyField = colId;
-  } else if (src === 'trips') {
-    keyConfig.tripKeyField = colId;
-  }
-  personnelStore.systemKeyConfig = keyConfig;
-  await saveAppSettings('system_key_config', keyConfig);
-  alert(`Đã thiết lập cột "${props.column.label || colId}" làm Khóa liên kết (Link Key) của bảng!`);
+const handleToggleShowInDetail = () => {
+  emit("change-show-in-detail", { colId: props.column.id, showInDetail: editShowInDetail.value });
+};
+
+const handleToggleCollapseDuplicates = () => {
+  emit("change-collapse-duplicates", { colId: props.column.id, collapseDuplicates: editCollapseDuplicates.value });
 };
 
 const handleInsertLeft = () => {
@@ -806,10 +900,6 @@ const handleInsertRight = () => {
 const handleDuplicate = () => {
   emit("duplicate-column", props.column);
   closeMenu();
-};
-
-const handleToggleParentField = (key) => {
-  emit("change-name-col-field", key);
 };
 
 const handleDeleteColumn = () => {

@@ -614,10 +614,8 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     };
 
     const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-    const directTripCccd = combinedTrip[tKeyField] ?? combinedTrip.cccdchuyendi;
-    const travelerCccd = !isInternalId(directTripCccd) 
-      ? directTripCccd 
-      : (combinedTrip.isRelative ? (!isInternalId(combinedTrip[rKeyField] ?? combinedTrip.cccdthannhan) ? (combinedTrip[rKeyField] ?? combinedTrip.cccdthannhan) : '') : canBoCccd);
+    const directTripCccd = combinedTrip[tKeyField] ?? combinedTrip.cccdchuyendi ?? combinedTrip.cccd;
+    const travelerCccd = !isInternalId(directTripCccd) ? String(directTripCccd).trim() : '';
     
     tripObj.cccdchuyendi = travelerCccd;
     tripObj.cccd_chuyen_di = travelerCccd;
@@ -793,7 +791,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       
       const groupLines = [];
       (grp.columns || []).forEach((col) => {
-        if (!col.id || col.id === 'stt') return;
+        if (!col.id || col.id === 'stt' || col.includeInExport === false) return;
         if (selFields && Array.isArray(selFields) && !selFields.includes(col.id)) return;
         let label = col.label || col.id;
         if (showColNumbers && !label.includes('(')) label = `${label}${pfx()}`;
@@ -829,7 +827,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       if (relGroups.length > 0) {
         relGroups.forEach((rGrp) => {
           (rGrp.columns || []).forEach((col) => {
-            if (!col.id || col.id === 'stt') return;
+            if (!col.id || col.id === 'stt' || col.includeInExport === false) return;
             if (selRelFields && Array.isArray(selRelFields) && !selRelFields.includes(col.id)) return;
             
             let label = col.label || col.id;
@@ -883,7 +881,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       if (tripGroups.length > 0) {
         tripGroups.forEach((tGrp) => {
           (tGrp.columns || []).forEach((col) => {
-            if (!col.id || col.id === 'stt') return;
+            if (!col.id || col.id === 'stt' || col.includeInExport === false) return;
             if (selTripFields && Array.isArray(selTripFields) && !selTripFields.includes(col.id)) return;
 
             let label = col.label || col.id;
@@ -1420,7 +1418,7 @@ export async function createDynamicDocxTemplateBlob(
   // Bổ sung các cột khác của Bảng Cán bộ phẳng hoàn toàn
   (personnelGroups || []).forEach((grp) => {
     (grp.columns || []).forEach((col) => {
-      if (!col.id || col.id === 'stt' || processedFieldIds.has(col.id)) return;
+      if (!col.id || col.id === 'stt' || col.includeInExport === false || processedFieldIds.has(col.id)) return;
       if (selectedFieldIds && Array.isArray(selectedFieldIds) && !selectedFieldIds.includes(col.id)) return;
       processedFieldIds.add(col.id);
 
@@ -1468,7 +1466,7 @@ export async function createDynamicDocxTemplateBlob(
     const activeRelCols = [];
     (relativeGroups || []).forEach((rGrp) => {
       (rGrp.columns || []).forEach((col) => {
-        if (col.id && col.id !== 'stt' && !activeRelCols.some((x) => x.id === col.id)) {
+        if (col.id && col.id !== 'stt' && col.includeInExport !== false && !activeRelCols.some((x) => x.id === col.id)) {
           if (!selectedRelativeFieldIds || selectedRelativeFieldIds.includes(col.id)) {
             activeRelCols.push(col);
           }
@@ -1517,7 +1515,7 @@ export async function createDynamicDocxTemplateBlob(
     const activeTripCols = [];
     (tripsGroups || []).forEach((tGrp) => {
       (tGrp.columns || []).forEach((col) => {
-        if (col.id && col.id !== 'stt' && !activeTripCols.some((x) => x.id === col.id)) {
+        if (col.id && col.id !== 'stt' && col.includeInExport !== false && !activeTripCols.some((x) => x.id === col.id)) {
           if (!selectedTripFieldIds || selectedTripFieldIds.includes(col.id)) {
             activeTripCols.push(col);
           }
@@ -1562,7 +1560,7 @@ export async function createDynamicDocxTemplateBlob(
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="047857"/></w:rPr><w:t>▶ Bản ghi #{stt}</w:t></w:r></w:p>
     `;
 
-    const activeCols = (ct.columns || []).filter((col) => ct.selectedFieldIds.includes(col.id));
+    const activeCols = (ct.columns || []).filter((col) => ct.selectedFieldIds.includes(col.id) && col.includeInExport !== false);
     activeCols.forEach((col) => {
       const colLabel = escapeXml(col.label || col.id);
       const colId = escapeXml(col.id);

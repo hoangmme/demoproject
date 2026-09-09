@@ -656,7 +656,23 @@
           </div>
         </div>
 
-        <!-- 1b. CỘT GOM NHÓM (KHI CHỌN BIỂU ĐỒ) -->
+        <!-- 1b. CHỌN CHẾ ĐỘ XEM (VIEW) ÁP DỤNG THỨ TỰ CỘT -->
+        <div class="field-item" style="background: #f0fdf4; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #86efac; display: flex; flex-direction: column; gap: 6px;">
+          <label class="field-label" style="font-weight: 700; color: #166534; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 0;">
+            <i class="pi pi-sliders-h" style="color: #16a34a; font-size: 1rem;"></i>
+            Áp dụng thứ tự cột theo Chế độ xem (View): <span style="color: #ef4444;">*</span>
+          </label>
+          <select v-model="widgetForm.viewId" class="settings-select" style="width: 100%; font-weight: 700; color: #166534; background: #ffffff; border: 1px solid #86efac; padding: 6px 10px; font-size: 0.82rem;">
+            <option v-for="v in availableViewsForWidgetSource" :key="v.id" :value="v.id">
+              👁️ {{ v.label }}
+            </option>
+          </select>
+          <span style="font-size: 0.74rem; color: #15803d; line-height: 1.35;">
+            💡 <strong>Tự động áp dụng cột:</strong> Khi mở popup chi tiết của khối thống kê này, bảng sẽ tự động hiển thị danh sách và thứ tự cột theo Chế độ xem đã chọn.
+          </span>
+        </div>
+
+        <!-- 1c. CỘT GOM NHÓM (KHI CHỌN BIỂU ĐỒ) -->
         <div v-if="widgetForm.displayType !== 'count'" class="field-item" style="background: #eff6ff; padding: 10px 12px; border-radius: 8px; border: 1px solid #bfdbfe; display: flex; flex-direction: column; gap: 10px;">
           <div>
             <label class="field-label" style="font-weight: 700; color: #1e40af;">
@@ -694,23 +710,6 @@
               💡 Khi chọn thêm cột này (VD: Đối tượng 'isRelative' → Cán bộ / Thân nhân, hoặc Trạng thái, Phòng ban...), mỗi cột sẽ được chia thành nhiều đoạn màu xếp chồng (Stacked Bar) kèm chú giải màu. Bấm vào màu nào sẽ mở danh sách chi tiết của riêng loại đó.
             </span>
           </div>
-        </div>
-
-        <!-- 1c. CHỌN VIEW ĐỂ ÁP DỤNG THỨ TỰ CỘT -->
-        <div class="field-item" style="background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-          <label class="field-label" style="font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
-            <i class="pi pi-sliders-h" style="color: #2563eb;"></i>
-            Áp dụng thứ tự cột chi tiết theo Chế độ xem (View):
-          </label>
-          <select v-model="widgetForm.viewId" class="settings-select" style="width: 100%; font-weight: 600;">
-            <option value="all">-- Mặc định (Toàn bộ / Tất cả cột) --</option>
-            <option v-for="v in availableViewsForWidgetSource" :key="v.id" :value="v.id">
-              {{ v.label }}
-            </option>
-          </select>
-          <span style="font-size: 0.72rem; color: #64748b; margin-top: 3px; display: block;">
-            💡 Khi mở popup chi tiết của khối thống kê này, bảng sẽ tự động áp dụng danh sách và thứ tự cột theo Chế độ xem đã chọn.
-          </span>
         </div>
 
         <!-- 2. BỘ LỌC ĐIỀU KIỆN (QUERY CRITERIA BUILDER - GIỐNG HỆT LỌC NÂNG CAO) -->
@@ -1592,13 +1591,20 @@ const drilldownAvailableViews = computed(() => {
   const tid = drilldownWidget.value?.topicId || drilldownSourceType.value || 'trips';
   const allDashboards = ensureStandardDashboards(availableTopicDashboards.value);
   const topic = allDashboards.find((t) => t.id === tid);
+  const views = [];
   if (topic && Array.isArray(topic.metricCards) && topic.metricCards.length > 0) {
-    return topic.metricCards.map((c) => ({
-      id: c.id || 'all',
-      label: c.label || c.title || 'Mặc định',
-    }));
+    topic.metricCards.forEach((c, idx) => {
+      const cId = c.id || (idx === 0 ? 'all' : `card_${idx}`);
+      views.push({
+        id: cId,
+        label: c.label || c.title || (idx === 0 ? 'Toàn bộ (Mặc định)' : `Chế độ xem ${idx}`),
+      });
+    });
   }
-  return [{ id: 'all', label: 'Toàn bộ' }];
+  if (views.length === 0) {
+    views.push({ id: 'all', label: 'Toàn bộ (Mặc định)' });
+  }
+  return views;
 });
 
 const getSetupColumnIdsForTable = (tableId, cardId = null) => {
@@ -3728,13 +3734,20 @@ const availableViewsForWidgetSource = computed(() => {
   const source = widgetForm.value.source || 'trips';
   const allDashboards = ensureStandardDashboards(availableTopicDashboards.value);
   const topic = allDashboards.find((t) => t.id === source);
+  const views = [];
   if (topic && Array.isArray(topic.metricCards) && topic.metricCards.length > 0) {
-    return topic.metricCards.map((c) => ({
-      id: c.id || 'all',
-      label: c.label || c.title || 'Mặc định',
-    }));
+    topic.metricCards.forEach((c, idx) => {
+      const cId = c.id || (idx === 0 ? 'all' : `card_${idx}`);
+      views.push({
+        id: cId,
+        label: c.label || c.title || (idx === 0 ? 'Toàn bộ (Mặc định)' : `Chế độ xem ${idx}`),
+      });
+    });
   }
-  return [{ id: 'all', label: 'Toàn bộ' }];
+  if (views.length === 0) {
+    views.push({ id: 'all', label: 'Toàn bộ (Mặc định)' });
+  }
+  return views;
 });
 
 const allAvailableRelativeColumns = computed(() => {

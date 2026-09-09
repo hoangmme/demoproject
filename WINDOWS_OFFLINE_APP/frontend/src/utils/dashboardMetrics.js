@@ -5,6 +5,7 @@ import {
   resolveVirtualColumnValue,
   computeDepartBeforeDecision,
   evaluateFormula,
+  evaluateLookup,
 } from '@/utils/formatters';
 
 /**
@@ -218,7 +219,8 @@ export const buildTopicSourceList = (source, personnelStore) => {
     pTrips.forEach((t) => {
       rawTripsPool.push({
         ...t,
-        _fallbackPerson: p,
+        isRelative: false,
+        personnelId: p.id,
       });
     });
 
@@ -233,8 +235,8 @@ export const buildTopicSourceList = (source, personnelStore) => {
         rawTripsPool.push({
           ...rt,
           isRelative: true,
-          _fallbackRelative: r,
-          _fallbackPerson: p,
+          personnelId: p.id,
+          relativeId: r.id,
         });
       });
     });
@@ -280,32 +282,41 @@ export const buildTopicSourceList = (source, personnelStore) => {
         const parentKey = String(matchedRelative.cccdparent || matchedRelative.parentCccd || '').trim().toLowerCase();
         if (parentKey && personnelByKey.has(parentKey)) {
           matchedPerson = personnelByKey.get(parentKey);
+        } else if (matchedRelative.personnelId && personnelByKey.has(String(matchedRelative.personnelId).trim().toLowerCase())) {
+          matchedPerson = personnelByKey.get(String(matchedRelative.personnelId).trim().toLowerCase());
         } else if (matchedRelative.rawPerson) {
           matchedPerson = matchedRelative.rawPerson;
         }
       }
     }
 
-    // Fallback nếu không có khóa nhưng có dữ liệu gắn sẵn từ trước
-    if (!matchedPerson && t._fallbackPerson) matchedPerson = t._fallbackPerson;
+    if (!matchedPerson && t.personnelId) {
+      const pid = String(t.personnelId).trim().toLowerCase();
+      if (personnelByKey.has(pid)) matchedPerson = personnelByKey.get(pid);
+      else if (personnelStore?.personnelList) matchedPerson = personnelStore.personnelList.find(p => String(p.id).trim() === String(t.personnelId).trim());
+    }
+
+    if (!matchedRelative && t.relativeId) {
+      const rid = String(t.relativeId).trim().toLowerCase();
+      if (relativeByKey.has(rid)) matchedRelative = relativeByKey.get(rid);
+      else if (personnelStore?.relativesList) matchedRelative = personnelStore.relativesList.find(r => String(r.id).trim() === String(t.relativeId).trim());
+    }
+
+    if (!matchedPerson && matchedRelative) {
+      if (matchedRelative.personnelId) {
+        const mpid = String(matchedRelative.personnelId).trim().toLowerCase();
+        if (personnelByKey.has(mpid)) matchedPerson = personnelByKey.get(mpid);
+        else if (personnelStore?.personnelList) matchedPerson = personnelStore.personnelList.find(p => String(p.id).trim() === String(matchedRelative.personnelId).trim());
+      } else if (matchedRelative.rawPerson) {
+        matchedPerson = matchedRelative.rawPerson;
+      }
+    }
+
     if (!matchedPerson && t.rawPerson) matchedPerson = t.rawPerson;
-    if (!matchedRelative && t._fallbackRelative) matchedRelative = t._fallbackRelative;
     if (!matchedRelative && t.rawRelative) matchedRelative = t.rawRelative;
 
     const presence = resolvePresence(t);
     const tripPrimaryKey = t.id || t.uniqueKey || t.code || `CD-${trips.length + 1}`;
-
-    const resolvedPersonnelName = isRel
-      ? (matchedRelative?.relativeName || matchedRelative?.name || t.relativeName || tCustom.relativeName || t.personnelName || 'Thân nhân')
-      : (matchedPerson?.name || t.personnelName || t.ho_va_ten || t.name || 'Chưa liên kết cán bộ');
-
-    const resolvedParentName = isRel
-      ? (matchedPerson?.name || matchedRelative?.parentName || t.parentName || t.parentPersonnelName || '')
-      : '';
-
-    const resolvedDepartmentName = matchedPerson
-      ? ((personnelStore.getDepartmentName && personnelStore.getDepartmentName(matchedPerson.departmentId)) || matchedPerson.departmentName || '')
-      : (t.departmentName || '');
 
     trips.push({
       ...tCustom,
@@ -314,14 +325,10 @@ export const buildTopicSourceList = (source, personnelStore) => {
       _primaryKey: tripPrimaryKey,
       uniqueKey: tripKey,
       isRelative: isRel,
-      personnelName: resolvedPersonnelName,
-      personnelCode: isRel ? (matchedRelative?.code || t.code || '') : (matchedPerson?.code || t.personnelCode || t.code || ''),
-      parentName: resolvedParentName,
-      parentPersonnelName: resolvedParentName,
-      parentPosition: isRel ? (matchedPerson?.positionName || matchedPerson?.position || '') : '',
-      departmentName: resolvedDepartmentName,
-      rawPerson: matchedPerson,
-      rawRelative: matchedRelative,
+      personnelId: t.personnelId || matchedPerson?.id || matchedRelative?.personnelId || '',
+      relativeId: t.relativeId || matchedRelative?.id || '',
+      rawPerson: matchedPerson || t.rawPerson || null,
+      rawRelative: matchedRelative || t.rawRelative || null,
       custom_data: tCustom,
       isAbroad: presence.isAbroad,
       isOverdue: presence.isOverdue,
@@ -510,8 +517,8 @@ export const checkConditionMatch = (val, op, target) => {
 /**
  * Trích xuất giá trị trường của bản ghi an toàn
  */
-export const extractRowFieldValue = (item, field, personnelStore) => {
-  if (!item || !field) return '';
+export const extractRowFieldValue = (item, field, personnelStore, depth = 0) => {
+  if (!item || !field || depth > 5) return '';
 
   // 1. Virtual columns
   const virt = resolveVirtualColumnValue(item, field);
@@ -524,7 +531,7 @@ export const extractRowFieldValue = (item, field, personnelStore) => {
     return item.isRelative ? 'Thân nhân' : 'Cán bộ';
   }
 
-  // 2. Nếu là formula column trong bất kỳ mapping nào (Personnel, Relative, Trips)
+  // 2. Nếu là lookup hoặc formula column trong bất kỳ mapping nào (Personnel, Relative, Trips)
   if (personnelStore) {
     const allColDefs = [
       ...(personnelStore.importMappingPersonnel || []),
@@ -532,12 +539,32 @@ export const extractRowFieldValue = (item, field, personnelStore) => {
       ...(personnelStore.importMappingTrips || []),
     ].flatMap((g) => g.columns || []);
     const colDef = allColDefs.find((c) => c && c.id === field);
+
+    if (colDef && colDef.format === 'lookup') {
+      const lkVal = evaluateLookup(item, colDef, personnelStore);
+      return lkVal !== '-' ? lkVal : '';
+    }
+
     if (colDef && colDef.format === 'formula') {
       if (colDef.formulaType === 'presence_status') {
         const p = resolvePresence(item);
         return p.shortLabel || p.label || '';
       }
-      const res = evaluateFormula(item, colDef);
+      const configWithResolver = {
+        ...colDef,
+        columns: allColDefs,
+        cellResolver: (targetColId) => {
+          if (!targetColId || targetColId === field || depth > 5) return '';
+          const targetCol = allColDefs.find((c) => c && (c.id === targetColId || c.label === targetColId));
+          if (targetCol && targetCol.format === 'lookup') {
+            const lkVal = evaluateLookup(item, targetCol, personnelStore);
+            return lkVal !== '-' ? lkVal : '';
+          }
+          const val = extractRowFieldValue(item, targetCol?.id || targetColId, personnelStore, depth + 1);
+          return val !== '-' ? val : '';
+        },
+      };
+      const res = evaluateFormula(item, configWithResolver);
       return res?.label || res?.shortLabel || (res?.count !== undefined ? `${res.count} lần` : '');
     }
   }
@@ -555,40 +582,6 @@ export const extractRowFieldValue = (item, field, personnelStore) => {
       }
     }
   }
-
-  // 4. Kiểm tra trên rawPerson (nếu bản ghi là Thân nhân / Chuyến đi gọi trường của Cán bộ)
-  if ((val === undefined || val === null || val === '') && item.rawPerson) {
-    val = item.rawPerson[field];
-    if (val === undefined || val === null || val === '') {
-      let pcd = item.rawPerson.custom_data;
-      if (typeof pcd === 'string') { try { pcd = JSON.parse(pcd); } catch (e) {} }
-      if (pcd && typeof pcd === 'object') val = pcd[field];
-    }
-  }
-
-  // 5. Kiểm tra trên activeTrip / rawTrip (nếu bản ghi là Thân nhân / Cán bộ gọi trường của Chuyến đi)
-  if (val === undefined || val === null || val === '') {
-    const t = item.activeTrip || item.rawTrip;
-    if (t) {
-      val = t[field];
-      if (val === undefined || val === null || val === '') {
-        let tcd = t.custom_data;
-        if (typeof tcd === 'string') { try { tcd = JSON.parse(tcd); } catch (e) {} }
-        if (tcd && typeof tcd === 'object') val = tcd[field];
-      }
-    }
-  }
-
-  // 6. Kiểm tra trên rawRelative (nếu bản ghi Chuyến đi gọi trường của Thân nhân)
-  if ((val === undefined || val === null || val === '') && item.rawRelative) {
-    val = item.rawRelative[field];
-    if (val === undefined || val === null || val === '') {
-      let rcd = item.rawRelative.custom_data;
-      if (typeof rcd === 'string') { try { rcd = JSON.parse(rcd); } catch (e) {} }
-      if (rcd && typeof rcd === 'object') val = rcd[field];
-    }
-  }
-
   return val !== undefined && val !== null ? val : '';
 };
 

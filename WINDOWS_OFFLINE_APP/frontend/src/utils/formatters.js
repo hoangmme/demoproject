@@ -226,20 +226,6 @@ export const getRecordFieldValue = (row, colId) => {
     try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
   }
   if (cd && typeof cd === 'object' && cd[colId] !== undefined && cd[colId] !== null && cd[colId] !== '') return cd[colId];
-  // 3. In rawTrip / rawPerson
-  if (row.rawTrip && row.rawTrip[colId] !== undefined && row.rawTrip[colId] !== null && row.rawTrip[colId] !== '') return row.rawTrip[colId];
-  if (row.rawPerson && row.rawPerson[colId] !== undefined && row.rawPerson[colId] !== null && row.rawPerson[colId] !== '') return row.rawPerson[colId];
-  // 4. In rawTrip.custom_data / rawPerson.custom_data
-  let rtcd = row.rawTrip?.custom_data;
-  if (typeof rtcd === 'string') {
-    try { rtcd = JSON.parse(rtcd); } catch (e) { rtcd = {}; }
-  }
-  if (rtcd && typeof rtcd === 'object' && rtcd[colId] !== undefined && rtcd[colId] !== null && rtcd[colId] !== '') return rtcd[colId];
-  let rpcd = row.rawPerson?.custom_data;
-  if (typeof rpcd === 'string') {
-    try { rpcd = JSON.parse(rpcd); } catch (e) { rpcd = {}; }
-  }
-  if (rpcd && typeof rpcd === 'object' && rpcd[colId] !== undefined && rpcd[colId] !== null && rpcd[colId] !== '') return rpcd[colId];
   return null;
 };
 
@@ -559,7 +545,12 @@ export const evaluateFormula = (record, formulaConfig = {}) => {
   const fType = formulaConfig.formulaType || 'presence_status';
 
   if (fType === 'custom_expression' || formulaConfig.formulaExpression) {
-    return evaluateCustomFormula(record, formulaConfig.formulaExpression, formulaConfig.columns || []);
+    return evaluateCustomFormula(
+      record,
+      formulaConfig.formulaExpression,
+      formulaConfig.columns || [],
+      formulaConfig.cellResolver || formulaConfig.fieldResolver
+    );
   }
 
   switch (fType) {
@@ -1049,10 +1040,10 @@ export const resolveVirtualColumnValue = (item, colId) => {
   if (colId === '_parentDepartment' || colId === 'parentDepartment') {
     return item.rawPerson?.departmentName || item.parentDepartment || (!item.isRelative ? (item.departmentName) : '') || '';
   }
-  if (colId === '_relativeName' || colId === 'relativeName') {
+  if (colId === '_relativeName') {
     return item.isRelative ? (item.relativeName || item.name || '') : '';
   }
-  if (colId === '_relationshipName' || colId === 'relationshipName') {
+  if (colId === '_relationshipName') {
     return item.isRelative ? (item.relationshipName || item.relationship || '') : '';
   }
   return undefined;
@@ -1342,51 +1333,89 @@ export const lookupOperators = [
  * @param {Object} col - Cấu hình cột lookup
  * @param {Object} personnelStore - Store dữ liệu cán bộ
  */
-export const evaluateLookup = (item, col, personnelStore) => {
-  if (!item || !col) return '-';
+export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
+  if (!item || !col || depth > 5) return '-';
   const target = col.lookupTarget || 'personnel';
   const field = col.lookupField;
   if (!field) return '-';
 
+  const findColumnDef = (colId) => {
+    if (!colId || !personnelStore) return null;
+    const allMappings = [
+      ...(personnelStore.importMappingPersonnel || []),
+      ...(personnelStore.importMappingRelative || []),
+      ...(personnelStore.importMappingTrips || []),
+    ];
+    for (const g of allMappings) {
+      const found = (g.columns || []).find((c) => c && (c.id === colId || c.label === colId));
+      if (found) return found;
+    }
+    return null;
+  };
+
   const getProp = (obj, key) => {
     if (!obj || !key) return undefined;
-    if (obj[key] !== undefined && obj[key] !== null) return obj[key];
+    if (obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim() !== '' && String(obj[key]).trim() !== '-') {
+      return obj[key];
+    }
     let cd = obj.custom_data;
     if (typeof cd === 'string') {
       try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
     }
-    return cd?.[key];
-  };
-
-  const isValEmpty = (v) => v === undefined || v === null || String(v).trim() === '' || String(v).trim() === '-';
-
-  const matchCondition = (candidate, cond) => {
-    if (!cond || !cond.targetField) return true;
-    const tVal = getProp(candidate, cond.targetField);
-    const op = cond.operator || 'is';
-
-    if (op === 'is_empty') return isValEmpty(tVal);
-    if (op === 'is_not_empty') return !isValEmpty(tVal);
-
-    const sVal = cond.sourceField ? getProp(item, cond.sourceField) : cond.value;
-    if (isValEmpty(tVal) && isValEmpty(sVal)) return op === 'is' || op === 'same_date' || op === 'num_eq';
-    if (isValEmpty(tVal) || isValEmpty(sVal)) {
-      return op === 'is_not' || op === 'does_not_contain';
+    if (cd?.[key] !== undefined && cd?.[key] !== null && String(cd[key]).trim() !== '' && String(cd[key]).trim() !== '-') {
+      return cd[key];
     }
 
-    const strT = String(tVal).trim().toLowerCase();
-    const strS = String(sVal).trim().toLowerCase();
+    // Hỗ trợ tham chiếu đa tầng (Lookup Chaining: A -> B -> C)
+    if (depth < 5) {
+      const colDef = findColumnDef(key);
+      if (colDef && colDef.id !== col.id) {
+        if (colDef.format === 'lookup') {
+          const lVal = evaluateLookup(obj, colDef, personnelStore, depth + 1);
+          if (lVal !== undefined && lVal !== null && lVal !== '-' && lVal !== '') return lVal;
+        } else if (colDef.format === 'formula') {
+          const res = evaluateFormula(obj, colDef);
+          const fVal = res?.label || res?.shortLabel || res;
+          if (fVal !== undefined && fVal !== null && fVal !== '-' && fVal !== '') return fVal;
+        } else if (colDef.format === 'rollup') {
+          const rVal = evaluateRollup(obj, colDef, personnelStore);
+          if (rVal !== undefined && rVal !== null && rVal !== '-' && rVal !== '') return rVal;
+        }
+      }
+    }
 
-    // 1. Chuỗi cơ bản
+    return obj[key] !== undefined ? obj[key] : (cd?.[key] !== undefined ? cd[key] : undefined);
+  };
+
+  const matchCondition = (cand, cond) => {
+    if (!cond || !cond.targetField) return true;
+    const op = cond.operator || 'is';
+    const targetVal = getProp(cand, cond.targetField);
+
+    if (op === 'is_empty') {
+      return targetVal === undefined || targetVal === null || String(targetVal).trim() === '' || String(targetVal).trim() === '-';
+    }
+    if (op === 'is_not_empty') {
+      return targetVal !== undefined && targetVal !== null && String(targetVal).trim() !== '' && String(targetVal).trim() !== '-';
+    }
+
+    const sourceVal = cond.sourceField ? getProp(item, cond.sourceField) : cond.value;
+    if (targetVal === undefined || sourceVal === undefined) return false;
+
+    const strT = String(targetVal).trim().toLowerCase();
+    const strS = String(sourceVal).trim().toLowerCase();
+
     if (op === 'is') return strT === strS;
     if (op === 'is_not') return strT !== strS;
     if (op === 'contains') return strT.includes(strS);
     if (op === 'does_not_contain') return !strT.includes(strS);
+    if (op === 'starts_with') return strT.startsWith(strS);
+    if (op === 'ends_with') return strT.endsWith(strS);
 
-    // 2. Ngày tháng (Date)
+    // Date/Number logic remains similar
     if (['before', 'after', 'on_or_before', 'on_or_after', 'same_date'].includes(op)) {
-      const dtT = parseDateValue(tVal);
-      const dtS = parseDateValue(sVal);
+      const dtT = parseDateValue(targetVal);
+      const dtS = parseDateValue(sourceVal);
       if (dtT && dtS) {
         const timeT = dtT.getTime();
         const timeS = dtS.getTime();
@@ -1402,10 +1431,9 @@ export const evaluateLookup = (item, col, personnelStore) => {
       }
     }
 
-    // 3. Số / Số ngày (Numeric / Days)
     if (['gt', 'gte', 'lt', 'lte', 'num_eq'].includes(op)) {
-      const numT = parseFloat(String(tVal).replace(/[^0-9.-]+/g, ''));
-      const numS = parseFloat(String(sVal).replace(/[^0-9.-]+/g, ''));
+      const numT = parseFloat(String(targetVal).replace(/[^0-9.-]+/g, ''));
+      const numS = parseFloat(String(sourceVal).replace(/[^0-9.-]+/g, ''));
       if (!isNaN(numT) && !isNaN(numS)) {
         if (op === 'gt') return numT > numS;
         if (op === 'gte') return numT >= numS;
@@ -1423,20 +1451,14 @@ export const evaluateLookup = (item, col, personnelStore) => {
   if (target === 'personnel') {
     if (personnelStore?.personnelList?.length) {
       candidatePool = personnelStore.personnelList;
-    } else if (item.rawPerson) {
-      candidatePool = [item.rawPerson];
     }
   } else if (target === 'relatives') {
     if (personnelStore?.relativesList?.length) {
       candidatePool = personnelStore.relativesList;
-    } else if (item.rawRelative) {
-      candidatePool = [item.rawRelative];
     }
   } else if (target === 'trips') {
     if (personnelStore?.tripsList?.length) {
       candidatePool = personnelStore.tripsList;
-    } else if (Array.isArray(item.trips) && item.trips.length > 0) {
-      candidatePool = item.trips;
     } else if (personnelStore?.personnelList) {
       candidatePool = personnelStore.personnelList.flatMap((p) => (Array.isArray(p.trips) ? p.trips : []));
     }
@@ -1472,17 +1494,101 @@ export const evaluateLookup = (item, col, personnelStore) => {
     return values.length > 0 ? String(values[0]) : '-';
   }
 
-  // 3. Fallback ngược về Khóa liên kết cũ (lookupLinkCol) - Đảm bảo 100% tương thích
+  // 3. Khóa liên kết (Flat Relational Lookup)
   if (target === 'personnel') {
-    let parent = item.rawPerson;
-    if (!parent && personnelStore) {
-      const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-      const linkCol = col.lookupLinkCol;
-      const parentKey = linkCol ? getProp(item, linkCol) : (item.cccdparent || item.parentCccd || item[pKeyField]);
-      if (parentKey) {
-        parent = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(parentKey) : null;
+    if (!personnelStore && !item.rawPerson) return '-';
+    let parent = item.rawPerson || null;
+    const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : null;
+    const tKeyField = personnelStore?.getTripKeyField ? personnelStore.getTripKeyField() : null;
+    const rKeyField = personnelStore?.getRelativeKeyField ? personnelStore.getRelativeKeyField() : null;
+
+    // 1. Cột liên kết do người dùng chỉ định (nếu có)
+    const linkCol = col.lookupLinkCol;
+    if (!parent && linkCol) {
+      const linkVal = getProp(item, linkCol);
+      if (linkVal) {
+        parent = (personnelStore?.personnelList || []).find((p) => {
+          const pk = pKeyField ? getProp(p, pKeyField) : null;
+          return (pk && String(pk).trim() === String(linkVal).trim()) || String(p.id).trim() === String(linkVal).trim() || String(p.code || '').trim() === String(linkVal).trim();
+        }) || null;
       }
     }
+
+    // 2. Liên kết bản ghi phẳng qua ID quan hệ (Record ID Join)
+    if (!parent && item.personnelId && personnelStore?.personnelList) {
+      parent = personnelStore.personnelList.find((p) => String(p.id).trim() === String(item.personnelId).trim());
+    }
+
+    // 2b. Nếu là bản ghi chuyến đi của thân nhân qua relativeId
+    if (!parent && item.relativeId && personnelStore?.relativesList) {
+      const matchedRel = personnelStore.relativesList.find((r) => String(r.id).trim() === String(item.relativeId).trim());
+      if (matchedRel) {
+        if (matchedRel.personnelId && personnelStore?.personnelList) {
+          parent = personnelStore.personnelList.find((p) => String(p.id).trim() === String(matchedRel.personnelId).trim());
+        }
+        if (!parent && pKeyField && personnelStore?.personnelList) {
+          const relPKey = getProp(matchedRel, pKeyField);
+          if (relPKey) {
+            parent = personnelStore.personnelList.find((p) => {
+              const pk = getProp(p, pKeyField);
+              return pk && String(pk).trim().toLowerCase() === String(relPKey).trim().toLowerCase();
+            });
+          }
+        }
+      }
+    }
+
+    // 3. Liên kết động qua Khóa định danh bảng (Dynamic Key Matching)
+    if (!parent && personnelStore?.personnelList) {
+      // 3a. Dòng mang trực tiếp khóa của Cán bộ
+      if (pKeyField) {
+        const itemPKey = getProp(item, pKeyField);
+        if (itemPKey) {
+          parent = personnelStore.personnelList.find((p) => {
+            const pk = getProp(p, pKeyField);
+            return pk && String(pk).trim().toLowerCase() === String(itemPKey).trim().toLowerCase();
+          });
+        }
+      }
+
+      // 3b. Dòng chuyến đi: Khóa chuyến đi khớp với Khóa Cán bộ (chuyến đi của Cán bộ)
+      if (!parent && tKeyField && pKeyField) {
+        const itemTKey = getProp(item, tKeyField);
+        if (itemTKey) {
+          parent = personnelStore.personnelList.find((p) => {
+            const pk = getProp(p, pKeyField);
+            return pk && String(pk).trim().toLowerCase() === String(itemTKey).trim().toLowerCase();
+          });
+        }
+      }
+
+      // 3c. Dòng chuyến đi của Thân nhân: Khóa chuyến đi khớp với Thân nhân -> Cán bộ chủ quản
+      if (!parent && tKeyField && rKeyField) {
+        const itemTKey = getProp(item, tKeyField);
+        if (itemTKey) {
+          // Tìm thân nhân mang khóa này từ danh sách phẳng
+          const relList = personnelStore.relativesList || [];
+          const matchedRel = relList.find((r) => {
+            const rk = getProp(r, rKeyField);
+            return rk && String(rk).trim().toLowerCase() === String(itemTKey).trim().toLowerCase();
+          });
+          if (matchedRel) {
+            if (matchedRel.personnelId) {
+              parent = personnelStore.personnelList.find((p) => String(p.id).trim() === String(matchedRel.personnelId).trim());
+            } else if (pKeyField) {
+              const relPKey = getProp(matchedRel, pKeyField);
+              if (relPKey) {
+                parent = personnelStore.personnelList.find((p) => {
+                  const pk = getProp(p, pKeyField);
+                  return pk && String(pk).trim().toLowerCase() === String(relPKey).trim().toLowerCase();
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
     if (parent) {
       const val = getProp(parent, field);
       return val !== undefined && val !== null && val !== '' ? String(val) : '-';
@@ -1491,17 +1597,23 @@ export const evaluateLookup = (item, col, personnelStore) => {
   }
 
   if (target === 'relatives') {
-    if (!personnelStore) return '-';
-    const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
-    const linkCol = col.lookupLinkCol;
-    const searchKey = linkCol ? getProp(item, linkCol) : (item.cccdthannhan || item[rKeyField] || item.cccd);
-    if (!searchKey) return '-';
+    if (!personnelStore && !item.rawRelative) return '-';
+    let rel = item.rawRelative || null;
+    const rKeyField = personnelStore?.getRelativeKeyField ? personnelStore.getRelativeKeyField() : null;
+    const tKeyField = personnelStore?.getTripKeyField ? personnelStore.getTripKeyField() : null;
 
-    const relativesList = personnelStore.relativesList || [];
-    const rel = relativesList.find((r) => {
-      const k = getProp(r, rKeyField) ?? r.cccdthannhan ?? r.cccd;
-      return String(k).trim() === String(searchKey).trim();
-    });
+    if (!rel && item.relativeId && personnelStore?.relativesList) {
+      rel = personnelStore.relativesList.find((r) => String(r.id).trim() === String(item.relativeId).trim());
+    }
+
+    const linkCol = col.lookupLinkCol;
+    const searchKey = linkCol ? getProp(item, linkCol) : (tKeyField ? getProp(item, tKeyField) : (rKeyField ? getProp(item, rKeyField) : null));
+    if (!rel && searchKey && rKeyField && personnelStore?.relativesList) {
+      rel = personnelStore.relativesList.find((r) => {
+        const k = getProp(r, rKeyField);
+        return k && String(k).trim().toLowerCase() === String(searchKey).trim().toLowerCase();
+      });
+    }
 
     if (rel) {
       const val = getProp(rel, field);
@@ -1512,28 +1624,23 @@ export const evaluateLookup = (item, col, personnelStore) => {
 
   if (target === 'trips') {
     if (!personnelStore) return '-';
-    const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
+    const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : null;
     const linkCol = col.lookupLinkCol;
-    const searchKey = linkCol ? getProp(item, linkCol) : (item.cccdchuyendi || item[tKeyField] || item.id);
+    const searchKey = linkCol ? getProp(item, linkCol) : (tKeyField ? getProp(item, tKeyField) : item.id);
     if (!searchKey) return '-';
 
     let targetTrip = null;
     if (Array.isArray(item.trips)) {
       targetTrip = item.trips.find((t) => {
-        const k = getProp(t, tKeyField) ?? t.id;
-        return String(k).trim() === String(searchKey).trim();
+        const k = tKeyField ? getProp(t, tKeyField) : t.id;
+        return k && String(k).trim().toLowerCase() === String(searchKey).trim().toLowerCase();
       });
     }
-    if (!targetTrip && personnelStore.personnelList) {
-      for (const p of personnelStore.personnelList) {
-        if (p.trips && Array.isArray(p.trips)) {
-          targetTrip = p.trips.find((t) => {
-            const k = getProp(t, tKeyField) ?? t.id;
-            return String(k).trim() === String(searchKey).trim();
-          });
-          if (targetTrip) break;
-        }
-      }
+    if (!targetTrip && personnelStore.tripsList) {
+      targetTrip = personnelStore.tripsList.find((t) => {
+        const k = tKeyField ? getProp(t, tKeyField) : t.id;
+        return k && String(k).trim().toLowerCase() === String(searchKey).trim().toLowerCase();
+      });
     }
     if (targetTrip) {
       const val = getProp(targetTrip, field);
@@ -1547,7 +1654,8 @@ export const evaluateLookup = (item, col, personnelStore) => {
 
 /**
  * Đánh giá giá trị cột Tính toán tổng hợp (Rollup)
- * @param {Object} item - Bản ghi hiện tại (cán bộ...)
+ * Chuẩn hóa 100% Flat Relational Engine - Không hardcode khóa định danh
+ * @param {Object} item - Bản ghi hiện tại (cán bộ, thân nhân...)
  * @param {Object} col - Cấu hình cột rollup
  * @param {Object} personnelStore - Store dữ liệu cán bộ
  */
@@ -1557,30 +1665,96 @@ export const evaluateRollup = (item, col, personnelStore) => {
   const field = col.rollupField;
   const fn = col.rollupFunction || 'count';
 
+  const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : null;
+  const rKeyField = personnelStore?.getRelativeKeyField ? personnelStore.getRelativeKeyField() : null;
+  const tKeyField = personnelStore?.getTripKeyField ? personnelStore.getTripKeyField() : null;
+
+  const getSubProp = (sub, key) => {
+    if (!sub || !key) return undefined;
+    if (sub[key] !== undefined && sub[key] !== null && String(sub[key]).trim() !== '' && String(sub[key]).trim() !== '-') {
+      return sub[key];
+    }
+    let cd = sub.custom_data;
+    if (typeof cd === 'string') {
+      try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+    }
+    if (cd?.[key] !== undefined && cd?.[key] !== null && String(cd[key]).trim() !== '' && String(cd[key]).trim() !== '-') {
+      return cd[key];
+    }
+    return undefined;
+  };
+
   let list = [];
-  if (target === 'trips') {
-    list = item.trips || item.rawPerson?.trips || [];
-  } else if (target === 'relatives') {
-    if (Array.isArray(item.relatives)) {
+
+  // Nguồn 1: Bảng Chuyến đi (Toàn bộ Chuyến đi phẳng - Flat Trips Engine)
+  if (target === 'trips' || target === 'relative_trips') {
+    if (personnelStore?.tripsList) {
+      list = personnelStore.tripsList.filter((t) => {
+        if (item.id && t.personnelId && String(t.personnelId).trim() === String(item.id).trim()) return true;
+        if (item.id && t.relativeId && String(t.relativeId).trim() === String(item.id).trim()) return true;
+        if (pKeyField && tKeyField) {
+          const pKey = getSubProp(item, pKeyField);
+          const tKey = getSubProp(t, tKeyField);
+          if (pKey && tKey && String(pKey).trim() === String(tKey).trim()) return true;
+        }
+        if (rKeyField && tKeyField) {
+          const rKey = getSubProp(item, rKeyField);
+          const tKey = getSubProp(t, tKeyField);
+          if (rKey && tKey && String(rKey).trim() === String(tKey).trim()) return true;
+        }
+        return false;
+      });
+    } else if (Array.isArray(item.trips)) {
+      list = item.trips;
+    }
+  }
+  // Nguồn 3: Thân nhân
+  else if (target === 'relatives') {
+    if (personnelStore?.relativesList) {
+      list = personnelStore.relativesList.filter((r) => {
+        if (item.id && r.personnelId && r.personnelId === item.id) return true;
+        if (pKeyField) {
+          const pKey = getSubProp(item, pKeyField);
+          const rParentKey = getSubProp(r, pKeyField);
+          if (pKey && rParentKey && String(pKey).trim() === String(rParentKey).trim()) return true;
+        }
+        return false;
+      });
+    } else if (Array.isArray(item.relatives)) {
       list = item.relatives;
-    } else if (personnelStore) {
-      const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-      const keyVal = item[pKeyField] || item.cccd || item.cccdparent;
-      list = (personnelStore.relativesList || []).filter(
-        (r) => (r.cccdparent || r.parentCccd) === keyVal
-      );
+    }
+  }
+  // Nguồn 4: Cán bộ
+  else if (target === 'personnel') {
+    if (personnelStore?.personnelList) {
+      list = personnelStore.personnelList.filter((p) => {
+        if (item.personnelId && p.id === item.personnelId) return true;
+        if (pKeyField) {
+          const pKey = getSubProp(p, pKeyField);
+          const itemParentKey = getSubProp(item, pKeyField);
+          if (pKey && itemParentKey && String(pKey).trim() === String(itemParentKey).trim()) return true;
+        }
+        return false;
+      });
     }
   }
 
   if (!Array.isArray(list)) list = [];
 
   if (fn === 'count') {
+    if (field) {
+      const valid = list.filter((sub) => {
+        const val = getSubProp(sub, field);
+        return val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-';
+      });
+      return valid.length;
+    }
     return list.length;
   }
 
   if (fn === 'sum') {
     const sum = list.reduce((acc, sub) => {
-      const val = Number(sub[field] !== undefined ? sub[field] : sub.custom_data?.[field] ?? 0);
+      const val = Number(getSubProp(sub, field) ?? 0);
       return acc + (isNaN(val) ? 0 : val);
     }, 0);
     return sum;
@@ -1588,8 +1762,8 @@ export const evaluateRollup = (item, col, personnelStore) => {
 
   if (fn === 'join') {
     const values = list
-      .map((sub) => (sub[field] !== undefined ? sub[field] : sub.custom_data?.[field]))
-      .filter((v) => v !== undefined && v !== null && v !== '')
+      .map((sub) => getSubProp(sub, field))
+      .filter((v) => v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-')
       .map((v) => String(v).trim());
     return values.length > 0 ? Array.from(new Set(values)).join(', ') : '-';
   }
@@ -1597,7 +1771,7 @@ export const evaluateRollup = (item, col, personnelStore) => {
   if (fn === 'latest') {
     if (list.length === 0) return '-';
     const lastItem = list[list.length - 1];
-    const val = lastItem[field] !== undefined ? lastItem[field] : lastItem.custom_data?.[field];
+    const val = getSubProp(lastItem, field);
     return val !== undefined && val !== null && val !== '' ? String(val) : '-';
   }
 

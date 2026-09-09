@@ -3,7 +3,7 @@
     v-model:visible="visible"
     modal
     :header="mode === 'edit' ? `✏️ Chỉnh sửa Chế độ xem: ${form.label || ''}` : `➕ Thêm Chế độ xem (View) Mới - ${tableTitle || 'Bảng dữ liệu'}`"
-    :style="{ width: '560px', maxWidth: '95vw' }"
+    :style="{ width: '660px', maxWidth: '95vw' }"
     :closable="true"
     @hide="onClose"
   >
@@ -77,7 +77,7 @@
 
         <!-- Danh sách điều kiện -->
         <div v-if="form.conditions.length === 0" style="padding: 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; color: #64748b; font-size: 0.76rem;">
-          Chưa đặt điều kiện nào. Chế độ xem này sẽ hiển thị <strong>toàn bộ bản ghi</strong> của bảng.
+          Chưa đặt điều kiện nào. Chế độ xem này sẽ hiển thị <strong>toàn bộ kết quả</strong> của bảng.
         </div>
 
         <div v-else style="display: flex; flex-direction: column; gap: 8px;">
@@ -196,6 +196,101 @@
           </button>
         </div>
       </div>
+
+      <!-- TÙY CHỌN CỘT HIỂN THỊ RIÊNG CHO CHẾ ĐỘ XEM (VIEW) NÀY -->
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-sliders-h" style="color: #7c3aed; font-size: 0.85rem;"></i>
+            <span>Tùy chọn Cột riêng cho View này:</span>
+          </label>
+          <span style="font-size: 0.72rem; color: #0284c7; font-weight: 700; background: #eff6ff; padding: 2px 8px; border-radius: 9999px; border: 1px solid #bfdbfe;">
+            Đã chọn: {{ form.columns.length }} / {{ availableColumns.length }} cột
+          </span>
+        </div>
+
+        <div style="font-size: 0.72rem; color: #64748b; line-height: 1.35;">
+          Tùy chỉnh danh sách và thứ tự các cột hiển thị riêng biệt cho chế độ xem này. Bạn có thể kéo thả hoặc dùng nút mũi tên để sắp xếp thứ tự cột.
+        </div>
+
+        <!-- Toolbar tìm kiếm & Thao tác nhanh -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #f8fafc; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 6px; flex-wrap: wrap;">
+          <div style="position: relative; flex: 1; min-width: 180px;">
+            <i class="pi pi-search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #94a3b8;"></i>
+            <input
+              v-model="colSearchQuery"
+              type="text"
+              placeholder="Tìm kiếm cột..."
+              style="width: 100%; height: 28px; padding: 2px 8px 2px 26px; font-size: 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; outline: none;"
+            />
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem;">
+            <button type="button" @click="selectAllCols" style="background: none; border: none; color: #0284c7; font-weight: 600; cursor: pointer; padding: 0;">Chọn tất cả</button>
+            <span style="color: #cbd5e1;">|</span>
+            <button type="button" @click="deselectAllCols" style="background: none; border: none; color: #ef4444; font-weight: 600; cursor: pointer; padding: 0;">Bỏ chọn</button>
+            <span style="color: #cbd5e1;">|</span>
+            <button type="button" @click="resetDefaultCols" style="background: none; border: none; color: #64748b; font-weight: 600; cursor: pointer; padding: 0;">Thứ tự gốc</button>
+          </div>
+        </div>
+
+        <!-- Danh sách Cột -->
+        <div style="max-height: 240px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px;">
+          <div v-if="filteredDisplayColumns.length === 0" style="padding: 16px; text-align: center; color: #94a3b8; font-size: 0.75rem;">
+            Không tìm thấy cột phù hợp.
+          </div>
+          <div
+            v-for="(c, cIdx) in filteredDisplayColumns"
+            :key="c.id"
+            style="display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: 5px; transition: background 0.15s ease; border-bottom: 1px solid #f8fafc;"
+            :style="{ background: isColSelected(c.id) ? '#f0fdf4' : '#ffffff' }"
+          >
+            <!-- Checkbox & Tên Cột -->
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; user-select: none; margin: 0;">
+              <input
+                type="checkbox"
+                :checked="isColSelected(c.id)"
+                @change="toggleCol(c.id)"
+                style="cursor: pointer; margin: 0; width: 15px; height: 15px;"
+              />
+              <span style="font-size: 0.78rem; font-weight: 600;" :style="{ color: isColSelected(c.id) ? '#166534' : '#475569' }">
+                {{ c.label || c.id }}
+              </span>
+              <span v-if="c.isVirtual" style="font-size: 0.65rem; color: #7c3aed; background: #f3e8ff; padding: 1px 5px; border-radius: 4px; font-weight: 600;">Ảo</span>
+              <span v-else-if="c.format === 'formula'" style="font-size: 0.65rem; color: #0284c7; background: #e0f2fe; padding: 1px 5px; border-radius: 4px; font-weight: 600;">Công thức</span>
+              <span v-else-if="c.format === 'lookup'" style="font-size: 0.65rem; color: #ea580c; background: #ffedd5; padding: 1px 5px; border-radius: 4px; font-weight: 600;">Lookup</span>
+              <span v-else-if="c.format === 'rollup'" style="font-size: 0.65rem; color: #059669; background: #d1fae5; padding: 1px 5px; border-radius: 4px; font-weight: 600;">Rollup</span>
+            </label>
+
+            <!-- Thứ tự & Nút Dời vị trí nếu cột được chọn -->
+            <div v-if="isColSelected(c.id)" style="display: flex; align-items: center; gap: 4px;">
+              <span style="font-size: 0.68rem; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 1px 6px; border-radius: 4px; min-width: 24px; text-align: center;">
+                #{{ getColOrderIndex(c.id) + 1 }}
+              </span>
+              <button
+                type="button"
+                :disabled="getColOrderIndex(c.id) === 0"
+                @click.stop="moveCol(c.id, -1)"
+                title="Dời lên trên"
+                style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 5px; cursor: pointer; color: #475569; font-size: 0.65rem;"
+                :style="{ opacity: getColOrderIndex(c.id) === 0 ? 0.4 : 1, cursor: getColOrderIndex(c.id) === 0 ? 'not-allowed' : 'pointer' }"
+              >
+                <i class="pi pi-arrow-up"></i>
+              </button>
+              <button
+                type="button"
+                :disabled="getColOrderIndex(c.id) === form.columns.length - 1"
+                @click.stop="moveCol(c.id, 1)"
+                title="Dời xuống dưới"
+                style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 5px; cursor: pointer; color: #475569; font-size: 0.65rem;"
+                :style="{ opacity: getColOrderIndex(c.id) === form.columns.length - 1 ? 0.4 : 1, cursor: getColOrderIndex(c.id) === form.columns.length - 1 ? 'not-allowed' : 'pointer' }"
+              >
+                <i class="pi pi-arrow-down"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <template #footer>
@@ -284,10 +379,75 @@ const form = ref({
   color: 'blue',
   logicOp: 'AND',
   conditions: [],
+  columns: [],
 });
 
+const colSearchQuery = ref('');
+
 const availableColumns = computed(() => {
-  return (props.columns || []).filter((c) => c && c.id && c.id !== 'stt');
+  return (props.columns || []).filter((c) => c && c.id && c.id !== 'stt' && c.id !== 'status' && c.id !== 'tripStatus' && c.id !== '_primaryKey');
+});
+
+const isColSelected = (colId) => {
+  return form.value.columns.includes(colId);
+};
+
+const getColOrderIndex = (colId) => {
+  return form.value.columns.indexOf(colId);
+};
+
+const toggleCol = (colId) => {
+  const idx = form.value.columns.indexOf(colId);
+  if (idx !== -1) {
+    form.value.columns.splice(idx, 1);
+  } else {
+    form.value.columns.push(colId);
+  }
+};
+
+const moveCol = (colId, direction) => {
+  const idx = form.value.columns.indexOf(colId);
+  if (idx === -1) return;
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= form.value.columns.length) return;
+  const item = form.value.columns.splice(idx, 1)[0];
+  form.value.columns.splice(newIdx, 0, item);
+};
+
+const selectAllCols = () => {
+  const allIds = availableColumns.value.map((c) => c.id);
+  form.value.columns = [...allIds];
+};
+
+const deselectAllCols = () => {
+  form.value.columns = [];
+};
+
+const resetDefaultCols = () => {
+  const allIds = availableColumns.value.map((c) => c.id);
+  form.value.columns = [...allIds];
+};
+
+const filteredDisplayColumns = computed(() => {
+  const q = colSearchQuery.value.trim().toLowerCase();
+  const all = [...availableColumns.value];
+
+  // Sắp xếp: các cột được chọn lên trước theo đúng thứ tự form.columns, sau đó là các cột chưa chọn
+  all.sort((a, b) => {
+    const idxA = form.value.columns.indexOf(a.id);
+    const idxB = form.value.columns.indexOf(b.id);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return 0;
+  });
+
+  if (!q) return all;
+  return all.filter((c) => {
+    const label = (c.label || c.id || '').toLowerCase();
+    const id = (c.id || '').toLowerCase();
+    return label.includes(q) || id.includes(q);
+  });
 });
 
 const getFieldOptions = (fieldId) => {
@@ -333,6 +493,7 @@ const removeCondition = (idx) => {
 };
 
 const resetForm = () => {
+  colSearchQuery.value = '';
   if (props.mode === 'edit' && props.viewData) {
     const d = props.viewData;
     let conds = [];
@@ -343,20 +504,37 @@ const resetForm = () => {
     } else if (d.field) {
       conds = [{ id: 'c_init', field: d.field, operator: d.operator || 'equals', value: d.value || '' }];
     }
+
+    let cols = [];
+    if (Array.isArray(d.columns) && d.columns.length > 0) {
+      cols = [...d.columns];
+    } else {
+      cols = availableColumns.value.map((c) => c.id);
+    }
+
     form.value = {
       id: d.id || ('view_' + Date.now()),
       label: d.label || '',
       color: d.color || 'blue',
       logicOp: d.logicOp || d.logicOperator || 'AND',
       conditions: conds,
+      columns: cols,
     };
   } else {
+    let initialCols = [];
+    if (props.viewData && Array.isArray(props.viewData.columns) && props.viewData.columns.length > 0) {
+      initialCols = [...props.viewData.columns];
+    } else {
+      initialCols = availableColumns.value.map((c) => c.id);
+    }
+
     form.value = {
       id: 'view_' + Date.now(),
       label: '',
       color: 'blue',
       logicOp: 'AND',
       conditions: [],
+      columns: initialCols,
     };
   }
 };
@@ -385,6 +563,7 @@ const handleSave = () => {
     color: form.value.color || 'blue',
     logicOp: form.value.logicOp || 'AND',
     conditions: activeConditions,
+    columns: [...form.value.columns],
   });
   visible.value = false;
 };

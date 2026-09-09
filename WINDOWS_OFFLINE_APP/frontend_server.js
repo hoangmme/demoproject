@@ -52,6 +52,11 @@ const server = http.createServer((req, res) => {
         res.end('500 Internal Server Error');
         return;
       }
+      if (ext === '.html') {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
       res.writeHead(200, { 'Content-Type': contentType });
       res.end(content);
     });

@@ -30,7 +30,7 @@
         <div>
           <Button
             v-if="isEdit && authStore.isAdmin"
-            label="Xóa bản ghi"
+            label="Xóa hồ sơ"
             icon="pi pi-trash"
             severity="danger"
             text
@@ -57,7 +57,7 @@
           />
           <Button label="Đóng" severity="secondary" text size="small" @click="visible = false" />
           <Button
-            label="Lưu bản ghi"
+            label="Lưu hồ sơ"
             icon="pi pi-check"
             severity="success"
             size="small"
@@ -132,13 +132,19 @@ const isEdit = computed(() => Boolean(form.value.id || form.value.uniqueKey));
 
 const allTableColumns = computed(() => {
   if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
-    return props.columns.filter((c) => !c.isVirtual && c.id !== 'stt');
+    return props.columns.filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
   }
-  // Mặc định lấy toàn bộ cột cấu hình của bảng Cán bộ
+  const allGroups = [
+    ...(personnelStore.importMappingPersonnel || []),
+    ...(personnelStore.importMappingRelative || []),
+    ...(personnelStore.importMappingTrips || []),
+  ];
   const list = [];
-  (personnelStore.importMappingPersonnel || []).forEach((grp) => {
+  const seen = new Set();
+  allGroups.forEach((grp) => {
     (grp.columns || []).forEach((col) => {
-      if (col && col.id && col.id !== 'stt') {
+      if (col && col.id && col.id !== 'stt' && !col.isVirtual && col.showInDetail !== false && !seen.has(col.id)) {
+        seen.add(col.id);
         list.push(col);
       }
     });
@@ -147,9 +153,13 @@ const allTableColumns = computed(() => {
 });
 
 const dialogHeader = computed(() => {
+  if (form.value._recordType === 'trip') {
+    const dest = form.value.countryName || form.value.quoc_gia_xuat_canh || form.value.country || '';
+    return isEdit.value ? (dest ? `Chi tiết Chuyến đi: ${dest}` : `Chi tiết Chuyến đi`) : `Thêm mới Chuyến đi`;
+  }
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const nameVal = form.value[pNameField] || form.value.name || form.value.ho_va_ten || '';
-  return isEdit.value ? `Chi tiết: ${nameVal || 'Bản ghi'}` : `Thêm bản ghi mới`;
+  const nameVal = form.value[pNameField] || form.value.name || (form.value._recordType === 'relative' ? (form.value.relativeName || form.value.name) : '') || form.value.title || form.value.id || '';
+  return isEdit.value ? `Chi tiết: ${nameVal || 'Kết quả'}` : `Thêm mới kết quả`;
 });
 
 const safeClone = (obj) => {
@@ -157,7 +167,7 @@ const safeClone = (obj) => {
   try {
     return JSON.parse(
       JSON.stringify(obj, (key, value) => {
-        if (key === 'rawPerson' || key === 'rawRelative' || key === 'rawTrip' || key === 'parentPerson') {
+        if (key === 'rawPerson' || key === 'rawRelative' || key === 'rawTrip' || key === 'parentPerson' || key === '_fallbackPerson' || key === '_fallbackRelative') {
           return undefined;
         }
         return value;
@@ -185,6 +195,8 @@ const initFormData = (val) => {
     delete parsedVal.rawRelative;
     delete parsedVal.rawTrip;
     delete parsedVal.uniqueKey;
+    delete parsedVal._fallbackPerson;
+    delete parsedVal._fallbackRelative;
 
     form.value = {
       ...cd,
@@ -212,6 +224,10 @@ watch(
   { immediate: true, deep: true }
 );
 
+const executeSave = async (payload) => {
+  return await personnelStore.saveRecord(payload);
+};
+
 const triggerAutoSave = () => {
   if (!isEdit.value || isSavingInternal || saving.value) return;
 
@@ -226,7 +242,7 @@ const triggerAutoSave = () => {
         ...form.value,
         custom_data: { ...(form.value.custom_data || {}), ...form.value },
       };
-      const saved = await personnelStore.savePerson(payload);
+      const saved = await executeSave(payload);
       initialJsonSnapshot = JSON.stringify(form.value);
       autoSaveStatus.value = 'saved';
       emit('saved', saved);
@@ -270,7 +286,10 @@ const handleSave = async () => {
       ...form.value,
       custom_data: { ...(form.value.custom_data || {}), ...form.value },
     };
-    const saved = await personnelStore.savePerson(payload);
+    const saved = await executeSave(payload);
+    if (!saved) {
+      throw new Error('Hệ thống không thể lưu bản ghi. Vui lòng kiểm tra lại thông tin nhập!');
+    }
     initialJsonSnapshot = JSON.stringify(form.value);
     autoSaveStatus.value = 'saved';
     emit('saved', saved);
@@ -289,14 +308,14 @@ const handleSave = async () => {
 
 const handleDelete = async () => {
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const nameVal = form.value[pNameField] || form.value.name || 'bản ghi này';
+  const nameVal = form.value[pNameField] || form.value.name || form.value.relativeName || form.value.title || form.value.id || 'kết quả này';
   if (!confirm(`Bạn có chắc chắn muốn xóa "${nameVal}" không?`)) return;
   try {
-    await personnelStore.deletePerson(form.value);
+    await personnelStore.deleteRecord(form.value);
     emit('deleted', form.value);
     visible.value = false;
   } catch (e) {
-    alert('Lỗi xóa hồ sơ: ' + (e.message || e));
+    alert('Lỗi xóa: ' + (e.message || e));
   }
 };
 </script>

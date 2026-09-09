@@ -373,11 +373,11 @@
             <div class="result-stats-box">
               <div class="result-stat-item">
                 <span class="rs-label">Đã thêm mới thành công:</span>
-                <span class="rs-val rs-green">+{{ resultReport.created }} bản ghi</span>
+                <span class="rs-val rs-green">+{{ resultReport.created }} kết quả</span>
               </div>
               <div class="result-stat-item">
                 <span class="rs-label">Đã cập nhật dữ liệu:</span>
-                <span class="rs-val rs-blue">{{ resultReport.updated }} bản ghi</span>
+                <span class="rs-val rs-blue">{{ resultReport.updated }} kết quả</span>
               </div>
               <div v-if="resultReport.skipped > 0" class="result-stat-item">
                 <span class="rs-label">Đã bỏ qua (dòng lỗi):</span>

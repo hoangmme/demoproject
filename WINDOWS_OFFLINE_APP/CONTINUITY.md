@@ -2349,3 +2349,21 @@
        - `npm run build` thành công 100% (0 lỗi, 591ms).
        - Đồng bộ đầy đủ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
     4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 15)**: **Tối Ưu Giao Diện Chọn Chế Độ Xem (View) Cho Thống Kê & Cấu Hình Header Tránh Cache Trình Duyệt**:
+    1. **Yêu cầu & Phản hồi**:
+       - Người dùng phản ánh chưa thấy dropdown chọn View trên modal "Chỉnh sửa Khối Thống kê".
+       - Cần đảm bảo dropdown chọn View hiển thị nổi bật, rõ ràng, trực quan ngay dưới mục Nguồn dữ liệu & Dạng hiển thị.
+    2. **Giải pháp & Triển khai**:
+       - **Tối ưu vị trí và giao diện Dropdown Chọn View trong Modal Cấu hình Widget (`src/views/DashboardView.vue`)**:
+         + Di chuyển khối chọn Chế độ xem (View) lên ngay dưới hàng `1. Nguồn Dữ liệu Thống kê & 2. Dạng Hiển thị`.
+         + Thiết kế khối xanh nổi bật (`#f0fdf4`, border `1.5px solid #86efac`, icon `pi-sliders-h`, text `#166534`), nhãn rõ ràng: `Áp dụng thứ tự cột theo Chế độ xem (View): *`.
+         + Chuẩn hóa danh sách view `availableViewsForWidgetSource` và `drilldownAvailableViews` tự động lấy từ cấu hình view của bảng nguồn (`ensureStandardDashboards`), luôn có tùy chọn "Toàn bộ (Mặc định)" và các view con (`Chế độ xem 1, 2...`).
+         + Đặt khối này trước khối chọn Cột gom nhóm và trước Bộ lọc điều kiện để người dùng luôn thấy ngay lập tức khi mở modal ở bất kỳ dạng hiển thị nào (`count`, `vertical_bar`, `horizontal_bar`).
+       - **Cấu hình Cache-Control chống cache HTML trong `WINDOWS_OFFLINE_APP/frontend_server.js`**:
+         + Thêm `Cache-Control: no-cache, no-store, must-revalidate`, `Pragma: no-cache`, `Expires: 0` khi server phục vụ file HTML.
+         + Đồng bộ toàn bộ mã nguồn `src/` sang `WINDOWS_OFFLINE_APP/frontend/src/` và build production assets mới.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 819ms).
+       - Đồng bộ đầy đủ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
+    4. **Trạng thái**: Done [Reversible].

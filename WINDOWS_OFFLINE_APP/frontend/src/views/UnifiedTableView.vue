@@ -39,7 +39,7 @@
         <div>
           <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
             {{ currentDashboardConfig.title || 'Danh sách chuyến đi' }}
-            <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredList.length }} bản ghi</span>
+            <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">· {{ filteredList.length }} kết quả</span>
           </h1>
         </div>
       </div>
@@ -118,6 +118,7 @@
               :hasCustomDraggedWidths="hasCustomDraggedWidths"
               @change="onColumnsChange"
               @open-col-menu="handleChildColMenuFromSelector"
+              @duplicate-column="onDuplicateChildCol"
               @change-width-setting="onColWidthSettingChange"
               @reset-dragged-widths="onResetDraggedWidths"
             />
@@ -151,7 +152,7 @@
           severity="success"
           size="small"
           @click="openAddTripDialog"
-          :title="`Thêm bản ghi mới trực tiếp vào bảng ${currentDashboardConfig.title || ''}`"
+          :title="`Thêm mới trực tiếp vào bảng ${currentDashboardConfig.title || ''}`"
           style="font-size: 0.8rem;"
         />
       </div>
@@ -195,6 +196,10 @@
                 <button type="button" class="lark-tab-menu-item" @click.stop="openEditViewDialog(card, cIdx); closeTabMenu()">
                   <i class="pi pi-pencil"></i>
                   <span>Sửa tên & Điều kiện lọc</span>
+                </button>
+                <button type="button" class="lark-tab-menu-item" @click.stop="duplicateView(card, cIdx); closeTabMenu()">
+                  <i class="pi pi-clone" style="color: #10b981;"></i>
+                  <span>Nhân bản Chế độ xem</span>
                 </button>
                 <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click.stop="moveView(cIdx, -1); closeTabMenu()">
                   <i class="pi pi-arrow-left"></i>
@@ -242,7 +247,7 @@
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px;">
             <span style="font-weight: 700; color: #1e3a8a; font-size: 0.95rem;">{{ drillDownFilterLabel }}</span>
             <span style="font-weight: 700; color: #2563eb; background: #ffffff; padding: 2px 8px; border-radius: 12px; border: 1px solid #bfdbfe; font-size: 0.75rem;">
-              {{ filteredList.length }} bản ghi
+              {{ filteredList.length }} kết quả
             </span>
           </div>
         </div>
@@ -279,7 +284,7 @@
         :rowsPerPageOptions="[15, 30, 50, 100]"
         :selectionPageOnly="true"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
-        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} bản ghi"
+        currentPageReportTemplate="Hiển thị {first} đến {last} của {totalRecords} kết quả"
         :loading="personnelStore.loading"
         responsiveLayout="scroll"
         stripedRows
@@ -295,7 +300,7 @@
         <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
         <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
           <template #body="{ index }">
-            <span style="font-weight: 600; color: #4b5563;">{{ dtFirst + index + 1 }}</span>
+            <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem;">{{ dtFirst + index + 1 }}</span>
           </template>
         </Column>
 
@@ -327,54 +332,41 @@
               </button>
             </div>
           </template>
-          <template #body="{ data }">
-            <!-- 0. Cột Khóa chính (_primaryKey) -->
-            <template v-if="col.id === '_primaryKey'">
-              <span style="display: inline-flex; align-items: center; font-family: monospace; font-size: 0.76rem; font-weight: 600; color: #475569; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
-                {{ getCellValue(data, col.id) }}
-              </span>
-            </template>
-
-            <!-- 1c. Cột Họ và tên Thân nhân -->
-            <template v-else-if="col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'">
-              <div style="display: flex; flex-direction: column; gap: 2px; line-height: 1.35; padding: 2px 0;">
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <strong style="color: #0f172a; font-weight: 700; font-size: 0.85rem;">
-                    {{ data.relativeName || data.name || '-' }}
-                  </strong>
-                  <span
-                    v-if="data.relationshipName || data.relationship"
-                    style="font-size: 0.7rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"
-                  >
-                    {{ data.relationshipName || data.relationship }}
-                  </span>
-                </div>
-                <div v-if="data.cccdthannhan || data.cccd" style="font-size: 0.72rem; color: #64748b;">
-                  CCCD TN: {{ data.cccdthannhan || data.cccd }}
-                </div>
-              </div>
-            </template>
-
-            <!-- 1d. Cột Mối quan hệ riêng -->
-            <template v-else-if="col.id === 'relationshipName' || col.id === 'relationship'">
-              <span
-                v-if="data.relationshipName || data.relationship"
-                style="display: inline-flex; align-items: center; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;"
+          <template #body="{ data, index }">
+            <div
+              v-if="shouldCollapseDuplicate(data, index, col)"
+              class="ditto-cell-wrapper"
+              @dblclick.stop="startChildInlineEdit(data, col)"
+              :title="'Tương tự dòng trên: ' + (getCellValue(data, col.id) || data[col.id] || '')"
+            >
+              <span class="ditto-mark">″</span>
+            </div>
+            <template v-else>
+              <!-- 1. Cột Họ và tên (Cán bộ, Thân nhân... - chỉ hiện tên thuần túy) -->
+            <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen' || col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'">
+              <div
+                class="inline-cell-wrapper"
+                @dblclick.stop="startChildInlineEdit(data, col)"
+                :title="'Nhấp đúp để chỉnh sửa nhanh ô này'"
               >
-                {{ data.relationshipName || data.relationship }}
-              </span>
-              <span v-else style="color: #94a3b8;">-</span>
-            </template>
-
-            <!-- 1b. Cột Họ và tên gốc (chỉ hiện tên thuần túy) -->
-            <template v-else-if="col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen'">
-              <strong style="color: #0f172a; font-weight: 700;">{{ data[col.id] || data.personnelName || data.name || '-' }}</strong>
+                <div v-if="editingChildCell?.uniqueKey === data.uniqueKey && editingChildCell?.colId === col.id" class="inline-edit-box" @click.stop>
+                  <input
+                    v-model="editingChildCell.value"
+                    class="inline-edit-input"
+                    autofocus
+                    @keyup.enter="saveChildInlineEdit"
+                    @keyup.esc="cancelChildInlineEdit"
+                    @blur="saveChildInlineEdit"
+                  />
+                </div>
+                <strong v-else style="color: #0f172a; font-weight: 700; font-size: 1.18rem;">{{ getCellValue(data, col.id) || data[col.id] || '-' }}</strong>
+              </div>
             </template>
 
 
             <!-- 2. Cột ngày tháng định dạng chuẩn (bất kể mã cột) -->
             <template v-else-if="col.format === 'date' || col.id === 'departureDate' || col.id === 'approvedDepartureDate' || col.id === 'arrivalDate' || col.id === 'approvedArrivalDate'">
-              <span>{{ formatDisplayDate(getCellValue(data, col.id)) }}</span>
+              <span style="font-size: 1.15rem;">{{ formatDisplayDate(getCellValue(data, col.id)) }}</span>
             </template>
 
             <!-- 3. Số quyết định -->
@@ -575,17 +567,18 @@
                 <!-- Hiển thị giá trị bình thường -->
                 <div
                   v-else-if="String(getCellValue(data, col.id)).includes('\n')"
-                  style="white-space: pre-line; line-height: 1.45; font-size: 0.78rem; color: #1e293b;"
+                  style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; color: #1e293b;"
                 >
-                  <div style="font-weight: 700; color: #0369a1;">
+                  <div style="font-weight: 700; color: #0369a1; font-size: 1.12rem;">
                     {{ String(getCellValue(data, col.id)).split('\n')[0] }}
                   </div>
-                  <div style="font-size: 0.73rem; color: #475569; margin-top: 2px;">
+                  <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
                     {{ String(getCellValue(data, col.id)).split('\n').slice(1).join('\n') }}
                   </div>
                 </div>
-                <span v-else style="word-break: break-word; line-height: 1.45;">{{ getCellValue(data, col.id) }}</span>
+                <span v-else style="word-break: break-word; line-height: 1.45; font-size: 1.15rem;">{{ getCellValue(data, col.id) }}</span>
               </div>
+            </template>
             </template>
           </template>
         </Column>
@@ -718,16 +711,16 @@
             <template v-else>
               <div
                 v-if="String(getActiveCardCellValue(data)).includes('\n')"
-                style="white-space: pre-line; line-height: 1.45; font-size: 0.78rem; text-align: left;"
+                style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; text-align: left;"
               >
-                <div style="font-weight: 700; color: #b91c1c;">
+                <div style="font-weight: 700; color: #b91c1c; font-size: 1.12rem;">
                   {{ String(getActiveCardCellValue(data)).split('\n')[0] }}
                 </div>
-                <div style="font-size: 0.73rem; color: #475569; margin-top: 2px;">
+                <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
                   {{ String(getActiveCardCellValue(data)).split('\n').slice(1).join('\n') }}
                 </div>
               </div>
-              <span v-else style="font-weight: 700; color: #b91c1c; font-size: 0.8rem;">
+              <span v-else style="font-weight: 700; color: #b91c1c; font-size: 1.15rem;">
                 {{ getActiveCardCellValue(data) }}
               </span>
             </template>
@@ -1013,6 +1006,7 @@
       :personData="activePersonData"
       :columns="allAvailableColumnsList"
       @saved="handlePersonnelSaved"
+      @deleted="handlePersonnelSaved"
     />
 
     <!-- Dialog Quản lý Chế độ xem (View) đa hình (Thêm / Sửa / Xóa / Bộ lọc điều kiện dùng chung) -->
@@ -1096,7 +1090,11 @@
       @change-options="onChildChangeColumnOptions"
       @change-form-width="onChildChangeColumnFormWidth"
       @change-required="onChildChangeColumnRequired"
+      @change-include-export="onChildChangeColumnIncludeExport"
+      @change-show-in-detail="onChildChangeColumnShowInDetail"
+      @change-collapse-duplicates="onChildChangeColumnCollapseDuplicates"
       @change-lookup="onChildChangeColumnLookup"
+      @change-rollup="onChildChangeColumnRollup"
       @change-name-col-field="toggleNameColField"
       @delete-column="onChildDeleteColumnFromTable"
       @hide-column="onChildHideColumn"
@@ -2231,6 +2229,93 @@ const onChildChangeColumnRequired = async ({ colId, required }) => {
   }
 };
 
+const onChildChangeColumnIncludeExport = async ({ colId, includeInExport }) => {
+  const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.includeInExport = Boolean(includeInExport);
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.includeInExport = Boolean(includeInExport);
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await persistTableMapping(src, mapping);
+  }
+};
+
+const onChildChangeColumnShowInDetail = async ({ colId, showInDetail }) => {
+  const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.showInDetail = Boolean(showInDetail);
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.showInDetail = Boolean(showInDetail);
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await persistTableMapping(src, mapping);
+  }
+};
+
+const onChildChangeColumnCollapseDuplicates = async ({ colId, collapseDuplicates }) => {
+  const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.collapseDuplicates = Boolean(collapseDuplicates);
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.collapseDuplicates = Boolean(collapseDuplicates);
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await persistTableMapping(src, mapping);
+  }
+};
+
 const onChildChangeColumnFormat = async ({ colId, newFormat }) => {
   const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
   if (isBlank && cDash) {
@@ -2315,6 +2400,39 @@ const onChildChangeColumnLookup = async (payload) => {
       if (lookupFormat !== undefined) c.lookupFormat = lookupFormat;
       await saveAppSettings('custom_dashboards_config', personnelStore.customDashboards);
     }
+  }
+};
+
+const onChildChangeColumnRollup = async (payload) => {
+  const { colId, rollupTarget, rollupField, rollupFunction } = payload;
+  const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const c = (cDash.customColumns || []).find((col) => col.id === colId);
+    if (c) {
+      c.format = 'rollup';
+      c.rollupTarget = rollupTarget;
+      c.rollupField = rollupField;
+      c.rollupFunction = rollupFunction;
+      await persistTableMapping('blank', customDashboards.value);
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.format = 'rollup';
+        c.rollupTarget = rollupTarget;
+        c.rollupField = rollupField;
+        c.rollupFunction = rollupFunction;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await saveAppSettings(key, mapping);
   }
 };
 
@@ -2580,7 +2698,14 @@ const onInsertChildColRight = (col) => {
 
 const onDuplicateChildCol = async (col) => {
   const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
-  const copyId = col.id + '_copy_' + Math.random().toString(36).substring(2, 6);
+  const baseId = String(col.id).replace(/_copy(_\d+)?$/, '');
+  let counter = 1;
+  let copyId = `${baseId}_copy`;
+  const existingIds = new Set(allAvailableColumnsList.value.map(c => c.id));
+  while (existingIds.has(copyId)) {
+    counter++;
+    copyId = `${baseId}_copy_${counter}`;
+  }
   const copyCol = {
     ...col,
     id: copyId,
@@ -2695,20 +2820,26 @@ const saveChildInlineEdit = async () => {
     }
     row.custom_data[colId] = value;
 
-    // Phân giải bản ghi cha (Cán bộ) để lưu
-    const parent = row.rawPerson || (row.personnelId ? personnelStore.personnelList.find(p => p.id === row.personnelId) : null);
-    if (parent) {
-      // Cập nhật chuyến đi hoặc thân nhân tương ứng trong parent
-      if (row.id && parent.trips) {
-        const tIdx = parent.trips.findIndex(t => t.id === row.id || t.code === row.id);
-        if (tIdx !== -1) {
-          parent.trips[tIdx][colId] = value;
-        }
+    if (currentDashboardConfig.value?.source === 'blank') {
+      const tid = topicId.value;
+      const list = [...(customTableRows.value || [])];
+      const idx = list.findIndex((r) => r.id === row.id || r.uniqueKey === row.uniqueKey);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], [colId]: value, custom_data: { ...(list[idx].custom_data || {}), [colId]: value } };
+        customTableRows.value = list;
+        try {
+          localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(list));
+          await saveAppSettings(`custom_table_rows_${tid}`, list);
+        } catch (e) {}
       }
-      await personnelStore.savePerson(parent);
+      return;
     }
+
+    await personnelStore.saveRecord(row);
+    await personnelStore.fetchPersonnel();
   } catch (err) {
-    console.error('Lỗi cập nhật nhanh inline trên chuyên đề:', err);
+    console.error('Lỗi cập nhật nhanh inline trên bảng:', err);
+    alert('Lỗi lưu dữ liệu: ' + (err.message || err));
   }
 };
 
@@ -2876,6 +3007,7 @@ const allAvailableColumnsList = computed(() => {
     const effectiveCols = rawCustomCols.length > 0 ? rawCustomCols : defaultStarterCols;
     effectiveCols.forEach((c, idx) => {
       rawList.push({
+        ...c,
         id: c.id,
         label: c.label || c.id,
         colIndex: idx + 1,
@@ -3013,21 +3145,28 @@ const onColumnsChange = async (newCols) => {
     await saveAppSettings(currentKey, selectedColIds.value);
   } catch (e) {}
 
-  const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => String(d.id) === String(topicId.value));
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => String(d.id) === String(topicId.value));
+  }
+
   if (idx !== -1) {
     if (isBaseline) {
-      customDashboards.value[idx].columns = [...selectedColIds.value];
+      dashboards[idx].columns = [...selectedColIds.value];
     } else {
-      if (!customDashboards.value[idx].metricCards) {
-        customDashboards.value[idx].metricCards = [];
+      if (!dashboards[idx].metricCards) {
+        dashboards[idx].metricCards = [];
       }
-      if (customDashboards.value[idx].metricCards[activeMetricCardIdx.value]) {
-        customDashboards.value[idx].metricCards[activeMetricCardIdx.value].columns = [...selectedColIds.value];
+      if (dashboards[idx].metricCards[activeMetricCardIdx.value]) {
+        dashboards[idx].metricCards[activeMetricCardIdx.value].columns = [...selectedColIds.value];
       }
     }
+    customDashboards.value = dashboards;
     try {
-      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
-      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+      await saveAppSettings('custom_dashboards_config', dashboards);
     } catch (e) {}
   }
 };
@@ -3040,14 +3179,44 @@ const selectedViewIdx = ref(-1);
 
 const openAddViewDialog = () => {
   viewManagerMode.value = 'create';
-  selectedViewForEdit.value = null;
+  selectedViewForEdit.value = {
+    id: 'view_' + Date.now(),
+    label: '',
+    color: 'blue',
+    logicOp: 'AND',
+    conditions: [],
+    columns: [...selectedColIds.value],
+  };
   selectedViewIdx.value = -1;
   isViewManagerOpen.value = true;
 };
 
 const openEditViewDialog = (card, cIdx) => {
   viewManagerMode.value = 'edit';
-  selectedViewForEdit.value = { ...card };
+  const tableId = currentDashboardId.value;
+  const cardId = card?.id || (cIdx <= 0 ? 'all' : `card_${cIdx}`);
+
+  // Lấy danh sách cột riêng của view này
+  let existingCols = null;
+  if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
+    existingCols = card.columns;
+  } else {
+    try {
+      const local = localStorage.getItem(`child_dashboard_cols_${tableId}_${cardId}`);
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) existingCols = parsed;
+      }
+    } catch (e) {}
+  }
+  if (!existingCols || existingCols.length === 0) {
+    existingCols = [...selectedColIds.value];
+  }
+
+  selectedViewForEdit.value = {
+    ...card,
+    columns: [...existingCols],
+  };
   selectedViewIdx.value = cIdx;
   isViewManagerOpen.value = true;
 };
@@ -3073,19 +3242,31 @@ const handleSaveView = async (savedData) => {
   ];
   const cards = currentDash.metricCards ? [...currentDash.metricCards] : [...defaultCards];
 
+  const targetCols = (savedData.columns && Array.isArray(savedData.columns) && savedData.columns.length > 0)
+    ? [...savedData.columns]
+    : [...selectedColIds.value];
+
+  let targetCardId = null;
   if (viewManagerMode.value === 'edit' && selectedViewIdx.value >= 0 && selectedViewIdx.value < cards.length) {
     cards[selectedViewIdx.value] = {
       ...cards[selectedViewIdx.value],
       ...savedData,
+      columns: targetCols,
     };
+    targetCardId = cards[selectedViewIdx.value].id;
+    if (activeMetricCardIdx.value === selectedViewIdx.value) {
+      selectedColIds.value = [...targetCols];
+    }
   } else {
     const newCard = {
       ...savedData,
       id: savedData.id || ('view_' + Date.now()),
-      columns: [...selectedColIds.value],
+      columns: targetCols,
     };
     cards.push(newCard);
     activeMetricCardIdx.value = cards.length - 1;
+    selectedColIds.value = [...targetCols];
+    targetCardId = newCard.id;
   }
 
   currentDash.metricCards = cards;
@@ -3095,6 +3276,12 @@ const handleSaveView = async (savedData) => {
   try {
     localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
     await saveAppSettings('custom_dashboards_config', dashboards);
+
+    if (targetCardId) {
+      const cardKey = `child_dashboard_cols_${tableId}_${targetCardId}`;
+      localStorage.setItem(cardKey, JSON.stringify(targetCols));
+      await saveAppSettings(cardKey, targetCols);
+    }
   } catch (e) {
     console.error('Error saving view:', e);
   }
@@ -3140,6 +3327,39 @@ const deleteView = async (card, cIdx) => {
     }
   }
   isViewManagerOpen.value = false;
+};
+
+const duplicateView = async (card, cIdx) => {
+  if (!card) return;
+  const tableId = currentDashboardId.value;
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
+
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
+  }
+  if (idx === -1) return;
+
+  const currentDash = { ...dashboards[idx] };
+  const cards = currentDash.metricCards ? [...currentDash.metricCards] : [];
+  
+  const newCard = JSON.parse(JSON.stringify(card));
+  newCard.id = 'view_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  newCard.label = (newCard.label || 'Chế độ xem') + ' (Bản sao)';
+  
+  cards.splice(cIdx + 1, 0, newCard);
+  currentDash.metricCards = cards;
+  dashboards[idx] = currentDash;
+  customDashboards.value = dashboards;
+  activeMetricCardIdx.value = cIdx + 1;
+
+  try {
+    localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+    await saveAppSettings('custom_dashboards_config', dashboards);
+  } catch (e) {
+    console.error('Error duplicating view:', e);
+  }
 };
 
 const moveView = async (cIdx, direction) => {
@@ -3197,206 +3417,7 @@ const visibleColumns = computed(() => {
   }));
 });
 
-// Build unified list of trips from both Cán bộ and Thân nhân profiles
-const unifiedTripsList = computed(() => {
-  const list = [];
-  const pList = personnelStore.personnelList || [];
-  const now = new Date();
-  const processedTripKeys = new Set();
-  const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  const tKeyField = personnelStore.getTripKeyField();
-  const rKeyField = personnelStore.getRelativeKeyField();
 
-  pList.forEach((p) => {
-    // 1. Chuyến đi của Cán bộ (p.trips)
-    (p.trips || []).forEach((t, tIdx) => {
-      let custom = {};
-      if (t.custom_data) {
-        try {
-          custom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data;
-        } catch (e) {}
-      }
-
-      const cName = t.countryName || custom.countryName || t.country || custom.quoc_gia_xuat_canh || '';
-      const depDate = t.departureDate || custom.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || custom.ngay_xuat_canh || t.ngayDi || custom.ngayDi || '';
-      const arrDate = t.arrivalDate || custom.arrivalDate || t.ngay_nhap_canh || custom.ngay_nhap_canh || t.ngayVe || custom.ngayVe || '';
-      const appArrDate = t.approvedArrivalDate || custom.approvedArrivalDate || t.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || t.thoiGianDuyetVe || '';
-      const extDate = t.approvedExtensionDate || custom.approvedExtensionDate || t.gia_han_den_ngay || custom.gia_han_den_ngay || '';
-      const dNum = t.decisionNumber || custom.decisionNumber || t.decision || '';
-      const fName = t.fundingName || t.funding || t.nguon_kinh_phi || t.kinh_phi || t.nguonKinhPhi || t.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
-      const purpose = t.purpose || custom.purpose || '';
-
-      // Skip empty/dummy placeholder trip objects that have no real data
-      if (!cName && !depDate && !arrDate && !dNum && !purpose) {
-        return;
-      }
-
-      const isRel = Boolean(
-        t.isRelative === true ||
-        t.isRelative === 'true' ||
-        (t.relativeName && String(t.relativeName).trim() !== '' && String(t.relativeName).trim() !== '-' && String(t.relativeName).trim() !== 'Chưa rõ') ||
-        (t.cccdthannhan && String(t.cccdthannhan).trim() !== '' && String(t.cccdthannhan).trim() !== '-' && !String(t.cccdthannhan).startsWith('cd_'))
-      );
-      const presence = getTripPresence({
-        departureDate: depDate,
-        arrivalDate: arrDate,
-        approvedArrivalDate: appArrDate,
-        approvedExtensionDate: extDate,
-        custom_data: custom,
-      });
-
-      const uniqueKey = t.id || `trip_${p.id}_${tIdx}`;
-      if (processedTripKeys.has(uniqueKey)) return;
-      processedTripKeys.add(uniqueKey);
-
-      const canBoCccd = String(p[pKeyField] ?? p.custom_data?.[pKeyField] ?? '').trim();
-      const relCccd = String(t[rKeyField] ?? (isRel && !isInternalId(t.cccd) ? t.cccd : '')).trim();
-      const relName = t.relativeName || (isRel ? 'Thân nhân' : p.name);
-      const relShip = t.relationshipName || (isRel ? 'Thân nhân' : '');
-      const directTripCccd = t[tKeyField] ?? t.cccdchuyendi;
-      const travelerCccd = !isInternalId(directTripCccd) ? directTripCccd : (isRel ? relCccd : canBoCccd);
-
-      list.push({
-        ...custom,
-        ...t,
-        _recordType: 'trip',
-        uniqueKey,
-        isRelative: isRel,
-        personnelId: p.id,
-        personnelCode: p.code || '',
-        personnelName: isRel ? relName : p.name,
-        name: isRel ? relName : p.name,
-        relativeName: isRel ? relName : '',
-        relationshipName: relShip,
-        parentName: p.name,
-        parentPersonnelName: p.name,
-        parentCccd: canBoCccd,
-        cccdthannhan: relCccd,
-        cccdparent: canBoCccd,
-        cccdchuyendi: travelerCccd,
-        cccd: travelerCccd || canBoCccd,
-        position: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.position || p.positionName || p.chuc_vu || p.chucVu || custom.position || custom.chuc_vu || ''),
-        positionName: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.position || p.positionName || p.chuc_vu || p.chucVu || custom.position || custom.chuc_vu || ''),
-        chuc_vu: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.position || p.positionName || p.chuc_vu || p.chucVu || custom.position || custom.chuc_vu || ''),
-        chucVu: isRel ? `${relShip || 'Thân nhân'} của: ${p.name}` : (p.position || p.positionName || p.chuc_vu || p.chucVu || custom.position || custom.chuc_vu || ''),
-        departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-        countryName: cName,
-        departureDate: depDate,
-        arrivalDate: arrDate,
-        approvedDepartureDate: t.approvedDepartureDate || custom.approvedDepartureDate || depDate,
-        approvedArrivalDate: appArrDate,
-        approvedExtensionDate: extDate,
-        decisionNumber: dNum,
-        fundingName: fName,
-        purpose,
-        passportNumber: t.passportNumber || custom.passportNumber || '',
-        isAbroad: presence.isAbroad,
-        isOverdue: presence.isOverdue,
-        overdueDays: presence.overdueDays,
-        presenceStatus: presence.label || presence.shortLabel,
-        presenceLabel: presence.label,
-        _presenceStatus: presence.shortLabel || presence.label,
-        rawTrip: t,
-        rawPerson: p,
-        custom_data: custom,
-      });
-    });
-
-    // 2. Chuyến đi của Thân nhân (p.relatives[].trips)
-    (p.relatives || []).forEach((r, rIdx) => {
-      (r.trips || []).forEach((rt, rtIdx) => {
-        let custom = {};
-        if (rt.custom_data) {
-          try {
-            custom = typeof rt.custom_data === 'string' ? JSON.parse(rt.custom_data) : rt.custom_data;
-          } catch (e) {}
-        }
-
-        const cName = rt.countryName || custom.countryName || rt.country || r.countryName || '';
-        const depDate = rt.departureDate || custom.departureDate || rt.ngay_xuat_canh || custom.ngay_xuat_canh || rt.ngayDi || custom.ngayDi || '';
-        const arrDate = rt.arrivalDate || custom.arrivalDate || rt.ngay_nhap_canh || custom.ngay_nhap_canh || rt.ngayVe || custom.ngayVe || '';
-        const appArrDate = rt.approvedArrivalDate || custom.approvedArrivalDate || rt.thoi_gian_duyet_ve || custom.thoi_gian_duyet_ve || rt.thoiGianDuyetVe || '';
-        const extDate = rt.approvedExtensionDate || custom.approvedExtensionDate || rt.gia_han_den_ngay || custom.gia_han_den_ngay || '';
-        const dNum = rt.decisionNumber || custom.decisionNumber || '';
-        const fName = rt.fundingName || rt.funding || rt.nguon_kinh_phi || rt.kinh_phi || rt.nguonKinhPhi || rt.kinhPhi || custom.fundingName || custom.funding || custom.nguon_kinh_phi || custom.kinh_phi || '';
-        const purpose = rt.purpose || custom.purpose || '';
-
-        // Skip empty/dummy placeholder trip objects
-        if (!cName && !depDate && !arrDate && !dNum && !purpose) {
-          return;
-        }
-
-        const presence = getTripPresence({
-          departureDate: depDate,
-          arrivalDate: arrDate,
-          approvedArrivalDate: appArrDate,
-          approvedExtensionDate: extDate,
-          custom_data: custom,
-        });
-
-        const uniqueKey = rt.id || `rel_trip_${p.id}_${rIdx}_${rtIdx}`;
-        if (processedTripKeys.has(uniqueKey)) return;
-        processedTripKeys.add(uniqueKey);
-
-        const rCccd = !isInternalId(r[rKeyField] ?? r.cccdthannhan) ? String(r[rKeyField] ?? r.cccdthannhan).trim() : '';
-        const canBoCccd = String(p[pKeyField] ?? p.custom_data?.[pKeyField] ?? '').trim();
-        const tripCccd = !isInternalId(rt[tKeyField] ?? rt.cccdchuyendi) ? String(rt[tKeyField] ?? rt.cccdchuyendi).trim() : rCccd;
-        const relName = r.relativeName || r.name || custom.relativeName || 'Thân nhân';
-        const relShip = r.relationshipName || r.relationship || custom.relationshipName || 'Thân nhân';
-        const travelerCccd = tripCccd || rCccd;
-
-        list.push({
-          ...custom,
-          ...rt,
-          _recordType: 'trip',
-          uniqueKey,
-          isRelative: true,
-          personnelId: p.id,
-          personnelCode: p.code || '',
-          personnelName: relName,
-          name: relName,
-          relativeName: relName,
-          relationshipName: relShip,
-          parentName: p.name,
-          parentPersonnelName: p.name,
-          parentCccd: canBoCccd,
-          cccdthannhan: travelerCccd,
-          cccdparent: canBoCccd,
-          cccdchuyendi: travelerCccd,
-          cccd: travelerCccd || canBoCccd,
-          position: `${relShip} của: ${p.name}`,
-          positionName: `${relShip} của: ${p.name}`,
-          chuc_vu: `${relShip} của: ${p.name}`,
-          chucVu: `${relShip} của: ${p.name}`,
-          departmentName: personnelStore.getDepartmentName(p.departmentId) || p.departmentName || '',
-          countryName: cName,
-          departureDate: depDate,
-          arrivalDate: arrDate,
-          approvedDepartureDate: rt.approvedDepartureDate || depDate,
-          approvedArrivalDate: appArrDate,
-          approvedExtensionDate: extDate,
-          decisionNumber: dNum,
-          fundingName: fName,
-          purpose: rt.purpose || custom.purpose || '',
-          passportNumber: rt.passportNumber || custom.passportNumber || '',
-          isAbroad: presence.isAbroad,
-          isOverdue: presence.isOverdue,
-          overdueDays: presence.overdueDays,
-          presenceStatus: presence.label || presence.shortLabel,
-          presenceLabel: presence.label,
-          _presenceStatus: presence.shortLabel || presence.label,
-          rawTrip: rt,
-          rawRelative: r,
-          rawPerson: p,
-          custom_data: custom,
-        });
-      });
-    });
-  });
-
-  return list;
-});
 
 // Custom Table Rows for blank/independent custom tables
 const customTableRows = ref([]);
@@ -3686,41 +3707,34 @@ const getCheckboxFileLoopItems = (data, colId) => {
   });
 };
 
-const getCellValue = (trip, colId) => {
-  if (!trip || !colId) return '-';
+const shouldCollapseDuplicate = (data, index, col) => {
+  if (!col?.collapseDuplicates) return false;
+  if (!data || typeof index !== 'number' || index <= 0) return false;
+  if (editingChildCell.value && editingChildCell.value.uniqueKey === data.uniqueKey && editingChildCell.value.colId === col.id) {
+    return false;
+  }
+  const list = filteredList.value || [];
+  const currentIdx = (dtFirst.value || 0) + index;
+  if (currentIdx <= 0 || currentIdx >= list.length) return false;
+  const prevData = list[currentIdx - 1];
+  if (!prevData) return false;
+
+  const currentVal = getCellValue(data, col.id) || data[col.id];
+  if (currentVal === undefined || currentVal === null || currentVal === '-' || String(currentVal).trim() === '') return false;
+
+  const prevVal = getCellValue(prevData, col.id) || prevData[col.id];
+  if (prevVal === undefined || prevVal === null || prevVal === '-' || String(prevVal).trim() === '') return false;
+
+  return String(currentVal).trim().toLowerCase() === String(prevVal).trim().toLowerCase();
+};
+
+const getCellValue = (trip, colId, depth = 0) => {
+  if (!trip || !colId || depth > 5) return '-';
 
   // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
   const vVal = resolveVirtualColumnValue(trip, colId);
   if (vVal !== undefined) {
     return vVal || '-';
-  }
-
-  // Cột CCCD / Định danh người đi
-  const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  const tKeyField = personnelStore.getTripKeyField();
-  const rKeyField = personnelStore.getRelativeKeyField();
-
-  if (colId === tKeyField || colId === 'cccdchuyendi' || colId === 'cccd_chuyen_di' || colId === 'cccd_nguoi_di') {
-    const directVal = trip[tKeyField] ?? trip.cccdchuyendi ?? trip.rawTrip?.[tKeyField] ?? trip.rawTrip?.cccdchuyendi ?? trip[colId];
-    if (!isInternalId(directVal)) return String(directVal).trim();
-    if (trip.isRelative) {
-      const rCccd = trip[rKeyField] ?? trip.cccdthannhan ?? trip.rawRelative?.[rKeyField] ?? trip.rawRelative?.cccdthannhan;
-      if (!isInternalId(rCccd)) return String(rCccd).trim();
-    }
-    const canBoCccd = trip.rawPerson?.[pKeyField] ?? trip.rawPerson?.custom_data?.[pKeyField] ?? trip.parentCccd ?? trip.cccdparent;
-    if (!isInternalId(canBoCccd)) return String(canBoCccd).trim();
-    return '-';
-  }
-  if (colId === pKeyField || colId === 'cccdparent' || colId === 'cccd_can_bo') {
-    const canBoCccd = trip.parentCccd ?? trip.cccdparent ?? trip.rawPerson?.[pKeyField] ?? trip.rawPerson?.custom_data?.[pKeyField];
-    if (!isInternalId(canBoCccd)) return String(canBoCccd).trim();
-    return '-';
-  }
-  if (colId === rKeyField || colId === 'cccdthannhan' || colId === 'cccd_than_nhan') {
-    const rCccd = trip[rKeyField] ?? trip.cccdthannhan ?? trip.rawRelative?.[rKeyField] ?? trip.rawRelative?.cccdthannhan;
-    if (!isInternalId(rCccd)) return String(rCccd).trim();
-    return '-';
   }
 
   // 1. Check if col is Formula column in any mapping
@@ -3740,7 +3754,16 @@ const getCellValue = (trip, colId) => {
 
   const colDef = allMap[colId];
   if (colDef && colDef.format === 'formula') {
-    const result = evaluateFormula(trip, colDef);
+    const configWithResolver = {
+      ...colDef,
+      columns: allAvailableColumnsList.value || [],
+      cellResolver: (targetColId) => {
+        if (!targetColId || targetColId === colId) return '';
+        const cell = getCellValue(trip, targetColId, depth + 1);
+        return cell !== '-' ? cell : '';
+      },
+    };
+    const result = evaluateFormula(trip, configWithResolver);
     return result?.label || result?.shortLabel || '-';
   }
   if (colDef && colDef.format === 'lookup') {
@@ -3750,75 +3773,9 @@ const getCellValue = (trip, colId) => {
     return evaluateRollup(trip, colDef, personnelStore);
   }
 
-  // 2. Identify column origin strictly from import mappings
-  const tripColIds = (personnelStore.importMappingTrips || []).flatMap((g) => (g.columns || []).map((c) => c.id));
-  const relColIds = (personnelStore.importMappingRelative || []).flatMap((g) => (g.columns || []).map((c) => c.id));
-  const perColIds = (personnelStore.importMappingPersonnel || []).flatMap((g) => (g.columns || []).map((c) => c.id));
-
-  let rawVal = undefined;
-
-  if (tripColIds.includes(colId)) {
-    // Cột thuộc Bảng Chuyến đi
-    if (trip.isRelative || currentDashboardConfig.value?.source === 'relatives') {
-      // Đối tượng là Thân nhân -> đọc từ chuyến đi mới nhất theo departureDate
-      const trips = Array.isArray(trip.trips) ? trip.trips : [];
-      let latestTrip = null;
-      let latestDep = -Infinity;
-      for (const t of trips) {
-        const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-        const depRaw = t.departureDate || tCustom.departureDate || t.ngay_xuat_canh || tCustom.ngay_xuat_canh || '';
-        const dep = parseDateValue(depRaw);
-        const time = dep ? dep.getTime() : 0;
-        if (time >= latestDep) {
-          latestDep = time;
-          latestTrip = { ...tCustom, ...t };
-        }
-      }
-      if (latestTrip) {
-        rawVal = latestTrip[colId];
-      }
-    } else if (currentDashboardConfig.value?.source === 'personnel') {
-      // Đối tượng là Cán bộ -> chỉ đọc trong danh sách chuyến đi thực tế (trip.trips)
-      const trips = Array.isArray(trip.trips) ? trip.trips : [];
-      for (const t of trips) {
-        const tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data || '{}') : (t.custom_data || {});
-        const v = t[colId] !== undefined ? t[colId] : tCustom[colId];
-        if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
-          rawVal = v;
-          break;
-        }
-      }
-    } else {
-      // Đối tượng là Bản ghi Chuyến đi
-      const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
-      const rtcd = typeof trip.rawTrip?.custom_data === 'string' ? JSON.parse(trip.rawTrip.custom_data || '{}') : (trip.rawTrip?.custom_data || {});
-      rawVal = trip[colId] !== undefined ? trip[colId] : (tcd[colId] ?? trip.rawTrip?.[colId] ?? rtcd[colId]);
-    }
-  } else if (relColIds.includes(colId)) {
-    // Cột thuộc Bảng Thân nhân
-    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
-    const rrcd = typeof trip.rawRelative?.custom_data === 'string' ? JSON.parse(trip.rawRelative.custom_data || '{}') : (trip.rawRelative?.custom_data || {});
-    if (trip.isRelative || currentDashboardConfig.value?.source === 'relatives') {
-      rawVal = trip[colId] !== undefined ? trip[colId] : (tcd[colId] ?? trip.rawRelative?.[colId] ?? rrcd[colId]);
-    } else if (trip.rawRelative) {
-      rawVal = trip.rawRelative[colId] !== undefined ? trip.rawRelative[colId] : (rrcd[colId]);
-    }
-  } else if (perColIds.includes(colId)) {
-    // Cột thuộc Bảng Cán bộ
-    const p = trip.rawPerson || trip;
-    const pcd = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p.custom_data || {});
-    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
-    rawVal = p[colId] !== undefined ? p[colId] : (pcd[colId] ?? trip[colId] ?? tcd[colId]);
-  } else {
-    // Cột thông thường / fallback trực tiếp
-    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
-    const rtcd = typeof trip.rawTrip?.custom_data === 'string' ? JSON.parse(trip.rawTrip.custom_data || '{}') : (trip.rawTrip?.custom_data || {});
-    const rrcd = typeof trip.rawRelative?.custom_data === 'string' ? JSON.parse(trip.rawRelative.custom_data || '{}') : (trip.rawRelative?.custom_data || {});
-    const p = trip.rawPerson;
-    const pcd = typeof p?.custom_data === 'string' ? JSON.parse(p.custom_data || '{}') : (p?.custom_data || {});
-    rawVal = trip[colId] !== undefined ? trip[colId] : (tcd[colId] ?? trip.rawTrip?.[colId] ?? rtcd[colId] ?? trip.rawRelative?.[colId] ?? rrcd[colId] ?? p?.[colId] ?? pcd[colId]);
-  }
-
+  // 2. Direct property or in custom_data (KHÔNG fallback ngầm sang rawPerson)
+  const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
+  const rawVal = trip[colId] !== undefined ? trip[colId] : tcd[colId];
   return formatGenericCellValue(rawVal, colDef || { id: colId });
 };
 
@@ -4019,14 +3976,10 @@ const saveColumnSelection = async () => {
 };
 
 // Actions
-const openPersonnelDetail = (trip) => {
-  const targetRecord = trip.rawPerson || trip.rawRelative || trip.rawTrip || trip;
-  if (targetRecord) {
-    activePersonData.value = targetRecord;
-    isPersonnelDialogOpen.value = true;
-  } else {
-    alert('Không tìm thấy dữ liệu chi tiết của bản ghi!');
-  }
+const openPersonnelDetail = (record) => {
+  if (!record) return;
+  activePersonData.value = record;
+  isPersonnelDialogOpen.value = true;
 };
 
 const isSameTripItem = (t, trip) => {
@@ -4055,8 +4008,8 @@ const isSameTripItem = (t, trip) => {
 const handleDeleteItem = async (item) => {
   const src = currentDashboardConfig.value?.source || '';
   if (src === 'blank') {
-    const title = item.title || item.name || 'bản ghi này';
-    if (!confirm(`Bạn có chắc chắn muốn xóa bản ghi "${title}" không?`)) return;
+    const title = item.title || item.name || 'mục này';
+    if (!confirm(`Bạn có chắc chắn muốn xóa "${title}" không?`)) return;
     const tid = topicId.value;
     const list = (customTableRows.value || []).filter((r) => r.id !== item.id);
     customTableRows.value = list;
@@ -4154,7 +4107,7 @@ const handleDeleteTrip = async (trip) => {
 const handleBulkDeleteTrips = async () => {
   const count = selectedTrips.value.length;
   if (!count) return;
-  if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${count} bản ghi đã chọn không?`)) return;
+  if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${count} kết quả đã chọn không?`)) return;
 
   const src = currentDashboardConfig.value?.source || '';
   if (src === 'blank') {
@@ -4219,7 +4172,7 @@ const handleBulkDeleteTrips = async () => {
     }
     selectedTrips.value = [];
     await personnelStore.fetchPersonnel();
-    alert(`Đã xóa thành công ${count} bản ghi!`);
+    alert(`Đã xóa thành công ${count} kết quả!`);
   } catch (e) {
     console.error('Bulk delete error in ChildDashboardView:', e);
     alert('Có lỗi xảy ra khi xóa: ' + (e.message || e));
@@ -4266,33 +4219,12 @@ const openAddTripDialog = () => {
     addCustomRow();
     return;
   }
-  if (src === 'personnel') {
-    activePersonData.value = null;
-    dialogInitialTab.value = 0;
-    dialogTargetRelativeCode.value = '';
-    isPersonnelDialogOpen.value = true;
-    return;
-  }
-  if (src === 'relatives') {
-    activePersonData.value = null;
-    dialogInitialTab.value = 2; // Tab 3: Thân nhân
-    dialogTargetRelativeCode.value = '';
-    isPersonnelDialogOpen.value = true;
-    return;
-  }
-  editingTripItem.value = null;
-  selectedTargetKey.value = (personnelStore.personnelList[0]?.cccd || personnelStore.personnelList[0]?.id) || '';
-  tripTargetType.value = 'personnel';
-  tripFormData.value = {
-    countryName: '',
-    departureDate: '',
-    arrivalDate: '',
-    decisionNumber: '',
-    fundingName: 'Ngân sách nhà nước',
-    purpose: '',
-    passportNumber: '',
+  const newRec = {
+    _recordType: src === 'relatives' ? 'relative' : (src === 'trips' ? 'trip' : 'personnel'),
+    custom_data: {},
   };
-  isTripFormDialogOpen.value = true;
+  activePersonData.value = newRec;
+  isPersonnelDialogOpen.value = true;
 };
 
 const saveTripForm = async () => {
@@ -4354,7 +4286,22 @@ const saveTripForm = async () => {
   }
 };
 
-const handlePersonnelSaved = async () => {
+const handlePersonnelSaved = async (savedRecord) => {
+  if (currentDashboardConfig.value?.source === 'blank' && savedRecord) {
+    const tid = topicId.value;
+    const list = [...(customTableRows.value || [])];
+    const idx = list.findIndex((r) => r.id === savedRecord.id || r.uniqueKey === savedRecord.uniqueKey);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...savedRecord };
+    } else {
+      list.unshift(savedRecord);
+    }
+    customTableRows.value = list;
+    try {
+      localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(list));
+      await saveAppSettings(`custom_table_rows_${tid}`, list);
+    } catch (e) {}
+  }
   await personnelStore.fetchPersonnel();
 };
 
@@ -5381,6 +5328,37 @@ onUnmounted(() => {
 .menu-action-sub {
   font-size: 0.68rem;
   color: #64748b;
+}
+
+.ditto-cell-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 2px 0;
+  cursor: pointer;
+  user-select: none;
+}
+.ditto-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #94a3b8;
+  line-height: 1;
+  letter-spacing: 2px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  padding: 1px 12px;
+  transition: all 0.15s ease;
+}
+.ditto-cell-wrapper:hover .ditto-mark {
+  color: #0284c7;
+  border-color: #38bdf8;
+  background: #f0f9ff;
+  transform: scale(1.1);
 }
 
 </style>
