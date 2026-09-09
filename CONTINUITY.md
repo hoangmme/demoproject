@@ -2682,10 +2682,16 @@
        - *"popup thống kê sao ko có tô đậm chữ giống ở bảng, sao k dùng cùng logic cho dễ?"*: Popup drilldown thống kê chưa đồng bộ style ô nhiều dòng (dòng 1 Họ tên tô đậm xanh dương `#0369a1`) như ở bảng chính.
        - *"ở cột có nên cho phép tích chọn unique không? như vậy sẽ ưu tiên gộp theo cột đó?"*: Cho phép tích chọn Unique trực tiếp trên cột để ưu tiên gộp các dòng trùng lặp theo cột đó.
     2. **Giải pháp & Triển khai**:
-       - **Công Thức Số Lần Xuất Cảnh Thông Minh (`src/utils/formatters.js`)**:
+       - **Công Thức Số Lần Xuất Cảnh Thông Minh Chuẩn Hóa (`src/utils/formatters.js`)**:
          * Tự động phân biệt dòng chuyến đi phẳng (`!isAggregatedRow && (record.departureDate || record.ngay_xuat_canh || record._recordType === 'trip')`) và dòng gộp Unique (`_isUniqueRow === true` hoặc bản ghi cán bộ tổng hợp).
-         * Ở chế độ phẳng (2 hàng riêng biệt): tìm chính xác vị trí chuyến đi của dòng hiện tại trong năm (`currentTripIdx`), hiển thị gọn gàng: `Chuyến ${idx + 1}/${count}: ${country} - ${dateStr}` (VD: `Chuyến 1/2: Mỹ - 15/10/2025` và `Chuyến 2/2: Pháp - 20/11/2025`).
-         * Ở chế độ gộp Unique: gom toàn bộ chuyến đi hiển thị đầy đủ đa dòng (`2 lần\n- Chuyến 1: ...\n- Chuyến 2: ...`).
+         * Ở chế độ phẳng (tách hàng riêng biệt): hiển thị đúng định dạng chuẩn theo yêu cầu:
+           `- Chuyến 1: Thái Lan - 29/04/2026`
+           `- Chuyến 2: Singapore - 15/08/2026`
+           (Nếu có 1 chuyến: `- Chuyến 1: Thái Lan - 29/04/2026`).
+         * Ở chế độ gộp Unique (1 hàng duy nhất cho Cán bộ):
+           `2 lần (năm 2026)`
+           `- Chuyến 1: Thái Lan - 29/04/2026`
+           `- Chuyến 2: Singapore - 15/08/2026`
        - **Đồng Bộ Hoàn Toàn Style Popup Thống Kê với Bảng Chính (`src/views/DashboardView.vue`)**:
          * Áp dụng cùng logic tách dòng `\n` như `UnifiedTableView.vue`: dòng 1 hiển thị chữ to, tô đậm xanh dương `#0369a1` (font-size 1.12rem, weight 700); các dòng chức vụ/đơn vị phụ bên dưới hiển thị màu xám `#475569` font-size 0.95rem.
          * Các cột Họ tên đơn dòng cũng được áp dụng màu xanh `#0369a1` in đậm đồng bộ.
@@ -2693,10 +2699,11 @@
          * Bổ sung checkbox: `🔘 Lọc duy nhất theo cột này (Unique - Gộp các dòng trùng)` (`col.isUnique`).
          * `useTableFilters.js`: Khi có cột được đánh dấu `isUnique`, bảng tự động lọc duy nhất theo giá trị của cột đó (`uniqueCol.id`), gán cờ `_isUniqueRow = true` để kích hoạt chế độ gộp dữ liệu và công thức tương ứng.
     3. **Kiểm thử & Triển khai**:
-       - `npm run build` thành công 100% (0 lỗi, 549ms).
+       - `npm run build` thành công 100% (0 lỗi, 765ms).
        - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
        - Commit & push lên git `main`.
     4. **Trạng thái**: Done [Reversible].
+
 
 
 

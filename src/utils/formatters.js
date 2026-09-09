@@ -819,8 +819,8 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     if (currentTripIdx !== -1) {
       const currentTrip = matchedTrips[currentTripIdx];
       const tripNum = currentTripIdx + 1;
-      const shortStr = count > 1 ? `Chuyến ${tripNum}/${count}: ${currentTrip.country}` : `Chuyến 1: ${currentTrip.country}`;
-      const fullStr = count > 1 ? `Chuyến ${tripNum}/${count}: ${currentTrip.country} - ${currentTrip.dateStr}` : `Chuyến 1: ${currentTrip.country} - ${currentTrip.dateStr}`;
+      const fullStr = `- Chuyến ${tripNum}: ${currentTrip.country} - ${currentTrip.dateStr}`;
+      const shortStr = `- Chuyến ${tripNum}: ${currentTrip.country}`;
       return {
         status: 'normal',
         count,
@@ -832,13 +832,33 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
         tripIndex: currentTripIdx,
         cssClass: '',
       };
+    } else if (currentDepDate) {
+      const recCountry = getRecordFieldValue(record, countryCol) || getRecordFieldValue(record, 'quoc_gia_xuat_canh') || record.countryName || 'Chưa rõ nơi đến';
+      const recDateStr = formatDate(currentDepDate) || formatDate(rawCurrentDep) || '';
+      const fullStr = `- Chuyến 1: ${recCountry} - ${recDateStr}`;
+      return {
+        status: 'normal',
+        count: 1,
+        value: 1,
+        year: targetYear,
+        label: fullStr,
+        shortLabel: fullStr,
+        details: [],
+        tripIndex: 0,
+        cssClass: '',
+      };
     }
   }
 
   // Khi là dòng Unique / gộp theo Cán bộ: hiển thị tổng số lần và chi tiết tất cả chuyến đi
-  const mainCountStr = labelTpl
-    .replace(/{count}/g, String(count))
-    .replace(/{year}/g, String(targetYear));
+  let mainCountStr = '';
+  if (labelTpl && labelTpl !== '{count} lần') {
+    mainCountStr = labelTpl
+      .replace(/{count}/g, String(count))
+      .replace(/{year}/g, String(targetYear));
+  } else {
+    mainCountStr = `${count} lần${targetYear ? ` (năm ${targetYear})` : ''}`;
+  }
 
   const shortLabel = count > 0 ? (mainCountStr.trim() ? mainCountStr : `${count} lần`) : '0 lần';
   let fullLabel = shortLabel;
