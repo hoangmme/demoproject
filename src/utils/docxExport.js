@@ -935,7 +935,14 @@ export function generateDocxBlob(templateBuffer, contextData) {
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
-      nullGetter: () => '', // Tránh hiện undefined nếu thẻ tag trống
+      nullGetter: (part) => {
+        // Nếu là thẻ lặp (loop) hoặc thẻ điều kiện, trả về mảng rỗng để không phá vỡ cấu trúc lặp
+        if (part && (part.module === 'loop' || part.module === 'condition' || part.type === 'placeholder' && part.raw?.startsWith('#'))) {
+          return [];
+        }
+        // Với các trường dữ liệu bình thường, nếu không có dữ liệu trả về '-' trang nhã thay vì để trống trơn
+        return '-';
+      },
     });
 
     doc.render(contextData);

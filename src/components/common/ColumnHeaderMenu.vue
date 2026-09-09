@@ -756,6 +756,29 @@
             />
             <span style="font-weight: 600; color: #7e22ce;">🔘 Lọc duy nhất theo cột này (Unique - Gộp dòng trùng)</span>
           </label>
+
+          <!-- Tùy chọn In đậm & Đổi màu dòng đầu tiên -->
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 6px; display: flex; flex-direction: column; gap: 6px;">
+            <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #166534; cursor: pointer; user-select: none;">
+              <input
+                type="checkbox"
+                v-model="editBoldFirstLine"
+                @change="handleSaveBoldFirstLine"
+                style="accent-color: #16a34a; cursor: pointer;"
+              />
+              <span style="font-weight: 700;">✨ In đậm & Đổi màu dòng đầu tiên</span>
+            </label>
+            <div v-if="editBoldFirstLine" style="display: flex; align-items: center; gap: 6px; padding-left: 20px;">
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Màu chữ dòng đầu:</span>
+              <input
+                type="color"
+                v-model="editFirstLineColor"
+                @change="handleSaveBoldFirstLine"
+                style="width: 28px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;"
+              />
+              <span style="font-size: 0.72rem; font-family: monospace; color: #334155;">{{ editFirstLineColor }}</span>
+            </div>
+          </div>
         </div>
 
         <!-- 5c. Khóa chính & Liên kết Bảng (Primary Key & Table Link) -->
@@ -1025,6 +1048,7 @@ const emit = defineEmits([
   "change-rollup",
   "change-collapse-duplicates",
   "change-column-unique",
+  "change-bold-first-line",
   "change-name-col-field",
   "change-suggest",
   "delete-column",
@@ -1072,6 +1096,8 @@ const editIncludeInExport = ref(true);
 const editShowInDetail = ref(true);
 const editCollapseDuplicates = ref(false);
 const editIsUnique = ref(false);
+const editBoldFirstLine = ref(false);
+const editFirstLineColor = ref("#0369a1");
 const editIsKey = ref(false);
 const editLinkTable = ref("");
 const editLinkColumn = ref("");
@@ -1365,6 +1391,8 @@ watch(
       editShowInDetail.value = col.showInDetail !== false && col.showInDetail !== 'false';
       editCollapseDuplicates.value = Boolean(col.collapseDuplicates);
       editIsUnique.value = Boolean(col.isUnique);
+      editBoldFirstLine.value = Boolean(col.boldFirstLine);
+      editFirstLineColor.value = col.firstLineColor || "#0369a1";
       editIsKey.value = Boolean(col.isKey);
       editLinkTable.value = col.linkTable || "";
       editLinkColumn.value = col.linkColumn || "";
@@ -1620,6 +1648,18 @@ const handleToggleCollapseDuplicates = () => {
 
 const handleToggleIsUnique = () => {
   emit("change-column-unique", { colId: props.column.id, isUnique: editIsUnique.value });
+};
+
+const handleSaveBoldFirstLine = () => {
+  if (props.column) {
+    props.column.boldFirstLine = editBoldFirstLine.value;
+    props.column.firstLineColor = editFirstLineColor.value;
+  }
+  emit("change-bold-first-line", {
+    colId: props.column?.id,
+    boldFirstLine: editBoldFirstLine.value,
+    firstLineColor: editFirstLineColor.value,
+  });
 };
 
 const handleInsertLeft = () => {

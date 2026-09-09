@@ -627,6 +627,42 @@ export function useTableColumns({
     }
   };
 
+  const onChildChangeBoldFirstLine = async ({ colId, boldFirstLine, firstLineColor }) => {
+    if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
+      selectedChildMenuCol.value.boldFirstLine = Boolean(boldFirstLine);
+      selectedChildMenuCol.value.firstLineColor = firstLineColor || '#0369a1';
+    }
+    const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+    if (isBlank && cDash) {
+      const col = (cDash.customColumns || []).find((c) => c.id === colId);
+      if (col) {
+        col.boldFirstLine = Boolean(boldFirstLine);
+        col.firstLineColor = firstLineColor || '#0369a1';
+        try {
+          customDashboards.value = JSON.parse(JSON.stringify(customDashboards.value));
+          localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+          await saveAppSettings('custom_dashboards_config', customDashboards.value);
+        } catch (e) {}
+      }
+      return;
+    }
+    let found = false;
+    for (const g of mapping || []) {
+      for (const c of g.columns || []) {
+        if (c.id === colId) {
+          c.boldFirstLine = Boolean(boldFirstLine);
+          c.firstLineColor = firstLineColor || '#0369a1';
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+    }
+    if (found) {
+      await persistTableMapping(src, mapping);
+    }
+  };
+
   const onChildChangeColumnKey = async ({ colId, isKey }) => {
     if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
       selectedChildMenuCol.value.isKey = Boolean(isKey);
@@ -1274,6 +1310,7 @@ export function useTableColumns({
     onChildChangeColumnShowInDetail,
     onChildChangeColumnCollapseDuplicates,
     onChildChangeColumnUnique,
+    onChildChangeBoldFirstLine,
     onChildChangeColumnFormat,
     onChildChangeColumnLookup,
     onChildChangeColumnRollup,

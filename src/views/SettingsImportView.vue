@@ -556,6 +556,153 @@
           </div>
         </div>
       </div>
+
+      <!-- Khối 4: Tùy biến Phông chữ & Cỡ chữ Bảng Dữ liệu (Table Typography) -->
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 1.5rem;">
+        <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="pi pi-file-edit" style="color: #0284c7; font-size: 1.15rem;"></i>
+            Tùy biến Phông chữ & Cỡ chữ Bảng Dữ liệu (Table Typography)
+          </h3>
+          <p style="font-size: 0.78rem; color: #64748b; margin: 4px 0 0 0;">
+            Lựa chọn kiểu phông chữ và kích thước chữ cho bảng dữ liệu chính, popup thống kê và các danh sách toàn hệ thống.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+          <!-- Cột 1: Các tùy chọn cấu hình Font, Cỡ thân, Cỡ tiêu đề -->
+          <div style="display: flex; flex-direction: column; gap: 14px; background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; display: block;">
+                Phông chữ hiển thị bảng (Font Family):
+              </label>
+              <select
+                v-model="tableTypography.fontFamily"
+                style="width: 100%; height: 34px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; background: #fff; cursor: pointer;"
+              >
+                <option value="inherit">Mặc định hệ thống (Inter / System UI)</option>
+                <option value="'Be Vietnam Pro', sans-serif">Be Vietnam Pro (Hiện đại, chuẩn tiếng Việt)</option>
+                <option value="'Roboto', sans-serif">Roboto (Rõ ràng, cân đối)</option>
+                <option value="'Arial', sans-serif">Arial (Tiêu chuẩn văn phòng)</option>
+                <option value="'Times New Roman', serif">Times New Roman (Văn bản hành chính)</option>
+                <option value="'Noto Sans', sans-serif">Noto Sans (Đơn giản, dễ đọc)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; display: block;">
+                Cỡ chữ Thân bảng (Nội dung dòng - Body font size):
+              </label>
+              <select
+                v-model="tableTypography.bodyFontSize"
+                style="width: 100%; height: 34px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; background: #fff; cursor: pointer;"
+              >
+                <option value="0.95rem">Nhỏ (0.95rem - ~15px)</option>
+                <option value="1.05rem">Vừa (1.05rem - ~17px)</option>
+                <option value="1.15rem">Lớn (1.15rem - ~18.5px - Mặc định hiện tại)</option>
+                <option value="1.25rem">Rất lớn (1.25rem - ~20px)</option>
+                <option value="1.35rem">Cực đại (1.35rem - ~21.5px)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; display: block;">
+                Cỡ chữ Tiêu đề cột (Header font size):
+              </label>
+              <select
+                v-model="tableTypography.headerFontSize"
+                style="width: 100%; height: 34px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; background: #fff; cursor: pointer;"
+              >
+                <option value="0.85rem">Nhỏ gọn (0.85rem - ~13.5px)</option>
+                <option value="0.98rem">Tiêu chuẩn (0.98rem - ~15.5px - Mặc định)</option>
+                <option value="1.10rem">Lớn (1.10rem - ~17.5px)</option>
+              </select>
+            </div>
+
+            <!-- Nút Lưu & Khôi phục -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 6px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+              <Button
+                label="Khôi phục Mặc định"
+                icon="pi pi-refresh"
+                severity="secondary"
+                size="small"
+                outlined
+                @click="resetDefaultTableTypography"
+                style="font-size: 0.78rem;"
+              />
+              <Button
+                label="Lưu Cỡ & Font Chữ Bảng"
+                icon="pi pi-check"
+                severity="primary"
+                size="small"
+                :loading="isSavingTypography"
+                @click="saveTableTypography"
+                style="font-size: 0.78rem;"
+              />
+            </div>
+          </div>
+
+          <!-- Cột 2: Khung Xem trước trực tiếp (Live Preview) -->
+          <div>
+            <div style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 8px;">
+              Xem trước trực tiếp (Live Preview):
+            </div>
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #f9fafb; border-bottom: 1px solid #e2e8f0;">
+                    <th :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.headerFontSize, padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: '#4b5563', borderRight: '1px solid #e2e8f0' }">
+                      STT
+                    </th>
+                    <th :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.headerFontSize, padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: '#4b5563', borderRight: '1px solid #e2e8f0' }">
+                      HỌ VÀ TÊN
+                    </th>
+                    <th :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.headerFontSize, padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: '#4b5563', borderRight: '1px solid #e2e8f0' }">
+                      ĐƠN VỊ CÔNG TÁC
+                    </th>
+                    <th :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.headerFontSize, padding: '8px 12px', textAlign: 'left', fontWeight: '700', color: '#4b5563' }">
+                      TRẠNG THÁI
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.bodyFontSize, padding: '10px 12px', color: '#1e293b', borderRight: '1px solid #e2e8f0', fontWeight: '600', textAlign: 'center' }">
+                      1
+                    </td>
+                    <td :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.bodyFontSize, padding: '10px 12px', color: '#0369a1', borderRight: '1px solid #e2e8f0', fontWeight: '700' }">
+                      Nguyễn Văn An
+                    </td>
+                    <td :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.bodyFontSize, padding: '10px 12px', color: '#1e293b', borderRight: '1px solid #e2e8f0' }">
+                      Phòng An ninh Chính trị Nội bộ
+                    </td>
+                    <td :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.bodyFontSize, padding: '10px 12px', color: '#16a34a', fontWeight: '600' }">
+                      Trong nước
+                    </td>
+                  </tr>
+                  <tr>
+                    <td :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.bodyFontSize, padding: '10px 12px', color: '#1e293b', borderRight: '1px solid #e2e8f0', fontWeight: '600', textAlign: 'center' }">
+                      2
+                    </td>
+                    <td :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.bodyFontSize, padding: '10px 12px', color: '#0369a1', borderRight: '1px solid #e2e8f0', fontWeight: '700' }">
+                      Trần Thị Mai
+                    </td>
+                    <td :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.bodyFontSize, padding: '10px 12px', color: '#1e293b', borderRight: '1px solid #e2e8f0' }">
+                      Công an Quận 1
+                    </td>
+                    <td :style="{ fontFamily: tableTypography.fontFamily, fontSize: tableTypography.bodyFontSize, padding: '10px 12px', color: '#2563eb', fontWeight: '600' }">
+                      Đang ở nước ngoài
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="font-size: 0.72rem; color: #64748b; margin-top: 8px; line-height: 1.35;">
+              💡 Kích thước và kiểu chữ sẽ được áp dụng ngay cho tất cả các bảng dữ liệu trên toàn hệ thống sau khi bấm <strong>Lưu</strong>.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Dialog Thêm / Sửa Nhóm Dashboard -->
@@ -1248,6 +1395,73 @@ const resetDefaultSidebarBg = async () => {
   await saveAppSettings('sidebar_subtitle_text_color', '');
   window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
   alert('Đã khôi phục nền Menu mặc định!');
+};
+
+// Quản lý Phông chữ & Cỡ chữ Bảng Dữ liệu (Table Typography)
+const DEFAULT_TABLE_TYPOGRAPHY = {
+  fontFamily: 'inherit',
+  bodyFontSize: '1.15rem',
+  headerFontSize: '0.98rem',
+};
+
+const tableTypography = ref({ ...DEFAULT_TABLE_TYPOGRAPHY });
+const isSavingTypography = ref(false);
+
+const applyTableTypographyToDom = (cfg) => {
+  if (!cfg || typeof cfg !== 'object') return;
+  const root = document.documentElement;
+  if (cfg.fontFamily) root.style.setProperty('--table-font-family', cfg.fontFamily);
+  if (cfg.bodyFontSize) root.style.setProperty('--table-body-font-size', cfg.bodyFontSize);
+  if (cfg.headerFontSize) root.style.setProperty('--table-header-font-size', cfg.headerFontSize);
+};
+
+const loadTableTypographySettings = async () => {
+  try {
+    const local = localStorage.getItem('table_typography_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      tableTypography.value = { ...DEFAULT_TABLE_TYPOGRAPHY, ...parsed };
+      applyTableTypographyToDom(tableTypography.value);
+    }
+    const dbData = await getAppSettings('table_typography_config', null);
+    if (dbData) {
+      tableTypography.value = { ...DEFAULT_TABLE_TYPOGRAPHY, ...dbData };
+      applyTableTypographyToDom(tableTypography.value);
+      localStorage.setItem('table_typography_config', JSON.stringify(tableTypography.value));
+    }
+  } catch (err) {
+    console.warn('Failed to load table typography:', err);
+  }
+};
+
+const saveTableTypography = async () => {
+  isSavingTypography.value = true;
+  try {
+    const cfg = {
+      fontFamily: tableTypography.value.fontFamily || 'inherit',
+      bodyFontSize: tableTypography.value.bodyFontSize || '1.15rem',
+      headerFontSize: tableTypography.value.headerFontSize || '0.98rem',
+    };
+    applyTableTypographyToDom(cfg);
+    localStorage.setItem('table_typography_config', JSON.stringify(cfg));
+    await saveAppSettings('table_typography_config', cfg);
+    alert('Đã lưu cấu hình Phông chữ & Cỡ chữ Bảng thành công! Toàn bộ bảng đã được cập nhật.');
+  } catch (e) {
+    alert('Lỗi lưu cấu hình: ' + (e.message || e));
+  } finally {
+    isSavingTypography.value = false;
+  }
+};
+
+const resetDefaultTableTypography = async () => {
+  if (!confirm('Khôi phục lại kích thước và kiểu chữ mặc định cho Bảng dữ liệu?')) return;
+  tableTypography.value = { ...DEFAULT_TABLE_TYPOGRAPHY };
+  applyTableTypographyToDom(tableTypography.value);
+  try {
+    localStorage.setItem('table_typography_config', JSON.stringify(tableTypography.value));
+    await saveAppSettings('table_typography_config', tableTypography.value);
+  } catch (e) {}
+  alert('Đã khôi phục cài đặt chữ bảng về mặc định!');
 };
 
 // Quản lý Danh sách Mẫu Word (.docx)
@@ -2047,6 +2261,7 @@ onMounted(async () => {
     loadDocxTemplates(),
     loadLoginBg(),
     loadSidebarBgSettings(),
+    loadTableTypographySettings(),
   ]);
 });
 

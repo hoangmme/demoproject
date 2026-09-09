@@ -671,6 +671,30 @@
             <div style="font-size: 0.65rem; color: #9333ea;">Ưu tiên gộp các dòng trùng lặp theo giá trị của cột này (mỗi giá trị hiển thị 1 hàng)</div>
           </div>
         </label>
+
+        <!-- Tùy chọn In đậm & Đổi màu dòng đầu tiên -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 10px; grid-column: span 2; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: #166534; cursor: pointer; user-select: none;">
+            <input
+              type="checkbox"
+              v-model="form.boldFirstLine"
+              style="accent-color: #16a34a; width: 15px; height: 15px; cursor: pointer;"
+            />
+            <div>
+              <div style="font-weight: 700;">✨ In đậm & Đổi màu dòng đầu tiên</div>
+              <div style="font-size: 0.65rem; color: #15803d;">Cột họ tên hoặc nội dung nhiều dòng sẽ được nhấn mạnh dòng 1</div>
+            </div>
+          </label>
+          <div v-if="form.boldFirstLine" style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Màu chữ:</span>
+            <input
+              type="color"
+              v-model="form.firstLineColor"
+              style="width: 28px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;"
+            />
+            <span style="font-size: 0.72rem; font-family: monospace; color: #334155;">{{ form.firstLineColor }}</span>
+          </div>
+        </div>
       </div>
 
       <!-- 5. Bắt buộc nhập liệu (Required) -->
@@ -768,6 +792,8 @@ const form = ref({
   showInDetail: true,
   collapseDuplicates: false,
   isUnique: false,
+  boldFirstLine: false,
+  firstLineColor: '#0369a1',
   required: false,
   lookupTarget: 'personnel',
   lookupLinkCol: '',
@@ -834,6 +860,8 @@ watch(
         showInDetail: true,
         collapseDuplicates: false,
         isUnique: false,
+        boldFirstLine: false,
+        firstLineColor: '#0369a1',
         required: false,
         lookupTarget: 'personnel',
         lookupLinkCol: '',
@@ -1094,6 +1122,8 @@ const handleSave = async () => {
       showInDetail: form.value.showInDetail !== false,
       collapseDuplicates: Boolean(form.value.collapseDuplicates),
       isUnique: Boolean(form.value.isUnique),
+      boldFirstLine: Boolean(form.value.boldFirstLine),
+      firstLineColor: form.value.firstLineColor || '#0369a1',
       required: Boolean(form.value.required),
       options: form.value.options ? form.value.options.trim() : '',
       ...(form.value.format === 'lookup' ? {

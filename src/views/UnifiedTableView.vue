@@ -522,18 +522,23 @@
                   />
                 </div>
 
-                <!-- Hiển thị giá trị bình thường -->
+                <!-- Hiển thị giá trị bình thường (có kiểm tra col.boldFirstLine hoặc xuống dòng) -->
                 <div
                   v-else-if="String(getCellValue(data, col.id)).includes('\n')"
                   style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; color: #1e293b;"
                 >
-                  <div style="font-weight: 700; color: #0369a1; font-size: 1.12rem;">
+                  <div :style="{ fontWeight: col.boldFirstLine !== false ? '700' : 'normal', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
                     {{ String(getCellValue(data, col.id)).split('\n')[0] }}
                   </div>
                   <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
                     {{ String(getCellValue(data, col.id)).split('\n').slice(1).join('\n') }}
                   </div>
                 </div>
+                <template v-else-if="col.boldFirstLine">
+                  <strong :style="{ color: col.firstLineColor || '#0369a1', fontWeight: '700', fontSize: '1.15rem', whiteSpace: 'pre-line', display: 'inline-block', lineHeight: '1.45' }">
+                    {{ getCellValue(data, col.id) }}
+                  </strong>
+                </template>
                 <span v-else style="word-break: break-word; line-height: 1.45; font-size: 1.15rem; white-space: pre-line;">{{ getCellValue(data, col.id) }}</span>
               </div>
             </template>
@@ -1060,6 +1065,7 @@
       @change-show-in-detail="onChildChangeColumnShowInDetail"
       @change-collapse-duplicates="onChildChangeColumnCollapseDuplicates"
       @change-column-unique="onChildChangeColumnUnique"
+      @change-bold-first-line="onChildChangeBoldFirstLine"
       @change-lookup="onChildChangeColumnLookup"
       @change-rollup="onChildChangeColumnRollup"
       @change-name-col-field="toggleNameColField"
@@ -2254,6 +2260,7 @@ const {
   onChildChangeColumnShowInDetail,
   onChildChangeColumnCollapseDuplicates,
   onChildChangeColumnUnique,
+  onChildChangeBoldFirstLine,
   onChildChangeColumnFormat,
   onChildChangeColumnLookup,
   onChildChangeColumnRollup,

@@ -1124,21 +1124,6 @@
 
           <!-- Actions Toolbar inside Drilldown Header -->
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <!-- Dropdown chọn Chế độ xem (View) để áp dụng thứ tự cột -->
-            <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 8px; height: 32px;">
-              <i class="pi pi-sliders-h" style="font-size: 0.75rem; color: #2563eb;"></i>
-              <span style="font-size: 0.74rem; font-weight: 600; color: #475569; white-space: nowrap;">Chế độ xem:</span>
-              <select
-                v-model="drilldownSelectedViewId"
-                @change="onDrilldownViewChange"
-                style="height: 26px; font-size: 0.75rem; font-weight: 600; border: none; background: transparent; outline: none; color: #1e293b; cursor: pointer; max-width: 170px;"
-                title="Chọn Chế độ xem để áp dụng thứ tự và danh sách cột"
-              >
-                <option v-for="v in drilldownAvailableViews" :key="v.id" :value="v.id">
-                  {{ v.label }}
-                </option>
-              </select>
-            </div>
 
             <!-- Tùy chỉnh cột riêng cho Chế độ xem đang chọn -->
             <ColumnSelector
@@ -1244,12 +1229,12 @@
                 </span>
               </template>
 
-              <!-- Cột có xuống dòng (Họ tên + chức vụ/đơn vị, hoặc công thức nhiều dòng: dòng 1 tô đậm xanh giống bảng chính) -->
+              <!-- Cột có xuống dòng (Họ tên + chức vụ/đơn vị, hoặc công thức nhiều dòng: dòng 1 tô đậm theo cấu hình hoặc mặc định) -->
               <div
                 v-else-if="String(getRowFieldValue(data, col.id, col) || '').includes('\n')"
                 style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; color: #1e293b; text-align: left;"
               >
-                <div style="font-weight: 700; color: #0369a1; font-size: 1.12rem;">
+                <div :style="{ fontWeight: col.boldFirstLine !== false ? '700' : 'normal', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
                   {{ String(getRowFieldValue(data, col.id, col) || '').split('\n')[0] }}
                 </div>
                 <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
@@ -1257,9 +1242,9 @@
                 </div>
               </div>
 
-              <!-- Cột Họ tên (kể cả khi chỉ có 1 dòng) -->
-              <template v-else-if="col.id === '_parentPersonnelName' || col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen' || col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan' || col.id?.toLowerCase().includes('name') || col.label?.toLowerCase().includes('tên')">
-                <strong style="color: #0369a1; font-weight: 700; font-size: 1.15rem; white-space: pre-line; display: inline-block; line-height: 1.45; text-align: left;">
+              <!-- Cột được cấu hình In đậm dòng đầu hoặc là cột tên -->
+              <template v-else-if="col.boldFirstLine || col.id === '_parentPersonnelName' || col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen' || col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan' || col.id?.toLowerCase().includes('name') || col.label?.toLowerCase().includes('tên')">
+                <strong :style="{ color: col.firstLineColor || '#0369a1', fontWeight: '700', fontSize: '1.15rem', whiteSpace: 'pre-line', display: 'inline-block', lineHeight: '1.45', textAlign: 'left' }">
                   {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </strong>
               </template>

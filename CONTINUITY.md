@@ -163,6 +163,24 @@
 
 ### 14. TÙY CHỈNH MÀU CHỮ MENU SIDEBAR (AppSidebar.vue, SettingsImportView.vue)
 - Bổ sung tùy chọn chọn màu chữ menu bên trái (`sidebar_custom_text_color`) trong phần Cài đặt Hệ thống -> Tùy chỉnh Hình nền Menu Bên Trái.
+
+### 15. NÂNG CẤP TAB NGANG THÂN NHÂN ZERO-HARDCODE, CÀI ĐẶT FONT/SIZE BẢNG, BOLD/MÀU CỘT ĐỘNG & CHUẨN HÓA XUẤT TÀI LIỆU (Session 29 - 2026-09-10)
+- **1. Tab ngang Thân nhân & Cơ chế Zero-Hardcode (`PersonnelRelatedTabs.vue`)**:
+  - Khi xem/sửa Thân nhân, thanh tab ngang hiển thị đầy đủ các bảng liên quan: `[Thông tin chính]`, `[Chuyến đi]`, `[Cán bộ]`.
+  - Tự động liên kết 2 chiều giữa 3 bảng cốt lõi (`personnel`, `relatives`, `trips`) và mọi bảng tùy biến có quan hệ khóa ngoại / lookup mà không cần cấu hình thủ công.
+  - Hỗ trợ nạp đầy đủ chuyến đi của thân nhân từ cả store `tripsList` và mảng cục bộ `curRecord.trips` / `curRecord.custom_data.trips`.
+- **2. Tinh gọn Popup Thống kê Drilldown (`DashboardView.vue`)**:
+  - Xóa bỏ dropdown "Chế độ xem" tại header popup drilldown, giúp thanh công cụ gọn gàng, tập trung vào ô tìm kiếm, bộ chọn cột và nút xuất dữ liệu.
+- **3. Cài đặt Phông chữ & Cỡ chữ Bảng toàn cục (`SettingsImportView.vue`, `main.css`, `App.vue`)**:
+  - Thêm Khối 4 trong Cài đặt chung: Tùy biến Font chữ (Inter, Be Vietnam Pro, Roboto, Arial, Times New Roman, Noto Sans) và Cỡ chữ thân bảng (`0.95rem` đến `1.35rem`), Cỡ chữ tiêu đề (`0.85rem` đến `1.10rem`).
+  - Khung Live Preview xem trước trực quan.
+  - Lưu vào `app_settings` key `table_typography_config` và `localStorage`, nạp tự động trong `App.vue` áp dụng qua biến CSS `--table-font-family`, `--table-body-font-size`, `--table-header-font-size`.
+- **4. Tùy chọn Cột In đậm & Đổi màu dòng đầu tiên động (`ColumnHeaderMenu.vue`, `AddColumnDialog.vue`, `useTableColumns.js`, `UnifiedTableView.vue`, `DashboardView.vue`)**:
+  - Xóa bỏ hardcode kiểm tra tên cột (`col.id === 'name'`).
+  - Thêm checkbox `col.boldFirstLine` và color picker `col.firstLineColor` (mặc định `#0369a1`).
+  - Cả Bảng chính (`UnifiedTableView`) và Popup Thống kê (`DashboardView`) dùng chung cơ chế hiển thị dòng 1 in đậm và đổi màu theo đúng cấu hình cột.
+- **5. Chuẩn hóa Dữ liệu Xuất PDF/Word (`docxExport.js`)**:
+  - Cập nhật `nullGetter` trong `Docxtemplater`: tự động điền `'-'` trang nhã cho mọi trường/cột không có dữ liệu thay vì để trống trơn, tránh gây hiểu nhầm là lỗi hiển thị. Thẻ lặp và điều kiện vẫn an toàn trả về `[]`.
 - Hỗ trợ chọn bảng màu (color picker), nhập mã hex trực tiếp, các nút gợi ý gam màu chuẩn (Đen mặc định `#000000`, Trắng sáng `#ffffff`, Vàng nhạt `#fef08a`, Xám đậm `#334155`, Xanh lục đậm `#14532d`).
 - Tự động áp dụng màu chữ cho toàn bộ menu bên trái bao gồm: tên cơ quan, các mục menu, tiêu đề phân nhóm và icon.
 

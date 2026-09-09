@@ -448,6 +448,18 @@ const getLinkedRows = (targetTable) => {
     const relVal = String(curRecord[relKeyField.value] || curRecord.cccdthannhan || curRecord.cccd || '').trim().toLowerCase();
     const res = [];
     const seen = new Set();
+    // Also check local trips array on curRecord if present
+    const localTrips = Array.isArray(curRecord.trips) ? curRecord.trips : (Array.isArray(curRecord.custom_data?.trips) ? curRecord.custom_data.trips : []);
+    localTrips.forEach((t, idx) => {
+      const uKey = t.uniqueKey || t.id || `local_trip_${idx}`;
+      if (seen.has(uKey)) return;
+      seen.add(uKey);
+      res.push({
+        ...t,
+        _isPersonnelTrip: false,
+      });
+    });
+
     (personnelStore.tripsList || []).forEach((t, idx) => {
       const uKey = t.uniqueKey || t.id || `trip_${idx}`;
       if (seen.has(uKey)) return;
@@ -503,15 +515,35 @@ const isTableLinked = (targetTable) => {
   const targetId = targetTable.id;
   if (curId === targetId) return false;
 
-  // Column link checks (Only link when explicitly configured by user via linkTable)
+  // 1. Automatic reciprocal link for Core 3 Tables: personnel <-> relatives <-> trips
+  const coreTables = ['personnel', 'relatives', 'trips'];
+  if (coreTables.includes(curId) && coreTables.includes(targetId)) {
+    return true;
+  }
+
+  // 2. Column link checks (Dynamic foreign keys, lookup, or linkTable)
   const targetCols = targetTable.getColumns ? targetTable.getColumns(personnelStore) : [];
   const curCols = curTable?.getColumns ? curTable.getColumns(personnelStore) : [];
 
-  const fkTarget = targetCols.some((c) => checkTableMatchesLink(c.linkTable, curId, curTable?.source));
+  const fkTarget = targetCols.some((c) => 
+    checkTableMatchesLink(c.linkTable, curId, curTable?.source) ||
+    (c.format === 'lookup' && checkTableMatchesLink(c.lookupTable || c.linkTable, curId, curTable?.source))
+  );
   if (fkTarget) return true;
 
-  const fkCur = curCols.some((c) => checkTableMatchesLink(c.linkTable, targetId, targetTable.source));
+  const fkCur = curCols.some((c) => 
+    checkTableMatchesLink(c.linkTable, targetId, targetTable.source) ||
+    (c.format === 'lookup' && checkTableMatchesLink(c.lookupTable || c.linkTable, targetId, targetTable.source))
+  );
   if (fkCur) return true;
+
+  // 3. Dynamic row check: If there are linked rows found, auto-link
+  try {
+    const rows = getLinkedRows(targetTable);
+    if (rows && rows.length > 0) return true;
+  } catch (e) {
+    // ignore
+  }
 
   return false;
 };
