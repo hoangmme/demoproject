@@ -797,6 +797,45 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   // Sắp xếp các chuyến đi theo ngày tăng dần
   matchedTrips.sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0));
 
+  // Kiểm tra xem dòng hiện tại là 1 chuyến đi đơn lẻ hay là dòng đã gộp Unique theo Cán bộ
+  const isAggregatedRow = Boolean(
+    record._isUniqueRow ||
+    record._isAggregatedPerson ||
+    (!record.departureDate && !record.ngay_xuat_canh && !record.rawTrip && record.code?.startsWith('CB-'))
+  );
+
+  // Nếu là dòng chuyến đi đơn lẻ (dữ liệu hiển thị từng hàng):
+  // Hiển thị thông tin chuyến đi tương ứng của từng hàng thay vì gộp danh sách trùng lặp
+  if (!isAggregatedRow && (record.departureDate || record.ngay_xuat_canh || record.rawTrip || record._recordType === 'trip')) {
+    const tripRecId = record.id || record.uniqueKey || record.rawTrip?.id;
+    const currentTripIdx = matchedTrips.findIndex((mt) => {
+      const mtId = mt.trip?.id || mt.trip?.uniqueKey;
+      if (tripRecId && mtId && String(tripRecId) === String(mtId)) return true;
+      const recDateStr = formatDate(currentDepDate) || formatDate(rawCurrentDep) || '';
+      const recCountry = getRecordFieldValue(record, countryCol) || getRecordFieldValue(record, 'quoc_gia_xuat_canh') || record.countryName || '';
+      return mt.dateStr === recDateStr && mt.country === recCountry;
+    });
+
+    if (currentTripIdx !== -1) {
+      const currentTrip = matchedTrips[currentTripIdx];
+      const tripNum = currentTripIdx + 1;
+      const shortStr = count > 1 ? `Chuyến ${tripNum}/${count}: ${currentTrip.country}` : `Chuyến 1: ${currentTrip.country}`;
+      const fullStr = count > 1 ? `Chuyến ${tripNum}/${count}: ${currentTrip.country} - ${currentTrip.dateStr}` : `Chuyến 1: ${currentTrip.country} - ${currentTrip.dateStr}`;
+      return {
+        status: 'normal',
+        count,
+        value: count,
+        year: targetYear,
+        label: fullStr,
+        shortLabel: shortStr,
+        details: [currentTrip],
+        tripIndex: currentTripIdx,
+        cssClass: '',
+      };
+    }
+  }
+
+  // Khi là dòng Unique / gộp theo Cán bộ: hiển thị tổng số lần và chi tiết tất cả chuyến đi
   const mainCountStr = labelTpl
     .replace(/{count}/g, String(count))
     .replace(/{year}/g, String(targetYear));

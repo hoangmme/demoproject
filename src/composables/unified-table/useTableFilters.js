@@ -82,31 +82,48 @@ export function useTableFilters({
         : baseSource.filter((t) => matchSharedCardCondition(t, targetCard, personnelStore));
     }
 
-    // 2. Đếm / Hiển thị Unique (kế thừa tính unique từ thẻ baseline nếu có ràng buộc)
+    // 2. Đếm / Hiển thị Unique (kế thừa tính unique từ thẻ baseline hoặc cột có tick isUnique)
+    const activeCols = resolveList(visibleColumns);
+    const uniqueCol = activeCols.find((c) => c.isUnique);
+
     const isUniqueCount =
       targetCard?.isUnique ||
       (shouldInheritBaseline && !!baselineCard?.isUnique) ||
-      (targetCard === baselineCard && !!baselineCard?.isUnique);
+      (targetCard === baselineCard && !!baselineCard?.isUnique) ||
+      Boolean(uniqueCol);
+
     if (isUniqueCount) {
-      const pKeyField = personnelStore?.getPersonnelKeyField
+      const pKeyField = uniqueCol?.id || (personnelStore?.getPersonnelKeyField
         ? personnelStore.getPersonnelKeyField()
-        : 'cccdparent';
+        : 'cccdparent');
       const seenKeys = new Set();
       list = list.filter((item) => {
-        const keyVal =
-          item[pKeyField] ??
-          item.cccdparent ??
-          item.parentCccd ??
-          item.rawPerson?.[pKeyField] ??
-          item.rawPerson?.custom_data?.[pKeyField] ??
-          item.personnelId ??
-          item.id;
+        let keyVal;
+        if (uniqueCol) {
+          keyVal = typeof extractRowFieldValue === 'function'
+            ? extractRowFieldValue(item, uniqueCol.id, personnelStore)
+            : item[uniqueCol.id];
+          if (!keyVal && typeof getCellValue === 'function') {
+            keyVal = getCellValue(item, uniqueCol.id);
+          }
+        } else {
+          keyVal =
+            item[pKeyField] ??
+            item.cccdparent ??
+            item.parentCccd ??
+            item.rawPerson?.[pKeyField] ??
+            item.rawPerson?.custom_data?.[pKeyField] ??
+            item.personnelId ??
+            item.id;
+        }
         if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
-          const strKey = String(keyVal).trim();
+          const strKey = String(keyVal).trim().toLowerCase();
           if (seenKeys.has(strKey)) return false;
           seenKeys.add(strKey);
+          item._isUniqueRow = true;
           return true;
         }
+        item._isUniqueRow = true;
         return true;
       });
     }

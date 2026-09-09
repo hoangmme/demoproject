@@ -594,6 +594,39 @@ export function useTableColumns({
     }
   };
 
+  const onChildChangeColumnUnique = async ({ colId, isUnique }) => {
+    if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
+      selectedChildMenuCol.value.isUnique = Boolean(isUnique);
+    }
+    const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+    if (isBlank && cDash) {
+      (cDash.customColumns || []).forEach((c) => {
+        if (c.id === colId) c.isUnique = Boolean(isUnique);
+        else if (isUnique) c.isUnique = false;
+      });
+      try {
+        customDashboards.value = JSON.parse(JSON.stringify(customDashboards.value));
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+      return;
+    }
+    let found = false;
+    for (const g of mapping || []) {
+      for (const c of g.columns || []) {
+        if (c.id === colId) {
+          c.isUnique = Boolean(isUnique);
+          found = true;
+        } else if (isUnique) {
+          c.isUnique = false;
+        }
+      }
+    }
+    if (found) {
+      await persistTableMapping(src, mapping);
+    }
+  };
+
   const onChildChangeColumnKey = async ({ colId, isKey }) => {
     if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
       selectedChildMenuCol.value.isKey = Boolean(isKey);
@@ -1240,6 +1273,7 @@ export function useTableColumns({
     onChildChangeColumnIncludeExport,
     onChildChangeColumnShowInDetail,
     onChildChangeColumnCollapseDuplicates,
+    onChildChangeColumnUnique,
     onChildChangeColumnFormat,
     onChildChangeColumnLookup,
     onChildChangeColumnRollup,

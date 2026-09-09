@@ -1059,6 +1059,7 @@
       @change-include-export="onChildChangeColumnIncludeExport"
       @change-show-in-detail="onChildChangeColumnShowInDetail"
       @change-collapse-duplicates="onChildChangeColumnCollapseDuplicates"
+      @change-column-unique="onChildChangeColumnUnique"
       @change-lookup="onChildChangeColumnLookup"
       @change-rollup="onChildChangeColumnRollup"
       @change-name-col-field="toggleNameColField"
@@ -2252,6 +2253,7 @@ const {
   onChildChangeColumnIncludeExport,
   onChildChangeColumnShowInDetail,
   onChildChangeColumnCollapseDuplicates,
+  onChildChangeColumnUnique,
   onChildChangeColumnFormat,
   onChildChangeColumnLookup,
   onChildChangeColumnRollup,

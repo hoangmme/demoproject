@@ -2676,4 +2676,27 @@
        - Đã commit và push mã nguồn lên nhánh `main`.
     4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-10 - Session 27)**: **Công Thức Số Lần Xuất Cảnh Thông Minh Theo Dòng/Unique, Đồng Bộ Tô Đậm Popup Thống Kê Giống Bảng & Tùy Chọn Lọc Unique Theo Cột**:
+    1. **Yêu cầu của người dùng**:
+       - *"công thức số lần xuất cảnh trong năm nên thông minh hơn tí, tức là nếu dữ liệu ở 2 hàng thì hiển thị chuyến đi từng hàng, còn nếu unique thì mới gộp lại chứ"*: Khi dữ liệu hiển thị phẳng từng hàng (không gộp unique), mỗi dòng hiển thị đúng chuyến đi của dòng đó (`Chuyến 1/2: Mỹ - 15/10/2025` và `Chuyến 2/2: Pháp - 20/11/2025`), tránh lặp lại danh sách toàn bộ chuyến trên cả 2 dòng. Khi bật Unique/gộp thì mới gộp danh sách đầy đủ.
+       - *"popup thống kê sao ko có tô đậm chữ giống ở bảng, sao k dùng cùng logic cho dễ?"*: Popup drilldown thống kê chưa đồng bộ style ô nhiều dòng (dòng 1 Họ tên tô đậm xanh dương `#0369a1`) như ở bảng chính.
+       - *"ở cột có nên cho phép tích chọn unique không? như vậy sẽ ưu tiên gộp theo cột đó?"*: Cho phép tích chọn Unique trực tiếp trên cột để ưu tiên gộp các dòng trùng lặp theo cột đó.
+    2. **Giải pháp & Triển khai**:
+       - **Công Thức Số Lần Xuất Cảnh Thông Minh (`src/utils/formatters.js`)**:
+         * Tự động phân biệt dòng chuyến đi phẳng (`!isAggregatedRow && (record.departureDate || record.ngay_xuat_canh || record._recordType === 'trip')`) và dòng gộp Unique (`_isUniqueRow === true` hoặc bản ghi cán bộ tổng hợp).
+         * Ở chế độ phẳng (2 hàng riêng biệt): tìm chính xác vị trí chuyến đi của dòng hiện tại trong năm (`currentTripIdx`), hiển thị gọn gàng: `Chuyến ${idx + 1}/${count}: ${country} - ${dateStr}` (VD: `Chuyến 1/2: Mỹ - 15/10/2025` và `Chuyến 2/2: Pháp - 20/11/2025`).
+         * Ở chế độ gộp Unique: gom toàn bộ chuyến đi hiển thị đầy đủ đa dòng (`2 lần\n- Chuyến 1: ...\n- Chuyến 2: ...`).
+       - **Đồng Bộ Hoàn Toàn Style Popup Thống Kê với Bảng Chính (`src/views/DashboardView.vue`)**:
+         * Áp dụng cùng logic tách dòng `\n` như `UnifiedTableView.vue`: dòng 1 hiển thị chữ to, tô đậm xanh dương `#0369a1` (font-size 1.12rem, weight 700); các dòng chức vụ/đơn vị phụ bên dưới hiển thị màu xám `#475569` font-size 0.95rem.
+         * Các cột Họ tên đơn dòng cũng được áp dụng màu xanh `#0369a1` in đậm đồng bộ.
+       - **Tùy Chọn Lọc Unique Theo Cột (`ColumnHeaderMenu.vue`, `useTableColumns.js`, `AddColumnDialog.vue`, `useTableFilters.js`)**:
+         * Bổ sung checkbox: `🔘 Lọc duy nhất theo cột này (Unique - Gộp các dòng trùng)` (`col.isUnique`).
+         * `useTableFilters.js`: Khi có cột được đánh dấu `isUnique`, bảng tự động lọc duy nhất theo giá trị của cột đó (`uniqueCol.id`), gán cờ `_isUniqueRow = true` để kích hoạt chế độ gộp dữ liệu và công thức tương ứng.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 549ms).
+       - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+       - Commit & push lên git `main`.
+    4. **Trạng thái**: Done [Reversible].
+
+
 

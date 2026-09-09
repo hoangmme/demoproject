@@ -1244,9 +1244,22 @@
                 </span>
               </template>
 
-              <!-- Họ tên Cán bộ / Bản ghi chính (dòng đậm) -->
-              <template v-else-if="col.id === '_parentPersonnelName' || col.id === 'name' || col.id === 'ho_va_ten'">
-                <strong style="color: #0284c7; font-weight: 700; font-size: 1.18rem; white-space: pre-line; display: inline-block; line-height: 1.45; text-align: left;">
+              <!-- Cột có xuống dòng (Họ tên + chức vụ/đơn vị, hoặc công thức nhiều dòng: dòng 1 tô đậm xanh giống bảng chính) -->
+              <div
+                v-else-if="String(getRowFieldValue(data, col.id, col) || '').includes('\n')"
+                style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; color: #1e293b; text-align: left;"
+              >
+                <div style="font-weight: 700; color: #0369a1; font-size: 1.12rem;">
+                  {{ String(getRowFieldValue(data, col.id, col) || '').split('\n')[0] }}
+                </div>
+                <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
+                  {{ String(getRowFieldValue(data, col.id, col) || '').split('\n').slice(1).join('\n') }}
+                </div>
+              </div>
+
+              <!-- Cột Họ tên (kể cả khi chỉ có 1 dòng) -->
+              <template v-else-if="col.id === '_parentPersonnelName' || col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen' || col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan' || col.id?.toLowerCase().includes('name') || col.label?.toLowerCase().includes('tên')">
+                <strong style="color: #0369a1; font-weight: 700; font-size: 1.15rem; white-space: pre-line; display: inline-block; line-height: 1.45; text-align: left;">
                   {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </strong>
               </template>

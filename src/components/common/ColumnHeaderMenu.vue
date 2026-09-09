@@ -746,6 +746,16 @@
             />
             <span style="font-weight: 600; color: #0369a1;">Gộp / Ẩn giá trị lặp liên tiếp (Dấu lặp ″)</span>
           </label>
+
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; user-select: none; background: #faf5ff; border: 1px solid #e9d5ff; padding: 4px 6px; border-radius: 4px;">
+            <input
+              type="checkbox"
+              v-model="editIsUnique"
+              @change="handleToggleIsUnique"
+              style="accent-color: #9333ea; cursor: pointer;"
+            />
+            <span style="font-weight: 600; color: #7e22ce;">🔘 Lọc duy nhất theo cột này (Unique - Gộp dòng trùng)</span>
+          </label>
         </div>
 
         <!-- 5c. Khóa chính & Liên kết Bảng (Primary Key & Table Link) -->
@@ -1014,6 +1024,7 @@ const emit = defineEmits([
   "change-lookup",
   "change-rollup",
   "change-collapse-duplicates",
+  "change-column-unique",
   "change-name-col-field",
   "change-suggest",
   "delete-column",
@@ -1060,6 +1071,7 @@ const editRequired = ref(false);
 const editIncludeInExport = ref(true);
 const editShowInDetail = ref(true);
 const editCollapseDuplicates = ref(false);
+const editIsUnique = ref(false);
 const editIsKey = ref(false);
 const editLinkTable = ref("");
 const editLinkColumn = ref("");
@@ -1352,6 +1364,7 @@ watch(
       editIncludeInExport.value = col.includeInExport !== false && col.includeInExport !== 'false';
       editShowInDetail.value = col.showInDetail !== false && col.showInDetail !== 'false';
       editCollapseDuplicates.value = Boolean(col.collapseDuplicates);
+      editIsUnique.value = Boolean(col.isUnique);
       editIsKey.value = Boolean(col.isKey);
       editLinkTable.value = col.linkTable || "";
       editLinkColumn.value = col.linkColumn || "";
@@ -1603,6 +1616,10 @@ const handleToggleShowInDetail = () => {
 
 const handleToggleCollapseDuplicates = () => {
   emit("change-collapse-duplicates", { colId: props.column.id, collapseDuplicates: editCollapseDuplicates.value });
+};
+
+const handleToggleIsUnique = () => {
+  emit("change-column-unique", { colId: props.column.id, isUnique: editIsUnique.value });
 };
 
 const handleInsertLeft = () => {

@@ -659,6 +659,18 @@
             <div style="font-size: 0.65rem; color: #64748b;">Hàng sau trùng giá trị với hàng trước sẽ hiển thị dấu tương tự "″"</div>
           </div>
         </label>
+
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: #1e293b; cursor: pointer; user-select: none; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 6px 10px; grid-column: span 2;">
+          <input
+            type="checkbox"
+            v-model="form.isUnique"
+            style="accent-color: #9333ea; width: 15px; height: 15px; cursor: pointer;"
+          />
+          <div>
+            <div style="font-weight: 600; color: #7e22ce;">🔘 Lọc duy nhất theo cột này (Unique - Gộp các dòng trùng)</div>
+            <div style="font-size: 0.65rem; color: #9333ea;">Ưu tiên gộp các dòng trùng lặp theo giá trị của cột này (mỗi giá trị hiển thị 1 hàng)</div>
+          </div>
+        </label>
       </div>
 
       <!-- 5. Bắt buộc nhập liệu (Required) -->
@@ -755,6 +767,7 @@ const form = ref({
   includeInExport: true,
   showInDetail: true,
   collapseDuplicates: false,
+  isUnique: false,
   required: false,
   lookupTarget: 'personnel',
   lookupLinkCol: '',
@@ -820,6 +833,7 @@ watch(
         includeInExport: true,
         showInDetail: true,
         collapseDuplicates: false,
+        isUnique: false,
         required: false,
         lookupTarget: 'personnel',
         lookupLinkCol: '',
@@ -1079,6 +1093,7 @@ const handleSave = async () => {
       includeInExport: form.value.includeInExport !== false,
       showInDetail: form.value.showInDetail !== false,
       collapseDuplicates: Boolean(form.value.collapseDuplicates),
+      isUnique: Boolean(form.value.isUnique),
       required: Boolean(form.value.required),
       options: form.value.options ? form.value.options.trim() : '',
       ...(form.value.format === 'lookup' ? {
