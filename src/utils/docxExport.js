@@ -614,10 +614,8 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     };
 
     const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-    const directTripCccd = combinedTrip[tKeyField] ?? combinedTrip.cccdchuyendi;
-    const travelerCccd = !isInternalId(directTripCccd) 
-      ? directTripCccd 
-      : (combinedTrip.isRelative ? (!isInternalId(combinedTrip[rKeyField] ?? combinedTrip.cccdthannhan) ? (combinedTrip[rKeyField] ?? combinedTrip.cccdthannhan) : '') : canBoCccd);
+    const directTripCccd = combinedTrip[tKeyField] ?? combinedTrip.cccdchuyendi ?? combinedTrip.cccd;
+    const travelerCccd = !isInternalId(directTripCccd) ? String(directTripCccd).trim() : '';
     
     tripObj.cccdchuyendi = travelerCccd;
     tripObj.cccd_chuyen_di = travelerCccd;

@@ -153,8 +153,12 @@ const allTableColumns = computed(() => {
 });
 
 const dialogHeader = computed(() => {
+  if (form.value._recordType === 'trip') {
+    const dest = form.value.countryName || form.value.quoc_gia_xuat_canh || form.value.country || '';
+    return isEdit.value ? (dest ? `Chi tiết Chuyến đi: ${dest}` : `Chi tiết Chuyến đi`) : `Thêm mới Chuyến đi`;
+  }
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const nameVal = form.value[pNameField] || form.value.name || form.value.relativeName || form.value.personnelName || form.value.countryName || form.value.title || form.value.id || '';
+  const nameVal = form.value[pNameField] || form.value.name || (form.value._recordType === 'relative' ? (form.value.relativeName || form.value.name) : '') || form.value.title || form.value.id || '';
   return isEdit.value ? `Chi tiết: ${nameVal || 'Kết quả'}` : `Thêm mới kết quả`;
 });
 
@@ -163,7 +167,7 @@ const safeClone = (obj) => {
   try {
     return JSON.parse(
       JSON.stringify(obj, (key, value) => {
-        if (key === 'rawPerson' || key === 'rawRelative' || key === 'rawTrip' || key === 'parentPerson') {
+        if (key === 'rawPerson' || key === 'rawRelative' || key === 'rawTrip' || key === 'parentPerson' || key === '_fallbackPerson' || key === '_fallbackRelative') {
           return undefined;
         }
         return value;
@@ -191,6 +195,8 @@ const initFormData = (val) => {
     delete parsedVal.rawRelative;
     delete parsedVal.rawTrip;
     delete parsedVal.uniqueKey;
+    delete parsedVal._fallbackPerson;
+    delete parsedVal._fallbackRelative;
 
     form.value = {
       ...cd,

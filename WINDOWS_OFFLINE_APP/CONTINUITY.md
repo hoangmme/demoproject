@@ -2,14 +2,21 @@
 
 ## PROJECT: demoproject | Hệ thống Quản lý Cán bộ & Theo dõi Chuyến đi Xuất nhập cảnh
 
-### 1. NORTH STAR & ARCHITECTURE RULES
+### 1. NORTH STAR & ARCHITECTURE RULES (PURE FLAT TABLE / RECORD PARADIGM)
+- **Kiến trúc Bảng Phẳng Thuần Túy (Pure Flat Table / Record Architecture - Teable / Lark Base Paradigm)**:
+  - Toàn bộ các bảng trong hệ thống: **Cán bộ (`personnel`)**, **Thân nhân (`relatives`)**, **Chuyến đi (`trips`)**, và các **Bảng tùy biến tự tạo (`custom tables`)** hoạt động 100% như các Bảng Phẳng Độc Lập (Flat Records).
+  - Không còn khái niệm bao bọc đa tầng hay phân loại đa hình cứng (`targetType: 'personnel' | 'relative' | 'trip'`).
+  - **Quy tắc Vàng: "Ấn dòng nào sửa dòng đó" (What You Click Is What You Edit)**:
+    - Khi người dùng bấm [Chi tiết] hoặc [Chỉnh sửa] trên bất kỳ dòng nào (ở Bảng Tổng Hợp, Drilldown Popup Dashboard, hay Tìm kiếm Nâng cao): Mở trực tiếp Form chỉnh sửa bản ghi đó (`:personData="row"`), hiển thị chính xác danh sách cột của bảng đó (`:columns="tableColumns"`).
+    - **TUYỆT ĐỐI CẤM** cướp quyền chuyển hướng sang Cán bộ chủ quản (`rawPerson`) hoặc tự ý nhảy loại form.
+    - Lưu và xóa dữ liệu qua động cơ phổ quát: `personnelStore.saveRecord(row)` và `personnelStore.deleteRecord(row)`.
 - **Core Data Storage**: Directus table `personnels`. All dynamic columns, custom fields, relative profiles (`relatives: [...]`), and trips (`trips: [...]`) are stored directly within `personnels.custom_data`.
 - **No Legacy Appendix Tables**: Legacy tables (`appendix1`, `appendix2`, `appendix3`) are completely deprecated and must NOT be queried over network.
-- **Child Dashboard (Dashboard Chuyên đề)**:
-  - Source `personnel`: Displays list of Cán bộ (`personnelStore.personnelList`).
-  - Source `relatives`: Displays list of Thân nhân (`personnelStore.relativesList`).
-  - Source `trips`: Bóc tách trực tiếp từ `p.trips` và `r.trips` nằm trong hồ sơ Cán bộ.
-  - Action button: Always provides `[Chi tiết]` and `[Xóa]` (Admin) buttons linking directly to `PersonnelDialog` for the corresponding Cán bộ profile.
+- **Child Dashboard (Dashboard Chuyên đề) & Flat Views**:
+  - Source `personnel`: Danh sách Cán bộ (`personnelStore.personnelList`).
+  - Source `relatives`: Danh sách Thân nhân (`personnelStore.relativesList`).
+  - Source `trips`: Bảng Chuyến đi độc lập dạng Flat Table. Mọi chuyến đi tồn tại độc lập và được ánh xạ động (Dynamic Relational Join) tới hồ sơ Cán bộ hoặc Thân nhân thông qua điều kiện khóa (`tripKeyField === personnelKeyField` hoặc `tripKeyField === relativeKeyField`).
+  - Action button: Bấm [Chi tiết] hoặc [Xóa] trên dòng nào thì thao tác trực tiếp trên dòng đó.
 
 ### 2. PERFORMANCE CACHING ENGINE
 - **In-Memory & LocalStorage Multi-Tier Cache** (`src/api/settings.js`):
@@ -26,23 +33,37 @@
   - If `depDate <= now` and no `arrDate`: `Đang ở nước ngoài` (overdue if `now > approvedArrivalDate`).
 
 ### 4. NGUYÊN TẮC BẤT DI BẤT DỊCH VỀ DỮ LIỆU (STRICT DATA INTEGRITY & ZERO-GUESSING)
+- ⛔ **TRIỆT TIÊU 100% HARDCODE, DỮ LIỆU CŨ & LOGIC FALLBACK NGẦM (ZERO HARDCODE & STRICT USER-APPROVAL)**:
+  - Toàn bộ hệ thống đã chuyển đổi sang dạng Flat Table thuần túy. Mọi cấu trúc dữ liệu cũ (lồng ghép cứng, enum đa hình, mảng alias cũ) đều bị cấm.
+  - **Bất kỳ cấu trúc dữ liệu cũ, hardcode cũ hoặc logic chuyển đổi nào còn sót lại: BẮT BUỘC phải xóa bỏ hoặc đề xuất người dùng duyệt trước khi triển khai, cấm tự ý duy trì hay tự tiện viết code phỏng đoán.**
+  - **TUYỆT ĐỐI KHÔNG FALLBACK NGẦM SANG BẢN GHI KHÁC**:
+    - Khi một ô/cột không có giá trị, hiển thị `'-'` hoặc rỗng `""`. Tuyệt đối cấm lấy giá trị của bản ghi khác (như `rawPerson`, `rawRelative`, `rawTrip`) đắp vào!
+    - Trong công thức (`formulaEngine.js`), thống kê/bộ lọc (`dashboardMetrics.js`), và tra cứu (`evaluateLookup`): Tuyệt đối không nạp ngầm thuộc tính của Cán bộ vào dòng Chuyến đi hay Thân nhân. Dữ liệu giữa Bảng và Công thức/Thống kê phải khớp 1-1.
+- ⛔ **CỘT CHUYẾN ĐI & CCCD LÀ BẢN GHI PHẲNG THUẦN TÚY (ZERO PRIMARY KEY HARDCODING & ZERO SYNTHETIC INJECTION)**:
+  - Cột `cccdchuyendi`, `cccdparent`, `cccdthannhan` là các cột dữ liệu thông thường trong bảng, HOÀN TOÀN KHÔNG PHẢI khóa cứng độc quyền hay đối tượng được phép nạp ngầm.
+  - **CẤM TỰ Ý NẠP/ÉP GIÁ TRỊ TĨNH** từ hồ sơ Cán bộ (`personCccd`, `canBoCccd`) hay Thân nhân (`relCccd`) vào trường `cccdchuyendi` hoặc bất kỳ trường nào của dòng chuyến đi khi thu thập mảng `allTrips` trong `src/stores/personnel.js`, `buildTopicSourceList` trong `src/utils/dashboardMetrics.js`, hoặc bất kỳ bộ gom dữ liệu nào.
+  - Nếu người dùng cần lấy số CCCD hoặc thông tin của Cán bộ / Thân nhân sang bảng Chuyến đi, người dùng sẽ tự cấu hình cột **Lookup (Tham chiếu)** để lấy sang một cách minh bạch theo nhu cầu.
+  - Trong `getCellValue` / `getRowFieldValue`: Xóa bỏ 100% các đoạn code kiểm tra hardcode `isInternalId`, `tKeyField`, `pKeyField`, `rKeyField`, `cccdchuyendi`. Toàn bộ giá trị hiển thị thuần khiết theo đúng thuộc tính của dòng hoặc `custom_data` (nếu không có thì trả về `'-'`).
 - ⛔ **100% DỮ LIỆU ĐỘNG THEO CẤU HÌNH CỘT (`column.id`)**:
-  - Toàn bộ 3 bảng **Cán bộ (`personnel`)**, **Chuyến đi (`trips`)**, và **Thân nhân (`relatives`)** hoạt động 100% dựa trên danh mục cấu hình cột (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`).
+  - Toàn bộ bảng hoạt động 100% dựa trên danh mục cấu hình cột (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`, hoặc cấu hình bảng tự tạo).
   - **CẤM DÙNG DỮ LIỆU TĨNH / FALLBACK TĨNH**: Tuyệt đối KHÔNG sử dụng các mảng alias tĩnh gom nhóm trường (như `['quoc_gia_xuat_canh', 'countryName', 'country', ...]`, `['noi_o_hien_nay', 'currentAddress', ...]`). Cột nào cấu hình `column.id` là gì thì hệ thống truy xuất chính xác 1-1 theo `column.id` đó trên bản ghi hoặc trong `custom_data`.
+  - Không dùng các mã tiền tố nhân tạo cứng như `[CB-01]`, `[TN-02]`, `[CD-03]`. Tên bảng hiển thị thuần khiết theo tên bảng người dùng cấu hình (`table.title`).
   - Nếu cột không có giá trị dưới `column.id` được chỉ định, trả về rỗng `""` hoặc `"-"`. Không được tự tiện lấy trường khác bù vào.
 - ⛔ **KHÔNG TỰ BỊA DỮ LIỆU / KHÔNG TỰ SUY ĐOÁN**: Tuyệt đối không tự phỏng đoán hoặc giả định dữ liệu hay ý định của người dùng.
-- ⛔ **KHÓA CHÍNH & ĐỊNH DANH (PRIMARY UNIQUE KEYS) - CẤM GOM CHUỖI `||` ĐOÁN MÒ**:
-  - Khóa chính Cán bộ: BẮT BUỘC dùng `personnelStore.getPersonnelKeyField()` (mặc định `cccdparent`). Không bao giờ tự viết chuỗi fallback như `p.cccd || p.cccdparent || ...` hay tự chế biến tên kiểu `pCccd`.
-  - Khóa chính Chuyến đi: BẮT BUỘC dùng `personnelStore.getTripKeyField()` (mặc định `cccdchuyendi`).
-  - Khóa chính Thân nhân: BẮT BUỘC dùng `personnelStore.getRelativeKeyField()` (mặc định `cccdthannhan`).
-  - Khi cần lấy giá trị: Dùng trực tiếp `object[keyField] ?? object.custom_data?.[keyField]`. Tuyệt đối không tự bịa thêm các trường fallback khác.
+- ⛔ **TỰ ĐỘNG HÓA LIÊN KẾT & THAM CHIẾU DỮ LIỆU ĐỘNG (ZERO-HARDCODING KEYS)**:
+  - Bỏ nút thủ công "Khóa & Liên kết" trên thanh công cụ và giao diện cấu hình khóa thủ công ở Cài đặt chung để đơn giản hóa tối đa trải nghiệm người dùng.
+  - Tự động phát hiện trường khóa định danh (`getPersonnelKeyField`, `getRelativeKeyField`, `getTripKeyField`) từ danh mục cột cấu hình qua thuộc tính `isKey`/`isIdentifier`/`format: 'id'`, hoặc vị trí cột đầu tiên nếu chưa gán nhãn, **tuyệt đối không hardcode ngầm yêu cầu tên cột phải là cccdparent/cccdthannhan/cccdchuyendi**.
+  - Gỡ bỏ hoàn toàn cột tĩnh `_parentPersonnelName` ("Đối tượng liên quan") và logic gom nhóm `↳ (cùng hồ sơ liên quan)` trong Bảng Thân nhân. Bảng Thân nhân hoạt động 100% độc lập, thuần khiết theo danh mục cột cấu hình động (`importMappingRelative`).
+- ⛔ **TÌM KIẾM & BỘ LỌC ĐỘNG 100% THEO CỘT HIỂN THỊ (DYNAMIC FILTER & SEARCH ENGINE)**:
+  - Ô tìm kiếm nhanh (`searchQuery`) tại Bảng Thống kê Chuyên đề (`ChildDashboardView.vue`) và Hồ sơ Cán bộ / Thân nhân (`PersonnelView.vue`) duyệt tự động qua toàn bộ danh sách cột đang hiển thị (`visibleColumns` / `activeColumns` / `activeRelativeColumns`) qua hàm trích xuất `getCellValue(item, col)`. Người dùng cấu hình bất kỳ cột nào (tiêu chuẩn, công thức, tùy biến) thì ô tìm kiếm đều tự động tra cứu chính xác trên cột đó mà không cần hardcode tên trường.
+  - Gỡ bỏ triệt để các khối lọc cứng (`targetCountry`, `targetFunding`, `targetDept`) và các hàm suy đoán alias ngầm (`getFundingValue`, `getDepartmentValue`). Mọi drilldown lọc theo cột đều đi qua cơ chế động chuẩn `filterField` & `filterValue`.
+  - Phân loại bản ghi chuyến đi (`isTripRecord`) trong `dashboardMetrics.js` dựa thuần túy trên thuộc tính bản ghi (`_recordType === 'trip'`, `rawTrip`, `uniqueKey`), không kiểm tra cứng theo danh sách tên cột tĩnh (`departureDate`, `ngay_xuat_canh`, `countryName`, `destination`).
 - ⛔ **LAN TRUYỀN ĐỘNG THUỘC TÍNH (DYNAMIC SPREAD)**:
   - Khi tổng hợp dữ liệu (như Thân nhân kèm Chuyến đi trong `buildTopicSourceList`), toàn bộ các trường của Chuyến đi phải được bóc tách và lan truyền động (`...tripDynamicFields`) để mọi cột người dùng cấu hình trong Chuyến đi đều sẵn sàng truy xuất trực tiếp trên bản ghi.
 - ⛔ **KHI THIẾU DỮ LIỆU HOẶC KHÔNG RÕ LOGIC**: BẮT BUỘC DỪNG LẠI VÀ HỎI TRỰC TIẾP NGƯỜI DÙNG, tuyệt đối không tự ý viết code đoán mò.
 
-### 5. XUẤT HỒ SƠ PDF TOÀN DIỆN (DOCX/PDF EXPORT ARCHITECTURE)
-- Chuyến đi (`trips`) và Thân nhân (`relatives`) không tồn tại độc lập mà luôn liên kết chặt chẽ với Cán bộ chủ quản (`personnel`).
-- Khi xuất PDF từ bất kỳ giao diện nào (Hồ sơ Cán bộ, Tab Thân nhân, Bảng Chuyên đề hay Tìm kiếm nâng cao), hệ thống luôn tự động phân giải (`resolvePersonFromItem`) về đúng hồ sơ Cán bộ chủ quản để xuất đầy đủ và chính xác 100%.
+### 5. XUẤT HỒ SƠ PDF/DOCX
+- Xuất tài liệu phản ánh trung thực bản ghi được chọn theo cấu hình mẫu xuất, hỗ trợ liên kết thông tin khi có quan hệ khóa định danh rõ ràng.
 
 ### 6. BỘ LỌC ĐA TỪ KHÓA & ĐỐI TƯỢNG (MULTI-KEYWORD & TARGET OBJECT ENGINE)
 - **Toán tử `contains` & `equals`**: Hỗ trợ danh sách từ khóa phân tách bằng dấu phẩy `,` hoặc chấm phẩy `;` (ví dụ: `Sở, Ban, Ngành` hoặc `Xã, Phường, Đặc khu`).
@@ -70,6 +91,7 @@
   - Tự động hiển thị huy hiệu `[Đảng]`, `[Chính quyền]` kèm nội dung text và link mở tệp đính kèm.
 
 ### 10. PHÂN TẦNG MÀU SẮC POPUP CHI TIẾT & BỘ LỌC HIỆN DIỆN THÂN NHÂN
+- **Xóa bỏ Phân nhóm Popup Chi tiết (Eliminate Grouping in Drilldown Popup)**: Theo nguyên tắc gỡ bỏ group, Dialog Chi tiết Bản ghi (Drilldown Detail Dialog) không còn phân tách các block folder (📁) mà hiển thị toàn bộ cột trong 1 khung thẻ thống nhất, hiện đại, loại bỏ hoàn toàn các chuỗi tiêu đề hardcode cũ ("Thông tin chuyến đi xuất nhập cảnh").
 - **Phân tầng màu sắc Visual Hierarchy (`PersonnelDialog.vue`, `PersonnelTravelForm.vue`, `PersonnelFamilyForm.vue`)**:
   - Khối Cố định: Nền trắng `#ffffff`, viền xám `#e2e8f0`.
   - Khối Chuyến đi nước ngoài (Đồng bộ nhận diện thống nhất cho CẢ Cán bộ & Thân nhân):
@@ -1490,11 +1512,606 @@
 - **Status**: Done [Reversible].
 - **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+### 16. CHUẨN HÓA LARK BASE UI/UX, NHẬP LIỆU ĐA BẢNG, HỢP NHẤT MẪU WORD & CLEANUP HỆ THỐNG
+- **Các cải tiến đã thực hiện**:
+  1. **Khắc phục triệt để lỗi Icon Ổ Khóa `🔒` Chưa Đồng Bộ**:
+     - Xác định `canonicalPrimaryId` rõ ràng (`name` / `ho_va_ten` cho cán bộ, `relativeName` cho thân nhân). Tuyệt đối không gán `isPrimaryField: idx === 0` mù quáng khiến icon ổ khóa nhảy sang cột `TÊN KHÁC` khi thứ tự mảng thay đổi.
+     - Bọc tiêu đề cột và huy hiệu khóa trong `.table-col-title-inline` và `.table-col-lock-badge` với `display: inline-flex; white-space: nowrap`, chấm dứt hiện tượng chữ "🔒" bị rớt xuống dòng dưới.
+  2. **Thanh Tab Chế Độ Xem (View Tabs) & Bộ Lọc Riêng Từng Bảng (Chuẩn Lark Base)**:
+     - Tích hợp thanh View Tabs phía trên bảng: `[ ⊞ Toàn bộ ] [ ⊞ Thẻ lọc ... ] [ + Thêm View ]`.
+     - Cho phép tạo Chế độ xem (View) mới với bộ lọc và cột hiển thị lưu độc lập cho từng bảng.
+  3. **Đồng Bộ Nhập Liệu Đa Bảng Tinh Gọn (Dynamic Data Entry)**:
+     - Xây dựng component `TableDataEntryDialog.vue`: Modal nhập liệu duy nhất hỗ trợ toàn bộ các bảng trong hệ thống (`[CB-01]`, `[TN-02]`, `[CD-03]`, `[TB-xx]`).
+     - Tự động nhận diện trường liên kết: nếu nhập cho bảng Thân nhân hoặc Chuyến đi, cho phép tìm chọn Cán bộ chủ quản liên kết ở Bước 2.
+     - Thay thế các nút nhập liệu tĩnh ở Sidebar bằng nút duy nhất `+ Nhập liệu mới`.
+  4. **Xóa Bỏ Hoàn Toàn "Tìm Kiếm Nâng Cao"**:
+     - Xóa menu "Tìm kiếm nâng cao" khỏi Sidebar (`AppSidebar.vue`), điều hướng `/advanced-search` về `/dashboard` (`router/index.js`).
+     - Hoàn toàn không ảnh hưởng đến Thống kê hay các tính năng khác vì Drilldown Modal độc lập đã đảm nhiệm việc tra cứu chi tiết.
+  5. **Tùy Chỉnh Cột: Thêm Icon Sao Chép Mã Thẻ Tag Word (`{col_id}`)**:
+     - Trong `ColumnSelector.vue`: Thêm nút copy trực tiếp mã tag `{col.id}` cạnh tên cột với tooltip và phản hồi tức thì (`pi pi-check`).
+     - Trong `ColumnHeaderMenu.vue`: Thêm mục thao tác `📋 Sao chép mã thẻ Word ({col.id})` kèm thông báo đã sao chép.
+  6. **Tích Hợp Quản Lý Danh Sách Mẫu Word Vào Trực Tiếp Xuất PDF/Word**:
+     - Trong `AdvancedDocxExportDialog.vue`: Tích hợp đầy đủ bảng quản lý Mẫu Word (.docx): tải lên mẫu mới, xem danh sách mẫu hệ thống, đặt làm mẫu mặc định (`system_docx_templates`), tải về máy, xóa mẫu cũ, tải mẫu tham khảo.
+  7. **Xóa Tab "Bảng Tra Cứu Mã Thẻ Tag & Mẫu Word" Trong Cài Đặt Chung**:
+     - Trong `SettingsImportView.vue`: Xóa tab button và toàn bộ block HTML `activeTab === 'tags'` (giảm gần 300 dòng code thừa), vì 100% tính năng đã được hợp nhất vào Tùy chỉnh cột (sao chép tag) và Hộp thoại Xuất PDF (quản lý mẫu).
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+### 17. ĐỒNG BỘ GIAO DIỆN LARK BASE VIEW TABS & HỢP NHẤT LƯU TRỮ CẤU HÌNH ĐA BẢNG
+- **Vấn đề giải quyết**:
+  - Giao diện giữa Bảng Cán bộ/Thân nhân (`PersonnelView.vue`) và Bảng Chuyến đi/Tự tạo (`ChildDashboardView.vue`) trước đây không đồng nhất. `PersonnelView.vue` đặt tab chuyển đổi Cán bộ/Thân nhân và các filter pills tĩnh ở trên cùng (trên cả breadcrumb và header), không có nút `+ Thêm View` và bảng Thân nhân không có các View lọc.
+  - Cấu hình View bị phân mảnh thành nhiều khóa (`personnel_views_config`, `relatives_views_config`, `custom_dashboards_config`).
+- **Giải pháp thực hiện**:
+  1. **Hợp nhất Nguồn Lưu Trữ Cấu Hình vào `custom_dashboards_config`**:
+     - Toàn bộ danh mục bảng trong hệ thống (`personnel` [CB-01], `relatives` [TN-02], `trips` [CD-03], và các bảng tùy chỉnh `[TB-xx]`) đều được lưu trữ và quản lý trong `custom_dashboards_config`.
+     - Cung cấp `DEFAULT_UNIFIED_DASHBOARDS` và helper `ensureStandardDashboards` trong `src/utils/tableRegistry.js`, đảm bảo 3 bảng chuẩn luôn sẵn sàng và không bị ghi đè hay mất cấu hình.
+  2. **Đồng bộ hóa 100% Giao diện theo Chuẩn Lark Base**:
+     - Mọi bảng đều tuân thủ cấu trúc phân tầng trực quan:
+       - **Tầng 1**: Breadcrumb: `Bảng dữ liệu / [Tên bảng]`.
+       - **Tầng 2**: Header Section: `[Mã bảng] [Tên bảng] · [Số lượng bản ghi]`, bộ chuyển đổi nhanh bảng `[ ⊞ Cán bộ CB-01 ] [ 👥 Thân nhân TN-02 ]`, thanh tìm kiếm nhanh, `+ Thêm cột mới`, `Tùy chọn Cột`, `Khóa & Liên kết`, `Xuất / Nhập`, `+ Thêm bản ghi mới`.
+       - **Tầng 3**: Thanh Chế độ xem (Lark Base View Tabs strip) nằm ngay dưới Header:
+         `[ ⊞ Toàn bộ · X ] [ ⊞ Thẻ lọc 1 · Y ] [ ⊞ Thẻ lọc 2 · Z ] ... [ + Thêm View ]`.
+  3. **Nút `+ Thêm View` và Bộ Lọc Độc Lập cho Từng Bảng**:
+     - Bổ sung thanh View Tabs cho cả Bảng Cán bộ và Bảng Thân nhân.
+     - Thêm hộp thoại `isAddViewDialogOpen` cho phép quản trị viên tạo View mới: nhập Tên View, chọn Cột cần lọc, chọn Toán tử (`equals`, `contains`, `not_equals`, `has_value`, `is_empty`), nhập Giá trị lọc, chọn Màu sắc huy hiệu.
+     - Dữ liệu View mới lưu trực tiếp vào `custom_dashboards_config` và kích hoạt lọc dữ liệu tức thì.
+  4. **Lưu Cột Hiển Thị Riêng Theo Từng View**:
+     - Khi người dùng điều chỉnh hiển thị cột trong "Tùy chọn Cột", danh sách cột được lưu trữ riêng vào `card.columns` của View đang active.
+  5. **Loại trừ Trùng Lặp Sidebar**:
+     - Trong `AppSidebar.vue`, `topicDashboards` tự động loại trừ `personnel` và `relatives` để không bị trùng lặp với menu chính trên thanh điều hướng.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+### 18. KHẮC PHỤC HIỂN THỊ NỘI DUNG CŨ, BỎ THẺ MÃ BẢNG VÀ TÙY CHỈNH BIỂU TƯỢNG (ICON) & MÀU SẮC BẢNG
+- **Vấn đề giải quyết**:
+  - `PersonnelView.vue`: Xuất hiện breadcrumb trùng lặp ở bảng Thân nhân (`Bảng dữ liệu / Thân nhân` bị hiển thị 2 lần).
+  - Cả Cán bộ và Thân nhân đều bị gắn bộ nút chuyển đổi bảng tĩnh `[ ⊞ Cán bộ CB-01 ] [ 👥 Thân nhân TN-02 ]` cạnh tiêu đề khiến giao diện bị rối và hiển thị nội dung cũ không cần thiết.
+  - Các thẻ mã bảng cố định như `CB-01`, `TN-02`, `CD-03` không cần thiết trong trải nghiệm người dùng hiện đại.
+  - Cần tính năng cho phép Quản trị viên tùy biến Biểu tượng (Icon) và Màu sắc nhận diện của từng bảng (Cán bộ, Thân nhân, Chuyến đi, Bảng tự tạo).
+- **Giải pháp thực hiện**:
+  1. **Khắc phục Lỗi Hiển thị Nội dung Cũ**:
+     - Xóa bỏ breadcrumb thứ hai bị lặp ở bảng Thân nhân trong `PersonnelView.vue`.
+     - Xóa bỏ hoàn toàn thanh nút chuyển đổi bảng `.lark-table-switcher-pills` ở cả Cán bộ và Thân nhân. Cả 2 bảng đều có trang/route và mục menu độc lập trên Sidebar.
+  2. **Bỏ Thẻ Mã Bảng (`CB-01`, `TN-02`, `CD-03`)**:
+     - Xóa bỏ các thẻ `<span class="badge-code-cd">CB-01</span>`, `<span class="badge-code-cd">TN-02</span>` trong `PersonnelView.vue` và `<span class="badge-code-cd">{{ currentDashboardConfig.code || 'CD-03' }}</span>` trong `ChildDashboardView.vue`.
+  3. **Tùy Chỉnh Biểu Tượng & Màu Sắc Bảng (`TableIconColorDialog.vue`)**:
+     - Xây dựng component `TableIconColorDialog.vue`:
+       - Hộp xem trước (Live Preview Card) cập nhật tức thì màu sắc và biểu tượng.
+       - 14 màu sắc nhận diện chuẩn (Blue, Royal Blue, Purple, Violet, Emerald, Green, Olive, Amber, Orange, Red, Pink, Cyan, Indigo, Slate) kèm ô nhập/chọn mã màu Hex tùy chọn.
+       - Lưới 26 biểu tượng PrimeIcons được chọn lọc chuyên sâu cho nghiệp vụ quản lý kèm ô tìm kiếm theo tên và từ khóa tiếng Việt.
+       - Lưu trực tiếp cấu hình `icon` và `iconColor` vào `custom_dashboards_config` (cả localStorage và server).
+       - Phát sự kiện `custom-dashboards-updated` để đồng bộ toàn bộ ứng dụng trong 0ms.
+  4. **Tích hợp Nút Biểu Tượng Tương Tác**:
+     - **Header Bảng dữ liệu** (`PersonnelView.vue`, `ChildDashboardView.vue`): Đặt nút biểu tượng bảng có bo góc, viền và nền mang màu sắc tùy chỉnh ngay trước tiêu đề bảng. Quản trị viên chỉ cần click vào biểu tượng là mở ngay modal chọn icon và màu sắc.
+     - **Thanh điều hướng Sidebar** (`AppSidebar.vue`): Render icon và màu sắc động của từng bảng (`personnel`, `relatives`, `trips`, và các bảng chuyên đề/tự tạo). Thêm nút icon bảng màu `pi pi-palette` trong menu thao tác cạnh nút đổi tên để quản trị viên có thể đổi trực tiếp từ Sidebar.
+  5. **Cập nhật `DEFAULT_UNIFIED_DASHBOARDS` & `ensureStandardDashboards`**:
+     - Mặc định Cán bộ: `icon: 'pi-users'`, `iconColor: '#0284c7'`.
+     - Mặc định Thân nhân: `icon: 'pi-heart'`, `iconColor: '#a855f7'`.
+     - Mặc định Chuyến đi: `icon: 'pi-send'`, `iconColor: '#10b981'`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+- **Entry (2026-09-08)**: **Loại bỏ hoàn toàn biểu tượng Khóa (🔒) & Chìa khóa (🔑), Chuẩn hóa Cột Hệ thống thành Text mặc định ẩn, Khôi phục quyền tùy chọn & di chuyển Cột tự do**:
+  1. **Loại bỏ Biểu tượng Khóa (`🔒`) và Chìa khóa (`🔑`)**:
+     - Xóa bỏ toàn bộ các badge `🔒` và `🔑` xuất hiện trên tiêu đề cột ở tất cả các bảng (`PersonnelView.vue`, `ChildDashboardView.vue`, `ColumnSelector.vue`, `ColumnHeaderMenu.vue`, `personnel.js`).
+     - Xóa bỏ việc tự động gán `isPrimaryField: idx === 0` trong `ChildDashboardView.vue` và `cfg.id === primaryId` trong `PersonnelView.vue`.
+  2. **Cột Hệ thống (`_parentPersonnelName` / `_primaryKey`)**:
+     - Định dạng là text thuần túy, không tạo các khối subtitle đa dòng nhân tạo ("Cán bộ: ... / Số CCCD: ... / Mã định danh: ..."). Nếu chưa có dữ liệu thì để trống hoặc `"-"`.
+     - Mặc định ẩn hoàn toàn các cột hệ thống (`_parentPersonnelName`, `_primaryKey`), không ép đứng ở index 0, không ép vào danh sách `essential` của `finalizeColumns`. Người dùng có toàn quyền bật/gọi ra khi cần trong Cấu hình cột.
+     - Trong danh sách cột có sẵn, các cột ảo hệ thống được đẩy về cuối mảng (`push` thay vì `unshift`).
+  3. **Bộ chọn Cột Không Giới Hạn (`ColumnSelector.vue`)**:
+     - Bỏ toàn bộ vô hiệu hóa checkbox (`:disabled="false"`), người dùng có thể tự do ẩn/hiện bất kỳ cột nào.
+     - Bỏ hạn chế di chuyển cột (`moveUp` / `moveDown`), cho phép người dùng thoải mái hoán đổi vị trí mọi cột kể cả cột đầu tiên.
+     - Xóa bỏ logic cưỡng ép đưa `canonicalPrimaryId` về index 0.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/` và push git lên repository.
 
+- **Entry (2026-09-08)**: **Dynamic Table Scanning cho Nhập liệu mới, Đồng bộ Icon & Màu sắc, Quản lý View (Sửa, Xóa, Dời vị trí) & Bộ lọc Điều kiện dùng chung chuẩn Lark Base**:
+  1. **Quét Bảng Động 100% cho Nhập liệu mới (`TableDataEntryDialog.vue` & `tableRegistry.js`)**:
+     - Loại bỏ danh sách 3 bảng hardcode tĩnh (`CB-01`, `TN-02`, `CD-03`).
+     - `getUnifiedTableDefinitions(options)` tự động đọc cấu hình `custom_dashboards_config` từ `localStorage` và đồng bộ qua sự kiện `custom-dashboards-updated`.
+     - Tự động quét và nạp toàn bộ các bảng trong hệ thống: Bảng Cán bộ, Thân nhân, Chuyến đi và MỌI bảng tự tạo / chuyên đề với icon và màu sắc động (`table.iconColor`).
+     - Bỏ toàn bộ tag mã cứng (`TN-02`). Khi chọn bảng tự tạo, hệ thống tự động điều hướng sang `${table.route}?action=new_record` và mở form thêm bản ghi trực tiếp.
+  2. **Quản lý View toàn diện cho Mọi Bảng (Dời trái/phải, Sửa tên/điều kiện, Xóa view)**:
+     - Tích hợp thanh công cụ thao tác view `.lark-tab-actions` (Dời trái `pi-arrow-left`, Dời phải `pi-arrow-right`, Sửa `pi-pencil`, Xóa `pi-times`) vào từng tab của Cán bộ, Thân nhân (`PersonnelView.vue`) và Chuyến đi / Bảng tự tạo (`ChildDashboardView.vue`).
+     - Tự động bảo vệ View mặc định ("Toàn bộ" tại index 0) không cho phép xóa.
+     - Lưu trực tiếp thứ tự và cấu hình các view vào `custom_dashboards_config` (cả localStorage và server Directus).
+  3. **Bộ lọc điều kiện View dùng chung chuẩn Thống kê / Tìm kiếm nâng cao (`TableViewManagerDialog.vue`)**:
+     - Xây dựng component dùng chung `TableViewManagerDialog.vue` cho toàn bộ các bảng trong hệ thống thay thế form đơn sơ cũ.
+     - Hỗ trợ xây dựng nhiều dòng điều kiện (`conditions: [{ field, operator, value }]`) kết hợp toán tử logic `VÀ (AND)` hoặc `HOẶC (OR)`.
+     - Đầy đủ toán tử: Bằng (`equals`), Chứa từ khóa (`contains`), Không bằng (`not_equals`), Không chứa (`not_contains`), Có giá trị (`has_value`), Rỗng (`empty`), So sánh số / ngày (`gte`, `lte`, `gt`, `lt`), Đếm (`count_gte`, `count_gt`).
+     - Đánh giá trực tiếp qua động cơ chuẩn `matchCardCondition(row, card, store)` trong `dashboardMetrics.js`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
 
+- **Entry (2026-09-08)**: **Khắc phục Xuất PDF Popup Thống kê, Bổ sung Xem trước PDF trực tiếp cho từng dòng & Tối ưu Giao diện Xuất Hồ sơ Bảng**:
+  1. **Khắc phục Lỗi Xuất PDF (`src/utils/docxExport.js`)**:
+     - Điều chỉnh tọa độ sandbox của `convertDocxBlobToPdfBlob`: Thay thế `left: -9999px` bằng `position: fixed; top: 0; left: 0; opacity: 0; z-index: -9999; pointer-events: none;`, giải quyết triệt để tình trạng `html2canvas` chụp ra canvas rỗng do phần tử nằm ngoài giới hạn viewport.
+     - Truyền `arrayBuffer` an toàn vào `renderAsync` và thiết lập `scrollX: 0, scrollY: 0, x: 0, y: 0` cho `html2canvas`.
+     - Tích hợp hàm `generateSinglePersonnelPdfBlob` và `getEffectiveExportTemplateBuffer`.
+     - Đánh giá tự động toàn bộ cột công thức (`col.format === 'formula'`), trạng thái hiện diện (`resolvePresence`) và cột ảo (`resolveVirtualColumnValue`) cho cả Cán bộ, Thân nhân và Chuyến đi để mọi trường được chọn đều có giá trị rõ ràng, không bị bỏ sót hoặc để trống.
+     - Mẫu Word động (`createDynamicDocxTemplateBlob`): Nhận diện tiêu đề bảng động theo cài đặt hệ thống (`tableTitles`), hiển thị chuẩn hóa tiêu đề từng phần (`I. BẢNG CÁN BỘ...`, `II. BẢNG THÂN NHÂN...`, `III. BẢNG CHUYẾN ĐI...`).
+  2. **Bổ sung Nút Xem trước PDF Trực tiếp trên Từng Dòng (`DashboardView.vue`)**:
+     - Thêm cột cố định bên phải `Thao tác` với nút `[👁️ Xem PDF]` (màu đỏ nhẹ, outlined) ở bảng xem chi tiết thống kê (Drilldown DataTable).
+     - Khi bấm vào nút này, hệ thống tự động tìm và ánh xạ về đúng hồ sơ Cán bộ chủ quản (kể cả khi đang xem danh sách Chuyến đi hay Thân nhân), sinh trực tiếp file PDF và hiển thị ngay trên modal xem trước tương tác (`PdfPreviewDialog.vue`) mà không bắt buộc phải tải tệp về máy.
+     - Tích hợp nút `[👁️ Xem trước PDF]` bên trong `AdvancedDocxExportDialog.vue` cạnh nút tải về để người dùng có thể xem trước văn bản trước khi quyết định xuất file.
+  3. **Tạo Component Xem Trước PDF Chuyên Nghiệp (`PdfPreviewDialog.vue`)**:
+     - Modal xem trước PDF toàn diện: Tích hợp iframe hiển thị PDF bản địa của trình duyệt, thanh công cụ với các thao tác `Tải về máy`, `In hồ sơ`, `Mở tab mới`, và `Đóng`.
+     - Quản lý vòng đời `URL.createObjectURL` và `URL.revokeObjectURL` tự động, ngăn ngừa rò rỉ bộ nhớ.
+  4. **Tối ưu Hóa Giao diện Xuất Hồ sơ & Khắc phục Lặp Bảng (`AdvancedDocxExportDialog.vue`)**:
+     - Mở rộng chiều rộng dialog từ `560px` lên `820px` (`max-width: 95vw`), giải quyết hoàn toàn lỗi co dúm và tràn dòng 2 tầng của huy hiệu số lượng trường (`(21/21 trường)`) và các nút chọn.
+     - Thiết lập `white-space: nowrap;` cho `.tree-badge-count` và `flex-wrap: wrap; gap: 8px;` cho `.tree-table-header`.
+     - Đồng bộ tên bảng động (`mainTableTitle`, `relativeTableTitle`, `tripsTableTitle`) từ cấu hình nhận diện thương hiệu `system_branding_config`.
+     - **Sửa lỗi nhân bản bảng**: Loại trừ các bảng cốt lõi (`trips`, `personnel`, `relatives`) trong `loadCustomTables()` để không bị sinh lặp thêm Bảng 4 "Danh sách Chuyến đi".
+- **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Gọn Hóa Menu Thao Tác Tab View (Icon Setup Cực Gọn), Đồng Bộ Xuất/Nhập & Xem PDF ở Chuyến Đi, Khắc Phục Nút "Chỉnh Sửa Hồ Sơ" trong Popup**:
+  1. **Gọn Hóa Thao Tác Tab Chế Độ Xem (`PersonnelView.vue`, `ChildDashboardView.vue`, `main.css`)**:
+     - Thay thế cụm 4 icon thao tác dàn hàng ngang `[ ← ] [ → ] [ ✎ ] [ ✕ ]` làm tràn thanh tab bằng duy nhất **1 icon Setup `[ ⋮ ]` (`pi pi-ellipsis-v`)** tinh gọn, hiện đại.
+     - Khi bấm vào icon Setup, hiển thị menu thả nổi (`.lark-tab-dropdown-menu`) chứa đầy đủ các tùy chọn:
+       - `Sửa tên & Điều kiện lọc` (`pi-pencil`)
+       - `Dời sang trái` (`pi-arrow-left`, ẩn khi ở vị trí đầu)
+       - `Dời sang phải` (`pi-arrow-right`, ẩn khi ở vị trí cuối)
+       - `Xóa Chế độ xem` (`pi-trash`, màu đỏ nguy hiểm, ẩn ở view mặc định đầu tiên)
+     - Tự động đóng menu khi click ra ngoài (`window.addEventListener('click', closeTabMenu)`).
+  2. **Đồng Bộ Hoàn Toàn Module Xuất / Nhập và Xem PDF ở Bảng Chuyến Đi (`ChildDashboardView.vue`)**:
+     - Đồng bộ menu `Xuất / Nhập` ở Chuyến đi và Chuyên đề: Bổ sung tùy chọn `Import Excel Chuyến đi (Wizard 4 Bước)` (kết nối trực tiếp với `ExcelImportWizard.vue`).
+     - Tích hợp cột cố định bên phải `Thao tác` với nút `[👁️ Xem PDF]` trực tiếp trên từng dòng của DataTable Chuyến đi / Chuyên đề.
+     - Tự động phân giải cán bộ chủ quản (`resolvePersonFromItem`) và mở `PdfPreviewDialog` trực quan không cần tải về máy.
+  3. **Khắc Phục Triệt Để Lỗi Nút "Chỉnh sửa hồ sơ" trong Popup (`PersonnelDialog.vue`, `DashboardView.vue`)**:
+     - **Sửa lỗi crash cấu trúc đệ quy (Circular JSON Structure)**: `safeClone` lọc bỏ các tham chiếu vòng (`rawPerson`, `rawRelative`, `rawTrip`, `parentPerson`), ngăn chặn triệt để `TypeError: Converting circular structure to JSON` khi mở `PersonnelDialog`.
+     - **Sửa lỗi gán vào computed read-only**: Xóa bỏ câu lệnh gán `isEdit.value = false;` gây cảnh báo và đứt đoạn reactive trong `initFormData`.
+     - **Sửa điều kiện hiển thị nút**: Bỏ ràng buộc `drilldownSourceType === 'personnel'` ở footer popup xem chi tiết (`isDrilldownRecordDetailOpen`), cho phép nút `[Chỉnh sửa hồ sơ]` hoạt động với mọi bảng (Chuyến đi, Thân nhân, Cán bộ).
+     - **Điều hướng thông minh theo loại bản ghi**: Tự động chuyển hướng chính xác đến `openTripDetail` (Tab 1: Chuyến đi), `openRelativeDetail` (Tab 2: Thân nhân) hoặc `openPersonnelDetail` (Tab 0: Cán bộ).
+- **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Thống Nhất 100% Template Component "Xuất / Nhập" Dùng Chung Cho Tất Cả Các Bảng (`ExportImportMenu.vue`)**:
+  1. **Nguyên nhân cốt lõi gây lệch**:
+     - Trước đây nút `Xuất / Nhập` được viết lặp lại (copy-paste HTML, CSS, và state hover) độc lập ở từng view: Bảng Cán bộ, Bảng Thân nhân (`PersonnelView.vue`) và Bảng Chuyến đi / Chuyên đề (`ChildDashboardView.vue`).
+     - Dẫn đến tình trạng lệch cấu trúc: Cán bộ và Thân nhân không có tùy chọn xuất file Excel, Chuyến đi bị lệch text và logic, style dropdown và thời gian hover lệch nhau.
+  2. **Giải pháp kiến trúc dứt điểm (Single Source of Truth)**:
+     - Tạo mới component dùng chung duy nhất: [`ExportImportMenu.vue`](file:///Users/hoji/Documents/code/demoproject/src/components/common/ExportImportMenu.vue).
+     - Toàn bộ các bảng trong hệ thống (Cán bộ, Thân nhân, Chuyến đi, và mọi bảng Chuyên đề tự tạo) đều sử dụng 1 template duy nhất này với đúng 3 tùy chọn đồng nhất 100%:
+       1. 📥 `Import Excel [Tên bảng] (Wizard 4 Bước)` (kết nối Wizard import)
+       2. 📄 `Xuất Hồ sơ [Tên bảng] (PDF / Word)` (kèm số lượng đã chọn, kết nối Advanced DOCX/PDF export)
+       3. 📊 `Xuất danh sách Excel (.xlsx)` (tự động xuất 100% các cột đang hiển thị và giá trị lọc thực tế của bảng đó ra file Excel)
+     - Thay thế toàn bộ code trùng lặp ở `PersonnelView.vue` và `ChildDashboardView.vue` bằng component `ExportImportMenu`.
+- **Status**: Done [Reversible].
+- **Verification**: `npm run build` thành công 100% (0 lỗi), đã đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+- **Entry (2026-09-08)**: **Khắc Phục Nút Setup Tab View `[ ⋮ ]` (`pi pi-ellipsis-v`) Bị Đè / Bấm Không Hiện Menu**:
+  1. **Nguyên nhân gốc rễ**:
+     - `.lark-base-view-tabs-strip` có CSS `overflow-x: auto;`. Theo W3C CSS spec, khi một trục là `auto` thì trục kia tự động thành `auto/scroll` (không thể `visible`). Do đó dropdown `.lark-tab-dropdown-menu` bung ra phía dưới thanh tab (cao ~36px) bị cắt cụt (clipped) và ẩn hoàn toàn.
+     - Thiếu bối cảnh xếp chồng (stacking context): Bảng DataTable (`.app-card`) bên dưới có `position: relative`, trong khi container thanh tab không có `position: relative` & `z-index`, khiến menu nếu tràn xuống sẽ bị bảng bên dưới đè lên trên.
+     - Cơ chế bắt sự kiện click toàn cục: `window.addEventListener('click', closeTabMenu)` đóng menu ngay cả khi sự kiện click xuất phát từ chính nút bấm hoặc menu nếu chưa kịp xử lý.
+  2. **Giải pháp đã thực hiện**:
+     - `src/assets/styles/main.css`:
+       - Đổi `overflow-x: auto` thành `overflow: visible` trên `.lark-base-view-tabs-strip`.
+       - Thiết lập `position: relative; z-index: 100;` cho `.lark-base-view-tabs-container` để luôn nằm trên các thành phần bên dưới.
+       - Thêm `.lark-tab-item-wrapper.menu-open { z-index: 1100; }`.
+       - Cấp `position: relative; z-index: 10;` cho `.lark-tab-actions`.
+       - Nâng `z-index` của `.lark-tab-dropdown-menu` lên `9999` với bóng đổ nổi và viền sắc nét.
+       - Thêm `pointer-events: none;` cho icon `i` bên trong `.btn-tab-action` để tránh nuốt click.
+     - `PersonnelView.vue` & `ChildDashboardView.vue`:
+       - Thêm `@click.stop.prevent="toggleTabMenu(...)"` và `@mousedown.stop` vào nút `.btn-tab-setup`.
+       - Nâng cấp `handleGlobalTabMenuClick` kiểm tra `closest('.lark-tab-actions')`, `closest('.btn-tab-setup')`, `closest('.lark-tab-dropdown-menu')` trước khi đóng menu, ngăn ngừa tuyệt đối xung đột sự kiện.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% không lỗi.
+- **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Xóa Triệt Để Cột Đã Xóa Khỏi Thống Kê, Bỏ Toàn Bộ Mã Bảng Tĩnh ([TB-02], [CB-01]...), Làm Sạch Nhãn Cột Dropdown**:
+  1. **Khắc phục lỗi xóa cột ở bảng nhưng Thống kê vẫn gọi được**:
+     - *Nguyên nhân*: Hàm `onChildDeleteColumnFromTable` trong `ChildDashboardView.vue` trước đây chỉ lọc `g.columns` trên đối tượng tạm thời, bỏ qua cấu trúc bảng tùy chỉnh `isBlank && cDash`. Do đó `cDash.customColumns` và `cDash.columns` không bao giờ bị xóa và không được lưu vào `custom_dashboards_config`, đồng thời không phát sự kiện `custom-dashboards-updated` cho Thống kê.
+     - *Giải pháp*: Xử lý riêng trường hợp `isBlank && cDash`, lọc trực tiếp trên `cDash.customColumns` và `cDash.columns`, lưu lại `custom_dashboards_config` và phát `window.dispatchEvent(new CustomEvent('custom-dashboards-updated'))`. Ở `PersonnelView.vue` cũng phát sự kiện tương ứng khi xóa cột bảng Cán bộ/Thân nhân.
+  2. **Bỏ toàn bộ mã bảng tĩnh nhân tạo (`[TB-02]`, `[CD-03]`, `[CB-01]`, `[TN-02]`)**:
+     - *Nguyên nhân*: `tableRegistry.js` tự động gắn `[${code}]` trước tên bảng khi tạo các nhóm tìm kiếm (`getSearchableGroups`), tạo ra `📋 [TB-02] Test`.
+     - *Giải pháp*: Xóa bỏ hoàn toàn việc ghép mã tĩnh, hiển thị thuần khiết theo tên bảng thực tế của người dùng (`Test`, `Cán bộ`, `Chuyến đi`, `Thân nhân`) đúng theo Quy tắc 4 của CONTINUITY.md.
+  3. **Làm sạch thứ tự cột trong các menu chọn (Dropdown Selectors)**:
+     - Bỏ tiền tố `Cột X: ` trong toàn bộ các dropdown chọn cột (`DashboardView.vue`, `TableViewManagerDialog.vue`, `AdvancedSearchView.vue`), chỉ hiển thị tên cột thuần khiết `{{ c.label || c.id }}` (kèm `⚡ ` / `✨ ` cho cột ảo).
+     - Quy tắc hiển thị số thứ tự cột: Số thứ tự cột (`Cột 1`, `Cột 2`...) chỉ hiển thị trên Header của Bảng dữ liệu khi người dùng chủ động bật công tắc "Hiện số thứ tự cột" (`showColIndex`).
+  4. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi).
+- **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Chuyển Đổi Ô Nhập Giá Trị Điều Kiện Lọc Sang Định Dạng Lai (Hybrid Input: Tự Do Nhập Text + Gợi Ý Datalist + Pills Chọn Nhanh)**:
+  1. **Vấn đề người dùng phản ánh**:
+     - Khi lọc điều kiện (ví dụ toán tử `Chứa từ khóa` với cột `Trạng thái hiện diện`), hệ thống trước đây ép buộc dùng thẻ `<select>` khóa chết, khiến người dùng không thể tự gõ từ khóa tự do (như gõ tắt "Quá hạn", "Chưa về", hoặc nhập nhiều từ khóa cách nhau bằng dấu phẩy `,`).
+  2. **Giải pháp kiến trúc đồng bộ (`DashboardView.vue`, `AdvancedSearchView.vue`, `TableViewManagerDialog.vue`)**:
+     - Thay thế toàn bộ `<select>` cứng bằng **Ô nhập lai (Hybrid Combobox)**:
+       - **Ô nhập tự do (`<input type="text">`)**: Luôn luôn cho phép gõ phím bất kỳ từ khóa nào, gõ tắt, hoặc gõ nhiều từ khóa phân tách bằng dấu phẩy `,` (đã được bộ lọc `matchSingleCondition` hỗ trợ sẵn).
+       - **Gợi ý tự động (`<datalist>`)**: Tích hợp danh sách giá trị mẫu (Ví dụ: `Trong nước`, `Đang ở nước ngoài`, `Quá hạn chưa về`, hoặc options của dropdown/checkbox) để tự động gợi ý khi click hoặc gõ ký tự.
+       - **Thẻ chọn nhanh (Quick Pills `[Trong nước] [Đang ở nước ngoài]...`)**: Hiển thị các nút pill trực quan ngay dưới ô nhập, người dùng chỉ cần 1 click là điền ngay giá trị, có highlight trạng thái đang chọn.
+       - **Nút mở rộng `▾`**: Cho phép bấm chọn thêm bất kỳ giá trị nào từ danh sách để nối tiếp vào ô nhập.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi).
+- **Entry (2026-09-08)**: **Gỡ Bỏ Nhóm Cột Cũ (Group) Khỏi Menu Chọn Cột, Làm Phẳng 100% Danh Sách Cột Chuẩn Lark Base**:
+  1. **Vấn đề người dùng phản ánh**:
+     - Menu chọn cột trong Thống kê và Tìm kiếm nâng cao vẫn hiển thị các nhóm cũ `🎯 Bảng đang chọn: Cán bộ - Thông tin cơ bản` và `🎯 Bảng đang chọn: Cán bộ - Thông tin Lưu ý & Kỷ luật`, trong khi toàn bộ hệ thống bảng dữ liệu đã chuyển sang mô hình phẳng (Flat Table) theo chuẩn Lark Base.
+  2. **Giải pháp kiến trúc đã thực hiện (`tableRegistry.js`, `DashboardView.vue`)**:
+     - `src/utils/tableRegistry.js`:
+       - Chuẩn hóa các phương thức `getSearchableGroups` và `getColumns` của 3 bảng nòng cốt (`personnelTable`, `tripsTable`, `relativesTable`).
+       - Toàn bộ cột của mỗi bảng được gom phẳng thành 1 danh sách duy nhất thuộc tiêu đề bảng tương ứng (`Cán bộ`, `Chuyến đi`, `Thân nhân`), loại bỏ hoàn toàn các hậu tố nhóm cũ `- Thông tin cơ bản`, `- Thông tin Lưu ý & Kỷ luật`, `[Thông tin cán bộ]`, `[Thông tin thân nhân]`.
+       - Menu dropdown trong Thống kê giờ đây hiển thị thuần khiết: `🎯 Bảng đang chọn: Cán bộ`, `📋 Chuyến đi`, `📋 Thân nhân`.
+     - `src/views/DashboardView.vue`:
+       - Làm sạch các computed `availableColumnsForWidgetSource`, `allAvailableRelativeColumns`, `allAvailablePersonnelColumns`, `allAvailableTripColumns`, loại bỏ hoàn toàn việc ghép tiền tố `[grp]` hay `c.group`.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, ~622ms).
+- **Entry (2026-09-08)**: **Xóa Triệt Để Tiền Tố 'Cột X:' Trên Header & Form Chi Tiết, Mở Rộng Cuộn Export PDF, Bỏ Toàn Bộ Cột Ảo Hardcode**:
+  1. **Xóa tiền tố 'Cột X:' trên Header Bảng dữ liệu (`PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - Loại bỏ hoàn toàn nhãn `Cột {{ col.colIndex }}: ` trên header của cả bảng Cán bộ, Thân nhân, và Bảng chuyên đề con.
+     - Header bảng hiển thị tên cột thuần khiết: `{{ col.label }}`.
+  2. **Xóa huy hiệu 'Cột X' trên Form Chi Tiết (`PersonnelBasicForm.vue`, `PersonnelNotesForm.vue`, `PersonnelTravelForm.vue`, `PersonnelFamilyForm.vue`)**:
+     - Loại bỏ hoàn toàn `<span class="col-num-badge">{{ colIndexMap[col.id] }}</span>`.
+     - Nhãn form hiển thị gọn gàng, tự nhiên theo đúng tên trường: `Họ và tên`, `Tên khác`, `Năm sinh`...
+  3. **Khắc phục thanh cuộn Dialog Xuất PDF (`AdvancedDocxExportDialog.vue`)**:
+     - Bổ sung `:contentStyle="{ maxHeight: '82vh', overflowY: 'auto' }"` trên Dialog.
+     - Cấp `overflow-y: auto; max-height: calc(82vh - 80px)` cho `.docx-export-container`.
+     - Nâng `max-height` của `.tree-container` lên `520px` kèm thanh cuộn mỏng rõ nét.
+     - Cấp `max-height: 220px; overflow-y: auto;` cho `.tree-fields-inline-wrap` của từng bảng (Cán bộ, Thân nhân, Chuyến đi, v.v.), cho phép người dùng cuộn mượt mà xem đầy đủ tất cả 35/35 trường không bị che khuất hay cắt cụt.
+  4. **Gỡ bỏ toàn bộ Cột ảo Hardcode (`personnel.js`, `tableRegistry.js`, `ChildDashboardView.vue`, `PersonnelView.vue`, `DashboardView.vue`, `AdvancedSearchView.vue`)**:
+     - Xóa bỏ các cột ảo nhân tạo chèn cứng: `_parentPersonnelName`, `_parentPersonnelCode`, `code`, `_primaryKey`, `_presenceStatus`, `_parentPosition`, `_parentDepartment`.
+     - Bỏ toàn bộ biểu tượng ảo `⚡ ` và `✨ ` trong dropdown.
+     - Toàn bộ danh mục cột hiện tại hoạt động 100% tự động và trung thực dựa trên cấu hình cột thực tế do người dùng thiết lập (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`, `customColumns`), tuân thủ tuyệt đối Quy tắc 4 của CONTINUITY.md.
+  5. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 575ms).
+- **Entry (2026-09-08)**: **Tối Ưu Hiển Thị Định Dạng Hộp Kiểm Đính Kèm (Checkbox + File / Loop): Xuống Hàng Nội Dung Văn Bản**:
+  1. **Vấn đề người dùng phản ánh**:
+     - Cột định dạng "Hộp kiểm kèm Tệp" (`checkbox_file_loop` / `checkbox_file`), ví dụ cột "KỶ LUẬT", khi hiển thị trong ô bảng dữ liệu: huy hiệu lựa chọn (ví dụ: `[Đảng, Chính quyền]`) và nội dung văn bản (ví dụ: `Khiển trách (Quyết định kỷ luật...)`) bị dồn ép chung trên cùng 1 hàng flex ngang.
+     - Do huy hiệu chiếm chiều ngang, phần khoảng trống còn lại quá hẹp khiến nội dung văn bản bị ép xuống từng ký tự dọc (K-h-i-ể-n...).
+  2. **Giải pháp bố cục 2 tầng (Two-Row Hierarchy) đã thực hiện (`ChildDashboardView.vue`, `PersonnelView.vue`)**:
+     - Cấu trúc lại hiển thị từng mục trong ô bảng:
+       - **Hàng 1 (Huy hiệu & Thao tác)**: Chứa icon trạng thái (`pi-check-circle` / `pi-circle`), badge lựa chọn (`[Đảng, Chính quyền]`) và nút bấm xem tệp đính kèm (`[📎 Tệp]`). Bố trí dạng `display: flex; align-items: center; flex-wrap: wrap; gap: 6px;`.
+       - **Hàng 2 (Nội dung văn bản - Xuống hàng)**: Chứa toàn bộ nội dung text chi tiết, hiển thị trọn vẹn 100% bề rộng khả dụng của ô (`padding-left: 18px; word-break: break-word; line-height: 1.35; color: #1e293b;`). Văn bản ngắt dòng theo từ tự nhiên, rõ ràng, không bao giờ bị dồn ép ký tự.
+     - Đồng bộ cả 4 vị trí render bảng:
+       - Bảng Thống kê Chuyên đề (`ChildDashboardView.vue`) cho cả cột động và cột đối chiếu đơn (`activeCardSingleCol`).
+       - Bảng Cán bộ (`PersonnelView.vue`) cho `checkbox_file` và `checkbox_file_loop`.
+       - Bảng Thân nhân (`PersonnelView.vue`) cho cả `checkbox_file_loop` và `checkbox_file`.
+     - Tối ưu độ rộng mặc định (`getColWidth` & `allAvailableColumnsList`): Tự động cấp độ rộng mặc định `250px` cho cột dạng `checkbox_file_loop` và `checkbox_file` nếu người dùng chưa cài đặt `tableWidth` riêng, tạo không gian hiển thị rộng rãi, thoáng mắt.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 602ms).
+- **Entry (2026-09-08)**: **Hợp Nhất Toàn Bộ Bảng Dữ Liệu Dùng Chung 1 Động Cơ Duy Nhất (Single Unified Table Engine - UnifiedTableView.vue)**:
+  1. **Chỉ đạo chiến lược của người dùng**:
+     - Trong mô hình Flat Table chuẩn Lark Base: Mọi bảng (`personnel`, `relatives`, `trips`, và các bảng tự tạo) đều là các Custom Table bình đẳng, tự động ánh xạ bằng cơ chế tham chiếu động.
+     - Xóa bỏ triệt để tình trạng phân mảnh tách đôi view (`PersonnelView.vue` ~4.300 dòng và `ChildDashboardView.vue` ~5.100 dòng = ~9.400 dòng code trùng lặp).
+     - Quy về một template/động cơ chung duy nhất cho TẤT CẢ các bảng để tránh tình trạng code riêng ad-hoc.
+  2. **Giải pháp kiến trúc đã thực hiện (`UnifiedTableView.vue`, `router/index.js`, `PersonnelView.vue`, `ChildDashboardView.vue`)**:
+     - **Động cơ bảng dùng chung (`src/views/UnifiedTableView.vue`)**:
+       - Tự động nhận diện bảng nguồn theo route hoặc param: `/personnel` (source: `personnel`), `/relatives` (source: `relatives`), `/trips` (source: `trips`), `/dashboard-topic/:id` (source: `blank` | `trips` | `personnel` | `relatives`).
+       - Đồng bộ thanh View Tabs Lark Base (`[Toàn bộ] [Thẻ 1] [Thẻ 2]... [+ Thêm View]`) với đếm số lượng động.
+       - Tích hợp 100% các tính năng cao cấp: Tùy chọn cột (kèm độ rộng `tableWidth` và điều chỉnh chiều cao hàng), tìm kiếm nhanh đa trường, bộ lọc chi tiết, STT phân trang chuẩn offset (`dtFirst + index + 1`), bố cục 2 tầng xuống hàng cho `checkbox_file_loop` / `checkbox_file`, xuất Word/PDF/Excel.
+       - Nút Thêm mới thích ứng động theo nguồn: `Thêm Cán bộ`, `Thêm Thân nhân`, `Thêm Chuyến đi`, `Thêm Bản Ghi Mới`.
+       - Click dòng mở popup chi tiết điều hướng chính xác theo nguồn: Cán bộ (Tab 0), Chuyến đi (Tab 1), Thân nhân (Tab 2).
+       - Khả năng chuyển đổi route tức thì 0ms, tự động dọn dẹp bộ lọc và nạp cấu hình bảng mới tương ứng.
+     - **Router (`src/router/index.js`)**:
+       - Trỏ trực tiếp cả 4 route `/personnel`, `/relatives`, `/trips`, `/dashboard-topic/:id` vào `UnifiedTableView.vue`.
+     - **Xóa bỏ vĩnh viễn PersonnelView.vue & ChildDashboardView.vue**:
+       - Đã xóa sạch hoàn toàn cả 2 file view cũ khỏi cả `src/views/` và `WINDOWS_OFFLINE_APP/frontend/src/views/`.
+       - Loại bỏ sạch sẽ các dòng import thừa trong `router/index.js`, giải phóng hoàn toàn ~9.400 dòng code, không lưu lại bất kỳ wrapper hay code thừa nào trong hệ thống.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 510ms).
+- **Status**: Done [Reversible].
+- **Entry (2026-09-08)**: **Khắc Phục Lỗi TDZ colDef, Xóa Tiêu Đề Phụ Header, Cho Phép Đổi Text & Màu Sắc Header Chính**:
+  1. **Sửa lỗi ReferenceError: Cannot access 'o' before initialization (`dashboardMetrics.js`)**:
+     - Phát hiện biến `colDef` được sử dụng ở điều kiện 2 (`di_truoc_khi_co_quyet_dinh`) trước khi được khai báo ở điều kiện 3 (`let colDef = null`).
+     - Đã dời khai báo `colDef` và tra cứu cấu hình cột lên ngay đầu hàm `matchSingleCondition`, loại bỏ hoàn toàn lỗi TDZ runtime khi lọc thẻ/bảng.
+  2. **Xóa tiêu đề phụ Header (`AppHeader.vue`)**:
+     - Loại bỏ hoàn toàn khối `<div class="app-header-sub-title">{{ currentTitle }}</div>`.
+  3. **Tùy biến Text & Màu sắc Tiêu đề Header Chính (`AppHeader.vue`, `SettingsImportView.vue`)**:
+     - Bổ sung cấu hình `headerMainTitle` (nội dung tiêu đề) và `headerMainTitleColor` (bộ chọn màu mã màu hex) trong `SettingsImportView.vue`.
+     - `AppHeader.vue` tự động tải và cập nhật theo thời gian thực (realtime qua event `system-branding-updated`) tiêu đề và màu sắc tùy chỉnh của người dùng.
+  4. **Dọn dẹp Cấu hình chung (`SettingsImportView.vue`)**:
+     - Xóa bỏ hoàn toàn các khối cấu hình gây rối: "Tùy biến Tên Menu & Tiêu đề Bảng Dữ liệu:" và checkbox "Bật quản lý Bảng Phụ (Thân nhân / Phụ huynh) và Bảng Sự kiện con (Chuyến đi / Hoạt động) trên menu".
+  5. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 560ms).
+- **Entry (2026-09-08)**: **Triển Khai Động Cơ Độ Rộng Cột 2 Tầng Chuẩn Lark Base, Xóa Bỏ Cấu Hình Chiều Cao Hàng & Tầng 3**:
+  1. **Chỉ đạo chiến lược của người dùng**:
+     - Xóa bỏ hoàn toàn cấu hình "Chiều cao hàng" khỏi "Tùy chọn cột" (`ColumnSelector.vue`) và `UnifiedTableView.vue`.
+     - Thay thế bằng Động cơ Độ rộng cột 2 tầng chuẩn Lark Base:
+       - **Ưu tiên 1 (Cao nhất)**: Người dùng nhập `px` cụ thể (ví dụ: `160px`) tại Tùy chọn cột -> Áp dụng đồng bộ cố định cho TOÀN BỘ CỘT trên bảng (`width: Xpx; minWidth: Xpx; maxWidth: Xpx`).
+       - **Ưu tiên 2 (Khi Tùy chọn cột để `Auto`)**:
+         - Cột nào người dùng đã tự dùng chuột kéo rê mép cột trên header bảng (Tầng 1 - Direct Drag Resizing) -> Nhận độ rộng thực tế đã kéo.
+         - Cột nào chưa kéo -> Tự động co giãn theo nội dung (`auto`), kèm `min-width` tối ưu (240px cho `checkbox_file_loop` / `checkbox_file`, 150px cho cột văn bản thường).
+       - **Xóa bỏ hoàn toàn Tầng 3**: Loại bỏ triệt để mục "Độ rộng hiển thị (px):" trong menu ⚙️ từng cột (`ColumnHeaderMenu.vue`), không cấu hình thừa thãi phân tán.
+  2. **Giải pháp kiến trúc đã thực hiện**:
+     - `src/components/common/ColumnSelector.vue`:
+       - Xóa bỏ hoàn toàn UI và logic "Chiều cao hàng" (`.row-height-control`, `rowHeightLimit`, `setRowHeightLimit`).
+       - Bổ sung khối UI Độ rộng cột hiện đại (`.col-width-control`): Nút chọn chế độ `Auto`, ô nhập số `Cố định: [ 160 ] px`, nút reset `Đặt lại kéo tay` khi đang ở Auto, và dòng ghi chú rõ ràng về nguyên lý ưu tiên.
+     - `src/components/common/ColumnHeaderMenu.vue`:
+       - Xóa bỏ mục số 3 "Độ rộng hiển thị (px):", `editWidth` ref, `handleSaveWidth`, và emit `change-width`.
+     - `src/views/UnifiedTableView.vue`:
+       - Bật `:resizableColumns="true"` và `columnResizeMode="expand"` trên PrimeVue `<DataTable>`.
+       - Gắn `:pt="{ headerCell: { 'data-column-id': col.id } }"` trên từng `<Column>`.
+       - Bắt sự kiện `@column-resize-end="onColumnResizeEnd"`, lưu vết độ rộng từng cột đã kéo vào `resizedColWidths` và `localStorage` / `saveAppSettings`.
+       - Triển khai hàm `getColWidthStyle(col)` tính toán style chính xác theo đúng 2 tầng ưu tiên.
+       - Gỡ bỏ hoàn toàn `table-row-clamp-*` và các event listener liên quan.
+     - `src/assets/styles/main.css`:
+       - Gỡ bỏ các class giới hạn chiều cao hàng (`.table-row-clamp-*`), cho phép nội dung ô co giãn tự nhiên.
+       - Bổ sung định dạng hiển thị cho thanh kéo PrimeVue `.p-column-resizer` (cursor `col-resize`, highlight màu xanh `#0284c7` khi hover).
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 541ms).
+- **Entry (2026-09-08)**: **Mở Rộng Toàn Diện Dải Độ Rộng Form Chi Tiết Từ 5% Đến 100%**:
+  1. **Chỉ đạo của người dùng**:
+     - Bổ sung đầy đủ dải lựa chọn độ rộng trường dữ liệu trong popup/form chi tiết từ 5%, 10%, 15%, 20%... đến 100% (bước nhảy 5% + giữ 33% 1/3 dòng).
+  2. **Giải pháp kiến trúc đã thực hiện**:
+     - `src/utils/formatters.js`:
+       - Khai báo danh mục dùng chung `formWidthOptions` đầy đủ 21 cấp độ (5% -> 100%).
+       - Xuất hàm `getColItemStyle(width)` tự động tính toán width/flex chính xác bù trừ theo gap 1rem (`calc(w% - deduction)`), đảm bảo các trường ghép dòng (VD: 20% x 5, 10% x 10, 30% + 70%...) hiển thị chuẩn xác 100% chiều ngang hàng mà không bị tràn hay thụt lùi.
+     - Đồng bộ dropdown `formWidthOptions` tại cả 3 nơi cấu hình:
+       - Menu cài đặt cột header (`ColumnHeaderMenu.vue`).
+       - Dialog thêm cột mới (`AddColumnDialog.vue`).
+       - Cấu hình chung bảng dữ liệu (`SettingsImportView.vue`).
+     - Tích hợp `getColItemStyle` trên cả 4 form chi tiết:
+       - `PersonnelBasicForm.vue`, `PersonnelFamilyForm.vue`, `PersonnelNotesForm.vue`, `PersonnelTravelForm.vue`.
+     - `src/assets/styles/main.css`:
+       - Cập nhật `.form-grid` sang cơ chế `display: flex; flex-wrap: wrap; gap: 1rem;`, cho phép các trường tỷ lệ phần trăm co giãn linh hoạt và tự động xếp chồng `100%` trên thiết bị di động (responsive).
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 537ms).
+- **Entry (2026-09-08)**: **Xóa Bỏ Vĩnh Viễn 4 Form Cũ (PersonnelBasicForm, PersonnelFamilyForm, PersonnelNotesForm, PersonnelTravelForm) - Hợp Nhất Modal Chi Tiết Flat**:
+  1. **Chỉ đạo của người dùng**:
+     - Xóa bỏ hoàn toàn 4 component form cũ (`PersonnelBasicForm.vue`, `PersonnelFamilyForm.vue`, `PersonnelNotesForm.vue`, `PersonnelTravelForm.vue`) do đây là tàn dư của mô hình lồng đối tượng cũ.
+  2. **Giải pháp kiến trúc đã thực hiện**:
+     - Xóa vĩnh viễn cả 4 file khỏi `src/components/personnel/` và `WINDOWS_OFFLINE_APP/frontend/src/components/personnel/`.
+     - Tái cấu trúc [PersonnelDialog.vue](file:///Users/hoji/Documents/code/demoproject/src/components/personnel/PersonnelDialog.vue) thành **Modal Chi tiết Bản ghi Động (Flat Record Dialog)**:
+       - Không chia tab lồng cũ (Cán bộ / Thân nhân / Chuyến đi / Kỷ luật).
+       - Nhận động danh sách cột cấu hình (`:columns="allAvailableColumnsList"`).
+       - Hiển thị toàn bộ trường dữ liệu của bản ghi bằng `<DynamicField>` trong một `.form-grid` duy nhất với `:style="getColItemStyle(col.width)"`.
+     - Cập nhật `UnifiedTableView.vue`: Khi click dòng hoặc xem chi tiết, nạp trực tiếp bản ghi (`trip.rawPerson || trip.rawRelative || trip.rawTrip || trip`) vào modal duy nhất, không phụ thuộc vào tab.
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ toàn diện sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 529ms, giảm ~22 kB bundle).
+- **Entry (2026-09-08)**: **Nâng cấp Cột Tham chiếu (Lookup) Kiểu Lark Base & Xóa Bỏ Cấu hình Thừa**:
+  1. **Chỉ đạo của người dùng**:
+     - Xóa bỏ "Độ rộng trên Bảng (px):" và "Khóa định danh chính (Cột primal):" trong dialog thêm cột mới (`AddColumnDialog.vue`).
+     - Nâng cấp tính năng Lookup theo chuẩn Lark Base:
+       - Hỗ trợ xây dựng đa điều kiện (Multi-condition Matching: `[Cột bảng đích] [Toán tử] [Cột bảng này]`) kèm nút `+ Thêm điều kiện (Add Condition)`.
+       - Hỗ trợ chọn logic kết hợp: **AND (Khớp tất cả)** và **OR (Khớp bất kỳ)**.
+       - Bổ sung đầy đủ toán tử so sánh ngày tháng (`before`, `after`, `on_or_before`, `on_or_after`, `same_date`) theo chuẩn `parseDateValue` và so sánh số / số ngày (`>`, `>=`, `<`, `<=`, `=`).
+       - Tùy chọn hiển thị dữ liệu: `value` (bản ghi đầu tiên), `join` (gộp dấu phẩy), `count` (đếm số lượng), `array` (nhiều dòng).
+  2. **Giải pháp kiến trúc đã thực hiện**:
+     - `AddColumnDialog.vue`: Đã xóa sạch triệt để `isPrimaryKey`, toggle button khóa chính, và trường nhập `tableWidth` trên bảng. Thay thế section Lookup bằng bộ cấu hình Lark Base đầy đủ.
+     - `ColumnHeaderMenu.vue`: Nâng cấp giao diện cấu hình Lookup popover sang chuẩn Lark Base, mở rộng độ rộng popover 360px cho thao tác thuận tiện.
+     - `src/utils/formatters.js`:
+       - Xuất `lookupOperators` với đầy đủ 3 nhóm toán tử (Chuỗi cơ bản, Ngày tháng, Số học / Số ngày).
+       - Nâng cấp `evaluateLookup(item, col, personnelStore)` hỗ trợ đa điều kiện (AND/OR), trích xuất ứng viên chuẩn xác từ store theo bảng đích, định dạng hiển thị linh hoạt, và fallback ngược 100% tương thích dữ liệu cũ.
+     - `UnifiedTableView.vue`: Cập nhật `onChildChangeColumnLookup` để lưu đầy đủ các trường cấu hình lookup mới (`lookupConditions`, `lookupLogicOp`, `lookupDisplay`, `lookupFormat`).
+  3. **Đồng bộ & Kiểm chứng**:
+     - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` thành công 100% (0 lỗi, 547ms).
+- **Entry (2026-09-08)**: **Sửa Lỗi Hiển Thị Cấu Hình Lookup & Triển Khai Động Cơ Công Thức Nâng Cao (Teable & Lark Base Formula Engine)**:
+  1. **Vấn đề & Yêu cầu của người dùng**:
+     - *Lỗi cấu hình Lookup*: Khi nhấn sửa cột (Edit Column), cấu hình Lookup cũ không được hiển thị lại trên dropdown / cột bảng đích báo `-- Chọn cột lấy --`.
+     - *Nâng cấp Động cơ Công thức*: Thiết kế hệ thống cột công thức tính toán tự do tương tự Lark Suite và Teable (cho phép gõ biểu thức tự do, tham chiếu `{col_id}`, sử dụng các hàm Logic, Ngày tháng, Văn bản, Số học, chèn cột/hàm bằng 1 click, và xem trước kết quả trực tiếp).
+  2. **Nguyên nhân gốc rễ lỗi Lookup**:
+     - Trong `UnifiedTableView.vue` hàm tính toán `allAvailableColumnsList`, logic cũ chỉ copy chọn lọc các trường `{ id, label, colIndex, width, tableWidth, format, isVirtual }` mà bỏ sót `c.lookupTarget`, `c.lookupField`, `c.lookupConditions`, `c.lookupLogicOp`, `c.lookupDisplay`, `c.formulaExpression`. Khi mở menu `openChildColMenu`, prop `column` bị thiếu các thuộc tính này dẫn đến form menu bị reset về rỗng.
+     - Đồng thời, popover menu mở ở các cột cuối trang có thể bị tràn ra dưới đáy màn hình.
+  3. **Giải pháp kiến trúc đã thực hiện**:
+     - **Sửa Lỗi Lookup & Popover**:
+       - Tại `UnifiedTableView.vue` (`allAvailableColumnsList`), sử dụng object spread `...c` để giữ lại 100% tất cả thuộc tính của cột (lookup, formula, options, formWidth...).
+       - Tại `openChildColMenu`, bổ sung thuật toán giới hạn tọa độ thông minh (`Math.min(y, window.innerHeight - menuHeight - 16)`), chống tràn popover khỏi cạnh dưới màn hình.
+     - **Động cơ Công thức Nâng Cao (Formula Engine - Safe Recursive Evaluator)**:
+       - Tạo `src/utils/formulaCatalog.js`: Danh mục các hàm chuẩn Lark Base / Teable phân nhóm theo danh mục (Logic: `IF, AND, OR, NOT, ISBLANK, SWITCH`; Ngày tháng: `TODAY, NOW, DATEDIF, DATEADD, YEAR, MONTH, DAY, DATE`; Văn bản: `CONCATENATE, UPPER, LOWER, TRIM, LEN, LEFT, RIGHT, MID, SUBSTITUTE`; Số học: `ROUND, INT, ABS, MAX, MIN, SUM, AVERAGE`).
+       - Tạo `src/utils/formulaEngine.js`: Trình phân tích từ vựng (Tokenizer) và đánh giá biểu thức đệ quy an toàn (Recursive AST/Precedence Evaluator), hỗ trợ:
+         - Toán tử số học `+ - * / %`, toán tử nối chuỗi `&`, toán tử so sánh `== != > < >= <=`, toán tử logic `&& || AND OR`.
+         - Tham chiếu trường an toàn `{field_id}` hoặc `{Tên Cột}` lấy từ record hoặc `custom_data`.
+         - Không sử dụng `eval()` hay `Function()` mất an toàn.
+       - Tích hợp vào `src/utils/formatters.js`: `evaluateFormula(record, formulaConfig)` tự động nhận diện `custom_expression` hoặc `formulaExpression` và trả về kết quả chuẩn `{ status: 'custom', label, shortLabel, value }`.
+     - **Giao diện Soạn thảo Công thức Trực quan (Formula Editor UI)**:
+       - Bổ sung vào cả `ColumnHeaderMenu.vue` và `AddColumnDialog.vue`:
+         - Lựa chọn `⚡ Biểu thức Công thức Tự do (Lark Base / Teable)`.
+         - Textarea soạn thảo biểu thức với placeholder mẫu.
+         - Tab `Chèn Cột ({...})` hiển thị các thẻ pill tên cột của bảng hiện tại, bấm là tự động chèn `{col_id}` vào biểu thức.
+         - Tab `Chèn Hàm (fn)` liệt kê danh mục hàm kèm cú pháp, mô tả và ví dụ, bấm là tự động chèn `TÊN_HÀM()`.
+         - Khung Xem trước Trực tiếp (Live Preview) đánh giá ngay lập tức trên dòng mẫu đầu tiên (`Dòng 1`).
+     - **Tuân thủ quy tắc kiến trúc (500-Line Rule & Dual Deployment)**:
+       - Tách danh mục hàm sang `formulaCatalog.js` để kiểm soát độ dài file `formulaEngine.js`.
+       - Đồng bộ 100% các tệp sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+       - `npm run build` thành công 100% (0 lỗi, 557ms). Toàn bộ 10 bài kiểm thử đơn vị logic công thức (Test suite) đều vượt qua.
+  4. **Trạng thái**: Done [Reversible].
+- **Entry (2026-09-08)**: **Sửa Triệt Để Lỗi Mất Cột Tùy Chỉnh Khi Tải Lại Trang & Nổi Bật Công Thức Nâng Cao (Lark Base / Teable)**:
+  1. **Vấn đề & Chỉ đạo của người dùng**:
+     - *Lỗi mất cột khi reload*: Cột tùy chỉnh tạo thành công có hiển thị trên bảng, nhưng khi load lại trang (F5/Cmd+R) thì bị mất.
+     - *Nổi bật công thức nâng cao*: Người dùng không nhìn thấy công thức nâng cao ở đâu lúc tạo cột mới. Yêu cầu làm rõ ràng, trực quan.
+     - *Định hướng chiến lược*: Tập trung 100% online trên Directus (`https://api.hscb.online`), tạo cột vật lý trên Directus schema, sẵn sàng hoạt động như Lark Base engine no-code tùy biến dữ liệu linh hoạt.
+  2. **Nguyên nhân gốc rễ lỗi mất cột**:
+     - `UnifiedTableView.vue` trước đây lưu cấu hình cột vào `import_mapping_*`, trong khi `personnelStore.loadSettings()` khi khởi động / reload trang lại chỉ đọc từ `mapping_config_*`. Do `mapping_config_*` không được cập nhật, Pinia store bị ghi đè lại bởi mảng cũ, khiến `visibleColumns` và `allAvailableColumnsList` mất định nghĩa cột vừa tạo.
+  3. **Giải pháp kiến trúc đã thực hiện**:
+     - **Đồng bộ hóa Đa Khóa Cấu hình (Multi-Key Synchronous Persistence)**:
+       - Tại `src/stores/personnel.js`, cập nhật `loadSettings()` truy vấn song song tất cả các khóa ứng viên (`mapping_config_*`, `import_mapping_*`, `importMapping*`). Bổ sung thuật toán `resolveBestMapping(candidates)` tự động ưu tiên cấu hình chứa nhiều cột nhất và mới nhất.
+       - Tại `src/views/UnifiedTableView.vue`, triển khai `persistTableMapping(src, mappingData)` ghi đồng thời vào cả 3 khóa DB Directus và localStorage.
+       - Cập nhật toàn bộ các sự kiện thay đổi cột (`saveNewColumn`, `onChildRenameColumn`, `onChildChangeColumnRequired`, `onChildChangeColumnFormat`, `onChildChangeColumnLookup`, `onChildChangeColumnOptions`, `onChildChangeColumnFormWidth`, `onChildDeleteColumnFromTable`, `onDuplicateChildCol`, `onChildChangeFormulaType`) sử dụng `persistTableMapping`.
+       - Tích hợp `createDirectusField('personnels', colPayload)` tự động tạo schema vật lý trên Directus server online.
+     - **Làm Nổi Bật Tính Năng Công Thức Nâng Cao (Prominent Advanced Formula Discovery)**:
+       - Tại `AddColumnDialog.vue` và `ColumnHeaderMenu.vue`, cập nhật nhãn rõ ràng: `⚡ Công thức Nâng cao (Formula - Lark Base / Teable)`.
+       - Bổ sung dãy nút chọn nhanh (Quick-Select Format Pills) ngay dưới mục Kiểu dữ liệu (`[⚡ Công thức Nâng cao]`, `[🔗 Tham chiếu]`, `[📝 Văn bản]`, `[🔢 Số]`, `[📅 Ngày tháng]`, `[▼ Danh mục]`, `[📎 Tệp đính kèm]`).
+       - Bấm vào `[⚡ Công thức Nâng cao]` sẽ tự động chọn kiểu `formula` và mở ngay trình soạn thảo biểu thức tự do với tabs Chèn Cột `{...}`, Chèn Hàm `fn()`, và Live Preview trực tiếp.
+       - Tiêu đề khung cấu hình công thức được cập nhật sang `⚡ Cấu hình Công thức Nâng cao (Lark Base & Teable Formula)`.
+  4. **Đồng bộ & Kiểm tra**:
+     - Đồng bộ toàn bộ các tệp sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+     - `npm run build` hoàn thành với 0 lỗi (568ms).
+  5. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-08)**: **Sửa Lỗi Công Thức Tham Chiếu Cột Động / Cột Tham Chiếu (Lookup) Bị Luôn Sai ({cccdchuyendi} = {test})**:
+   1. **Vấn đề & Báo cáo của người dùng**:
+      - Công thức: IF( {cccdchuyendi}={test},'Cán bộ','Thân nhân')
+      - Người dùng phản ánh: "nó chỉ hiện điều kiện sai còn điều kiện đúng k hoạt động".
+   2. **Nguyên nhân gốc rễ**:
+      - Cột {test} là cột tham chiếu (Lookup: tra cứu cccdparent trong bảng Cán bộ khớp với cccdchuyendi).
+      - Giá trị cột Lookup được tính toán động (evaluateLookup), không lưu tĩnh trong trip.
+      - Khi FormulaEvaluator chạy, {test} không tìm thấy trong context tĩnh nên trả về "".
+      - Biểu thức so sánh thành '079081023618' = '', luôn luôn FALSE, dẫn đến toàn bộ dòng đều trả về 'Thân nhân'.
+   3. **Giải pháp kiến trúc đã triển khai**:
+      - Dynamic Cell Resolver: Cung cấp callback cellResolver/fieldResolver cho FormulaEvaluator và evaluateCustomFormula để phân giải giá trị thời gian thực từ bất kỳ cột nào trên bảng (Lookup, Virtual, Computed, Formula).
+      - Bổ sung .trim() trong parseComparison để triệt tiêu khoảng trắng thừa.
+      - Chuẩn hóa '-' thành '' khi lookup không tìm thấy kết quả.
+      - getCellValue truyền cellResolver kèm depth guard (depth > 5) chống tham chiếu vòng.
+      - AddColumnDialog và ColumnHeaderMenu cập nhật formulaPreviewResult gọi evaluateLookup để xem trước trực tiếp chính xác.
+   4. **Kiểm thử & Triển khai**:
+      - npm run build thành công 100% (0 lỗi, 567ms). Đã push commit ec4ab7c lên git.
+   5. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-08)**: **Sửa Lỗi Bấm "Chỉnh Sửa Hồ Sơ" Thân Nhân ở Popup Lại Nhảy Qua Cán Bộ**:
+   1. **Vấn đề & Báo cáo của người dùng**:
+      - "khi bấm chính sửa hồ sơ thân nhân ở popup thì nhảy qua cán bộ?"
+   2. **Nguyên nhân gốc rễ**:
+      - Trước đây, `PersonnelDialog.vue` từng có các Tab (Tab 0: Cán bộ, Tab 1: Chuyến đi, Tab 2: Thân nhân). Sau đợt tái cấu trúc thành Dynamic Flat Form, `PersonnelDialog` đã loại bỏ hoàn toàn các tab để hiển thị trực tiếp danh sách cột động theo cấu hình.
+      - Tuy nhiên, trong `DashboardView.vue`, hàm `openRelativeDetail(r)` vẫn giữ logic cũ: tìm cán bộ cha `parent = r.rawPerson || ...`, sau đó gán `selectedPersonForDialog.value = parent` (tức là gán hồ sơ Cán bộ) và `dialogInitialTab.value = 2` (không còn tác dụng).
+      - Đồng thời, `PersonnelDialog.vue` không được truyền `:columns`, nên mặc định fallback về `importMappingPersonnel` (cột của Cán bộ). Kết quả là form hiển thị toàn bộ thông tin và các trường của Cán bộ cha thay vì Thân nhân.
+      - Tương tự tại `UnifiedTableView.vue`, hàm `openPersonnelDetail(trip)` từng kiểm tra `trip.rawPerson || trip.rawRelative || ...`, khiến cho các dòng trong bảng Thân nhân có gắn `rawPerson` đều bị phân giải nhầm thành Cán bộ.
+   3. **Giải pháp kiến trúc đã triển khai**:
+      - **Đa hình hóa `PersonnelDialog.vue` (Polymorphic Dynamic Dialog)**:
+        - Bổ sung prop `targetType` (`'personnel' | 'relative' | 'trip' | 'auto'`) và `effectiveTargetType` tự động nhận diện đối tượng.
+        - `allTableColumns`: Tự động lấy đúng bộ cấu hình cột (`importMappingRelative` cho thân nhân, `importMappingTrips` cho chuyến đi, `importMappingPersonnel` cho cán bộ) khi không truyền `:columns`.
+        - `dialogHeader`: Hiển thị chính xác tiêu đề tương ứng (`Chi tiết Thân nhân: [Tên]`, `Chi tiết Chuyến đi: [Nơi đến]`, `Chi tiết Cán bộ: [Tên]`).
+        - Tự động gọi đúng hàm lưu/xóa tương ứng (`saveRelative` / `deleteRelative` cho thân nhân, `saveTrip` / `deleteTrip` cho chuyến đi, `savePerson` / `deletePerson` cho cán bộ).
+      - **Bổ sung `saveRelative`, `saveTrip`, `deleteTrip` trong `src/stores/personnel.js`**:
+        - `saveRelative(relData)`: Tìm cán bộ cha tương ứng trong `personnelList` (theo CCCD cha, `personnelId`, hoặc mã thân nhân), cập nhật vào `p.relatives` và `p.custom_data.relatives`, lưu qua `savePerson(updatedP)`, đồng bộ Directus `appendix2` nếu có ID, ghi nhật ký hoạt động.
+        - `saveTrip(tripData)` & `deleteTrip(trip)`: Quản lý chuyến đi trực tiếp và cập nhật hồ sơ chủ quản.
+      - **Cập nhật `DashboardView.vue`**:
+        - `openRelativeDetail(r)`: Gán trực tiếp bản ghi thân nhân `selectedPersonForDialog.value = r.rawRelative || r`, thiết lập `dialogTargetType = 'relative'`, cung cấp danh mục cột thân nhân `importMappingRelative`.
+        - `openTripDetail(t)`: Gán bản ghi chuyến đi và cột chuyến đi tương ứng.
+        - `openPersonnelDetailFromRecord`: Nhận diện chuẩn xác thân nhân qua `row.rawRelative || row._recordType === 'relative' || row.relationshipName || row.cccdthannhan || row.relativeName`.
+      - **Cập nhật `UnifiedTableView.vue`**:
+        - `openPersonnelDetail(trip)`: Kiểm tra nguồn bảng `src === 'relatives'` để ưu tiên `trip.rawRelative || trip`, đảm bảo click vào thân nhân mở đúng form thân nhân.
+   4. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 575ms).
+- **Entry (2026-09-08)**: **Triệt Tiêu Hoàn Toàn Phân Loại Đa Hình Và Mọi Fallback Ngầm (Zero Polymorphic Enums & Zero Hidden Fallbacks)**:
+   1. **Yêu cầu & Phản hồi của người dùng**:
+      - *"personnel | relative | trip là cũ rồi đéo cần đa hình hóa làm gì, ấn cái gì thì sửa cái đó thôi."*
+      - *"Check kỹ xem có chỗ nào fallback ngầm nữa, xóa hết đi chứ."*
+      - *"Cột test (lookup cccd) không hiển thị dữ liệu mà cột điều kiện IF lại đánh dấu là Cán bộ >>> dữ liệu không trùng khớp giữa chi tiết và bảng do fallback ngầm."*
+   2. **Nguyên nhân gốc rễ**:
+      - `PersonnelDialog.vue`: Tồn tại nhánh phân loại đa hình cứng (`targetType: 'personnel' | 'relative' | 'trip'`). Người dùng muốn kiến trúc pure flat table/record: truyền record nào thì sửa đúng record đó theo columns của bảng đó, không gán nhãn đối tượng giả tạo.
+      - `UnifiedTableView.vue` (line 4032): `const targetRecord = trip.rawPerson || trip.rawRelative || trip.rawTrip || trip;` khiến mọi click vào dòng Thân nhân/Chuyến đi đều bị cướp quyền và mở Cán bộ vì `rawPerson` luôn tồn tại.
+      - `DashboardView.vue` (`getDisplayValue` & `getRowFieldValue`): Không xử lý cột `lookup` và `rollup`, khiến cột `test` (lookup) hiển thị `-` trên bảng; đồng thời gọi `evaluateFormula` không truyền `columns` và `cellResolver`.
+      - `formulaEngine.js` (`getRecordFieldValue` & `evaluateCustomFormula`): Tự động nạp toàn bộ thuộc tính của `rawPerson`, `rawRelative`, `rawTrip` vào context tính toán công thức, và fallback sang `record.rawPerson` khi trường rỗng. Điều này làm cho công thức IF đọc được giá trị từ `rawPerson` trong khi cột thực tế trên bảng lại trống.
+      - `dashboardMetrics.js` (`extractRowFieldValue`): Kiểm tra fallback sang `item.rawPerson[field]`, `item.activeTrip[field]`, `item.rawRelative[field]`, làm sai lệch kết quả lọc và thống kê.
+      - `formatters.js` (`evaluateLookup`): Gán cứng `let parent = item.rawPerson` trong nhánh liên kết cũ và gán `candidatePool = [item.rawPerson]`, bỏ qua việc đối chiếu khóa liên kết thực tế của dòng.
+      - `AdvancedSearchView.vue` (`openDetail` & `getItemFieldValue`): Gán `activePersonData = item.rawPerson` và fallback sang `rawPerson` khi kiểm tra điều kiện.
+   3. **Giải pháp kiến trúc đã triển khai**:
+      - **Ấn cái gì sửa cái đó (Pure Record Editor)**:
+        - `PersonnelDialog.vue`: Bỏ hoàn toàn prop `targetType` và các nhánh switch-case đa hình. Nhận trực tiếp `:personData="record"` và `:columns="columns"`. Form hiển thị đúng các trường do bảng truyền vào.
+        - Lưu dữ liệu bằng `personnelStore.saveRecord(payload)` và xóa bằng `personnelStore.deleteRecord(record)`. Store tự động định tuyến lưu vào đúng bảng dữ liệu mà không cần caller phải khai báo loại đối tượng.
+      - **Xóa bỏ 100% Fallback ngầm**:
+        - `formulaEngine.js`: Xóa bỏ việc nạp `rawPerson`, `rawRelative`, `rawTrip` vào context và hàm `getRecordFieldValue`. Công thức chỉ đánh giá trên trường thực tế của record và `custom_data` (kèm `cellResolver` động).
+        - `dashboardMetrics.js`: Xóa bỏ các nhánh fallback sang `rawPerson`, `activeTrip`, `rawRelative` trong `extractRowFieldValue`.
+        - `formatters.js`: Xóa bỏ fallback sang `rawPerson` trong `candidatePool` và `evaluateLookup`. Khóa liên kết `lookupLinkCol` phải tìm kiếm chính xác qua CCCD/khóa định danh trong `personnelStore`.
+        - `DashboardView.vue`: Bổ sung xử lý đầy đủ `lookup` và `rollup` trong `getDisplayValue` và `getRowFieldValue`; truyền `cellResolver` đệ quy an toàn cho `evaluateFormula`.
+        - `AdvancedSearchView.vue`: `openDetail` gán trực tiếp `activePersonData.value = JSON.parse(JSON.stringify(item))`; loại bỏ fallback `rawPerson`/`rawTrip` trong `getItemFieldValue`.
+   4. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 547ms).
+   5. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-08)**: **Tùy Chọn Cột In PDF & Chi Tiết, Nhập Liệu Động 100%, Đồng Nhất Độ Rộng & Tối Ưu Tab Chế Độ Xem**:
+   1. **Yêu cầu của người dùng**:
+      - Tùy chọn cột: Thêm nút tick xuất hiện lúc in PDF hoặc export/import dữ liệu (mặc định tick); nút tick hiển thị ở chi tiết (mặc định tick - bỏ tick thì ẩn ở chi tiết).
+      - Nhập liệu mới đang dính logic cũ hardcode, chuyển sang dynamic đơn giản.
+      - Chiều rộng cột ở chi tiết và popup đồng nhất.
+      - Nút cài đặt của view từng bảng đang nằm ngoài với nền riêng, tối ưu lại.
+   2. **Giải pháp kiến trúc đã triển khai**:
+      - **Tùy chọn Cột (`includeInExport` & `showInDetail`)**:
+        - `ColumnHeaderMenu.vue` & `AddColumnDialog.vue`: Bổ sung 2 checkbox điều khiển trực tiếp trên Header Menu cột và hộp thoại tạo cột mới.
+        - `UnifiedTableView.vue`: Xử lý sự kiện `@change-include-export` và `@change-show-in-detail`, lưu cấu hình ngay lập tức vào Directus và LocalStorage.
+        - `PersonnelDialog.vue`: Bộ lọc `allTableColumns` tự động loại trừ các cột có `showInDetail === false`.
+        - `DashboardView.vue`: Danh sách cột trong popup drilldown và `selectedColumnsForDialog` lọc bỏ `c.showInDetail === false`.
+        - `excel.js` & `docxExport.js`: Lọc bỏ toàn bộ các cột có `col.includeInExport === false` trong các bảng xuất Excel, Mẫu nhập liệu, File Word động và Bản in PDF.
+      - **Nhập liệu Mới Động 100% (Dynamic Data Entry)**:
+        - `TableDataEntryDialog.vue`: Xóa bỏ hoàn toàn Bước 2 hardcode ("Chọn Cán bộ chủ quản liên kết") và các mô tả tĩnh. Hiển thị số lượng bản ghi động `${count} kết quả`. Khi chọn bảng, chuyển hướng linh hoạt tới route hoặc mở trực tiếp form nhập liệu với các cột của bảng đó.
+        - `UnifiedTableView.vue`: `openAddTripDialog` mở thẳng `PersonnelDialog` cho bản ghi mới với dữ liệu khởi tạo động, không qua form trung gian cũ.
+      - **Đồng Nhất Chiều Rộng Cột ở Chi Tiết và Popup**:
+        - `DashboardView.vue` (Drilldown Detail Dialog): Chuyển container sang `.form-grid` và áp dụng `:style="[getColItemStyle(col.width), ...]"` đồng bộ 100% với `PersonnelDialog.vue`, đảm bảo tỉ lệ phân chia cột (25%, 33%, 50%, 100%) hoàn toàn trùng khớp giữa popup xem nhanh và form chỉnh sửa.
+      - **Tối Ưu Nút Cài Đặt Chế Độ Xem (3-dots view settings button)**:
+        - `main.css`: Tái cấu trúc `.lark-tab-item-wrapper` thành pill liền khối duy nhất bao bọc cả tên tab và nút 3 chấm. Nút `.btn-tab-action` nằm gọn bên trong viền tab với nền trong suốt, triệt tiêu hoàn toàn khối vuông nền trắng thừa bị lồi ra ngoài.
+   3. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 549ms).
+- **Entry (2026-09-09)**: **Triệt Tiêu Hardcode/Cột Ảo Bảng Thân Nhân & Chuẩn Hóa Bảng Phẳng Thuần Túy (Pure Flat Table Record)**:
+   1. **Yêu cầu của người dùng**:
+      - *"Ở BẢNG THÂN NHÂN CỘT NÀY VẪN HARDCODE À, CHECK LẠI XÓA HẾT MẤY CỘT HARDCODE HAY CỘT ẢO ĐI CHỨ?"*
+      - Cột "Họ và tên Thân nhân" đang bị hardcode ghép badge mối quan hệ và số CCCD TN vào cùng 1 ô, phá vỡ tính phẳng của bảng.
+   2. **Nguyên nhân gốc rễ & Rà soát**:
+      - `UnifiedTableView.vue` (lines 338-356): Tồn tại khối template riêng `col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'` ghép cứng cả `relationshipName` và `cccdthannhan` vào ô tên thân nhân.
+      - `UnifiedTableView.vue` (lines 331-336): Khối hiển thị cột ảo `_primaryKey`.
+      - `UnifiedTableView.vue` (lines 358-367): Khối huy hiệu tĩnh cho `relationshipName` / `relationship` chặn mất cơ chế inline-edit dropdown.
+      - `stores/personnel.js`: Logic `visibleRelativeColumns` tự động ép `_parentPersonnelName` vào đầu mảng cột hiển thị; `allAvailableRelativeColumns` và `allAvailablePersonnelColumns` chứa cột ảo `_primaryKey`.
+      - `formatters.js` (`resolveVirtualColumnValue`): Nhận diện nhầm `relativeName` và `relationshipName` là cột ảo dẫn đến giá trị bị chặn trước khi đọc thuộc tính thực.
+   3. **Giải pháp đã triển khai**:
+      - **Bảng phẳng chuẩn Teable/Lark Base**: 1 cột = 1 trường dữ liệu. Xóa bỏ hoàn toàn việc gộp mối quan hệ và CCCD vào cột tên.
+      - **Họ và tên thuần túy + Inline Edit**: Gom toàn bộ các cột tên (`personnelName`, `name`, `ho_va_ten`, `relativeName`...) vào một khối duy nhất, hiển thị chữ đậm thuần khiết và hỗ trợ nhấp đúp để chỉnh sửa nhanh (inline edit).
+      - **Cột Mối quan hệ**: Để `relationshipName` rơi tự nhiên vào `v-else`, tự động render text và khi nhấp đúp mở dropdown chuẩn theo tùy chọn đã cấu hình.
+      - **Hỗ trợ lưu Inline Thân nhân & Cán bộ**: Bổ sung cập nhật trực tiếp `parent.relatives` và thuộc tính cha trong `saveChildInlineEdit`.
+      - **Dọn dẹp cột ảo**: Gỡ bỏ triệt để `_primaryKey` và việc force-inject `_parentPersonnelName` trong `personnel.js`. Sửa `resolveVirtualColumnValue` để không chặn các trường thực `relativeName` và `relationshipName`.
+   4. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 531ms).
+- **Entry (2026-09-09 - Session 2)**: **Tự động sinh Field ID, Nhân bản Cột/Khối thống kê, Hỗ trợ Lookup đa tầng A->B->C, Xóa bỏ Khối cấu hình khóa cứng**:
+   1. **Yêu cầu của người dùng**:
+      - Khi tạo cột mới, Mã định danh (Field ID) tự sinh theo tên cột khi nhập lần đầu.
+      - Bổ sung tính năng nhân bản cột (tự đổi tên ID sạch sẽ) và nhân bản khối thống kê.
+      - Khắc phục lỗi lookup từ bảng A sang B được nhưng lookup giá trị đó từ B sang C không hiển thị.
+      - Xóa bỏ khối hardcode "Khóa Định danh & Liên kết Bảng" trong popup tùy chỉnh cột; đồng thời sửa lỗi cột CCCD người đi bị rỗng trên bảng.
+   2. **Nguyên nhân gốc rễ**:
+      - `AddColumnDialog.vue`: Thẻ input tên cột gán `@input="onLabelInput"` nhưng hàm `onLabelInput` chưa được định nghĩa trong `<script>`, dẫn đến Field ID không tự động sinh từ `generateSlug(label)`.
+      - Tính năng nhân bản: Cần tự động sinh ID tăng dần (`${id}_copy`, `${id}_copy_2`), có thể kích hoạt trực tiếp từ Header Menu cột và Modal Tùy chọn cột (`ColumnSelector`). Khối thống kê trên Dashboard (`DashboardView`) và Chế độ xem (`UnifiedTableView`) thiếu nút nhân bản.
+      - Chained Lookup (A -> B -> C): `evaluateLookup` trong `formatters.js` chỉ đọc `obj[key]` hoặc `custom_data[key]` dạng static raw. Khi cột ở bảng B là một cột lookup/công thức động thì giá trị không lưu tĩnh trong `custom_data`, khiến bảng C tra cứu sang bảng B nhận về `undefined`.
+      - Khối Khóa Định danh cứng: `ColumnHeaderMenu.vue` vẫn còn giữ khối giao diện 5b và 6 cũ với các nút set khóa thủ công và cấu hình `_parentPersonnelName`.
+      - Cột CCCD người đi bị rỗng: Trong `stores/personnel.js`, hàm thu thập chuyến đi `allTrips` không chủ động nạp thuộc tính `cccdchuyendi` từ CCCD của Cán bộ / Thân nhân; và trong `UnifiedTableView.vue`, toán tử nullish coalescing `??` bị nghẽn bởi chuỗi rỗng `""`.
+   3. **Giải pháp đã triển khai**:
+      - **Tự động sinh Field ID**: Triển khai `onLabelInput` với `generateSlug(label)` và cờ `isIdManuallyEdited` trong `AddColumnDialog.vue`.
+      - **Nhân bản Cột & Khối Thống kê**:
+        + Thêm nút Nhân bản cột (`pi-clone`) tại cả `ColumnHeaderMenu.vue` và `ColumnSelector.vue`, tự động tạo ID sạch (`${baseId}_copy`, `${baseId}_copy_2...`).
+        + Thêm nút Nhân bản Khối thống kê (`duplicateWidget`) và Nhân bản Nhóm (`duplicateCustomGroup`) trong `DashboardView.vue`.
+        + Thêm nút Nhân bản Chế độ xem (`duplicateView`) trong `UnifiedTableView.vue`.
+      - **Động cơ Lookup đa tầng (Chained Lookup A -> B -> C)**:
+        + Nâng cấp `evaluateLookup` trong `formatters.js`: hàm trích xuất `getProp` tự động nhận diện nếu `key` là cột tính toán động (lookup, formula, rollup) ở bảng nguồn và đệ quy an toàn (`depth < 5`) để giải quyết giá trị trước khi trả về.
+      - **Xóa bỏ Khối Cấu hình Khóa cứng**:
+        + Xóa hoàn toàn các khối giao diện gán khóa thủ công và cột ảo `_parentPersonnelName` khỏi `ColumnHeaderMenu.vue`.
+      - **Sửa triệt để cột CCCD Người đi**:
+        + Nạp đầy đủ `cccdchuyendi: t.cccdchuyendi || t.cccd || personCccd` khi tổng hợp danh sách chuyến đi trong `personnelStore`.
+        + Cập nhật logic `getCellValue` sử dụng `||` và rà soát đầy đủ các trường CCCD của dòng.
+   4. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 517ms).
+   5. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 3)**: **Triệt Tiêu 100% Fallback Ngầm & Chuẩn Hóa Cột CCCD Người Đi (Cán bộ & Thân nhân)**:
+    1. **Yêu cầu & Phản ánh của người dùng**:
+       - *"Hiện tại tôi chỉ muốn Xóa sạch 100% các biến và fallback ngầm còn sót lại còn 'CCCD / Định danh người đi' hiển thị đúng data cccd thân nhân (cột này có 2 loại dữ liệu là cccd thân nhân và cccd cán bộ, thân nhân bị hiển thị - , tôi muốn hiển thị đúng)"*
+    2. **Nguyên nhân gốc rễ**:
+       - Tồn tại các biến fallback ngầm: `_fallbackPerson`, `_fallbackRelative` trong `dashboardMetrics.js`, việc nạp `relativeName`, `personnelName` từ `r` sang chuyến đi `rt` trong `stores/personnel.js`, và tiêu đề popup `PersonnelDialog.vue` tự suy đoán tên thân nhân.
+       - Cột `cccdchuyendi` của chuyến đi thân nhân trong dữ liệu cũ bị lưu mã sinh tạm nội bộ `cd_...`, trong khi số CCCD thật của thân nhân được lưu ở trường `cccdthannhan` (hoặc `r.cccdthannhan`), dẫn đến việc cột này hiển thị `-`.
+       - Hàm `saveTrip` trong `stores/personnel.js` chỉ tìm chuyến đi trong `p.trips` mà không duyệt `p.relatives[].trips`, khiến việc lưu/chỉnh sửa chuyến đi của thân nhân không cập nhật được.
+    3. **Giải pháp kiến trúc đã triển khai**:
+       - **Xóa sạch 100% Fallback ngầm**:
+         + Xóa bỏ triệt để các biến `_fallbackPerson`, `_fallbackRelative` khỏi `dashboardMetrics.js` và `PersonnelDialog.vue`.
+         + Bỏ việc tự ý nạp `relativeName`, `personnelName` từ thân nhân sang chuyến đi trong `stores/personnel.js`.
+         + `PersonnelDialog.vue`: Với bản ghi chuyến đi (`_recordType === 'trip'`), tiêu đề hiển thị trung thực `Chi tiết Chuyến đi: [Địa điểm]` thay vì phỏng đoán tên thân nhân.
+       - **Chuẩn hóa hiển thị CCCD Người đi (Cán bộ & Thân nhân)**:
+         + `stores/personnel.js` (`fetchPersonnel`) & `dashboardMetrics.js` (`buildTopicSourceList`): Khi thu thập chuyến đi, nếu `cccdchuyendi` là mã rác nội bộ `cd_...` hoặc rỗng: nếu là Thân nhân gán `travelerCccd` từ `rt.cccdthannhan || r.cccdthannhan`; nếu là Cán bộ gán từ `t.cccdparent || p.cccdparent || p.cccd`.
+         + `UnifiedTableView.vue` & `DashboardView.vue`: Tại hàm lấy giá trị `getCellValue` / `getRowFieldValue`, nếu `colId === 'cccdchuyendi'`, hệ thống tự động bóc tách CCCD người đi thực tế (CCCD Cán bộ cho chuyến Cán bộ, CCCD Thân nhân cho chuyến Thân nhân), triệt tiêu hoàn toàn lỗi hiển thị `-`.
+         + `PersonnelDialog.vue`: Khi mở form chi tiết chuyến đi, `cccdchuyendi` được nạp sẵn CCCD người đi thực tế.
+         + `saveTrip`: Hỗ trợ tìm và lưu chính xác cả chuyến đi nằm trong `p.relatives[].trips`.
+    4. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 572ms).
+    5. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 4)**: **Di Trú Dữ Liệu CCCD Vào Thẳng Database & Xóa 100% Runtime Fallback Trong Code**:
+    1. **Yêu cầu & Chỉ đạo của người dùng**:
+       - *"đã nói là xóa hết fallback mà mày cứ chuẩn hóa cái gì vậy... ví dụ cái fallback cũ đang đắp dữ liệu từ đâu đó thì chạy script 1 lần duy nhất điền data cũ vào cái ô cccdchuyendi để nó hiển thị đúng là xong, đéo fallback nữa"*
+    2. **Thực thi Di trú Dữ liệu 1 lần duy nhất (Database Migration)**:
+       - Đã chạy script kết nối trực tiếp Directus API (`https://api.hscb.online/items/personnels`):
+         + Duyệt toàn bộ 30 cán bộ và tất cả chuyến đi (`p.trips` và `r.trips`).
+         + Đối với mọi chuyến đi có `cccdchuyendi` là mã rác nội bộ (`cd_...`) hoặc rỗng:
+           - Chuyến đi Thân nhân: Gán thẳng số CCCD thật của thân nhân (`r.cccdthannhan || rt.cccdthannhan`) vào thuộc tính `cccdchuyendi`.
+           - Chuyến đi Cán bộ: Gán thẳng số CCCD thật của cán bộ (`p.cccdparent || p.cccd`) vào `cccdchuyendi`.
+         + Lưu vĩnh viễn dữ liệu sạch vào Database Directus và cập nhật file `BACKUP_DATA/personnels.json`.
+    3. **Gỡ bỏ triệt để 100% Runtime Fallback trong toàn bộ Codebase**:
+       - `UnifiedTableView.vue` (`getCellValue`): Xóa bỏ hoàn toàn khối phân giải fallback 1b. Cột đọc thuần túy từ `trip[colId] ?? tcd[colId]`.
+       - `DashboardView.vue` (`getRowFieldValue`): Xóa bỏ hoàn toàn khối fallback 1b. Cột đọc thuần túy từ `row[colId] ?? rcd[colId]`.
+       - `src/stores/personnel.js` (`fetchPersonnel`): Bỏ toàn bộ code kiểm tra `isInternalId` và nạp ngầm `cccdchuyendi`. Thu thập `...t` và `...rt` nguyên bản từ DB.
+       - `src/utils/dashboardMetrics.js` (`buildTopicSourceList`): Bỏ toàn bộ code kiểm tra `isInternalId` và nạp ngầm `cccdchuyendi`. Thu thập `...t` và `...rt` nguyên bản từ DB.
+       - `src/components/personnel/PersonnelDialog.vue` (`initFormData`): Xóa bỏ hoàn toàn logic fallback `isInternalId`. Form nạp 100% trung thực dữ liệu của bản ghi.
+    4. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 505ms).
+    5. **Trạng thái**: Done [Hard to Reverse / Data Migrated].

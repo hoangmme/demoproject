@@ -318,11 +318,6 @@ export const usePersonnelStore = defineStore('personnel', {
                 trips: relTrips,
                 personnelId: p.id,
                 personnelCode: p.code || '',
-                parentName: p.name,
-                parentPersonnelName: p.name,
-                cccdparent: personCccd,
-                parentPosition: p.positionName || p.position || '',
-                parentDepartment: p.departmentName || (p.departmentId ? this.getDepartmentName(p.departmentId) : '') || '',
                 code: r.code || `TN-${String(allRelatives.length + 1).padStart(5, '0')}`,
               });
             });
@@ -333,12 +328,9 @@ export const usePersonnelStore = defineStore('personnel', {
             matchedTrips.forEach((t) => {
               allTrips.push({
                 ...t,
+                isRelative: false,
                 personnelId: p.id,
                 personnelCode: p.code || '',
-                personnelName: p.name,
-                cccdchuyendi: t.cccdchuyendi || t.cccd || personCccd,
-                cccdparent: personCccd,
-                cccd: t.cccd || t.cccdchuyendi || personCccd,
               });
             });
           }
@@ -355,20 +347,11 @@ export const usePersonnelStore = defineStore('personnel', {
                 const rtId = rt.id || rt.uniqueKey;
                 const exists = allTrips.some((et) => (rtId && (et.id === rtId || et.uniqueKey === rtId)));
                 if (!exists) {
-                  const relCccd = r.cccdthannhan || r.cccd || rCustom.cccdthannhan || rCustom.cccd || '';
                   allTrips.push({
                     ...rt,
                     isRelative: true,
                     personnelId: p.id,
-                    personnelCode: p.code || '',
-                    personnelName: rt.relativeName || r.relativeName || r.name || 'Thân nhân',
-                    relativeName: rt.relativeName || r.relativeName || r.name || 'Thân nhân',
-                    parentName: p.name,
-                    parentPersonnelName: p.name,
-                    cccdchuyendi: rt.cccdchuyendi || rt.cccd || relCccd,
-                    cccdthannhan: rt.cccdthannhan || relCccd,
-                    cccdparent: personCccd,
-                    cccd: rt.cccd || rt.cccdchuyendi || relCccd,
+                    relativeId: r.id,
                   });
                 }
               });
@@ -1052,26 +1035,52 @@ export const usePersonnelStore = defineStore('personnel', {
           }
           const tripsInP = Array.isArray(p.trips) ? p.trips : (Array.isArray(custom.trips) ? custom.trips : []);
           const hasTrip = tripsInP.some(isSameTrip);
+          let hasTripInRel = false;
+          let matchedRelIdx = -1;
+          const relsInP = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(custom.relatives) ? custom.relatives : []);
+          for (let rI = 0; rI < relsInP.length; rI++) {
+            const r = relsInP[rI];
+            if (Array.isArray(r.trips) && r.trips.some(isSameTrip)) {
+              hasTripInRel = true;
+              matchedRelIdx = rI;
+              break;
+            }
+          }
+
           const matchesPerson = (cleanTrip.personnelId && (String(p.id) === String(cleanTrip.personnelId) || String(p.code) === String(cleanTrip.personnelId))) ||
                                 (cleanTrip.cccd && (p.cccd === cleanTrip.cccd || p.cccdparent === cleanTrip.cccd)) ||
                                 (cleanTrip.cccdparent && (p.cccd === cleanTrip.cccdparent || p.cccdparent === cleanTrip.cccdparent));
 
-          if (hasTrip || matchesPerson) {
+          if (hasTrip || hasTripInRel || matchesPerson) {
             const updatedP = JSON.parse(JSON.stringify(p));
-            let pTrips = Array.isArray(updatedP.trips) ? [...updatedP.trips] : [];
-            const tIdx = pTrips.findIndex(isSameTrip);
-            if (tIdx !== -1) {
-              pTrips[tIdx] = { ...pTrips[tIdx], ...cleanTrip };
-            } else {
-              if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
-              pTrips.push(cleanTrip);
-            }
-            updatedP.trips = pTrips;
             if (!updatedP.custom_data) updatedP.custom_data = {};
             if (typeof updatedP.custom_data === 'string') {
               try { updatedP.custom_data = JSON.parse(updatedP.custom_data); } catch (e) { updatedP.custom_data = {}; }
             }
-            updatedP.custom_data.trips = pTrips;
+
+            if (hasTripInRel && matchedRelIdx !== -1) {
+              const relObj = updatedP.relatives[matchedRelIdx];
+              if (!relObj.trips) relObj.trips = [];
+              const tIdx = relObj.trips.findIndex(isSameTrip);
+              if (tIdx !== -1) {
+                relObj.trips[tIdx] = { ...relObj.trips[tIdx], ...cleanTrip };
+              } else {
+                relObj.trips.push(cleanTrip);
+              }
+              updatedP.custom_data.relatives = updatedP.relatives;
+            } else {
+              let pTrips = Array.isArray(updatedP.trips) ? [...updatedP.trips] : [];
+              const tIdx = pTrips.findIndex(isSameTrip);
+              if (tIdx !== -1) {
+                pTrips[tIdx] = { ...pTrips[tIdx], ...cleanTrip };
+              } else {
+                if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
+                pTrips.push(cleanTrip);
+              }
+              updatedP.trips = pTrips;
+              updatedP.custom_data.trips = pTrips;
+            }
+
             await this.savePerson(updatedP);
             foundPerson = updatedP;
             break;

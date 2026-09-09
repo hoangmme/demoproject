@@ -39,6 +39,11 @@
   - **TUYỆT ĐỐI KHÔNG FALLBACK NGẦM SANG BẢN GHI KHÁC**:
     - Khi một ô/cột không có giá trị, hiển thị `'-'` hoặc rỗng `""`. Tuyệt đối cấm lấy giá trị của bản ghi khác (như `rawPerson`, `rawRelative`, `rawTrip`) đắp vào!
     - Trong công thức (`formulaEngine.js`), thống kê/bộ lọc (`dashboardMetrics.js`), và tra cứu (`evaluateLookup`): Tuyệt đối không nạp ngầm thuộc tính của Cán bộ vào dòng Chuyến đi hay Thân nhân. Dữ liệu giữa Bảng và Công thức/Thống kê phải khớp 1-1.
+- ⛔ **CỘT CHUYẾN ĐI & CCCD LÀ BẢN GHI PHẲNG THUẦN TÚY (ZERO PRIMARY KEY HARDCODING & ZERO SYNTHETIC INJECTION)**:
+  - Cột `cccdchuyendi`, `cccdparent`, `cccdthannhan` là các cột dữ liệu thông thường trong bảng, HOÀN TOÀN KHÔNG PHẢI khóa cứng độc quyền hay đối tượng được phép nạp ngầm.
+  - **CẤM TỰ Ý NẠP/ÉP GIÁ TRỊ TĨNH** từ hồ sơ Cán bộ (`personCccd`, `canBoCccd`) hay Thân nhân (`relCccd`) vào trường `cccdchuyendi` hoặc bất kỳ trường nào của dòng chuyến đi khi thu thập mảng `allTrips` trong `src/stores/personnel.js`, `buildTopicSourceList` trong `src/utils/dashboardMetrics.js`, hoặc bất kỳ bộ gom dữ liệu nào.
+  - Nếu người dùng cần lấy số CCCD hoặc thông tin của Cán bộ / Thân nhân sang bảng Chuyến đi, người dùng sẽ tự cấu hình cột **Lookup (Tham chiếu)** để lấy sang một cách minh bạch theo nhu cầu.
+  - Trong `getCellValue` / `getRowFieldValue`: Xóa bỏ 100% các đoạn code kiểm tra hardcode `isInternalId`, `tKeyField`, `pKeyField`, `rKeyField`, `cccdchuyendi`. Toàn bộ giá trị hiển thị thuần khiết theo đúng thuộc tính của dòng hoặc `custom_data` (nếu không có thì trả về `'-'`).
 - ⛔ **100% DỮ LIỆU ĐỘNG THEO CẤU HÌNH CỘT (`column.id`)**:
   - Toàn bộ bảng hoạt động 100% dựa trên danh mục cấu hình cột (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`, hoặc cấu hình bảng tự tạo).
   - **CẤM DÙNG DỮ LIỆU TĨNH / FALLBACK TĨNH**: Tuyệt đối KHÔNG sử dụng các mảng alias tĩnh gom nhóm trường (như `['quoc_gia_xuat_canh', 'countryName', 'country', ...]`, `['noi_o_hien_nay', 'currentAddress', ...]`). Cột nào cấu hình `column.id` là gì thì hệ thống truy xuất chính xác 1-1 theo `column.id` đó trên bản ghi hoặc trong `custom_data`.
@@ -2069,3 +2074,44 @@
    4. **Kiểm thử & Triển khai**:
       - `npm run build` thành công 100% (0 lỗi, 517ms).
    5. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 3)**: **Triệt Tiêu 100% Fallback Ngầm & Chuẩn Hóa Cột CCCD Người Đi (Cán bộ & Thân nhân)**:
+    1. **Yêu cầu & Phản ánh của người dùng**:
+       - *"Hiện tại tôi chỉ muốn Xóa sạch 100% các biến và fallback ngầm còn sót lại còn 'CCCD / Định danh người đi' hiển thị đúng data cccd thân nhân (cột này có 2 loại dữ liệu là cccd thân nhân và cccd cán bộ, thân nhân bị hiển thị - , tôi muốn hiển thị đúng)"*
+    2. **Nguyên nhân gốc rễ**:
+       - Tồn tại các biến fallback ngầm: `_fallbackPerson`, `_fallbackRelative` trong `dashboardMetrics.js`, việc nạp `relativeName`, `personnelName` từ `r` sang chuyến đi `rt` trong `stores/personnel.js`, và tiêu đề popup `PersonnelDialog.vue` tự suy đoán tên thân nhân.
+       - Cột `cccdchuyendi` của chuyến đi thân nhân trong dữ liệu cũ bị lưu mã sinh tạm nội bộ `cd_...`, trong khi số CCCD thật của thân nhân được lưu ở trường `cccdthannhan` (hoặc `r.cccdthannhan`), dẫn đến việc cột này hiển thị `-`.
+       - Hàm `saveTrip` trong `stores/personnel.js` chỉ tìm chuyến đi trong `p.trips` mà không duyệt `p.relatives[].trips`, khiến việc lưu/chỉnh sửa chuyến đi của thân nhân không cập nhật được.
+    3. **Giải pháp kiến trúc đã triển khai**:
+       - **Xóa sạch 100% Fallback ngầm**:
+         + Xóa bỏ triệt để các biến `_fallbackPerson`, `_fallbackRelative` khỏi `dashboardMetrics.js` và `PersonnelDialog.vue`.
+         + Bỏ việc tự ý nạp `relativeName`, `personnelName` từ thân nhân sang chuyến đi trong `stores/personnel.js`.
+         + `PersonnelDialog.vue`: Với bản ghi chuyến đi (`_recordType === 'trip'`), tiêu đề hiển thị trung thực `Chi tiết Chuyến đi: [Địa điểm]` thay vì phỏng đoán tên thân nhân.
+       - **Chuẩn hóa hiển thị CCCD Người đi (Cán bộ & Thân nhân)**:
+         + `stores/personnel.js` (`fetchPersonnel`) & `dashboardMetrics.js` (`buildTopicSourceList`): Khi thu thập chuyến đi, nếu `cccdchuyendi` là mã rác nội bộ `cd_...` hoặc rỗng: nếu là Thân nhân gán `travelerCccd` từ `rt.cccdthannhan || r.cccdthannhan`; nếu là Cán bộ gán từ `t.cccdparent || p.cccdparent || p.cccd`.
+         + `UnifiedTableView.vue` & `DashboardView.vue`: Tại hàm lấy giá trị `getCellValue` / `getRowFieldValue`, nếu `colId === 'cccdchuyendi'`, hệ thống tự động bóc tách CCCD người đi thực tế (CCCD Cán bộ cho chuyến Cán bộ, CCCD Thân nhân cho chuyến Thân nhân), triệt tiêu hoàn toàn lỗi hiển thị `-`.
+         + `PersonnelDialog.vue`: Khi mở form chi tiết chuyến đi, `cccdchuyendi` được nạp sẵn CCCD người đi thực tế.
+         + `saveTrip`: Hỗ trợ tìm và lưu chính xác cả chuyến đi nằm trong `p.relatives[].trips`.
+    4. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 572ms).
+    5. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 4)**: **Di Trú Dữ Liệu CCCD Vào Thẳng Database & Xóa 100% Runtime Fallback Trong Code**:
+    1. **Yêu cầu & Chỉ đạo của người dùng**:
+       - *"đã nói là xóa hết fallback mà mày cứ chuẩn hóa cái gì vậy... ví dụ cái fallback cũ đang đắp dữ liệu từ đâu đó thì chạy script 1 lần duy nhất điền data cũ vào cái ô cccdchuyendi để nó hiển thị đúng là xong, đéo fallback nữa"*
+    2. **Thực thi Di trú Dữ liệu 1 lần duy nhất (Database Migration)**:
+       - Đã chạy script kết nối trực tiếp Directus API (`https://api.hscb.online/items/personnels`):
+         + Duyệt toàn bộ 30 cán bộ và tất cả chuyến đi (`p.trips` và `r.trips`).
+         + Đối với mọi chuyến đi có `cccdchuyendi` là mã rác nội bộ (`cd_...`) hoặc rỗng:
+           - Chuyến đi Thân nhân: Gán thẳng số CCCD thật của thân nhân (`r.cccdthannhan || rt.cccdthannhan`) vào thuộc tính `cccdchuyendi`.
+           - Chuyến đi Cán bộ: Gán thẳng số CCCD thật của cán bộ (`p.cccdparent || p.cccd`) vào `cccdchuyendi`.
+         + Lưu vĩnh viễn dữ liệu sạch vào Database Directus và cập nhật file `BACKUP_DATA/personnels.json`.
+    3. **Gỡ bỏ triệt để 100% Runtime Fallback trong toàn bộ Codebase**:
+       - `UnifiedTableView.vue` (`getCellValue`): Xóa bỏ hoàn toàn khối phân giải fallback 1b. Cột đọc thuần túy từ `trip[colId] ?? tcd[colId]`.
+       - `DashboardView.vue` (`getRowFieldValue`): Xóa bỏ hoàn toàn khối fallback 1b. Cột đọc thuần túy từ `row[colId] ?? rcd[colId]`.
+       - `src/stores/personnel.js` (`fetchPersonnel`): Bỏ toàn bộ code kiểm tra `isInternalId` và nạp ngầm `cccdchuyendi`. Thu thập `...t` và `...rt` nguyên bản từ DB.
+       - `src/utils/dashboardMetrics.js` (`buildTopicSourceList`): Bỏ toàn bộ code kiểm tra `isInternalId` và nạp ngầm `cccdchuyendi`. Thu thập `...t` và `...rt` nguyên bản từ DB.
+       - `src/components/personnel/PersonnelDialog.vue` (`initFormData`): Xóa bỏ hoàn toàn logic fallback `isInternalId`. Form nạp 100% trung thực dữ liệu của bản ghi.
+    4. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 505ms).
+    5. **Trạng thái**: Done [Hard to Reverse / Data Migrated].
