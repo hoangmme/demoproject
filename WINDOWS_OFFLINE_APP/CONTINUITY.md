@@ -2367,3 +2367,21 @@
        - `npm run build` thành công 100% (0 lỗi, 819ms).
        - Đồng bộ đầy đủ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
     4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 16)**: **Sửa Lỗi Tự Động Lưu Thứ Tự Cột Theo View & Bổ Sung Nút Nhập Liệu Đồng Bộ Trong Form Chi Tiết**:
+    1. **Yêu cầu của người dùng**:
+       - Chuyển view, sửa thứ tự và ẩn/hiện cột ở tùy chọn cột không tự lưu lại, bấm vào view là load sai thứ tự cột.
+       - Form chi tiết dữ liệu trong bảng (PersonnelDialog) chưa hiện nút thêm dữ liệu giống ở menu sidebar.
+    2. **Giải pháp & Triển khai**:
+       - **Sửa lỗi Tự động lưu & Tải đúng thứ tự cột theo từng View (`src/views/UnifiedTableView.vue` & `src/components/common/ColumnSelector.vue`)**:
+         + Chuẩn hóa hàm nhận diện khóa lưu trữ cột cho từng thẻ/view: `getCurrentCardId()` trả về ID chuẩn (`'all'` cho view mặc định, `'completed'`, `'abroad'`, hoặc `id` tùy biến), `getCurrentCardColKey()` trả về `child_dashboard_cols_${tid}_${cid}`.
+         + Trong `onColumnsChange`: Lưu tức thì vào `localStorage` cho cả key riêng của thẻ (`child_dashboard_cols_${tid}_${cid}`) lẫn `customDashboards` (`dashboards[idx].metricCards[cardIdx].columns` và `dashboards[idx].columns`).
+         + Trong `loadColumnsForCurrentCard`: Tái cấu trúc theo thứ tự ưu tiên tuyệt đối: (1) `currentCard.columns` từ in-memory / customDashboards; (2) `localStorage` của chính view đó; (3) Directus DB settings; (4) Kế thừa View 0 ("Toàn bộ") nếu view con chưa cấu hình; (5) Toàn bộ danh mục cột khả dụng. Loại bỏ hoàn toàn việc DB fallback cũ đè mất cấu hình cột mới của người dùng.
+         + Trong `ColumnSelector.vue`: Thêm watcher reset `customOrder` khi `props.modelValue` thay đổi (đảm bảo khi chuyển view không bị giữ mảng thứ tự của view cũ), và sửa logic `moveUp`/`moveDown` hoạt động trên danh sách gốc để không bị mất cột khi đang tìm kiếm từ khóa.
+       - **Tích hợp Nút Nhập liệu mới trong Form Chi tiết (`src/components/personnel/PersonnelDialog.vue`) & Bảng (`UnifiedTableView.vue`)**:
+         + Trong `PersonnelDialog.vue`: Bổ sung nút `+ Thêm dữ liệu` trên cả Header (cạnh tiêu đề chi tiết) và Footer (cạnh Xuất hồ sơ PDF).
+         + Nhúng component `TableDataEntryDialog` ngay trong `PersonnelDialog.vue` và `UnifiedTableView.vue`, đồng bộ chính xác với mục "Nhập liệu" ở Sidebar menu (hỗ trợ chọn bảng dữ liệu, nhập hồ sơ mới cho Cán bộ, Thân nhân, Chuyến đi, và Bảng tự tạo).
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 533ms).
+       - Đồng bộ toàn bộ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
+    4. **Trạng thái**: Done [Reversible].

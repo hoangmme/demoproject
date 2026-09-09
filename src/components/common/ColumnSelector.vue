@@ -320,7 +320,14 @@ const copyColumnTag = (col) => {
   }
 };
 
-const displayOptions = computed(() => {
+watch(
+  () => props.modelValue,
+  () => {
+    customOrder.value = [];
+  }
+);
+
+const baseDisplayOptions = computed(() => {
   let opts = [...props.options];
   if (customOrder.value.length === 0) {
     const activeSet = new Set(props.modelValue);
@@ -328,7 +335,7 @@ const displayOptions = computed(() => {
       .map((id) => opts.find((o) => id === o.id))
       .filter(Boolean);
     const remaining = opts.filter((o) => !activeSet.has(o.id));
-    opts = [...orderedActive, ...remaining];
+    return [...orderedActive, ...remaining];
   } else {
     const map = new Map(opts.map((o) => [o.id, o]));
     const ordered = customOrder.value.map((id) => map.get(id)).filter(Boolean);
@@ -336,43 +343,63 @@ const displayOptions = computed(() => {
     opts.forEach((o) => {
       if (!orderedIds.has(o.id)) ordered.push(o);
     });
-    opts = ordered;
+    return ordered;
   }
+});
 
+const displayOptions = computed(() => {
+  const opts = baseDisplayOptions.value;
   if (searchQuery.value && searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase();
     return opts.filter((o) => (o.label || o.id || '').toLowerCase().includes(q));
   }
-
   return opts;
 });
 
 const moveUp = (idx) => {
   if (idx <= 0) return;
-  const list = displayOptions.value.map((o) => o.id);
-  const temp = list[idx];
-  list[idx] = list[idx - 1];
-  list[idx - 1] = temp;
-  customOrder.value = list;
+  const currentList = displayOptions.value;
+  const targetItem = currentList[idx];
+  const prevItem = currentList[idx - 1];
+  if (!targetItem || !prevItem) return;
 
-  const activeSet = new Set(props.modelValue);
-  const newModelValue = list.filter((id) => activeSet.has(id));
-  emit('update:modelValue', newModelValue);
-  emit('change', newModelValue);
+  const fullList = [...baseDisplayOptions.value.map((o) => o.id)];
+  const posA = fullList.indexOf(targetItem.id);
+  const posB = fullList.indexOf(prevItem.id);
+  if (posA !== -1 && posB !== -1) {
+    const temp = fullList[posA];
+    fullList[posA] = fullList[posB];
+    fullList[posB] = temp;
+    customOrder.value = fullList;
+
+    const activeSet = new Set(props.modelValue);
+    const newModelValue = fullList.filter((id) => activeSet.has(id));
+    emit('update:modelValue', newModelValue);
+    emit('change', newModelValue);
+  }
 };
 
 const moveDown = (idx) => {
-  if (idx < 0 || idx >= displayOptions.value.length - 1) return;
-  const list = displayOptions.value.map((o) => o.id);
-  const temp = list[idx];
-  list[idx] = list[idx + 1];
-  list[idx + 1] = temp;
-  customOrder.value = list;
+  const currentList = displayOptions.value;
+  if (idx < 0 || idx >= currentList.length - 1) return;
+  const targetItem = currentList[idx];
+  const nextItem = currentList[idx + 1];
+  if (!targetItem || !nextItem) return;
 
-  const activeSet = new Set(props.modelValue);
-  const newModelValue = list.filter((id) => activeSet.has(id));
-  emit('update:modelValue', newModelValue);
-  emit('change', newModelValue);
+  const fullList = [...baseDisplayOptions.value.map((o) => o.id)];
+  const posA = fullList.indexOf(targetItem.id);
+  const posB = fullList.indexOf(nextItem.id);
+  if (posA !== -1 && posB !== -1) {
+    const temp = fullList[posA];
+    fullList[posA] = fullList[posB];
+    fullList[posB] = temp;
+    customOrder.value = fullList;
+
+    const activeSet = new Set(props.modelValue);
+    const newModelValue = fullList.filter((id) => activeSet.has(id));
+    emit('update:modelValue', newModelValue);
+    emit('change', newModelValue);
+  }
 };
 
 const selectAll = () => {

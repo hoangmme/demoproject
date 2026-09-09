@@ -145,6 +145,18 @@
           style="font-size: 0.8rem;"
         />
 
+        <!-- Nút Nhập liệu mới đa bảng đồng bộ với Menu -->
+        <Button
+          icon="pi pi-plus-circle"
+          label="Nhập liệu"
+          severity="info"
+          outlined
+          size="small"
+          @click="isDynamicDataEntryOpen = true"
+          title="Nhập liệu mới cho bất kỳ bảng nào trong hệ thống (giống mục Nhập liệu ở menu)"
+          style="font-size: 0.8rem;"
+        />
+
         <!-- Thêm Bản Ghi Mới trực tiếp vào Bảng này -->
         <Button
           icon="pi pi-plus"
@@ -1043,6 +1055,12 @@
       @imported="onWizardImported"
     />
 
+    <!-- Dialog Nhập liệu mới đa bảng đồng bộ menu -->
+    <TableDataEntryDialog
+      v-model="isDynamicDataEntryOpen"
+      :activeSource="currentDashboardConfig?.source || topicId"
+    />
+
     <!-- Name Column Config Popover -->
     <div v-if="showNameColConfig" class="name-col-config-overlay" @click.self="showNameColConfig = false">
       <div class="name-col-config-panel" :style="nameColConfigPos">
@@ -1146,6 +1164,7 @@ import TableViewManagerDialog from '@/components/common/TableViewManagerDialog.v
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import ExportImportMenu from '@/components/common/ExportImportMenu.vue';
+import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import { ensureStandardDashboards } from '@/utils/tableRegistry';
 import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 
@@ -1159,6 +1178,7 @@ const router = useRouter();
 const personnelStore = usePersonnelStore();
 const authStore = useAuthStore();
 const isExportDocxDialogOpen = ref(false);
+const isDynamicDataEntryOpen = ref(false);
 
 // PDF Row Preview
 const showRowPdfPreview = ref(false);
@@ -3112,56 +3132,56 @@ const getInitialSelectedCols = () => {
 };
 const selectedColIds = ref(getInitialSelectedCols());
 
+const getCurrentCardId = () => {
+  const cards = activeMetricCards.value || [];
+  const cIdx = activeMetricCardIdx.value <= 0 ? 0 : activeMetricCardIdx.value;
+  const targetCard = cards[cIdx];
+  return targetCard?.id || (cIdx === 0 ? 'all' : `card_${cIdx}`);
+};
+
 const getCurrentCardColKey = () => {
   const tid = topicId.value || 'default';
-  if (activeMetricCardIdx.value <= 0) {
-    return `child_dashboard_cols_${tid}`;
-  }
-  const targetCard = activeMetricCards.value?.[activeMetricCardIdx.value];
-  const cid = (targetCard && targetCard.id) ? targetCard.id : `card_${activeMetricCardIdx.value}`;
+  const cid = getCurrentCardId();
   return `child_dashboard_cols_${tid}_${cid}`;
 };
 
 const onColumnsChange = async (newCols) => {
   const cols = Array.isArray(newCols) ? newCols : selectedColIds.value;
   selectedColIds.value = [...cols];
-  const currentKey = getCurrentCardColKey();
-  const isBaseline = activeMetricCardIdx.value <= 0;
+  const tid = topicId.value || 'default';
+  const cid = getCurrentCardId();
+  const cardIdx = activeMetricCardIdx.value <= 0 ? 0 : activeMetricCardIdx.value;
+  const currentKey = `child_dashboard_cols_${tid}_${cid}`;
 
+  // 1. Lưu ngay vào localStorage tức thì
   try {
     localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
-    if (isBaseline) {
-      if (topicId.value === 'trips') {
-        localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
-        await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
-      } else if (topicId.value === 'personnel') {
-        localStorage.setItem('personnel_active_columns', JSON.stringify(selectedColIds.value));
-        await saveAppSettings('personnel_active_columns', selectedColIds.value);
-      } else if (topicId.value === 'relatives') {
-        localStorage.setItem('relative_active_columns', JSON.stringify(selectedColIds.value));
-        await saveAppSettings('relative_active_columns', selectedColIds.value);
-      }
+    if (cardIdx === 0) {
+      localStorage.setItem(`child_dashboard_cols_${tid}`, JSON.stringify(selectedColIds.value));
+      localStorage.setItem(`child_dashboard_cols_${tid}_all`, JSON.stringify(selectedColIds.value));
+      if (tid === 'trips') localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
+      else if (tid === 'personnel') localStorage.setItem('personnel_active_columns', JSON.stringify(selectedColIds.value));
+      else if (tid === 'relatives') localStorage.setItem('relative_active_columns', JSON.stringify(selectedColIds.value));
     }
-    await saveAppSettings(currentKey, selectedColIds.value);
   } catch (e) {}
 
+  // 2. Lưu vào customDashboards (in-memory + DB)
   let dashboards = customDashboards.value ? [...customDashboards.value] : [];
-  let idx = dashboards.findIndex((d) => String(d.id) === String(topicId.value));
+  let idx = dashboards.findIndex((d) => String(d.id) === String(tid));
   if (idx === -1) {
     dashboards = ensureStandardDashboards(dashboards);
-    idx = dashboards.findIndex((d) => String(d.id) === String(topicId.value));
+    idx = dashboards.findIndex((d) => String(d.id) === String(tid));
   }
 
   if (idx !== -1) {
-    if (isBaseline) {
+    if (!dashboards[idx].metricCards || dashboards[idx].metricCards.length === 0) {
+      dashboards[idx].metricCards = [...(activeMetricCards.value || [])];
+    }
+    if (cardIdx === 0) {
       dashboards[idx].columns = [...selectedColIds.value];
-    } else {
-      if (!dashboards[idx].metricCards) {
-        dashboards[idx].metricCards = [];
-      }
-      if (dashboards[idx].metricCards[activeMetricCardIdx.value]) {
-        dashboards[idx].metricCards[activeMetricCardIdx.value].columns = [...selectedColIds.value];
-      }
+    }
+    if (dashboards[idx].metricCards[cardIdx]) {
+      dashboards[idx].metricCards[cardIdx].columns = [...selectedColIds.value];
     }
     customDashboards.value = dashboards;
     try {
@@ -3169,6 +3189,18 @@ const onColumnsChange = async (newCols) => {
       await saveAppSettings('custom_dashboards_config', dashboards);
     } catch (e) {}
   }
+
+  // 3. Lưu bất đồng bộ vào DB settings
+  try {
+    await saveAppSettings(currentKey, selectedColIds.value);
+    if (cardIdx === 0) {
+      await saveAppSettings(`child_dashboard_cols_${tid}`, selectedColIds.value);
+      await saveAppSettings(`child_dashboard_cols_${tid}_all`, selectedColIds.value);
+      if (tid === 'trips') await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
+      else if (tid === 'personnel') await saveAppSettings('personnel_active_columns', selectedColIds.value);
+      else if (tid === 'relatives') await saveAppSettings('relative_active_columns', selectedColIds.value);
+    }
+  } catch (e) {}
 };
 
 // ===== Lark Base View Tabs: Quản lý Chế độ xem (Thêm / Sửa / Xóa / Di chuyển) =====
@@ -3247,6 +3279,8 @@ const handleSaveView = async (savedData) => {
     : [...selectedColIds.value];
 
   let targetCardId = null;
+  const currentActiveIdx = activeMetricCardIdx.value <= 0 ? 0 : activeMetricCardIdx.value;
+
   if (viewManagerMode.value === 'edit' && selectedViewIdx.value >= 0 && selectedViewIdx.value < cards.length) {
     cards[selectedViewIdx.value] = {
       ...cards[selectedViewIdx.value],
@@ -3254,7 +3288,10 @@ const handleSaveView = async (savedData) => {
       columns: targetCols,
     };
     targetCardId = cards[selectedViewIdx.value].id;
-    if (activeMetricCardIdx.value === selectedViewIdx.value) {
+    if (selectedViewIdx.value === 0) {
+      currentDash.columns = [...targetCols];
+    }
+    if (currentActiveIdx === selectedViewIdx.value) {
       selectedColIds.value = [...targetCols];
     }
   } else {
@@ -3281,6 +3318,16 @@ const handleSaveView = async (savedData) => {
       const cardKey = `child_dashboard_cols_${tableId}_${targetCardId}`;
       localStorage.setItem(cardKey, JSON.stringify(targetCols));
       await saveAppSettings(cardKey, targetCols);
+
+      if (selectedViewIdx.value === 0 || targetCardId === 'all') {
+        localStorage.setItem(`child_dashboard_cols_${tableId}`, JSON.stringify(targetCols));
+        localStorage.setItem(`child_dashboard_cols_${tableId}_all`, JSON.stringify(targetCols));
+        await saveAppSettings(`child_dashboard_cols_${tableId}`, targetCols);
+        await saveAppSettings(`child_dashboard_cols_${tableId}_all`, targetCols);
+        if (tableId === 'trips') await saveAppSettings('trips_dashboard_columns', targetCols);
+        else if (tableId === 'personnel') await saveAppSettings('personnel_active_columns', targetCols);
+        else if (tableId === 'relatives') await saveAppSettings('relative_active_columns', targetCols);
+      }
     }
   } catch (e) {
     console.error('Error saving view:', e);
@@ -4369,20 +4416,13 @@ const loadCustomDashboards = async () => {
   }
 };
 
-const initTopicColumns = async () => {
-  const currentKey = `child_dashboard_cols_${topicId.value || 'default'}`;
-
-  const finalizeColumns = () => {
-    // Đảm bảo cho bảng Thân nhân mặc định: có thông tin cán bộ, họ tên thân nhân, mối quan hệ, trạng thái hiện diện và quốc gia
-    if (currentDashboardConfig.value?.source === 'relatives') {
-      selectedColIds.value = selectedColIds.value.map((id) => (id === 'countryName' ? 'countryNameTN' : id));
-      const essential = ['relativeName', 'relationshipName', '_presenceStatus', 'countryNameTN'];
-      const missing = essential.filter((c) => !selectedColIds.value.includes(c));
-      if (missing.length > 0) {
-        selectedColIds.value = [...selectedColIds.value, ...missing];
-      }
-    }
-  };
+const loadColumnsForCurrentCard = async () => {
+  const tid = topicId.value || 'default';
+  const cards = activeMetricCards.value || [];
+  const cardIdx = activeMetricCardIdx.value <= 0 ? 0 : activeMetricCardIdx.value;
+  const currentCard = cards[cardIdx];
+  const cid = currentCard?.id || (cardIdx === 0 ? 'all' : `card_${cardIdx}`);
+  const currentKey = `child_dashboard_cols_${tid}_${cid}`;
 
   const sanitizeRelCols = (cols) => {
     if (currentDashboardConfig.value?.source === 'relatives' && Array.isArray(cols)) {
@@ -4391,94 +4431,41 @@ const initTopicColumns = async () => {
     return cols;
   };
 
-  // 1. Kiểm tra cấu hình riêng đã lưu trong DB TRƯỚC TIÊN (Ưu tiên tuyệt đối DB hệ thống)
-  try {
-    let fallbackDb = null;
-    if (topicId.value === 'trips') fallbackDb = await getAppSettings('trips_dashboard_columns', null);
-    else if (topicId.value === 'personnel') fallbackDb = await getAppSettings('personnel_active_columns', null);
-    else if (topicId.value === 'relatives') fallbackDb = await getAppSettings('relative_active_columns', null);
-
-    const dbCols = (await getAppSettings(currentKey, null)) || fallbackDb;
-    if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
-      const valid = sanitizeRelCols(dbCols.filter((id) => id !== 'status' && id !== 'tripStatus'));
-      if (valid.length > 0) {
-        selectedColIds.value = valid;
-        finalizeColumns();
-        try {
-          localStorage.setItem(currentKey, JSON.stringify(valid));
-        } catch (e) {}
-        return;
-      }
-    }
-  } catch (e) {}
-
-  // 2. Kiểm tra cache local nếu DB chưa kịp trả về
-  try {
-    let fallbackLocal = null;
-    if (topicId.value === 'trips') fallbackLocal = localStorage.getItem('trips_dashboard_columns');
-    else if (topicId.value === 'personnel') fallbackLocal = localStorage.getItem('personnel_active_columns');
-    else if (topicId.value === 'relatives') fallbackLocal = localStorage.getItem('relative_active_columns');
-
-    const localCols = localStorage.getItem(currentKey) || fallbackLocal;
-    if (localCols) {
-      const parsed = JSON.parse(localCols);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        selectedColIds.value = sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus'));
-        finalizeColumns();
-        return;
-      }
-    }
-  } catch (e) {}
-
-  // 3. Nếu trong customDashboards có cấu hình columns riêng của chuyên đề này
-  if (currentDashboardConfig.value?.columns && currentDashboardConfig.value.columns.length > 0) {
-    const validCfg = sanitizeRelCols(currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus'));
-    if (validCfg.length > 0) {
-      selectedColIds.value = validCfg;
-      finalizeColumns();
+  // 1. Kiểm tra columns trực tiếp trên thẻ (in-memory / customDashboards)
+  if (currentCard?.columns && Array.isArray(currentCard.columns) && currentCard.columns.length > 0) {
+    const valid = sanitizeRelCols(currentCard.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+    if (valid.length > 0) {
+      selectedColIds.value = valid;
       return;
     }
   }
 
-  // 4. Mặc định: Hiển thị TOÀN BỘ các cột có trong chuyên đề (cột _primaryKey mặc định ẩn nhưng có trong danh sách chọn)
-  const allIds = allAvailableColumnsList.value
-    .map((c) => c.id)
-    .filter((id) => id !== '_primaryKey' && id !== 'status' && id !== 'tripStatus');
-  if (allIds.length > 0) {
-    selectedColIds.value = sanitizeRelCols(allIds);
-    finalizeColumns();
+  // Nếu là card đầu tiên (all): kiểm tra dashboards[idx].columns
+  if (cardIdx === 0 && currentDashboardConfig.value?.columns && Array.isArray(currentDashboardConfig.value.columns) && currentDashboardConfig.value.columns.length > 0) {
+    const valid = sanitizeRelCols(currentDashboardConfig.value.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+    if (valid.length > 0) {
+      selectedColIds.value = valid;
+      return;
+    }
   }
-};
 
-const loadColumnsForCurrentCard = async () => {
-  const isBaseline = activeMetricCardIdx.value <= 0;
-  const currentKey = getCurrentCardColKey();
+  // 2. Kiểm tra cache localStorage riêng của view này (Ưu tiên cao hơn DB fallback)
+  const keysToCheck = [currentKey];
+  if (cardIdx === 0) {
+    keysToCheck.push(`child_dashboard_cols_${tid}_all`);
+    keysToCheck.push(`child_dashboard_cols_${tid}`);
+    if (tid === 'trips') keysToCheck.push('trips_dashboard_columns');
+    else if (tid === 'personnel') keysToCheck.push('personnel_active_columns');
+    else if (tid === 'relatives') keysToCheck.push('relative_active_columns');
+  }
 
-  const sanitizeRelCols = (cols) => {
-    if (currentDashboardConfig.value?.source === 'relatives' && Array.isArray(cols)) {
-      return cols.map((id) => (id === 'countryName' ? 'countryNameTN' : id));
-    }
-    return cols;
-  };
-
-  if (!isBaseline) {
-    const card = activeMetricCards.value?.[activeMetricCardIdx.value];
-    // 1. Kiểm tra columns riêng của thẻ trong cấu hình chuyên đề (customDashboards)
-    if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
-      const valid = sanitizeRelCols(card.columns.filter((id) => id !== 'status' && id !== 'tripStatus'));
-      if (valid.length > 0) {
-        selectedColIds.value = valid;
-        return;
-      }
-    }
-
-    // 2. Kiểm tra cache localStorage riêng của thẻ
+  for (const k of keysToCheck) {
     try {
-      const local = localStorage.getItem(currentKey);
+      const local = localStorage.getItem(k);
       if (local) {
         const parsed = JSON.parse(local);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus'));
+          const valid = sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
           if (valid.length > 0) {
             selectedColIds.value = valid;
             return;
@@ -4486,27 +4473,55 @@ const loadColumnsForCurrentCard = async () => {
         }
       }
     } catch (e) {}
+  }
 
-    // 3. Kiểm tra Directus DB settings riêng của thẻ
+  // 3. Kiểm tra DB settings
+  for (const k of keysToCheck) {
     try {
-      const dbCols = await getAppSettings(currentKey, null);
+      const dbCols = await getAppSettings(k, null);
       if (dbCols && Array.isArray(dbCols) && dbCols.length > 0) {
-        const valid = sanitizeRelCols(dbCols.filter((id) => id !== 'status' && id !== 'tripStatus'));
+        const valid = sanitizeRelCols(dbCols.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
         if (valid.length > 0) {
           selectedColIds.value = valid;
           try {
-            localStorage.setItem(currentKey, JSON.stringify(valid));
+            localStorage.setItem(k, JSON.stringify(valid));
           } catch (e) {}
           return;
         }
       }
     } catch (e) {}
-
-    // 4. Nếu thẻ này chưa từng tùy biến cột riêng -> kế thừa bộ cột cơ sở của chuyên đề
   }
 
-  // Nạp cấu hình cột cơ sở của toàn bộ chuyên đề
-  await initTopicColumns();
+  // 4. Nếu view con chưa từng cấu hình cột: kế thừa từ view 0
+  if (cardIdx > 0) {
+    for (const k of [`child_dashboard_cols_${tid}_all`, `child_dashboard_cols_${tid}`]) {
+      try {
+        const local = localStorage.getItem(k);
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const valid = sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+            if (valid.length > 0) {
+              selectedColIds.value = valid;
+              return;
+            }
+          }
+        }
+      } catch (e) {}
+    }
+  }
+
+  // 5. Mặc định toàn bộ cột khả dụng
+  const allIds = allAvailableColumnsList.value
+    .map((c) => c.id)
+    .filter((id) => id !== '_primaryKey' && id !== 'status' && id !== 'tripStatus');
+  if (allIds.length > 0) {
+    selectedColIds.value = sanitizeRelCols(allIds);
+  }
+};
+
+const initTopicColumns = async () => {
+  await loadColumnsForCurrentCard();
 };
 
 // ==================== LƯU VÀ TẢI BỘ LỌC VÀO DATABASE ====================

@@ -2,11 +2,29 @@
   <Dialog
     v-model:visible="visible"
     modal
-    :header="dialogHeader"
     :baseZIndex="15000"
     :style="{ width: '85vw', maxWidth: '1100px', zIndex: 15000 }"
     :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
   >
+    <template #header>
+      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding-right: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="p-dialog-title" style="font-size: 1.05rem; font-weight: 700; color: #0f172a;">
+            {{ dialogHeader }}
+          </span>
+        </div>
+        <Button
+          icon="pi pi-plus"
+          label="+ Thêm dữ liệu"
+          severity="success"
+          size="small"
+          @click="isDynamicDataEntryOpen = true"
+          title="Nhập liệu mới cho bất kỳ bảng nào trong hệ thống (đồng bộ menu)"
+          style="font-size: 0.78rem; font-weight: 700; padding: 4px 10px; height: 32px;"
+        />
+      </div>
+    </template>
+
     <!-- Contents Area: 100% Dynamic Flat Form -->
     <div style="max-height: 70vh; overflow-y: auto; padding: 6px 12px 16px 6px;">
       <div class="form-grid">
@@ -47,6 +65,16 @@
           </span>
 
           <Button
+            label="+ Thêm dữ liệu"
+            icon="pi pi-plus"
+            severity="info"
+            outlined
+            size="small"
+            @click="isDynamicDataEntryOpen = true"
+            title="Nhập liệu mới cho bất kỳ bảng nào (đồng bộ menu)"
+          />
+
+          <Button
             v-if="isEdit"
             label="Xuất Hồ sơ PDF"
             icon="pi pi-file-pdf"
@@ -74,6 +102,12 @@
     v-model="isDocxExportOpen"
     :targetPerson="form"
   />
+
+  <!-- Dialog Nhập liệu mới đồng bộ như ở menu -->
+  <TableDataEntryDialog
+    v-model="isDynamicDataEntryOpen"
+    :activeSource="recordSource"
+  />
 </template>
 
 <script setup>
@@ -84,9 +118,17 @@ import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
 import DynamicField from '@/components/common/DynamicField.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
+import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import { getColItemStyle } from '@/utils/formatters';
 
 const isDocxExportOpen = ref(false);
+const isDynamicDataEntryOpen = ref(false);
+
+const recordSource = computed(() => {
+  if (form.value._recordType === 'trip') return 'trips';
+  if (form.value._recordType === 'relative') return 'relatives';
+  return 'personnel';
+});
 
 const props = defineProps({
   modelValue: {
