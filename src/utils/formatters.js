@@ -1496,15 +1496,15 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
 
   // 3. Khóa liên kết (lookupLinkCol)
   if (target === 'personnel') {
-    if (!personnelStore) return '-';
-    let parent = null;
-    const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
+    if (!personnelStore && !item.rawPerson) return '-';
+    let parent = item.rawPerson || null;
+    const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
     const linkCol = col.lookupLinkCol;
     const parentKey = linkCol ? getProp(item, linkCol) : (item.cccdparent || item.parentCccd || item[pKeyField]);
-    if (parentKey) {
-      parent = personnelStore.findPersonByCccd ? personnelStore.findPersonByCccd(parentKey) : null;
+    if (!parent && parentKey) {
+      parent = personnelStore?.findPersonByCccd ? personnelStore.findPersonByCccd(parentKey) : null;
     }
-    if (!parent && personnelStore.personnelList) {
+    if (!parent && personnelStore?.personnelList) {
       if (item.personnelId) {
         parent = personnelStore.personnelList.find((p) => p.id === item.personnelId);
       }
@@ -1515,15 +1515,18 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
       if (!parent && item.cccdchuyendi) {
         const travelerCccd = String(item.cccdchuyendi).trim().toLowerCase();
         parent = personnelStore.personnelList.find((p) => {
-          const pRels = Array.isArray(p.relatives) ? p.relatives : [];
+          let pRels = Array.isArray(p.relatives) ? p.relatives : [];
+          if (pRels.length === 0 && p.custom_data) {
+            try {
+              const cd = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+              if (Array.isArray(cd?.relatives)) pRels = cd.relatives;
+            } catch (e) {}
+          }
           return pRels.some((r) => {
             const rCccd = String(r.cccdthannhan || r.cccd || '').trim().toLowerCase();
             return rCccd && rCccd === travelerCccd;
           });
         });
-      }
-      if (!parent && item.rawPerson) {
-        parent = item.rawPerson;
       }
     }
     if (parent) {

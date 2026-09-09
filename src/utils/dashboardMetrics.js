@@ -282,6 +282,8 @@ export const buildTopicSourceList = (source, personnelStore) => {
         const parentKey = String(matchedRelative.cccdparent || matchedRelative.parentCccd || '').trim().toLowerCase();
         if (parentKey && personnelByKey.has(parentKey)) {
           matchedPerson = personnelByKey.get(parentKey);
+        } else if (matchedRelative.personnelId && personnelByKey.has(String(matchedRelative.personnelId).trim().toLowerCase())) {
+          matchedPerson = personnelByKey.get(String(matchedRelative.personnelId).trim().toLowerCase());
         } else if (matchedRelative.rawPerson) {
           matchedPerson = matchedRelative.rawPerson;
         }
@@ -301,8 +303,10 @@ export const buildTopicSourceList = (source, personnelStore) => {
       _primaryKey: tripPrimaryKey,
       uniqueKey: tripKey,
       isRelative: isRel,
-      rawPerson: matchedPerson,
-      rawRelative: matchedRelative,
+      personnelId: t.personnelId || matchedPerson?.id || matchedRelative?.personnelId || '',
+      relativeId: t.relativeId || matchedRelative?.id || '',
+      rawPerson: matchedPerson || t.rawPerson || null,
+      rawRelative: matchedRelative || t.rawRelative || null,
       custom_data: tCustom,
       isAbroad: presence.isAbroad,
       isOverdue: presence.isOverdue,
