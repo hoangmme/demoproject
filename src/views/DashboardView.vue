@@ -149,6 +149,14 @@
           </button>
           <button
             type="button"
+            class="btn-icon-square"
+            @click="duplicateCustomGroup(group)"
+            title="Nhân bản nhóm thống kê này"
+          >
+            <i class="pi pi-clone" style="color: #10b981;"></i>
+          </button>
+          <button
+            type="button"
             class="btn-icon-square btn-danger"
             @click="deleteGroup(group)"
             title="Xóa nhóm này"
@@ -216,6 +224,10 @@
                   >
                     <i class="pi pi-chevron-right" style="font-size: 0.72rem;"></i>
                   </button>
+                  <!-- Nhân bản khối -->
+                  <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
+                    <i class="pi pi-clone" style="color: #10b981;"></i>
+                  </button>
                   <!-- Cài đặt khối -->
                   <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Cài đặt khối này">
                     <i class="pi pi-pencil"></i>
@@ -252,6 +264,9 @@
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;" @click.stop>
+                <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
+                  <i class="pi pi-clone" style="color: #10b981;"></i>
+                </button>
                 <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
                   <i class="pi pi-pencil"></i>
                 </button>
@@ -317,6 +332,9 @@
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;" @click.stop>
+                <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
+                  <i class="pi pi-clone" style="color: #10b981;"></i>
+                </button>
                 <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Sửa biểu đồ này">
                   <i class="pi pi-pencil"></i>
                 </button>
@@ -3080,6 +3098,45 @@ const deleteWidget = async (group, widget) => {
     }
   });
 
+  await saveCustomGroupsToDb();
+};
+
+const duplicateWidget = async (group, widget) => {
+  if (!group || !widget) return;
+  const newWidget = JSON.parse(JSON.stringify(widget));
+  newWidget.id = 'w_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  newWidget.title = (newWidget.title || 'Khối thống kê') + ' (Bản sao)';
+  delete newWidget.cardId;
+  delete newWidget.topicId;
+
+  if (!Array.isArray(group.widgets)) group.widgets = [];
+  const wIdx = group.widgets.findIndex((w) => w.id === widget.id);
+  if (wIdx !== -1) {
+    group.widgets.splice(wIdx + 1, 0, newWidget);
+  } else {
+    group.widgets.push(newWidget);
+  }
+  await saveCustomGroupsToDb();
+};
+
+const duplicateCustomGroup = async (group) => {
+  if (!group) return;
+  const newGroup = JSON.parse(JSON.stringify(group));
+  newGroup.id = 'grp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  newGroup.title = (newGroup.title || 'Nhóm thống kê') + ' (Bản sao)';
+  if (Array.isArray(newGroup.widgets)) {
+    newGroup.widgets = newGroup.widgets.map((w) => ({
+      ...w,
+      id: 'w_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      title: w.title,
+    }));
+  }
+  const gIdx = customGroups.value.findIndex((g) => g.id === group.id);
+  if (gIdx !== -1) {
+    customGroups.value.splice(gIdx + 1, 0, newGroup);
+  } else {
+    customGroups.value.push(newGroup);
+  }
   await saveCustomGroupsToDb();
 };
 

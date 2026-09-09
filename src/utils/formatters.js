@@ -1333,20 +1333,58 @@ export const lookupOperators = [
  * @param {Object} col - Cấu hình cột lookup
  * @param {Object} personnelStore - Store dữ liệu cán bộ
  */
-export const evaluateLookup = (item, col, personnelStore) => {
-  if (!item || !col) return '-';
+export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
+  if (!item || !col || depth > 5) return '-';
   const target = col.lookupTarget || 'personnel';
   const field = col.lookupField;
   if (!field) return '-';
 
+  const findColumnDef = (colId) => {
+    if (!colId || !personnelStore) return null;
+    const allMappings = [
+      ...(personnelStore.importMappingPersonnel || []),
+      ...(personnelStore.importMappingRelative || []),
+      ...(personnelStore.importMappingTrips || []),
+    ];
+    for (const g of allMappings) {
+      const found = (g.columns || []).find((c) => c && (c.id === colId || c.label === colId));
+      if (found) return found;
+    }
+    return null;
+  };
+
   const getProp = (obj, key) => {
     if (!obj || !key) return undefined;
-    if (obj[key] !== undefined && obj[key] !== null) return obj[key];
+    if (obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim() !== '' && String(obj[key]).trim() !== '-') {
+      return obj[key];
+    }
     let cd = obj.custom_data;
     if (typeof cd === 'string') {
       try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
     }
-    return cd?.[key];
+    if (cd?.[key] !== undefined && cd?.[key] !== null && String(cd[key]).trim() !== '' && String(cd[key]).trim() !== '-') {
+      return cd[key];
+    }
+
+    // Hỗ trợ tham chiếu đa tầng (Lookup Chaining: A -> B -> C)
+    if (depth < 5) {
+      const colDef = findColumnDef(key);
+      if (colDef && colDef.id !== col.id) {
+        if (colDef.format === 'lookup') {
+          const lVal = evaluateLookup(obj, colDef, personnelStore, depth + 1);
+          if (lVal !== undefined && lVal !== null && lVal !== '-' && lVal !== '') return lVal;
+        } else if (colDef.format === 'formula') {
+          const res = evaluateFormula(obj, colDef);
+          const fVal = res?.label || res?.shortLabel || res;
+          if (fVal !== undefined && fVal !== null && fVal !== '-' && fVal !== '') return fVal;
+        } else if (colDef.format === 'rollup') {
+          const rVal = evaluateRollup(obj, colDef, personnelStore);
+          if (rVal !== undefined && rVal !== null && rVal !== '-' && rVal !== '') return rVal;
+        }
+      }
+    }
+
+    return obj[key] !== undefined ? obj[key] : (cd?.[key] !== undefined ? cd[key] : undefined);
   };
 
   const isValEmpty = (v) => v === undefined || v === null || String(v).trim() === '' || String(v).trim() === '-';

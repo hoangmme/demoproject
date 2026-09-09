@@ -171,7 +171,6 @@ export const usePersonnelStore = defineStore('personnel', {
 
       if (list.length === 0) {
         return [
-          { id: '_primaryKey', label: 'Mã định danh (ID)', width: '160px', tableWidth: '160px', isVirtual: true, isPrimaryKey: true, colIndex: null },
           { id: 'cccdchuyendi', label: 'CCCD / Định danh người đi (cccdchuyendi)' },
           { id: 'countryName', label: 'Quốc gia / Nơi đến' },
           { id: 'departureDate', label: 'Ngày xuất cảnh' },
@@ -337,6 +336,9 @@ export const usePersonnelStore = defineStore('personnel', {
                 personnelId: p.id,
                 personnelCode: p.code || '',
                 personnelName: p.name,
+                cccdchuyendi: t.cccdchuyendi || t.cccd || personCccd,
+                cccdparent: personCccd,
+                cccd: t.cccd || t.cccdchuyendi || personCccd,
               });
             });
           }
@@ -353,6 +355,7 @@ export const usePersonnelStore = defineStore('personnel', {
                 const rtId = rt.id || rt.uniqueKey;
                 const exists = allTrips.some((et) => (rtId && (et.id === rtId || et.uniqueKey === rtId)));
                 if (!exists) {
+                  const relCccd = r.cccdthannhan || r.cccd || rCustom.cccdthannhan || rCustom.cccd || '';
                   allTrips.push({
                     ...rt,
                     isRelative: true,
@@ -362,6 +365,10 @@ export const usePersonnelStore = defineStore('personnel', {
                     relativeName: rt.relativeName || r.relativeName || r.name || 'Thân nhân',
                     parentName: p.name,
                     parentPersonnelName: p.name,
+                    cccdchuyendi: rt.cccdchuyendi || rt.cccd || relCccd,
+                    cccdthannhan: rt.cccdthannhan || relCccd,
+                    cccdparent: personCccd,
+                    cccd: rt.cccd || rt.cccdchuyendi || relCccd,
                   });
                 }
               });

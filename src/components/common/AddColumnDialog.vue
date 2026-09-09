@@ -30,6 +30,7 @@
             placeholder="so_quyet_dinh"
             class="dialog-input"
             style="font-family: monospace;"
+            @input="isIdManuallyEdited = true"
           />
         </div>
       </div>
@@ -448,6 +449,14 @@ const form = ref({
   formulaExpression: '',
 });
 
+const isIdManuallyEdited = ref(false);
+
+const onLabelInput = () => {
+  if (!isIdManuallyEdited.value) {
+    form.value.id = generateSlug(form.value.label || '');
+  }
+};
+
 const onFormatChange = () => {
   if (form.value.format === 'formula' && !form.value.formulaType) {
     form.value.formulaType = 'custom_expression';
@@ -458,6 +467,7 @@ watch(
   () => props.visible,
   (val) => {
     if (val) {
+      isIdManuallyEdited.value = false;
       form.value = {
         label: '',
         id: '',

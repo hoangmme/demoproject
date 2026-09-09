@@ -158,6 +158,17 @@
             >
               <i class="pi pi-cog" style="font-size: 0.72rem; color: #64748b;"></i>
             </button>
+
+            <!-- Nút Nhân bản cột này -->
+            <button
+              v-if="(!col.isVirtual || col.id === '_parentPersonnelName') && col.id !== '_primaryKey' && col.id !== 'stt' && col.id !== 'code'"
+              type="button"
+              class="btn-col-action-trigger"
+              @click.stop="$emit('duplicate-column', col)"
+              title="Nhân bản cột này (tạo bản sao)"
+            >
+              <i class="pi pi-clone" style="font-size: 0.72rem; color: #10b981;"></i>
+            </button>
             <button
               type="button"
               class="btn-reorder"
@@ -221,6 +232,7 @@ const emit = defineEmits([
   'update:modelValue',
   'change',
   'open-col-menu',
+  'duplicate-column',
   'update:widthMode',
   'update:widthPx',
   'change-width-setting',

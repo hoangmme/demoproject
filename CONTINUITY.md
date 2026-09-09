@@ -2041,4 +2041,31 @@
       - **Dọn dẹp cột ảo**: Gỡ bỏ triệt để `_primaryKey` và việc force-inject `_parentPersonnelName` trong `personnel.js`. Sửa `resolveVirtualColumnValue` để không chặn các trường thực `relativeName` và `relationshipName`.
    4. **Kiểm thử & Triển khai**:
       - `npm run build` thành công 100% (0 lỗi, 531ms).
+- **Entry (2026-09-09 - Session 2)**: **Tự động sinh Field ID, Nhân bản Cột/Khối thống kê, Hỗ trợ Lookup đa tầng A->B->C, Xóa bỏ Khối cấu hình khóa cứng**:
+   1. **Yêu cầu của người dùng**:
+      - Khi tạo cột mới, Mã định danh (Field ID) tự sinh theo tên cột khi nhập lần đầu.
+      - Bổ sung tính năng nhân bản cột (tự đổi tên ID sạch sẽ) và nhân bản khối thống kê.
+      - Khắc phục lỗi lookup từ bảng A sang B được nhưng lookup giá trị đó từ B sang C không hiển thị.
+      - Xóa bỏ khối hardcode "Khóa Định danh & Liên kết Bảng" trong popup tùy chỉnh cột; đồng thời sửa lỗi cột CCCD người đi bị rỗng trên bảng.
+   2. **Nguyên nhân gốc rễ**:
+      - `AddColumnDialog.vue`: Thẻ input tên cột gán `@input="onLabelInput"` nhưng hàm `onLabelInput` chưa được định nghĩa trong `<script>`, dẫn đến Field ID không tự động sinh từ `generateSlug(label)`.
+      - Tính năng nhân bản: Cần tự động sinh ID tăng dần (`${id}_copy`, `${id}_copy_2`), có thể kích hoạt trực tiếp từ Header Menu cột và Modal Tùy chọn cột (`ColumnSelector`). Khối thống kê trên Dashboard (`DashboardView`) và Chế độ xem (`UnifiedTableView`) thiếu nút nhân bản.
+      - Chained Lookup (A -> B -> C): `evaluateLookup` trong `formatters.js` chỉ đọc `obj[key]` hoặc `custom_data[key]` dạng static raw. Khi cột ở bảng B là một cột lookup/công thức động thì giá trị không lưu tĩnh trong `custom_data`, khiến bảng C tra cứu sang bảng B nhận về `undefined`.
+      - Khối Khóa Định danh cứng: `ColumnHeaderMenu.vue` vẫn còn giữ khối giao diện 5b và 6 cũ với các nút set khóa thủ công và cấu hình `_parentPersonnelName`.
+      - Cột CCCD người đi bị rỗng: Trong `stores/personnel.js`, hàm thu thập chuyến đi `allTrips` không chủ động nạp thuộc tính `cccdchuyendi` từ CCCD của Cán bộ / Thân nhân; và trong `UnifiedTableView.vue`, toán tử nullish coalescing `??` bị nghẽn bởi chuỗi rỗng `""`.
+   3. **Giải pháp đã triển khai**:
+      - **Tự động sinh Field ID**: Triển khai `onLabelInput` với `generateSlug(label)` và cờ `isIdManuallyEdited` trong `AddColumnDialog.vue`.
+      - **Nhân bản Cột & Khối Thống kê**:
+        + Thêm nút Nhân bản cột (`pi-clone`) tại cả `ColumnHeaderMenu.vue` và `ColumnSelector.vue`, tự động tạo ID sạch (`${baseId}_copy`, `${baseId}_copy_2...`).
+        + Thêm nút Nhân bản Khối thống kê (`duplicateWidget`) và Nhân bản Nhóm (`duplicateCustomGroup`) trong `DashboardView.vue`.
+        + Thêm nút Nhân bản Chế độ xem (`duplicateView`) trong `UnifiedTableView.vue`.
+      - **Động cơ Lookup đa tầng (Chained Lookup A -> B -> C)**:
+        + Nâng cấp `evaluateLookup` trong `formatters.js`: hàm trích xuất `getProp` tự động nhận diện nếu `key` là cột tính toán động (lookup, formula, rollup) ở bảng nguồn và đệ quy an toàn (`depth < 5`) để giải quyết giá trị trước khi trả về.
+      - **Xóa bỏ Khối Cấu hình Khóa cứng**:
+        + Xóa hoàn toàn các khối giao diện gán khóa thủ công và cột ảo `_parentPersonnelName` khỏi `ColumnHeaderMenu.vue`.
+      - **Sửa triệt để cột CCCD Người đi**:
+        + Nạp đầy đủ `cccdchuyendi: t.cccdchuyendi || t.cccd || personCccd` khi tổng hợp danh sách chuyến đi trong `personnelStore`.
+        + Cập nhật logic `getCellValue` sử dụng `||` và rà soát đầy đủ các trường CCCD của dòng.
+   4. **Kiểm thử & Triển khai**:
+      - `npm run build` thành công 100% (0 lỗi, 517ms).
    5. **Trạng thái**: Done [Reversible].

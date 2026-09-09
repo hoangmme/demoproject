@@ -365,77 +365,6 @@
           </label>
         </div>
 
-        <!-- 5b. Đặt làm Khóa chính / Khóa liên kết của bảng -->
-        <div class="menu-field" style="margin-top: 6px; background: #fafafa; border: 1px solid #f1f5f9; border-radius: 6px; padding: 8px;">
-          <label style="margin-bottom: 5px;">Khóa Định danh & Liên kết Bảng:</label>
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <!-- Nút Khóa chính (Primary Unique Key) -->
-            <button
-              type="button"
-              class="btn-primary-key-toggle"
-              :class="{ 'is-primary-key': isCurrentPrimaryKey }"
-              @click="handleSetPrimaryKey"
-              :title="isCurrentPrimaryKey ? 'Cột này đang là Khóa chính (Primary Key) của bảng' : 'Đặt cột này làm Khóa chính của bảng'"
-            >
-              <i class="pi pi-key" style="font-size: 0.92rem;"></i>
-              <span>{{ isCurrentPrimaryKey ? '🔑 Khóa chính (Đang áp dụng)' : '🔑 Đặt làm Khóa chính' }}</span>
-            </button>
-
-            <!-- Nút Khóa liên kết (nếu ở bảng Thân nhân hoặc Chuyến đi) -->
-            <button
-              v-if="tableSource === 'relatives' || tableSource === 'trips'"
-              type="button"
-              class="btn-primary-key-toggle"
-              :class="{ 'is-primary-key': isCurrentLinkKey }"
-              @click="handleSetLinkKey"
-              :title="isCurrentLinkKey ? 'Cột này đang là Khóa liên kết của bảng' : 'Đặt cột này làm Khóa liên kết của bảng'"
-            >
-              <i class="pi pi-link" style="font-size: 0.92rem;"></i>
-              <span>{{ isCurrentLinkKey ? '🔗 Khóa liên kết (Đang áp dụng)' : '🔗 Đặt làm Khóa liên kết' }}</span>
-            </button>
-
-            <!-- Nút mở Hộp thoại Toàn diện -->
-            <button
-              type="button"
-              class="btn-open-all-keys"
-              @click="$emit('open-key-config'); closeMenu();"
-              style="display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 5px 8px; border: 1px dashed #cbd5e1; border-radius: 4px; background: #ffffff; font-size: 0.72rem; color: #475569; cursor: pointer;"
-            >
-              <i class="pi pi-sliders-h" style="font-size: 0.75rem; color: #2563eb;"></i>
-              <span>Cấu hình Khóa & Liên kết Bảng...</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 6. Cấu hình Cột ảo Thông tin Đối tượng / Cán bộ / Học sinh (nếu là _parentPersonnelName) -->
-        <div v-if="column?.id === '_parentPersonnelName'" class="menu-field" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-top: 6px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <label style="font-weight: 700; color: #1e293b; margin: 0;">Các trường hiển thị trong cột:</label>
-            <span style="font-size: 0.7rem; color: #2563eb; font-weight: 700;">{{ selectedFieldCount }} trường</span>
-          </div>
-          <div style="font-size: 0.68rem; color: #64748b; margin-bottom: 8px; line-height: 1.35;">
-            Linh hoạt theo mô hình (Cán bộ, Học sinh, Nhân sự...). Tick chọn các cột từ hồ sơ chính để hiển thị gộp vào cột này:
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; padding-right: 4px; border: 1px solid #f1f5f9; border-radius: 6px; padding: 6px; background: #ffffff;">
-            <label
-              v-for="opt in effectiveParentFieldOptions"
-              :key="opt.key"
-              style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; padding: 3px 6px; border-radius: 4px; user-select: none;"
-              :style="nameColFields[opt.key] ? 'background: #eff6ff; font-weight: 600; color: #1d4ed8;' : ''"
-            >
-              <input
-                type="checkbox"
-                :checked="Boolean(nameColFields[opt.key])"
-                @change="handleToggleParentField(opt.key)"
-                style="accent-color: #2563eb; cursor: pointer; flex-shrink: 0;"
-              />
-              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="opt.label">
-                {{ opt.label }}
-              </span>
-            </label>
-          </div>
-        </div>
-
         <div class="menu-divider"></div>
 
         <!-- Chèn cột & Nhân bản (Lark Base style) -->
@@ -785,68 +714,6 @@ const handleToggleShowInDetail = () => {
   emit("change-show-in-detail", { colId: props.column.id, showInDetail: editShowInDetail.value });
 };
 
-const isCurrentPrimaryKey = computed(() => {
-  if (!props.column?.id) return false;
-  const colId = props.column.id;
-  const src = props.tableSource;
-  if (src === 'relatives') {
-    return personnelStore.getRelativeKeyField() === colId;
-  }
-  if (src === 'trips') {
-    return personnelStore.getTripKeyField() === colId;
-  }
-  return personnelStore.getPersonnelKeyField() === colId;
-});
-
-const isCurrentLinkKey = computed(() => {
-  if (!props.column?.id) return false;
-  const colId = props.column.id;
-  const src = props.tableSource;
-  if (src === 'relatives') {
-    return personnelStore.getRelativeParentKeyField() === colId;
-  }
-  if (src === 'trips') {
-    return personnelStore.getTripKeyField() === colId;
-  }
-  return false;
-});
-
-const handleSetPrimaryKey = async () => {
-  if (!props.column?.id) return;
-  const colId = props.column.id;
-  const src = props.tableSource;
-  const keyConfig = {
-    ...(personnelStore.systemKeyConfig || {}),
-  };
-  if (src === 'relatives') {
-    keyConfig.relativeKeyField = colId;
-  } else if (src === 'trips') {
-    keyConfig.tripKeyField = colId;
-  } else {
-    keyConfig.personnelKeyField = colId;
-  }
-  personnelStore.systemKeyConfig = keyConfig;
-  await saveAppSettings('system_key_config', keyConfig);
-  alert(`Đã thiết lập cột "${props.column.label || colId}" làm Khóa chính (Primary Key / Cột primal) của bảng!`);
-};
-
-const handleSetLinkKey = async () => {
-  if (!props.column?.id) return;
-  const colId = props.column.id;
-  const src = props.tableSource;
-  const keyConfig = {
-    ...(personnelStore.systemKeyConfig || {}),
-  };
-  if (src === 'relatives') {
-    keyConfig.relativeParentKeyField = colId;
-  } else if (src === 'trips') {
-    keyConfig.tripKeyField = colId;
-  }
-  personnelStore.systemKeyConfig = keyConfig;
-  await saveAppSettings('system_key_config', keyConfig);
-  alert(`Đã thiết lập cột "${props.column.label || colId}" làm Khóa liên kết (Link Key) của bảng!`);
-};
-
 const handleInsertLeft = () => {
   emit("insert-left", props.column);
   closeMenu();
@@ -860,10 +727,6 @@ const handleInsertRight = () => {
 const handleDuplicate = () => {
   emit("duplicate-column", props.column);
   closeMenu();
-};
-
-const handleToggleParentField = (key) => {
-  emit("change-name-col-field", key);
 };
 
 const handleDeleteColumn = () => {

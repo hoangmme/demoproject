@@ -118,6 +118,7 @@
               :hasCustomDraggedWidths="hasCustomDraggedWidths"
               @change="onColumnsChange"
               @open-col-menu="handleChildColMenuFromSelector"
+              @duplicate-column="onDuplicateChildCol"
               @change-width-setting="onColWidthSettingChange"
               @reset-dragged-widths="onResetDraggedWidths"
             />
@@ -195,6 +196,10 @@
                 <button type="button" class="lark-tab-menu-item" @click.stop="openEditViewDialog(card, cIdx); closeTabMenu()">
                   <i class="pi pi-pencil"></i>
                   <span>Sửa tên & Điều kiện lọc</span>
+                </button>
+                <button type="button" class="lark-tab-menu-item" @click.stop="duplicateView(card, cIdx); closeTabMenu()">
+                  <i class="pi pi-clone" style="color: #10b981;"></i>
+                  <span>Nhân bản Chế độ xem</span>
                 </button>
                 <button v-if="cIdx > 0" type="button" class="lark-tab-menu-item" @click.stop="moveView(cIdx, -1); closeTabMenu()">
                   <i class="pi pi-arrow-left"></i>
@@ -2619,7 +2624,14 @@ const onInsertChildColRight = (col) => {
 
 const onDuplicateChildCol = async (col) => {
   const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
-  const copyId = col.id + '_copy_' + Math.random().toString(36).substring(2, 6);
+  const baseId = String(col.id).replace(/_copy(_\d+)?$/, '');
+  let counter = 1;
+  let copyId = `${baseId}_copy`;
+  const existingIds = new Set(allAvailableColumnsList.value.map(c => c.id));
+  while (existingIds.has(copyId)) {
+    counter++;
+    copyId = `${baseId}_copy_${counter}`;
+  }
   const copyCol = {
     ...col,
     id: copyId,
@@ -3191,6 +3203,39 @@ const deleteView = async (card, cIdx) => {
   isViewManagerOpen.value = false;
 };
 
+const duplicateView = async (card, cIdx) => {
+  if (!card) return;
+  const tableId = currentDashboardId.value;
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
+
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => String(d.id) === String(tableId));
+  }
+  if (idx === -1) return;
+
+  const currentDash = { ...dashboards[idx] };
+  const cards = currentDash.metricCards ? [...currentDash.metricCards] : [];
+  
+  const newCard = JSON.parse(JSON.stringify(card));
+  newCard.id = 'view_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  newCard.label = (newCard.label || 'Chế độ xem') + ' (Bản sao)';
+  
+  cards.splice(cIdx + 1, 0, newCard);
+  currentDash.metricCards = cards;
+  dashboards[idx] = currentDash;
+  customDashboards.value = dashboards;
+  activeMetricCardIdx.value = cIdx + 1;
+
+  try {
+    localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+    await saveAppSettings('custom_dashboards_config', dashboards);
+  } catch (e) {
+    console.error('Error duplicating view:', e);
+  }
+};
+
 const moveView = async (cIdx, direction) => {
   const targetIdx = cIdx + direction;
   const tableId = currentDashboardId.value;
@@ -3751,17 +3796,17 @@ const getCellValue = (trip, colId, depth = 0) => {
   const rKeyField = personnelStore.getRelativeKeyField();
 
   if (colId === tKeyField || colId === 'cccdchuyendi' || colId === 'cccd_chuyen_di' || colId === 'cccd_nguoi_di') {
-    const directVal = trip[tKeyField] ?? trip.cccdchuyendi ?? trip[colId];
+    const directVal = trip[tKeyField] || trip.cccdchuyendi || trip.cccd || trip[colId];
     if (!isInternalId(directVal)) return String(directVal).trim();
     return '-';
   }
   if (colId === pKeyField || colId === 'cccdparent' || colId === 'cccd_can_bo') {
-    const canBoCccd = trip[pKeyField] ?? trip.cccdparent ?? trip[colId];
+    const canBoCccd = trip[pKeyField] || trip.cccdparent || trip.parentCccd || trip.cccd || trip[colId];
     if (!isInternalId(canBoCccd)) return String(canBoCccd).trim();
     return '-';
   }
   if (colId === rKeyField || colId === 'cccdthannhan' || colId === 'cccd_than_nhan') {
-    const rCccd = trip[rKeyField] ?? trip.cccdthannhan ?? trip[colId];
+    const rCccd = trip[rKeyField] || trip.cccdthannhan || trip.cccd || trip[colId];
     if (!isInternalId(rCccd)) return String(rCccd).trim();
     return '-';
   }
