@@ -2385,3 +2385,25 @@
        - `npm run build` thành công 100% (0 lỗi, 533ms).
        - Đồng bộ toàn bộ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
     4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 17)**: **Tái Cấu Trúc Toàn Diện UnifiedTableView.vue Theo Kiến Trúc Module (Composables, Sub-component, External CSS)**:
+    1. **Yêu cầu của người dùng**:
+       - File `UnifiedTableView.vue` quá dài (5.380 dòng), gây khó khăn cho việc đọc hiểu, bảo trì và tiềm ẩn rủi ro xung đột.
+       - Đề xuất và yêu cầu refactor theo module tính năng một cách cẩn trọng, không gây lỗi (Zero-Breaking Change).
+    2. **Giải pháp & Triển khai**:
+       - **Bóc tách 4 Composables chuyên biệt trong `src/composables/unified-table/`**:
+         + `useTableViews.js`: Quản lý toàn bộ Chế độ xem / View Tabs (Thêm, Sửa, Nhân bản, Dời thứ tự, Xóa View, Menu thao tác 3 chấm, Click Outside listener).
+         + `useTableGridInteraction.js`: Quản lý tương tác ô dữ liệu và chỉnh sửa trực tiếp trên bảng (Inline cell editing: `startChildInlineEdit`, `cancelChildInlineEdit`, `saveChildInlineEdit`, `getChildColDropdownOptions`, hỗ trợ cả Cán bộ, Thân nhân, Chuyến đi và Bảng tự tạo).
+         + `useTableColumns.js`: Động cơ cột, độ rộng và menu ngữ cảnh cột trên header (`colWidthMode`, `colWidthPx`, `resizedColWidths`, `onColumnResizeEnd`, `getColWidthStyle`, context menu rename/hide/duplicate/required/format, `loadColumnsForCurrentCard`, `onColumnsChange`, `initTopicColumns`).
+         + `useTableFilters.js`: Bộ lọc động và tìm kiếm nhanh (`searchQuery`, `statusFilter`, `timeFilterYear`, `selectedCountry`, `selectedDepartment`, `selectedFunding`, `customFilterField`, `customFilterValue`, `availableYears`, `filteredList`, `triggerAutoSaveFilter`, `loadTopicFilterState`). Hỗ trợ hàm `resolveList` xử lý getter `() => currentSourceList.value` triệt tiêu 100% lỗi Temporal Dead Zone (TDZ).
+       - **Bóc tách Sub-component `UnifiedTableViewTabs.vue` trong `src/components/unified-table/`**:
+         + Độc lập toàn bộ thanh Tab Chế độ xem ở đầu trang, các nút Thẻ KPI View, menu popover ngữ cảnh tab, và nút "+ Thêm View".
+       - **Trích xuất CSS sang `src/assets/styles/unified-table.css`**:
+         + Chuyển ~700 dòng CSS scoped sang file CSS bên ngoài, nhúng qua `@import '@/assets/styles/unified-table.css';`.
+       - **Hiệu quả thu gọn**:
+         + `UnifiedTableView.vue` giảm từ **5.380 dòng** xuống còn **3.302 dòng** (giảm 2.078 dòng code, tương đương 38.6%), code rõ ràng, dễ bảo trì, cấu trúc mạch lạc.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 537ms).
+       - Đồng bộ toàn bộ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
+    4. **Trạng thái**: Done [Reversible].
+
