@@ -696,6 +696,23 @@
           </div>
         </div>
 
+        <!-- 1c. CHỌN VIEW ĐỂ ÁP DỤNG THỨ TỰ CỘT -->
+        <div class="field-item" style="background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <label class="field-label" style="font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
+            <i class="pi pi-sliders-h" style="color: #2563eb;"></i>
+            Áp dụng thứ tự cột chi tiết theo Chế độ xem (View):
+          </label>
+          <select v-model="widgetForm.viewId" class="settings-select" style="width: 100%; font-weight: 600;">
+            <option value="all">-- Mặc định (Toàn bộ / Tất cả cột) --</option>
+            <option v-for="v in availableViewsForWidgetSource" :key="v.id" :value="v.id">
+              {{ v.label }}
+            </option>
+          </select>
+          <span style="font-size: 0.72rem; color: #64748b; margin-top: 3px; display: block;">
+            💡 Khi mở popup chi tiết của khối thống kê này, bảng sẽ tự động áp dụng danh sách và thứ tự cột theo Chế độ xem đã chọn.
+          </span>
+        </div>
+
         <!-- 2. BỘ LỌC ĐIỀU KIỆN (QUERY CRITERIA BUILDER - GIỐNG HỆT LỌC NÂNG CAO) -->
         <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -1108,6 +1125,22 @@
 
           <!-- Actions Toolbar inside Drilldown Header -->
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <!-- Dropdown chọn Chế độ xem (View) để áp dụng thứ tự cột -->
+            <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 8px; height: 32px;">
+              <i class="pi pi-sliders-h" style="font-size: 0.75rem; color: #2563eb;"></i>
+              <span style="font-size: 0.74rem; font-weight: 600; color: #475569; white-space: nowrap;">Chế độ xem:</span>
+              <select
+                v-model="drilldownSelectedViewId"
+                @change="onDrilldownViewChange"
+                style="height: 26px; font-size: 0.75rem; font-weight: 600; border: none; background: transparent; outline: none; color: #1e293b; cursor: pointer; max-width: 170px;"
+                title="Chọn Chế độ xem để áp dụng thứ tự và danh sách cột"
+              >
+                <option v-for="v in drilldownAvailableViews" :key="v.id" :value="v.id">
+                  {{ v.label }}
+                </option>
+              </select>
+            </div>
+
             <!-- Tìm kiếm nhanh -->
             <div style="position: relative; width: 220px;">
               <i class="pi pi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #94a3b8;"></i>
@@ -1449,6 +1482,7 @@ import {
   getUnifiedTableColumns,
   getUnifiedTableLabel,
   findUnifiedTable,
+  ensureStandardDashboards,
 } from '@/utils/tableRegistry';
 
 const route = useRoute();
@@ -1552,6 +1586,20 @@ const drilldownDtFirst = ref(0);
 const drilldownSelectedRows = ref([]);
 const isDocxExportOpen = ref(false);
 const drilldownSavedColIds = ref(null);
+const drilldownSelectedViewId = ref('all');
+
+const drilldownAvailableViews = computed(() => {
+  const tid = drilldownWidget.value?.topicId || drilldownSourceType.value || 'trips';
+  const allDashboards = ensureStandardDashboards(availableTopicDashboards.value);
+  const topic = allDashboards.find((t) => t.id === tid);
+  if (topic && Array.isArray(topic.metricCards) && topic.metricCards.length > 0) {
+    return topic.metricCards.map((c) => ({
+      id: c.id || 'all',
+      label: c.label || c.title || 'Mặc định',
+    }));
+  }
+  return [{ id: 'all', label: 'Toàn bộ' }];
+});
 
 const getSetupColumnIdsForTable = (tableId, cardId = null) => {
   const sanitizeRelCols = (cols) => {
@@ -1560,6 +1608,8 @@ const getSetupColumnIdsForTable = (tableId, cardId = null) => {
     }
     return cols;
   };
+
+  const allDashboards = ensureStandardDashboards(availableTopicDashboards.value);
 
   // 1. Nếu có cardId cụ thể, kiểm tra cấu hình riêng của card đó
   if (cardId) {
@@ -1573,7 +1623,7 @@ const getSetupColumnIdsForTable = (tableId, cardId = null) => {
       }
     } catch (e) {}
 
-    const topic = (availableTopicDashboards.value || []).find((t) => t.id === tableId);
+    const topic = allDashboards.find((t) => t.id === tableId);
     if (topic && Array.isArray(topic.metricCards)) {
       const card = topic.metricCards.find((c) => c.id === cardId);
       if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
@@ -1612,7 +1662,7 @@ const getSetupColumnIdsForTable = (tableId, cardId = null) => {
   }
 
   // 4. Nếu là chuyên đề/bảng tùy biến, kiểm tra topic.columns
-  const topic = (availableTopicDashboards.value || []).find((t) => t.id === tableId);
+  const topic = allDashboards.find((t) => t.id === tableId);
   if (topic?.columns && Array.isArray(topic.columns) && topic.columns.length > 0) {
     return sanitizeRelCols(topic.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
   }
@@ -1621,6 +1671,59 @@ const getSetupColumnIdsForTable = (tableId, cardId = null) => {
   }
 
   return null;
+};
+
+const onDrilldownViewChange = async () => {
+  const tid = drilldownWidget.value?.topicId || drilldownSourceType.value || 'trips';
+  const vId = drilldownSelectedViewId.value || 'all';
+  drilldownDtFirst.value = 0;
+  drilldownSelectedRows.value = [];
+
+  let loadedCols = null;
+  try {
+    const local = localStorage.getItem(`child_dashboard_cols_${tid}_${vId}`);
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        loadedCols = parsed.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
+      }
+    }
+  } catch (e) {}
+
+  if (!loadedCols) {
+    const allDashboards = ensureStandardDashboards(availableTopicDashboards.value);
+    const topic = allDashboards.find((t) => t.id === tid);
+    const card = topic?.metricCards?.find((c) => c.id === vId);
+    if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
+      loadedCols = card.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
+    }
+  }
+
+  if (!loadedCols) {
+    loadedCols = getSetupColumnIdsForTable(tid, vId);
+  }
+
+  drilldownSavedColIds.value = loadedCols;
+
+  try {
+    const keysToCheck = [`child_dashboard_cols_${tid}_${vId}`];
+    if (vId === 'all') {
+      keysToCheck.push(`child_dashboard_cols_${tid}`);
+      if (tid === 'trips') keysToCheck.push('trips_dashboard_columns');
+      else if (tid === 'personnel') keysToCheck.push('personnel_active_columns');
+      else if (tid === 'relatives') keysToCheck.push('relative_active_columns');
+    }
+    for (const k of keysToCheck) {
+      const dbVal = await getAppSettings(k, null);
+      if (Array.isArray(dbVal) && dbVal.length > 0) {
+        const sanitized = dbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
+        if (sanitized.length > 0) {
+          drilldownSavedColIds.value = sanitized;
+          break;
+        }
+      }
+    }
+  } catch (e) {}
 };
 
 const drilldownColumns = computed(() => {
@@ -1641,8 +1744,9 @@ const drilldownColumns = computed(() => {
     }
   });
 
-  // Ưu tiên thứ tự các cột mà người dùng đã setup trên bảng
-  const setupColIds = drilldownSavedColIds.value || getSetupColumnIdsForTable(tid, drilldownWidget.value?.cardId);
+  // Ưu tiên thứ tự các cột mà người dùng đã setup trên view được chọn
+  const activeViewId = drilldownSelectedViewId.value || drilldownWidget.value?.viewId || drilldownWidget.value?.cardId || 'all';
+  const setupColIds = drilldownSavedColIds.value || getSetupColumnIdsForTable(tid, activeViewId);
 
   if (setupColIds && Array.isArray(setupColIds) && setupColIds.length > 0) {
     const orderedCols = [];
@@ -2014,6 +2118,7 @@ const widgetForm = ref({
   id: '',
   title: '',
   source: 'trips',
+  viewId: 'all',
   columnId: '',
   columnLabel: '',
   subColumnId: '',
@@ -2529,6 +2634,8 @@ const loadAllCustomTablesData = async () => {
 
 const onWidgetSourceChange = () => {
   widgetForm.value.columnId = '';
+  widgetForm.value.subColumnId = '';
+  widgetForm.value.viewId = 'all';
   if (widgetForm.value.conditions && widgetForm.value.conditions.length > 0) {
     widgetForm.value.conditions.forEach((c) => {
       c.field = '';
@@ -2787,6 +2894,9 @@ function hydrateWidgetConditions(w, group) {
   if (!clone.logicOp) {
     clone.logicOp = clone.logicOperator || 'AND';
   }
+  if (!clone.viewId) {
+    clone.viewId = clone.cardId || 'all';
+  }
 
   if (Array.isArray(clone.conditions) && clone.conditions.length > 0) {
     return clone;
@@ -2881,6 +2991,7 @@ const openAddWidgetDialog = async (group) => {
     id: 'w_' + Date.now(),
     title: '',
     source: group?.defaultSource || 'trips',
+    viewId: 'all',
     columnId: '',
     columnLabel: '',
     subColumnId: '',
@@ -2915,6 +3026,7 @@ const openEditWidgetDialog = async (group, widget) => {
   widgetOrder.value = curIdx !== -1 ? curIdx + 1 : (group.widgets || []).length;
   widgetForm.value = {
     ...JSON.parse(JSON.stringify(hydrated)),
+    viewId: hydrated.viewId || hydrated.cardId || 'all',
     subColumnId: hydrated.subColumnId || '',
     subColumnLabel: hydrated.subColumnLabel || '',
     widthPercent: (hydrated.widthPercent !== undefined && hydrated.widthPercent !== null && hydrated.widthPercent !== '') ? Number(hydrated.widthPercent) : 33,
@@ -3361,12 +3473,14 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
   }
 
   const tid = widget.topicId || source;
-  drilldownSavedColIds.value = getSetupColumnIdsForTable(tid, widget.cardId);
+  const targetViewId = widget.viewId || widget.cardId || 'all';
+  drilldownSelectedViewId.value = targetViewId;
+  drilldownSavedColIds.value = getSetupColumnIdsForTable(tid, targetViewId);
 
   (async () => {
     try {
       const keysToCheck = [];
-      if (widget.cardId) keysToCheck.push(`child_dashboard_cols_${tid}_${widget.cardId}`);
+      if (targetViewId) keysToCheck.push(`child_dashboard_cols_${tid}_${targetViewId}`);
       keysToCheck.push(`child_dashboard_cols_${tid}`);
       if (tid === 'trips') keysToCheck.push('trips_dashboard_columns');
       else if (tid === 'personnel') keysToCheck.push('personnel_active_columns');
@@ -3608,6 +3722,19 @@ const availableColumnsForWidgetSource = computed(() => {
     rawLabel: c.label || c.id,
     label: `[Cột ${idx + 1}] ${c.label || c.id} (${c.id})`,
   }));
+});
+
+const availableViewsForWidgetSource = computed(() => {
+  const source = widgetForm.value.source || 'trips';
+  const allDashboards = ensureStandardDashboards(availableTopicDashboards.value);
+  const topic = allDashboards.find((t) => t.id === source);
+  if (topic && Array.isArray(topic.metricCards) && topic.metricCards.length > 0) {
+    return topic.metricCards.map((c) => ({
+      id: c.id || 'all',
+      label: c.label || c.title || 'Mặc định',
+    }));
+  }
+  return [{ id: 'all', label: 'Toàn bộ' }];
 });
 
 const allAvailableRelativeColumns = computed(() => {

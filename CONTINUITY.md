@@ -139,6 +139,26 @@
   - Trong `AppHeader.vue`: Đảm bảo khi route là `DynamicTopicDashboard`, `Trips` hoặc các đường dẫn `/dashboard-topic/...`, `/trips`, tiêu đề hiển thị gọn gàng là **`Chuyên đề`** (loại bỏ hoàn toàn chữ `Dashboard`).
   - Đã đóng gói và cập nhật bản build mới nhất vào cả thư mục `dist` và `WINDOWS_OFFLINE_APP/frontend`.
 
+### 13. TÙY CHỌN CỘT RIÊNG CHO MỖI VIEW & DROPDOWN CHỌN VIEW TRONG THỐNG KÊ (PER-VIEW COLUMN SETUP & VIEW PICKER IN DRILLDOWN)
+- **Tùy chọn Cột Riêng cho Từng Chế Độ Xem (View / Metric Card)**:
+  - Mọi Chế độ xem (Views) trên toàn bộ các bảng (`UnifiedTableView.vue`: Cán bộ, Thân nhân, Chuyến đi, và Bảng tùy biến) đều có cấu hình danh sách và thứ tự cột độc lập.
+  - Dialog Quản lý View (`TableViewManagerDialog.vue`):
+    - Cho phép trực tiếp chọn/bỏ chọn cột, dời thứ tự hiển thị của từng cột (Move Up / Down), kèm huy hiệu số thứ tự `#1, #2...` và loại cột (Ảo, Công thức, Lookup, Rollup).
+    - Cung cấp thanh thao tác nhanh: Ô tìm kiếm cột, nút Chọn tất cả, Bỏ chọn, Khôi phục thứ tự gốc.
+  - Tùy biến cột trên thanh công cụ (`ColumnSelector`):
+    - Tự động lưu riêng cấu hình cột vào Chế độ xem đang active (`cards[selectedViewIdx].columns`) và đồng bộ đa tầng (`child_dashboard_cols_${tableId}_${cardId}` qua cả LocalStorage và Directus DB `app_settings`).
+- **Thống Kê Có Dropdown Chọn View Để Áp Dụng Thứ Tự Cột (`src/views/DashboardView.vue`)**:
+  - **Popup Chi tiết Dữ liệu Thống kê (Drilldown Full Columns Modal)**:
+    - Bổ sung Dropdown chọn Chế độ xem (View) ngay trên thanh toolbar cạnh ô tìm kiếm nhanh.
+    - Danh sách view nạp động từ cấu hình của bảng nguồn (`ensureStandardDashboards(availableTopicDashboards)`).
+    - Khi người dùng chọn Chế độ xem từ dropdown: Thứ tự và danh sách cột (`drilldownColumns`) lập tức chuyển đổi mượt mà theo đúng cấu hình cột đã lưu của View đó.
+  - **Modal Cấu hình Widget (Khối thống kê)**:
+    - Bổ sung trường chọn Chế độ xem áp dụng (`widgetForm.viewId` / `availableViewsForWidgetSource`).
+    - Khi lưu, widget ghi nhớ View mặc định; khi click widget mở Drilldown Popup, popup tự động nhận diện và áp dụng ngay thứ tự cột của View đó.
+- **Tăng Kích Thước Chữ Body Lên 30% (`src/assets/styles/main.css`)**:
+  - Cấu hình `html { font-size: 130%; }` và `body { font-size: 1rem; }` tăng đồng bộ 30% toàn bộ kích thước chữ của các thành phần trong hệ thống (nội dung bảng dữ liệu, ô nhập liệu, thẻ thống kê, form modal...).
+  - Mở rộng nhẹ độ rộng sidebar lên `285px` để bố cục chữ menu và tiêu đề cơ quan hiển thị thoáng đẹp, sắc nét.
+
 ### 14. TÙY CHỈNH MÀU CHỮ MENU SIDEBAR (AppSidebar.vue, SettingsImportView.vue)
 - Bổ sung tùy chọn chọn màu chữ menu bên trái (`sidebar_custom_text_color`) trong phần Cài đặt Hệ thống -> Tùy chỉnh Hình nền Menu Bên Trái.
 - Hỗ trợ chọn bảng màu (color picker), nhập mã hex trực tiếp, các nút gợi ý gam màu chuẩn (Đen mặc định `#000000`, Trắng sáng `#ffffff`, Vàng nhạt `#fef08a`, Xám đậm `#334155`, Xanh lục đậm `#14532d`).

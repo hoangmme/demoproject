@@ -20,12 +20,17 @@
   box-sizing: border-box;
 }
 
+html {
+  font-size: 130%; /* Tăng size chữ body / toàn bộ giao diện lên 30% */
+}
+
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
   font-family: var(--font-family);
+  font-size: 1rem;
   background-color: var(--app-bg);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -46,7 +51,7 @@ html, body {
 }
 
 .app-sidebar {
-  width: 275px;
+  width: 285px;
   background-color: var(--sidebar-bg, #889962);
   color: var(--sidebar-text-color, #000000);
   display: flex;

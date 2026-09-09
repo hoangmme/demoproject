@@ -3145,21 +3145,28 @@ const onColumnsChange = async (newCols) => {
     await saveAppSettings(currentKey, selectedColIds.value);
   } catch (e) {}
 
-  const idx = customDashboards.value.findIndex((d) => d.id === topicId.value);
+  let dashboards = customDashboards.value ? [...customDashboards.value] : [];
+  let idx = dashboards.findIndex((d) => String(d.id) === String(topicId.value));
+  if (idx === -1) {
+    dashboards = ensureStandardDashboards(dashboards);
+    idx = dashboards.findIndex((d) => String(d.id) === String(topicId.value));
+  }
+
   if (idx !== -1) {
     if (isBaseline) {
-      customDashboards.value[idx].columns = [...selectedColIds.value];
+      dashboards[idx].columns = [...selectedColIds.value];
     } else {
-      if (!customDashboards.value[idx].metricCards) {
-        customDashboards.value[idx].metricCards = [];
+      if (!dashboards[idx].metricCards) {
+        dashboards[idx].metricCards = [];
       }
-      if (customDashboards.value[idx].metricCards[activeMetricCardIdx.value]) {
-        customDashboards.value[idx].metricCards[activeMetricCardIdx.value].columns = [...selectedColIds.value];
+      if (dashboards[idx].metricCards[activeMetricCardIdx.value]) {
+        dashboards[idx].metricCards[activeMetricCardIdx.value].columns = [...selectedColIds.value];
       }
     }
+    customDashboards.value = dashboards;
     try {
-      localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
-      await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
+      await saveAppSettings('custom_dashboards_config', dashboards);
     } catch (e) {}
   }
 };
@@ -3172,14 +3179,44 @@ const selectedViewIdx = ref(-1);
 
 const openAddViewDialog = () => {
   viewManagerMode.value = 'create';
-  selectedViewForEdit.value = null;
+  selectedViewForEdit.value = {
+    id: 'view_' + Date.now(),
+    label: '',
+    color: 'blue',
+    logicOp: 'AND',
+    conditions: [],
+    columns: [...selectedColIds.value],
+  };
   selectedViewIdx.value = -1;
   isViewManagerOpen.value = true;
 };
 
 const openEditViewDialog = (card, cIdx) => {
   viewManagerMode.value = 'edit';
-  selectedViewForEdit.value = { ...card };
+  const tableId = currentDashboardId.value;
+  const cardId = card?.id || (cIdx <= 0 ? 'all' : `card_${cIdx}`);
+
+  // Lấy danh sách cột riêng của view này
+  let existingCols = null;
+  if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
+    existingCols = card.columns;
+  } else {
+    try {
+      const local = localStorage.getItem(`child_dashboard_cols_${tableId}_${cardId}`);
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) existingCols = parsed;
+      }
+    } catch (e) {}
+  }
+  if (!existingCols || existingCols.length === 0) {
+    existingCols = [...selectedColIds.value];
+  }
+
+  selectedViewForEdit.value = {
+    ...card,
+    columns: [...existingCols],
+  };
   selectedViewIdx.value = cIdx;
   isViewManagerOpen.value = true;
 };
@@ -3205,19 +3242,31 @@ const handleSaveView = async (savedData) => {
   ];
   const cards = currentDash.metricCards ? [...currentDash.metricCards] : [...defaultCards];
 
+  const targetCols = (savedData.columns && Array.isArray(savedData.columns) && savedData.columns.length > 0)
+    ? [...savedData.columns]
+    : [...selectedColIds.value];
+
+  let targetCardId = null;
   if (viewManagerMode.value === 'edit' && selectedViewIdx.value >= 0 && selectedViewIdx.value < cards.length) {
     cards[selectedViewIdx.value] = {
       ...cards[selectedViewIdx.value],
       ...savedData,
+      columns: targetCols,
     };
+    targetCardId = cards[selectedViewIdx.value].id;
+    if (activeMetricCardIdx.value === selectedViewIdx.value) {
+      selectedColIds.value = [...targetCols];
+    }
   } else {
     const newCard = {
       ...savedData,
       id: savedData.id || ('view_' + Date.now()),
-      columns: [...selectedColIds.value],
+      columns: targetCols,
     };
     cards.push(newCard);
     activeMetricCardIdx.value = cards.length - 1;
+    selectedColIds.value = [...targetCols];
+    targetCardId = newCard.id;
   }
 
   currentDash.metricCards = cards;
@@ -3227,6 +3276,12 @@ const handleSaveView = async (savedData) => {
   try {
     localStorage.setItem('custom_dashboards_config', JSON.stringify(dashboards));
     await saveAppSettings('custom_dashboards_config', dashboards);
+
+    if (targetCardId) {
+      const cardKey = `child_dashboard_cols_${tableId}_${targetCardId}`;
+      localStorage.setItem(cardKey, JSON.stringify(targetCols));
+      await saveAppSettings(cardKey, targetCols);
+    }
   } catch (e) {
     console.error('Error saving view:', e);
   }
