@@ -287,6 +287,9 @@ const handleSave = async () => {
       custom_data: { ...(form.value.custom_data || {}), ...form.value },
     };
     const saved = await executeSave(payload);
+    if (!saved) {
+      throw new Error('Hệ thống không thể lưu bản ghi. Vui lòng kiểm tra lại thông tin nhập!');
+    }
     initialJsonSnapshot = JSON.stringify(form.value);
     autoSaveStatus.value = 'saved';
     emit('saved', saved);

@@ -71,6 +71,7 @@ export function getUnifiedTableDefinitions(options = {}) {
           if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
             seen.add(c.id);
             cols.push({
+              ...c,
               id: c.id,
               label: c.label || c.id,
               group: coreTripsTitle,
@@ -129,6 +130,7 @@ export function getUnifiedTableDefinitions(options = {}) {
           if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
             seen.add(c.id);
             cols.push({
+              ...c,
               id: c.id,
               label: c.label || c.id,
               group: corePersonnelTitle,
@@ -187,6 +189,7 @@ export function getUnifiedTableDefinitions(options = {}) {
           if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
             seen.add(c.id);
             cols.push({
+              ...c,
               id: c.id,
               label: c.label || c.id,
               group: coreRelativesTitle,
@@ -280,6 +283,7 @@ export function getUnifiedTableDefinitions(options = {}) {
           const customCols = ct.customColumns || ct.columns || [];
           if (customCols.length > 0) {
             return customCols.filter((c) => c.id && c.id !== 'stt').map((c) => ({
+              ...c,
               id: c.id,
               label: c.label || c.id,
               group: title,

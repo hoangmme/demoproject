@@ -2202,9 +2202,128 @@
            * **Rollup (Tính toán tổng hợp)**: Mục đích và cách thức thu thập nhiều dòng liên kết để tính toán ra 1 ô (VD: `count` đếm số chuyến, `join` gom danh sách nước, `sum` tính tổng tiền).
     3. **Kiểm thử & Triển khai**:
        - `npm run build` thành công 100% (0 lỗi, 502ms).
+       - **Entry (2026-09-09 - Session 10)**: **Nâng Cấp Rollup Field Filter (Count Theo Cột Có Dữ Liệu) & Hướng Dẫn Setup Lọc Cán Bộ Có Thân Nhân Đi Nước Ngoài**:
+    1. **Yêu cầu của người dùng**:
+       - Muốn biết bao nhiêu cán bộ có thân nhân đã từng đi nước ngoài.
+       - Quy tắc nghiệp vụ: Thân nhân có cột Quốc gia có dữ liệu là mặc định có đi nước ngoài.
+       - Hướng dẫn thiết lập setup trên phần mềm.
+    2. **Giải pháp & Triển khai**:
+       - **Nâng cấp Động cơ Rollup (`src/utils/formatters.js` - `evaluateRollup`)**:
+         + Với hàm `count`: Khi người dùng chọn một cột cụ thể (như cột `Quốc gia`), hệ thống tự động lọc chỉ đếm các dòng bản ghi có dữ liệu ở cột đó (`val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-'`), thay vì đếm toàn bộ số dòng thân nhân liên kết.
+         + Cho phép đếm chính xác số thân nhân đã đi nước ngoài (có dữ liệu quốc gia) trên mỗi dòng Cán bộ.
+       - **Quy trình Setup Chuẩn cho Người dùng**:
+         + **Bước 1**: Tạo 1 cột Rollup trên Bảng Cán bộ (`/personnel`):
+           * Tên cột: `Quốc gia Thân nhân đi` (dùng hàm `join`) hoặc `Số Thân nhân đi NN` (dùng hàm `count`).
+           * Nguồn: `Bảng Thân nhân`. Cột đích: Cột `Quốc gia` của Thân nhân.
+         + **Bước 2**: Lọc hoặc thống kê:
+           * Lọc trực tiếp trên Bảng Cán bộ (chọn khác `-` hoặc `> 0`).
+           * Hoặc tạo Thẻ KPI Chuyên đề / Thẻ thống kê Dashboard với điều kiện: Cột `Quốc gia Thân nhân đi` -> `Có dữ liệu (has_value)` hoặc `Khác` `-`.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 527ms).
        - Đồng bộ đầy đủ sang `WINDOWS_OFFLINE_APP/frontend` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
     4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-09 - Session 11)**: **Đồng Bộ Thứ Tự Cột Popup Thống Kê Giống Bảng Setup & Chuyển Nút Nhập Liệu Sang Popup Chi Tiết**:
+    1. **Yêu cầu của người dùng**:
+       - Ở chi tiết hiển thị nút nhập liệu chứ không phải popup của thống kê.
+       - Bảng popup khi ấn vào thống kê hiển thị thứ tự cột giống bảng đã setup.
+    2. **Giải pháp & Triển khai**:
+       - **Dời Nút Nhập Liệu sang Popup Chi Tiết (`src/views/DashboardView.vue`)**:
+         + Gỡ bỏ nút `Nhập liệu` khỏi Header và Footer của Popup thống kê danh sách (`isDrilldownModalOpen`).
+         + Thêm nút `Nhập liệu` màu xanh lá chuẩn vào cả Header và Footer của Popup Chi tiết Bản ghi (`isDrilldownRecordDetailOpen`).
+         + Bổ sung nút `[Chi tiết]` trong cột Thao tác của từng hàng trên bảng thống kê, giúp người dùng mở trực tiếp popup chi tiết bên cạnh việc click vào dòng.
+         + Đồng bộ đóng tự động cả 2 popup khi chọn bảng để nhập liệu mới trong `TableDataEntryDialog`.
+       - **Đồng Bộ Thứ Tự Cột Popup Thống Kê Theo Setup Bảng (`src/views/DashboardView.vue`)**:
+         + Xây dựng hàm `getSetupColumnIdsForTable(tableId, cardId)`:
+           * Quét thứ tự cấu hình cột đã lưu của bảng tương ứng: `child_dashboard_cols_${tid}_${cardId}`, `child_dashboard_cols_${tid}`, `personnel_active_columns`, `trips_dashboard_columns`, `relative_active_columns`, hoặc `topic.columns` / `topic.customColumns`.
+           * Truy vấn nền bất đồng bộ từ Directus Database (`getAppSettings`) để đảm bảo đồng bộ đa thiết bị.
+         + Nâng cấp `drilldownColumns`: Map danh sách cột của bảng theo đúng thứ tự các cột mà người dùng đã setup trên bảng dữ liệu đó, loại bỏ các cột đã ẩn hoặc không kích hoạt.
+         + Áp dụng `col.tableWidth` ưu tiên cho độ rộng cột hiển thị trên bảng thống kê chi tiết.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 513ms).
+       - Đồng bộ tài nguyên sang `WINDOWS_OFFLINE_APP/frontend` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
+    4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-09 - Session 12)**: **Khắc Phục Lỗi Cột Lookup / Rollup Đầu Tiên Không Hiện Trong Popup Thống Kê**:
+    1. **Vấn đề / Câu hỏi của người dùng**:
+       - *"Tại sao cột đầu tiên lookup không hiện khi ấn popup ở thống kê"* (Ví dụ: cột "Tên cán bộ" kiểu Lookup từ bảng Cán bộ đặt ở vị trí đầu tiên sau STT trong bảng Chuyến đi).
+    2. **Nguyên nhân gốc rễ (Root Cause)**:
+       - **Trong `src/utils/tableRegistry.js`**: Các hàm `getColumns` của `tripsTable`, `personnelTable`, `relativesTable`, và `customList` khi đẩy cột vào mảng `cols` chỉ sao chép một số trường cứng (`id, label, group, format, width, tableWidth, formulaType, isVirtual`) mà **KHÔNG SPREAD `...c`**. Hậu quả là toàn bộ các cấu hình quan trọng của cột Lookup (`lookupTarget`, `lookupField`, `lookupConditions`, `lookupDisplay`, `lookupLinkCol`) và Rollup (`rollupTarget`, `rollupField`, `rollupFunction`) bị **xóa sạch (undefined)** khi trả về cho `drilldownColumns` của Popup Thống kê.
+       - Khi `evaluateLookup(row, col, personnelStore)` thực thi, hàm kiểm tra `const field = col.lookupField; if (!field) return '-';` -> Do `field` bị `undefined`, nó lập tức trả về `'-'`.
+       - **Trong `src/views/DashboardView.vue`**: `getRowFieldValue` chỉ nhận `(row, colId)` và tự tìm `colDef` trong `allMap` (vốn không chứa các cột tùy biến của Topic Dashboard), đồng thời khi `evaluateLookup` trả về `'-'`, hàm trả về `''` (rỗng), khiến ô trên giao diện không hiển thị nội dung.
+    3. **Giải pháp & Triển khai**:
+       - **Bảo toàn 100% Cấu hình Cột trong `src/utils/tableRegistry.js`**: Spread `...c` trong toàn bộ các hàm `getColumns` (`tripsTable`, `personnelTable`, `relativesTable`, `customList`), đảm bảo đầy đủ thuộc tính `lookup*`, `rollup*`, `formula*` được truyền trọn vẹn vào `drilldownColumns`.
+       - **Nâng cấp `getRowFieldValue` trong `src/views/DashboardView.vue`**:
+         + Nhận thêm tham số thứ 3 `colDefOverride = null`, ưu tiên `colDefOverride || drilldownColumns.value.find(c => c.id === colId) || allMap[colId]`.
+         + Quét bổ sung toàn bộ custom columns từ `availableTopicDashboards`.
+         + Truyền trực tiếp `col` từ v-for trong template DataTable và popup chi tiết vào `getRowFieldValue(data, col.id, col)`.
+       - **TUÂN THỦ ZERO-FALLBACK & PURE FLAT TABLE TRONG `evaluateLookup`**:
+         + Tuyệt đối KHÔNG fallback alias ngầm, KHÔNG lấy giá trị từ bản ghi khác hoặc item. Cột chỉ định lấy trường nào thì trích xuất chính xác trường đó từ đối tượng liên kết cha (`parent`), nếu không có thì trả về `'-'`.
+    4. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 535ms).
+       - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
+    5. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-09 - Session 13)**: **Khắc Phục Triệt Để Lỗi Bảng Lưu Dữ Liệu Không Được (Báo Lưu Thành Công Nhưng Không Lưu)**:
+    1. **Vấn đề của người dùng**:
+       - Bảng lưu dữ liệu không được, không thấy báo lỗi gì, nhưng báo lưu thành công.
+       - Vi phạm nguyên tắc: Tự ý thêm logic fallback ngầm trong `evaluateLookup`.
+    2. **Nguyên nhân gốc rễ (Root Cause)**:
+       - **Xóa bỏ 100% logic Fallback ngầm**: Gỡ bỏ hoàn toàn việc đoán alias tên (`fullName`, `ho_va_ten`, `personnelName`) và việc lấy tên từ chuyến đi đắp vào cán bộ trong `src/utils/formatters.js`.
+       - **Lỗi trong `src/stores/personnel.js` (`saveTrip`)**:
+         + Khi người dùng sửa hoặc thêm chuyến đi: Hàm `isSameTrip` chỉ so sánh `t.id === tripData.id` và `t.uniqueKey === tripData.uniqueKey`. Tuy nhiên các chuyến đi trong DB thường không có `uniqueKey` và `id` có thể chưa gán -> `isSameTrip` trả về false.
+         + Vòng lặp tìm cán bộ `matchesPerson` chỉ kiểm tra `cleanTrip.cccd` và `cleanTrip.cccdparent`, KHÔNG kiểm tra trường khóa chuyến đi `cccdchuyendi` hay `tKeyField`.
+         + Khi `foundPerson` không tìm thấy (hoặc chuyến đi độc lập `standaloneTrips`), hàm `saveTrip` **KHÔNG LƯU VÀO ĐÂU CẢ** nhưng vẫn chạy qua và return `cleanTrip`! Form nhận kết quả nên báo "Đã lưu thành công" giả tạo trong khi DB không có dữ liệu!
+       - **Lỗi trong `src/stores/personnel.js` (`saveRelative`)**:
+         + Khi không tìm thấy cán bộ quản lý (`targetPerson === null`), hàm im lặng kết thúc mà không ném lỗi, dẫn đến lưu thất bại nhưng không có cảnh báo.
+       - **Lỗi trong `src/views/UnifiedTableView.vue` (`saveChildInlineEdit`)**:
+         + Khi chỉnh sửa ô trực tiếp trên bảng, hàm chỉ tìm `row.id` trong `parent.trips`. Với các chuyến đi độc lập, thân nhân, hoặc bảng tự tạo (`blank`), hàm không lưu được nhưng nuốt lỗi bằng `console.error`.
+       - **Lỗi trong `src/components/personnel/PersonnelDialog.vue`**:
+         + Không kiểm tra chặt chẽ kết quả trả về của `executeSave(payload)`.
+    3. **Giải pháp & Triển khai**:
+       - **Tái cấu trúc `saveTrip` trong `src/stores/personnel.js`**:
+         + Nhận diện chuyến đi toàn diện bằng `id`, `uniqueKey`, `_primaryKey`, `code` và bộ tứ nội dung (`departureDate`, `countryName`, `decisionNumber`, `cccdchuyendi`).
+         + Mở rộng tìm kiếm liên kết cán bộ qua cả `cccdchuyendi`, `personnelId`, `tKeyField`, `pKeyField`, `rKeyField`.
+         + Hỗ trợ cập nhật chuyến đi thuộc Thân nhân (`r.trips`) và chuyến đi thuộc Cán bộ (`p.trips`).
+         + Nếu không thuộc cán bộ/thân nhân nào: Lưu vào `standaloneTrips` qua `addStandaloneTrip(cleanTrip)`, đồng thời cập nhật trong `standaloneTrips` nếu đã tồn tại.
+         + Nếu có lỗi: Ném lỗi `throw e`, tuyệt đối không nuốt lỗi.
+       - **Sửa `saveRelative` trong `src/stores/personnel.js`**:
+         + Nếu không tìm thấy hồ sơ Cán bộ chủ quản phù hợp: Ném lỗi `throw new Error(...)` rõ ràng để form hiển thị alert cho người dùng.
+       - **Sửa `saveRecord` trong `src/stores/personnel.js`**:
+         + Thêm hỗ trợ bản ghi bảng tự tạo (`blank` / `row_...`).
+       - **Sửa `saveChildInlineEdit` trong `src/views/UnifiedTableView.vue`**:
+         + Lưu các dòng bảng tự tạo vào `customTableRows` và `app_settings`.
+         + Gọi trực tiếp `saveRecord(row)` và `fetchPersonnel()`, bắt lỗi và hiển thị `alert` ngay khi có sự cố.
+       - **Cập nhật `PersonnelDialog.vue`**:
+         + Bắt buộc kiểm tra `saved`: nếu `!saved` lập tức ném lỗi để hiển thị cảnh báo, ngăn chặn trạng thái "thành công ảo".
+    4. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 535ms).
+       - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
+    5. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-09 - Session 14)**: **Triển Khai Biểu Đồ Cột Xếp Chồng Nhiều Màu (Stacked Bar / Multi-Series Chart) & Loại Bỏ Triệt Để Dữ Liệu Tĩnh Trong Store**:
+    1. **Yêu cầu của người dùng**:
+       - Bỏ hoàn toàn việc đối chiếu các trường dữ liệu tĩnh trong `saveRecord` và `deleteRecord`. Lưu là lưu thẳng vào bản ghi theo đúng nguyên tắc Pure Flat Table.
+       - Khi chọn dạng hiển thị Biểu đồ cột dọc (`vertical_bar`) hoặc Cột ngang (`horizontal_bar`), cho phép chọn thêm một cột để phân nhóm phụ theo màu (Stacked Series, ví dụ cột Đối tượng `isRelative` → Cán bộ / Thân nhân, Trạng thái, Phòng ban...).
+       - Nếu 1 cột gom được 39 dữ liệu (ví dụ Lào = 39) và chọn cột phân loại phụ `isRelative`, hệ thống tự động bóc tách thành nhiều đoạn màu xếp chồng (Stacked Bar, ví dụ 20 Cán bộ xanh dương, 19 Thân nhân tím).
+       - Bấm vào đoạn màu nào thì Popup Thống kê mở đúng danh sách chi tiết của loại đó (bấm vào màu Cán bộ hiện đúng 20 Cán bộ, bấm vào màu Thân nhân hiện đúng 19 Thân nhân).
+    2. **Giải pháp & Triển khai**:
+       - **Loại bỏ 100% kiểm tra tên cột tĩnh trong Store (`src/stores/personnel.js`)**:
+         + Trong `saveRecord` và `deleteRecord`: Xóa bỏ hoàn toàn các điều kiện kiểm tra cột tĩnh (`departureDate`, `ngay_xuat_canh`, `destination`, `quoc_gia_xuat_canh`, `relationshipName`, `cccdthannhan`). Chỉ nhận diện theo cấu trúc bản ghi phẳng (`_recordType === 'trip'`, `rawTrip`, `uniqueKey`, `_recordType === 'relative'`, `rawRelative`).
+       - **Cấu hình Cột phân loại phụ theo màu trong `src/views/DashboardView.vue`**:
+         + Bổ sung trường `subColumnId`, `subColumnLabel` vào `widgetForm` ref, form modal cấu hình widget, `openAddWidgetDialog`, `openEditWidgetDialog`, và `saveWidget`.
+         + Thêm dropdown "Cột phân loại phụ theo màu (Tùy chọn - Biểu đồ cột xếp chồng nhiều màu)" ngay dưới cột gom nhóm chính trong modal.
+       - **Nâng cấp Động cơ Tính toán Biểu đồ (`computeWidgetChartData`)**:
+         + Khi có `subColumnId`: Gom nhóm lồng nhau theo `(groupVal, subVal)` qua `getRowFieldValue`, tính toán mảng `segments` cho từng cột và xây dựng `seriesList` kèm bảng màu ngữ nghĩa (`Cán bộ` → `#0284c7`, `Thân nhân` → `#8b5cf6`, `Đúng hạn` → `#10b981`, `Quá hạn` → `#ef4444`...).
+         + Từng phân đoạn màu (`segment`) tính tỷ lệ phần trăm và chiều cao/chiều rộng chính xác theo `max` để xếp chồng mượt mà.
+       - **Tương tác Đa Tầng (Multi-Series Drilldown)**:
+         + Thêm hàm `handleChartSegmentClick(widget, item, segment)`: Khi người dùng bấm vào một đoạn màu cụ thể trên biểu đồ (dọc hoặc ngang), hệ thống truyền 2 điều kiện lọc đồng thời (`groupField === item.name` VÀ `subField === segment.name`) vào `openDrilldownForWidget`.
+         + Cập nhật `openDrilldownForWidget` hỗ trợ nhận mảng nhiều điều kiện (`extraCondition` là array), tự động kết hợp với điều kiện cơ sở của widget/chuyên đề và hiển thị tiêu đề chi tiết (VD: `Quốc gia: Lào • Cán bộ`).
+       - **Giao diện Biểu đồ (`vertical_bar` & `horizontal_bar`)**:
+         + Biểu đồ Cột dọc: Render các đoạn màu `column-segment-stacked` xếp chồng từ dưới lên theo tỷ lệ thực, có tooltip chi tiết từng phân đoạn và hiệu ứng hover sáng.
+         + Biểu đồ Cột ngang: Render thanh ngang chia nhiều đoạn màu `column-segment-stacked-h` kèm huy hiệu mini breakdown số lượng từng loại.
+         + Thêm Legend (chú giải màu) bên dưới biểu đồ: Hiển thị tên loại, màu sắc và tổng số lượng; người dùng có thể click vào từng mục legend để lọc toàn bộ nhóm đó.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 591ms).
+       - Đồng bộ đầy đủ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
+    4. **Trạng thái**: Done [Reversible].

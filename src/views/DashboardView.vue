@@ -290,13 +290,30 @@
                   :key="item.name"
                   class="country-column-item"
                   @click="handleChartItemClick(widget, item)"
-                  :title="`${item.name}: ${item.count} kết quả\n(Bấm để xem danh sách chi tiết)`"
+                  :title="`${item.name}: ${item.count} kết quả\n(Bấm để xem danh sách chi tiết toàn bộ)`"
                   style="cursor: pointer;"
                 >
                   <span class="column-top-total">{{ item.count }}</span>
                   <div class="column-bar-track">
+                    <!-- Multi-series Stacked Segments -->
+                    <template v-if="item.segments && item.segments.length > 0">
+                      <div
+                        v-for="seg in item.segments"
+                        :key="seg.name"
+                        class="column-segment-stacked"
+                        @click.stop="handleChartSegmentClick(widget, item, seg)"
+                        :title="`${item.name} • ${seg.name}: ${seg.count} (${seg.percent}%)\n(Bấm để xem danh sách chi tiết ${seg.name})`"
+                        :style="{
+                          height: `${(seg.count / (getWidgetChartData(widget).max || 1)) * 100}%`,
+                          background: seg.color,
+                        }"
+                      >
+                        <span v-if="seg.count >= 2" class="segment-label">{{ seg.count }}</span>
+                      </div>
+                    </template>
+                    <!-- Fallback Single Segment -->
                     <div
-                      v-if="item.count > 0"
+                      v-else-if="item.count > 0"
                       class="column-segment-cb"
                       :style="{
                         height: `${(item.count / (getWidgetChartData(widget).max || 1)) * 100}%`,
@@ -313,6 +330,24 @@
                     <span :style="{ color: widget.color || '#2e7d32', fontWeight: '700' }">{{ item.count }}</span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Series Legend for Stacked Bar -->
+            <div
+              v-if="getWidgetChartData(widget).seriesList && getWidgetChartData(widget).seriesList.length > 0"
+              style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 6px 8px 2px 8px; border-top: 1px dashed #e2e8f0; margin-top: 8px;"
+            >
+              <div
+                v-for="s in getWidgetChartData(widget).seriesList"
+                :key="s.name"
+                style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: #475569; cursor: pointer; padding: 2px 6px; border-radius: 4px; background: #f8fafc; border: 1px solid #e2e8f0;"
+                @click.stop="openDrilldownForWidget(widget, { field: getWidgetChartData(widget).subGroupField, operator: 'equals', value: s.name })"
+                :title="`Bấm để lọc toàn bộ nhóm '${s.name}' (${s.total} lượt)`"
+              >
+                <span :style="{ background: s.color, width: '10px', height: '10px', borderRadius: '3px', display: 'inline-block' }"></span>
+                <span style="font-weight: 600;">{{ s.name }}</span>
+                <span style="color: #64748b; font-weight: 700;">({{ s.total }})</span>
               </div>
             </div>
           </div>
@@ -353,7 +388,7 @@
                 :key="item.name"
                 class="breakdown-row"
                 @click="handleChartItemClick(widget, item)"
-                :title="`${item.name}: ${item.count} kết quả\n(Bấm để xem danh sách chi tiết)`"
+                :title="`${item.name}: ${item.count} kết quả\n(Bấm để xem danh sách chi tiết toàn bộ)`"
                 style="cursor: pointer;"
               >
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -372,8 +407,42 @@
                     </span>
                   </div>
                 </div>
-                <div style="height: 5px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+
+                <!-- Sub-segments Breakdown Badges (if stacked) -->
+                <div v-if="item.segments && item.segments.length > 1" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px;">
+                  <span
+                    v-for="seg in item.segments"
+                    :key="seg.name"
+                    @click.stop="handleChartSegmentClick(widget, item, seg)"
+                    :title="`Bấm để xem danh sách ${seg.name}`"
+                    style="font-size: 0.67rem; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; color: #ffffff;"
+                    :style="{ background: seg.color }"
+                  >
+                    <span>{{ seg.name }}:</span>
+                    <strong style="color: #ffffff;">{{ seg.count }}</strong>
+                  </span>
+                </div>
+
+                <div style="height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; display: flex;">
+                  <!-- Multi-series Stacked Segments -->
+                  <template v-if="item.segments && item.segments.length > 0">
+                    <div
+                      v-for="seg in item.segments"
+                      :key="seg.name"
+                      class="column-segment-stacked-h"
+                      @click.stop="handleChartSegmentClick(widget, item, seg)"
+                      :title="`${item.name} • ${seg.name}: ${seg.count} (${seg.percent}%)\n(Bấm để xem danh sách chi tiết ${seg.name})`"
+                      :style="{
+                        width: `${(seg.count / (getWidgetChartData(widget).max || 1)) * 100}%`,
+                        background: seg.color,
+                        height: '100%',
+                        transition: 'width 0.4s ease',
+                        cursor: 'pointer'
+                      }"
+                    ></div>
+                  </template>
                   <div
+                    v-else
                     style="height: 100%; border-radius: 4px; transition: width 0.4s ease;"
                     :style="{
                       width: `${(item.count / (getWidgetChartData(widget).max || 1)) * 100}%`,
@@ -381,6 +450,24 @@
                     }"
                   ></div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Series Legend for Stacked Bar -->
+            <div
+              v-if="getWidgetChartData(widget).seriesList && getWidgetChartData(widget).seriesList.length > 0"
+              style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 6px 8px 2px 8px; border-top: 1px dashed #e2e8f0; margin-top: 8px;"
+            >
+              <div
+                v-for="s in getWidgetChartData(widget).seriesList"
+                :key="s.name"
+                style="display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: #475569; cursor: pointer; padding: 2px 6px; border-radius: 4px; background: #f8fafc; border: 1px solid #e2e8f0;"
+                @click.stop="openDrilldownForWidget(widget, { field: getWidgetChartData(widget).subGroupField, operator: 'equals', value: s.name })"
+                :title="`Bấm để lọc toàn bộ nhóm '${s.name}' (${s.total} lượt)`"
+              >
+                <span :style="{ background: s.color, width: '10px', height: '10px', borderRadius: '3px', display: 'inline-block' }"></span>
+                <span style="font-weight: 600;">{{ s.name }}</span>
+                <span style="color: #64748b; font-weight: 700;">({{ s.total }})</span>
               </div>
             </div>
           </div>
@@ -570,22 +657,43 @@
         </div>
 
         <!-- 1b. CỘT GOM NHÓM (KHI CHỌN BIỂU ĐỒ) -->
-        <div v-if="widgetForm.displayType !== 'count'" class="field-item" style="background: #eff6ff; padding: 10px 12px; border-radius: 8px; border: 1px solid #bfdbfe;">
-          <label class="field-label" style="font-weight: 700; color: #1e40af;">
-            <i class="pi pi-chart-bar" style="margin-right: 4px;"></i>
-            Cột gom nhóm phân bổ (Phân loại theo cột nào):
-          </label>
-          <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; font-weight: 600;">
-            <option value="">-- Mặc định (theo Quốc gia / Đơn vị) --</option>
-            <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
-              <option v-for="c in grp.columns" :key="c.id" :value="c.id">
-                {{ c.label || c.id }}
-              </option>
-            </optgroup>
-          </select>
-          <span style="font-size: 0.72rem; color: #1e40af; margin-top: 4px; display: block;">
-            💡 Biểu đồ sẽ tự động gom nhóm, đếm số lượt và xếp hạng theo từng giá trị của cột này.
-          </span>
+        <div v-if="widgetForm.displayType !== 'count'" class="field-item" style="background: #eff6ff; padding: 10px 12px; border-radius: 8px; border: 1px solid #bfdbfe; display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label class="field-label" style="font-weight: 700; color: #1e40af;">
+              <i class="pi pi-chart-bar" style="margin-right: 4px;"></i>
+              Cột gom nhóm phân bổ chính (Trục ngang / Danh mục chính):
+            </label>
+            <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; font-weight: 600;">
+              <option value="">-- Mặc định (theo Quốc gia / Đơn vị) --</option>
+              <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
+                <option v-for="c in grp.columns" :key="c.id" :value="c.id">
+                  {{ c.label || c.id }}
+                </option>
+              </optgroup>
+            </select>
+            <span style="font-size: 0.72rem; color: #1e40af; margin-top: 3px; display: block;">
+              💡 Biểu đồ sẽ tự động gom nhóm, đếm số lượt và xếp hạng theo từng giá trị của cột này.
+            </span>
+          </div>
+
+          <!-- Cột phân loại phụ theo màu (Stacked Bar) -->
+          <div style="padding-top: 8px; border-top: 1px dashed #bfdbfe;">
+            <label class="field-label" style="font-weight: 700; color: #1e40af; font-size: 0.78rem;">
+              <i class="pi pi-palette" style="margin-right: 4px;"></i>
+              Cột phân loại phụ theo màu (Tùy chọn - Biểu đồ cột xếp chồng nhiều màu):
+            </label>
+            <select v-model="widgetForm.subColumnId" class="settings-select" style="width: 100%; font-weight: 600;">
+              <option value="">-- Không phân loại màu (Đơn sắc) --</option>
+              <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
+                <option v-for="c in grp.columns" :key="c.id" :value="c.id">
+                  {{ c.label || c.id }}
+                </option>
+              </optgroup>
+            </select>
+            <span style="font-size: 0.72rem; color: #1e40af; margin-top: 3px; display: block;">
+              💡 Khi chọn thêm cột này (VD: Đối tượng 'isRelative' → Cán bộ / Thân nhân, hoặc Trạng thái, Phòng ban...), mỗi cột sẽ được chia thành nhiều đoạn màu xếp chồng (Stacked Bar) kèm chú giải màu. Bấm vào màu nào sẽ mở danh sách chi tiết của riêng loại đó.
+            </span>
+          </div>
         </div>
 
         <!-- 2. BỘ LỌC ĐIỀU KIỆN (QUERY CRITERIA BUILDER - GIỐNG HỆT LỌC NÂNG CAO) -->
@@ -1017,17 +1125,6 @@
               />
             </div>
 
-            <!-- Nút Nhập liệu mới (Đồng bộ logic với mục Nhập liệu ở menu Sidebar) -->
-            <Button
-              icon="pi pi-plus"
-              label="Nhập liệu"
-              severity="success"
-              size="small"
-              @click="isDynamicDataEntryOpen = true"
-              title="Nhập liệu mới (Đồng bộ danh sách bảng như mục Nhập liệu ở menu)"
-              style="font-size: 0.78rem; height: 32px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;"
-            />
-
             <!-- Menu Xuất / Nhập Dropdown chuẩn dùng chung ExportImportMenu -->
             <ExportImportMenu
               :tableTitle="drilldownExtraTitle || drilldownWidget?.title || 'Thống kê'"
@@ -1077,8 +1174,8 @@
             :key="col.id"
             :field="col.id"
             :header="col.label"
-            :headerStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
-            :bodyStyle="{ width: col.width || '160px', minWidth: col.width || '160px' }"
+            :headerStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
+            :bodyStyle="{ width: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px', minWidth: (col.tableWidth ? col.tableWidth + 'px' : col.width) || '160px' }"
           >
             <template #body="{ data }">
               <!-- Trạng thái hiện diện -->
@@ -1109,41 +1206,53 @@
               <!-- Họ tên Cán bộ / Bản ghi chính (dòng đậm) -->
               <template v-else-if="col.id === '_parentPersonnelName' || col.id === 'name' || col.id === 'ho_va_ten'">
                 <strong style="color: #0284c7; font-weight: 700; font-size: 0.82rem;">
-                  {{ getRowFieldValue(data, col.id) || '-' }}
+                  {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </strong>
               </template>
 
               <!-- Cột thông thường -->
               <template v-else>
                 <span style="font-size: 0.78rem; color: #334155; line-height: 1.35; word-break: break-word;">
-                  {{ getRowFieldValue(data, col.id) || '-' }}
+                  {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </span>
               </template>
             </template>
           </Column>
 
-          <!-- Thao tác xem trực tiếp PDF của từng hàng -->
+          <!-- Thao tác xem chi tiết & PDF của từng hàng -->
           <Column
             header="Thao tác"
             headerClass="col-center"
             bodyClass="col-center col-frozen-action"
-            :headerStyle="{ width: '110px', minWidth: '110px', background: '#f8fafc !important', zIndex: 12 }"
-            :bodyStyle="{ width: '110px', minWidth: '110px', background: '#ffffff !important', zIndex: 11, boxShadow: '-4px 0 8px rgba(0, 0, 0, 0.08)' }"
+            :headerStyle="{ width: '150px', minWidth: '150px', background: '#f8fafc !important', zIndex: 12 }"
+            :bodyStyle="{ width: '150px', minWidth: '150px', background: '#ffffff !important', zIndex: 11, boxShadow: '-4px 0 8px rgba(0, 0, 0, 0.08)' }"
             frozen
             alignFrozen="right"
           >
             <template #body="{ data }">
-              <Button
-                icon="pi pi-eye"
-                label="Xem PDF"
-                severity="danger"
-                size="small"
-                outlined
-                :loading="rowPreviewingKey === (data.uniqueKey || data.id)"
-                @click.stop="previewPdfForRow(data)"
-                style="font-size: 0.72rem; padding: 3px 8px;"
-                title="Xem trực tiếp PDF của hồ sơ này"
-              />
+              <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <Button
+                  icon="pi pi-eye"
+                  label="Chi tiết"
+                  severity="info"
+                  size="small"
+                  outlined
+                  @click.stop="handleDrilldownRowClick(data)"
+                  style="font-size: 0.72rem; padding: 3px 7px;"
+                  title="Xem chi tiết bản ghi này"
+                />
+                <Button
+                  icon="pi pi-file-pdf"
+                  label="PDF"
+                  severity="danger"
+                  size="small"
+                  outlined
+                  :loading="rowPreviewingKey === (data.uniqueKey || data.id)"
+                  @click.stop="previewPdfForRow(data)"
+                  style="font-size: 0.72rem; padding: 3px 7px;"
+                  title="Xem trực tiếp PDF của hồ sơ này"
+                />
+              </div>
             </template>
           </Column>
         </DataTable>
@@ -1155,14 +1264,6 @@
             Tổng cộng: <strong>{{ filteredDrilldownList.length }}</strong> kết quả (Bấm vào dòng để xem chi tiết)
           </span>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <Button
-              icon="pi pi-plus"
-              label="Nhập liệu"
-              severity="success"
-              size="small"
-              @click="isDynamicDataEntryOpen = true"
-              style="font-size: 0.78rem;"
-            />
             <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownModalOpen = false" />
           </div>
         </div>
@@ -1177,18 +1278,31 @@
       :contentStyle="{ maxHeight: '78vh', overflowY: 'auto', padding: '16px' }"
     >
       <template #header>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 38px; height: 38px; border-radius: 8px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center;">
-            <i class="pi pi-id-card" style="font-size: 1.2rem;"></i>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding-right: 12px; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 38px; height: 38px; border-radius: 8px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center;">
+              <i class="pi pi-id-card" style="font-size: 1.2rem;"></i>
+            </div>
+            <div>
+              <h3 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0;">
+                Chi tiết Bản ghi: {{ getRecordTitle(selectedDrilldownRow) }}
+              </h3>
+              <span style="font-size: 0.74rem; color: #64748b;">
+                Bảng dữ liệu: <strong>{{ getSourceLabel(drilldownSourceType) }}</strong>
+              </span>
+            </div>
           </div>
-          <div>
-            <h3 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0;">
-              Chi tiết Bản ghi: {{ getRecordTitle(selectedDrilldownRow) }}
-            </h3>
-            <span style="font-size: 0.74rem; color: #64748b;">
-              Bảng dữ liệu: <strong>{{ getSourceLabel(drilldownSourceType) }}</strong>
-            </span>
-          </div>
+
+          <!-- Nút Nhập liệu mới trong Popup Chi tiết -->
+          <Button
+            icon="pi pi-plus"
+            label="Nhập liệu"
+            severity="success"
+            size="small"
+            @click="isDynamicDataEntryOpen = true"
+            title="Nhập liệu mới (Đồng bộ danh sách bảng như mục Nhập liệu ở menu)"
+            style="font-size: 0.78rem; height: 32px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;"
+          />
         </div>
       </template>
 
@@ -1241,7 +1355,7 @@
                 </template>
                 <template v-else>
                   <span style="font-size: 0.82rem; font-weight: 600; color: #0f172a; word-break: break-word;">
-                    {{ getRowFieldValue(selectedDrilldownRow, col.id) || '-' }}
+                    {{ getRowFieldValue(selectedDrilldownRow, col.id, col) || '-' }}
                   </span>
                 </template>
               </div>
@@ -1252,15 +1366,24 @@
 
       <template #footer>
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <Button
-            v-if="selectedDrilldownRow"
-            label="Chỉnh sửa hồ sơ"
-            icon="pi pi-user-edit"
-            severity="primary"
-            size="small"
-            @click="openPersonnelDetailFromRecord"
-          />
-          <div v-else></div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <Button
+              v-if="selectedDrilldownRow"
+              label="Chỉnh sửa hồ sơ"
+              icon="pi pi-user-edit"
+              severity="primary"
+              size="small"
+              @click="openPersonnelDetailFromRecord"
+            />
+            <Button
+              icon="pi pi-plus"
+              label="Nhập liệu"
+              severity="success"
+              size="small"
+              @click="isDynamicDataEntryOpen = true"
+              style="font-size: 0.78rem;"
+            />
+          </div>
           <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownRecordDetailOpen = false" />
         </div>
       </template>
@@ -1294,7 +1417,7 @@
     <TableDataEntryDialog
       v-model="isDynamicDataEntryOpen"
       :activeSource="drilldownSourceType"
-      @select-table="isDrilldownModalOpen = false"
+      @select-table="isDrilldownModalOpen = false; isDrilldownRecordDetailOpen = false;"
     />
   </div>
 </template>
@@ -1428,14 +1551,119 @@ const drilldownSearchText = ref('');
 const drilldownDtFirst = ref(0);
 const drilldownSelectedRows = ref([]);
 const isDocxExportOpen = ref(false);
+const drilldownSavedColIds = ref(null);
+
+const getSetupColumnIdsForTable = (tableId, cardId = null) => {
+  const sanitizeRelCols = (cols) => {
+    if (tableId === 'relatives' && Array.isArray(cols)) {
+      return cols.map((id) => (id === 'countryName' ? 'countryNameTN' : id));
+    }
+    return cols;
+  };
+
+  // 1. Nếu có cardId cụ thể, kiểm tra cấu hình riêng của card đó
+  if (cardId) {
+    try {
+      const cardLocal = localStorage.getItem(`child_dashboard_cols_${tableId}_${cardId}`);
+      if (cardLocal) {
+        const parsed = JSON.parse(cardLocal);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+        }
+      }
+    } catch (e) {}
+
+    const topic = (availableTopicDashboards.value || []).find((t) => t.id === tableId);
+    if (topic && Array.isArray(topic.metricCards)) {
+      const card = topic.metricCards.find((c) => c.id === cardId);
+      if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
+        return sanitizeRelCols(card.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+      }
+    }
+  }
+
+  // 2. Kiểm tra child_dashboard_cols_${tableId}
+  try {
+    const tableLocal = localStorage.getItem(`child_dashboard_cols_${tableId}`);
+    if (tableLocal) {
+      const parsed = JSON.parse(tableLocal);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+      }
+    }
+  } catch (e) {}
+
+  // 3. Fallback theo bảng chuẩn
+  let fallbackKey = null;
+  if (tableId === 'trips') fallbackKey = 'trips_dashboard_columns';
+  else if (tableId === 'personnel') fallbackKey = 'personnel_active_columns';
+  else if (tableId === 'relatives') fallbackKey = 'relative_active_columns';
+
+  if (fallbackKey) {
+    try {
+      const fbLocal = localStorage.getItem(fallbackKey);
+      if (fbLocal) {
+        const parsed = JSON.parse(fbLocal);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 4. Nếu là chuyên đề/bảng tùy biến, kiểm tra topic.columns
+  const topic = (availableTopicDashboards.value || []).find((t) => t.id === tableId);
+  if (topic?.columns && Array.isArray(topic.columns) && topic.columns.length > 0) {
+    return sanitizeRelCols(topic.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+  }
+  if (topic?.customColumns && Array.isArray(topic.customColumns) && topic.customColumns.length > 0) {
+    return sanitizeRelCols(topic.customColumns.map((c) => c.id).filter((id) => id && id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+  }
+
+  return null;
+};
 
 const drilldownColumns = computed(() => {
   const src = drilldownSourceType.value || 'trips';
-  return getUnifiedTableColumns(src, {
+  const tid = drilldownWidget.value?.topicId || src;
+
+  // Lấy toàn bộ các cột khả dụng của bảng nguồn
+  const allCols = getUnifiedTableColumns(src, {
     personnelStore,
     customDashboards: availableTopicDashboards.value,
     systemBranding: systemBranding.value,
   });
+
+  const colMap = new Map();
+  allCols.forEach((c) => {
+    if (c.id && c.id !== 'status' && c.id !== 'tripStatus' && c.id !== '_primaryKey') {
+      colMap.set(c.id, c);
+    }
+  });
+
+  // Ưu tiên thứ tự các cột mà người dùng đã setup trên bảng
+  const setupColIds = drilldownSavedColIds.value || getSetupColumnIdsForTable(tid, drilldownWidget.value?.cardId);
+
+  if (setupColIds && Array.isArray(setupColIds) && setupColIds.length > 0) {
+    const orderedCols = [];
+    setupColIds.forEach((id) => {
+      let targetCol = colMap.get(id);
+      if (!targetCol && src === 'relatives') {
+        if (id === 'countryNameTN') targetCol = colMap.get('countryName');
+        else if (id === 'countryName') targetCol = colMap.get('countryNameTN');
+      }
+      if (targetCol) {
+        orderedCols.push(targetCol);
+      }
+    });
+
+    if (orderedCols.length > 0) {
+      return orderedCols;
+    }
+  }
+
+  // Fallback: Nếu bảng chưa từng tùy biến sắp xếp cột, hiển thị theo đúng thứ tự cấu hình cột (importMapping / customColumns)
+  return allCols.filter((c) => c.id && c.id !== 'status' && c.id !== 'tripStatus' && c.id !== '_primaryKey');
 });
 
 const filteredDrilldownList = computed(() => {
@@ -1446,7 +1674,7 @@ const filteredDrilldownList = computed(() => {
   const cols = drilldownColumns.value;
   return list.filter((row) => {
     return cols.some((col) => {
-      const val = getRowFieldValue(row, col.id);
+      const val = getRowFieldValue(row, col.id, col);
       return val && String(val).toLowerCase().includes(q);
     });
   });
@@ -1612,7 +1840,7 @@ const getDisplayValue = (row, colId, depth = 0) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
   });
 
-  const colDef = allMap[colId];
+  const colDef = drilldownColumns.value?.find((c) => c.id === colId) || allMap[colId];
   if (colDef && colDef.format === 'formula') {
     const configWithResolver = {
       ...colDef,
@@ -1633,7 +1861,7 @@ const getDisplayValue = (row, colId, depth = 0) => {
     return evaluateRollup(row, colDef, personnelStore);
   }
 
-  const val = getRowFieldValue(row, colId);
+  const val = getRowFieldValue(row, colId, colDef);
   if (val === undefined || val === null || val === '') return '-';
   if (typeof val === 'object') {
     if (val instanceof Date) {
@@ -1788,6 +2016,8 @@ const widgetForm = ref({
   source: 'trips',
   columnId: '',
   columnLabel: '',
+  subColumnId: '',
+  subColumnLabel: '',
   displayType: 'count',
   widthPercent: 25,
   logicOp: 'AND',
@@ -2352,7 +2582,7 @@ const getTripPresence = (t) => resolvePresence(t);
 
 const unifiedTripsList = computed(() => buildTopicSourceList('trips', personnelStore));
 
-const getRowFieldValue = (row, colId) => {
+const getRowFieldValue = (row, colId, colDefOverride = null) => {
   if (!row || !colId) return '';
 
   // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
@@ -2372,8 +2602,13 @@ const getRowFieldValue = (row, colId) => {
   (personnelStore.importMappingRelative || []).forEach((g) => {
     (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
   });
+  (availableTopicDashboards.value || []).forEach((topic) => {
+    (topic.customColumns || topic.columns || []).forEach((c) => {
+      if (c && c.id && !allMap[c.id]) allMap[c.id] = c;
+    });
+  });
 
-  const colDef = allMap[colId];
+  const colDef = colDefOverride || drilldownColumns.value?.find((c) => c.id === colId) || allMap[colId];
   if (colDef && colDef.format === 'formula') {
     if (colDef.formulaType === 'presence_status') {
       const p = resolvePresence(row);
@@ -2393,11 +2628,11 @@ const getRowFieldValue = (row, colId) => {
   }
   if (colDef && colDef.format === 'lookup') {
     const lkVal = evaluateLookup(row, colDef, personnelStore);
-    return lkVal !== '-' ? lkVal : '';
+    return lkVal !== '-' && lkVal !== undefined && lkVal !== null ? lkVal : '';
   }
   if (colDef && colDef.format === 'rollup') {
     const rlVal = evaluateRollup(row, colDef, personnelStore);
-    return rlVal !== '-' ? rlVal : '';
+    return rlVal !== '-' && rlVal !== undefined && rlVal !== null ? rlVal : '';
   }
 
   if (colId === '_presenceStatus' || colId === 'presenceStatus' || colId === 'status' || colId === 'tripStatus' || colId === 'trang_thai_hien_dien' || colId === 'trangThaiHienDien') {
@@ -2648,6 +2883,8 @@ const openAddWidgetDialog = async (group) => {
     source: group?.defaultSource || 'trips',
     columnId: '',
     columnLabel: '',
+    subColumnId: '',
+    subColumnLabel: '',
     displayType: 'count',
     widthPercent: 25,
     logicOp: 'AND',
@@ -2678,6 +2915,8 @@ const openEditWidgetDialog = async (group, widget) => {
   widgetOrder.value = curIdx !== -1 ? curIdx + 1 : (group.widgets || []).length;
   widgetForm.value = {
     ...JSON.parse(JSON.stringify(hydrated)),
+    subColumnId: hydrated.subColumnId || '',
+    subColumnLabel: hydrated.subColumnLabel || '',
     widthPercent: (hydrated.widthPercent !== undefined && hydrated.widthPercent !== null && hydrated.widthPercent !== '') ? Number(hydrated.widthPercent) : 33,
   };
   if (!widgetForm.value.conditions || widgetForm.value.conditions.length === 0) {
@@ -2705,6 +2944,15 @@ const onWidgetColumnSelect = () => {
         ? `Tổng số ${widgetForm.value.columnLabel}`
         : `Phân bổ theo ${widgetForm.value.columnLabel}`;
     }
+  }
+};
+
+const onWidgetSubColumnSelect = () => {
+  const selected = availableColumnsForWidgetSource.value.find((c) => c.id === widgetForm.value.subColumnId);
+  if (selected) {
+    widgetForm.value.subColumnLabel = selected.rawLabel || selected.label;
+  } else {
+    widgetForm.value.subColumnLabel = '';
   }
 };
 
@@ -2738,6 +2986,8 @@ const saveWidget = async () => {
 
     const payload = {
       ...widgetForm.value,
+      subColumnId: widgetForm.value.subColumnId || '',
+      subColumnLabel: widgetForm.value.subColumnLabel || '',
       conditions: cleanedConditions,
       widthPercent: finalWp,
       hidden: finalWp === 0,
@@ -3018,12 +3268,37 @@ function computeWidgetCount(widget) {
   return filtered.length;
 };
 
+const DEFAULT_SERIES_COLORS = [
+  '#0284c7', // Xanh dương (Cán bộ)
+  '#8b5cf6', // Tím hoa cà (Thân nhân)
+  '#f97316', // Cam
+  '#10b981', // Xanh lá ngọc
+  '#ec4899', // Hồng phấn
+  '#eab308', // Vàng hổ phách
+  '#06b6d4', // Xanh lơ
+  '#6366f1', // Chàm
+  '#14b8a6', // Xanh mòng két
+  '#f43f5e', // Đỏ hồng
+  '#84cc16', // Vôi chanh
+  '#a855f7', // Tím đậm
+];
+
+const getSemanticColorForSubVal = (val, colorIdx) => {
+  const str = String(val || '').trim().toLowerCase();
+  if (str === 'cán bộ' || str === 'can bo' || str === 'cb') return '#0284c7';
+  if (str === 'thân nhân' || str === 'than nhan' || str === 'tn') return '#8b5cf6';
+  if (str.includes('đúng hạn') || str.includes('hoàn thành')) return '#10b981';
+  if (str.includes('quá hạn') || str.includes('chưa về') || str.includes('cảnh báo')) return '#ef4444';
+  if (str.includes('chờ') || str.includes('chưa')) return '#f59e0b';
+  return DEFAULT_SERIES_COLORS[colorIdx % DEFAULT_SERIES_COLORS.length];
+};
+
 const openDrilldownForWidget = (widget, extraCondition = null) => {
   const source = widget.source || 'trips';
   let list = getSourceList(source);
 
   // Chuẩn hóa conditions của widget
-  const conds = (Array.isArray(widget.conditions) && widget.conditions.length > 0)
+  let conds = (Array.isArray(widget.conditions) && widget.conditions.length > 0)
     ? [...widget.conditions]
     : (Array.isArray(widget.criteria) && widget.criteria.length > 0
         ? [...widget.criteria]
@@ -3031,8 +3306,25 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
             ? [{ field: widget.field || widget.columnId, operator: widget.operator || widget.countCondition || 'has_value', value: widget.value || widget.countValue || '' }]
             : []));
 
+  if (conds.length === 0 && widget.topicId) {
+    const topic = (availableTopicDashboards.value || []).find((t) => t.id === widget.topicId);
+    if (topic) {
+      const topicCards = topic.metricCards || [];
+      const topicCard = topicCards.find((c, idx) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title || `card_${idx}` === widget.cardId);
+      if (topicCard && topicCard.conditions && Array.isArray(topicCard.conditions)) {
+        conds = [...topicCard.conditions];
+      } else if (topicCard && topicCard.field) {
+        conds = [{ field: topicCard.field, operator: topicCard.operator || 'has_value', value: topicCard.value || '' }];
+      }
+    }
+  }
+
   if (extraCondition) {
-    conds.push(extraCondition);
+    if (Array.isArray(extraCondition)) {
+      conds.push(...extraCondition);
+    } else {
+      conds.push(extraCondition);
+    }
   }
 
   const activeConds = conds.filter((c) => c && c.field && String(c.field).trim() !== '');
@@ -3068,8 +3360,39 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
     filtered = uniqueResult;
   }
 
+  const tid = widget.topicId || source;
+  drilldownSavedColIds.value = getSetupColumnIdsForTable(tid, widget.cardId);
+
+  (async () => {
+    try {
+      const keysToCheck = [];
+      if (widget.cardId) keysToCheck.push(`child_dashboard_cols_${tid}_${widget.cardId}`);
+      keysToCheck.push(`child_dashboard_cols_${tid}`);
+      if (tid === 'trips') keysToCheck.push('trips_dashboard_columns');
+      else if (tid === 'personnel') keysToCheck.push('personnel_active_columns');
+      else if (tid === 'relatives') keysToCheck.push('relative_active_columns');
+
+      for (const k of keysToCheck) {
+        const dbVal = await getAppSettings(k, null);
+        if (Array.isArray(dbVal) && dbVal.length > 0) {
+          const sanitized = dbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
+          if (sanitized.length > 0) {
+            drilldownSavedColIds.value = sanitized;
+            break;
+          }
+        }
+      }
+    } catch (e) {}
+  })();
+
   drilldownWidget.value = widget;
-  drilldownExtraTitle.value = extraCondition ? `${widget.title}: "${extraCondition.value}"` : (widget.title || 'Thống kê');
+  if (Array.isArray(extraCondition) && extraCondition.length > 0) {
+    drilldownExtraTitle.value = `${widget.title || 'Thống kê'}: ${extraCondition.map((c) => `"${c.value}"`).join(' • ')}`;
+  } else if (extraCondition && extraCondition.value) {
+    drilldownExtraTitle.value = `${widget.title || 'Thống kê'}: "${extraCondition.value}"`;
+  } else {
+    drilldownExtraTitle.value = widget.title || 'Thống kê';
+  }
   drilldownSourceType.value = source;
   drilldownRawList.value = filtered;
   drilldownSearchText.value = '';
@@ -3093,8 +3416,37 @@ const handleChartItemClick = (widget, item) => {
   openDrilldownForWidget(widget, extraCondition);
 };
 
+const handleChartSegmentClick = (widget, item, segment) => {
+  if (!segment) {
+    handleChartItemClick(widget, item);
+    return;
+  }
+  const groupField = item?.field || widget.columnId || (widget.source === 'personnel' ? 'departmentName' : 'countryName');
+  const groupVal = item?.name || '';
+  const subField = segment?.field || widget.subColumnId || '';
+  const subVal = segment?.name || '';
+
+  const extraConditions = [];
+  if (groupField && groupVal) {
+    extraConditions.push({
+      field: groupField,
+      operator: 'equals',
+      value: groupVal,
+    });
+  }
+  if (subField && subVal && subVal !== 'Chưa phân loại') {
+    extraConditions.push({
+      field: subField,
+      operator: 'equals',
+      value: subVal,
+    });
+  }
+
+  openDrilldownForWidget(widget, extraConditions);
+};
+
 const computeWidgetChartData = (widget) => {
-  if (!widget) return { list: [], max: 1, total: 0, groupField: '' };
+  if (!widget) return { list: [], max: 1, total: 0, groupField: '', subGroupField: '', seriesList: [] };
   const source = widget.source || 'trips';
   const list = getSourceList(source);
 
@@ -3135,7 +3487,10 @@ const computeWidgetChartData = (widget) => {
     groupField = source === 'trips' ? 'countryName' : (source === 'relatives' ? 'countryName' : 'departmentName');
   }
 
+  const subGroupField = widget.subColumnId || '';
+
   const counts = {};
+  const subValTotals = {};
   let total = 0;
 
   matchedList.forEach((row) => {
@@ -3144,16 +3499,77 @@ const computeWidgetChartData = (widget) => {
     const strVal = String(val).trim();
     if (!strVal || strVal === '-') return;
 
-    counts[strVal] = (counts[strVal] || 0) + 1;
+    if (!counts[strVal]) {
+      counts[strVal] = { total: 0, subCounts: {} };
+    }
+    counts[strVal].total++;
     total++;
+
+    if (subGroupField) {
+      const sVal = getRowFieldValue(row, subGroupField);
+      const subStrVal = (sVal !== undefined && sVal !== null && String(sVal).trim() !== '' && String(sVal).trim() !== '-')
+        ? String(sVal).trim()
+        : 'Chưa phân loại';
+      counts[strVal].subCounts[subStrVal] = (counts[strVal].subCounts[subStrVal] || 0) + 1;
+      subValTotals[subStrVal] = (subValTotals[subStrVal] || 0) + 1;
+    }
   });
 
+  // Xây dựng danh sách Series và Palette màu đồng bộ
+  const seriesColorMap = {};
+  const seriesList = [];
+  if (subGroupField) {
+    const sortedSubVals = Object.keys(subValTotals).sort((a, b) => subValTotals[b] - subValTotals[a]);
+    sortedSubVals.forEach((sName, idx) => {
+      const sColor = getSemanticColorForSubVal(sName, idx);
+      seriesColorMap[sName] = sColor;
+      seriesList.push({
+        name: sName,
+        color: sColor,
+        total: subValTotals[sName],
+        field: subGroupField,
+      });
+    });
+  }
+
   const chartList = Object.entries(counts)
-    .map(([name, count]) => ({ name, count, field: groupField }))
+    .map(([name, data]) => {
+      const segments = [];
+      if (subGroupField && Object.keys(data.subCounts).length > 0) {
+        seriesList.forEach((s) => {
+          const cnt = data.subCounts[s.name] || 0;
+          if (cnt > 0) {
+            segments.push({
+              name: s.name,
+              count: cnt,
+              color: s.color,
+              percent: data.total > 0 ? Math.round((cnt / data.total) * 100) : 0,
+              field: subGroupField,
+            });
+          }
+        });
+      } else {
+        segments.push({
+          name,
+          count: data.total,
+          color: widget.color || '#2e7d32',
+          percent: 100,
+          field: groupField,
+        });
+      }
+
+      return {
+        name,
+        count: data.total,
+        field: groupField,
+        subField: subGroupField,
+        segments,
+      };
+    })
     .sort((a, b) => b.count - a.count);
 
   const max = chartList.length > 0 ? chartList[0].count : 1;
-  return { list: chartList, max, total, groupField };
+  return { list: chartList, max, total, groupField, subGroupField, seriesList };
 };
 
 const chartDataCache = new Map();
@@ -3167,8 +3583,8 @@ watch(
 );
 
 const getWidgetChartData = (widget) => {
-  if (!widget?.id) return { list: [], max: 1, total: 0, groupField: '' };
-  const cacheKey = `${widget.id}_${widget.topicId || ''}_${widget.columnId || ''}_${widget.cardId || ''}`;
+  if (!widget?.id) return { list: [], max: 1, total: 0, groupField: '', subGroupField: '', seriesList: [] };
+  const cacheKey = `${widget.id}_${widget.topicId || ''}_${widget.columnId || ''}_${widget.subColumnId || ''}_${widget.cardId || ''}`;
   if (chartDataCache.has(cacheKey)) {
     return chartDataCache.get(cacheKey);
   }
@@ -3927,6 +4343,31 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   transition: height 0.4s ease;
+}
+
+.column-segment-stacked {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: height 0.4s ease, filter 0.2s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.column-segment-stacked:hover {
+  filter: brightness(1.22);
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.35);
+  z-index: 2;
+}
+
+.column-segment-stacked-h {
+  transition: width 0.4s ease, filter 0.2s ease;
+}
+
+.column-segment-stacked-h:hover {
+  filter: brightness(1.22);
+  opacity: 0.92;
 }
 
 .column-segment-tn {

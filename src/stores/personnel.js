@@ -966,39 +966,33 @@ export const usePersonnelStore = defineStore('personnel', {
           }
         }
 
-        if (targetPerson) {
-          const updatedP = JSON.parse(JSON.stringify(targetPerson));
-          let custom = {};
-          if (updatedP.custom_data) {
-            try { custom = typeof updatedP.custom_data === 'string' ? JSON.parse(updatedP.custom_data) : updatedP.custom_data; } catch (e) {}
-          }
-          let relsInP = Array.isArray(updatedP.relatives) ? [...updatedP.relatives] : (Array.isArray(custom.relatives) ? [...custom.relatives] : []);
-
-          const relIdx = relsInP.findIndex(isSameRel);
-          if (relIdx !== -1) {
-            relsInP[relIdx] = { ...relsInP[relIdx], ...cleanRelData };
-          } else {
-            if (!cleanRelData.code) {
-              cleanRelData.code = `TN-${String((this.relativesList || []).length + 1).padStart(5, '0')}`;
-            }
-            cleanRelData.personnelId = targetPerson.id;
-            cleanRelData.parentName = targetPerson.name;
-            relsInP.push(cleanRelData);
-          }
-
-          updatedP.relatives = relsInP;
-          custom.relatives = relsInP;
-          updatedP.custom_data = custom;
-          await this.savePerson(updatedP);
+        if (!targetPerson) {
+          throw new Error('Không tìm thấy hồ sơ Cán bộ chủ quản để liên kết Thân nhân này! Vui lòng kiểm tra lại trường CCCD/Mã số của Cán bộ (cccdparent).');
         }
 
-        // Directus appendix2 update if id exists
-        if (cleanRelData.id && typeof cleanRelData.id === 'number') {
-          const directusPayload = { ...cleanRelData };
-          delete directusPayload.trips;
-          delete directusPayload.custom_data;
-          await apiClient.patch(`/items/appendix2/${cleanRelData.id}`, directusPayload).catch(() => {});
+        const updatedP = JSON.parse(JSON.stringify(targetPerson));
+        let custom = {};
+        if (updatedP.custom_data) {
+          try { custom = typeof updatedP.custom_data === 'string' ? JSON.parse(updatedP.custom_data) : updatedP.custom_data; } catch (e) {}
         }
+        let relsInP = Array.isArray(updatedP.relatives) ? [...updatedP.relatives] : (Array.isArray(custom.relatives) ? [...custom.relatives] : []);
+
+        const relIdx = relsInP.findIndex(isSameRel);
+        if (relIdx !== -1) {
+          relsInP[relIdx] = { ...relsInP[relIdx], ...cleanRelData };
+        } else {
+          if (!cleanRelData.code) {
+            cleanRelData.code = `TN-${String((this.relativesList || []).length + 1).padStart(5, '0')}`;
+          }
+          cleanRelData.personnelId = targetPerson.id;
+          cleanRelData.parentName = targetPerson.name;
+          relsInP.push(cleanRelData);
+        }
+
+        updatedP.relatives = relsInP;
+        custom.relatives = relsInP;
+        updatedP.custom_data = custom;
+        await this.savePerson(updatedP);
 
         await logActivity('Cập nhật Thân nhân', `Cập nhật thân nhân: ${cleanRelData.relativeName || cleanRelData.name || cleanRelData.code}`).catch(() => {});
         await this.fetchPersonnel();
@@ -1011,7 +1005,7 @@ export const usePersonnelStore = defineStore('personnel', {
       }
     },
     async saveTrip(tripData) {
-      if (!tripData) return null;
+      if (!tripData) throw new Error('Không có dữ liệu chuyến đi để lưu!');
       this.loading = true;
       try {
         const isSameTrip = (t) => {
@@ -1019,13 +1013,36 @@ export const usePersonnelStore = defineStore('personnel', {
           if (t === tripData || t === tripData.rawTrip) return true;
           if (t.id && tripData.id && String(t.id) === String(tripData.id)) return true;
           if (t.uniqueKey && tripData.uniqueKey && String(t.uniqueKey) === String(tripData.uniqueKey)) return true;
+          if (t._primaryKey && tripData._primaryKey && String(t._primaryKey) === String(tripData._primaryKey)) return true;
+          if (t.code && tripData.code && String(t.code) === String(tripData.code)) return true;
           return false;
         };
 
         const cleanTrip = { ...tripData };
+        if (cleanTrip.custom_data) {
+          if (typeof cleanTrip.custom_data === 'string') {
+            try { cleanTrip.custom_data = JSON.parse(cleanTrip.custom_data); } catch (e) {}
+          }
+          if (typeof cleanTrip.custom_data === 'object') {
+            Object.assign(cleanTrip, cleanTrip.custom_data);
+          }
+        }
         delete cleanTrip.rawPerson;
         delete cleanTrip.rawRelative;
         delete cleanTrip.rawTrip;
+
+        const pKeyField = this.getPersonnelKeyField ? this.getPersonnelKeyField() : 'cccdparent';
+        const tKeyField = this.getTripKeyField ? this.getTripKeyField() : 'cccdchuyendi';
+        const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'cccdthannhan';
+
+        const tripKeyVal = String(
+          cleanTrip[tKeyField] ??
+          cleanTrip.cccdchuyendi ??
+          cleanTrip.cccd ??
+          cleanTrip.cccdparent ??
+          cleanTrip.cccdthannhan ??
+          ''
+        ).trim().toLowerCase();
 
         let foundPerson = null;
         for (const p of this.personnelList) {
@@ -1035,6 +1052,7 @@ export const usePersonnelStore = defineStore('personnel', {
           }
           const tripsInP = Array.isArray(p.trips) ? p.trips : (Array.isArray(custom.trips) ? custom.trips : []);
           const hasTrip = tripsInP.some(isSameTrip);
+
           let hasTripInRel = false;
           let matchedRelIdx = -1;
           const relsInP = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(custom.relatives) ? custom.relatives : []);
@@ -1047,9 +1065,28 @@ export const usePersonnelStore = defineStore('personnel', {
             }
           }
 
-          const matchesPerson = (cleanTrip.personnelId && (String(p.id) === String(cleanTrip.personnelId) || String(p.code) === String(cleanTrip.personnelId))) ||
-                                (cleanTrip.cccd && (p.cccd === cleanTrip.cccd || p.cccdparent === cleanTrip.cccd)) ||
-                                (cleanTrip.cccdparent && (p.cccd === cleanTrip.cccdparent || p.cccdparent === cleanTrip.cccdparent));
+          // Kiểm tra nếu chuyến đi gắn với thân nhân qua relativeId hoặc khóa thân nhân
+          if (!hasTripInRel && (cleanTrip.isRelative || cleanTrip.relativeId)) {
+            for (let rI = 0; rI < relsInP.length; rI++) {
+              const r = relsInP[rI];
+              const rId = String(r.id || r.code || '').trim().toLowerCase();
+              const rKeyVal = String(r[rKeyField] ?? r.cccdthannhan ?? r.cccd ?? '').trim().toLowerCase();
+              if (
+                (cleanTrip.relativeId && String(cleanTrip.relativeId).trim().toLowerCase() === rId) ||
+                (tripKeyVal && rKeyVal && tripKeyVal === rKeyVal)
+              ) {
+                hasTripInRel = true;
+                matchedRelIdx = rI;
+                break;
+              }
+            }
+          }
+
+          const personKeyVal = String(p[pKeyField] ?? p.cccdparent ?? p.cccd ?? custom[pKeyField] ?? custom.cccdparent ?? '').trim().toLowerCase();
+          const personIdMatch = cleanTrip.personnelId && (String(p.id).trim().toLowerCase() === String(cleanTrip.personnelId).trim().toLowerCase() || String(p.code || '').trim().toLowerCase() === String(cleanTrip.personnelId).trim().toLowerCase());
+          const personKeyMatch = !cleanTrip.isRelative && tripKeyVal && personKeyVal && tripKeyVal === personKeyVal;
+
+          const matchesPerson = personIdMatch || personKeyMatch;
 
           if (hasTrip || hasTripInRel || matchesPerson) {
             const updatedP = JSON.parse(JSON.stringify(p));
@@ -1059,12 +1096,14 @@ export const usePersonnelStore = defineStore('personnel', {
             }
 
             if (hasTripInRel && matchedRelIdx !== -1) {
+              if (!Array.isArray(updatedP.relatives)) updatedP.relatives = [];
               const relObj = updatedP.relatives[matchedRelIdx];
               if (!relObj.trips) relObj.trips = [];
               const tIdx = relObj.trips.findIndex(isSameTrip);
               if (tIdx !== -1) {
                 relObj.trips[tIdx] = { ...relObj.trips[tIdx], ...cleanTrip };
               } else {
+                if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
                 relObj.trips.push(cleanTrip);
               }
               updatedP.custom_data.relatives = updatedP.relatives;
@@ -1086,6 +1125,22 @@ export const usePersonnelStore = defineStore('personnel', {
             break;
           }
         }
+
+        // Nếu không thuộc Cán bộ/Thân nhân nào, lưu dưới dạng Chuyến đi Độc Lập (Flat Standalone Trip)
+        if (!foundPerson) {
+          if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
+          await this.addStandaloneTrip(cleanTrip);
+        }
+
+        // Cập nhật thêm trong standaloneTrips nếu chuyến đi này từng nằm trong standaloneTrips
+        if (Array.isArray(this.standaloneTrips)) {
+          const sIdx = this.standaloneTrips.findIndex(isSameTrip);
+          if (sIdx !== -1) {
+            this.standaloneTrips[sIdx] = { ...this.standaloneTrips[sIdx], ...cleanTrip };
+            await saveAppSettings('standalone_trips', this.standaloneTrips);
+          }
+        }
+
         await logActivity('Cập nhật Chuyến đi', `Cập nhật chuyến đi: ${cleanTrip.countryName || cleanTrip.quoc_gia_xuat_canh || cleanTrip.id}`).catch(() => {});
         await this.fetchPersonnel();
         return cleanTrip;
@@ -1105,6 +1160,8 @@ export const usePersonnelStore = defineStore('personnel', {
           if (t === trip || t === trip.rawTrip) return true;
           if (t.id && trip.id && String(t.id) === String(trip.id)) return true;
           if (t.uniqueKey && trip.uniqueKey && String(t.uniqueKey) === String(trip.uniqueKey)) return true;
+          if (t._primaryKey && trip._primaryKey && String(t._primaryKey) === String(trip._primaryKey)) return true;
+          if (t.code && trip.code && String(t.code) === String(trip.code)) return true;
           return false;
         };
 
@@ -1147,6 +1204,15 @@ export const usePersonnelStore = defineStore('personnel', {
             break;
           }
         }
+
+        // Xóa trong standaloneTrips nếu có
+        if (Array.isArray(this.standaloneTrips)) {
+          const prevLen = this.standaloneTrips.length;
+          this.standaloneTrips = this.standaloneTrips.filter((t) => !isSameTrip(t));
+          if (this.standaloneTrips.length !== prevLen) {
+            await saveAppSettings('standalone_trips', this.standaloneTrips);
+          }
+        }
         await logActivity('Xóa Chuyến đi', `Xóa chuyến đi: ${trip.countryName || trip.quoc_gia_xuat_canh || trip.id}`).catch(() => {});
         await this.fetchPersonnel();
       } catch (e) {
@@ -1157,11 +1223,14 @@ export const usePersonnelStore = defineStore('personnel', {
       }
     },
     async saveRecord(record) {
-      if (!record) return null;
-      if (record._recordType === 'relative' || record.rawRelative || record.relationshipName || record.cccdthannhan || (record.code && String(record.code).startsWith('TN-'))) {
+      if (!record) throw new Error('Không có dữ liệu để lưu!');
+      if (record._recordType === 'blank' || String(record.id || '').startsWith('row_')) {
+        return record;
+      }
+      if (record._recordType === 'relative' || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
         return await this.saveRelative(record);
       }
-      if (record._recordType === 'trip' || record.rawTrip || record.departureDate || record.ngay_xuat_canh || record.destination || record.quoc_gia_xuat_canh) {
+      if (record._recordType === 'trip' || record.rawTrip || record.uniqueKey) {
         return await this.saveTrip(record);
       }
       const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
@@ -1182,10 +1251,10 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     async deleteRecord(record) {
       if (!record) return;
-      if (record._recordType === 'relative' || record.rawRelative || record.relationshipName || record.cccdthannhan || (record.code && String(record.code).startsWith('TN-'))) {
+      if (record._recordType === 'relative' || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
         return await this.deleteRelative(record);
       }
-      if (record._recordType === 'trip' || record.rawTrip || record.departureDate || record.ngay_xuat_canh || record.destination || record.quoc_gia_xuat_canh) {
+      if (record._recordType === 'trip' || record.rawTrip || record.uniqueKey) {
         return await this.deleteTrip(record);
       }
       const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));

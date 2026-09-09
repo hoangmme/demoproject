@@ -2820,29 +2820,26 @@ const saveChildInlineEdit = async () => {
     }
     row.custom_data[colId] = value;
 
-    // Phân giải bản ghi cha (Cán bộ) để lưu
-    const parent = row.rawPerson || (row.personnelId ? personnelStore.personnelList.find(p => p.id === row.personnelId) : null);
-    if (parent) {
-      // Cập nhật chuyến đi hoặc thân nhân tương ứng trong parent
-      if (row.id && parent.trips) {
-        const tIdx = parent.trips.findIndex(t => t.id === row.id || t.code === row.id);
-        if (tIdx !== -1) {
-          parent.trips[tIdx][colId] = value;
-        }
+    if (currentDashboardConfig.value?.source === 'blank') {
+      const tid = topicId.value;
+      const list = [...(customTableRows.value || [])];
+      const idx = list.findIndex((r) => r.id === row.id || r.uniqueKey === row.uniqueKey);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], [colId]: value, custom_data: { ...(list[idx].custom_data || {}), [colId]: value } };
+        customTableRows.value = list;
+        try {
+          localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(list));
+          await saveAppSettings(`custom_table_rows_${tid}`, list);
+        } catch (e) {}
       }
-      if (row.id && parent.relatives) {
-        const rIdx = parent.relatives.findIndex(r => r.id === row.id || r.code === row.id);
-        if (rIdx !== -1) {
-          parent.relatives[rIdx][colId] = value;
-        }
-      }
-      if (parent.id === row.id) {
-        parent[colId] = value;
-      }
-      await personnelStore.savePerson(parent);
+      return;
     }
+
+    await personnelStore.saveRecord(row);
+    await personnelStore.fetchPersonnel();
   } catch (err) {
-    console.error('Lỗi cập nhật nhanh inline trên chuyên đề:', err);
+    console.error('Lỗi cập nhật nhanh inline trên bảng:', err);
+    alert('Lỗi lưu dữ liệu: ' + (err.message || err));
   }
 };
 
@@ -4234,7 +4231,22 @@ const saveTripForm = async () => {
   }
 };
 
-const handlePersonnelSaved = async () => {
+const handlePersonnelSaved = async (savedRecord) => {
+  if (currentDashboardConfig.value?.source === 'blank' && savedRecord) {
+    const tid = topicId.value;
+    const list = [...(customTableRows.value || [])];
+    const idx = list.findIndex((r) => r.id === savedRecord.id || r.uniqueKey === savedRecord.uniqueKey);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...savedRecord };
+    } else {
+      list.unshift(savedRecord);
+    }
+    customTableRows.value = list;
+    try {
+      localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(list));
+      await saveAppSettings(`custom_table_rows_${tid}`, list);
+    } catch (e) {}
+  }
   await personnelStore.fetchPersonnel();
 };
 

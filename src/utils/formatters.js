@@ -1742,6 +1742,13 @@ export const evaluateRollup = (item, col, personnelStore) => {
   if (!Array.isArray(list)) list = [];
 
   if (fn === 'count') {
+    if (field) {
+      const valid = list.filter((sub) => {
+        const val = getSubProp(sub, field);
+        return val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-';
+      });
+      return valid.length;
+    }
     return list.length;
   }
 
