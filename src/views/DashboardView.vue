@@ -1017,6 +1017,17 @@
               />
             </div>
 
+            <!-- Nút Nhập liệu mới (Đồng bộ logic với mục Nhập liệu ở menu Sidebar) -->
+            <Button
+              icon="pi pi-plus"
+              label="Nhập liệu"
+              severity="success"
+              size="small"
+              @click="isDynamicDataEntryOpen = true"
+              title="Nhập liệu mới (Đồng bộ danh sách bảng như mục Nhập liệu ở menu)"
+              style="font-size: 0.78rem; height: 32px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;"
+            />
+
             <!-- Menu Xuất / Nhập Dropdown chuẩn dùng chung ExportImportMenu -->
             <ExportImportMenu
               :tableTitle="drilldownExtraTitle || drilldownWidget?.title || 'Thống kê'"
@@ -1143,7 +1154,17 @@
           <span style="font-size: 0.75rem; color: #64748b;">
             Tổng cộng: <strong>{{ filteredDrilldownList.length }}</strong> kết quả (Bấm vào dòng để xem chi tiết)
           </span>
-          <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownModalOpen = false" />
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <Button
+              icon="pi pi-plus"
+              label="Nhập liệu"
+              severity="success"
+              size="small"
+              @click="isDynamicDataEntryOpen = true"
+              style="font-size: 0.78rem;"
+            />
+            <Button label="Đóng" severity="secondary" size="small" @click="isDrilldownModalOpen = false" />
+          </div>
         </div>
       </template>
     </Dialog>
@@ -1268,6 +1289,13 @@
       :title="rowPreviewTitle"
       :filename="rowPreviewFileName"
     />
+
+    <!-- Dialog Nhập liệu mới đa bảng đồng bộ với Sidebar menu -->
+    <TableDataEntryDialog
+      v-model="isDynamicDataEntryOpen"
+      :activeSource="drilldownSourceType"
+      @select-table="isDrilldownModalOpen = false"
+    />
   </div>
 </template>
 
@@ -1283,6 +1311,7 @@ import AppDatePicker from '@/components/common/AppDatePicker.vue';
 import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ExportImportMenu from '@/components/common/ExportImportMenu.vue';
+import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
@@ -1390,6 +1419,7 @@ const allUnifiedTables = computed(() => {
 // POPUP DIALOG CHI TIẾT DỮ LIỆU THỐNG KÊ (DRILLDOWN POPUP MODAL)
 // =========================================================================
 const isDrilldownModalOpen = ref(false);
+const isDynamicDataEntryOpen = ref(false);
 const drilldownWidget = ref(null);
 const drilldownExtraTitle = ref('');
 const drilldownSourceType = ref('trips');

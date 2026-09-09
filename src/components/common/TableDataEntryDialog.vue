@@ -2,6 +2,7 @@
   <Dialog
     v-model:visible="visible"
     modal
+    :baseZIndex="11000"
     :style="{ width: '560px', maxWidth: '95vw' }"
     header="➕ Nhập liệu Bản ghi Mới - Chọn Bảng Dữ Liệu"
     :closable="true"
@@ -35,9 +36,17 @@
               <i :class="table.icon ? (table.icon.startsWith('pi-') ? `pi ${table.icon}` : table.icon) : 'pi pi-table'"></i>
             </div>
             <div style="flex: 1; min-width: 0;">
-              <strong style="font-size: 0.88rem; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">
-                {{ table.title }}
-              </strong>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <strong style="font-size: 0.88rem; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">
+                  {{ table.title }}
+                </strong>
+                <span
+                  v-if="props.activeSource && (table.source === props.activeSource || table.id === props.activeSource)"
+                  style="font-size: 0.65rem; background: #e0f2fe; color: #0284c7; padding: 1px 6px; border-radius: 4px; font-weight: 700; flex-shrink: 0;"
+                >
+                  Bảng hiện tại
+                </span>
+              </div>
               <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">
                 {{ getTableSubInfo(table) }}
               </div>
@@ -83,9 +92,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  activeSource: {
+    type: String,
+    default: '',
+  },
 });
 
-const emit = defineEmits(['update:modelValue', 'open-create-personnel', 'open-create-relative', 'open-create-trip']);
+const emit = defineEmits(['update:modelValue', 'select-table', 'open-create-personnel', 'open-create-relative', 'open-create-trip']);
 
 const router = useRouter();
 const personnelStore = usePersonnelStore();
@@ -127,12 +140,27 @@ const allTables = computed(() => {
 
 const filteredTables = computed(() => {
   const q = searchTableQuery.value.trim().toLowerCase();
-  if (!q) return allTables.value;
-  return allTables.value.filter((t) => {
-    return (t.title && t.title.toLowerCase().includes(q)) ||
-      (t.code && t.code.toLowerCase().includes(q)) ||
-      (t.source && t.source.toLowerCase().includes(q));
-  });
+  let tables = allTables.value;
+  if (q) {
+    tables = tables.filter((t) => {
+      return (t.title && t.title.toLowerCase().includes(q)) ||
+        (t.code && t.code.toLowerCase().includes(q)) ||
+        (t.source && t.source.toLowerCase().includes(q));
+    });
+  }
+  if (props.activeSource) {
+    const active = [];
+    const others = [];
+    tables.forEach((t) => {
+      if (t.source === props.activeSource || t.id === props.activeSource) {
+        active.push(t);
+      } else {
+        others.push(t);
+      }
+    });
+    return [...active, ...others];
+  }
+  return tables;
 });
 
 
@@ -158,6 +186,7 @@ const getTableSubInfo = (table) => {
 const handleSelectTable = (table) => {
   visible.value = false;
   selectedTable.value = table;
+  emit('select-table', table);
   if (table.route) {
     router.push(`${table.route}?action=new_record`);
   } else if (table.id === 'trips' || table.source === 'trips') {

@@ -1686,38 +1686,26 @@ export const evaluateRollup = (item, col, personnelStore) => {
 
   let list = [];
 
-  // Nguồn 1: Chuyến đi của Cán bộ
-  if (target === 'trips') {
+  // Nguồn 1: Bảng Chuyến đi (Toàn bộ Chuyến đi phẳng - Flat Trips Engine)
+  if (target === 'trips' || target === 'relative_trips') {
     if (personnelStore?.tripsList) {
       list = personnelStore.tripsList.filter((t) => {
-        if (t.isRelative) return false;
-        if (item.id && t.personnelId && t.personnelId === item.id) return true;
+        if (item.id && t.personnelId && String(t.personnelId).trim() === String(item.id).trim()) return true;
+        if (item.id && t.relativeId && String(t.relativeId).trim() === String(item.id).trim()) return true;
         if (pKeyField && tKeyField) {
           const pKey = getSubProp(item, pKeyField);
           const tKey = getSubProp(t, tKeyField);
           if (pKey && tKey && String(pKey).trim() === String(tKey).trim()) return true;
         }
-        return false;
-      });
-    } else if (Array.isArray(item.trips)) {
-      list = item.trips.filter((t) => !t.isRelative);
-    }
-  }
-  // Nguồn 2: Chuyến đi của Thân nhân
-  else if (target === 'relative_trips') {
-    if (personnelStore?.tripsList) {
-      list = personnelStore.tripsList.filter((t) => {
-        if (!t.isRelative) return false;
-        if (item.id && t.personnelId && t.personnelId === item.id) return true;
-        if (pKeyField) {
-          const pKey = getSubProp(item, pKeyField);
-          const tParentKey = getSubProp(t, pKeyField);
-          if (pKey && tParentKey && String(pKey).trim() === String(tParentKey).trim()) return true;
+        if (rKeyField && tKeyField) {
+          const rKey = getSubProp(item, rKeyField);
+          const tKey = getSubProp(t, tKeyField);
+          if (rKey && tKey && String(rKey).trim() === String(tKey).trim()) return true;
         }
         return false;
       });
-    } else if (Array.isArray(item.relatives)) {
-      list = item.relatives.flatMap((r) => (Array.isArray(r.trips) ? r.trips : []));
+    } else if (Array.isArray(item.trips)) {
+      list = item.trips;
     }
   }
   // Nguồn 3: Thân nhân

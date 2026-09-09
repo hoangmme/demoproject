@@ -66,8 +66,21 @@
             <div style="display: flex; align-items: center; gap: 5px;">
               <i class="pi pi-link"></i>
               <span>Cấu hình Tham chiếu (Lookup)</span>
+              <i
+                class="pi pi-info-circle"
+                style="font-size: 0.8rem; color: #2563eb; cursor: help;"
+                title="Lookup lấy giá trị 1 ô từ Bảng khác sang Bảng hiện tại theo liên kết hồ sơ"
+              ></i>
             </div>
             <span style="font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Lark Base</span>
+          </div>
+
+          <!-- Hộp giải thích cách hoạt động của Lookup với icon ! -->
+          <div style="background: #ffffff; border: 1px solid #bfdbfe; border-left: 3px solid #2563eb; border-radius: 6px; padding: 5px 8px; font-size: 0.7rem; color: #1e40af; line-height: 1.4; display: flex; gap: 6px; align-items: flex-start; margin-bottom: 8px;">
+            <div style="width: 16px; height: 16px; border-radius: 50%; background: #dbeafe; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.7rem; flex-shrink: 0; line-height: 1;">!</div>
+            <div>
+              <strong>Cách Lookup hoạt động:</strong> Lấy 1 cột từ Bảng khác sang Bảng này. <em>VD:</em> Bảng Chuyến đi lấy Tên Cán bộ / Đơn vị từ Bảng Cán bộ.
+            </div>
           </div>
 
           <!-- 1. Look up data in this field: Chọn bảng đích & cột lấy dữ liệu -->
@@ -77,9 +90,9 @@
             </label>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
               <select v-model="editLookupTarget" class="menu-select" @change="editLookupField = ''; handleSaveLookup()">
-                <option value="personnel">Bảng Cán bộ</option>
-                <option value="relatives">Bảng Thân nhân</option>
-                <option value="trips">Bảng Chuyến đi</option>
+                <option v-for="tbl in availableTargetTables" :key="tbl.id" :value="tbl.id">
+                  {{ tbl.title }}
+                </option>
               </select>
               <select v-model="editLookupField" class="menu-select" @change="handleSaveLookup">
                 <option value="">-- Chọn cột lấy --</option>
@@ -308,8 +321,21 @@
             <div style="display: flex; align-items: center; gap: 5px;">
               <i class="pi pi-calculator"></i>
               <span>📊 Cấu hình Tính toán Tổng hợp (Rollup)</span>
+              <i
+                class="pi pi-info-circle"
+                style="font-size: 0.8rem; color: #16a34a; cursor: help;"
+                title="Rollup gom và tính toán trên nhiều dòng từ Bảng khác liên kết với dòng này"
+              ></i>
             </div>
             <span style="font-size: 0.65rem; background: #dcfce7; color: #166534; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Flat Engine</span>
+          </div>
+
+          <!-- Hộp giải thích cách hoạt động của Rollup với icon ! -->
+          <div style="background: #ffffff; border: 1px solid #bbf7d0; border-left: 3px solid #16a34a; border-radius: 6px; padding: 5px 8px; font-size: 0.7rem; color: #166534; line-height: 1.4; display: flex; gap: 6px; align-items: flex-start; margin-bottom: 8px;">
+            <div style="width: 16px; height: 16px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.7rem; flex-shrink: 0; line-height: 1;">!</div>
+            <div>
+              <strong>Cách Rollup hoạt động:</strong> Thu thập nhiều dòng liên kết từ Bảng khác và tính toán ra 1 ô. <em>VD:</em> Đếm số chuyến đi (<code>count</code>), gom danh sách nước đi (<code>join</code>), tính tổng kinh phí (<code>sum</code>).
+            </div>
           </div>
 
           <!-- 1. Bảng dữ liệu nguồn -->
@@ -318,10 +344,9 @@
               1. Bảng dữ liệu nguồn:
             </label>
             <select v-model="editRollupTarget" class="menu-select" @change="editRollupField = ''; handleSaveRollup()">
-              <option value="trips">Chuyến đi (Cán bộ)</option>
-              <option value="relative_trips">Chuyến đi của Thân nhân</option>
-              <option value="relatives">Bảng Thân nhân</option>
-              <option value="personnel">Bảng Cán bộ</option>
+              <option v-for="tbl in availableTargetTables" :key="tbl.id" :value="tbl.id">
+                {{ tbl.title }}
+              </option>
             </select>
           </div>
 
@@ -421,6 +446,16 @@
             />
             <span>Hiển thị trong Form / Popup Chi tiết</span>
           </label>
+
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; user-select: none; background: #f0f9ff; border: 1px solid #bae6fd; padding: 4px 6px; border-radius: 4px;">
+            <input
+              type="checkbox"
+              v-model="editCollapseDuplicates"
+              @change="handleToggleCollapseDuplicates"
+              style="accent-color: #0284c7; cursor: pointer;"
+            />
+            <span style="font-weight: 600; color: #0369a1;">Gộp / Ẩn giá trị lặp liên tiếp (Dấu lặp ″)</span>
+          </label>
         </div>
 
         <div class="menu-divider"></div>
@@ -496,6 +531,7 @@ import {
   getRecordFieldValue,
   formulaFunctionsCatalog,
 } from "@/utils/formatters";
+import { getUnifiedTableDefinitions } from "@/utils/tableRegistry";
 
 const props = defineProps({
   visible: {
@@ -540,6 +576,7 @@ const emit = defineEmits([
   "change-show-in-detail",
   "change-lookup",
   "change-rollup",
+  "change-collapse-duplicates",
   "change-name-col-field",
   "delete-column",
   "hide-column",
@@ -562,6 +599,7 @@ const editFormWidth = ref("50");
 const editRequired = ref(false);
 const editIncludeInExport = ref(true);
 const editShowInDetail = ref(true);
+const editCollapseDuplicates = ref(false);
 
 const editLookupTarget = ref("personnel");
 const editLookupLinkCol = ref("");
@@ -605,22 +643,54 @@ const availableTripCols = computed(() => {
   return list;
 });
 
+const customDashboards = ref([]);
+const loadDashboards = () => {
+  try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed)) customDashboards.value = parsed;
+    }
+  } catch (e) {}
+};
+loadDashboards();
+
+const availableTargetTables = computed(() => {
+  const list = getUnifiedTableDefinitions({
+    personnelStore,
+    customDashboards: customDashboards.value,
+  });
+  return list.map((t) => ({
+    id: t.source || t.id,
+    tableId: t.id,
+    title: t.title || t.id,
+    source: t.source,
+  }));
+});
+
 const currentTableCols = computed(() => {
   if (props.tableSource === 'relatives') return availableRelativeCols.value;
   if (props.tableSource === 'trips') return availableTripCols.value;
   return availablePersonnelCols.value;
 });
 
+const getColumnsForTargetTable = (targetId) => {
+  if (targetId === 'relatives') return availableRelativeCols.value;
+  if (targetId === 'trips' || targetId === 'relative_trips') return availableTripCols.value;
+  if (targetId === 'personnel') return availablePersonnelCols.value;
+  const cust = (customDashboards.value || []).find((d) => d.id === targetId || d.source === targetId);
+  if (cust && Array.isArray(cust.customColumns)) {
+    return cust.customColumns.map((c) => ({ id: c.id, label: c.label || c.id }));
+  }
+  return availableTripCols.value;
+};
+
 const targetLookupCols = computed(() => {
-  if (editLookupTarget.value === 'relatives') return availableRelativeCols.value;
-  if (editLookupTarget.value === 'trips') return availableTripCols.value;
-  return availablePersonnelCols.value;
+  return getColumnsForTargetTable(editLookupTarget.value);
 });
 
 const targetRollupCols = computed(() => {
-  if (editRollupTarget.value === 'relatives') return availableRelativeCols.value;
-  if (editRollupTarget.value === 'trips' || editRollupTarget.value === 'relative_trips') return availableTripCols.value;
-  return availablePersonnelCols.value;
+  return getColumnsForTargetTable(editRollupTarget.value);
 });
 
 const defaultFallbackParentFields = [
@@ -666,6 +736,7 @@ watch(
       editRollupFunction.value = col.rollupFunction || "count";
       editIncludeInExport.value = col.includeInExport !== false;
       editShowInDetail.value = col.showInDetail !== false;
+      editCollapseDuplicates.value = Boolean(col.collapseDuplicates);
     }
   },
   { immediate: true }
@@ -810,6 +881,10 @@ const handleToggleIncludeExport = () => {
 
 const handleToggleShowInDetail = () => {
   emit("change-show-in-detail", { colId: props.column.id, showInDetail: editShowInDetail.value });
+};
+
+const handleToggleCollapseDuplicates = () => {
+  emit("change-collapse-duplicates", { colId: props.column.id, collapseDuplicates: editCollapseDuplicates.value });
 };
 
 const handleInsertLeft = () => {

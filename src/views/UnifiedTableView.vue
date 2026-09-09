@@ -332,8 +332,17 @@
               </button>
             </div>
           </template>
-          <template #body="{ data }">
-            <!-- 1. Cột Họ và tên (Cán bộ, Thân nhân... - chỉ hiện tên thuần túy) -->
+          <template #body="{ data, index }">
+            <div
+              v-if="shouldCollapseDuplicate(data, index, col)"
+              class="ditto-cell-wrapper"
+              @dblclick.stop="startChildInlineEdit(data, col)"
+              :title="'Tương tự dòng trên: ' + (getCellValue(data, col.id) || data[col.id] || '')"
+            >
+              <span class="ditto-mark">″</span>
+            </div>
+            <template v-else>
+              <!-- 1. Cột Họ và tên (Cán bộ, Thân nhân... - chỉ hiện tên thuần túy) -->
             <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen' || col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'">
               <div
                 class="inline-cell-wrapper"
@@ -569,6 +578,7 @@
                 </div>
                 <span v-else style="word-break: break-word; line-height: 1.45;">{{ getCellValue(data, col.id) }}</span>
               </div>
+            </template>
             </template>
           </template>
         </Column>
@@ -1082,6 +1092,7 @@
       @change-required="onChildChangeColumnRequired"
       @change-include-export="onChildChangeColumnIncludeExport"
       @change-show-in-detail="onChildChangeColumnShowInDetail"
+      @change-collapse-duplicates="onChildChangeColumnCollapseDuplicates"
       @change-lookup="onChildChangeColumnLookup"
       @change-rollup="onChildChangeColumnRollup"
       @change-name-col-field="toggleNameColField"
@@ -2265,6 +2276,35 @@ const onChildChangeColumnShowInDetail = async ({ colId, showInDetail }) => {
     for (const c of (g.columns || [])) {
       if (c.id === colId) {
         c.showInDetail = Boolean(showInDetail);
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found) {
+    await persistTableMapping(src, mapping);
+  }
+};
+
+const onChildChangeColumnCollapseDuplicates = async ({ colId, collapseDuplicates }) => {
+  const { mapping, isBlank, cDash, src } = getTargetMappingRef();
+  if (isBlank && cDash) {
+    const col = (cDash.customColumns || []).find((c) => c.id === colId);
+    if (col) {
+      col.collapseDuplicates = Boolean(collapseDuplicates);
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+    return;
+  }
+  let found = false;
+  for (const g of (mapping || [])) {
+    for (const c of (g.columns || [])) {
+      if (c.id === colId) {
+        c.collapseDuplicates = Boolean(collapseDuplicates);
         found = true;
         break;
       }
@@ -3613,6 +3653,27 @@ const getCheckboxFileLoopItems = (data, colId) => {
     const hasFile = Boolean(it.file && (it.file.url || it.file.name || it.file.fileName));
     return hasOpts || hasText || hasFile;
   });
+};
+
+const shouldCollapseDuplicate = (data, index, col) => {
+  if (!col?.collapseDuplicates) return false;
+  if (!data || typeof index !== 'number' || index <= 0) return false;
+  if (editingChildCell.value && editingChildCell.value.uniqueKey === data.uniqueKey && editingChildCell.value.colId === col.id) {
+    return false;
+  }
+  const list = filteredList.value || [];
+  const currentIdx = (dtFirst.value || 0) + index;
+  if (currentIdx <= 0 || currentIdx >= list.length) return false;
+  const prevData = list[currentIdx - 1];
+  if (!prevData) return false;
+
+  const currentVal = getCellValue(data, col.id) || data[col.id];
+  if (currentVal === undefined || currentVal === null || currentVal === '-' || String(currentVal).trim() === '') return false;
+
+  const prevVal = getCellValue(prevData, col.id) || prevData[col.id];
+  if (prevVal === undefined || prevVal === null || prevVal === '-' || String(prevVal).trim() === '') return false;
+
+  return String(currentVal).trim().toLowerCase() === String(prevVal).trim().toLowerCase();
 };
 
 const getCellValue = (trip, colId, depth = 0) => {
@@ -5200,6 +5261,37 @@ onUnmounted(() => {
 .menu-action-sub {
   font-size: 0.68rem;
   color: #64748b;
+}
+
+.ditto-cell-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 2px 0;
+  cursor: pointer;
+  user-select: none;
+}
+.ditto-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #94a3b8;
+  line-height: 1;
+  letter-spacing: 2px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  padding: 1px 12px;
+  transition: all 0.15s ease;
+}
+.ditto-cell-wrapper:hover .ditto-mark {
+  color: #0284c7;
+  border-color: #38bdf8;
+  background: #f0f9ff;
+  transform: scale(1.1);
 }
 
 </style>

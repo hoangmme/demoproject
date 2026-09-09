@@ -2115,3 +2115,96 @@
     4. **Kiểm thử & Triển khai**:
        - `npm run build` thành công 100% (0 lỗi, 505ms).
     5. **Trạng thái**: Done [Hard to Reverse / Data Migrated].
+
+- **Entry (2026-09-09 - Session 5)**: **Nâng cấp Động cơ Tham chiếu (evaluateLookup) Nhận diện Cán bộ Chủ quản cho Bảng Chuyến đi**:
+    1. **Yêu cầu của người dùng**:
+       - Tạo 1 cột trên Bảng Chuyến đi sao cho: Nếu dòng chuyến đi là Cán bộ thì hiển thị tên Cán bộ, nếu là Thân nhân thì hiển thị tên Cán bộ chủ quản liên quan.
+    2. **Giải pháp kiến trúc**:
+       - Nâng cấp hàm `evaluateLookup` (`src/utils/formatters.js`): Khi cột có `lookupTarget === 'personnel'` (Bảng Cán bộ), hệ thống tự động nhận diện Cán bộ chủ quản theo thứ tự ưu tiên quan hệ:
+         1) Khớp theo `item.personnelId === p.id` (ID cán bộ gắn kèm bản ghi chuyến đi).
+         2) Khớp theo CCCD cán bộ (`p.cccd === (item.cccdparent || item.cccdchuyendi)`).
+         3) Khớp theo quan hệ Thân nhân: Tìm Cán bộ có thân nhân trong `p.relatives` mang CCCD khớp với CCCD người đi (`cccdthannhan === item.cccdchuyendi`).
+         4) Khớp theo `item.rawPerson`.
+       - Đồng thời nâng cấp nhánh `target === 'relatives'` để hỗ trợ tra cứu thân nhân qua `item.relativeId` và `item.cccdchuyendi`.
+       - Không làm sai lệch dữ liệu phẳng của dòng, không nạp fallback ngầm, chỉ phân giải khi cột Lookup được cấu hình.
+- **Entry (2026-09-09 - Session 6)**: **Hoàn thiện Giao diện Rollup UI (AddColumnDialog & ColumnHeaderMenu) & Chuẩn hóa 100% Động cơ Flat Table (evaluateRollup & evaluateLookup)**:
+    1. **Vấn đề & Phản hồi người dùng**:
+       - Người dùng phản hồi: *"1. tên nó lấy đc tên nó không lấy nè?", "- bạn vừa sửa có dạng flat gì chưa đó, có hardcode gì ko? có thì bỏ đi vì tôi ko cần hardcode", "- rollup lỗi ko hiển thị gì khi chọn"*.
+    2. **Nguyên nhân cốt lõi**:
+       - Trong `AddColumnDialog.vue`: Dropdown có tùy chọn Rollup nhưng thiếu khối template `v-if="form.format === 'rollup'"` và thiếu các trường `rollupTarget`, `rollupField`, `rollupFunction` trong state và save payload -> Khi chọn Rollup giao diện bị trắng/trống không hiển thị gì.
+       - Trong `src/utils/formatters.js`: Có lỗi cú pháp `return '-'; };` thừa gây crash bundle, đồng thời việc so khớp ID kiểu nghiêm ngặt `===` (number vs string) khiến một số bản ghi không liên kết được tên Cán bộ.
+       - Trong `src/utils/dashboardMetrics.js` (`buildTopicSourceList`): Chưa liên kết ngược `matchedPerson` / `matchedRelative` qua ID quan hệ phẳng `t.personnelId` / `t.relativeId`.
+    3. **Giải pháp & Triển khai**:
+       - **Giao diện Cấu hình Rollup (AddColumnDialog.vue & ColumnHeaderMenu.vue)**:
+         + Bổ sung khối UI Rollup đầy đủ, trực quan: Chọn Bảng nguồn đích (`trips`, `relative_trips`, `relatives`, `personnel`), Chọn Hàm tính toán (`count`, `join`, `sum`, `latest`), Chọn Cột tổng hợp (`targetRollupCols`), và Xem trước kết quả trực tiếp (`rollupPreviewResult`).
+         + Tích hợp đầy đủ vào `handleSave` và sự kiện `@change-rollup` trong `UnifiedTableView.vue`.
+       - **Động cơ Flat Table 100% Thuần Khiết (Không Hardcode)**:
+         + `evaluateRollup`: Nâng cấp sang Flat Table engine đa nguồn (`trips`, `relative_trips`, `relatives`, `personnel`), xóa sạch toàn bộ hardcode tên cột khóa, so khớp linh hoạt qua `getPersonnelKeyField()`, `getRelativeKeyField()`, `getTripKeyField()`.
+         + `evaluateLookup`: Xóa bỏ hoàn toàn hardcode, chuẩn hóa so khớp ID dạng string (`String(id).trim()`), hỗ trợ liên kết qua `item.personnelId` và `item.relativeId`.
+         + `buildTopicSourceList`: Bổ sung liên kết `matchedPerson` và `matchedRelative` qua `t.personnelId` và `t.relativeId` để bảo toàn đối tượng phẳng cho toàn bộ 48 chuyến đi.
+- **Entry (2026-09-09 - Session 7)**: **Tính năng Gộp / Ẩn Giá trị Trùng Lặp Hàng Liên Tiếp (Ditto Mark `″`)**:
+    1. **Yêu cầu của người dùng**:
+       - Tùy chọn cột thêm tính năng gộp trùng hàng: Khi có nhiều dòng liên tiếp có cùng giá trị trên một cột (ví dụ cột Họ và tên), chỉ hiển thị giá trị ở hàng đầu tiên, các hàng sau hiển thị biểu tượng tương tự (dấu tương tự hành chính `″` - Ditto Mark).
+       - Người dùng đã chọn giải pháp Cách A: Sử dụng ký hiệu lặp `″` (Ditto Mark) thay vì `rowspan` HTML để tránh lỗi vỡ bảng, giữ nguyên hoàn hảo cấu trúc dòng bảng phẳng, tương thích 100% với phân trang, bộ lọc, sắp xếp và sửa nhanh ô (inline edit).
+    2. **Giải pháp & Triển khai**:
+       - **Giao diện Menu Cột (`ColumnHeaderMenu.vue`)**:
+         + Bổ sung checkbox tùy chọn `Gộp / Ẩn giá trị lặp liên tiếp (Dấu lặp ″)` trong phần "Hiển thị & Xuất dữ liệu".
+         + Thêm emit `change-collapse-duplicates` và handler `handleToggleCollapseDuplicates`.
+       - **Giao diện Thêm Cột Mới (`AddColumnDialog.vue`)**:
+         + Bổ sung checkbox tùy chọn `Gộp / Ẩn giá trị lặp liên tiếp (Dấu lặp ″)` trong form tạo cột mới.
+         + Lưu thuộc tính `collapseDuplicates: Boolean` vào cấu hình cột khi lưu.
+       - **Bảng Dữ liệu Động (`UnifiedTableView.vue`)**:
+         + Bắt sự kiện `@change-collapse-duplicates="onChildChangeColumnCollapseDuplicates"` và lưu bền vững vào `persistTableMapping` / `custom_dashboards_config`.
+         + Bổ sung hàm kiểm tra `shouldCollapseDuplicate(data, index, col)`:
+           * Kiểm tra `col.collapseDuplicates`.
+           * Với dòng đầu tiên của trang (`index === 0`), luôn hiển thị đầy đủ giá trị để giữ nguyên ngữ cảnh khi phân trang.
+           * So sánh giá trị chuẩn hóa của dòng hiện tại với dòng liền trước `list[currentIdx - 1]`. Nếu giống nhau và không phải giá trị rỗng/gạch ngang `'-'`, ẩn giá trị và hiển thị huy hiệu dấu lặp `″`.
+           * Tích hợp mượt mà với inline edit: Khi người dùng nhấp đúp vào ô có dấu lặp `″`, hệ thống tự động mở ô input chỉnh sửa nhanh ngay tại ô đó.
+         + CSS styling chuẩn UX cho `.ditto-cell-wrapper` và `.ditto-mark`: viền nét đứt nhã nhặn, hover phóng to nhẹ và đổi màu xanh trực quan.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 548ms).
+       - Đồng bộ đầy đủ sang `WINDOWS_OFFLINE_APP/frontend`.
+    4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 8)**: **Bổ sung Nút Nhập Liệu trên Popup Dữ Liệu Thống Kê Chi Tiết (Drilldown Modal)**:
+    1. **Yêu cầu của người dùng**:
+       - Ở popup thống kê (`DashboardView.vue` - Drilldown modal chi tiết), thêm nút Nhập liệu đồng bộ logic với tính năng 'Nhập liệu' ở menu Sidebar.
+    2. **Giải pháp & Triển khai**:
+       - **Nâng cấp `TableDataEntryDialog.vue`**:
+         + Bổ sung prop `activeSource` để nhận diện nguồn bảng hiện tại đang xem thống kê (trips, personnel, relatives, custom tables).
+         + Tự động đưa bảng khớp với `activeSource` lên đầu danh sách kèm huy hiệu `Bảng hiện tại` giúp thao tác 1-click nhanh chóng, đồng thời người dùng vẫn có thể chọn bất kỳ bảng nào khác trong hệ thống.
+         + Thêm `:baseZIndex="11000"` đảm bảo modal luôn hiển thị sắc nét trên popup thống kê (`:baseZIndex="10000"`).
+         + Bổ sung emit `@select-table` để popup thống kê tự động đóng khi chuyển hướng sang form nhập liệu.
+       - **Tích hợp vào `DashboardView.vue`**:
+         + Thêm nút `+ Nhập liệu` màu xanh lá chuẩn tại thanh công cụ Header của Popup thống kê (ngay cạnh ô Tìm kiếm và Menu Xuất báo cáo) và tại thanh Footer (cạnh nút Đóng).
+         + Tích hợp modal `TableDataEntryDialog` với `:activeSource="drilldownSourceType"` và `@select-table="isDrilldownModalOpen = false"`.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 600ms).
+       - Đồng bộ tài nguyên sang `WINDOWS_OFFLINE_APP/frontend` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
+    4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 9)**: **Chuẩn hóa Rollup & Lookup Bảng Động 100% (Xóa bỏ Tách Nhóm Cũ) & Bổ sung Icon Giải thích (!) Trực quan**:
+    1. **Vấn đề & Phản hồi người dùng**:
+       - Dropdown bảng nguồn của Rollup bị hardcode cứng các lựa chọn `Chuyến đi (Cán bộ)`, `Chuyến đi của Thân nhân`, vi phạm nguyên tắc Bảng phẳng thuần túy (Pure Flat Table Record Paradigm) và ngăn cản người dùng chọn Bảng Chuyến đi hợp nhất.
+       - Thiếu icon hướng dẫn/giải thích trực quan cách thức hoạt động của Rollup và Lookup.
+    2. **Giải pháp & Triển khai**:
+       - **Bảng Nguồn Động 100% (`AddColumnDialog.vue` & `ColumnHeaderMenu.vue`)**:
+         + Xóa bỏ triệt để toàn bộ hardcode cũ `trips` vs `relative_trips`.
+         + Nạp danh sách bảng nguồn hoàn toàn tự động qua `getUnifiedTableDefinitions({ personnelStore, customDashboards })`: hiển thị chuẩn mực **Bảng Chuyến đi**, **Bảng Cán bộ**, **Bảng Thân nhân**, và toàn bộ các Bảng tùy biến tự tạo / Chuyên đề.
+         + Tự động quét danh sách cột tương ứng của bảng đích qua `getColumnsForTargetTable(targetId)`.
+       - **Động cơ Flat Rollup Hợp nhất (`src/utils/formatters.js`)**:
+         + `evaluateRollup`: Bỏ hoàn toàn logic `if (t.isRelative) return false;`. Bảng Chuyến đi hoạt động như 1 tập bản ghi phẳng duy nhất; tự động liên kết mọi chuyến đi của bản ghi hiện tại qua `personnelId`, `relativeId`, hoặc các trường khóa định danh mà không chia tách nhân tạo.
+       - **Bổ sung Icon Giải thích (!) & Khung Trợ giúp Trực quan**:
+         + Tại cả `AddColumnDialog.vue` và `ColumnHeaderMenu.vue`:
+         + Bổ sung icon `!` (`pi pi-info-circle`) kèm tooltip chi tiết tại tiêu đề khối cấu hình.
+         + Bổ sung khung hướng dẫn có biểu tượng `!` nổi bật giải thích rõ:
+           * **Lookup (Tham chiếu)**: Mục đích và cách thức kéo 1 cột từ bảng khác sang theo liên kết hồ sơ (VD: lấy Tên Cán bộ, Đơn vị sang Chuyến đi).
+           * **Rollup (Tính toán tổng hợp)**: Mục đích và cách thức thu thập nhiều dòng liên kết để tính toán ra 1 ô (VD: `count` đếm số chuyến, `join` gom danh sách nước, `sum` tính tổng tiền).
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 502ms).
+       - Đồng bộ đầy đủ sang `WINDOWS_OFFLINE_APP/frontend` và `WINDOWS_OFFLINE_APP/CONTINUITY.md`.
+    4. **Trạng thái**: Done [Reversible].
+
+
+
+
