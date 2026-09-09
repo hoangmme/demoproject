@@ -1078,16 +1078,15 @@ const saveNewTable = async () => {
     localStorage.setItem('custom_dashboards_config', JSON.stringify(updatedList));
   } catch (e) {}
 
-  try {
-    await saveAppSettings('custom_dashboards_config', updatedList);
-  } catch (e) {
-    console.error('Error saving new table to DB:', e);
-  }
-
   window.dispatchEvent(new CustomEvent('custom-dashboards-updated', { detail: updatedList }));
 
   isAddTableDialogOpen.value = false;
   router.push(`/dashboard-topic/${newId}`);
+
+  // Lưu Directus DB ở background không chặn giao diện (Optimistic UI - Instant load)
+  saveAppSettings('custom_dashboards_config', updatedList).catch((e) => {
+    console.error('Error saving new table to DB:', e);
+  });
 };
 
 const isInputMenuOpen = ref(false);

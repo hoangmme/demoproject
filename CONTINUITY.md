@@ -2445,3 +2445,21 @@
        - Đồng bộ toàn bộ `dist/` và các file `src/` đã sửa sang `WINDOWS_OFFLINE_APP/frontend/`.
     4. **Trạng thái**: Done [Reversible].
 
+- **Entry (2026-09-09 - Session 19)**: **Sửa Lỗi TDZ Runtime Crash, Tối Ưu Tốc Độ Thêm Bảng & Tải Thống Kê, Xóa Nút Trùng Lặp Trong Form Chi Tiết, Bổ Sung Nút Tùy Chỉnh Cột Trực Tiếp Trên Popup Thống Kê**:
+    1. **Yêu cầu của người dùng**:
+       - Sửa lỗi crash runtime: `ReferenceError: Cannot access 'On' before initialization at setup (index-DBy61ra2.js:3122:83497)`.
+       - Thêm bảng mới load khá chậm.
+       - Thống kê (Dashboard) load chậm.
+       - Ở form chỉnh sửa (PersonnelDialog): nút "Thêm dữ liệu" đang có cả ở trên và dưới (xóa nút ở dưới đi, sửa nút ở trên không bị duplicate "+ +").
+       - Ở popup thống kê (drilldown): cho phép tùy chỉnh cột trực tiếp cho Chế độ xem (View) đang chọn, lưu đúng cho View đó.
+    2. **Giải pháp & Triển khai**:
+       - **Sửa triệt để TDZ Runtime Crash (`src/views/UnifiedTableView.vue`)**: Khai báo `const customTableRows = ref([])` được đưa lên đầu trước `useTableGridInteraction`. Chuyển `openPersonnelDetail` sang function declaration.
+       - **Tối ưu tốc độ Thêm bảng mới (`src/components/common/AppSidebar.vue`)**: Áp dụng Optimistic Navigation: cập nhật state, lưu localStorage, dispatch event và chuyển hướng route tức thì trong 0ms. Chuyển `saveAppSettings` xuống background task.
+       - **Tối ưu tốc độ Thống kê Dashboard (`src/views/DashboardView.vue`)**: Tái sử dụng các danh sách nguồn đã được tính toán trong Vue computed (`cachedSourceTrips`, `cachedSourcePersonnel`, `cachedSourceRelatives`), tránh duyệt và re-map dữ liệu lặp đi lặp lại. Song song hóa `loadAllCustomTablesData` bằng `Promise.all`.
+       - **Dọn dẹp nút "Thêm dữ liệu" trong Form Chi tiết (`src/components/personnel/PersonnelDialog.vue`)**: Xóa bỏ nút ở footer, sửa nhãn header thành `label="Thêm dữ liệu"`.
+       - **Tích hợp Nút Tùy chỉnh cột trực tiếp trên Popup Thống kê (`src/views/DashboardView.vue`)**: Nhúng component `ColumnSelector` vào Actions Toolbar của Drilldown Header ngay cạnh Dropdown chọn Chế độ xem (View). Hàm `onDrilldownColumnsChange` lưu cấu hình cột trực tiếp cho View đang chọn.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 551ms).
+       - Đồng bộ toàn bộ `dist/` và `src/` sang `WINDOWS_OFFLINE_APP/frontend/`.
+    4. **Trạng thái**: Done [Reversible].
+

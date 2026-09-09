@@ -15,7 +15,7 @@
         </div>
         <Button
           icon="pi pi-plus"
-          label="+ Thêm dữ liệu"
+          label="Thêm dữ liệu"
           severity="success"
           size="small"
           @click="isDynamicDataEntryOpen = true"
@@ -63,16 +63,6 @@
           <span v-else-if="autoSaveStatus === 'saved'" style="font-size: 0.75rem; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
             <i class="pi pi-check-circle"></i> Đã lưu thành công
           </span>
-
-          <Button
-            label="+ Thêm dữ liệu"
-            icon="pi pi-plus"
-            severity="info"
-            outlined
-            size="small"
-            @click="isDynamicDataEntryOpen = true"
-            title="Nhập liệu mới cho bất kỳ bảng nào (đồng bộ menu)"
-          />
 
           <Button
             v-if="isEdit"

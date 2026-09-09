@@ -1140,6 +1140,15 @@
               </select>
             </div>
 
+            <!-- Tùy chỉnh cột riêng cho Chế độ xem đang chọn -->
+            <ColumnSelector
+              :inline="false"
+              :key="drilldownSelectedViewId + '_' + (drilldownWidget?.topicId || drilldownSourceType)"
+              :modelValue="drilldownColumns.map((c) => c.id)"
+              :options="allAvailableDrilldownColumns"
+              @change="onDrilldownColumnsChange"
+            />
+
             <!-- Tìm kiếm nhanh -->
             <div style="position: relative; width: 220px;">
               <i class="pi pi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #94a3b8;"></i>
@@ -1348,6 +1357,7 @@ import PersonnelDialog from '@/components/personnel/PersonnelDialog.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import ExportImportMenu from '@/components/common/ExportImportMenu.vue';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
+import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import { usePersonnelStore } from '@/stores/personnel';
 import { useAuthStore } from '@/stores/auth';
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
@@ -1626,6 +1636,56 @@ const drilldownColumns = computed(() => {
   // Fallback: Nếu bảng chưa từng tùy biến sắp xếp cột, hiển thị theo đúng thứ tự cấu hình cột (importMapping / customColumns)
   return allCols.filter((c) => c.id && c.id !== 'status' && c.id !== 'tripStatus' && c.id !== '_primaryKey');
 });
+
+const allAvailableDrilldownColumns = computed(() => {
+  const src = drilldownSourceType.value || 'trips';
+  const allCols = getUnifiedTableColumns(src, {
+    personnelStore,
+    customDashboards: availableTopicDashboards.value,
+    systemBranding: systemBranding.value,
+  });
+  return allCols.filter((c) => c.id && c.id !== 'status' && c.id !== 'tripStatus' && c.id !== '_primaryKey');
+});
+
+const onDrilldownColumnsChange = async (newColIds) => {
+  if (!Array.isArray(newColIds)) return;
+  const sanitized = newColIds.filter((id) => id && id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
+  drilldownSavedColIds.value = sanitized;
+
+  const tid = drilldownWidget.value?.topicId || drilldownSourceType.value || 'trips';
+  const vId = drilldownSelectedViewId.value || 'all';
+  const key = `child_dashboard_cols_${tid}_${vId}`;
+
+  // 1. Lưu ngay vào localStorage cho View đang chọn
+  try {
+    localStorage.setItem(key, JSON.stringify(sanitized));
+  } catch (e) {}
+
+  // 2. Đồng bộ vào cấu hình View của chuyên đề/bảng nếu có
+  try {
+    const dList = availableTopicDashboards.value || [];
+    const tIdx = dList.findIndex((d) => d && (d.id === tid || d.id === drilldownSourceType.value));
+    if (tIdx >= 0) {
+      const topic = dList[tIdx];
+      if (vId === 'all') {
+        topic.columns = sanitized;
+      }
+      if (Array.isArray(topic.metricCards)) {
+        const cIdx = topic.metricCards.findIndex((c) => c && (c.id === vId || c.condition === vId));
+        if (cIdx >= 0) {
+          topic.metricCards[cIdx].columns = sanitized;
+        }
+      }
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(dList));
+      saveAppSettings('custom_dashboards_config', dList).catch(() => {});
+    }
+  } catch (e) {}
+
+  // 3. Lưu vào Directus DB bất đồng bộ
+  try {
+    await saveAppSettings(key, sanitized);
+  } catch (e) {}
+};
 
 const filteredDrilldownList = computed(() => {
   const list = drilldownRawList.value || [];
@@ -2541,9 +2601,7 @@ const loadCustomTableRowsForDashboard = async (tableId) => {
 
 const loadAllCustomTablesData = async () => {
   const tables = customTablesList.value.filter((t) => t.source === 'blank');
-  for (const t of tables) {
-    await loadCustomTableRowsForDashboard(t.id);
-  }
+  await Promise.all(tables.map((t) => loadCustomTableRowsForDashboard(t.id)));
 };
 
 const onWidgetSourceChange = () => {
@@ -2676,6 +2734,14 @@ const cachedSourcePersonnel = computed(() => buildTopicSourceList('personnel', p
 const cachedSourceRelatives = computed(() => buildTopicSourceList('relatives', personnelStore));
 
 const getSourceList = (source) => {
+  if (source === 'trips') return cachedSourceTrips.value || [];
+  if (source === 'personnel') return cachedSourcePersonnel.value || [];
+  if (source === 'relatives') return cachedSourceRelatives.value || [];
+
+  if (customTableRowsMap.value[source] && Array.isArray(customTableRowsMap.value[source])) {
+    return customTableRowsMap.value[source];
+  }
+
   const rows = getUnifiedTableRows(source, {
     personnelStore,
     customDashboards: availableTopicDashboards.value,

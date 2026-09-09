@@ -1941,6 +1941,8 @@ const dtFirst = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(30);
 
+// Custom Table Rows for blank/independent custom tables (declared before composable)
+const customTableRows = ref([]);
 
 // ===== INLINE EDITING FOR CHILD DASHBOARD (useTableGridInteraction) =====
 const {
@@ -2332,9 +2334,6 @@ const visibleColumns = computed(() => {
 });
 
 
-
-// Custom Table Rows for blank/independent custom tables
-const customTableRows = ref([]);
 
 const loadCustomTableRows = async () => {
   const tid = topicId.value;
@@ -2800,11 +2799,11 @@ const saveColumnSelection = async () => {
 };
 
 // Actions
-const openPersonnelDetail = (record) => {
+function openPersonnelDetail(record) {
   if (!record) return;
   activePersonData.value = record;
   isPersonnelDialogOpen.value = true;
-};
+}
 
 const isSameTripItem = (t, trip) => {
   if (!t || !trip) return false;
