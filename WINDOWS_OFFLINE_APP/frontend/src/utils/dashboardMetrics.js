@@ -804,6 +804,12 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
       let keyVal;
       if (uCol) {
         keyVal = extractRowFieldValue(item, uCol, personnelStore);
+        if ((keyVal === undefined || keyVal === null || String(keyVal).trim() === '' || String(keyVal).trim() === '-') && item.rawPerson) {
+          keyVal = extractRowFieldValue(item.rawPerson, uCol, personnelStore);
+        }
+        if (keyVal === undefined || keyVal === null || String(keyVal).trim() === '' || String(keyVal).trim() === '-') {
+          keyVal = item.cccdchuyendi || item.cccd || item.rawPerson?.cccd || item.rawPerson?.code || item.personnelId || item.id;
+        }
       } else {
         keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.personnelId ?? item.id;
       }

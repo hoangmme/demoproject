@@ -3497,6 +3497,12 @@ function computeWidgetCount(widget) {
       let val;
       if (uCol) {
         val = getRowFieldValue(r, uCol);
+        if ((val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') && r.rawPerson) {
+          val = getRowFieldValue(r.rawPerson, uCol);
+        }
+        if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') {
+          val = r.cccdchuyendi || r.cccd || r.rawPerson?.cccd || r.rawPerson?.code || r.personnelId || r.id;
+        }
       } else {
         val = r.cccd || r.rawPerson?.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
       }
@@ -3597,6 +3603,12 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
       let val;
       if (uCol) {
         val = getRowFieldValue(r, uCol);
+        if ((val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') && r.rawPerson) {
+          val = getRowFieldValue(r.rawPerson, uCol);
+        }
+        if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') {
+          val = r.cccdchuyendi || r.cccd || r.rawPerson?.cccd || r.rawPerson?.code || r.personnelId || r.id;
+        }
       } else {
         val = r.cccd || r.rawPerson?.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
       }
@@ -3606,8 +3618,6 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
           seen.add(key);
           uniqueResult.push(r);
         }
-      } else {
-        uniqueResult.push(r);
       }
     });
     filtered = uniqueResult;

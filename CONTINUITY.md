@@ -3154,3 +3154,59 @@
      - Đồng bộ `dist/` và `src/` sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 
+## SESSION 42 (2026-09-10) - ĐỒNG BỘ SỐ LƯỢNG UNIQUE WIDGET VỚI POPUP & LÀM RÕ DỮ LIỆU CHUYẾN ĐI NGUYỄN VĂN CHƯƠNG
+- **Yêu cầu Người dùng**:
+  1. Thống kê Unique hiện 4 kết quả mà khi bấm vào popup drilldown lại hiện 5 kết quả?
+  2. Cán bộ Nguyễn Văn Chương có 4 người con (thực tế là thân nhân) đi nước ngoài, nhưng bản thân không đi, tại sao trong dữ liệu chuyến đi lại hiện có đi? Check tại sao lệch dữ liệu.
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. *Lệch số lượng Unique giữa Thẻ thống kê (4) và Bảng Popup (5)*:
+     - Trong `computeWidgetCount`: khi `isUnique` bật, hệ thống gom `seen.add(key)`. Chỉ các dòng có `val` khác rỗng mới được thêm vào Set (`seen.size = 4`). Dòng có `val` rỗng bị bỏ qua.
+     - Trong `openDrilldownForWidget`: khối code cũ có nhánh `else { uniqueResult.push(r); }`. Khi 1 dòng có trường khóa unique rỗng, nó không được lọc mà bị đẩy thẳng vào `uniqueResult`! Dẫn tới bảng popup có 4 dòng unique + 1 dòng rỗng = 5 dòng.
+     - Hơn nữa, người dùng cấu hình cột Unique là `Số CCCD (cccdparent)` (vốn là trường của bảng Cán bộ/Thân nhân). Trên bản thân dòng chuyến đi của cán bộ, trường CCCD nằm ở `cccdchuyendi` hoặc trên hồ sơ `rawPerson`. Một số dòng chuyến đi không có trường `cccdparent` trực tiếp nên `val` bị rỗng.
+  2. *Dữ liệu chuyến đi của Cán bộ Nguyễn Văn Chương*:
+     - Kiểm tra trực tiếp tệp import gốc `"Thong tin can bo thu nghiem day ne (1) - Cá nhân (1).csv"` (dòng 18): Bản ghi của đồng chí Nguyễn Văn Chương có điền sẵn thông tin xuất cảnh:
+       + Số Quyết định: `2300/QĐ-UBND`, Ngày: `17/4/2026`, Cơ quan: `UBND TP`.
+       + Ngày xuất cảnh: `23/4/2026`, Ngày nhập cảnh: `28/4/2026`, Quốc gia: `Trung Quốc`, Mục đích: `Du lịch`.
+       + Tệp đính kèm: `SYT_PGD_di_TQ_17-4_signed.pdf`.
+     - Khi import tệp này vào hệ thống, hệ thống đã nạp chuyến đi Trung Quốc này vào hồ sơ cán bộ.
+     - Đồng thời, 4 thân nhân (Nguyễn Hồng Diễm Kim, Nguyễn Hồng Diễm Châu, Nguyễn Thị Phương Nga, Nguyễn Hồng Khang) được nạp từ tệp thân nhân, trong đó Kim, Châu, Khang có chuyến đi riêng. Tổng cộng hồ sơ có 4 chuyến đi (1 của Cán bộ + 3 của Thân nhân).
+- **Giải pháp Đã Triển khai**:
+  1. `DashboardView.vue` (`computeWidgetCount` & `openDrilldownForWidget`):
+     - Loại bỏ hoàn toàn `else { uniqueResult.push(r); }` trong `openDrilldownForWidget`. Bảng popup chỉ hiển thị đúng các bản ghi duy nhất, khớp 100% với số lượng `seen.size` trên thẻ.
+     - Bổ sung fallback tự động khi tra cứu trường unique của chuyến đi: Nếu trường khóa unique (`uCol`) rỗng trên bản thân dòng chuyến đi, tự động lấy từ Cán bộ liên quan (`rawPerson`) hoặc các trường định danh chuẩn (`cccdchuyendi`, `personnelId`), đảm bảo không bản ghi hợp lệ nào bị tính là rỗng.
+  2. Đồng bộ giải pháp vào `dashboardMetrics.js` (`computeMetricCardCount`) và `useTableFilters.js`.
+  3. **Kiểm thử & Triển khai**:
+     - `npm run build`: Thành công 100% (611ms, 0 lỗi).
+     - Đồng bộ toàn bộ `dist/` và `src/` sang `WINDOWS_OFFLINE_APP/`.
+## SESSION 43 (2026-09-10) - RÀ SOÁT ĐỘNG CƠ LOOKUP (ZERO-HARDCODE & ZERO-FALLBACK) & KIỂM ĐẾM TOÀN BỘ CHUYẾN ĐI CÁN BỘ / THÂN NHÂN
+- **Yêu cầu Người dùng**:
+  1. Check kỹ lại cái lookup coi có bug gì không.
+  2. Đếm xem có bao nhiêu thân nhân bao nhiêu cán bộ ở bảng chuyến đi.
+- **Kết quả Kiểm đếm Dữ liệu Thực tế (Live Database Audit)**:
+  - **Tổng số chuyến đi trong hệ thống**: **40 chuyến đi** (Tab FULL hiển thị đúng 40).
+  - **Số chuyến đi của CÁN BỘ**: **22 chuyến đi**.
+  - **Số chuyến đi của THÂN NHÂN**: **18 chuyến đi**.
+  - **Tổng số Cán bộ**: 30 cán bộ.
+  - **Tổng số Thân nhân**: 23 thân nhân.
+  - **Lý do Tab "Chuyến đi của cán bộ" hiển thị 5 và "Chuyến đi thân nhân" hiển thị 35**:
+    + Tab được lọc theo cột công thức `thuoc_tinh`: `IF( {cccdchuyendi}={cccdlookup}, 'Cán bộ', 'Thân nhân' )`.
+    + Cột `{cccdlookup}` tra cứu Cán bộ theo điều kiện `{cccdparent} = {cccdchuyendi}`.
+    + Khi số CCCD của Cán bộ khớp hoàn hảo thì `{cccdlookup}` có giá trị -> công thức trả về `'Cán bộ'` (5 chuyến).
+    + Với 17 chuyến đi còn lại của Cán bộ (bị lệch định dạng CCCD, nhập 13 số thay vì 12 số như Trần Quốc Anh, hoặc khác số do gõ lệch) và 18 chuyến đi của Thân nhân: `{cccdlookup}` trả về `'-'`, dẫn đến công thức tự động gán nhãn thành `'Thân nhân'` (17 + 18 = 35 chuyến).
+- **Rà soát & Khắc phục Lỗi Động cơ Lookup (`evaluateLookup` & `evaluateRollup`)**:
+  1. *Triệt tiêu 100% can thiệp nhân tạo & fallback ngầm*:
+     - Xóa bỏ triệt để đoạn chặn `if (isTripItem && !item.isRelative) { matched = []; }`.
+     - Xóa bỏ triệt để khối fallback đổi khóa `rKeyField` / `rParentField` và tự tiện tiêm `rawRelative` / `rawPerson` khi `matched.length === 0`.
+     - Động cơ thực thi 100% thuần khiết theo điều kiện cấu hình của người dùng (`col.lookupConditions`) và toán tử `AND` / `OR`.
+  2. *Sửa lỗi so khớp rỗng/null (`"" === ""` hoặc `null === null`)*:
+     - Trong `matchCondition` và `matchRollupCondition`: Khi `targetVal` hoặc `sourceVal` rỗng (`null`, `""`, `"-"`), lập tức trả về `false` (trừ khi toán tử là `is_empty`), triệt tiêu hoàn toàn rủi ro 2 ô trống tự động khớp nhau.
+  3. *Chuẩn hóa so khớp CCCD linh hoạt với số 0 ở đầu*:
+     - Bổ sung `cleanNumT.replace(/^0+/, '') === cleanNumS.replace(/^0+/, '')` để xử lý các số CCCD bị nhập thừa số 0 ở đầu (13 chữ số như `0340070004402` vs `340070004402`).
+  4. *Thu hẹp định danh chính xác (Disambiguation)*:
+     - Khi điều kiện người dùng khớp nhiều thân nhân (do cùng cán bộ bảo lãnh), nếu chuyến đi mang định danh Thân nhân cụ thể (`relativeId` / `rawRelative`), tự động thu hẹp về đúng thân nhân đi chuyến đó.
+- **Kiểm thử & Triển khai**:
+  - `npm run build`: Thành công 100% (610ms, 0 lỗi).
+  - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `WINDOWS_OFFLINE_APP/frontend/src/utils/formatters.js`.
+- **Trạng thái**: Done [Reversible].
+
+

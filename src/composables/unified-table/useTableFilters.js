@@ -107,6 +107,14 @@ export function useTableFilters({
           if (!keyVal && typeof getCellValue === 'function') {
             keyVal = getCellValue(item, uColId);
           }
+          if ((keyVal === undefined || keyVal === null || String(keyVal).trim() === '' || String(keyVal).trim() === '-') && item.rawPerson) {
+            keyVal = typeof extractRowFieldValue === 'function'
+              ? extractRowFieldValue(item.rawPerson, uColId, personnelStore)
+              : (typeof getCellValue === 'function' ? getCellValue(item.rawPerson, uColId) : item.rawPerson[uColId]);
+          }
+          if (keyVal === undefined || keyVal === null || String(keyVal).trim() === '' || String(keyVal).trim() === '-') {
+            keyVal = item.cccdchuyendi || item.cccd || item.rawPerson?.cccd || item.rawPerson?.code || item.personnelId || item.id;
+          }
         } else {
           keyVal =
             item[pKeyField] ??
@@ -124,8 +132,7 @@ export function useTableFilters({
           item._isUniqueRow = true;
           return true;
         }
-        item._isUniqueRow = true;
-        return true;
+        return false;
       });
     }
 

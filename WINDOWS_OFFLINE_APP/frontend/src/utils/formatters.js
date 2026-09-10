@@ -1549,7 +1549,8 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     } else if (cond.value !== undefined) {
       sourceVal = cond.value;
     }
-    if (targetVal === undefined || sourceVal === undefined) return false;
+    if (targetVal === undefined || targetVal === null || String(targetVal).trim() === '' || String(targetVal).trim() === '-') return false;
+    if (sourceVal === undefined || sourceVal === null || String(sourceVal).trim() === '' || String(sourceVal).trim() === '-') return false;
 
     const strT = String(targetVal).trim().toLowerCase();
     const strS = String(sourceVal).trim().toLowerCase();
@@ -1563,13 +1564,17 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
       if (strT === strS) return true;
       if (isBothDigits) {
         // So khớp số CCCD linh hoạt nếu bị mất số 0 đầu hoặc có khoảng trắng vô tình
-        return cleanNumT === cleanNumS || cleanNumT.padStart(12, '0') === cleanNumS.padStart(12, '0');
+        return cleanNumT === cleanNumS || 
+               cleanNumT.padStart(12, '0') === cleanNumS.padStart(12, '0') ||
+               cleanNumT.replace(/^0+/, '') === cleanNumS.replace(/^0+/, '');
       }
       return false;
     }
     if (op === 'is_not') {
       if (isBothDigits) {
-        return cleanNumT !== cleanNumS && cleanNumT.padStart(12, '0') !== cleanNumS.padStart(12, '0');
+        return cleanNumT !== cleanNumS && 
+               cleanNumT.padStart(12, '0') !== cleanNumS.padStart(12, '0') &&
+               cleanNumT.replace(/^0+/, '') !== cleanNumS.replace(/^0+/, '');
       }
       return strT !== strS;
     }
@@ -1726,123 +1731,21 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
         }
       }
 
-      // 2. Nếu vẫn chưa có và bản ghi chuyến đi đã mang sẵn liên kết Cán bộ (rawPerson / personnelId)
-      if (!parentOfficer) {
-        if (item.rawPerson && candidatePool.some(p => p.id === item.rawPerson.id)) {
-          parentOfficer = item.rawPerson;
-        } else if (item.personnelId) {
-          const pid = String(item.personnelId).trim().toLowerCase();
-          parentOfficer = candidatePool.find(p => String(p.id || '').trim().toLowerCase() === pid || String(p.code || '').trim().toLowerCase() === pid);
-        }
-      }
-
       if (parentOfficer) {
         matched.push(parentOfficer);
       }
     } else if (target === 'relatives') {
-      // Xử lý tra cứu Thân nhân (100% động theo cấu hình bảng importMappingRelative)
-      const relCols = (personnelStore?.importMappingRelative || []).flatMap(g => g.columns || []).filter(c => c && c.id && c.id !== 'stt');
-      const rKeyCol = relCols.find(c => c.isKey || c.isPrimaryKey) ||
-                      relCols.find(c => c.format === 'id') ||
-                      (personnelStore?.getRelativeKeyField ? { id: personnelStore.getRelativeKeyField() } : null);
-      const rKeyField = rKeyCol?.id;
-
-      const rParentCol = relCols.find(c => checkTableMatchesLink(c.linkTable, 'personnel')) ||
-                         relCols.find(c => c.isParentKey || c.linkColumn) ||
-                         (personnelStore?.getRelativeParentKeyField ? { id: personnelStore.getRelativeParentKeyField() } : null);
-      const rParentField = rParentCol?.id;
-
-      const isTripItem = item._recordType === 'trip' || item.departureDate !== undefined || item.destination !== undefined || item.isRelative !== undefined;
-
-      // 1. Nếu item là chuyến đi của riêng Cán bộ (không phải thân nhân đi) -> Không có thân nhân nào trong chuyến đi này
-      if (isTripItem && !item.isRelative && !item.relativeId && !item.rawRelative) {
-        matched = [];
-      } else {
-        // 2. Nếu khớp nhiều Thân nhân (ví dụ: điều kiện cccdparent trùng với Cán bộ bảo lãnh có nhiều thân nhân),
-        // nhưng chuyến đi này thuộc về một Thân nhân cụ thể -> Tự động thu hẹp về đúng 1 Thân nhân đi chuyến này
-        if (matched.length > 1 && (item.relativeId || item.rawRelative)) {
-          const targetRelId = String(item.relativeId || item.rawRelative?.id || item.rawRelative?.code || '').trim().toLowerCase();
-          const specific = matched.find(r => {
-            const rId = String(r.id || '').trim().toLowerCase();
-            const rCode = String(r.code || '').trim().toLowerCase();
-            return (targetRelId && (rId === targetRelId || rCode === targetRelId)) || (item.rawRelative && r === item.rawRelative);
-          });
-          if (specific) {
-            matched = [specific];
-          }
-        }
-
-        // 3. Nếu chưa khớp thân nhân nào (matched.length === 0)
-        if (matched.length === 0) {
-          // 3a. Ưu tiên đối tượng thân nhân đã gắn sẵn trên chuyến đi (rawRelative / relativeId)
-          if (item.rawRelative && candidatePool.some(r => r.id === item.rawRelative.id)) {
-            matched = [item.rawRelative];
-          } else if (item.relativeId) {
-            const rid = String(item.relativeId).trim().toLowerCase();
-            const specific = candidatePool.find(r => String(r.id || '').trim().toLowerCase() === rid || String(r.code || '').trim().toLowerCase() === rid);
-            if (specific) matched = [specific];
-          }
-
-          // 3b. Kiểm tra qua điều kiện cấu hình (đối chiếu sVal với khóa chính Thân nhân hoặc khóa ngoại Cán bộ)
-          if (matched.length === 0 && conditions.length > 0) {
-            for (const cond of conditions) {
-              const sVal = cond.sourceField ? getProp(item, cond.sourceField) : cond.value;
-              if (sVal === undefined || sVal === null || sVal === '' || sVal === '-') continue;
-              const strS = String(sVal).trim().toLowerCase();
-              const cleanS = strS.replace(/[^0-9]/g, '');
-              if (!cleanS && !strS) continue;
-
-              // Ưu tiên khớp với Khóa chính của Thân nhân (rKeyField, ví dụ CCCD thân nhân trên dòng chuyến đi)
-              if (rKeyField) {
-                const matchedByRelKey = candidatePool.find(r => {
-                  const rVal = getProp(r, rKeyField);
-                  if (rVal !== undefined && rVal !== null) {
-                    const strR = String(rVal).trim().toLowerCase();
-                    if (strS && strR === strS) return true;
-                    const cleanR = strR.replace(/[^0-9]/g, '');
-                    if (cleanS && cleanR && (cleanS === cleanR || cleanS.padStart(12, '0') === cleanR.padStart(12, '0'))) return true;
-                  }
-                  return String(r.id || '').trim().toLowerCase() === strS || String(r.code || '').trim().toLowerCase() === strS;
-                });
-                if (matchedByRelKey) {
-                  matched = [matchedByRelKey];
-                  break;
-                }
-              }
-
-              // Khớp qua Khóa ngoại trỏ về Cán bộ (rParentField)
-              if (rParentField) {
-                const matchedRels = candidatePool.filter(r => {
-                  const rParentVal = getProp(r, rParentField);
-                  if (rParentVal !== undefined && rParentVal !== null) {
-                    const strP = String(rParentVal).trim().toLowerCase();
-                    if (strS && strP === strS) return true;
-                    const cleanP = strP.replace(/[^0-9]/g, '');
-                    if (cleanS && cleanP && (cleanS === cleanP || cleanS.padStart(12, '0') === cleanP.padStart(12, '0'))) return true;
-                  }
-                  return false;
-                });
-
-                if (matchedRels.length > 0) {
-                  // Nếu chuyến đi có thân nhân cụ thể, chỉ lấy đúng thân nhân đó
-                  if (item.relativeId || item.rawRelative) {
-                    const targetRelId = String(item.relativeId || item.rawRelative?.id || item.rawRelative?.code || '').trim().toLowerCase();
-                    const specific = matchedRels.find(r => {
-                      const rId = String(r.id || '').trim().toLowerCase();
-                      const rCode = String(r.code || '').trim().toLowerCase();
-                      return (targetRelId && (rId === targetRelId || rCode === targetRelId)) || (item.rawRelative && r === item.rawRelative);
-                    });
-                    if (specific) {
-                      matched = [specific];
-                      break;
-                    }
-                  }
-                  matched.push(...matchedRels);
-                  break;
-                }
-              }
-            }
-          }
+      // Nếu điều kiện người dùng khớp nhiều Thân nhân (ví dụ: điều kiện cccdparent trùng với Cán bộ bảo lãnh có nhiều thân nhân),
+      // nhưng bản thân dòng chuyến đi này thuộc về một Thân nhân cụ thể -> Thu hẹp về đúng Thân nhân thực tế của chuyến đi đó
+      if (matched.length > 1 && (item.relativeId || item.rawRelative)) {
+        const targetRelId = String(item.relativeId || item.rawRelative?.id || item.rawRelative?.code || '').trim().toLowerCase();
+        const specific = matched.find(r => {
+          const rId = String(r.id || '').trim().toLowerCase();
+          const rCode = String(r.code || '').trim().toLowerCase();
+          return (targetRelId && (rId === targetRelId || rCode === targetRelId)) || (item.rawRelative && r === item.rawRelative);
+        });
+        if (specific) {
+          matched = [specific];
         }
       }
     }
@@ -1976,7 +1879,8 @@ export const evaluateRollup = (item, col, personnelStore) => {
     } else if (cond.value !== undefined) {
       sourceVal = cond.value;
     }
-    if (targetVal === undefined || sourceVal === undefined) return false;
+    if (targetVal === undefined || targetVal === null || String(targetVal).trim() === '' || String(targetVal).trim() === '-') return false;
+    if (sourceVal === undefined || sourceVal === null || String(sourceVal).trim() === '' || String(sourceVal).trim() === '-') return false;
 
     const strT = String(targetVal).trim().toLowerCase();
     const strS = String(sourceVal).trim().toLowerCase();
@@ -1988,13 +1892,17 @@ export const evaluateRollup = (item, col, personnelStore) => {
     if (op === 'is') {
       if (strT === strS) return true;
       if (isBothDigits) {
-        return cleanNumT === cleanNumS || cleanNumT.padStart(12, '0') === cleanNumS.padStart(12, '0');
+        return cleanNumT === cleanNumS || 
+               cleanNumT.padStart(12, '0') === cleanNumS.padStart(12, '0') ||
+               cleanNumT.replace(/^0+/, '') === cleanNumS.replace(/^0+/, '');
       }
       return false;
     }
     if (op === 'is_not') {
       if (isBothDigits) {
-        return cleanNumT !== cleanNumS && cleanNumT.padStart(12, '0') !== cleanNumS.padStart(12, '0');
+        return cleanNumT !== cleanNumS && 
+               cleanNumT.padStart(12, '0') !== cleanNumS.padStart(12, '0') &&
+               cleanNumT.replace(/^0+/, '') !== cleanNumS.replace(/^0+/, '');
       }
       return strT !== strS;
     }
