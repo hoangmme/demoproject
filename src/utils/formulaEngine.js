@@ -327,19 +327,23 @@ export class FormulaEvaluator {
       // Tham chiếu cột dữ liệu: {ten_cot}
       if (token.type === 'FIELD') {
         const fieldName = consume().value;
-        if (typeof this.fieldResolver === 'function') {
-          const res = this.fieldResolver(fieldName);
-          if (res !== undefined && res !== null && res !== '' && res !== '-') {
-            return res;
-          }
-        }
-        let val = this.context[fieldName] ?? this.context[fieldName.toLowerCase()];
+        const val = this.context[fieldName] ?? this.context[fieldName.toLowerCase()];
         if (val !== undefined && val !== null && val !== '' && val !== '-') {
           return val;
         }
         if (typeof this.fieldResolver === 'function') {
-          const res = this.fieldResolver(fieldName);
-          if (res !== undefined && res !== null && res !== '' && res !== '-') return res;
+          if (!this.resolvingFields) this.resolvingFields = new Set();
+          const cleanKey = String(fieldName).toLowerCase().trim();
+          if (this.resolvingFields.has(cleanKey)) return '';
+          this.resolvingFields.add(cleanKey);
+          try {
+            const res = this.fieldResolver(fieldName);
+            if (res !== undefined && res !== null && res !== '' && res !== '-') {
+              return res;
+            }
+          } finally {
+            this.resolvingFields.delete(cleanKey);
+          }
         }
         return null;
       }
@@ -360,16 +364,25 @@ export class FormulaEvaluator {
           consume(')');
           return this.executeFunction(funcName, args);
         }
-        // Nếu không có dấu ngoặc, kiểm tra xem có phải tên cột không
-        if (typeof this.fieldResolver === 'function') {
-          const res = this.fieldResolver(funcName);
-          if (res !== undefined && res !== null && res !== '' && res !== '-') {
-            return res;
-          }
-        }
+        // Nếu không có dấu ngoặc, kiểm tra context trước
         const cVal = this.context[funcName] ?? this.context[funcName.toLowerCase()];
         if (cVal !== undefined && cVal !== null && cVal !== '' && cVal !== '-') {
           return cVal;
+        }
+        // Sau đó mới kiểm tra fieldResolver kèm chống lặp vô hạn
+        if (typeof this.fieldResolver === 'function') {
+          if (!this.resolvingFields) this.resolvingFields = new Set();
+          const cleanKey = String(funcName).toLowerCase().trim();
+          if (this.resolvingFields.has(cleanKey)) return funcName;
+          this.resolvingFields.add(cleanKey);
+          try {
+            const res = this.fieldResolver(funcName);
+            if (res !== undefined && res !== null && res !== '' && res !== '-') {
+              return res;
+            }
+          } finally {
+            this.resolvingFields.delete(cleanKey);
+          }
         }
         return funcName;
       }
@@ -585,21 +598,18 @@ export const evaluateCustomFormula = (record, expression, columns = [], fieldRes
     }
 
 
-    // Nạp theo tên nhãn hiển thị (label) của cột
+    // Nạp theo tên nhãn hiển thị (label) của cột từ dữ liệu sẵn có trên bản ghi
     if (Array.isArray(columns)) {
       columns.forEach((c) => {
         if (c && c.id) {
-          let val = getRecordFieldValue(record, c.id);
-          if ((val === undefined || val === null || val === '') && typeof fieldResolver === 'function') {
-            val = fieldResolver(c.id);
-          }
+          const val = getRecordFieldValue(record, c.id);
           if (val !== undefined && val !== null) {
             context[c.id] = val;
             context[c.id.toLowerCase()] = val;
-          }
-          if (c.label && val !== undefined && val !== null) {
-            context[c.label] = val;
-            context[c.label.toLowerCase()] = val;
+            if (c.label) {
+              context[c.label] = val;
+              context[c.label.toLowerCase()] = val;
+            }
           }
         }
       });

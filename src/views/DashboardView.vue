@@ -1948,7 +1948,7 @@ const getDisplayValue = (row, colId, depth = 0) => {
       ...colDef,
       columns: Object.values(allMap),
       cellResolver: (targetColId) => {
-        if (!targetColId || targetColId === colId) return '';
+        if (!targetColId || targetColId === colId || depth > 2) return '';
         const cell = getDisplayValue(row, targetColId, depth + 1);
         return cell !== '-' ? cell : '';
       },
@@ -2766,8 +2766,8 @@ const getTripPresence = (t) => resolvePresence(t);
 
 const unifiedTripsList = computed(() => buildTopicSourceList('trips', personnelStore));
 
-const getRowFieldValue = (row, colId, colDefOverride = null) => {
-  if (!row || !colId) return '';
+const getRowFieldValue = (row, colId, colDefOverride = null, depth = 0) => {
+  if (!row || !colId || depth > 2) return '';
 
   // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
   const vVal = resolveVirtualColumnValue(row, colId);
@@ -2802,8 +2802,8 @@ const getRowFieldValue = (row, colId, colDefOverride = null) => {
       ...colDef,
       columns: Object.values(allMap),
       cellResolver: (targetColId) => {
-        if (!targetColId || targetColId === colId) return '';
-        const cell = getRowFieldValue(row, targetColId);
+        if (!targetColId || targetColId === colId || depth > 2) return '';
+        const cell = getRowFieldValue(row, targetColId, null, depth + 1);
         return cell !== '-' ? cell : '';
       },
     };

@@ -563,7 +563,7 @@ export const extractRowFieldValue = (item, field, personnelStore, depth = 0) => 
         ...colDef,
         columns: allColDefs,
         cellResolver: (targetColId) => {
-          if (!targetColId || targetColId === field || depth > 5) return '';
+          if (!targetColId || targetColId === field || depth > 2) return '';
           const targetCol = allColDefs.find((c) => c && (c.id === targetColId || c.label === targetColId));
           if (targetCol && targetCol.format === 'lookup') {
             const lkVal = evaluateLookup(item, targetCol, personnelStore);

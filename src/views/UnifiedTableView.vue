@@ -2574,7 +2574,7 @@ const shouldCollapseDuplicate = (data, index, col) => {
 
 const getCellValue = (trip, colOrId, depth = 0) => {
   const colId = typeof colOrId === 'object' && colOrId !== null ? (colOrId.id || colOrId.field) : colOrId;
-  if (!trip || !colId || depth > 5) return '-';
+  if (!trip || !colId || depth > 2) return '-';
 
   // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
   const vVal = resolveVirtualColumnValue(trip, colId);
@@ -2603,7 +2603,7 @@ const getCellValue = (trip, colOrId, depth = 0) => {
       ...colDef,
       columns: allAvailableColumnsList.value || [],
       cellResolver: (targetColId) => {
-        if (!targetColId || targetColId === colId) return '';
+        if (!targetColId || targetColId === colId || depth > 2) return '';
         const cell = getCellValue(trip, targetColId, depth + 1);
         return cell !== '-' ? cell : '';
       },

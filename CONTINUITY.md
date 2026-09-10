@@ -2947,7 +2947,29 @@
   - **Kiểm thử & Triển khai**:
     - `npm run build` thành công 100% (557ms, 0 lỗi).
     - Đồng bộ `dist/`, `src/`, và `CONTINUITY.md` sang `WINDOWS_OFFLINE_APP/`.
+- **Session 37 (2026-09-10) - Triệt Tiêu Lỗi Vòng Lặp Vô Hạn RangeError: Maximum call stack size exceeded trong Động Cơ Công Thức (Formula Engine)**:
+  - **Vấn đề Người dùng Báo cáo**:
+    - Console xuất hiện lỗi sập stack: `RangeError: Maximum call stack size exceeded at cellResolver ... at Array.forEach (<anonymous>)`.
+  - **Nguyên nhân Gốc rễ**:
+    1. Trong `src/utils/formulaEngine.js` (`evaluateCustomFormula`): Trước khi đánh giá biểu thức, code thực hiện một vòng lặp `columns.forEach((c) => ...)` duyệt qua toàn bộ 50 cột của bảng. Nếu cột đó chưa có giá trị trên record, nó gọi ngay `fieldResolver(c.id)` (tức `cellResolver`).
+    2. Nếu trong bảng có các cột công thức khác (hoặc khi `cellResolver` gọi lại `getCellValue` / `getRowFieldValue` / `extractRowFieldValue`), hàm lấy giá trị lại kích hoạt `evaluateFormula`, tạo ra vòng lặp lồng nhau đệ quy giữa các cột công thức.
+    3. Hơn nữa, `FormulaEvaluator` thiếu cơ chế phát hiện chu kỳ (Cycle Detection) khi một trường tự tham chiếu hoặc gọi chéo nhau.
+  - **Giải pháp & Cải tiến Triển khai**:
+    1. **Loại bỏ Eager Resolution trong `formulaEngine.js`**:
+       - Bỏ hoàn toàn lời gọi `fieldResolver` bên trong vòng lặp `columns.forEach`. `context` chỉ nạp các giá trị đã có sẵn trên `record` / `custom_data`.
+       - `fieldResolver` chỉ được kích hoạt lười (Lazy Evaluation) theo nhu cầu khi và chỉ khi biểu thức công thức thực sự chứa token tham chiếu `{ten_cot}` đó.
+    2. **Cơ chế Chống Lặp Vô hạn (Cycle Detection) Tuyệt đối trong `FormulaEvaluator`**:
+       - Bổ sung `this.resolvingFields = new Set()`: Khi một trường đang được giải quyết, nếu phát hiện chính trường đó lại bị gọi lại trong chuỗi đệ quy, hàm lập tức ngắt và trả về rỗng `""` thay vì chạy lặp vô hạn.
+       - Ưu tiên đọc trực tiếp từ `this.context[fieldName]` trước khi gọi `fieldResolver`.
+    3. **Giới hạn Độ sâu Đệ quy (Depth Guard <= 2) tại Mọi Điểm Gọi**:
+       - `UnifiedTableView.vue`: `depth > 2` trả về `'-'` ngay lập tức.
+       - `DashboardView.vue`: `depth > 2` cho cả `getDisplayValue` và `getRowFieldValue`.
+       - `dashboardMetrics.js`: `depth > 2` trong `cellResolver`.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (570ms, 0 lỗi).
+    - Đồng bộ `dist/`, `src/`, và `CONTINUITY.md` sang `WINDOWS_OFFLINE_APP/`.
   - **Trạng thái**: Done [Reversible].
+
 
 
 
