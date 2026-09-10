@@ -360,11 +360,11 @@ const getLinkedRows = (targetTable) => {
   if (curId === 'personnel' && targetId === 'trips') {
     const allTrips = targetTable.getRows ? targetTable.getRows(personnelStore) : (personnelStore.tripsList || []);
     const pKeyCol = getTableKeyColId(curTable);
-    const pKeyVal = String(curRecord[pKeyCol] || curRecord.cccd || curRecord.code || curRecord.id || '').trim().toLowerCase();
-    const pId = String(curRecord.id || curRecord.code || '').trim();
+    const pKeyVal = pKeyCol && curRecord[pKeyCol] ? String(curRecord[pKeyCol]).trim().toLowerCase() : '';
+    const pId = String(curRecord.id || '').trim();
 
     const tripFkPers = targetCols.find((c) => checkTableMatchesLink(c.linkTable, 'personnel')) ||
-                       targetCols.find((c) => c.id === 'cccdchuyendi' || c.id === 'cccd');
+                       (tripKeyField.value ? targetCols.find((c) => c.id === tripKeyField.value) : null);
 
     const res = [];
     const seen = new Set();
@@ -372,10 +372,11 @@ const getLinkedRows = (targetTable) => {
     // 1a. Personal trips taken by this Officer (Pure Key Match)
     allTrips.forEach((t, idx) => {
       const uKey = t.uniqueKey || t.id || `trip_${idx}`;
-      const tVal = tripFkPers ? String(t[tripFkPers.id] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase() : '';
-      const matchKey = pKeyVal && tVal && tVal === pKeyVal;
+      const tVal = tripFkPers && t[tripFkPers.id] ? String(t[tripFkPers.id]).trim().toLowerCase() : '';
+      const matchKey = Boolean(pKeyVal && tVal && tVal === pKeyVal);
+      const matchPersId = Boolean(pId && t.personnelId && String(t.personnelId).trim() === pId);
 
-      if (matchKey && !t.isRelative) {
+      if ((matchKey || matchPersId) && !t.isRelative) {
         if (!seen.has(uKey)) {
           seen.add(uKey);
           res.push({
@@ -393,23 +394,40 @@ const getLinkedRows = (targetTable) => {
     const relTable = allTables.value.find((t) => t.id === 'relatives');
     const linkedRelatives = relTable ? getLinkedRows(relTable) : [];
     const tripFkRel = targetCols.find((c) => checkTableMatchesLink(c.linkTable, 'relatives')) ||
-                      targetCols.find((c) => c.id === 'cccdchuyendi' || c.id === 'cccd');
+                      (tripKeyField.value ? targetCols.find((c) => c.id === tripKeyField.value) : null);
 
     linkedRelatives.forEach((r) => {
-      const rKeyCol = relTable ? getTableKeyColId(relTable) : (relKeyField.value || 'id');
-      const rKeyVal = String(r[rKeyCol] || r.cccdthannhan || r.cccd || r.id || '').trim().toLowerCase();
+      const rKeyCol = relTable ? getTableKeyColId(relTable) : relKeyField.value;
+      const rKeyVal = rKeyCol && r[rKeyCol] ? String(r[rKeyCol]).trim().toLowerCase() : '';
       const rId = String(r.id || '').trim();
       const rDisplayName = r[relativeNameField.value] || r.relativeName || r.name || 'Thân nhân';
       const rRelName = r.relationshipName || r.relationship || '';
       const rBadge = `👥 Thân nhân: ${rDisplayName}${rRelName ? ' (' + rRelName + ')' : ''}`;
 
+      // Include trips stored directly inside relative
+      (r.trips || []).forEach((t, idx) => {
+        const uKey = t.uniqueKey || t.id || `local_rel_trip_${idx}`;
+        if (!seen.has(uKey)) {
+          seen.add(uKey);
+          res.push({
+            ...t,
+            _travelerType: 'relative',
+            _travelerBadge: rBadge,
+            _travelerName: rDisplayName,
+            _relativeInfo: r,
+            _isPersonnelTrip: false,
+          });
+        }
+      });
+
       allTrips.forEach((t, idx) => {
         const uKey = t.uniqueKey || t.id || `trip_${idx}`;
         if (seen.has(uKey)) return;
-        const tVal = tripFkRel ? String(t[tripFkRel.id] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase() : '';
-        const matchKey = rKeyVal && tVal && tVal === rKeyVal;
+        const tVal = tripFkRel && t[tripFkRel.id] ? String(t[tripFkRel.id]).trim().toLowerCase() : '';
+        const matchKey = Boolean(rKeyVal && tVal && tVal === rKeyVal);
+        const matchRelId = Boolean(rId && t.relativeId && String(t.relativeId).trim() === rId);
 
-        if (matchKey) {
+        if (matchKey || matchRelId) {
           seen.add(uKey);
           res.push({
             ...t,
@@ -432,20 +450,20 @@ const getLinkedRows = (targetTable) => {
   if (curId === 'personnel' && targetId === 'relatives') {
     const allRelatives = targetTable.getRows ? targetTable.getRows(personnelStore) : (personnelStore.relativesList || []);
     const pKeyCol = getTableKeyColId(curTable);
-    const pKeyVal = String(curRecord[pKeyCol] || curRecord.cccd || curRecord.code || curRecord.id || '').trim().toLowerCase();
-    const pId = String(curRecord.id || curRecord.code || '').trim();
+    const pKeyVal = pKeyCol && curRecord[pKeyCol] ? String(curRecord[pKeyCol]).trim().toLowerCase() : '';
+    const pId = String(curRecord.id || '').trim();
 
     const fkRelToPers = targetCols.find((c) => checkTableMatchesLink(c.linkTable, 'personnel')) ||
-                        targetCols.find((c) => c.id === 'cccdparent');
+                        (relParentKey.value ? targetCols.find((c) => c.id === relParentKey.value) : null);
 
     const res = [];
     const seen = new Set();
     allRelatives.forEach((r, idx) => {
       const uKey = r.id || r.uniqueKey || `rel_${idx}`;
       if (seen.has(uKey)) return;
-      const rParentVal = fkRelToPers ? String(r[fkRelToPers.id] || r.cccdparent || r.parentCccd || '').trim().toLowerCase() : '';
-      const matchId = pId && r.personnelId && String(r.personnelId).trim() === pId;
-      const matchKey = pKeyVal && rParentVal && rParentVal === pKeyVal;
+      const rParentVal = fkRelToPers && r[fkRelToPers.id] ? String(r[fkRelToPers.id]).trim().toLowerCase() : '';
+      const matchId = Boolean(pId && r.personnelId && String(r.personnelId).trim() === pId);
+      const matchKey = Boolean(pKeyVal && rParentVal && rParentVal === pKeyVal);
 
       if (matchId || matchKey) {
         seen.add(uKey);
@@ -473,14 +491,14 @@ const getLinkedRows = (targetTable) => {
     const pKeyCol = getTableKeyColId(targetTable);
 
     const fkRelToPers = curCols.find((c) => checkTableMatchesLink(c.linkTable, 'personnel')) ||
-                        curCols.find((c) => c.id === 'cccdparent');
-    const pVal = String(curRecord[fkRelToPers?.id] || curRecord.cccdparent || curRecord.parentCccd || '').trim().toLowerCase();
+                        (relParentKey.value ? curCols.find((c) => c.id === relParentKey.value) : null);
+    const pVal = fkRelToPers && curRecord[fkRelToPers.id] ? String(curRecord[fkRelToPers.id]).trim().toLowerCase() : '';
     const pId = String(curRecord.personnelId || '').trim();
 
     const p = allPersonnel.find((pers) => {
-      if (pId && (String(pers.id).trim() === pId || String(pers.code).trim() === pId)) return true;
-      if (pVal) {
-        const val = String(pers[pKeyCol] || pers.cccd || '').trim().toLowerCase();
+      if (pId && String(pers.id).trim() === pId) return true;
+      if (pVal && pKeyCol) {
+        const val = pers[pKeyCol] ? String(pers[pKeyCol]).trim().toLowerCase() : '';
         if (val && val === pVal) return true;
       }
       return false;
@@ -495,22 +513,40 @@ const getLinkedRows = (targetTable) => {
   if (curId === 'relatives' && targetId === 'trips') {
     const allTrips = targetTable.getRows ? targetTable.getRows(personnelStore) : (personnelStore.tripsList || []);
     const rKeyCol = getTableKeyColId(curTable);
-    const rKeyVal = String(curRecord[rKeyCol] || curRecord.cccdthannhan || curRecord.cccd || curRecord.id || '').trim().toLowerCase();
-    const rId = String(curRecord.id || curRecord.code || '').trim();
+    const rKeyVal = rKeyCol && curRecord[rKeyCol] ? String(curRecord[rKeyCol]).trim().toLowerCase() : '';
+    const rId = String(curRecord.id || '').trim();
 
     const tripFkRel = targetCols.find((c) => checkTableMatchesLink(c.linkTable, 'relatives')) ||
-                      targetCols.find((c) => c.id === 'cccdchuyendi' || c.id === 'cccd');
+                      (tripKeyField.value ? targetCols.find((c) => c.id === tripKeyField.value) : null);
 
     const res = [];
     const seen = new Set();
 
+    // 4a. Local trips inside this relative record
+    (curRecord.trips || []).forEach((t, idx) => {
+      const uKey = t.uniqueKey || t.id || `rel_trip_${idx}`;
+      if (!seen.has(uKey)) {
+        seen.add(uKey);
+        res.push({
+          ...t,
+          _travelerType: 'relative',
+          _travelerBadge: '👥 Thân nhân',
+          _isPersonnelTrip: false,
+        });
+      }
+    });
+
+    // 4b. Trips in allTrips matching this relative
     allTrips.forEach((t, idx) => {
       const uKey = t.uniqueKey || t.id || `trip_${idx}`;
       if (seen.has(uKey)) return;
-      const tVal = tripFkRel ? String(t[tripFkRel.id] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase() : '';
-      const matchKey = rKeyVal && tVal && tVal === rKeyVal;
 
-      if (matchKey) {
+      const tVal = tripFkRel && t[tripFkRel.id] ? String(t[tripFkRel.id]).trim().toLowerCase() : '';
+      const matchKey = Boolean(rKeyVal && tVal && tVal === rKeyVal);
+      const matchRelId = Boolean(rId && t.relativeId && String(t.relativeId).trim() === rId);
+      const matchRelKey = Boolean(rKeyVal && t.cccdthannhan && String(t.cccdthannhan).trim().toLowerCase() === rKeyVal);
+
+      if (matchKey || matchRelId || matchRelKey) {
         seen.add(uKey);
         res.push({
           ...t,
@@ -532,15 +568,15 @@ const getLinkedRows = (targetTable) => {
     const pKeyCol = getTableKeyColId(targetTable);
 
     const fkTripToPers = curCols.find((c) => checkTableMatchesLink(c.linkTable, 'personnel')) ||
-                         curCols.find((c) => c.id === 'cccdchuyendi' || c.id === 'cccd');
-    const tripLinkVal = String(curRecord[fkTripToPers?.id] || curRecord.cccdchuyendi || curRecord.cccd || '').trim().toLowerCase();
+                         (tripKeyField.value ? curCols.find((c) => c.id === tripKeyField.value) : null);
+    const tripLinkVal = fkTripToPers && curRecord[fkTripToPers.id] ? String(curRecord[fkTripToPers.id]).trim().toLowerCase() : '';
 
     // ZERO FALLBACK: If trip linking key is empty, no linked personnel!
     if (!tripLinkVal) return [];
 
     // 5a. Direct match with Personnel via tripLinkVal (e.g. CCCD Cán bộ)
     const p = allPersonnel.find((pers) => {
-      const val = String(pers[pKeyCol] || pers.cccd || '').trim().toLowerCase();
+      const val = pKeyCol && pers[pKeyCol] ? String(pers[pKeyCol]).trim().toLowerCase() : '';
       return val && val === tripLinkVal;
     });
     if (p) return [p];
@@ -548,20 +584,21 @@ const getLinkedRows = (targetTable) => {
     // 5b. Transitive lookup via Relative (if tripLinkVal matched a Relative's CCCD, find that relative's parent officer)
     const relTable = allTables.value.find((t) => t.id === 'relatives');
     const allRelatives = relTable?.getRows ? relTable.getRows(personnelStore) : (personnelStore.relativesList || []);
-    const rKeyCol = relTable ? getTableKeyColId(relTable) : (relKeyField.value || 'id');
+    const rKeyCol = relTable ? getTableKeyColId(relTable) : relKeyField.value;
 
     const matchedRel = allRelatives.find((r) => {
-      const val = String(r[rKeyCol] || r.cccdthannhan || r.cccd || '').trim().toLowerCase();
+      const val = rKeyCol && r[rKeyCol] ? String(r[rKeyCol]).trim().toLowerCase() : '';
       return val && val === tripLinkVal;
     });
 
     if (matchedRel) {
-      const relParentCol = (relTable?.getColumns ? relTable.getColumns(personnelStore) : []).find((c) => checkTableMatchesLink(c.linkTable, 'personnel'));
-      const parentKeyVal = String(matchedRel[relParentCol?.id] || matchedRel.cccdparent || matchedRel.parentCccd || '').trim().toLowerCase();
+      const relParentCol = (relTable?.getColumns ? relTable.getColumns(personnelStore) : []).find((c) => checkTableMatchesLink(c.linkTable, 'personnel')) ||
+                           (relParentKey.value ? { id: relParentKey.value } : null);
+      const parentKeyVal = relParentCol && matchedRel[relParentCol.id] ? String(matchedRel[relParentCol.id]).trim().toLowerCase() : '';
 
-      if (parentKeyVal) {
+      if (parentKeyVal && pKeyCol) {
         const parentPers = allPersonnel.find((pers) => {
-          const val = String(pers[pKeyCol] || pers.cccd || '').trim().toLowerCase();
+          const val = pers[pKeyCol] ? String(pers[pKeyCol]).trim().toLowerCase() : '';
           return val && val === parentKeyVal;
         });
         if (parentPers) return [parentPers];
@@ -579,15 +616,15 @@ const getLinkedRows = (targetTable) => {
     const rKeyCol = getTableKeyColId(targetTable);
 
     const fkTripToRel = curCols.find((c) => checkTableMatchesLink(c.linkTable, 'relatives')) ||
-                        curCols.find((c) => c.id === 'cccdchuyendi' || c.id === 'cccd');
-    const tripLinkVal = String(curRecord[fkTripToRel?.id] || curRecord.cccdchuyendi || curRecord.cccd || '').trim().toLowerCase();
+                        (tripKeyField.value ? curCols.find((c) => c.id === tripKeyField.value) : null);
+    const tripLinkVal = fkTripToRel && curRecord[fkTripToRel.id] ? String(curRecord[fkTripToRel.id]).trim().toLowerCase() : '';
 
     // ZERO FALLBACK: If trip linking key is empty, no linked relatives!
     if (!tripLinkVal) return [];
 
     // 6a. If tripLinkVal matches a specific relative directly via CCCD
     const r = allRelatives.find((rel) => {
-      const val = String(rel[rKeyCol] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
+      const val = rKeyCol && rel[rKeyCol] ? String(rel[rKeyCol]).trim().toLowerCase() : '';
       return val && val === tripLinkVal;
     });
     if (r) return [r];
@@ -597,13 +634,13 @@ const getLinkedRows = (targetTable) => {
     const parentPersList = persTable ? getLinkedRows(persTable) : [];
     if (parentPersList.length > 0) {
       const p = parentPersList[0];
-      const pKeyCol = persTable ? getTableKeyColId(persTable) : 'cccd';
-      const pKeyVal = String(p[pKeyCol] || p.cccd || '').trim().toLowerCase();
+      const pKeyCol = persTable ? getTableKeyColId(persTable) : pKeyField.value;
+      const pKeyVal = pKeyCol && p[pKeyCol] ? String(p[pKeyCol]).trim().toLowerCase() : '';
       const fkRelToPers = targetCols.find((c) => checkTableMatchesLink(c.linkTable, 'personnel')) ||
-                          targetCols.find((c) => c.id === 'cccdparent');
+                          (relParentKey.value ? targetCols.find((c) => c.id === relParentKey.value) : null);
       return allRelatives.filter((rel) => {
-        const rParentVal = fkRelToPers ? String(rel[fkRelToPers.id] || rel.cccdparent || rel.parentCccd || '').trim().toLowerCase() : '';
-        return pKeyVal && rParentVal && rParentVal === pKeyVal;
+        const rParentVal = fkRelToPers && rel[fkRelToPers.id] ? String(rel[fkRelToPers.id]).trim().toLowerCase() : '';
+        return Boolean(pKeyVal && rParentVal && rParentVal === pKeyVal);
       });
     }
 

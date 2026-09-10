@@ -391,19 +391,19 @@ const dialogHeader = computed(() => {
 // Dynamic linkage resolution for Trips banner (Zero Fallback / Pure Key Matching)
 const tripLinkedRelative = computed(() => {
   if (recordSource.value !== 'trips') return null;
-  const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
-  const tVal = String(form.value[tKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
+  const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : '';
+  const tVal = tKeyField && form.value[tKeyField] ? String(form.value[tKeyField]).trim().toLowerCase() : '';
 
   // ZERO FALLBACK: If trip linking key is empty, it does NOT link to anyone!
   if (!tVal) return null;
 
   const allRelatives = personnelStore.relativesList || [];
-  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : '';
 
   // Direct Key match with Relative Key (e.g. cccdthannhan)
   if (rKeyField) {
     const r = allRelatives.find((rel) => {
-      const c = String(rel[rKeyField] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
+      const c = rel[rKeyField] ? String(rel[rKeyField]).trim().toLowerCase() : '';
       return c && c === tVal;
     });
     if (r) return r;
@@ -413,19 +413,19 @@ const tripLinkedRelative = computed(() => {
 
 const tripLinkedOfficer = computed(() => {
   if (recordSource.value !== 'trips') return null;
-  const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
-  const tVal = String(form.value[tKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
+  const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : '';
+  const tVal = tKeyField && form.value[tKeyField] ? String(form.value[tKeyField]).trim().toLowerCase() : '';
 
   // ZERO FALLBACK: If trip linking key is empty, it does NOT link to anyone!
   if (!tVal) return null;
 
   const allPersonnel = personnelStore.personnelList || [];
-  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccd';
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : '';
 
   // 1. Direct Key match with Personnel Key (e.g. cccd)
   if (pKeyField) {
     const p = allPersonnel.find((pers) => {
-      const c = String(pers[pKeyField] || pers.cccd || '').trim().toLowerCase();
+      const c = pers[pKeyField] ? String(pers[pKeyField]).trim().toLowerCase() : '';
       return c && c === tVal;
     });
     if (p) return p;
@@ -434,11 +434,11 @@ const tripLinkedOfficer = computed(() => {
   // 2. Via linked relative (only if trip was matched to a relative, find that relative's parent officer)
   const rel = tripLinkedRelative.value;
   if (rel) {
-    const relParentKey = personnelStore.getRelativeParentKeyField ? personnelStore.getRelativeParentKeyField() : 'cccdparent';
-    const parentVal = String(rel[relParentKey] || rel.cccdparent || rel.parentCccd || '').trim().toLowerCase();
+    const relParentKey = personnelStore.getRelativeParentKeyField ? personnelStore.getRelativeParentKeyField() : '';
+    const parentVal = relParentKey && rel[relParentKey] ? String(rel[relParentKey]).trim().toLowerCase() : '';
     if (parentVal && pKeyField) {
       const p = allPersonnel.find((pers) => {
-        const c = String(pers[pKeyField] || pers.cccd || '').trim().toLowerCase();
+        const c = pers[pKeyField] ? String(pers[pKeyField]).trim().toLowerCase() : '';
         return c && c === parentVal;
       });
       if (p) return p;
@@ -459,22 +459,22 @@ const travelerTrips = computed(() => {
   if (!officer && !rel) return [];
 
   const allTrips = personnelStore.tripsList || [];
-  const tripKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
-  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccd';
-  const relKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+  const tripKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : '';
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : '';
+  const relKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : '';
 
   if (isRelativeTrip.value && rel) {
-    const relKeyVal = String(rel[relKeyField] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
+    const relKeyVal = relKeyField && rel[relKeyField] ? String(rel[relKeyField]).trim().toLowerCase() : '';
     if (!relKeyVal) return [];
     return allTrips.filter((t) => {
-      const tVal = String(t[tripKeyField] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
+      const tVal = tripKeyField && t[tripKeyField] ? String(t[tripKeyField]).trim().toLowerCase() : '';
       return tVal && tVal === relKeyVal;
     });
   } else if (officer) {
-    const officerKeyVal = String(officer[pKeyField] || officer.cccd || '').trim().toLowerCase();
+    const officerKeyVal = pKeyField && officer[pKeyField] ? String(officer[pKeyField]).trim().toLowerCase() : '';
     if (!officerKeyVal) return [];
     return allTrips.filter((t) => {
-      const tVal = String(t[tripKeyField] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
+      const tVal = tripKeyField && t[tripKeyField] ? String(t[tripKeyField]).trim().toLowerCase() : '';
       return tVal && tVal === officerKeyVal;
     });
   }
