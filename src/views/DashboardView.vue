@@ -1036,14 +1036,6 @@
           </div>
         </div>
 
-        <!-- Tùy chọn Xuống dòng mới (Break row) -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px;">
-          <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #1e293b; font-weight: 600; cursor: pointer;">
-            <input type="checkbox" v-model="widgetForm.breakRow" style="accent-color: #2563eb; width: 16px; height: 16px; cursor: pointer;" />
-            <span>Xuống dòng mới (Ngắt hàng - bắt đầu khối thống kê này ở đầu hàng tiếp theo)</span>
-          </label>
-        </div>
-
         <!-- Preview Live Số lượng kết quả khớp -->
         <div style="font-size: 0.78rem; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
           <span style="display: flex; align-items: center; gap: 6px; font-weight: 600;">

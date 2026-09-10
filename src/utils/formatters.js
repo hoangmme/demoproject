@@ -1444,6 +1444,17 @@ export const lookupOperators = [
 ];
 
 /**
+ * Kiểm tra xem chuỗi cấu hình linkTable (có thể chứa nhiều bảng phân tách bằng dấu phẩy) có khớp với tableId hoặc tableSource không
+ */
+export const checkTableMatchesLink = (linkTableStr, tableId, tableSource) => {
+  if (!linkTableStr) return false;
+  const parts = String(linkTableStr).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const tId = String(tableId || '').trim().toLowerCase();
+  const tSrc = String(tableSource || '').trim().toLowerCase();
+  return (tId && parts.includes(tId)) || (tSrc && parts.includes(tSrc));
+};
+
+/**
  * Đánh giá giá trị cột Tham chiếu tự động (Lookup)
  * Hỗ trợ tra cứu đa bảng: Cán bộ (personnel), Thân nhân (relatives), Chuyến đi (trips)
  * Hỗ trợ đa điều kiện (Multi-condition matching với AND/OR), so sánh ngày tháng và số ngày, nhiều chế độ hiển thị
@@ -1625,7 +1636,7 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
 
   if (conditions.length > 0 || displayMode === 'count' || displayMode === 'sum') {
     const isOr = String(col.lookupLogicOp || 'AND').toUpperCase() === 'OR';
-    const matched = conditions.length > 0
+    let matched = conditions.length > 0
       ? candidatePool.filter(cand => {
           if (isOr) {
             return conditions.some(c => matchCondition(cand, c));
@@ -1633,6 +1644,137 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
           return conditions.every(c => matchCondition(cand, c));
         })
       : candidatePool;
+
+    // Tra cứu Bắc cầu Quan hệ ĐỘNG 100% dựa trên Cấu hình Khóa & Liên kết Bảng (isKey, linkTable, linkColumn)
+    // Trường hợp 1: Tra cứu Cán bộ từ Chuyến đi, nhưng cột khóa là của Thân nhân
+    if (matched.length === 0 && target === 'personnel') {
+      let parentOfficer = null;
+
+      // Đọc động các cột khóa & liên kết từ danh mục cấu hình bảng Thân nhân (importMappingRelative)
+      const relCols = (personnelStore?.importMappingRelative || []).flatMap(g => g.columns || []).filter(c => c && c.id && c.id !== 'stt');
+      // Khóa chính của bảng Thân nhân (cột có isKey: true hoặc format: 'id')
+      const rKeyCol = relCols.find(c => c.isKey || c.isPrimaryKey) ||
+                      relCols.find(c => c.format === 'id') ||
+                      (personnelStore?.getRelativeKeyField ? { id: personnelStore.getRelativeKeyField() } : null);
+      const rKeyField = rKeyCol?.id;
+
+      // Khóa ngoại của Thân nhân trỏ tới Cán bộ (cột có linkTable chứa 'personnel' hoặc isParentKey hoặc linkColumn)
+      const rParentCol = relCols.find(c => checkTableMatchesLink(c.linkTable, 'personnel')) ||
+                         relCols.find(c => c.isParentKey || c.linkColumn) ||
+                         (personnelStore?.getRelativeParentKeyField ? { id: personnelStore.getRelativeParentKeyField() } : null);
+      const rParentField = rParentCol?.id;
+      const rParentTargetCol = rParentCol?.linkColumn || null;
+
+      // Khóa của bảng Cán bộ (từ cond.targetField hoặc cột có isKey: true trong Cán bộ)
+      const persCols = (personnelStore?.importMappingPersonnel || []).flatMap(g => g.columns || []).filter(c => c && c.id && c.id !== 'stt');
+      const pKeyCol = persCols.find(c => c.isKey || c.isPrimaryKey) ||
+                      (personnelStore?.getPersonnelKeyField ? { id: personnelStore.getPersonnelKeyField() } : null);
+      const pTargetKeyField = rParentTargetCol || pKeyCol?.id;
+
+      // 1. Kiểm tra qua khóa liên kết của điều kiện Lookup (sourceVal do người dùng chọn trong cond.sourceField)
+      if (conditions.length > 0) {
+        for (const cond of conditions) {
+          const sVal = cond.sourceField ? getProp(item, cond.sourceField) : cond.value;
+          if (sVal === undefined || sVal === null || sVal === '' || sVal === '-') continue;
+          const strS = String(sVal).trim().toLowerCase();
+          const cleanS = strS.replace(/[^0-9]/g, '');
+
+          // Kiểm tra cột nguồn cond.sourceField có liên kết tới Thân nhân không
+          const sourceColDef = findColumnDef(cond.sourceField);
+          const linksToRelatives = sourceColDef ? checkTableMatchesLink(sourceColDef.linkTable, 'relatives') : true;
+
+          if (linksToRelatives && rKeyField) {
+            // Tìm thân nhân có giá trị tại cột khóa chính (rKeyField) khớp với sVal
+            const rel = (personnelStore?.relativesList || []).find(r => {
+              const rVal = getProp(r, rKeyField);
+              if (rVal !== undefined && rVal !== null && rVal !== '' && rVal !== '-') {
+                const strR = String(rVal).trim().toLowerCase();
+                if (strS && strR === strS) return true;
+                const cleanR = strR.replace(/[^0-9]/g, '');
+                if (cleanS && cleanR && (cleanS === cleanR || cleanS.padStart(12, '0') === cleanR.padStart(12, '0'))) return true;
+              }
+              return String(r.id || '').trim().toLowerCase() === strS || String(r.code || '').trim().toLowerCase() === strS;
+            });
+
+            if (rel) {
+              // Lấy giá trị khóa ngoại trỏ tới Cán bộ (rParentField) từ Thân nhân vừa tìm được
+              const parentKeyVal = rParentField ? getProp(rel, rParentField) : undefined;
+              const parentId = rel.personnelId ? String(rel.personnelId).trim().toLowerCase() : '';
+              const cleanParentKey = parentKeyVal ? String(parentKeyVal).trim().toLowerCase().replace(/[^0-9]/g, '') : '';
+              const targetFieldOnPersonnel = pTargetKeyField || cond.targetField;
+
+              parentOfficer = candidatePool.find(p => {
+                const pId = String(p.id || '').trim().toLowerCase();
+                const pCode = String(p.code || '').trim().toLowerCase();
+                if (parentId && (pId === parentId || pCode === parentId)) return true;
+
+                if (cleanParentKey && targetFieldOnPersonnel) {
+                  const pVal = getProp(p, targetFieldOnPersonnel);
+                  if (pVal !== undefined && pVal !== null) {
+                    const strP = String(pVal).trim().toLowerCase();
+                    if (String(parentKeyVal).trim().toLowerCase() === strP) return true;
+                    const cleanP = strP.replace(/[^0-9]/g, '');
+                    if (cleanP && (cleanParentKey === cleanP || cleanParentKey.padStart(12, '0') === cleanP.padStart(12, '0'))) return true;
+                  }
+                }
+                return false;
+              });
+
+              if (parentOfficer) break;
+            }
+          }
+        }
+      }
+
+      // 2. Nếu vẫn chưa có và bản ghi chuyến đi đã mang sẵn liên kết Cán bộ (rawPerson / personnelId)
+      if (!parentOfficer) {
+        if (item.rawPerson && candidatePool.some(p => p.id === item.rawPerson.id)) {
+          parentOfficer = item.rawPerson;
+        } else if (item.personnelId) {
+          const pid = String(item.personnelId).trim().toLowerCase();
+          parentOfficer = candidatePool.find(p => String(p.id || '').trim().toLowerCase() === pid || String(p.code || '').trim().toLowerCase() === pid);
+        }
+      }
+
+      if (parentOfficer) {
+        matched.push(parentOfficer);
+      }
+    } else if (matched.length === 0 && target === 'relatives') {
+      // Chiều ngược lại: Tra cứu Thân nhân nhưng sourceVal lại là khóa Cán bộ (Foreign Key -> Personnel)
+      if (conditions.length > 0) {
+        for (const cond of conditions) {
+          const sVal = cond.sourceField ? getProp(item, cond.sourceField) : cond.value;
+          if (sVal === undefined || sVal === null || sVal === '' || sVal === '-') continue;
+          const strS = String(sVal).trim().toLowerCase();
+          const cleanS = strS.replace(/[^0-9]/g, '');
+          if (!cleanS && !strS) continue;
+
+          const relCols = (personnelStore?.importMappingRelative || []).flatMap(g => g.columns || []).filter(c => c && c.id && c.id !== 'stt');
+          const rParentCol = relCols.find(c => checkTableMatchesLink(c.linkTable, 'personnel')) ||
+                             relCols.find(c => c.isParentKey || c.linkColumn) ||
+                             (personnelStore?.getRelativeParentKeyField ? { id: personnelStore.getRelativeParentKeyField() } : null);
+          const rParentField = rParentCol?.id;
+
+          if (rParentField) {
+            const matchedRels = candidatePool.filter(r => {
+              const rParentVal = getProp(r, rParentField);
+              if (rParentVal !== undefined && rParentVal !== null) {
+                const strP = String(rParentVal).trim().toLowerCase();
+                if (strS && strP === strS) return true;
+                const cleanP = strP.replace(/[^0-9]/g, '');
+                if (cleanS && cleanP && (cleanS === cleanP || cleanS.padStart(12, '0') === cleanP.padStart(12, '0'))) return true;
+              }
+              return false;
+            });
+
+            if (matchedRels.length > 0) {
+              matched.push(...matchedRels);
+              break;
+            }
+          }
+        }
+      }
+    }
 
     if (displayMode === 'count') {
       return matched.length;
@@ -1687,7 +1829,19 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     return '-';
   }
 
-  // Tuyệt đối không đoán mò hay fallback ngầm sang rawPerson / rawRelative nếu không khớp điều kiện người dùng cấu hình
+  // 4. Nếu không cấu hình điều kiện và target là Cán bộ, hỗ trợ liên kết sẵn có qua rawPerson / personnelId
+  if (target === 'personnel') {
+    if (item.rawPerson && candidatePool.some(p => p.id === item.rawPerson.id)) {
+      return extractCandidateValue(item.rawPerson) || '-';
+    }
+    if (item.personnelId) {
+      const pid = String(item.personnelId).trim().toLowerCase();
+      const cand = candidatePool.find(p => String(p.id || '').trim().toLowerCase() === pid || String(p.code || '').trim().toLowerCase() === pid);
+      if (cand) return extractCandidateValue(cand) || '-';
+    }
+  }
+
+  // Mặc định nếu không khớp
   return '-';
 };
 
@@ -1838,6 +1992,69 @@ export const evaluateRollup = (item, col, personnelStore) => {
         if (targetVal === undefined || targetVal === null) return false;
         return String(targetVal).trim().toLowerCase() === srcStr;
       });
+
+      // Bắc cầu động cho Rollup khi target là Cán bộ dựa trên cấu hình Khóa & Liên kết Bảng (isKey, linkTable)
+      if (list.length === 0 && target === 'personnel') {
+        const cleanS = srcStr.replace(/[^0-9]/g, '');
+        const relCols = (personnelStore?.importMappingRelative || []).flatMap(g => g.columns || []).filter(c => c && c.id && c.id !== 'stt');
+        const rKeyCol = relCols.find(c => c.isKey || c.isPrimaryKey) ||
+                        relCols.find(c => c.format === 'id') ||
+                        (personnelStore?.getRelativeKeyField ? { id: personnelStore.getRelativeKeyField() } : null);
+        const rKeyField = rKeyCol?.id;
+
+        const rParentCol = relCols.find(c => checkTableMatchesLink(c.linkTable, 'personnel')) ||
+                           relCols.find(c => c.isParentKey || c.linkColumn) ||
+                           (personnelStore?.getRelativeParentKeyField ? { id: personnelStore.getRelativeParentKeyField() } : null);
+        const rParentField = rParentCol?.id;
+        const targetKeyField = rParentCol?.linkColumn || col.rollupTargetCol;
+
+        if (rKeyField && rParentField) {
+          const rel = (personnelStore?.relativesList || []).find(r => {
+            const rVal = getSubProp(r, rKeyField);
+            if (rVal !== undefined && rVal !== null && rVal !== '' && rVal !== '-') {
+              const strR = String(rVal).trim().toLowerCase();
+              if (srcStr && strR === srcStr) return true;
+              const cleanR = strR.replace(/[^0-9]/g, '');
+              if (cleanS && cleanR && (cleanS === cleanR || cleanS.padStart(12, '0') === cleanR.padStart(12, '0'))) return true;
+            }
+            return String(r.id || '').trim().toLowerCase() === srcStr || String(r.code || '').trim().toLowerCase() === srcStr;
+          });
+
+          if (rel) {
+            const parentKeyVal = getSubProp(rel, rParentField);
+            const parentId = rel.personnelId ? String(rel.personnelId).trim().toLowerCase() : '';
+            const cleanParentKey = parentKeyVal ? String(parentKeyVal).trim().toLowerCase().replace(/[^0-9]/g, '') : '';
+
+            const pOfficer = candidatePool.find(p => {
+              const pId = String(p.id || '').trim().toLowerCase();
+              const pCode = String(p.code || '').trim().toLowerCase();
+              if (parentId && (pId === parentId || pCode === parentId)) return true;
+
+              if (cleanParentKey && targetKeyField) {
+                const pVal = getSubProp(p, targetKeyField);
+                if (pVal !== undefined && pVal !== null) {
+                  const strP = String(pVal).trim().toLowerCase();
+                  if (String(parentKeyVal).trim().toLowerCase() === strP) return true;
+                  const cleanP = strP.replace(/[^0-9]/g, '');
+                  if (cleanP && (cleanParentKey === cleanP || cleanParentKey.padStart(12, '0') === cleanP.padStart(12, '0'))) return true;
+                }
+              }
+              return false;
+            });
+            if (pOfficer) list = [pOfficer];
+          }
+        }
+
+        if (list.length === 0) {
+          if (item.rawPerson && candidatePool.some(p => p.id === item.rawPerson.id)) {
+            list = [item.rawPerson];
+          } else if (item.personnelId) {
+            const pid = String(item.personnelId).trim().toLowerCase();
+            const pOfficer = candidatePool.find(p => String(p.id || '').trim().toLowerCase() === pid || String(p.code || '').trim().toLowerCase() === pid);
+            if (pOfficer) list = [pOfficer];
+          }
+        }
+      }
     } else {
       list = [];
     }
