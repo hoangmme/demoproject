@@ -2842,3 +2842,33 @@
     - `npm run build` thành công 100% (563ms, 0 lỗi).
     - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
   - **Trạng thái**: Done [Reversible].
+
+- **Session 33 (2026-09-10) - Tùy Biến Xuống Dòng Thống Kê, Khóa STT 1 Hàng (Nowrap), Điều Kiện So Sánh Text/Số & Cải Tiến Sum Rollup/Lookup**:
+  - **Yêu cầu Người dùng**:
+    1. "thống kê cho phép tôi tùy chỉnh xuống dòng"
+    2. "stt cần 1 hàng đang bị xuống dòng ở bảng và popup thống kê"
+    3. "ví dụ loopkup muốn có thêm điều kiện thì sao (ví dụ chỉ đếm nếu hàng bảng nguồn có cột có dữ liệu chứa 'text' chẳng hạn?"
+    4. "Lookup khi chọn tổng giá trị số (sum) chưa hoạt động, ví dụ tổng nó đếm đc thì 19 thì nó sẽ hiển thị hàng nào cũng 19 nếu chọn vậy ms đúng chứ, hiện tại có vẻ nó k sum đc"
+  - **Giải pháp & Cải tiến triển khai**:
+    1. **Khóa STT hiển thị 1 hàng duy nhất (`white-space: nowrap !important;`)**:
+       - Tại `src/assets/styles/main.css`: Bổ sung CSS chuẩn định dạng cho toàn bộ `th.col-center`, `td.col-center`, `.p-datatable-thead > tr > th.col-center`, `.p-datatable-tbody > tr > td.col-center` với `white-space: nowrap !important; word-break: normal !important; padding-left: 4px !important; padding-right: 4px !important;`.
+       - Tại `UnifiedTableView.vue` và `DashboardView.vue` (Drilldown modal): HeaderStyle và BodyStyle của cột STT được cố định `padding: '0.75rem 4px', whiteSpace: 'nowrap'`.
+    2. **Tùy chỉnh xuống dòng mới cho Khối Thống Kê (`DashboardView.vue`)**:
+       - Hỗ trợ thuộc tính `breakRow: Boolean` trên từng widget trong nhóm thống kê (`customGroups`).
+       - Bổ sung `<div v-if="widget.breakRow && wIdx > 0" class="widget-flex-row-break" style="flex-basis: 100%; width: 100%; height: 0; margin: 0; padding: 0; pointer-events: none;"></div>` để flexbox ngắt xuống hàng mới.
+       - Thêm nút tắt/bật nhanh icon `pi pi-arrow-down-left` trên header của Thẻ đếm số lượng, Biểu đồ cột dọc và Tiến trình ngang; thêm checkbox cấu hình `breakRow` trong modal Sửa/Thêm khối thống kê; tự động lưu cấu hình `saveCustomDashboardsToDB`.
+    3. **Điều kiện lọc bổ sung linh hoạt (So khớp Cột vs Text/Số tự do) cho Lookup & Rollup**:
+       - Cho phép chọn kiểu so sánh `compareType: 'field' | 'value'`:
+         - `compareType === 'field'`: So sánh cột bảng nguồn với cột của bảng hiện tại.
+         - `compareType === 'value'`: So sánh cột bảng nguồn với một giá trị text hoặc số cụ thể do người dùng nhập (ví dụ: Cột [Quốc gia] chứa 'Nhật Bản', Cột [Trạng thái] = 'Đang công tác').
+       - Cập nhật động cơ `evaluateLookup` và `evaluateRollup` trong `src/utils/formatters.js`: hàm `matchLookupCondition` và `matchRollupCondition` hỗ trợ đầy đủ các toán tử `contains`, `not_contains`, `is`, `is_not`, `starts_with`, `ends_with`, `gt`, `gte`, `lt`, `lte`, `is_empty`, `is_not_empty`.
+       - Cập nhật UI xây dựng điều kiện trong `ColumnHeaderMenu.vue` và `AddColumnDialog.vue` cho cả hai định dạng `lookup` và `rollup`.
+    4. **Cải tiến tính toán Tổng (sum) cho Rollup & Lookup**:
+       - Bổ sung `rollupScope: 'linked' | 'all'`: Khi chọn `'all'` (hoặc không cấu hình khóa nối), hàm `evaluateRollup` tính toán trên toàn bộ danh sách bảng nguồn (toàn bảng - tất cả các dòng đều hiển thị tổng số kết quả, ví dụ 19).
+       - Bóc tách chuỗi số an toàn: `parseFloat(String(val).replace(/,/g, '').replace(/[^0-9.-]+/g, ''))`. Nếu cột được chọn là chuỗi chữ (không phải số) hoặc để trống, hàm fallback trả về tổng số bản ghi thỏa mãn điều kiện (`list.length`), giải quyết triệt để lỗi người dùng chọn `sum()` nhưng hiển thị `0`.
+       - Bổ sung chế độ hiển thị `sum` cho `lookupDisplay` trong Lookup.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (558ms, 0 lỗi).
+    - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `src/` sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+  - **Trạng thái**: Done [Reversible].
+

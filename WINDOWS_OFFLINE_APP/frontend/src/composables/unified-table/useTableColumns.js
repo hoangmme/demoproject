@@ -828,6 +828,7 @@ export function useTableColumns({
       rollupField,
       rollupFunction,
       rollupOp,
+      rollupScope,
       rollupTargetCol,
       rollupSourceCol,
       rollupConditions,
@@ -844,6 +845,7 @@ export function useTableColumns({
         c.rollupField = rollupField;
         c.rollupFunction = rollupFunction || rollupOp || 'count';
         c.rollupOp = rollupOp || rollupFunction || 'count';
+        if (rollupScope !== undefined) c.rollupScope = rollupScope;
         if (rollupTargetCol !== undefined) c.rollupTargetCol = rollupTargetCol;
         if (rollupSourceCol !== undefined) c.rollupSourceCol = rollupSourceCol;
         if (rollupConditions !== undefined) c.rollupConditions = rollupConditions;
@@ -863,6 +865,7 @@ export function useTableColumns({
           c.rollupField = rollupField;
           c.rollupFunction = rollupFunction || rollupOp || 'count';
           c.rollupOp = rollupOp || rollupFunction || 'count';
+          if (rollupScope !== undefined) c.rollupScope = rollupScope;
           if (rollupTargetCol !== undefined) c.rollupTargetCol = rollupTargetCol;
           if (rollupSourceCol !== undefined) c.rollupSourceCol = rollupSourceCol;
           if (rollupConditions !== undefined) c.rollupConditions = rollupConditions;

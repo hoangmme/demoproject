@@ -170,17 +170,35 @@
                   </select>
 
                   <!-- Cột bảng hiện tại -->
-                  <select
-                    v-if="cond.operator !== 'is_empty' && cond.operator !== 'is_not_empty'"
-                    v-model="cond.sourceField"
-                    class="dialog-select"
-                    style="font-size: 0.74rem;"
-                  >
-                    <option value="">-- Chọn cột ở Bảng này --</option>
-                    <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
-                      {{ c.label }} ({{ c.id }})
-                    </option>
-                  </select>
+                  <div v-if="cond.operator !== 'is_empty' && cond.operator !== 'is_not_empty'" style="display: flex; gap: 4px; align-items: center;">
+                    <select
+                      v-model="cond.compareType"
+                      class="dialog-select"
+                      style="width: 76px; font-size: 0.7rem; flex-shrink: 0;"
+                    >
+                      <option value="field">Cột</option>
+                      <option value="value">Text/Số</option>
+                    </select>
+
+                    <select
+                      v-if="cond.compareType !== 'value'"
+                      v-model="cond.sourceField"
+                      class="dialog-select"
+                      style="font-size: 0.74rem; flex: 1; min-width: 0;"
+                    >
+                      <option value="">-- Chọn cột ở Bảng này --</option>
+                      <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
+                        {{ c.label }} ({{ c.id }})
+                      </option>
+                    </select>
+                    <input
+                      v-else
+                      v-model="cond.value"
+                      class="dialog-input"
+                      placeholder="Nhập text / giá trị..."
+                      style="font-size: 0.74rem; height: 30px; flex: 1; min-width: 0;"
+                    />
+                  </div>
                   <span v-else style="font-size: 0.7rem; color: #94a3b8; font-style: italic; text-align: center;">
                     (Không cần cột so khớp)
                   </span>
@@ -213,6 +231,7 @@
               <option value="value">Giá trị (Bản ghi đầu tiên)</option>
               <option value="join">Gộp tất cả (, )</option>
               <option value="count">Đếm số lượng</option>
+              <option value="sum">sum() - Tính tổng số</option>
               <option value="array">Nhiều dòng</option>
             </select>
           </div>
@@ -601,6 +620,155 @@
           </select>
         </div>
 
+        <!-- 4. Phạm vi tính toán & Cặp cột liên kết -->
+        <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 10px;">
+          <div style="margin-bottom: 6px;">
+            <label style="font-size: 0.72rem; font-weight: 700; color: #166534; display: block; margin-bottom: 3px;">
+              4. Phạm vi tính toán (Scope):
+            </label>
+            <select v-model="form.rollupScope" class="dialog-select">
+              <option value="linked">Theo từng dòng liên kết (Khóa nối: Cột bảng nguồn = Cột bảng này)</option>
+              <option value="all">Toàn bộ bảng nguồn (Toàn bảng - mọi dòng đều nhận kết quả tổng này)</option>
+            </select>
+          </div>
+
+          <!-- Cặp cột liên kết (nếu scope là linked) -->
+          <div v-if="form.rollupScope !== 'all'">
+            <label style="font-size: 0.7rem; color: #475569; font-weight: 700; display: block; margin-bottom: 4px;">
+              Cặp cột liên kết (Khóa nối giữa 2 bảng):
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center;">
+              <div>
+                <span style="font-size: 0.68rem; color: #64748b; display: block; margin-bottom: 2px;">Cột bảng nguồn:</span>
+                <select v-model="form.rollupTargetCol" class="dialog-select" style="font-size: 0.74rem;">
+                  <option value="">-- Cột bảng nguồn --</option>
+                  <option v-for="c in targetRollupCols" :key="c.id" :value="c.id">
+                    {{ c.label }} ({{ c.id }})
+                  </option>
+                </select>
+              </div>
+              <span style="font-weight: 700; color: #16a34a; font-size: 0.85rem; padding-top: 14px;">=</span>
+              <div>
+                <span style="font-size: 0.68rem; color: #64748b; display: block; margin-bottom: 2px;">Cột bảng này:</span>
+                <select v-model="form.rollupSourceCol" class="dialog-select" style="font-size: 0.74rem;">
+                  <option value="">-- Cột bảng này --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
+                    {{ c.label }} ({{ c.id }})
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div style="font-size: 0.65rem; color: #64748b; margin-top: 4px; font-style: italic;">
+              💡 <em>VD:</em> Cột [cccdchuyendi] của Chuyến đi = Cột [cccd] của Cán bộ
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Điều kiện lọc bổ sung (Rollup Conditions) -->
+        <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.72rem; color: #166534; font-weight: 700;">
+              5. Điều kiện lọc bổ sung (Tùy chọn):
+            </span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="font-size: 0.68rem; color: #64748b;">Khớp:</span>
+              <select
+                v-model="form.rollupLogicOp"
+                class="dialog-select"
+                style="width: 80px; height: 24px; font-size: 0.7rem; padding: 0 4px; font-weight: 700; color: #15803d; background: #f0fdf4;"
+              >
+                <option value="AND">AND (Tất cả)</option>
+                <option value="OR">OR (Bất kỳ)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Danh sách điều kiện -->
+          <div v-if="form.rollupConditions && form.rollupConditions.length > 0" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+            <div
+              v-for="(rCond, rcIdx) in form.rollupConditions"
+              :key="rcIdx"
+              style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px;"
+            >
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 0.68rem; font-weight: 700; color: #166534;">
+                  ĐK {{ rcIdx + 1 }}:
+                </span>
+                <button
+                  type="button"
+                  @click="removeRollupCondition(rcIdx)"
+                  style="border: none; background: transparent; color: #ef4444; cursor: pointer; font-size: 0.74rem; padding: 0 4px;"
+                  title="Xóa điều kiện này"
+                >
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <!-- Cột bảng nguồn -->
+                <select v-model="rCond.targetField" class="dialog-select" style="font-size: 0.72rem;">
+                  <option value="">-- Cột bảng nguồn cần lọc --</option>
+                  <option v-for="c in targetRollupCols" :key="c.id" :value="c.id">
+                    {{ c.label }} ({{ c.id }})
+                  </option>
+                </select>
+
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: 4px; align-items: center;">
+                  <!-- Toán tử -->
+                  <select v-model="rCond.operator" class="dialog-select" style="font-size: 0.7rem;">
+                    <option v-for="op in lookupOperators" :key="op.value" :value="op.value">
+                      {{ op.label }}
+                    </option>
+                  </select>
+
+                  <!-- So sánh với Text cố định HOẶC Cột bảng này -->
+                  <div v-if="rCond.operator !== 'is_empty' && rCond.operator !== 'is_not_empty'" style="display: flex; gap: 4px; align-items: center;">
+                    <select
+                      v-model="rCond.compareType"
+                      class="dialog-select"
+                      style="width: 76px; font-size: 0.7rem; flex-shrink: 0;"
+                    >
+                      <option value="value">Text/Số</option>
+                      <option value="field">Cột</option>
+                    </select>
+
+                    <input
+                      v-if="rCond.compareType !== 'field'"
+                      v-model="rCond.value"
+                      class="dialog-input"
+                      placeholder="Nhập text / giá trị..."
+                      style="font-size: 0.72rem; height: 30px; flex: 1; min-width: 0;"
+                    />
+                    <select
+                      v-else
+                      v-model="rCond.sourceField"
+                      class="dialog-select"
+                      style="font-size: 0.72rem; flex: 1; min-width: 0;"
+                    >
+                      <option value="">-- Cột bảng này --</option>
+                      <option v-for="c in currentTableCols" :key="c.id" :value="c.id">
+                        {{ c.label }} ({{ c.id }})
+                      </option>
+                    </select>
+                  </div>
+                  <span v-else style="font-size: 0.68rem; color: #94a3b8; font-style: italic; text-align: center;">
+                    (Không cần giá trị so sánh)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nút thêm điều kiện -->
+          <button
+            type="button"
+            @click="addRollupCondition"
+            style="width: 100%; border: 1px dashed #16a34a; background: #f0fdf4; color: #15803d; padding: 6px 10px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600;"
+          >
+            <i class="pi pi-plus" style="font-size: 0.7rem;"></i>
+            <span>+ Thêm điều kiện lọc (VD: Cột chứa 'text')</span>
+          </button>
+        </div>
+
         <!-- Live Preview -->
         <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;">
           <span style="font-size: 0.68rem; color: #166534; font-weight: 600;">Xem trước kết quả (Dòng mẫu 1):</span>
@@ -829,6 +997,11 @@ const form = ref({
   rollupTarget: 'trips',
   rollupField: '',
   rollupFunction: 'count',
+  rollupScope: 'linked',
+  rollupTargetCol: '',
+  rollupSourceCol: '',
+  rollupConditions: [],
+  rollupLogicOp: 'AND',
 });
 
 const isIdManuallyEdited = ref(false);
@@ -897,6 +1070,11 @@ watch(
         rollupTarget: 'trips',
         rollupField: '',
         rollupFunction: 'count',
+        rollupScope: 'linked',
+        rollupTargetCol: '',
+        rollupSourceCol: '',
+        rollupConditions: [],
+        rollupLogicOp: 'AND',
       };
     }
   }
@@ -997,13 +1175,33 @@ const addLookupCondition = () => {
   form.value.lookupConditions.push({
     targetField: defaultTarget,
     operator: 'is',
+    compareType: 'field',
     sourceField: defaultSource,
+    value: '',
   });
 };
 
 const removeLookupCondition = (index) => {
   if (Array.isArray(form.value.lookupConditions)) {
     form.value.lookupConditions.splice(index, 1);
+  }
+};
+
+const addRollupCondition = () => {
+  const defaultTarget = targetRollupCols.value?.[0]?.id || '';
+  if (!form.value.rollupConditions) form.value.rollupConditions = [];
+  form.value.rollupConditions.push({
+    targetField: defaultTarget,
+    operator: 'contains',
+    compareType: 'value',
+    sourceField: '',
+    value: '',
+  });
+};
+
+const removeRollupCondition = (index) => {
+  if (Array.isArray(form.value.rollupConditions)) {
+    form.value.rollupConditions.splice(index, 1);
   }
 };
 
@@ -1019,6 +1217,11 @@ const rollupPreviewResult = computed(() => {
       rollupTarget: form.value.rollupTarget || 'trips',
       rollupField: form.value.rollupField || '',
       rollupFunction: form.value.rollupFunction || 'count',
+      rollupScope: form.value.rollupScope || 'linked',
+      rollupTargetCol: form.value.rollupTargetCol || '',
+      rollupSourceCol: form.value.rollupSourceCol || '',
+      rollupConditions: form.value.rollupConditions || [],
+      rollupLogicOp: form.value.rollupLogicOp || 'AND',
     }, personnelStore);
     if (res === null || res === undefined || res === '') return '(trống)';
     return String(res);
@@ -1165,6 +1368,12 @@ const handleSave = async () => {
         rollupTarget: form.value.rollupTarget || 'trips',
         rollupField: form.value.rollupField || '',
         rollupFunction: form.value.rollupFunction || 'count',
+        rollupScope: form.value.rollupScope || 'linked',
+        rollupTargetCol: form.value.rollupTargetCol || '',
+        rollupSourceCol: form.value.rollupSourceCol || '',
+        rollupLinkCol: form.value.rollupSourceCol || '',
+        rollupConditions: form.value.rollupConditions || [],
+        rollupLogicOp: form.value.rollupLogicOp || 'AND',
       } : {}),
       targetIndex: props.targetIndex,
     };

@@ -256,9 +256,9 @@
         @page="e => dtFirst = e.first"
       >
         <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
-        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
+        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '65px', minWidth: '65px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }" :bodyStyle="{ width: '65px', minWidth: '65px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }">
           <template #body="{ index }">
-            <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem;">{{ dtFirst + index + 1 }}</span>
+            <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem; white-space: nowrap;">{{ dtFirst + index + 1 }}</span>
           </template>
         </Column>
 

@@ -176,84 +176,99 @@
 
       <!-- Unified Flexible Grid for Group Widgets -->
       <div v-else style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch;">
-        <div
-          v-for="(widget, wIdx) in group.widgets"
-          :key="widget.id"
-          v-show="!isWidgetHidden(widget)"
-          :style="getWidgetStyle(widget)"
-        >
-          <!-- 1. Dạng Đếm Số Lượng (Count Metric Card) -->
+        <template v-for="(widget, wIdx) in group.widgets" :key="widget.id">
+          <!-- Phân cách ngắt hàng nếu widget được thiết lập xuống dòng mới -->
           <div
-            v-if="widget.displayType === 'count'"
-            class="stat-card"
-            :style="{
-              borderLeft: `4px solid ${widget.color || '#2e7d32'}`,
-              backgroundColor: widget.bgColor || '#ffffff',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              padding: '1rem 1.15rem'
-            }"
-            @click="handleWidgetClick(widget)"
-            style="cursor: pointer;"
+            v-if="widget.breakRow && wIdx > 0"
+            class="widget-flex-row-break"
+            style="flex-basis: 100%; width: 100%; height: 0; margin: 0; padding: 0; pointer-events: none;"
+          ></div>
+          <div
+            v-show="!isWidgetHidden(widget)"
+            :style="getWidgetStyle(widget)"
           >
-            <div>
-              <!-- Dời số lượng lên trên cùng để thẳng hàng nhau -->
-              <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px;">
-                <span class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '0' }">
-                  {{ computeWidgetCount(widget) }}
-                </span>
-                <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">trường hợp</span>
-              </div>
+            <!-- 1. Dạng Đếm Số Lượng (Count Metric Card) -->
+            <div
+              v-if="widget.displayType === 'count'"
+              class="stat-card"
+              :style="{
+                borderLeft: `4px solid ${widget.color || '#2e7d32'}`,
+                backgroundColor: widget.bgColor || '#ffffff',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem'
+              }"
+              @click="handleWidgetClick(widget)"
+              style="cursor: pointer;"
+            >
+              <div>
+                <!-- Dời số lượng lên trên cùng để thẳng hàng nhau -->
+                <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px;">
+                  <span class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '0' }">
+                    {{ computeWidgetCount(widget) }}
+                  </span>
+                  <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">trường hợp</span>
+                </div>
 
-              <!-- Tiêu đề thẻ và các nút tác vụ điều khiển bên dưới -->
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 4px;">
-                <div style="flex: 1; padding-right: 6px;">
-                  <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;" @click.stop>
-                  <!-- Nút dời trái < (lên trước) -->
-                  <button
-                    v-if="wIdx > 0"
-                    type="button"
-                    class="btn-card-setting"
-                    @click.stop="moveWidget(group, widget, -1)"
-                    title="Dời thẻ sang trái (lên trước)"
-                  >
-                    <i class="pi pi-chevron-left" style="font-size: 0.72rem;"></i>
-                  </button>
-                  <!-- Nút dời phải > (về sau) -->
-                  <button
-                    v-if="wIdx < group.widgets.length - 1"
-                    type="button"
-                    class="btn-card-setting"
-                    @click.stop="moveWidget(group, widget, 1)"
-                    title="Dời thẻ sang phải (về sau)"
-                  >
-                    <i class="pi pi-chevron-right" style="font-size: 0.72rem;"></i>
-                  </button>
-                  <!-- Nhân bản khối -->
-                  <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
-                    <i class="pi pi-clone" style="color: #10b981;"></i>
-                  </button>
-                  <!-- Cài đặt khối -->
-                  <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Cài đặt khối này">
-                    <i class="pi pi-pencil"></i>
-                  </button>
-                  <!-- Xóa -->
-                  <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa khối này" style="color: #ef4444;">
-                    <i class="pi pi-trash"></i>
-                  </button>
+                <!-- Tiêu đề thẻ và các nút tác vụ điều khiển bên dưới -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 4px;">
+                  <div style="flex: 1; padding-right: 6px;">
+                    <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;" @click.stop>
+                    <!-- Nút dời trái < (lên trước) -->
+                    <button
+                      v-if="wIdx > 0"
+                      type="button"
+                      class="btn-card-setting"
+                      @click.stop="moveWidget(group, widget, -1)"
+                      title="Dời thẻ sang trái (lên trước)"
+                    >
+                      <i class="pi pi-chevron-left" style="font-size: 0.72rem;"></i>
+                    </button>
+                    <!-- Nút dời phải > (về sau) -->
+                    <button
+                      v-if="wIdx < group.widgets.length - 1"
+                      type="button"
+                      class="btn-card-setting"
+                      @click.stop="moveWidget(group, widget, 1)"
+                      title="Dời thẻ sang phải (về sau)"
+                    >
+                      <i class="pi pi-chevron-right" style="font-size: 0.72rem;"></i>
+                    </button>
+                    <!-- Nút ngắt xuống dòng mới -->
+                    <button
+                      type="button"
+                      class="btn-card-setting"
+                      :style="widget.breakRow ? { color: '#2563eb', background: '#eff6ff', borderColor: '#bfdbfe' } : {}"
+                      @click.stop="toggleWidgetBreakRow(group, widget)"
+                      :title="widget.breakRow ? 'Đang ngắt xuống dòng mới (Bấm để hủy ngắt hàng)' : 'Xuống dòng mới (Bắt đầu ở đầu hàng tiếp theo)'"
+                    >
+                      <i class="pi pi-arrow-down-left" style="font-size: 0.72rem;"></i>
+                    </button>
+                    <!-- Nhân bản khối -->
+                    <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
+                      <i class="pi pi-clone" style="color: #10b981;"></i>
+                    </button>
+                    <!-- Cài đặt khối -->
+                    <button type="button" class="btn-card-setting" @click.stop="openEditWidgetDialog(group, widget)" title="Cài đặt khối này">
+                      <i class="pi pi-pencil"></i>
+                    </button>
+                    <!-- Xóa -->
+                    <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa khối này" style="color: #ef4444;">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
+              <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">
+                <span class="view-more-tag" :style="{ color: widget.color || '#1e293b' }">
+                  Xem chi tiết <i class="pi pi-arrow-right"></i>
+                </span>
+              </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">
-              <span class="view-more-tag" :style="{ color: widget.color || '#1e293b' }">
-                Xem chi tiết <i class="pi pi-arrow-right"></i>
-              </span>
-            </div>
-          </div>
 
           <!-- 2. Dạng Biểu đồ Cột dọc (Vertical Bar Chart) -->
           <div
@@ -270,6 +285,16 @@
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;" @click.stop>
+                <!-- Nút ngắt xuống dòng mới -->
+                <button
+                  type="button"
+                  class="btn-card-setting"
+                  :style="widget.breakRow ? { color: '#2563eb', background: '#eff6ff', borderColor: '#bfdbfe' } : {}"
+                  @click.stop="toggleWidgetBreakRow(group, widget)"
+                  :title="widget.breakRow ? 'Đang ngắt xuống dòng mới (Bấm để hủy ngắt hàng)' : 'Xuống dòng mới (Bắt đầu ở đầu hàng tiếp theo)'"
+                >
+                  <i class="pi pi-arrow-down-left" style="font-size: 0.72rem;"></i>
+                </button>
                 <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
                   <i class="pi pi-clone" style="color: #10b981;"></i>
                 </button>
@@ -373,6 +398,16 @@
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;" @click.stop>
+                <!-- Nút ngắt xuống dòng mới -->
+                <button
+                  type="button"
+                  class="btn-card-setting"
+                  :style="widget.breakRow ? { color: '#2563eb', background: '#eff6ff', borderColor: '#bfdbfe' } : {}"
+                  @click.stop="toggleWidgetBreakRow(group, widget)"
+                  :title="widget.breakRow ? 'Đang ngắt xuống dòng mới (Bấm để hủy ngắt hàng)' : 'Xuống dòng mới (Bắt đầu ở đầu hàng tiếp theo)'"
+                >
+                  <i class="pi pi-arrow-down-left" style="font-size: 0.72rem;"></i>
+                </button>
                 <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
                   <i class="pi pi-clone" style="color: #10b981;"></i>
                 </button>
@@ -478,8 +513,9 @@
             </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
+  </div>
     </div>
 
 
@@ -956,6 +992,14 @@
           </div>
         </div>
 
+        <!-- Tùy chọn Xuống dòng mới (Break row) -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px;">
+          <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #1e293b; font-weight: 600; cursor: pointer;">
+            <input type="checkbox" v-model="widgetForm.breakRow" style="accent-color: #2563eb; width: 16px; height: 16px; cursor: pointer;" />
+            <span>Xuống dòng mới (Ngắt hàng - bắt đầu khối thống kê này ở đầu hàng tiếp theo)</span>
+          </label>
+        </div>
+
         <!-- Preview Live Số lượng kết quả khớp -->
         <div style="font-size: 0.78rem; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
           <span style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
@@ -1194,9 +1238,9 @@
         >
           <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '46px', minWidth: '46px' }" :bodyStyle="{ width: '46px', minWidth: '46px' }" />
 
-          <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '55px', minWidth: '55px' }" :bodyStyle="{ width: '55px', minWidth: '55px' }">
+          <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '65px', minWidth: '65px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }" :bodyStyle="{ width: '65px', minWidth: '65px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }">
             <template #body="{ index }">
-              <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem;">{{ drilldownDtFirst + index + 1 }}</span>
+              <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem; white-space: nowrap;">{{ drilldownDtFirst + index + 1 }}</span>
             </template>
           </Column>
 
@@ -2978,6 +3022,7 @@ const openAddWidgetDialog = async (group) => {
         value: '',
       }
     ],
+    breakRow: false,
     isUnique: false,
     color: '#0284c7',
     bgColor: '#ffffff',
@@ -2997,6 +3042,7 @@ const openEditWidgetDialog = async (group, widget) => {
   widgetOrder.value = curIdx !== -1 ? curIdx + 1 : (group.widgets || []).length;
   widgetForm.value = {
     ...JSON.parse(JSON.stringify(hydrated)),
+    breakRow: Boolean(hydrated.breakRow),
     viewId: hydrated.viewId || hydrated.cardId || 'all',
     subColumnId: hydrated.subColumnId || '',
     subColumnLabel: hydrated.subColumnLabel || '',
@@ -3069,6 +3115,7 @@ const saveWidget = async () => {
 
     const payload = {
       ...widgetForm.value,
+      breakRow: Boolean(widgetForm.value.breakRow),
       subColumnId: widgetForm.value.subColumnId || '',
       subColumnLabel: widgetForm.value.subColumnLabel || '',
       conditions: cleanedConditions,
@@ -3098,6 +3145,12 @@ const saveWidget = async () => {
   } finally {
     isSavingWidget.value = false;
   }
+};
+
+const toggleWidgetBreakRow = async (group, widget) => {
+  if (!widget) return;
+  widget.breakRow = !widget.breakRow;
+  await saveCustomGroupsToDb();
 };
 
 const openReorderWidgetsDialog = (group) => {

@@ -1508,7 +1508,14 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
       return targetVal !== undefined && targetVal !== null && String(targetVal).trim() !== '' && String(targetVal).trim() !== '-';
     }
 
-    const sourceVal = cond.sourceField ? getProp(item, cond.sourceField) : cond.value;
+    let sourceVal = undefined;
+    if (cond.compareType === 'value' || (!cond.sourceField && cond.value !== undefined && cond.value !== null)) {
+      sourceVal = cond.value;
+    } else if (cond.sourceField) {
+      sourceVal = getProp(item, cond.sourceField);
+    } else if (cond.value !== undefined) {
+      sourceVal = cond.value;
+    }
     if (targetVal === undefined || sourceVal === undefined) return false;
 
     const strT = String(targetVal).trim().toLowerCase();
@@ -1558,8 +1565,8 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     }
 
     if (['gt', 'gte', 'lt', 'lte', 'num_eq'].includes(op)) {
-      const numT = parseFloat(String(targetVal).replace(/[^0-9.-]+/g, ''));
-      const numS = parseFloat(String(sourceVal).replace(/[^0-9.-]+/g, ''));
+      const numT = parseFloat(String(targetVal).replace(/,/g, '').replace(/[^0-9.-]+/g, ''));
+      const numS = parseFloat(String(sourceVal).replace(/,/g, '').replace(/[^0-9.-]+/g, ''));
       if (!isNaN(numT) && !isNaN(numS)) {
         if (op === 'gt') return numT > numS;
         if (op === 'gte') return numT >= numS;
@@ -1606,6 +1613,25 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
       return matched.length;
     }
 
+    if (displayMode === 'sum') {
+      let hasNumeric = false;
+      const sum = matched.reduce((acc, cand) => {
+        const f = fields[0];
+        if (!f) return acc + 1;
+        const raw = getProp(cand, f);
+        if (raw === undefined || raw === null || String(raw).trim() === '' || String(raw).trim() === '-') return acc;
+        const cleaned = String(raw).replace(/,/g, '').replace(/[^0-9.-]+/g, '');
+        const val = parseFloat(cleaned);
+        if (!isNaN(val)) {
+          hasNumeric = true;
+          return acc + val;
+        }
+        return acc;
+      }, 0);
+      if (!fields[0] || !hasNumeric) return matched.length;
+      return sum;
+    }
+
     if (displayMode === 'join') {
       const values = matched.map(extractCandidateValue).filter(Boolean);
       return values.length > 0 ? values.join(col.lookupJoinSeparator || ', ') : '-';
@@ -1640,9 +1666,9 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
 };
 
 /**
- * Đánh giá giá trị cột Tính toán tổng hợp (Rollup)
- * Chuẩn hóa 100% Flat Relational Engine - Không hardcode khóa định danh
- * @param {Object} item - Bản ghi hiện tại (cán bộ, thân nhân...)
+ * Đánh giá giá trị cột Tính toán Tổng hợp (Rollup)
+ * Gom và tính toán trên nhiều dòng liên kết từ bảng khác (Flat Rollup Engine)
+ * @param {Object} item - Dòng dữ liệu hiện tại
  * @param {Object} col - Cấu hình cột rollup
  * @param {Object} personnelStore - Store dữ liệu cán bộ
  */
@@ -1678,10 +1704,106 @@ export const evaluateRollup = (item, col, personnelStore) => {
     candidatePool = personnelStore?.personnelList || [];
   }
 
+  // Áp dụng điều kiện lọc bổ sung của Rollup (rollupConditions) nếu có
+  const matchRollupCondition = (cand, cond) => {
+    if (!cond || !cond.targetField) return true;
+    const op = cond.operator || 'is';
+    const targetVal = getSubProp(cand, cond.targetField);
+
+    if (op === 'is_empty') {
+      return targetVal === undefined || targetVal === null || String(targetVal).trim() === '' || String(targetVal).trim() === '-';
+    }
+    if (op === 'is_not_empty') {
+      return targetVal !== undefined && targetVal !== null && String(targetVal).trim() === '' && String(targetVal).trim() === '-';
+    }
+
+    let sourceVal = undefined;
+    if (cond.compareType === 'value' || (!cond.sourceField && cond.value !== undefined && cond.value !== null)) {
+      sourceVal = cond.value;
+    } else if (cond.sourceField) {
+      sourceVal = getSubProp(item, cond.sourceField);
+    } else if (cond.value !== undefined) {
+      sourceVal = cond.value;
+    }
+    if (targetVal === undefined || sourceVal === undefined) return false;
+
+    const strT = String(targetVal).trim().toLowerCase();
+    const strS = String(sourceVal).trim().toLowerCase();
+
+    const cleanNumT = strT.replace(/[^0-9]/g, '');
+    const cleanNumS = strS.replace(/[^0-9]/g, '');
+    const isBothDigits = cleanNumT.length >= 8 && cleanNumS.length >= 8 && /^\d+$/.test(cleanNumT) && /^\d+$/.test(cleanNumS);
+
+    if (op === 'is') {
+      if (strT === strS) return true;
+      if (isBothDigits) {
+        return cleanNumT === cleanNumS || cleanNumT.padStart(12, '0') === cleanNumS.padStart(12, '0');
+      }
+      return false;
+    }
+    if (op === 'is_not') {
+      if (isBothDigits) {
+        return cleanNumT !== cleanNumS && cleanNumT.padStart(12, '0') !== cleanNumS.padStart(12, '0');
+      }
+      return strT !== strS;
+    }
+    if (op === 'contains') return strT.includes(strS) || (isBothDigits && cleanNumT.includes(cleanNumS));
+    if (op === 'does_not_contain') return !strT.includes(strS);
+    if (op === 'starts_with') return strT.startsWith(strS);
+    if (op === 'ends_with') return strT.endsWith(strS);
+
+    if (['before', 'after', 'on_or_before', 'on_or_after', 'same_date'].includes(op)) {
+      const dtT = parseDateValue(targetVal);
+      const dtS = parseDateValue(sourceVal);
+      if (dtT && dtS) {
+        const timeT = dtT.getTime();
+        const timeS = dtS.getTime();
+        if (op === 'before') return timeT < timeS;
+        if (op === 'after') return timeT > timeS;
+        if (op === 'on_or_before') return timeT <= timeS;
+        if (op === 'on_or_after') return timeT >= timeS;
+        if (op === 'same_date') {
+          return dtT.getFullYear() === dtS.getFullYear() &&
+                 dtT.getMonth() === dtS.getMonth() &&
+                 dtT.getDate() === dtS.getDate();
+        }
+      }
+    }
+
+    if (['gt', 'gte', 'lt', 'lte', 'num_eq'].includes(op)) {
+      const numT = parseFloat(String(targetVal).replace(/,/g, '').replace(/[^0-9.-]+/g, ''));
+      const numS = parseFloat(String(sourceVal).replace(/,/g, '').replace(/[^0-9.-]+/g, ''));
+      if (!isNaN(numT) && !isNaN(numS)) {
+        if (op === 'gt') return numT > numS;
+        if (op === 'gte') return numT >= numS;
+        if (op === 'lt') return numT < numS;
+        if (op === 'lte') return numT <= numS;
+        if (op === 'num_eq') return numT === numS;
+      }
+    }
+
+    return strT === strS;
+  };
+
+  const rollupConditions = Array.isArray(col.rollupConditions) ? col.rollupConditions.filter(c => c && c.targetField) : [];
+  if (rollupConditions.length > 0) {
+    const isOr = String(col.rollupLogicOp || 'AND').toUpperCase() === 'OR';
+    candidatePool = candidatePool.filter(cand => {
+      if (isOr) {
+        return rollupConditions.some(c => matchRollupCondition(cand, c));
+      }
+      return rollupConditions.every(c => matchRollupCondition(cand, c));
+    });
+  }
+
   let list = [];
+  const scope = col.rollupScope || (col.rollupTargetCol && col.rollupSourceCol ? 'linked' : 'all');
 
   // Khóa nối liên kết 2 bảng do người dùng chỉ định minh bạch (Target Col = Source Col)
-  if (col.rollupTargetCol && col.rollupSourceCol) {
+  if (scope === 'all' || (!col.rollupTargetCol && !col.rollupSourceCol && !col.rollupLinkCol)) {
+    // Tính trên toàn bộ bảng nguồn (Toàn bảng - mọi dòng đều nhận cùng một kết quả tổng hợp)
+    list = candidatePool;
+  } else if (col.rollupTargetCol && col.rollupSourceCol) {
     const srcVal = getSubProp(item, col.rollupSourceCol);
     if (srcVal !== undefined && srcVal !== null && String(srcVal).trim() !== '' && String(srcVal).trim() !== '-') {
       const srcStr = String(srcVal).trim().toLowerCase();
@@ -1705,15 +1827,7 @@ export const evaluateRollup = (item, col, personnelStore) => {
       list = [];
     }
   } else {
-    // Chỉ xử lý nếu có mảng trực tiếp sẵn trên item (legacy inline arrays)
-    if (target === 'trips' && Array.isArray(item.trips)) {
-      list = item.trips;
-    } else if (target === 'relatives' && Array.isArray(item.relatives)) {
-      list = item.relatives;
-    } else {
-      // KHÔNG đoán mò khóa ngầm nếu người dùng chưa chọn cặp cột liên kết!
-      return fn === 'count' ? 0 : '-';
-    }
+    list = candidatePool;
   }
 
   if (!Array.isArray(list)) list = [];
@@ -1730,10 +1844,25 @@ export const evaluateRollup = (item, col, personnelStore) => {
   }
 
   if (fn === 'sum') {
+    let hasNumeric = false;
     const sum = list.reduce((acc, sub) => {
-      const val = Number(getSubProp(sub, field) ?? 0);
-      return acc + (isNaN(val) ? 0 : val);
+      if (!field) return acc + 1;
+      const raw = getSubProp(sub, field);
+      if (raw === undefined || raw === null || String(raw).trim() === '' || String(raw).trim() === '-') return acc;
+      const cleaned = String(raw).replace(/,/g, '').replace(/[^0-9.-]+/g, '');
+      const val = parseFloat(cleaned);
+      if (!isNaN(val)) {
+        hasNumeric = true;
+        return acc + val;
+      }
+      return acc;
     }, 0);
+
+    // Nếu không chọn cột tính toán hoặc cột được chọn toàn chữ (ví dụ Quốc gia xuất cảnh)
+    // thì tổng số chính là số lượng dòng kết quả (ví dụ 19)
+    if (!field || !hasNumeric) {
+      return list.length;
+    }
     return sum;
   }
 
