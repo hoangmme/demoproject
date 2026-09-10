@@ -544,9 +544,8 @@ const getLinkedRows = (targetTable) => {
       const tVal = tripFkRel && t[tripFkRel.id] ? String(t[tripFkRel.id]).trim().toLowerCase() : '';
       const matchKey = Boolean(rKeyVal && tVal && tVal === rKeyVal);
       const matchRelId = Boolean(rId && t.relativeId && String(t.relativeId).trim() === rId);
-      const matchRelKey = Boolean(rKeyVal && t.cccdthannhan && String(t.cccdthannhan).trim().toLowerCase() === rKeyVal);
 
-      if (matchKey || matchRelId || matchRelKey) {
+      if (matchKey || matchRelId) {
         seen.add(uKey);
         res.push({
           ...t,
