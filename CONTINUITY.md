@@ -3209,4 +3209,81 @@
   - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `WINDOWS_OFFLINE_APP/frontend/src/utils/formatters.js`.
 - **Trạng thái**: Done [Reversible].
 
+## SESSION 44 (2026-09-10) - TỐI ƯU HÓA VÀ KHẮC PHỤC TRIỆT ĐỂ BẢN XEM TRƯỚC VÀ XUẤT PDF TRONG THỐNG KÊ
+- **Yêu cầu Người dùng**:
+  - Check lại bug và tối ưu chỗ xem PDF ở thống kê, và xuất PDF giúp tôi với.
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. *Lỗi trang PDF trắng / nét vẽ trong suốt (`convertDocxBlobToPdfBlob` trong `docxExport.js`)*:
+     - Thẻ sandbox `#docx-pdf-sandbox` trước đây dùng `opacity: 0` để ẩn khi render DOCX sang canvas.
+     - Thư viện `html2canvas` tuân thủ CSS `opacity`, render toàn bộ canvas với kênh alpha trong suốt (`a = 0`).
+     - Thuật toán cắt trang thông minh (`findSmartCutY`) dò pixel mực dựa trên ngưỡng alpha (`a > 20`), khi alpha = 0 toàn bộ các hàng pixel bị coi là rỗng, dẫn đến cắt sai hoặc tạo ra trang PDF trắng hoàn toàn.
+  2. *Lỗi sai lệch thuộc tính `filename` vs `fileName` trong `PdfPreviewDialog.vue`*:
+     - Trong Vue 3 template, `:filename` bind vào prop `filename` dạng chữ thường.
+     - `PdfPreviewDialog.vue` trước đó chỉ khai báo prop `fileName` dạng camelCase khiến prop `:filename="rowPreviewFileName"` không ăn khớp, tên file luôn fallback về `'Ho_so.pdf'`.
+  3. *Lỗi tham chiếu `authStore.currentUser`*:
+     - `useAuthStore` khai báo `user` chứ không phải `currentUser`. Các lệnh gọi `authStore.currentUser` truyền `undefined`, làm mất thông tin tài khoản người xuất tài liệu.
+  4. *Nâng cấp xem trước PDF khi xuất hàng loạt hoặc nhiều bản ghi*:
+     - Trong `AdvancedDocxExportDialog.vue`, nút "Xem trước PDF" bị chặn nếu `exportScope !== 'single'`. Người dùng không thể xem trước mẫu trước khi quyết định bấm xuất hàng loạt ZIP/PDF.
+  5. *Tên bản ghi và mã định danh tự động theo bảng*:
+     - Tên file và tiêu đề bản xem trước PDF ở `DashboardView.vue` và `UnifiedTableView.vue` cho các bảng Chuyến đi / Thân nhân / Bảng tùy biến trước đó dễ bị fallback về `'Ban_ghi'`.
+- **Giải pháp Đã Triển khai**:
+  1. `src/utils/docxExport.js`:
+     - Chuyển `opacity: '1'` cho `#docx-pdf-sandbox`, đồng thời đặt `zIndex: '-9999'` và `position: 'fixed'` ẩn an toàn phía sau DOM mà không gây chớp nháy giao diện.
+     - Đảm bảo `html2canvas` quét và vẽ 100% mực chữ sắc nét, độ nét cao (scale 2), thuật toán cắt trang `findSmartCutY` nhận diện chuẩn xác từng dòng chữ.
+     - Bổ sung phông chữ mặc định `"Times New Roman", "DejaVu Sans", "Segoe UI", Arial, sans-serif !important` vào `#docx-pdf-sandbox` override style.
+     - Đảm bảo mẫu xuất mặc định `getEffectiveExportTemplateBuffer` nhận diện chuẩn `tableId` (chuyến đi, thân nhân, cán bộ).
+  2. `src/components/common/PdfPreviewDialog.vue`:
+     - Khai báo đồng thời cả 2 prop `filename` và `fileName`.
+     - Tự động gắn tham số viewer chuẩn `#toolbar=1&navpanes=0&view=FitH` vào URL Blob trong thẻ iframe, hiển thị thanh công cụ phóng to/thu nhỏ/in ấn của trình duyệt và tự động căn vừa chiều rộng màn hình.
+  3. `src/views/DashboardView.vue` & `src/views/UnifiedTableView.vue`:
+     - Sửa `authStore.currentUser` thành `authStore.user || authStore.currentUser`.
+     - Tối ưu hóa hàm `previewPdfForRow` tự động nhận diện tên và mã định danh của Cán bộ / Thân nhân / Chuyến đi qua `getTargetRowDisplayName` và `getTargetRowCode`.
+  4. `src/components/common/AdvancedDocxExportDialog.vue`:
+     - Tối ưu hàm `handlePreviewPdf`: khi người dùng chọn phạm vi "Tất cả" hoặc "Chọn nhiều", nút "Xem trước PDF" sẽ lấy bản ghi đầu tiên trong danh sách để tạo bản xem trước trực quan ngay lập tức.
+- **Kiểm thử & Triển khai**:
+  - `npm run build`: Thành công 100% (613ms, 0 lỗi).
+  - Đồng bộ toàn bộ `dist/` và mã nguồn sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
+
+## SESSION 45 (2026-09-10) - SỬA LỖI DOUBLE HEADER "STT STT", TỐI ƯU LƯU TÙY CHỌN DROPDOWN & NÂNG CẤP CÔNG THỨC ĐẾM SỐ LẦN XUẤT CẢNH TRONG NĂM
+- **Yêu cầu Người dùng**:
+  1. Bảng popup và bảng cột STT đang có 2 STT hiển thị lặp (`STT  STT`).
+  2. Cột danh mục dropdown sửa giá trị xong không thể lưu lại được.
+  3. Check lại công thức số lần xuất cảnh trong năm (hiện tại bảng đang không đếm được và không gộp unique, hiển thị chuyến 1 2 được).
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. *Double STT STT*:
+     - Trong `UnifiedTableView.vue` và `DashboardView.vue`, cột STT vừa có thuộc tính `header="STT"` vừa có `<template #header><span>STT</span></template>`.
+     - PrimeVue Column render cả span title của prop lẫn slot header, gây ra chữ `STT  STT` cạnh nhau trên cùng một ô tiêu đề.
+  2. *Không lưu được tùy chọn dropdown (`ColumnHeaderMenu.vue` & `useTableColumns.js`)*:
+     - Ô nhập tùy chọn `editOptions` chỉ gắn sự kiện `@blur`. Không có nút Lưu rõ ràng, không hỗ trợ bấm phím Enter, không có phản hồi trạng thái đã lưu.
+     - Khi người dùng click ra ngoài backdrop để đóng menu, sự kiện `closeMenu` lập tức hủy popover trước khi blur kịp hoàn tất.
+     - Trong `useTableColumns.js`, hàm `onChildChangeColumnOptions` chưa cập nhật tức thì vào các instance cột đang hiển thị (`selectedChildMenuCol`, `visibleColumns`, `cards[selectedViewIdx].columns`).
+  3. *Công thức số lần xuất cảnh trong năm (`computeTripsCountInYear` & `tripsList`)*:
+     - Trong `src/stores/personnel.js`, khi xây dựng `allTrips` (nguồn của bảng Chuyến đi), các chuyến đi không được gắn `rawPerson: p` và `rawRelative: r`.
+     - Do đó, khi `computeTripsCountInYear` chạy trên một dòng chuyến đi, nó không tìm thấy các chuyến đi khác của người đó, dẫn đến `personTrips = [record]` (chỉ có duy nhất 1 chuyến).
+     - Khi người dùng gộp Unique theo Cán bộ/CCCD, nó chỉ hiện Chuyến 1 mà không thể hiện Chuyến 2, Chuyến 3.
+     - Đồng thời, code cũ khi format dòng chuyến đi đơn lẻ trả về nhãn cứng `- Chuyến 1: [Quốc gia] - [Ngày]` mà hoàn toàn KHÔNG hiển thị số lần đếm (`{count} lần`), khiến bảng không đếm được.
+     - Thuộc tính cấu hình `formulaTargetYear` và `formulaUnit` từ menu không được hàm `computeTripsCountInYear` đọc.
+- **Giải pháp Đã Triển khai**:
+  1. *Khắc phục double STT*:
+     - Xóa bỏ thuộc tính `header="STT"` thừa trên `<Column field="stt" ...>` ở cả `UnifiedTableView.vue` và `DashboardView.vue`, giữ lại `<template #header>` chống gãy dòng. Cột STT hiển thị duy nhất 1 chữ "STT".
+  2. *Nâng cấp Lưu danh mục Dropdown (`ColumnHeaderMenu.vue` & `useTableColumns.js`)*:
+     - Thêm nút Lưu mini chuyên dụng cạnh ô nhập tùy chọn với icon checkmark / save và phản hồi "Đã lưu danh sách tùy chọn!".
+     - Hỗ trợ nhấn `Enter` và sự kiện `@change`.
+     - Trong `closeMenu`: tự động kiểm tra và lưu nếu có thay đổi chưa lưu trước khi đóng menu.
+     - Cập nhật tức thì vào toàn bộ các đối tượng cột (`selectedChildMenuCol`, `visibleColumns`, `allAvailableColumnsList`, `currentCardColumns`).
+  3. *Nâng cấp Công thức Số lần xuất cảnh trong năm (`formatters.js`, `personnel.js`, `UnifiedTableView.vue`, `DashboardView.vue`)*:
+     - Trong `stores/personnel.js`: Gắn đầy đủ `rawPerson: p` và `rawRelative: r` vào tất cả các phần tử trong `allTrips`.
+     - Trong `computeTripsCountInYear`:
+       + Hỗ trợ đọc `formulaTargetYear` (năm tùy chọn) và `formulaUnit` (đơn vị: lần).
+       + Thu thập trọn vẹn tất cả chuyến đi của đối tượng qua `rawPerson.trips`, `rawRelative.trips` và đối chiếu qua toàn bộ danh sách `allTrips`.
+       + Trích xuất an toàn ngày xuất cảnh và quốc gia qua mọi trường dữ liệu (`departureDate`, `ngay_xuat_canh`, `ngay_di`, `custom_data`).
+       + Luôn định dạng nhãn bắt đầu bằng số lần đếm rõ ràng: `${count} ${unit} (năm ${targetYear})`, kèm các dòng chi tiết từng chuyến `- Chuyến 1: [Nơi đến] - [Ngày]`, `- Chuyến 2: [Nơi đến] - [Ngày]`.
+       + Hỗ trợ hiển thị đầy đủ Chuyến 1, Chuyến 2... khi gộp dòng Unique.
+       + Truyền `allTrips` và `personnelStore` vào `configWithResolver` ở cả `UnifiedTableView.vue` và `DashboardView.vue`.
+- **Kiểm thử & Triển khai**:
+  - `npm run build`: Thành công 100% (584ms, 0 lỗi).
+  - Đồng bộ toàn bộ `dist/` và mã nguồn sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
+
 

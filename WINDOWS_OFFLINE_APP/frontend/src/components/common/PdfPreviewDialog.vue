@@ -66,7 +66,7 @@
       <iframe
         v-if="blobUrl"
         ref="pdfIframeRef"
-        :src="blobUrl"
+        :src="`${blobUrl}#toolbar=1&navpanes=0&view=FitH`"
         class="pdf-iframe"
         title="Xem trước PDF"
       ></iframe>
@@ -101,7 +101,11 @@ const props = defineProps({
   },
   fileName: {
     type: String,
-    default: 'Ho_so.pdf',
+    default: '',
+  },
+  filename: {
+    type: String,
+    default: '',
   },
 });
 
@@ -120,7 +124,7 @@ const dialogTitle = computed(() => {
 });
 
 const safeFileName = computed(() => {
-  const name = props.fileName || 'Ho_so.pdf';
+  const name = props.fileName || props.filename || 'Ho_so.pdf';
   return name.endsWith('.pdf') ? name : `${name}.pdf`;
 });
 

@@ -348,6 +348,7 @@ export const usePersonnelStore = defineStore('personnel', {
                 isRelative: false,
                 personnelId: p.id,
                 personnelCode: p.code || '',
+                rawPerson: p,
               });
             });
           }
@@ -369,6 +370,10 @@ export const usePersonnelStore = defineStore('personnel', {
                     isRelative: true,
                     personnelId: p.id,
                     relativeId: r.id,
+                    relativeName: r.relativeName || r.name || '',
+                    parentPersonnelName: p.name || '',
+                    rawPerson: p,
+                    rawRelative: r,
                   });
                 }
               });

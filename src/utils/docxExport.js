@@ -708,7 +708,7 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
   container.style.backgroundColor = '#ffffff';
   container.style.color = '#000000';
   container.style.zIndex = '-9999';
-  container.style.opacity = '0';
+  container.style.opacity = '1';
   container.style.pointerEvents = 'none';
   container.style.overflow = 'visible';
 
@@ -721,6 +721,7 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
       box-shadow: none !important;
       text-shadow: none !important;
       filter: none !important;
+      font-family: "Times New Roman", "DejaVu Sans", "Segoe UI", Arial, sans-serif !important;
     }
     #docx-pdf-sandbox .docx-wrapper {
       background: #ffffff !important;
@@ -1271,7 +1272,8 @@ export async function getEffectiveExportTemplateBuffer(options = {}, personnelSt
         const local = localStorage.getItem('system_docx_templates');
         if (local) savedTemplates = JSON.parse(local);
       }
-      const defTpl = (savedTemplates || []).find((t) => t.isDefault && t.base64);
+      const targetTbl = options.tableId || 'personnel';
+      const defTpl = (savedTemplates || []).find((t) => t.isDefault && (t.tableId ? t.tableId === targetTbl : targetTbl === 'personnel') && t.base64);
       if (defTpl && defTpl.base64) {
         const binaryString = window.atob(defTpl.base64);
         const bytes = new Uint8Array(binaryString.length);

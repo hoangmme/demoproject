@@ -705,12 +705,56 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   const defaultResult = { status: 'none', label: '-', shortLabel: '-', isWarning: false, value: 0, year: null, count: 0, cssClass: '' };
   if (!record) return defaultResult;
 
-  const depCol = formulaConfig.formulaDepartureCol || formulaConfig.departureCol || 'ngay_xuat_canh';
-  const labelTpl = formulaConfig.formulaLabelFormat || formulaConfig.formulaLabelNormal || '{count} lần';
-  const countryCol = formulaConfig.formulaCountryCol || formulaConfig.countryCol || 'countryName';
+  const depCol = formulaConfig.formulaDepartureCol || formulaConfig.formulaDepCol || formulaConfig.departureCol;
+  const countryCol = formulaConfig.formulaCountryCol || formulaConfig.countryCol;
+  const labelTpl = formulaConfig.formulaLabelFormat || formulaConfig.formulaLabelNormal;
+  const unit = formulaConfig.formulaUnit || 'lần';
+  const configuredYear = Number(formulaConfig.formulaTargetYear || formulaConfig.targetYear) || null;
 
-  // 1. Xác định đối tượng và danh sách chuyến đi của CHÍNH đối tượng đó
-  // TUYỆT ĐỐI KHÔNG LẤY CHUYẾN ĐI CỦA CÁN BỘ GÁN CHO THÂN NHÂN VÀ NGƯỢC LẠI
+  // Helper 1: Trích xuất an toàn ngày xuất cảnh từ chuyến đi
+  const extractTripDepDate = (t) => {
+    if (!t) return null;
+    let raw = depCol ? getRecordFieldValue(t, depCol) : null;
+    if (!raw) {
+      raw = t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngay_di || t.ngayDi;
+    }
+    if (!raw && t.custom_data) {
+      let cd = t.custom_data;
+      if (typeof cd === 'string') {
+        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+      }
+      if (cd && typeof cd === 'object') {
+        raw = (depCol ? cd[depCol] : null) || cd.departureDate || cd.approvedDepartureDate || cd.ngay_xuat_canh || cd.ngay_di || cd.ngayDi;
+      }
+    }
+    return parseDateValue(raw);
+  };
+
+  // Helper 2: Trích xuất nơi đến / quốc gia từ chuyến đi
+  const resolveTripCountry = (rec) => {
+    if (!rec) return '';
+    if (countryCol) {
+      const v = getRecordFieldValue(rec, countryCol);
+      if (v !== undefined && v !== null && String(v).trim() !== '-' && String(v).trim() !== '') return String(v).trim();
+    }
+    if (rec.countryName !== undefined && String(rec.countryName).trim() !== '') return String(rec.countryName).trim();
+    if (rec.quoc_gia_xuat_canh !== undefined && String(rec.quoc_gia_xuat_canh).trim() !== '') return String(rec.quoc_gia_xuat_canh).trim();
+    if (rec.country !== undefined && String(rec.country).trim() !== '') return String(rec.country).trim();
+    if (rec.quoc_gia !== undefined && String(rec.quoc_gia).trim() !== '') return String(rec.quoc_gia).trim();
+    if (rec.custom_data) {
+      let cd = rec.custom_data;
+      if (typeof cd === 'string') {
+        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+      }
+      if (cd && typeof cd === 'object') {
+        const cVal = (countryCol ? cd[countryCol] : null) || cd.countryName || cd.quoc_gia_xuat_canh || cd.country || cd.quoc_gia;
+        if (cVal) return String(cVal).trim();
+      }
+    }
+    return '';
+  };
+
+  // 1. Thu thập toàn bộ danh sách chuyến đi của chính đối tượng (Cán bộ hoặc Thân nhân)
   let personTrips = [];
   const isRelative = Boolean(record.isRelative || record.relativeId || record.rawRelative || record._recordType === 'relative');
 
@@ -718,7 +762,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     // Đối tượng là Thân nhân (hoặc chuyến đi của Thân nhân)
     const rel = record.rawRelative || record;
     if (Array.isArray(rel.trips) && rel.trips.length > 0) {
-      personTrips = rel.trips;
+      personTrips = [...rel.trips];
     } else {
       let cdTrips = null;
       try {
@@ -732,12 +776,32 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
         } catch (e) {}
       }
       if (cdTrips && cdTrips.length > 0) {
-        personTrips = cdTrips;
+        personTrips = [...cdTrips];
       } else if (Array.isArray(record.trips) && record.trips.length > 0) {
-        personTrips = record.trips;
-      } else if (record._recordType === 'trip' || record.quoc_gia_xuat_canh || record.departureDate || record.ngay_xuat_canh) {
-        personTrips = [record];
+        personTrips = [...record.trips];
       }
+    }
+
+    // Tra cứu chéo thêm từ toàn bộ danh sách chuyến đi nếu có
+    const allTrips = formulaConfig.allTrips || formulaConfig.personnelStore?.tripsList || [];
+    if (allTrips.length > 0) {
+      const relId = record.relativeId || record.id || record.rawRelative?.id;
+      const relCccd = record.cccdthannhan || record.cccd || record.rawRelative?.cccdthannhan || record.rawRelative?.cccd;
+      const relName = record.relativeName || record.name || record.rawRelative?.relativeName || record.rawRelative?.name;
+      allTrips.forEach((t) => {
+        if (!t.isRelative) return;
+        const matchId = relId && (t.relativeId === relId || t.id === relId);
+        const matchCccd = relCccd && (t.cccdthannhan === relCccd || t.cccd === relCccd);
+        const matchName = relName && (t.relativeName === relName || t.name === relName);
+        if (matchId || matchCccd || matchName) {
+          const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
+          if (!exists) personTrips.push(t);
+        }
+      });
+    }
+
+    if (personTrips.length === 0 && (record._recordType === 'trip' || record.quoc_gia_xuat_canh || record.departureDate || record.ngay_xuat_canh)) {
+      personTrips = [record];
     }
   } else {
     // Đối tượng là Cán bộ (hoặc chuyến đi của Cán bộ)
@@ -760,29 +824,44 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
         personTrips = cdTrips.filter((t) => !t.isRelative);
       } else if (Array.isArray(record.trips) && record.trips.length > 0) {
         personTrips = record.trips.filter((t) => !t.isRelative);
-      } else if (record._recordType === 'trip' || record.quoc_gia_xuat_canh || record.departureDate || record.ngay_xuat_canh) {
-        personTrips = [record];
       }
+    }
+
+    // Tra cứu chéo thêm từ toàn bộ danh sách chuyến đi nếu có
+    const allTrips = formulaConfig.allTrips || formulaConfig.personnelStore?.tripsList || [];
+    if (allTrips.length > 0) {
+      const pId = record.personnelId || record.rawPerson?.id || (!record.isRelative ? record.id : null);
+      const pCccd = record.cccdchuyendi || record.cccdparent || record.cccd || record.rawPerson?.cccdparent || record.rawPerson?.cccd;
+      allTrips.forEach((t) => {
+        if (t.isRelative) return;
+        const matchId = pId && (t.personnelId === pId || t.id === pId);
+        const matchCccd = pCccd && (t.cccdchuyendi === pCccd || t.cccdparent === pCccd || t.cccd === pCccd);
+        if (matchId || matchCccd) {
+          const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
+          if (!exists) personTrips.push(t);
+        }
+      });
+    }
+
+    if (personTrips.length === 0 && (record._recordType === 'trip' || record.quoc_gia_xuat_canh || record.departureDate || record.ngay_xuat_canh)) {
+      personTrips = [record];
     }
   }
 
-  // 2. Xác định ngày và năm của chuyến đi hiện tại (nếu bản ghi là chuyến đi)
-  const rawCurrentDep = getRecordFieldValue(record, depCol) || record.departureDate || record.approvedDepartureDate || record.ngay_xuat_canh || record.ngayDi;
-  const currentDepDate = parseDateValue(rawCurrentDep);
-  let targetYear = currentDepDate ? currentDepDate.getFullYear() : null;
+  // 2. Xác định ngày và năm của chuyến đi hiện tại
+  const currentDepDate = extractTripDepDate(record);
+  let targetYear = configuredYear || (currentDepDate ? currentDepDate.getFullYear() : null);
 
-  // Nếu bản thân record là một chuyến đi nhưng không có ngày xuất cảnh hợp lệ, không thể tính số lần theo năm
+  // Nếu là dòng chuyến đi nhưng hoàn toàn không có ngày xuất cảnh hợp lệ và không cấu hình năm:
   const isTripRecord = Boolean(record._recordType === 'trip' || record.rawTrip || record.quoc_gia_xuat_canh || record.countryName);
-  if (isTripRecord && !currentDepDate) {
+  if (isTripRecord && !currentDepDate && !configuredYear) {
     return defaultResult;
   }
 
   if (!targetYear) {
-    // Nếu record là Cán bộ / Thân nhân gộp: thu thập các năm có chuyến đi hợp lệ
     const yearsWithTrips = [];
     for (const t of personTrips) {
-      const rawD = getRecordFieldValue(t, depCol) || t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngayDi;
-      const d = parseDateValue(rawD);
+      const d = extractTripDepDate(t);
       if (d) yearsWithTrips.push(d.getFullYear());
     }
     const currentYear = new Date().getFullYear();
@@ -791,54 +870,44 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     } else if (yearsWithTrips.length > 0) {
       targetYear = Math.max(...yearsWithTrips);
     } else {
-      // Không có chuyến đi nào có ngày hợp lệ
-      return defaultResult;
+      targetYear = currentYear;
     }
   }
 
-  // 3. Đếm số chuyến đi trong năm targetYear của chính đối tượng và thu thập danh sách chi tiết
-  let count = 0;
+  // 3. Đếm số chuyến đi trong năm targetYear của chính đối tượng và thu thập danh sách chi tiết (loại bỏ trùng lặp)
   const matchedTrips = [];
-
-  const resolveTripCountry = (rec) => {
-    if (!rec) return '';
-    if (countryCol) {
-      const v = getRecordFieldValue(rec, countryCol);
-      if (v !== undefined && v !== null && String(v).trim() !== '-' && String(v).trim() !== '') return String(v).trim();
-    }
-    if (rec.quoc_gia_xuat_canh !== undefined) return String(rec.quoc_gia_xuat_canh || '').trim();
-    if (rec.countryName !== undefined) return String(rec.countryName || '').trim();
-    if (rec.country !== undefined) return String(rec.country || '').trim();
-    return '';
-  };
+  const seenKeys = new Set();
 
   for (const t of personTrips) {
-    const rawDep = getRecordFieldValue(t, depCol) || t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngayDi;
-    const d = parseDateValue(rawDep);
+    const d = extractTripDepDate(t);
     if (d && d.getFullYear() === targetYear) {
-      count++;
-      const country = resolveTripCountry(t);
-      matchedTrips.push({
-        date: d,
-        dateStr: formatDate(d) || formatDate(rawDep) || '',
-        country: country || 'Chưa rõ nơi đến',
-        trip: t,
-      });
+      const cName = resolveTripCountry(t) || 'Chưa rõ nơi đến';
+      const dStr = formatDate(d);
+      const uniqueTripKey = t.id || t.uniqueKey || `${d.getTime()}_${cName}`;
+      if (!seenKeys.has(uniqueTripKey)) {
+        seenKeys.add(uniqueTripKey);
+        matchedTrips.push({
+          date: d,
+          dateStr: dStr,
+          country: cName,
+          trip: t,
+        });
+      }
     }
   }
 
-  // Nếu bản ghi hiện tại là 1 chuyến đi nhưng personTrips rỗng hoặc chỉ có 1
-  if (count === 0 && currentDepDate) {
-    count = 1;
-    const country = resolveTripCountry(record);
+  // Nếu bản ghi hiện tại là 1 chuyến đi nhưng personTrips chưa có
+  if (matchedTrips.length === 0 && currentDepDate && currentDepDate.getFullYear() === targetYear) {
+    const cName = resolveTripCountry(record) || 'Chưa rõ nơi đến';
     matchedTrips.push({
       date: currentDepDate,
-      dateStr: formatDate(currentDepDate) || formatDate(rawCurrentDep) || '',
-      country: country || 'Chưa rõ nơi đến',
+      dateStr: formatDate(currentDepDate),
+      country: cName,
       trip: record,
     });
   }
 
+  const count = matchedTrips.length;
   if (count === 0) {
     return defaultResult;
   }
@@ -846,78 +915,19 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   // Sắp xếp các chuyến đi theo ngày tăng dần
   matchedTrips.sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0));
 
-  // Kiểm tra xem dòng hiện tại là 1 chuyến đi đơn lẻ hay là dòng đã gộp Unique theo Cán bộ / Thân nhân
-  const isAggregatedRow = Boolean(
-    record._isUniqueRow ||
-    record._isAggregatedPerson ||
-    (!record.departureDate && !record.ngay_xuat_canh && !record.rawTrip && record._recordType !== 'trip' && record.code?.startsWith('CB-'))
-  );
-
-  // Nếu là dòng chuyến đi đơn lẻ (dữ liệu hiển thị từng hàng):
-  // Hiển thị thông tin chuyến đi tương ứng của từng hàng thay vì gộp danh sách trùng lặp
-  if (!isAggregatedRow && (record.departureDate || record.ngay_xuat_canh || record.rawTrip || record._recordType === 'trip')) {
-    const tripRecId = record.id || record.uniqueKey || record.rawTrip?.id;
-    const currentTripIdx = matchedTrips.findIndex((mt) => {
-      const mtId = mt.trip?.id || mt.trip?.uniqueKey;
-      if (tripRecId && mtId && String(tripRecId) === String(mtId)) return true;
-      const recDateStr = formatDate(currentDepDate) || formatDate(rawCurrentDep) || '';
-      const recCountry = resolveTripCountry(record);
-      return mt.dateStr === recDateStr && mt.country === recCountry;
-    });
-
-    if (currentTripIdx !== -1) {
-      const currentTrip = matchedTrips[currentTripIdx];
-      const tripNum = currentTripIdx + 1;
-      const fullStr = `- Chuyến ${tripNum}: ${currentTrip.country} - ${currentTrip.dateStr}`;
-      const shortStr = `- Chuyến ${tripNum}: ${currentTrip.country}`;
-      return {
-        status: 'normal',
-        count,
-        value: count,
-        year: targetYear,
-        label: fullStr,
-        shortLabel: shortStr,
-        details: [currentTrip],
-        tripIndex: currentTripIdx,
-        cssClass: '',
-      };
-    } else if (currentDepDate) {
-      const recCountry = resolveTripCountry(record) || 'Chưa rõ nơi đến';
-      const recDateStr = formatDate(currentDepDate) || formatDate(rawCurrentDep) || '';
-      const fullStr = `- Chuyến 1: ${recCountry} - ${recDateStr}`;
-      return {
-        status: 'normal',
-        count: 1,
-        value: 1,
-        year: targetYear,
-        label: fullStr,
-        shortLabel: fullStr,
-        details: [],
-        tripIndex: 0,
-        cssClass: '',
-      };
-    }
-  }
-
-  // Khi là dòng Unique / gộp theo Cán bộ / Thân nhân: hiển thị tổng số lần và chi tiết tất cả chuyến đi
+  // 4. Xây dựng nhãn hiển thị: luôn hiển thị rõ tổng số lần và chi tiết chuyến đi
   let mainCountStr = '';
   if (labelTpl && labelTpl !== '{count} lần') {
     mainCountStr = labelTpl
       .replace(/{count}/g, String(count))
       .replace(/{year}/g, String(targetYear));
   } else {
-    mainCountStr = `${count} lần${targetYear ? ` (năm ${targetYear})` : ''}`;
+    mainCountStr = `${count} ${unit}${targetYear ? ` (năm ${targetYear})` : ''}`;
   }
 
-  const shortLabel = count > 0 ? (mainCountStr.trim() ? mainCountStr : `${count} lần`) : '0 lần';
-  let fullLabel = shortLabel;
-
-  if (matchedTrips.length > 0) {
-    const detailLines = matchedTrips.map((t, idx) => `- Chuyến ${idx + 1}: ${t.country} - ${t.dateStr}`);
-    fullLabel = `${shortLabel}\n${detailLines.join('\n')}`;
-  } else if (count === 0) {
-    fullLabel = '-';
-  }
+  const shortLabel = count > 0 ? (mainCountStr.trim() ? mainCountStr : `${count} ${unit}`) : '0 lần';
+  const detailLines = matchedTrips.map((t, idx) => `- Chuyến ${idx + 1}: ${t.country} - ${t.dateStr}`);
+  const fullLabel = `${shortLabel}\n${detailLines.join('\n')}`;
 
   return {
     status: 'normal',

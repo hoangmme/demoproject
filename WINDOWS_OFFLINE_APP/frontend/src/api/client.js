@@ -65,9 +65,9 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response ? error.response.status : null;
-    if (status === 401) {
-      console.warn('API Unauthorized 401 - Session expired or unauthenticated');
-      // If token in session was rejected, clean access_token so future requests don't loop 401
+    if (status === 401 || status === 403) {
+      console.warn(`API ${status} - Session invalid or unauthenticated, clearing access_token`);
+      // If token in session was rejected, clean access_token so future requests don't loop 401/403
       try {
         const session = localStorage.getItem('mvp_session');
         if (session) {

@@ -487,7 +487,7 @@
         />
 
         <Button
-          v-if="outputFormat === 'pdf' && (exportScope === 'single' || (exportScope === 'selected' && selectedCount === 1))"
+          v-if="outputFormat === 'pdf'"
           label="Xem trước PDF"
           icon="pi pi-eye"
           size="small"
@@ -1314,9 +1314,12 @@ const previewingPdf = ref(false);
 const handlePreviewPdf = async () => {
   const buf = effectiveTemplateBuffer.value;
   if (!buf) return alert('Vui lòng chọn hoặc tải lên tệp mẫu Word (.docx)');
-  const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
-  const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
-  if (!targetP) return alert(`Xem trước chỉ hỗ trợ cho 1 ${mainTableTitle.value || 'bản ghi'}. Vui lòng chọn 1 bản ghi để xem trước.`);
+  const targetP = (exportScope.value === 'single' && props.targetPerson)
+    ? props.targetPerson
+    : (props.selectedPersonnel?.length > 0
+      ? props.selectedPersonnel[0]
+      : (props.allPersonnel?.length > 0 ? props.allPersonnel[0] : props.targetPerson));
+  if (!targetP) return alert(`Không tìm thấy bản ghi nào để xem trước. Vui lòng kiểm tra lại danh sách ${mainTableTitle.value || 'bản ghi'}.`);
 
   previewingPdf.value = true;
   try {

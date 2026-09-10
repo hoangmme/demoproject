@@ -883,6 +883,20 @@ export function useTableColumns({
   };
 
   const onChildChangeColumnOptions = async ({ colId, options }) => {
+    if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
+      selectedChildMenuCol.value.options = options;
+    }
+    const colInVisible = (visibleColumns.value || []).find((c) => c.id === colId);
+    if (colInVisible) colInVisible.options = options;
+    const colInAll = (allAvailableColumnsList.value || []).find((c) => c.id === colId);
+    if (colInAll) colInAll.options = options;
+
+    const cIdx = unref(selectedViewIdx);
+    if (cIdx >= 0 && cards.value?.[cIdx]?.columns) {
+      const colInCard = cards.value[cIdx].columns.find((c) => c.id === colId);
+      if (colInCard) colInCard.options = options;
+    }
+
     const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
     if (isBlank && cDash) {
       const col = (cDash.customColumns || []).find((c) => c.id === colId);
@@ -1154,6 +1168,20 @@ export function useTableColumns({
 
   const onChildChangeFormulaType = async (payload) => {
     const { colId, ...formulaProps } = payload || {};
+    if (selectedChildMenuCol.value && selectedChildMenuCol.value.id === colId) {
+      Object.assign(selectedChildMenuCol.value, formulaProps);
+    }
+    const colInVisible = (visibleColumns.value || []).find((c) => c.id === colId);
+    if (colInVisible) Object.assign(colInVisible, formulaProps);
+    const colInAll = (allAvailableColumnsList.value || []).find((c) => c.id === colId);
+    if (colInAll) Object.assign(colInAll, formulaProps);
+
+    const cIdx = unref(selectedViewIdx);
+    if (cIdx >= 0 && cards.value?.[cIdx]?.columns) {
+      const colInCard = cards.value[cIdx].columns.find((c) => c.id === colId);
+      if (colInCard) Object.assign(colInCard, formulaProps);
+    }
+
     const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
     if (isBlank && cDash) {
       const col = (cDash.customColumns || []).find((c) => c.id === colId);

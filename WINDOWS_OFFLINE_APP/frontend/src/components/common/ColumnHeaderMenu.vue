@@ -823,12 +823,30 @@
         <!-- Tùy chọn Options nếu là dropdown -->
         <div v-if="editFormat === 'dropdown' || editFormat === 'checkbox' || editFormat === 'checkbox_file_loop'" class="menu-field">
           <label>Danh sách tùy chọn (cách nhau bởi dấu phẩy):</label>
-          <input
-            v-model="editOptions"
-            class="menu-input"
-            placeholder="VD: Lựa chọn 1, Lựa chọn 2, Lựa chọn 3"
-            @blur="handleSaveOptions"
-          />
+          <div style="display: flex; gap: 4px;">
+            <input
+              v-model="editOptions"
+              class="menu-input"
+              placeholder="VD: Lựa chọn 1, Lựa chọn 2, Lựa chọn 3"
+              @keyup.enter="handleSaveOptions"
+              @change="handleSaveOptions"
+              @blur="handleSaveOptions"
+            />
+            <button
+              type="button"
+              class="btn-save-mini"
+              :class="{ 'btn-saved-success': isOptionsSaved }"
+              @click="handleSaveOptions"
+              title="Lưu danh sách tùy chọn"
+              style="flex-shrink: 0; min-width: 32px;"
+            >
+              <i :class="isOptionsSaved ? 'pi pi-check' : 'pi pi-save'"></i>
+            </button>
+          </div>
+          <div v-if="isOptionsSaved" style="font-size: 0.68rem; color: #16a34a; font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 3px;">
+            <i class="pi pi-check-circle" style="font-size: 0.72rem;"></i>
+            <span>Đã lưu danh sách tùy chọn!</span>
+          </div>
         </div>
 
         <!-- 4. Độ rộng trong Form Chi tiết (%) -->
@@ -1681,6 +1699,9 @@ const removeRollupCondition = (index) => {
 };
 
 const closeMenu = () => {
+  if (props.column && editOptions.value !== undefined && editOptions.value.trim() !== (props.column.options || '').trim()) {
+    handleSaveOptions();
+  }
   emit("update:visible", false);
 };
 
@@ -1792,8 +1813,19 @@ const handleFormatChange = () => {
   }
 };
 
+const isOptionsSaved = ref(false);
+let optionsSavedTimer = null;
+
 const handleSaveOptions = () => {
-  emit("change-options", { colId: props.column.id, options: editOptions.value.trim() });
+  if (!props.column) return;
+  const trimmed = (editOptions.value || "").trim();
+  props.column.options = trimmed;
+  emit("change-options", { colId: props.column.id, options: trimmed });
+  isOptionsSaved.value = true;
+  if (optionsSavedTimer) clearTimeout(optionsSavedTimer);
+  optionsSavedTimer = setTimeout(() => {
+    isOptionsSaved.value = false;
+  }, 2500);
 };
 
 const handleSaveFormWidth = () => {
@@ -2036,6 +2068,9 @@ const handleFilterByCol = () => {
 .btn-save-mini:disabled {
   background: #cbd5e1;
   cursor: not-allowed;
+}
+.btn-save-mini.btn-saved-success {
+  background: #16a34a !important;
 }
 
 .menu-divider {

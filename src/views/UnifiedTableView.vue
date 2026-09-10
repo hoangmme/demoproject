@@ -256,7 +256,7 @@
         @page="e => dtFirst = e.first"
       >
         <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
-        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }" :bodyStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }">
+        <Column field="stt" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }" :bodyStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }">
           <template #header>
             <span style="white-space: nowrap !important; word-break: keep-all !important; display: inline-block;">STT</span>
           </template>
@@ -1207,16 +1207,21 @@ const previewPdfForRow = async (row) => {
     };
 
     const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
-    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, row, personnelStore, authStore.currentUser, exportOpts);
+    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, row, personnelStore, authStore.user || authStore.currentUser, exportOpts);
 
     const titleCol = curCols.find((c) => c.isTitle || c.isIdentifier);
-    const pName = (titleCol && row[titleCol.id]) || row.name || row.personnelName || row.ho_ten || row.fullName || row.title || curTitle;
+    const pName = (titleCol && (row[titleCol.id] || row.custom_data?.[titleCol.id])) ||
+                  row.name || row.fullName || row.pName || row.personnelName ||
+                  row.relativeName || row.rName || row.countryName || row.quoc_gia_xuat_canh ||
+                  row.rawPerson?.fullName || row.rawPerson?.name ||
+                  row.rawRelative?.relativeName || row.title || curTitle || 'Hồ sơ';
     const keyCol = curCols.find((c) => c.isKey);
-    const pCode = (keyCol && row[keyCol.id]) || row.code || row.cccd || '';
+    const pCode = (keyCol && (row[keyCol.id] || row.custom_data?.[keyCol.id])) ||
+                  row.cccdchuyendi || row.cccdthannhan || row.cccdparent || row.code || row.cccd || '';
 
     rowPreviewPdfBlob.value = blob;
     rowPreviewTitle.value = `Hồ sơ: ${pName}${pCode ? ' (' + pCode + ')' : ''}`;
-    rowPreviewFileName.value = `Ho_so_${(pName || 'Ban_ghi').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    rowPreviewFileName.value = `Ho_so_${String(pName).replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
     showRowPdfPreview.value = true;
   } catch (err) {
     console.error('Lỗi khi xem PDF:', err);
@@ -2601,6 +2606,9 @@ const getCellValue = (trip, colOrId, depth = 0) => {
   if (colDef && colDef.format === 'formula') {
     const configWithResolver = {
       ...colDef,
+      personnelStore,
+      allTrips: tripsList.value || personnelStore.tripsList || [],
+      allPersonnel: personnelStore.personnelList || [],
       columns: allAvailableColumnsList.value || [],
       cellResolver: (targetColId) => {
         if (!targetColId || targetColId === colId || depth > 2) return '';
