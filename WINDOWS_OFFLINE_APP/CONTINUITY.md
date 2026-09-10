@@ -2797,8 +2797,15 @@
   - **Kiểm thử & Triển khai**:
     - `npm run build` thành công 100% (577ms, 0 lỗi).
     - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+- **Session 31 (2026-09-10) - Chuẩn Hóa Xuất PDF/Word 100% Dynamic, Tuyệt Đối Không Fallback, Dựa Trên Tính Năng "Khóa & Liên Kết Bảng"**:
+  - **Yêu cầu Người dùng**: "Bạn ơi, làm ơn đừng fallback, chúng ta đang cần dữ liệu minh bạch đúng cột và data được chọn,nếu bạn cần liên kết thì hãy dựa trên tính năng khóa liên kết tab chứ đừng hardcode dùm tôi, đữ liệu các cột thì lấy dynamic chứ sao cứ thích hardcode làm gì/???"
+  - **Nguyên lý thực hiện**:
+    1. **TUYỆT ĐỐI KHÔNG FALLBACK / KHÔNG HOÁN ĐỔI BẢN GHI**: Khi người dùng nhấn xuất trên bản ghi nào (Cán bộ, Chuyến đi, Thân nhân, Bảng tùy biến), dữ liệu xuất ra là 100% bản ghi được chọn (`targetPerson` / `form.value`), không tự ý tìm Cán bộ chủ quản để hoán đổi hay đè bản ghi gốc.
+    2. **100% DỮ LIỆU ĐỘNG THEO CẤU HÌNH CỘT**: Xóa bỏ toàn bộ các khối hardcode tĩnh (`dan_toc`, `ton_giao`, `que_quan`, `don_vi`, `chuc_vu`, `thuong_tru`, `tam_tru`, `passportPersonal`...). Thay vào đó, quét động qua danh sách cột của bảng (`columns`), trích xuất giá trị theo `col.id` và định dạng cột (`formula`, `lookup`, `rollup`, `date`, `presence`, `virtual`, `table_loop`, `checkbox_text`).
+    3. **LIÊN KẾT BẢNG DỰA TRÊN TÍNH NĂNG "KHÓA & LIÊN KẾT BẢNG"**: Động cơ liên kết `getLinkedRowsByConfig` trong `tableRegistry.js` đối chiếu động `linkTable`, `linkColumn`, `isKey` giữa 2 bảng, TUYỆT ĐỐI CẤM hardcode tên cột (`cccdparent`, `cccdchuyendi`...).
+    4. **MẪU TỰ ĐỘNG SINH ĐỘNG (DYNAMIC TEMPLATE GENERATION)**: `createDynamicDocxTemplateBlob` trong `docxExport.js` sinh mẫu Word 100% động từ `mainCols` của bảng hiện tại và các bảng liên kết được chọn, xóa sạch các thẻ XML cố định cũ.
+    5. **GIAO DIỆN XUẤT ĐA NĂNG ĐỘNG 100%**: `AdvancedDocxExportDialog.vue` nhận `tableId` và `columns`, hiển thị đúng tên bảng chính, cây trường dữ liệu Bảng chính + Bảng liên kết (`includePersonnel`, `includeRelatives`, `includeTrips`, `customTables`); `handleExport` và `handlePreviewPdf` xuất đúng danh sách và tên file tương ứng.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (567ms, 0 lỗi).
+    - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
   - **Trạng thái**: Done [Reversible].
-
-
-
-

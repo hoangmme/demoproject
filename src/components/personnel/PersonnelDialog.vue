@@ -102,7 +102,9 @@
   <!-- Advanced DOCX Export Dialog for current Person / Record -->
   <AdvancedDocxExportDialog
     v-model="isDocxExportOpen"
-    :targetPerson="exportTargetPerson"
+    :targetPerson="form"
+    :tableId="recordSource"
+    :columns="allTableColumns"
   />
 
   <!-- Dialog Nhập liệu mới đồng bộ như ở menu -->
@@ -219,71 +221,6 @@ const dialogHeader = computed(() => {
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
   const nameVal = form.value[pNameField] || form.value.name || (form.value._recordType === 'relative' ? (form.value.relativeName || form.value.name) : '') || form.value.title || form.value.id || '';
   return isEdit.value ? `Chi tiết: ${nameVal || 'Kết quả'}` : `Thêm mới kết quả`;
-});
-
-const exportTargetPerson = computed(() => {
-  const current = form.value || {};
-  const orig = props.personData || {};
-
-  const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const directName = current.name || current[pNameField] || current.ho_ten || current.fullName || orig.name || orig[pNameField] || orig.ho_ten;
-
-  // Nếu bản ghi hiện tại là Chuyến đi hoặc Thân nhân, tìm Cán bộ chủ quản liên kết
-  let linkedPerson = null;
-  const targetCccd = String(
-    current.cccdchuyendi || current.cccdparent || current.parentCccd || orig.cccdchuyendi || orig.cccdparent || orig.parentCccd || ''
-  ).trim();
-  const targetPId = String(current.personnelId || orig.personnelId || '').trim();
-  const targetPCode = String(current.personnelCode || orig.personnelCode || '').trim();
-
-  if (targetPId || targetPCode || targetCccd) {
-    linkedPerson = (personnelStore.personnelList || []).find((p) => {
-      if (targetPId && String(p.id).trim() === targetPId) return true;
-      if (targetPCode && String(p.code).trim() === targetPCode) return true;
-      if (targetCccd) {
-        const pKey = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-        const pCccd = String(p[pKey] || p.cccdparent || p.cccd || p.custom_data?.[pKey] || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim();
-        if (pCccd && pCccd.toLowerCase() === targetCccd.toLowerCase()) return true;
-      }
-      return false;
-    });
-  }
-
-  // Nếu tìm thấy cán bộ chủ quản liên kết khi đang ở context Chuyến đi hoặc Thân nhân
-  if (linkedPerson && (current._recordType === 'trip' || current._recordType === 'relative' || recordSource.value === 'trips' || recordSource.value === 'relatives' || !directName)) {
-    const fullPerson = JSON.parse(JSON.stringify(linkedPerson));
-    if (current._recordType === 'trip' || recordSource.value === 'trips') {
-      fullPerson.trips = Array.isArray(fullPerson.trips) ? fullPerson.trips : [];
-      const currTripId = current.id || current.uniqueKey;
-      const tripIdx = fullPerson.trips.findIndex((t) => currTripId && (t.id === currTripId || t.uniqueKey === currTripId));
-      if (tripIdx >= 0) {
-        fullPerson.trips[tripIdx] = { ...fullPerson.trips[tripIdx], ...current };
-      } else {
-        fullPerson.trips.unshift({ ...current });
-      }
-    } else if (current._recordType === 'relative' || recordSource.value === 'relatives') {
-      fullPerson.relatives = Array.isArray(fullPerson.relatives) ? fullPerson.relatives : [];
-      const currRelId = current.id || current.uniqueKey;
-      const relIdx = fullPerson.relatives.findIndex((r) => currRelId && (r.id === currRelId || r.uniqueKey === currRelId));
-      if (relIdx >= 0) {
-        fullPerson.relatives[relIdx] = { ...fullPerson.relatives[relIdx], ...current };
-      } else {
-        fullPerson.relatives.unshift({ ...current });
-      }
-    }
-    return fullPerson;
-  }
-
-  // Trường hợp Cán bộ thông thường (hoặc không tìm thấy liên kết)
-  const codeVal = current.code || current.personnelCode || orig.code || orig.personnelCode || (current.id ? String(current.id) : '');
-  const nameVal = directName || current.relativeName || current.title || orig.relativeName || orig.title || 'Cán bộ';
-
-  return {
-    ...orig,
-    ...current,
-    name: nameVal,
-    code: codeVal,
-  };
 });
 
 const safeClone = (obj) => {

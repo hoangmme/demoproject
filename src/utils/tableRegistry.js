@@ -438,3 +438,87 @@ export function getUnifiedTableLabel(tableId, options = {}) {
   if (!table) return 'Dữ liệu';
   return table.title || 'Dữ liệu';
 }
+
+/**
+ * Kiểm tra xem chuỗi cấu hình linkTable (có thể chứa nhiều bảng phân tách bằng dấu phẩy) có khớp với tableId hoặc tableSource không
+ */
+export function checkTableMatchesLink(linkTableStr, tableId, tableSource) {
+  if (!linkTableStr) return false;
+  const parts = String(linkTableStr).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const tId = String(tableId || '').trim().toLowerCase();
+  const tSrc = String(tableSource || '').trim().toLowerCase();
+  return (tId && parts.includes(tId)) || (tSrc && parts.includes(tSrc));
+}
+
+/**
+ * Lấy ID cột khóa chính của bảng (cột có isKey: true, hoặc khóa cấu hình hệ thống)
+ */
+export function getTableKeyColId(table, store) {
+  if (!table) return 'id';
+  const cols = table.getColumns ? table.getColumns(store) : (table.columns || []);
+  const keyCol = cols.find((c) => c.isKey);
+  if (keyCol) return keyCol.id;
+  if (table.id === 'personnel' || table.source === 'personnel') {
+    return store?.getPersonnelKeyField ? store.getPersonnelKeyField() : 'cccdparent';
+  }
+  if (table.id === 'relatives' || table.source === 'relatives') {
+    return store?.getRelativeKeyField ? store.getRelativeKeyField() : 'cccdthannhan';
+  }
+  if (table.id === 'trips' || table.source === 'trips') {
+    return store?.getTripKeyField ? store.getTripKeyField() : 'cccdchuyendi';
+  }
+  return 'id';
+}
+
+/**
+ * Lấy các dòng dữ liệu liên kết giữa 2 bảng hoàn toàn động dựa trên cấu hình Khóa & Liên kết Bảng (isKey, linkTable, linkColumn)
+ */
+export function getLinkedRowsByConfig(curRecord, curTableId, targetTableId, store) {
+  if (!curRecord || !curTableId || !targetTableId || !store) return [];
+
+  const curTable = findUnifiedTable(curTableId, { personnelStore: store });
+  const targetTable = findUnifiedTable(targetTableId, { personnelStore: store });
+  if (!curTable || !targetTable) return [];
+
+  const curId = curTable.id || curTable.source;
+  const targetId = targetTable.id || targetTable.source;
+  const curCols = curTable.getColumns ? curTable.getColumns(store) : (curTable.columns || []);
+  const targetCols = targetTable.getColumns ? targetTable.getColumns(store) : (targetTable.columns || []);
+  const targetRows = targetTable.getRows ? targetTable.getRows(store) : [];
+
+  // 1. Cột ở targetTable có linkTable trỏ tới curTable (Target -> Current)
+  const fkColInTarget = targetCols.find(
+    (c) => checkTableMatchesLink(c.linkTable, curId, curTable?.source)
+  );
+  if (fkColInTarget) {
+    const curKeyColId = fkColInTarget.linkColumn || getTableKeyColId(curTable, store);
+    const curVal = String(curRecord[curKeyColId] ?? curRecord.custom_data?.[curKeyColId] ?? curRecord.id ?? curRecord.code ?? '').trim().toLowerCase();
+    if (curVal) {
+      return targetRows.filter((r) => {
+        const val = String(r[fkColInTarget.id] ?? r.custom_data?.[fkColInTarget.id] ?? '').trim().toLowerCase();
+        return val && val === curVal;
+      });
+    }
+  }
+
+  // 2. Cột ở curTable có linkTable trỏ tới targetTable (Current -> Target)
+  const fkColInCur = curCols.find(
+    (c) => checkTableMatchesLink(c.linkTable, targetId, targetTable?.source)
+  );
+  if (fkColInCur) {
+    const targetKeyColId = fkColInCur.linkColumn || getTableKeyColId(targetTable, store);
+    const curVal = String(curRecord[fkColInCur.id] ?? curRecord.custom_data?.[fkColInCur.id] ?? '').trim().toLowerCase();
+    if (curVal) {
+      return targetRows.filter((r) => {
+        const val = String(r[targetKeyColId] ?? r.custom_data?.[targetKeyColId] ?? r.id ?? r.code ?? '').trim().toLowerCase();
+        return val && val === curVal;
+      });
+    }
+  }
+
+  // 3. Mảng dữ liệu con nếu đã được nạp trực tiếp trên bản ghi
+  if (Array.isArray(curRecord[targetId])) return curRecord[targetId];
+  if (Array.isArray(curRecord.custom_data?.[targetId])) return curRecord.custom_data[targetId];
+
+  return [];
+}
