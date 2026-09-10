@@ -276,11 +276,12 @@ export const usePersonnelStore = defineStore('personnel', {
 
             matchedRelatives.forEach((r, rIdx) => {
               if (!r.id || String(r.id).trim() === '' || String(r.id) === 'undefined') {
-                r.id = `rel_${Date.now()}_${Math.random().toString(36).slice(2, 9)}_${rIdx}`;
+                r.id = `rel_${p.id || 'p'}_${rIdx}`;
               }
               r.personnelId = p.id;
               r.parentPersonnelName = p.name || '';
               r.uniqueKey = r.id;
+              r.relativeIndex = rIdx;
 
               let rCustom = {};
               if (r.custom_data) {
@@ -342,9 +343,16 @@ export const usePersonnelStore = defineStore('personnel', {
 
           // Collect trips (Cán bộ)
           if (Array.isArray(matchedTrips)) {
-            matchedTrips.forEach((t) => {
+            matchedTrips.forEach((t, tIdx) => {
+              if (!t.id || String(t.id).trim() === '' || String(t.id) === 'undefined') {
+                t.id = `trip_${p.id || 'p'}_${tIdx}`;
+              }
+              t.uniqueKey = t.id;
               allTrips.push({
                 ...t,
+                id: t.id,
+                uniqueKey: t.id,
+                tripIndex: tIdx,
                 isRelative: false,
                 personnelId: p.id,
                 personnelCode: p.code || '',
@@ -1048,21 +1056,33 @@ export const usePersonnelStore = defineStore('personnel', {
         const targetParentId = relData.personnelId || relData.rawPerson?.id;
         const targetParentVal = String(relData[parentKeyField] || relData.rawPerson?.[pKeyField] || '').trim().toLowerCase();
         const targetRelId = relData.id ? String(relData.id).trim() : '';
+        const targetRelUniqueKey = relData.uniqueKey ? String(relData.uniqueKey).trim() : '';
+        const targetRelCode = relData.code ? String(relData.code).trim() : '';
+        const targetRelIdx = relData.relativeIndex !== undefined && relData.relativeIndex !== null
+          ? Number(relData.relativeIndex)
+          : (relData._relativeIndex !== undefined && relData._relativeIndex !== null ? Number(relData._relativeIndex) : null);
 
         const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'id';
         const targetRelKeyVal = String(relData[rKeyField] || relData.id || '').trim().toLowerCase();
+        const n2 = String(relData.relativeName || relData.name || relData.ho_va_ten || '').trim().toLowerCase();
 
-        const isSameRel = (r) => {
+        const isSameRel = (r, idx) => {
           if (!r || !relData) return false;
           if (r === relData || r === relData.rawRelative) return true;
+          // 1. Match by id
           if (targetRelId && r.id && String(r.id).trim() === targetRelId) return true;
+          // 2. Match by uniqueKey
+          if (targetRelUniqueKey && (String(r.uniqueKey || '').trim() === targetRelUniqueKey || String(r.id || '').trim() === targetRelUniqueKey)) return true;
+          // 3. Match by code (e.g. TN-00001)
+          if (targetRelCode && r.code && String(r.code).trim().toLowerCase() === targetRelCode.toLowerCase()) return true;
+          // 4. Match by relative key field (e.g. cccdthannhan)
           const rKeyVal = String(r[rKeyField] || r.id || '').trim().toLowerCase();
           if (rKeyVal && targetRelKeyVal && rKeyVal === targetRelKeyVal) return true;
+          // 5. Match by exact index in parent's relatives array
+          if (targetRelIdx !== null && typeof idx === 'number' && idx === targetRelIdx) return true;
+          // 6. Match by name (not requiring relationship match because relationship might have been edited)
           const n1 = String(r.relativeName || r.name || r.ho_va_ten || '').trim().toLowerCase();
-          const n2 = String(relData.relativeName || relData.name || relData.ho_va_ten || '').trim().toLowerCase();
-          const s1 = String(r.relationshipName || r.relationship || '').trim().toLowerCase();
-          const s2 = String(relData.relationshipName || relData.relationship || '').trim().toLowerCase();
-          if (n1 && n2 && n1 === n2 && s1 && s2 && s1 === s2) return true;
+          if (n1 && n2 && n1 === n2) return true;
           return false;
         };
 
@@ -1073,7 +1093,7 @@ export const usePersonnelStore = defineStore('personnel', {
         delete cleanRelData.uniqueKey;
 
         if (!cleanRelData.id || String(cleanRelData.id).trim() === '' || String(cleanRelData.id) === 'undefined') {
-          cleanRelData.id = `rel_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+          cleanRelData.id = targetRelId || `rel_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
         }
 
         // Clean custom_data
@@ -1138,6 +1158,10 @@ export const usePersonnelStore = defineStore('personnel', {
 
         const relIdx = relsInP.findIndex(isSameRel);
         if (relIdx !== -1) {
+          if (relsInP[relIdx].id) cleanRelData.id = relsInP[relIdx].id;
+          if (relsInP[relIdx].code) cleanRelData.code = relsInP[relIdx].code;
+          cleanRelData.personnelId = targetPerson.id;
+          cleanRelData.parentName = targetPerson.name;
           relsInP[relIdx] = { ...relsInP[relIdx], ...cleanRelData };
         } else {
           if (!cleanRelData.code) {
@@ -1167,13 +1191,31 @@ export const usePersonnelStore = defineStore('personnel', {
       if (!tripData) throw new Error('Không có dữ liệu chuyến đi để lưu!');
       this.loading = true;
       try {
+        const targetTripId = tripData.id ? String(tripData.id).trim() : '';
+        const targetTripUniqueKey = tripData.uniqueKey ? String(tripData.uniqueKey).trim() : '';
+        const targetTripPrimaryKey = tripData._primaryKey ? String(tripData._primaryKey).trim() : '';
+        const targetTripCode = tripData.code ? String(tripData.code).trim() : '';
+
+        const dep2 = String(tripData.ngay_xuat_canh || tripData.departureDate || tripData.approvedDepartureDate || '').trim();
+        const c2 = String(tripData.quoc_gia_xuat_canh || tripData.countryName || tripData.country || '').trim().toLowerCase();
+        const dec2 = String(tripData.so_quyet_dinh || tripData.decisionNumber || '').trim();
+
         const isSameTrip = (t) => {
           if (!t || !tripData) return false;
           if (t === tripData || t === tripData.rawTrip) return true;
-          if (t.id && tripData.id && String(t.id) === String(tripData.id)) return true;
-          if (t.uniqueKey && tripData.uniqueKey && String(t.uniqueKey) === String(tripData.uniqueKey)) return true;
-          if (t._primaryKey && tripData._primaryKey && String(t._primaryKey) === String(tripData._primaryKey)) return true;
-          if (t.code && tripData.code && String(t.code) === String(tripData.code)) return true;
+          if (targetTripId && t.id && String(t.id).trim() === targetTripId) return true;
+          if (targetTripUniqueKey && (String(t.uniqueKey || '').trim() === targetTripUniqueKey || String(t.id || '').trim() === targetTripUniqueKey)) return true;
+          if (targetTripPrimaryKey && t._primaryKey && String(t._primaryKey).trim() === targetTripPrimaryKey) return true;
+          if (targetTripCode && t.code && String(t.code).trim() === targetTripCode) return true;
+
+          const dep1 = String(t.ngay_xuat_canh || t.departureDate || t.approvedDepartureDate || '').trim();
+          const c1 = String(t.quoc_gia_xuat_canh || t.countryName || t.country || '').trim().toLowerCase();
+          const dec1 = String(t.so_quyet_dinh || t.decisionNumber || '').trim();
+
+          if (dep1 && dep2 && dep1 === dep2 && c1 && c2 && c1 === c2) {
+            if (dec1 || dec2) return dec1 === dec2;
+            return true;
+          }
           return false;
         };
 

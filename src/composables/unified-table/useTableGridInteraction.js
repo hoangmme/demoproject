@@ -99,8 +99,11 @@ export function useTableGridInteraction({
 
   const getChildColDropdownOptions = (col) => {
     if (!col.options) return [];
+    if (Array.isArray(col.options)) {
+      return col.options.map((s) => String(s).trim()).filter(Boolean);
+    }
     return String(col.options)
-      .split(',')
+      .split(/[,;\n\r]+/)
       .map((s) => s.trim())
       .filter(Boolean);
   };

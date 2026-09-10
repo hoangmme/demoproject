@@ -510,6 +510,12 @@
                     @blur="saveChildInlineEdit"
                   >
                     <option value="">-- Trống --</option>
+                    <option
+                      v-if="editingChildCell.value && !getChildColDropdownOptions(col).includes(editingChildCell.value)"
+                      :value="editingChildCell.value"
+                    >
+                      {{ editingChildCell.value }} (Hiện tại)
+                    </option>
                     <option v-for="opt in getChildColDropdownOptions(col)" :key="opt" :value="opt">
                       {{ opt }}
                     </option>

@@ -216,50 +216,15 @@
               style="cursor: pointer;"
             >
               <div>
-                <!-- Dời số lượng lên trên cùng để thẳng hàng nhau -->
-                <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px;">
-                  <span class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '0' }">
-                    {{ computeWidgetCount(widget) }}
-                  </span>
-                  <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">trường hợp</span>
-                </div>
-
-                <!-- Tiêu đề thẻ và các nút tác vụ điều khiển bên dưới -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 4px;">
-                  <div style="flex: 1; padding-right: 6px;">
-                    <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35', whiteSpace: 'pre-line' }" v-html="formatWidgetTitle(widget.title)"></span>
+                <!-- Hàng trên: Số lượng + text "trường hợp" (bên trái) và 3 nút tác vụ (bên phải) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <div style="display: flex; align-items: baseline; gap: 6px;">
+                    <span class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '0', lineHeight: 1 }">
+                      {{ computeWidgetCount(widget) }}
+                    </span>
+                    <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">trường hợp</span>
                   </div>
                   <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;" @click.stop>
-                    <!-- Nút dời trái < (lên trước) -->
-                    <button
-                      v-if="wIdx > 0"
-                      type="button"
-                      class="btn-card-setting"
-                      @click.stop="moveWidget(group, widget, -1)"
-                      title="Dời thẻ sang trái (lên trước)"
-                    >
-                      <i class="pi pi-chevron-left" style="font-size: 0.72rem;"></i>
-                    </button>
-                    <!-- Nút dời phải > (về sau) -->
-                    <button
-                      v-if="wIdx < group.widgets.length - 1"
-                      type="button"
-                      class="btn-card-setting"
-                      @click.stop="moveWidget(group, widget, 1)"
-                      title="Dời thẻ sang phải (về sau)"
-                    >
-                      <i class="pi pi-chevron-right" style="font-size: 0.72rem;"></i>
-                    </button>
-                    <!-- Nút ngắt xuống dòng mới -->
-                    <button
-                      type="button"
-                      class="btn-card-setting"
-                      :style="widget.breakRow ? { color: '#2563eb', background: '#eff6ff', borderColor: '#bfdbfe' } : {}"
-                      @click.stop="toggleWidgetBreakRow(group, widget)"
-                      :title="widget.breakRow ? 'Đang ngắt xuống dòng mới (Bấm để hủy ngắt hàng)' : 'Xuống dòng mới (Bắt đầu ở đầu hàng tiếp theo)'"
-                    >
-                      <i class="pi pi-arrow-down-left" style="font-size: 0.72rem;"></i>
-                    </button>
                     <!-- Nhân bản khối -->
                     <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
                       <i class="pi pi-clone" style="color: #10b981;"></i>
@@ -273,6 +238,11 @@
                       <i class="pi pi-trash"></i>
                     </button>
                   </div>
+                </div>
+
+                <!-- Tiêu đề thẻ chiếm trọn 100% width -->
+                <div style="width: 100%; margin-top: 4px;">
+                  <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35', whiteSpace: 'pre-line', display: 'block', width: '100%' }" v-html="formatWidgetTitle(widget.title)"></span>
                 </div>
               </div>
               <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">
@@ -297,16 +267,6 @@
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;" @click.stop>
-                <!-- Nút ngắt xuống dòng mới -->
-                <button
-                  type="button"
-                  class="btn-card-setting"
-                  :style="widget.breakRow ? { color: '#2563eb', background: '#eff6ff', borderColor: '#bfdbfe' } : {}"
-                  @click.stop="toggleWidgetBreakRow(group, widget)"
-                  :title="widget.breakRow ? 'Đang ngắt xuống dòng mới (Bấm để hủy ngắt hàng)' : 'Xuống dòng mới (Bắt đầu ở đầu hàng tiếp theo)'"
-                >
-                  <i class="pi pi-arrow-down-left" style="font-size: 0.72rem;"></i>
-                </button>
                 <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
                   <i class="pi pi-clone" style="color: #10b981;"></i>
                 </button>
@@ -410,16 +370,6 @@
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;" @click.stop>
-                <!-- Nút ngắt xuống dòng mới -->
-                <button
-                  type="button"
-                  class="btn-card-setting"
-                  :style="widget.breakRow ? { color: '#2563eb', background: '#eff6ff', borderColor: '#bfdbfe' } : {}"
-                  @click.stop="toggleWidgetBreakRow(group, widget)"
-                  :title="widget.breakRow ? 'Đang ngắt xuống dòng mới (Bấm để hủy ngắt hàng)' : 'Xuống dòng mới (Bắt đầu ở đầu hàng tiếp theo)'"
-                >
-                  <i class="pi pi-arrow-down-left" style="font-size: 0.72rem;"></i>
-                </button>
                 <button type="button" class="btn-card-setting" @click.stop="duplicateWidget(group, widget)" title="Nhân bản khối thống kê này">
                   <i class="pi pi-clone" style="color: #10b981;"></i>
                 </button>

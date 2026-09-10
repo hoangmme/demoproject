@@ -189,11 +189,13 @@ const recordSource = computed(() => {
   if (props.tableId && ['personnel', 'relatives', 'trips'].includes(props.tableId)) {
     return props.tableId;
   }
+  if (props.tableId && props.tableId !== 'default') {
+    return props.tableId;
+  }
+  if (form.value._tableId) return form.value._tableId;
   if (form.value._recordType === 'trip' || form.value.rawTrip || form.value.departureDate || form.value.ngay_xuat_canh || form.value.cccdchuyendi) return 'trips';
   if (form.value._recordType === 'relative' || form.value.rawRelative || form.value.relationshipName || form.value.relativeName || form.value.cccdthannhan || form.value.isRelative) return 'relatives';
   if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-')) || form.value.positionName || form.value.departmentName) return 'personnel';
-  if (form.value._tableId) return form.value._tableId;
-  if (props.tableId) return props.tableId;
   if (form.value._recordType === 'blank') return 'blank';
   return 'personnel';
 });
@@ -266,20 +268,29 @@ const isColumnVisibleInDetail = (c) => {
 };
 
 const allTableColumns = computed(() => {
-  // 1. Dynamic table registry columns for this record source
-  const srcCols = getUnifiedTableColumns(recordSource.value, { personnelStore });
-  if (srcCols && Array.isArray(srcCols) && srcCols.length > 0) {
-    const valid = srcCols.filter(isColumnVisibleInDetail);
-    if (valid.length > 0) return valid;
-    const nonVirtual = srcCols.filter((c) => !c.isVirtual && c.id !== 'stt');
-    if (nonVirtual.length > 0) return nonVirtual;
-  }
-
-  // 2. Props columns if passed and valid
+  // 1. Props columns if passed and valid (highest priority - contains latest UI edits & options)
   if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
     const valid = props.columns.filter(isColumnVisibleInDetail);
     if (valid.length > 0) return valid;
     const nonVirtual = props.columns.filter((c) => !c.isVirtual && c.id !== 'stt');
+    if (nonVirtual.length > 0) return nonVirtual;
+  }
+
+  // 2. Dynamic table registry columns for this record source
+  let customDashboards = [];
+  try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) customDashboards = JSON.parse(local);
+  } catch (e) {}
+
+  const srcCols = getUnifiedTableColumns(recordSource.value, {
+    personnelStore,
+    customDashboards,
+  });
+  if (srcCols && Array.isArray(srcCols) && srcCols.length > 0) {
+    const valid = srcCols.filter(isColumnVisibleInDetail);
+    if (valid.length > 0) return valid;
+    const nonVirtual = srcCols.filter((c) => !c.isVirtual && c.id !== 'stt');
     if (nonVirtual.length > 0) return nonVirtual;
   }
 

@@ -3286,4 +3286,65 @@
   - Đồng bộ toàn bộ `dist/` và mã nguồn sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 
+---
+
+### PHIÊN LÀM VIỆC: SỬA LỖI KHÔNG LƯU ĐƯỢC GIÁ TRỊ TÙY CHỌN DROPDOWN TRONG FORM CHỈNH SỬA & INLINE CELL
+- **Vấn đề người dùng phản hồi**:
+  - `"'Sửa lỗi không lưu được giá trị tùy chọn Dropdown' không phải, giá trị lưu được rồi, nhưng lúc edit dropdown ở chỉnh sửa, sửa giá trị thành đã sửa k đc"`
+  - Nghĩa là: Danh sách tùy chọn cấu hình trong Cột (Header Menu) người dùng đã lưu thành công. Tuy nhiên, khi vào form Chỉnh sửa bản ghi (`PersonnelDialog.vue`) hoặc chỉnh sửa inline ô trên bảng (`UnifiedTableView.vue`), người dùng chọn một giá trị tùy chọn mới (ví dụ: đổi Mối quan hệ từ "Con đẻ" sang "Con ruột", hoặc giá trị tùy chọn vừa thêm/sửa) thì hệ thống KHÔNG cập nhật được hoặc không lưu được giá trị đã chọn vào bản ghi.
+- **Nguyên nhân cốt lõi**:
+  1. *Lỗi logic so khớp bản ghi trong `saveRelative` (`src/stores/personnel.js`)*:
+     - Hàm `isSameRel` kiểm tra: `const s1 = r.relationshipName; const s2 = relData.relationshipName; if (n1 === n2 && s1 === s2) return true;`.
+     - Khi người dùng thay đổi giá trị Dropdown "Mối quan hệ" (từ `s1` sang `s2`), `s1 === s2` luôn luôn trả về `false`!
+     - Do đó, `relsInP.findIndex(isSameRel)` trả về `-1`. Hàm `saveRelative` không tìm thấy bản ghi cũ để cập nhật, mà lại push thêm 1 bản ghi mới và giữ nguyên giá trị cũ trên bản ghi đang xem!
+     - Đồng thời `isSameRel` chưa so khớp qua `uniqueKey`, `code` (`TN-00001`), hay `relativeIndex`.
+  2. *Lỗi logic so khớp chuyến đi trong `saveTrip` (`src/stores/personnel.js`)*:
+     - `isSameTrip` chỉ so khớp qua `id`/`uniqueKey`. Nếu chuyến đi trong database chưa có ID tĩnh (dữ liệu nhập từ Excel cũ), `isSameTrip` trả về `false`, không lưu được trường đã sửa.
+  3. *ID không ổn định trong `fetchPersonnel` (`src/stores/personnel.js`)*:
+     - Thân nhân và Chuyến đi được gán ID ngẫu nhiên bằng `Date.now()`, thay đổi sau mỗi lần fetch khiến ID ở form chỉnh sửa không khớp với ID trong store. Đã chuẩn hóa thành ID ổn định `rel_${p.id}_${rIdx}` và `trip_${p.id}_${tIdx}`.
+  4. *Thứ tự ưu tiên cột trong `PersonnelDialog.vue`*:
+     - `allTableColumns` ưu tiên gọi `getUnifiedTableColumns` từ bảng gốc thay vì `props.columns` (chứa các cấu hình cột và options cập nhật mới nhất từ giao diện xem).
+  5. *Dropdown `<select>` trong `DynamicField.vue` và `UnifiedTableView.vue`*:
+     - Nếu giá trị hiện tại của ô chưa nằm trong danh mục `parsedOptions` mới, thẻ `<select>` hiển thị rỗng/trắng.
+     - Hàm bóc tách `parsedOptions` chỉ tách theo dấu phẩy `,`, chưa hỗ trợ chấm phẩy `;`, xuống dòng `\n`, hoặc mảng Array.
+- **Giải pháp Đã Triển khai**:
+  1. *Sửa triệt để `isSameRel` trong `saveRelative`*:
+     - Bỏ điều kiện so khớp cứng `s1 === s2` (vì trường quan hệ chính là trường đang được chỉnh sửa!).
+     - Bổ sung kiểm tra đa tầng: `targetRelId` -> `targetRelUniqueKey` -> `targetRelCode` -> `targetRelKeyVal` -> `targetRelIdx` -> `n1 === n2`.
+     - Cập nhật đúng vị trí `relsInP[relIdx]` và lưu chuẩn vào Directus `personnels.custom_data.relatives`.
+  2. *Nâng cấp `isSameTrip` trong `saveTrip`*:
+     - Bổ sung so khớp nội dung chuyến đi (`ngay_xuat_canh` + `quoc_gia` + `so_quyet_dinh`) phòng trường hợp chuyến đi cũ chưa có ID.
+  3. *Chuẩn hóa ID ổn định trong `fetchPersonnel`*:
+     - Gán ID ổn định `rel_${p.id}_${rIdx}` và `trip_${p.id}_${tIdx}` để bảo đảm khóa khớp 100% giữa form chỉnh sửa và cơ sở dữ liệu.
+  4. *Ưu tiên `props.columns` trong `PersonnelDialog.vue`*:
+     - Đưa `props.columns` lên ưu tiên số 1 để form chỉnh sửa luôn nhận danh sách options và cấu hình mới nhất từ bảng.
+  5. *Nâng cấp Dropdown `<select>` trong `DynamicField.vue` & `UnifiedTableView.vue`*:
+     - Bổ sung `<option v-if="model && !parsedOptions.includes(model)" :value="model">{{ model }} (Hiện tại)</option>` để luôn hiển thị giá trị hiện có, không bị rỗng.
+     - Hỗ trợ phân tách tùy chọn linh hoạt theo regex `[,;\n\r]+` và mảng Array.
+- **Kiểm thử & Triển khai**:
+  - `npm run build`: Thành công 100% (581ms, 0 lỗi).
+  - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
+
+---
+
+### PHIÊN LÀM VIỆC: TỐI ƯU GIAO DIỆN THẺ THỐNG KÊ (STAT CARDS)
+- **Yêu cầu từ người dùng**:
+  1. Xóa tính năng và icon nút "Xuống dòng mới" (`pi-arrow-down-left`).
+  2. Xóa icon nút dời thẻ sang trái/phải (`pi-chevron-left`, `pi-chevron-right`).
+  3. Dời 3 nút tác vụ còn lại (Nhân bản / Clone, Cài đặt / Edit, Xóa / Delete) lên hàng trên, nằm bên phải của số lượng + chữ "trường hợp".
+  4. Đưa tiêu đề thẻ thống kê xuống hàng riêng để chiếm trọn 100% chiều rộng (không bị các nút chèn ép co ngắn dòng chữ).
+- **Thực hiện (`src/views/DashboardView.vue`)**:
+  - Hàng trên thẻ số lượng: Sử dụng flex container `justify-content: space-between; align-items: center`:
+    + Bên trái: Số lượng lớn (`stat-value`) + nhãn "trường hợp".
+    + Bên phải: Cụm 3 nút tác vụ tinh gọn: Nhân bản (`pi-clone`), Cài đặt (`pi-pencil`), Xóa (`pi-trash`).
+  - Hàng dưới: Tiêu đề thẻ (`stat-label`) nằm trọn 100% width (`display: block; width: 100%`), thoáng đẹp, dễ đọc.
+  - Gỡ bỏ nút `toggleWidgetBreakRow` (`pi-arrow-down-left`) khỏi thẻ thống kê và các biểu đồ liên quan.
+- **Kiểm thử**:
+  - `npm run build`: Thành công 100% (568ms, 0 lỗi).
+  - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
+
+
+
 

@@ -612,6 +612,12 @@
         class="custom-col-select"
       >
         <option value="">-- Chọn --</option>
+        <option
+          v-if="model && !parsedOptions.includes(model)"
+          :value="model"
+        >
+          {{ model }} (Hiện tại)
+        </option>
         <option v-for="opt in parsedOptions" :key="opt" :value="opt">
           {{ opt }}
         </option>
@@ -821,8 +827,11 @@ const matchedSuggestRecord = computed(() => {
 
 const parsedOptions = computed(() => {
   if (!props.col.options) return [];
+  if (Array.isArray(props.col.options)) {
+    return props.col.options.map((s) => String(s).trim()).filter(Boolean);
+  }
   return String(props.col.options)
-    .split(',')
+    .split(/[,;\n\r]+/)
     .map((s) => s.trim())
     .filter(Boolean);
 });
