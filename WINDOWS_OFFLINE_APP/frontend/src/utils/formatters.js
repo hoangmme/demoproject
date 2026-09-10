@@ -1635,15 +1635,7 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     return '-';
   }
 
-  // 4. Nếu là đối tượng cha con đã gắn sẵn (nested/inline context)
-  if (target === 'personnel' && item.rawPerson) {
-    return extractCandidateValue(item.rawPerson) || '-';
-  }
-  if (target === 'relatives' && item.rawRelative) {
-    return extractCandidateValue(item.rawRelative) || '-';
-  }
-
-  // KHÔNG đoán mò khóa định danh (CCCD/Key) nếu người dùng chưa thiết lập điều kiện!
+  // Tuyệt đối không đoán mò hay fallback ngầm sang rawPerson / rawRelative nếu không khớp điều kiện người dùng cấu hình
   return '-';
 };
 
