@@ -990,14 +990,16 @@ const totalPersonnelCount = computed(() => {
 });
 
 const effectiveTemplateBuffer = computed(() => {
-  if (templateSource.value === 'upload' && customTemplateBuffer.value) {
-    return customTemplateBuffer.value;
+  if (templateSource.value === 'upload') {
+    if (customTemplateBuffer.value) {
+      return customTemplateBuffer.value;
+    }
+    if (defaultSavedTemplate.value?.base64) {
+      return base64ToArrayBuffer(defaultSavedTemplate.value.base64);
+    }
   }
-  // Khi ở tab 'sample' (Theo Nhóm Cột Group):
-  // Ưu tiên tệp mẫu được đánh dấu là Mặc định cho Group (nếu có trong hệ thống)
-  if (defaultSavedTemplate.value?.base64) {
-    return base64ToArrayBuffer(defaultSavedTemplate.value.base64);
-  }
+  // Khi ở tab 'sample' (Theo Bảng Dữ Liệu):
+  // 100% sử dụng mẫu động theo đúng danh mục cột và liên kết được tích chọn
   return sampleTemplateBuffer.value;
 });
 

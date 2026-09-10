@@ -2809,3 +2809,19 @@
     - `npm run build` thành công 100% (567ms, 0 lỗi).
     - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
   - **Trạng thái**: Done [Reversible].
+
+- **Session 32 (2026-09-10) - Đồng Bộ Hoá 100% Giữa "Xem PDF" Và "Tải PDF Mặc Định" (Cùng Module, Cùng Dữ Liệu, Cùng Cấu Hình Cột)**:
+  - **Yêu cầu Người dùng**: "dso xem pdf và tải pdf mặc định khác nhau vậy? đúng ra nó cùng module mà?"
+  - **Nguyên nhân gốc rễ**:
+    1. Nút "Xem PDF" trên từng dòng bảng (`UnifiedTableView.vue` và `DashboardView.vue` drilldown) từng có hàm `previewPdfForRow` riêng biệt: Tự ý hoán đổi dòng sang Cán bộ chủ quản (`resolvePersonFromItem` / `row.rawPerson`), gọi `getEffectiveExportTemplateBuffer` với cấu hình rỗng (không truyền `tableId` và `columns`), dẫn tới mẫu PDF sinh ra luôn là mẫu Cán bộ cố định thay vì dữ liệu của bảng hiện tại.
+    2. Trong `AdvancedDocxExportDialog.vue`: Thuộc tính `effectiveTemplateBuffer` từng có logic kiểm tra `if (defaultSavedTemplate.value?.base64)` ngay cả khi người dùng đang ở tab "Theo Bảng Dữ Liệu", khiến mẫu động tự sinh theo cột bị ghi đè ngầm bởi tệp mẫu Word lưu cũ.
+    3. Hộp thoại `AdvancedDocxExportDialog` trong `UnifiedTableView.vue` và `DashboardView.vue` trước đây chưa được truyền `:tableId` và `:columns`, đồng thời các computed `selectedPersonnelForExport` / `drilldownSelectedPersonnel` từng gom lọc sang đối tượng Cán bộ thay vì giữ nguyên các dòng dữ liệu được chọn.
+  - **Giải pháp triệt để**:
+    1. **Đồng bộ hóa `previewPdfForRow`**: Nút "Xem PDF" trên từng dòng bảng dùng 100% cùng module: truyền trực tiếp `row` hiện tại (không hoán đổi sang Cán bộ), truyền `tableId: curSource` và `columns: curCols`, sử dụng chung `generateSinglePersonnelPdfBlob` và cùng logic xác định tiêu đề/tên file.
+    2. **Đồng bộ hóa `AdvancedDocxExportDialog`**: Khi người dùng ở tab "Theo Bảng Dữ Liệu" (`templateSource === 'sample'`), luôn luôn trả về `sampleTemplateBuffer` (mẫu động theo đúng danh sách cột và bảng liên kết được chọn), chỉ dùng tệp mẫu Word lưu sẵn khi người dùng ở tab "Theo Mẫu có sẵn / Tải lên".
+    3. **Đồng bộ danh sách xuất & Props**: `UnifiedTableView.vue` và `DashboardView.vue` truyền đầy đủ `:tableId` và `:columns` vào `AdvancedDocxExportDialog`, đồng thời danh sách bản ghi chọn xuất (`selectedPersonnelForExport`, `allPersonnelForExport`, `drilldownSelectedPersonnel`) giữ nguyên 100% các dòng dữ liệu thực tế đang chọn/hiển thị.
+    4. **Nâng cấp `getEffectiveExportTemplateBuffer`**: Tự động hỗ trợ nhận `options.tableId`, `options.columns`, kiểm tra mẫu mặc định lưu trong hệ thống, đảm bảo mọi nơi gọi xuất/xem PDF đều dùng chung một động cơ.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (563ms, 0 lỗi).
+    - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+  - **Trạng thái**: Done [Reversible].

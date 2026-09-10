@@ -1251,6 +1251,9 @@ export async function createSampleDocxTemplateBlob() {
  * @returns {Promise<ArrayBuffer>}
  */
 export async function getEffectiveExportTemplateBuffer(options = {}, personnelStore = null) {
+  if (options.templateBuffer) {
+    return options.templateBuffer;
+  }
   if (options.templateFile) {
     return await options.templateFile.arrayBuffer();
   }
@@ -1258,6 +1261,27 @@ export async function getEffectiveExportTemplateBuffer(options = {}, personnelSt
     const res = await fetch(options.templateUrl);
     return await res.arrayBuffer();
   }
+
+  // Kiểm tra xem hệ thống có mẫu Word mặc định đã lưu hay không (nếu không cấm dùng mẫu lưu)
+  if (options.useSavedDefault !== false) {
+    try {
+      let savedTemplates = await getAppSettings('system_docx_templates', []);
+      if (!savedTemplates || !savedTemplates.length) {
+        const local = localStorage.getItem('system_docx_templates');
+        if (local) savedTemplates = JSON.parse(local);
+      }
+      const defTpl = (savedTemplates || []).find((t) => t.isDefault && t.base64);
+      if (defTpl && defTpl.base64) {
+        const binaryString = window.atob(defTpl.base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+        return bytes.buffer;
+      }
+    } catch (e) {
+      console.warn('Could not load saved default template:', e);
+    }
+  }
+
   const dynamicBlob = await createDynamicDocxTemplateBlob(
     options.selectedGroupIndices || [0, 1, 2, 3, 4],
     personnelStore?.importMappingPersonnel || [],

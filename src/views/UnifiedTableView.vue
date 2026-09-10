@@ -990,6 +990,8 @@
       v-model="isExportDocxDialogOpen"
       :selectedPersonnel="selectedPersonnelForExport"
       :allPersonnel="allPersonnelForExport"
+      :tableId="currentDashboardConfig?.source || 'trips'"
+      :columns="allAvailableColumnsList"
     />
 
     <!-- PDF Preview Dialog (Direct browser preview & print/download) -->
@@ -1155,23 +1157,37 @@ const previewPdfForRow = async (row) => {
   rowPreviewingKey.value = rowKey;
 
   try {
-    const p = resolvePersonFromItem(row) || row.rawPerson || (row.name ? row : null);
-    if (!p) {
-      alert('Không tìm thấy hồ sơ cán bộ tương ứng để xuất PDF!');
-      return;
-    }
+    const curSource = currentDashboardConfig.value?.source || 'trips';
+    const curCols = allAvailableColumnsList.value || [];
+    const curTitle = currentDashboardConfig.value?.title || 'Bảng dữ liệu';
 
     const exportOpts = {
-      includeRelatives: true,
-      includeTrips: true,
+      tableId: curSource,
+      columns: curCols,
+      selectedFieldIds: curCols.map((c) => c.id),
+      includePersonnel: curSource !== 'personnel',
+      includeRelatives: curSource !== 'relatives',
+      includeTrips: curSource !== 'trips',
       showColumnNumbers: false,
+      tableTitles: {
+        personnel: 'Cán bộ',
+        relatives: 'Thân nhân',
+        trips: 'Chuyến đi',
+        main: curTitle,
+      },
     };
+
     const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
-    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, p, personnelStore, authStore.currentUser, exportOpts);
+    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, row, personnelStore, authStore.currentUser, exportOpts);
+
+    const titleCol = curCols.find((c) => c.isTitle || c.isIdentifier);
+    const pName = (titleCol && row[titleCol.id]) || row.name || row.personnelName || row.ho_ten || row.fullName || row.title || curTitle;
+    const keyCol = curCols.find((c) => c.isKey);
+    const pCode = (keyCol && row[keyCol.id]) || row.code || row.cccd || '';
 
     rowPreviewPdfBlob.value = blob;
-    rowPreviewTitle.value = `Hồ sơ: ${p.name || p.ho_ten || 'Cán bộ'}`;
-    rowPreviewFileName.value = `Ho_so_${(p.name || p.ho_ten || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    rowPreviewTitle.value = `Hồ sơ: ${pName}${pCode ? ' (' + pCode + ')' : ''}`;
+    rowPreviewFileName.value = `Ho_so_${(pName || 'Ban_ghi').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
     showRowPdfPreview.value = true;
   } catch (err) {
     console.error('Lỗi khi xem PDF:', err);
@@ -1444,36 +1460,11 @@ const resolvePersonFromItem = (item) => {
 };
 
 const selectedPersonnelForExport = computed(() => {
-  if (selectedTrips.value && selectedTrips.value.length > 0) {
-    const list = [];
-    const seenIds = new Set();
-    selectedTrips.value.forEach((t) => {
-      const p = resolvePersonFromItem(t);
-      if (p && p.id && !seenIds.has(p.id)) {
-        seenIds.add(p.id);
-        list.push(p);
-      }
-    });
-    return list;
-  }
-  return [];
+  return selectedTrips.value && selectedTrips.value.length > 0 ? selectedTrips.value : [];
 });
 
 const allPersonnelForExport = computed(() => {
-  const rows = filteredList.value || [];
-  if (rows.length > 0) {
-    const list = [];
-    const seenIds = new Set();
-    rows.forEach((t) => {
-      const p = resolvePersonFromItem(t);
-      if (p && p.id && !seenIds.has(p.id)) {
-        seenIds.add(p.id);
-        list.push(p);
-      }
-    });
-    if (list.length > 0) return list;
-  }
-  return personnelStore.personnelList || [];
+  return filteredList.value && filteredList.value.length > 0 ? filteredList.value : [];
 });
 
 // Dynamic Dashboard Topic State

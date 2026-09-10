@@ -1324,6 +1324,8 @@
       v-model="isDocxExportOpen"
       :selectedPersonnel="drilldownSelectedPersonnel"
       :allPersonnel="drilldownAllPersonnel"
+      :tableId="drilldownSourceType || 'trips'"
+      :columns="drilldownColumns"
     />
 
     <!-- Popup Xem trước PDF trực tiếp của từng hàng -->
@@ -1702,26 +1704,7 @@ const filteredDrilldownList = computed(() => {
 
 const drilldownSelectedPersonnel = computed(() => {
   const selected = drilldownSelectedRows.value || [];
-  const list = selected.length > 0 ? selected : filteredDrilldownList.value;
-  const personMap = new Map();
-  const pKeyField = personnelStore.getPersonnelKeyField();
-
-  list.forEach((r) => {
-    let p = r.rawPerson;
-    if (!p) {
-      const pKey = r[pKeyField] || r.parentCccd || r.cccdparent || r.cccd || r.id;
-      p = (personnelStore.personnelList || []).find(
-        (x) => (pKey && (x[pKeyField] === pKey || x.cccdparent === pKey || x.cccd === pKey || x.id === pKey)) ||
-               (r.personnelId && x.id === r.personnelId) ||
-               (r.personnelCode && x.code === r.personnelCode)
-      );
-    }
-    if (p && p.id && !personMap.has(p.id)) {
-      personMap.set(p.id, p);
-    }
-  });
-
-  return Array.from(personMap.values());
+  return selected.length > 0 ? selected : (filteredDrilldownList.value || []);
 });
 
 const showRowPdfPreview = ref(false);
@@ -1736,36 +1719,37 @@ const previewPdfForRow = async (row) => {
   rowPreviewingKey.value = rowKey;
 
   try {
-    const pKeyField = personnelStore.getPersonnelKeyField();
-    let p = row.rawPerson;
-    if (!p) {
-      const pKey = row[pKeyField] || row.parentCccd || row.cccdparent || row.cccd || row.id;
-      p = (personnelStore.personnelList || []).find(
-        (x) => (pKey && (x[pKeyField] === pKey || x.cccdparent === pKey || x.cccd === pKey || x.id === pKey)) ||
-               (row.personnelId && x.id === row.personnelId) ||
-               (row.personnelCode && x.code === row.personnelCode)
-      );
-    }
-    if (!p) {
-      if (row.name || row.ho_ten || row.code) {
-        p = row;
-      } else {
-        alert('Không tìm thấy thông tin hồ sơ cán bộ tương ứng.');
-        return;
-      }
-    }
+    const curSource = drilldownSourceType.value || 'trips';
+    const curCols = drilldownColumns.value || [];
+    const curTitle = drilldownExtraTitle.value || drilldownWidget.value?.title || 'Thống kê';
 
     const exportOpts = {
-      includeRelatives: true,
-      includeTrips: true,
+      tableId: curSource,
+      columns: curCols,
+      selectedFieldIds: curCols.map((c) => c.id),
+      includePersonnel: curSource !== 'personnel',
+      includeRelatives: curSource !== 'relatives',
+      includeTrips: curSource !== 'trips',
       showColumnNumbers: false,
+      tableTitles: {
+        personnel: 'Cán bộ',
+        relatives: 'Thân nhân',
+        trips: 'Chuyến đi',
+        main: curTitle,
+      },
     };
+
     const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
-    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, p, personnelStore, authStore.currentUser, exportOpts);
+    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, row, personnelStore, authStore.currentUser, exportOpts);
+
+    const titleCol = curCols.find((c) => c.isTitle || c.isIdentifier);
+    const pName = (titleCol && row[titleCol.id]) || row.name || row.personnelName || row.ho_ten || row.fullName || row.title || 'Ban_ghi';
+    const keyCol = curCols.find((c) => c.isKey);
+    const pCode = (keyCol && row[keyCol.id]) || row.code || row.cccd || '';
 
     rowPreviewPdfBlob.value = blob;
-    rowPreviewTitle.value = `Hồ sơ: ${p.name || p.ho_ten || 'Cán bộ'}`;
-    rowPreviewFileName.value = `Ho_so_${(p.name || p.ho_ten || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    rowPreviewTitle.value = `Hồ sơ: ${pName}${pCode ? ' (' + pCode + ')' : ''}`;
+    rowPreviewFileName.value = `Ho_so_${(pName || 'Ban_ghi').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
     showRowPdfPreview.value = true;
   } catch (err) {
     console.error('Lỗi khi xem PDF:', err);
@@ -1776,7 +1760,7 @@ const previewPdfForRow = async (row) => {
 };
 
 const drilldownAllPersonnel = computed(() => {
-  return personnelStore.personnelList || [];
+  return filteredDrilldownList.value || [];
 });
 
 const openDrilldownDocxExport = () => {
