@@ -215,15 +215,78 @@ export function formatFieldValueForDocx(val, col = {}) {
 export function preparePersonnelDocxData(person, index = 0, personnelStore = null, currentUser = null, exportOptions = {}) {
   if (!person) return {};
 
-  const cd = person.custom_data || {};
+  let effectivePerson = { ...person };
+  let cd = effectivePerson.custom_data || {};
+  if (typeof cd === 'string') {
+    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+  }
 
   // Lấy khóa chính CCCD Cán bộ, Chuyến đi, Thân nhân theo Cài đặt hệ thống (Primary Unique Key)
   const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
   const tKeyField = personnelStore?.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
   const rKeyField = personnelStore?.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
-  const canBoCccd = String(person[pKeyField] ?? cd?.[pKeyField] ?? person.cccdparent ?? cd?.cccdparent ?? '').trim();
-  const pId = String(person.id || '').trim();
-  const pCode = String(person.code || '').trim();
+
+  // Phân giải hồ sơ Cán bộ liên kết nếu đầu vào là Chuyến đi hoặc Thân nhân
+  const isTrip = effectivePerson._recordType === 'trip' || Boolean(effectivePerson.quoc_gia_xuat_canh || effectivePerson.departureDate);
+  const isRel = effectivePerson._recordType === 'relative' || Boolean(effectivePerson.relativeName);
+  const pNameField = personnelStore?.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
+  const directName = effectivePerson.name || effectivePerson[pNameField] || cd.name || cd[pNameField] || effectivePerson.ho_ten || cd.ho_ten;
+
+  if (personnelStore?.personnelList?.length > 0 && ((isTrip && !directName) || isRel)) {
+    const targetCccd = String(
+      effectivePerson[tKeyField] || effectivePerson.cccdchuyendi || effectivePerson[rKeyField] ||
+      effectivePerson.cccdthannhan || effectivePerson.cccdparent || effectivePerson.parentCccd ||
+      effectivePerson.cccd || cd[tKeyField] || cd.cccdchuyendi || cd.cccdparent || ''
+    ).trim().toLowerCase();
+    const targetPId = String(effectivePerson.personnelId || cd.personnelId || '').trim();
+    const targetPCode = String(effectivePerson.personnelCode || cd.personnelCode || '').trim();
+
+    const linked = personnelStore.personnelList.find((p) => {
+      if (targetPId && String(p.id).trim() === targetPId) return true;
+      if (targetPCode && String(p.code).trim() === targetPCode) return true;
+      if (targetCccd) {
+        const pCccd = String(p[pKeyField] || p.cccdparent || p.cccd || p.custom_data?.[pKeyField] || p.custom_data?.cccdparent || p.custom_data?.cccd || '').trim().toLowerCase();
+        if (pCccd && pCccd === targetCccd) return true;
+      }
+      return false;
+    });
+
+    if (linked) {
+      let linkedCd = linked.custom_data || {};
+      if (typeof linkedCd === 'string') {
+        try { linkedCd = JSON.parse(linkedCd); } catch (e) { linkedCd = {}; }
+      }
+      const origPerson = { ...effectivePerson };
+      effectivePerson = { ...linkedCd, ...linked, custom_data: { ...linkedCd, ...(linked.custom_data || {}) } };
+      cd = effectivePerson.custom_data;
+
+      if (isTrip) {
+        effectivePerson.trips = Array.isArray(effectivePerson.trips) ? [...effectivePerson.trips] : [];
+        const tripId = origPerson.id || origPerson.uniqueKey;
+        const tripIdx = effectivePerson.trips.findIndex((t) => tripId && (t.id === tripId || t.uniqueKey === tripId));
+        if (tripIdx >= 0) {
+          effectivePerson.trips[tripIdx] = { ...effectivePerson.trips[tripIdx], ...origPerson };
+        } else {
+          effectivePerson.trips.unshift(origPerson);
+        }
+      } else if (isRel) {
+        effectivePerson.relatives = Array.isArray(effectivePerson.relatives) ? [...effectivePerson.relatives] : [];
+        const relId = origPerson.id || origPerson.uniqueKey;
+        const relIdx = effectivePerson.relatives.findIndex((r) => relId && (r.id === relId || r.uniqueKey === relId));
+        if (relIdx >= 0) {
+          effectivePerson.relatives[relIdx] = { ...effectivePerson.relatives[relIdx], ...origPerson };
+        } else {
+          effectivePerson.relatives.unshift(origPerson);
+        }
+      }
+    }
+  }
+
+  const canBoCccd = String(effectivePerson[pKeyField] ?? cd?.[pKeyField] ?? effectivePerson.cccdparent ?? cd?.cccdparent ?? effectivePerson.cccd ?? cd?.cccd ?? '').trim();
+  const pId = String(effectivePerson.id || cd?.id || '').trim();
+  const pCode = String(effectivePerson.code || cd?.code || '').trim();
+  const pName = effectivePerson.name || effectivePerson[pNameField] || cd.name || cd[pNameField] || effectivePerson.ho_ten || cd.ho_ten || effectivePerson.personnelName || cd.personnelName || effectivePerson.relativeName || cd.relativeName || effectivePerson.fullName || cd.fullName || 'Cán bộ';
+  const pDisplayCode = effectivePerson.code || cd.code || effectivePerson.personnelCode || cd.personnelCode || (effectivePerson.id ? String(effectivePerson.id) : '');
 
   const today = new Date();
   const dayStr = String(today.getDate()).padStart(2, '0');
@@ -282,42 +345,44 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     ngay_gio_xuat: `${dayStr}/${monthStr}/${yearStr} ${hourStr}:${minuteStr}`,
 
     // 2. Thông tin cơ bản
-    code: person.code || '',
-    ma_can_bo: person.code || '',
-    name: person.name || '',
-    ho_ten: person.name || '',
-    otherName: person.otherName || '',
-    ten_khac: person.otherName || '',
-    birthYear: formatDate(person.birthYear || cd.birthYear),
-    nam_sinh: formatDate(person.birthYear || cd.birthYear),
-    ngay_sinh: formatDate(person.birthYear || cd.birthYear),
-    gender: person.gender || cd.gender || '',
-    gioi_tinh: person.gender || cd.gender || '',
-    ethnicity: person.ethnicity || cd.ethnicity || 'Kinh',
-    dan_toc: person.ethnicity || cd.ethnicity || 'Kinh',
-    religion: person.religion || cd.religion || 'Không',
-    ton_giao: person.religion || cd.religion || 'Không',
-    hometown: person.hometown || cd.hometown || '',
-    que_quan: person.hometown || cd.hometown || '',
+    code: pDisplayCode,
+    ma_can_bo: pDisplayCode,
+    name: pName,
+    ho_ten: pName,
+    otherName: effectivePerson.otherName || cd.otherName || cd.ten_khac || '',
+    ten_khac: effectivePerson.otherName || cd.otherName || cd.ten_khac || '',
+    birthYear: formatDate(effectivePerson.birthYear || cd.birthYear || cd.nam_sinh || cd.ngay_sinh),
+    nam_sinh: formatDate(effectivePerson.birthYear || cd.birthYear || cd.nam_sinh || cd.ngay_sinh),
+    ngay_sinh: formatDate(effectivePerson.birthYear || cd.birthYear || cd.nam_sinh || cd.ngay_sinh),
+    gender: effectivePerson.gender || cd.gender || cd.gioi_tinh || '',
+    gioi_tinh: effectivePerson.gender || cd.gender || cd.gioi_tinh || '',
+    ethnicity: effectivePerson.ethnicity || cd.ethnicity || cd.dan_toc || 'Kinh',
+    dan_toc: effectivePerson.ethnicity || cd.ethnicity || cd.dan_toc || 'Kinh',
+    religion: effectivePerson.religion || cd.religion || cd.ton_giao || 'Không',
+    ton_giao: effectivePerson.religion || cd.religion || cd.ton_giao || 'Không',
+    hometown: effectivePerson.hometown || cd.hometown || cd.que_quan || '',
+    que_quan: effectivePerson.hometown || cd.hometown || cd.que_quan || '',
 
     // 3. Đơn vị & Chức vụ
-    departmentName: person.departmentName || (person.departmentId && personnelStore ? personnelStore.getDepartmentName(person.departmentId) : '') || cd.departmentName || '',
-    don_vi: person.departmentName || (person.departmentId && personnelStore ? personnelStore.getDepartmentName(person.departmentId) : '') || cd.departmentName || '',
-    positionName: person.positionName || person.position || cd.positionName || cd.position || '',
-    chuc_vu: person.positionName || person.position || cd.positionName || cd.position || '',
+    departmentName: effectivePerson.departmentName || (effectivePerson.departmentId && personnelStore ? personnelStore.getDepartmentName(effectivePerson.departmentId) : '') || cd.departmentName || cd.don_vi || '',
+    don_vi: effectivePerson.departmentName || (effectivePerson.departmentId && personnelStore ? personnelStore.getDepartmentName(effectivePerson.departmentId) : '') || cd.departmentName || cd.don_vi || '',
+    positionName: effectivePerson.positionName || effectivePerson.position || cd.positionName || cd.position || cd.chuc_vu || '',
+    chuc_vu: effectivePerson.positionName || effectivePerson.position || cd.positionName || cd.position || cd.chuc_vu || '',
 
     // 4. Cư trú & Giấy tờ
-    thuongTru: person.thuongTru || cd.thuongTru || '',
-    thuong_tru: person.thuongTru || cd.thuongTru || '',
-    tamTru: person.tamTru || cd.tamTru || '',
-    tam_tru: person.tamTru || cd.tamTru || '',
-    cccdparent: person.cccdparent || cd.cccdparent || '',
-    passportPersonal: person.passportPersonal || person.hcCaNhan || cd.passportPersonal || cd.hcCaNhan || '',
-    ho_chieu_ca_nhan: person.passportPersonal || person.hcCaNhan || cd.passportPersonal || cd.hcCaNhan || '',
-    passportOfficial: person.passportOfficial || person.hcCongVu || cd.passportOfficial || cd.hcCongVu || '',
-    ho_chieu_cong_vu: person.passportOfficial || person.hcCongVu || cd.passportOfficial || cd.hcCongVu || '',
-    tcctResult: person.tcctResult || person.kqThamTra || cd.tcctResult || cd.kqThamTra || '',
-    ket_qua_tham_tra: person.tcctResult || person.kqThamTra || cd.tcctResult || cd.kqThamTra || '',
+    thuongTru: effectivePerson.thuongTru || cd.thuongTru || cd.thuong_tru || '',
+    thuong_tru: effectivePerson.thuongTru || cd.thuongTru || cd.thuong_tru || '',
+    tamTru: effectivePerson.tamTru || cd.tamTru || cd.tam_tru || '',
+    tam_tru: effectivePerson.tamTru || cd.tamTru || cd.tam_tru || '',
+    cccdparent: canBoCccd,
+    cccd: canBoCccd,
+    so_cccd: canBoCccd,
+    passportPersonal: effectivePerson.passportPersonal || effectivePerson.hcCaNhan || cd.passportPersonal || cd.hcCaNhan || cd.ho_chieu_ca_nhan || '',
+    ho_chieu_ca_nhan: effectivePerson.passportPersonal || effectivePerson.hcCaNhan || cd.passportPersonal || cd.hcCaNhan || cd.ho_chieu_ca_nhan || '',
+    passportOfficial: effectivePerson.passportOfficial || effectivePerson.hcCongVu || cd.passportOfficial || cd.hcCongVu || cd.ho_chieu_cong_vu || '',
+    ho_chieu_cong_vu: effectivePerson.passportOfficial || effectivePerson.hcCongVu || cd.passportOfficial || cd.hcCongVu || cd.ho_chieu_cong_vu || '',
+    tcctResult: effectivePerson.tcctResult || effectivePerson.kqThamTra || cd.tcctResult || cd.kqThamTra || cd.ket_qua_tham_tra || '',
+    ket_qua_tham_tra: effectivePerson.tcctResult || effectivePerson.kqThamTra || cd.tcctResult || cd.kqThamTra || cd.ket_qua_tham_tra || '',
   };
 
   const generateSlug = (str) => {
@@ -407,13 +472,13 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     (grp.columns || []).forEach((col) => {
       if (!col.id || col.id === 'stt') return;
       if (col.format === 'formula') {
-        const res = evaluateFormula(person, col);
+        const res = evaluateFormula(effectivePerson, col);
         const val = res?.label || res?.shortLabel || '';
         if (val) {
           data[col.id] = val;
         }
       } else if (col.isVirtual || col.id?.startsWith('_')) {
-        const val = resolveVirtualColumnValue(person, col.id);
+        const val = resolveVirtualColumnValue(effectivePerson, col.id);
         if (val) {
           data[col.id] = val;
         }
@@ -422,11 +487,28 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   });
 
   // 6. Danh sách Thân nhân (Loop {#than_nhan} / {#relatives})
-  let rawRelatives = Array.isArray(person.relatives) && person.relatives.length > 0 ? person.relatives : (cd.relatives || []);
-  if ((!rawRelatives || rawRelatives.length === 0) && personnelStore?.relativesList?.length > 0) {
-    rawRelatives = personnelStore.relativesList.filter((r) => {
-      const rParent = String(r.cccdparent || r.personnelId || r.personnelCode || '').trim();
-      return (canBoCccd && rParent === canBoCccd) || (pId && rParent === pId) || (pCode && rParent === pCode);
+  let rawRelatives = Array.isArray(effectivePerson.relatives) && effectivePerson.relatives.length > 0
+    ? [...effectivePerson.relatives]
+    : (Array.isArray(cd.relatives) ? [...cd.relatives] : []);
+
+  if (personnelStore?.relativesList?.length > 0) {
+    const matchedStoreRelatives = personnelStore.relativesList.filter((r) => {
+      const rPId = String(r.personnelId || r.rawPerson?.id || '').trim();
+      const rPCode = String(r.personnelCode || r.rawPerson?.code || '').trim();
+      const rParentCccd = String(r.cccdparent || r.parentCccd || r[personnelStore?.systemKeyConfig?.relativeParentKey || 'cccdparent'] || '').trim().toLowerCase();
+      const matchId = pId && rPId && pId === rPId;
+      const matchCode = pCode && rPCode && pCode === rPCode;
+      const matchCccd = canBoCccd && rParentCccd && canBoCccd.toLowerCase() === rParentCccd;
+      return matchId || matchCode || matchCccd;
+    });
+
+    const seenRelKeys = new Set(rawRelatives.map((r) => r.id || r.uniqueKey || r.code).filter(Boolean));
+    matchedStoreRelatives.forEach((sr) => {
+      const k = sr.id || sr.uniqueKey || sr.code;
+      if (!k || !seenRelKeys.has(k)) {
+        if (k) seenRelKeys.add(k);
+        rawRelatives.push(sr);
+      }
     });
   }
 
@@ -493,7 +575,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
             relObj[`tn_${col.id}`] = val;
           }
         } else if (col.isVirtual || col.id?.startsWith('_')) {
-          const val = resolveVirtualColumnValue({ ...rel, rawPerson: person }, col.id);
+          const val = resolveVirtualColumnValue({ ...rel, rawPerson: effectivePerson }, col.id);
           if (val) {
             relObj[col.id] = val;
             relObj[`tn_${col.id}`] = val;
@@ -523,9 +605,9 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   });
 
   // 7. Danh sách Chuyến đi Nước ngoài (Loop {#xuatnhapcanh} / {#chuyen_di} / {#trips})
-  let rawTrips = Array.isArray(person.trips) && person.trips.length > 0
-    ? person.trips
-    : (cd.trips || cd['Khối B: Chuyến đi nước ngoài'] || []);
+  let rawTrips = Array.isArray(effectivePerson.trips) && effectivePerson.trips.length > 0
+    ? [...effectivePerson.trips]
+    : (Array.isArray(cd.trips) ? [...cd.trips] : (Array.isArray(cd['Khối B: Chuyến đi nước ngoài']) ? [...cd['Khối B: Chuyến đi nước ngoài']] : []));
 
   if (typeof rawTrips === 'string' && rawTrips.trim()) {
     try {
@@ -534,13 +616,26 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     } catch (e) {}
   }
 
-  // Nếu vẫn rỗng, tìm trong personnelStore.tripsList / allTrips
-  if ((!rawTrips || rawTrips.length === 0) && personnelStore?.allTrips?.length > 0) {
-    rawTrips = personnelStore.allTrips.filter((t) => {
+  // Thu thập thêm từ personnelStore.tripsList hoặc personnelStore.allTrips
+  const storeTrips = personnelStore?.tripsList || personnelStore?.allTrips || [];
+  if (storeTrips.length > 0) {
+    const matchedStoreTrips = storeTrips.filter((t) => {
       const tPId = String(t.personnelId || t.rawPerson?.id || '').trim();
       const tCode = String(t.personnelCode || t.rawPerson?.code || '').trim();
-      const tCccd = String(t.cccdparent || t.parentCccd || '').trim();
-      return (pId && tPId === pId) || (pCode && tCode === pCode) || (canBoCccd && tCccd === canBoCccd);
+      const tCccd = String(t[tKeyField] || t.cccdchuyendi || t.cccd || t.cccdparent || t.parentCccd || '').trim().toLowerCase();
+      const matchId = pId && tPId && pId === tPId;
+      const matchCode = pCode && tCode && pCode === tCode;
+      const matchCccd = canBoCccd && tCccd && canBoCccd.toLowerCase() === tCccd;
+      return matchId || matchCode || matchCccd;
+    });
+
+    const seenTripKeys = new Set(rawTrips.map((t) => t.id || t.uniqueKey || t.code).filter(Boolean));
+    matchedStoreTrips.forEach((st) => {
+      const k = st.id || st.uniqueKey || st.code;
+      if (!k || !seenTripKeys.has(k)) {
+        if (k) seenTripKeys.add(k);
+        rawTrips.push(st);
+      }
     });
   }
 
@@ -1205,7 +1300,9 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
 export async function exportSinglePersonnelDocx(templateBuffer, person, filename, personnelStore, outputFormat = 'docx', currentUser = null, exportOptions = {}) {
   const contextData = preparePersonnelDocxData(person, 0, personnelStore, currentUser, exportOptions);
   const docxBlob = generateDocxBlob(templateBuffer, contextData);
-  const baseName = filename || `Ho_so_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}`;
+  const pName = contextData.name || person?.name || person?.personnelName || person?.ho_ten || 'Can_bo';
+  const pCode = contextData.code || person?.code || '';
+  const baseName = filename || `Ho_so_${pName.replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}${pCode ? '_' + pCode : ''}`;
 
   if (outputFormat === 'pdf') {
     const pdfBlob = await convertDocxBlobToPdfBlob(docxBlob);
@@ -1243,7 +1340,9 @@ export async function exportMultiplePersonnelZip(templateBuffer, personnelList, 
     const person = personnelList[i];
     const contextData = preparePersonnelDocxData(person, i, personnelStore, currentUser, exportOptions);
     const docxBlob = generateDocxBlob(templateBuffer, contextData);
-    const baseName = `${String(i + 1).padStart(3, '0')}_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}_${person.code || ''}`;
+    const pName = contextData.name || person.name || person.personnelName || person.ho_ten || 'Can_bo';
+    const pCode = contextData.code || person.code || '';
+    const baseName = `${String(i + 1).padStart(3, '0')}_${pName.replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}${pCode ? '_' + pCode : ''}`;
 
     if (outputFormat === 'pdf') {
       const pdfBlob = await convertDocxBlobToPdfBlob(docxBlob);

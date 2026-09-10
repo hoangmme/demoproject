@@ -24,7 +24,12 @@
             <input type="radio" v-model="exportScope" value="single" style="accent-color: #0284c7;" />
             <div>
               <strong style="color: #1e293b;">Chỉ cán bộ hiện tại:</strong>
-              <span style="color: #0284c7; margin-left: 4px; font-weight: 600;">{{ targetPerson.name }} ({{ targetPerson.code }})</span>
+              <span style="color: #0284c7; margin-left: 4px; font-weight: 600;">
+                {{ getTargetPersonDisplayName(targetPerson) }}
+                <template v-if="getTargetPersonCode(targetPerson)">
+                  ({{ getTargetPersonCode(targetPerson) }})
+                </template>
+              </span>
             </div>
           </label>
 
@@ -508,6 +513,20 @@ const visible = computed({
 const outputFormat = ref('pdf');
 const exportScope = ref('single');
 const templateSource = ref('sample'); // 'sample' (Group) | 'upload'
+
+const getTargetPersonDisplayName = (p) => {
+  if (!p) return 'Cán bộ';
+  const pNameField = personnelStore?.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
+  const name = p.name || p[pNameField] || p.personnelName || p.relativeName || p.ho_ten || p.fullName || p.title;
+  if (name) return name;
+  if (p.quoc_gia_xuat_canh || p.countryName || p.departureDate) return 'Chuyến đi';
+  return 'Cán bộ';
+};
+
+const getTargetPersonCode = (p) => {
+  if (!p) return '';
+  return p.code || p.personnelCode || (p.id ? String(p.id) : '');
+};
 
 // Dynamic titles cho các bảng chính theo Cài đặt hệ thống
 const mainTableTitle = computed(() => {
@@ -1111,9 +1130,10 @@ const getDownloadButtonLabel = () => {
   }
 
   if (isSingle) {
-    const pName = (exportScope.value === 'single' && props.targetPerson)
-      ? props.targetPerson.name
-      : (props.selectedPersonnel[0]?.name || 'Cán bộ');
+    const targetP = (exportScope.value === 'single' && props.targetPerson)
+      ? props.targetPerson
+      : (props.selectedPersonnel && props.selectedPersonnel.length > 0 ? props.selectedPersonnel[0] : null);
+    const pName = getTargetPersonDisplayName(targetP);
     return `Tải về file PDF: ${pName}`;
   }
   return `Tải file ZIP PDF (${exportScope.value === 'selected' ? selectedCount.value : totalPersonnelCount.value} Cán bộ)`;
@@ -1151,7 +1171,9 @@ const handleExport = async () => {
     const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
     const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
     if (isSingle && targetP) {
-      const fileName = `Ho_so_${(targetP.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}_${targetP.code || ''}`;
+      const pName = getTargetPersonDisplayName(targetP);
+      const pCode = getTargetPersonCode(targetP);
+      const fileName = `Ho_so_${(pName || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}${pCode ? '_' + pCode : ''}`;
       await exportSinglePersonnelDocx(buf, targetP, fileName, personnelStore, outputFormat.value, authStore.user, exportOptions);
       visible.value = false;
     } else {
@@ -1203,10 +1225,12 @@ const handlePreviewPdf = async () => {
         trips: tripsTableTitle.value,
       },
     };
+    const pName = getTargetPersonDisplayName(targetP);
+    const pCode = getTargetPersonCode(targetP);
     const blob = await generateSinglePersonnelPdfBlob(buf, targetP, personnelStore, authStore.user, exportOptions);
     previewPdfBlob.value = blob;
-    previewPdfTitle.value = `Hồ sơ: ${targetP.name || 'Cán bộ'} (${targetP.code || ''})`;
-    previewPdfFileName.value = `Ho_so_${(targetP.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    previewPdfTitle.value = `Hồ sơ: ${pName}${pCode ? ' (' + pCode + ')' : ''}`;
+    previewPdfFileName.value = `Ho_so_${(pName || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
     showPdfPreview.value = true;
   } catch (err) {
     console.error('Lỗi tạo bản xem trước PDF:', err);

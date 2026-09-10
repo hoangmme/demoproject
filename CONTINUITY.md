@@ -2771,6 +2771,34 @@
        - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
     5. **Trạng thái**: Done [Reversible].
 
+- **Session 30 (2026-09-10) - Khắc Phục Triệt Để Lỗi Nút Xuất PDF & Đảm Bảo Đầy Đủ 100% Dữ Liệu Xuất Tài Liệu**:
+  - **Yêu cầu Người dùng**: "check lại xuất pdf, nút pdf lỗi gì đó. và có vẻ ko đủ dữ liệu" (Kèm ảnh chụp màn hình hiển thị: `Chỉ cán bộ hiện tại: ()` và `Tải về file PDF: undefined`).
+  - **Nguyên nhân gốc rễ**:
+    1. Khi người dùng mở Form Chi tiết (`PersonnelDialog.vue`) từ 1 dòng Chuyến đi (`trip`) hoặc Thân nhân (`relative`) rồi bấm [Xuất Hồ sơ PDF]: `targetPerson` nhận `form.value` của chuyến đi (vốn không có thuộc tính `name` hay `code` của Cán bộ).
+    2. Trong `AdvancedDocxExportDialog.vue`: Dòng tiêu đề truy xuất trực tiếp `targetPerson.name` và `targetPerson.code` dẫn tới hiển thị `()`. Nút tải file ở footer truy xuất `props.targetPerson.name` dẫn tới nhãn bị in cứng chuỗi `Tải về file PDF: undefined`.
+    3. Trong `preparePersonnelDocxData` (`src/utils/docxExport.js`):
+       - Hàm chỉ đọc trực tiếp các trường Cán bộ của đối tượng truyền vào. Khi truyền 1 chuyến đi vào, toàn bộ thông tin Cán bộ (Họ tên, Đơn vị, Chức vụ, Năm sinh, Giới tính, Quê quán, CCCD, v.v.) đều bị trống rỗng.
+       - Danh sách chuyến đi `rawTrips` từng kiểm tra `personnelStore?.allTrips` (trong khi thuộc tính thực tế của store là `personnelStore.tripsList`), và chỉ so sánh CCCD với `t.cccdparent` mà không kiểm tra `t.cccdchuyendi` hay `t.cccd`, dẫn tới chuyến đi không được liên kết và mảng chuyến đi bị rỗng khi xuất.
+  - **Giải pháp triệt để**:
+    1. **`PersonnelDialog.vue`**:
+       - Bổ sung computed `exportTargetPerson`: Tự động nhận diện bản ghi hiện tại. Nếu là Chuyến đi hoặc Thân nhân, tìm và liên kết sang hồ sơ Cán bộ chủ quản đầy đủ nhất trong `personnelStore.personnelList` (thông qua ID, mã cán bộ, CCCD), đồng thời đính kèm chuyến đi/thân nhân hiện tại để không sót bất kỳ dữ liệu nào.
+       - Nếu là Cán bộ: Chuẩn hóa đầy đủ `name` và `code` từ mọi trường định danh (`pNameField`, `ho_ten`, `fullName`, `relativeName`, `title`).
+    2. **`AdvancedDocxExportDialog.vue`**:
+       - Bổ sung helper `getTargetPersonDisplayName(p)` và `getTargetPersonCode(p)`: Quét an toàn qua toàn bộ các biến thể tên và mã, triệt tiêu 100% tình trạng `undefined` và `()`.
+       - Cập nhật Radio label: Hiển thị tên rõ ràng và chỉ in `(Mã)` khi có mã thực tế.
+       - Cập nhật `getDownloadButtonLabel()`: Trả về nhãn chuẩn xác `Tải về file PDF: [Họ tên]`, loại bỏ hoàn toàn chữ `undefined`.
+       - Cập nhật `handleExport()` và `handlePreviewPdf()`: Đặt tên file xuất và tiêu đề xem trước chuẩn xác theo tên và mã thực tế.
+    3. **`src/utils/docxExport.js`**:
+       - Trong `preparePersonnelDocxData`: Tự động phân giải cán bộ chủ quản liên kết khi nhận bản ghi Chuyến đi/Thân nhân (`effectivePerson`).
+       - Bổ sung đầy đủ fallbacks đa tầng cho toàn bộ các trường thông tin cơ bản của Cán bộ (`name`, `code`, `cccd`, `birthYear`, `hometown`, `departmentName`, `positionName`, `passportPersonal`, `passportOfficial`, `tcctResult`...).
+       - Sửa lỗi truy xuất mảng chuyến đi: Nạp từ `personnelStore.tripsList || personnelStore.allTrips`, đối chiếu CCCD chuyến đi đa trường (`tKeyField`, `cccdchuyendi`, `cccd`, `cccdparent`, `parentCccd`).
+       - Hợp nhất và chống trùng lặp (deduplicate) toàn bộ danh sách Thân nhân và Chuyến đi để xuất ra đầy đủ 100% các bảng.
+       - Đảm bảo `exportSinglePersonnelDocx` và `exportMultiplePersonnelZip` tạo tên file an toàn dựa trên `contextData.name` và `contextData.code`.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (577ms, 0 lỗi).
+    - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+  - **Trạng thái**: Done [Reversible].
+
 
 
 

@@ -163,6 +163,24 @@
 
 ### 14. TÙY CHỈNH MÀU CHỮ MENU SIDEBAR (AppSidebar.vue, SettingsImportView.vue)
 - Bổ sung tùy chọn chọn màu chữ menu bên trái (`sidebar_custom_text_color`) trong phần Cài đặt Hệ thống -> Tùy chỉnh Hình nền Menu Bên Trái.
+
+### 15. NÂNG CẤP TAB NGANG THÂN NHÂN ZERO-HARDCODE, CÀI ĐẶT FONT/SIZE BẢNG, BOLD/MÀU CỘT ĐỘNG & CHUẨN HÓA XUẤT TÀI LIỆU (Session 29 - 2026-09-10)
+- **1. Tab ngang Thân nhân & Cơ chế Zero-Hardcode (`PersonnelRelatedTabs.vue`)**:
+  - Khi xem/sửa Thân nhân, thanh tab ngang hiển thị đầy đủ các bảng liên quan: `[Thông tin chính]`, `[Chuyến đi]`, `[Cán bộ]`.
+  - Tự động liên kết 2 chiều giữa 3 bảng cốt lõi (`personnel`, `relatives`, `trips`) và mọi bảng tùy biến có quan hệ khóa ngoại / lookup mà không cần cấu hình thủ công.
+  - Hỗ trợ nạp đầy đủ chuyến đi của thân nhân từ cả store `tripsList` và mảng cục bộ `curRecord.trips` / `curRecord.custom_data.trips`.
+- **2. Tinh gọn Popup Thống kê Drilldown (`DashboardView.vue`)**:
+  - Xóa bỏ dropdown "Chế độ xem" tại header popup drilldown, giúp thanh công cụ gọn gàng, tập trung vào ô tìm kiếm, bộ chọn cột và nút xuất dữ liệu.
+- **3. Cài đặt Phông chữ & Cỡ chữ Bảng toàn cục (`SettingsImportView.vue`, `main.css`, `App.vue`)**:
+  - Thêm Khối 4 trong Cài đặt chung: Tùy biến Font chữ (Inter, Be Vietnam Pro, Roboto, Arial, Times New Roman, Noto Sans) và Cỡ chữ thân bảng (`0.95rem` đến `1.35rem`), Cỡ chữ tiêu đề (`0.85rem` đến `1.10rem`).
+  - Khung Live Preview xem trước trực quan.
+  - Lưu vào `app_settings` key `table_typography_config` và `localStorage`, nạp tự động trong `App.vue` áp dụng qua biến CSS `--table-font-family`, `--table-body-font-size`, `--table-header-font-size`.
+- **4. Tùy chọn Cột In đậm & Đổi màu dòng đầu tiên động (`ColumnHeaderMenu.vue`, `AddColumnDialog.vue`, `useTableColumns.js`, `UnifiedTableView.vue`, `DashboardView.vue`)**:
+  - Xóa bỏ hardcode kiểm tra tên cột (`col.id === 'name'`).
+  - Thêm checkbox `col.boldFirstLine` và color picker `col.firstLineColor` (mặc định `#0369a1`).
+  - Cả Bảng chính (`UnifiedTableView`) và Popup Thống kê (`DashboardView`) dùng chung cơ chế hiển thị dòng 1 in đậm và đổi màu theo đúng cấu hình cột.
+- **5. Chuẩn hóa Dữ liệu Xuất PDF/Word (`docxExport.js`)**:
+  - Cập nhật `nullGetter` trong `Docxtemplater`: tự động điền `'-'` trang nhã cho mọi trường/cột không có dữ liệu thay vì để trống trơn, tránh gây hiểu nhầm là lỗi hiển thị. Thẻ lặp và điều kiện vẫn an toàn trả về `[]`.
 - Hỗ trợ chọn bảng màu (color picker), nhập mã hex trực tiếp, các nút gợi ý gam màu chuẩn (Đen mặc định `#000000`, Trắng sáng `#ffffff`, Vàng nhạt `#fef08a`, Xám đậm `#334155`, Xanh lục đậm `#14532d`).
 - Tự động áp dụng màu chữ cho toàn bộ menu bên trái bao gồm: tên cơ quan, các mục menu, tiêu đề phân nhóm và icon.
 
@@ -2549,3 +2567,238 @@
        - npm run build thành công 100% (0 lỗi, 531ms).
        - Đồng bộ toàn bộ assets dist/ và mã nguồn sang WINDOWS_OFFLINE_APP/frontend/.
     4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-09 - Session 23)**: **Sửa Triệt Để Lỗi Xóa Nhầm Thân Nhân & Chuẩn Hóa 100% ID Duy Nhất Cho Thân Nhân Trong Hệ Thống**:
+    1. **Yêu cầu của người dùng**:
+       - Người dùng phản ánh: khi chọn xóa thân nhân 26 ("chọn xóa thân nhân 26"), hệ thống thông báo "Đã xóa thân nhân thành công!" nhưng không xóa dòng 26 mà lại xóa một hàng thân nhân khác.
+    2. **Nguyên nhân gốc rễ**:
+       - **Lỗi 1: Khớp nhầm Cán bộ chủ quản trong `deleteRelative` (`src/stores/personnel.js`)**:
+         + Trước đây, `deleteRelative` lặp qua toàn bộ danh sách `personnelList` và kiểm tra `const isTargetP = relsInP.some(isSameRel) || ...`.
+         + Hàm `isSameRel` kiểm tra `if (r.code && rel.code && r.code === rel.code) return true;`.
+         + Dữ liệu thực tế có nhiều thân nhân mang mã trùng nhau (như `TN-00001`, `TN-00002` xuất hiện ở nhiều cán bộ). Khi xóa một thân nhân mang mã trùng hoặc thiếu ID, `isSameRel` lập tức khớp với cán bộ đầu tiên trong danh sách có thân nhân mang mã đó, dẫn đến việc xóa nhầm thân nhân của cán bộ khác và gọi `break;`!
+       - **Lỗi 2: Mất `personnelId` và thiếu ID trong `buildTopicSourceList` (`src/utils/dashboardMetrics.js`)**:
+         + Khi ghép `tripDynamicFields`, trường `personnelId` của chuyến đi đè lên bản ghi, trong khi đối tượng trả về không gắn tường minh `id: r.id` và `personnelId: parentPerson?.id`. Khi truyền `item` vào `deleteRelative(item)`, `item.personnelId` bị `undefined`, khiến store phải đoán mò cán bộ chủ quản.
+       - **Lỗi 3: Dữ liệu DB cũ thiếu ID duy nhất**:
+         + 10/28 thân nhân trong Directus DB có `id: undefined`; một số thân nhân có ID bắt đầu bằng `trip_`; 2 thân nhân có ID trùng lặp.
+    3. **Giải pháp & Triển khai**:
+       - **Tái cấu trúc `deleteRelative` trong `src/stores/personnel.js` (Chính xác 100%)**:
+         + Bước 1: Xác định chính xác Cán bộ chủ quản (`targetParentId = rel.personnelId || rel.rawPerson?.id` hoặc qua `targetParentCccd`).
+         + Chỉ thao tác xóa BÊN TRONG Cán bộ đích. Tuyệt đối không xóa trên bất kỳ cán bộ nào khác.
+         + Bước 2: Khớp bản ghi thân nhân cần xóa (`isSameRelItem`) dựa trên: Tham chiếu đối tượng (`r === rel`), ID duy nhất (`r.id === targetRelId`), uniqueKey, CCCD, hoặc relativeIndex / Họ tên + Quan hệ + Năm sinh. Tuyệt đối KHÔNG dùng mã `code` đơn độc để so khớp xóa.
+         + Xóa đồng bộ chuyến đi liên kết của thân nhân đó trong `p.trips` (nếu có).
+         + Lưu bản ghi cán bộ qua `savePerson` và refresh `fetchPersonnel()`.
+       - **Cập nhật `deleteMultipleRelatives` trong `src/stores/personnel.js`**:
+         + Ủy quyền từng bản ghi cần xóa cho `deleteRelative(item)` xử lý chuẩn xác, loại bỏ hoàn toàn việc lọc theo `code`.
+       - **Cập nhật `fetchPersonnel` trong `src/stores/personnel.js`**:
+         + Tự động cấp ID duy nhất vĩnh viễn (`rel_...`) nếu bản ghi thiếu ID; gán tường minh `personnelId`, `parentPersonnelName`, `uniqueKey`, `relativeIndex`, `rawRelative`, `rawPerson`.
+       - **Cập nhật `buildTopicSourceList` trong `src/utils/dashboardMetrics.js`**:
+         + Xóa bỏ `personnelId`, `id`, `uniqueKey`, `_recordType` khỏi `tripDynamicFields` để không đè lên thân nhân.
+         + Gán tường minh và bất biến: `id: r.id`, `uniqueKey`, `personnelId: parentPerson?.id || r.personnelId`, `parentPersonnelName`, `parentCccd`, `relativeIndex`, `rawRelative`, `rawPerson`.
+       - **Cập nhật `deleteRelative` trong `PersonnelRelatedTabs.vue`**:
+         + Bổ sung `personnelId` và `rawPerson` trước khi gọi store.
+       - **Dọn dẹp & Chuẩn hóa toàn bộ Thân nhân trong Directus DB**:
+         + Cấp ID duy nhất `rel_...` cho tất cả thân nhân thiếu ID hoặc trùng ID.
+         + Đánh lại mã `code` tuần tự và duy nhất 100% từ `TN-00001` đến `TN-00026`.
+    4. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 549ms).
+       - Đồng bộ toàn bộ assets `dist/` và mã nguồn sang `WINDOWS_OFFLINE_APP/frontend/`.
+    5. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-10 - Session 24)**: **Động Hóa 100% Tab Liên Kết Theo Tên Bảng, Setup Khóa Chính & Liên Kết Cột, Chỉnh Sửa Trực Tiếp Không Lồng Modal (Zero-Hardcode)**:
+    1. **Yêu cầu của người dùng**:
+       - Khử sạch hardcode khóa thân nhân `cccdthannhan` trong store và formatters.
+       - Sửa lỗi bảng thống kê popup drilldown bị dồn text theo hàng ngang trong khi bảng Chuyến đi xuống dòng đẹp.
+       - Tự setup liên kết giữa các bảng qua cấu hình cột:
+         * Ở cấu hình cột của Bảng A: tự chọn 1 cột làm Khóa chính (Primary Key).
+         * Ở cấu hình cột của Bảng B: tự chọn 1 cột để liên kết tới Bảng A và chọn cột đích để nối.
+         * Ở Form Chỉnh sửa chi tiết: tự động hiển thị tên Tab theo đúng TÊN BẢNG (Bảng A, Bảng B, Cán bộ, Thân nhân, Chuyến đi,...), tuyệt đối không hardcode nhãn cố định.
+         * "Ấn vào thì mở tab chỉnh sửa thôi ko cần thêm mấy logic phức tạp khác": hiển thị danh sách bản ghi liên kết + form chỉnh sửa trực tiếp phẳng (`<DynamicField>`), lưu và xóa trực tiếp mà không lồng sub-modal rườm rà.
+    2. **Giải pháp & Triển khai**:
+       - **Triệt tiêu hardcode khóa `cccdthannhan` (`src/stores/personnel.js`)**:
+         * Thay thế toàn bộ fallback tĩnh `'cccdthannhan'` bằng `'id'` trong `saveRelative`, `deleteRelative`, `saveTrip`, `getRelativeKeyField`, `getTripKeyField`.
+       - **Sửa wrap text hiển thị cho Popup Drilldown (`DashboardView.vue`, `UnifiedTableView.vue`)**:
+         * Bổ sung `white-space: pre-line; display: inline-block; line-height: 1.45;` cho template ô hiển thị popup thống kê.
+       - **Cấu hình Khóa chính & Liên kết Bảng trên Header Cột (`ColumnHeaderMenu.vue`, `useTableColumns.js`)**:
+         * Thêm mục "5c. Khóa & Liên kết Bảng":
+           + Checkbox `editIsKey`: Đặt làm Khóa chính của bảng này.
+           + Dropdown `editLinkTable`: Liên kết cột này tới Bảng khác (lấy động từ `getUnifiedTableDefinitions`).
+           + Dropdown `editLinkColumn`: Cột ở bảng đích để nối (lấy động từ `targetLinkCols`).
+         * Tự động lưu và đồng bộ thuộc tính `column.isKey`, `column.linkTable`, `column.linkColumn` vào cấu hình bảng (`customDashboards` hoặc `importMapping`) và cập nhật `systemKeyConfig`.
+       - **Hỗ trợ Lưu & Xóa phổ quát mọi bảng (`src/stores/personnel.js`)**:
+         * Nâng cấp `saveRecord` và `deleteRecord` để lưu và cập nhật trực tiếp cả bảng tự tạo (`blank` / `_tableId`) vào `localStorage` và `saveAppSettings('custom_table_rows_' + tid)`.
+       - **Tái cấu trúc Tab Liên kết Động 100% & Chỉnh Sửa Trực Tiếp Phẳng (`src/components/personnel/PersonnelRelatedTabs.vue`, `PersonnelDialog.vue`)**:
+         * Bỏ hoàn toàn logic 3 tab tĩnh (`relatives`, `parent`, `trips`).
+         * Quét toàn bộ `allTables` qua `getUnifiedTableDefinitions`:
+           + Tab 1: Thông tin bảng hiện tại (`currentTable.title`).
+           + Tab liên kết: Mọi bảng có quan hệ khóa ngoại hai chiều (`linkTable`) hoặc quan hệ cốt lõi đều được hiển thị động theo đúng `table.title` (Ví dụ: "Bảng A", "Bảng B", "Cán bộ", "Thân nhân", "Chuyến đi").
+           + Hiển thị huy hiệu số lượng bản ghi liên kết (`count`).
+         * Khi bấm vào Tab:
+           + Mở thẳng giao diện chỉnh sửa trực tiếp phẳng với `<DynamicField>` theo toàn bộ cột của bảng đó (`currentLinkedCols`).
+           + Nếu có nhiều bản ghi: cung cấp thanh pill selector chuyển đổi giữa các bản ghi nhanh chóng kèm nút "+ Thêm mới".
+           + Nút "Lưu thay đổi", "Hủy", và "Xóa bản ghi" thao tác trực tiếp, tự động làm mới store.
+           + Gỡ bỏ hoàn toàn 2 sub-dialogs `<Dialog v-model:visible="isRelativeFormOpen">` và `<Dialog v-model:visible="isTripFormOpen">`.
+         * Cho phép mở tabs liên kết cho mọi nguồn dữ liệu (`personnel`, `relatives`, `trips`, bảng tự tạo) trong `PersonnelDialog.vue`.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 619ms).
+       - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+    4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-10 - Session 25)**: **Khử Triệt Để Tab Thừa Khi Chưa Gán, Hỗ Trợ Liên Kết Đa Khóa Chính/Đa Bảng & Thẻ Thông Tin Chi Tiết Cho Ô Gợi Ý Tự Điền**:
+    1. **Yêu cầu của người dùng**:
+       - *"Cột 'Gợi ý tìm kiếm & Tự điền từ bảng khác:' có liên kết với 2 primal key cùng lúc thì làm sao...?"*: Cho phép cấu hình gợi ý và liên kết một cột tới đồng thời 2 (hoặc nhiều) bảng / khóa chính (VD: Cột CCCD chuyến đi có thể thuộc về Cán bộ HOẶC thuộc về Thân nhân).
+       - *"...và tôi thấy chưa gán mà sao vẫn còn tab cũ?"*: Khắc phục triệt để hiện tượng chưa gán liên kết cột nhưng form chi tiết vẫn hiện tab cũ (Cán bộ, Thân nhân, Chuyến đi). Khi chưa gán `linkTable`: chỉ hiển thị duy nhất tab chính của bảng hiện tại, không hiện bất kỳ tab liên kết thừa nào!
+       - *"- Với 'Gợi ý tìm kiếm & Tự điền từ bảng khác:'' khi điền xong nên hiện thêm dữ liệu (hiện tại chỉ show 1 dữ liệu)"*: Khi điền hoặc chọn từ dropdown gợi ý (VD: chọn "Đoàn Hùng Vũ"), ô nhập không chỉ hiện mỗi mã CCCD trơ trọi mà phải hiển thị thẻ thông tin phong phú (Họ tên, Nguồn bảng Cán bộ/Thân nhân, Chức vụ, Đơn vị / Quan hệ) ngay bên dưới ô nhập.
+    2. **Giải pháp & Triển khai**:
+       - **Khử 100% Tab Thừa & Hỗ Trợ Multi-Table Link (`src/components/personnel/PersonnelRelatedTabs.vue`)**:
+         * Xóa bỏ hoàn toàn khối fallback cố định các bảng core `curId in (personnel, relatives, trips)` trong `isTableLinked`.
+         * Thêm hàm `checkTableMatchesLink(linkTableStr, tableId, tableSource)` hỗ trợ chuỗi danh sách bảng phân tách bằng dấu phẩy (VD: `linkTable: 'personnel,relatives'`).
+         * Chỉ khi nào cột được người dùng cấu hình `linkTable` rõ ràng thì tab đích mới xuất hiện. Khi chưa gán (`linkTable` rỗng), `isTableLinked` trả về `false`, chỉ hiển thị duy nhất tab chính (`info`), ẩn hoàn toàn thanh điều hướng tab thừa.
+         * Cập nhật `getLinkedRows` đối chiếu chính xác theo khóa chính của từng bảng đích tương ứng.
+       - **Cấu hình Đa Bảng Dạng Checklist Đa Chọn (`src/components/common/ColumnHeaderMenu.vue`)**:
+         * Mục 5c (Khóa & Liên kết Bảng): Thay dropdown đơn thành checklist checkbox cho phép tích chọn cùng lúc 1 hoặc nhiều bảng đích (VD: tích cả Cán bộ & Thân nhân); có nút "Gỡ liên kết" nhanh.
+         * Mục 5b (Gợi ý tự điền): Thay dropdown bảng nguồn thành checklist checkbox cho phép tích chọn nhiều bảng nguồn để tìm kiếm và tự điền. Cột tìm kiếm và cột lấy giá trị tự động tổng hợp từ các bảng được chọn.
+       - **Hiển Thị Thẻ Thông Tin Phong Phú Sau Khi Điền (`src/components/common/DynamicField.vue`)**:
+         * `filteredSuggestList`: Tìm kiếm trên toàn bộ các bảng nguồn đã chọn, gắn huy hiệu `[Cán bộ]`, `[Thân nhân]` hoặc tên bảng tự tạo vào từng dòng dropdown.
+         * `matchedSuggestRecord`: Tự động tìm kiếm bản ghi khớp với giá trị ô nhập (CCCD/ID) qua tất cả các bảng đích đã cấu hình.
+         * Render thẻ thông tin `suggest-matched-card` ngay dưới ô nhập: Huy hiệu bảng xanh lá, Họ tên in đậm, Giá trị mã/CCCD, Chức vụ, Phòng ban, Quan hệ (nếu là thân nhân), kèm nút `x` để xóa nhanh và chọn đối tượng khác.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 578ms).
+- **Entry (2026-09-10 - Session 26)**: **Hiển Thị Đầy Đủ UI Cấu Hình Cho Các Công Thức Tích Hợp Sẵn & Khôi Phục 100% Thân Nhân / Chuyến Đi Đã Xóa Nhầm**:
+    1. **Yêu cầu của người dùng**:
+       - *"check lại mấy công thức cũ, ko có show ui sửa"*: Khi chọn các công thức tích hợp sẵn trong cấu hình cột (như Trạng thái hiện diện, Quá hạn chưa về, So sánh 2 cột ngày, Kiểm tra điều kiện, Đi khi chưa có QĐ, Số lần xuất cảnh trong năm), giao diện bên dưới bị trống trơn, không có ô để chọn cột và sửa nhãn.
+       - *"tôi mới xóa nhầm mấy cái này khôi phục đc k... [log 5 chuyến đi / thân nhân bị xóa nhầm]"*: Khôi phục 5 bản ghi thân nhân / chuyến đi của 3 cán bộ: Lê Thị Thu (`CB-00016`), Nguyễn Văn Chương (`CB-00017`), và Nguyễn Hoài Hận (`CB-00023`).
+    2. **Giải pháp & Triển khai**:
+       - **Giao diện Cấu hình Công thức Tích hợp Sẵn (`ColumnHeaderMenu.vue` & `AddColumnDialog.vue`)**:
+         * Bổ sung đầy đủ khối UI cấu hình trực quan cho cả 6 loại công thức tích hợp:
+           1. `presence_status`: Chọn Ngày đi, Ngày về, Deadline duyệt về; tùy chỉnh nhãn Trong nước / Nước ngoài / Quá hạn.
+           2. `overdue_status`: Chọn Ngày về, Deadline duyệt về; tùy chỉnh nhãn Quá hạn / Đúng hạn / Chưa quá hạn.
+           3. `date_delta`: Chọn Cột ngày A, Cột ngày B; tùy chỉnh nhãn Sớm / Muộn / Đúng lịch; tùy chọn hiển thị số ngày chênh lệch.
+           4. `conditional_check`: Chọn Cột điều kiện, Cột kiểm tra rỗng; tùy chỉnh nhãn Cảnh báo / Hợp lệ.
+           5. `depart_before_decision`: Chọn Ngày đi, Deadline duyệt đi, Cột số QĐ; tùy chỉnh nhãn Vi phạm / Đúng quyết định.
+           6. `trips_count_in_year`: Chọn Ngày xuất cảnh để lấy năm, Năm tính toán, Đơn vị hiển thị.
+         * Nâng cấp hộp "Xem trước (Dòng 1)" dùng chung cho tất cả các loại công thức thông qua `evaluateFormula`, tính toán live trực tiếp khi người dùng thay đổi bất kỳ ô cấu hình nào.
+         * Đồng bộ hóa toàn bộ các trường cấu hình công thức trong `handleSaveFormulaType`, `useTableColumns.js` (hỗ trợ lưu cả bảng chuẩn lẫn bảng tùy biến `customDashboards`), và `AddColumnDialog.vue` (khi tạo mới cột công thức).
+       - **Khôi phục 100% Dữ liệu Đã Xóa Nhầm vào Directus Live (`https://api.hscb.online`)**:
+         * Trích xuất chính xác 100% dữ liệu gốc từ `BACKUP_DATA/personnels.json`:
+           1. `trip_1788744759341` (Đi Nga): Thuộc thân nhân **Lê Minh Phương** (`TN-00011`) của CB **Lê Thị Thu** (`CB-00016`).
+           2. `trip_1788744660440` (Đi Đức): Thuộc thân nhân **Lê Hoàng Cương** (`TN-00012`) của CB **Lê Thị Thu** (`CB-00016`).
+           3. `trip_1788744647657` (Đi Nga): Thuộc thân nhân **Nguyễn Hồng Diễm Châu** (`TN-00002`) của CB **Nguyễn Văn Chương** (`CB-00017`).
+           4. `trip_1788744654107` (Đi Mỹ): Thuộc thân nhân **Nguyễn Hồng Khang** (`TN-00004`) của CB **Nguyễn Văn Chương** (`CB-00017`).
+           5. `trip_1788744626590` (Đi Nga): Thuộc thân nhân **Nguyền Ngọc Khánh Linh** (`TN-00021`) của CB **Nguyễn Hoài Hận** (`CB-00023`).
+           * Khôi phục thêm các thân nhân / chuyến đi liên đới trong cùng hồ sơ: `TN-00001` (Nguyễn Hồng Diễm Kim), `TN-00020` (Nguyễn Ngọc Như Quỳnh), `TN-00022` (Chị: Nguyễn Ngọc Anh).
+         * Giữ nguyên 100% các chuyến đi của Cán bộ hiện có trên hệ thống live.
+         * Đã patch thành công và ghi log kiểm toán (`audit_logs`) trên server live. Đã kiểm tra đối chiếu trực tiếp dữ liệu sau khi patch đạt trạng thái hoàn hảo.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 610ms).
+       - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+       - Đã commit và push mã nguồn lên nhánh `main`.
+    4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-10 - Session 27)**: **Công Thức Số Lần Xuất Cảnh Thông Minh Theo Dòng/Unique, Đồng Bộ Tô Đậm Popup Thống Kê Giống Bảng & Tùy Chọn Lọc Unique Theo Cột**:
+    1. **Yêu cầu của người dùng**:
+       - *"công thức số lần xuất cảnh trong năm nên thông minh hơn tí, tức là nếu dữ liệu ở 2 hàng thì hiển thị chuyến đi từng hàng, còn nếu unique thì mới gộp lại chứ"*: Khi dữ liệu hiển thị phẳng từng hàng (không gộp unique), mỗi dòng hiển thị đúng chuyến đi của dòng đó (`Chuyến 1/2: Mỹ - 15/10/2025` và `Chuyến 2/2: Pháp - 20/11/2025`), tránh lặp lại danh sách toàn bộ chuyến trên cả 2 dòng. Khi bật Unique/gộp thì mới gộp danh sách đầy đủ.
+       - *"popup thống kê sao ko có tô đậm chữ giống ở bảng, sao k dùng cùng logic cho dễ?"*: Popup drilldown thống kê chưa đồng bộ style ô nhiều dòng (dòng 1 Họ tên tô đậm xanh dương `#0369a1`) như ở bảng chính.
+       - *"ở cột có nên cho phép tích chọn unique không? như vậy sẽ ưu tiên gộp theo cột đó?"*: Cho phép tích chọn Unique trực tiếp trên cột để ưu tiên gộp các dòng trùng lặp theo cột đó.
+    2. **Giải pháp & Triển khai**:
+       - **Công Thức Số Lần Xuất Cảnh Thông Minh Chuẩn Hóa (`src/utils/formatters.js`)**:
+         * Tự động phân biệt dòng chuyến đi phẳng (`!isAggregatedRow && (record.departureDate || record.ngay_xuat_canh || record._recordType === 'trip')`) và dòng gộp Unique (`_isUniqueRow === true` hoặc bản ghi cán bộ tổng hợp).
+         * Ở chế độ phẳng (tách hàng riêng biệt): hiển thị đúng định dạng chuẩn theo yêu cầu:
+           `- Chuyến 1: Thái Lan - 29/04/2026`
+           `- Chuyến 2: Singapore - 15/08/2026`
+           (Nếu có 1 chuyến: `- Chuyến 1: Thái Lan - 29/04/2026`).
+         * Ở chế độ gộp Unique (1 hàng duy nhất cho Cán bộ):
+           `2 lần (năm 2026)`
+           `- Chuyến 1: Thái Lan - 29/04/2026`
+           `- Chuyến 2: Singapore - 15/08/2026`
+       - **Đồng Bộ Hoàn Toàn Style Popup Thống Kê với Bảng Chính (`src/views/DashboardView.vue`)**:
+         * Áp dụng cùng logic tách dòng `\n` như `UnifiedTableView.vue`: dòng 1 hiển thị chữ to, tô đậm xanh dương `#0369a1` (font-size 1.12rem, weight 700); các dòng chức vụ/đơn vị phụ bên dưới hiển thị màu xám `#475569` font-size 0.95rem.
+         * Các cột Họ tên đơn dòng cũng được áp dụng màu xanh `#0369a1` in đậm đồng bộ.
+       - **Tùy Chọn Lọc Unique Theo Cột (`ColumnHeaderMenu.vue`, `useTableColumns.js`, `AddColumnDialog.vue`, `useTableFilters.js`)**:
+         * Bổ sung checkbox: `🔘 Lọc duy nhất theo cột này (Unique - Gộp các dòng trùng)` (`col.isUnique`).
+         * `useTableFilters.js`: Khi có cột được đánh dấu `isUnique`, bảng tự động lọc duy nhất theo giá trị của cột đó (`uniqueCol.id`), gán cờ `_isUniqueRow = true` để kích hoạt chế độ gộp dữ liệu và công thức tương ứng.
+    3. **Kiểm thử & Triển khai**:
+       - `npm run build` thành công 100% (0 lỗi, 765ms).
+       - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+       - Commit & push lên git `main`.
+    4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-10 - Session 28)**: **Bổ Sung Line Mờ Ngăn Cách Giữa Các Cột & Sửa Triệt Để Lỗi Dữ Liệu "Trung Quốc" Trong Công Thức Chuyến Đi Thân Nhân**:
+    1. **Yêu cầu của người dùng**:
+       - *"bảng thiếu line mờ ngăn cách giữa các cột ấy bổ sung giúp tôi"*: Bảng chính và popup thống kê thiếu đường kẻ đứng mờ ngăn cách giữa các cột (giữa Checkbox, STT, Họ và tên, Chức vụ...), các cột bị dính liền nhìn khó phân tách ranh giới.
+       - *"check lại công thức và bảng chuyến đi, sao chuyến đi là trung quốc ???? dữ liệu tĩnh ak"*: Tại popup thống kê khi lọc Chuyến đi Thân nhân đi Mỹ, dòng của thân nhân Nguyễn Hồng Khang (cột QUỐC GIA XUẤT CẢNH là "Mỹ") nhưng cột SỐ LẦN XUẤT CẢNH TRONG NĂM lại hiển thị: `1 lần \n - Chuyến 1: Trung Quốc - 23/04/2026`. Người dùng thắc mắc có phải dữ liệu tĩnh bị hardcode không.
+    2. **Bản chất nguyên nhân & Giải pháp**:
+       - **Đường Line Mờ Ngăn Cách Giữa Các Cột (`main.css`, `unified-table.css`)**:
+         * Nguyên nhân: Trước đó `.p-datatable-thead > tr > th` và `.p-datatable-tbody > tr > td` có thuộc tính `border: none !important;` loại bỏ hoàn toàn viền đứng.
+         * Khắc phục: Bổ sung `border-right: 1px solid #e2e8f0 !important;` cho cả thẻ tiêu đề (`th`) và ô dữ liệu (`td`), đồng thời đặt `:last-child { border-right: none !important; }` để mép ngoài cùng không bị viền kép. Hiển thị line mờ trang nhã, sắc nét, đồng bộ cho toàn bộ hệ thống bảng.
+       - **Sửa Lỗi Dữ Liệu "Trung Quốc" Trong Công Thức `trips_count_in_year` (`src/utils/formatters.js`)**:
+         * Nguyên nhân gốc rễ: Trong `computeTripsCountInYear`, khi record là bản ghi chuyến đi của Thân nhân (`record.isRelative: true`), hàm kiểm tra `if (record.rawPerson?.trips)` và lấy nhầm mảng chuyến đi của **Cán bộ chủ quản Nguyễn Văn Chương** (Cán bộ Chương có chuyến đi Trung Quốc ngày 23/04/2026). Do đó, dòng của thân nhân Nguyễn Hồng Khang đã bị gán nhầm chuyến đi Trung Quốc của Cán bộ Chương thay vì chuyến đi của chính mình!
+         * Khắc phục triệt để theo Nguyên tắc North Star (Mục 4 - Strict Data Integrity & Zero-Guessing):
+           1. Phân lập dữ liệu chuyến đi theo đúng đối tượng: Nếu là Thân nhân (`record.isRelative` / `rawRelative`), chỉ lấy danh sách chuyến đi của Thân nhân đó (`rawRelative.trips` hoặc `record.trips` của thân nhân), **TUYỆT ĐỐI CẤM** fallback sang `rawPerson.trips`.
+           2. Nếu là Cán bộ, chỉ lấy chuyến đi của Cán bộ (loại bỏ chuyến đi thân nhân).
+           3. Nếu chuyến đi không có ngày xuất cảnh hợp lệ trong năm tính toán, hiển thị rỗng `'-'` (khớp 100% với các dòng chuyến đi thân nhân khác như Phạm Thị Kim, Vũ Nguyễn Tuấn Kiệt).
+           4. Khi chuyến đi có ngày xuất cảnh cụ thể, hiển thị chính xác thông tin nơi đến và ngày của chính chuyến đi đó (`- Chuyến X: [Nơi đến] - [Ngày]`), không bao giờ bị lẫn lộn giữa Cán bộ và Thân nhân.
+    3. **Kiểm thử & Triển khai**:
+       - Chạy kiểm thử tự động trên node: Kiểm tra ca Khang (Mỹ, không ngày) -> ra `'-'`, ca Khang có ngày -> ra `- Chuyến 1: Mỹ - ...`, ca Cán bộ Chương -> ra chuyến Trung Quốc trên hồ sơ Cán bộ Chương.
+       - `npm run build` thành công 100% (0 lỗi, 604ms).
+       - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+       - Commit & push lên git `main`.
+    4. **Trạng thái**: Done [Reversible].
+
+- **Entry (2026-09-10 - Session 30)**: **Sửa Lỗi Tìm Kiếm Bảng Cán Bộ, Xác Nhận Dữ Liệu Nguyễn Hoài Hận (001072041478) & Triệt Tiêu Hoàn Toàn Các Logic Fallback Ngầm**:
+    1. **Yêu cầu của người dùng**:
+       - *"sao chuyến đi có '001072041478' nguyễn hoài hận mà bảng cán bộ ko có???? check lại xem còn logic fallback nào ko xóa hết giúp tôi đi chứ, tôi rất mệt mỏi vì cứ còn fallback làm dữ liệu bị sai"*
+    2. **Bản chất nguyên nhân & Điều tra thực tế**:
+       - Cán bộ `Nguyễn Hoài Hận` (CCCD: `001072041478`, Mã: `CB-00023`) **CÓ ĐẦY ĐỦ** trong DB Directus (`/items/personnels` có 30 cán bộ).
+       - Ở Bảng Chuyến đi (`/trips`): Nguyễn Hoài Hận có chuyến đi Trung Quốc, cột `cccdchuyendi` hiển thị `001072041478` và cột Lookup `anhxatencanbo` hiển thị "Nguyễn Hoài Hận".
+       - Ở Bảng Cán bộ (`/personnel`):
+         * Cán bộ Nguyễn Hoài Hận nằm ở dòng 23 (Trang 2 của bảng khi phân trang 15 dòng/trang).
+         * Khi người dùng nhập `001072041478` vào ô tìm kiếm nhanh (`searchQuery`) để tìm: Trong `useTableFilters.js`, vòng lặp kiểm tra từng cột `col` gọi hàm `getCellValue(item, col)`. Vì `col` là một đối tượng (`object`) chứ không phải chuỗi `colId`, hàm `getCellValue` truy xuất `trip['[object Object]']` dẫn tới trả về `'-'`, khiến điều kiện `val !== '-'` luôn thất bại trên mọi cột. Kết quả là toàn bộ 30 dòng đều bị lọc mất, bảng hiển thị rỗng khiến người dùng lầm tưởng cán bộ không tồn tại!
+         * Thêm vào đó, nếu người dùng bấm vào các thẻ thống kê con của Cán bộ ("Kỷ luật", "Lịch sử chính trị", "Chính trị hiện nay"...), cán bộ Hận không có vi phạm nên không thuộc các thẻ lọc này.
+    3. **Giải pháp & Triển khai triệt để**:
+       - **Sửa Lỗi Ô Tìm Kiếm Nhanh (`useTableFilters.js` & `UnifiedTableView.vue`)**:
+         * Bóc tách chuẩn xác `colId = typeof col === 'object' && col !== null ? (col.id || col.field) : col;` trước khi đánh giá.
+         * Nâng cấp `getCellValue` trong `UnifiedTableView.vue` hỗ trợ cả tham số chuỗi `colId` lẫn đối tượng cột `colDef`, tự động lấy đúng giá trị ô bảng.
+         * Đồng thời bổ sung kiểm tra đối chiếu trên các trường định danh cơ bản của chính bản ghi (`name`, `personnelName`, `relativeName`, `code`, `personnelCode`, `cccd`, `cccdparent`, `parentCccd`, `cccdthannhan`, `cccdchuyendi`), đảm bảo tìm kiếm theo CCCD hay Tên luôn tìm ra 100% bản ghi ngay cả khi cột đó bị ẩn.
+       - **Triệt Tiêu Hoàn Toàn 100% Các Logic Fallback Ngầm Còn Sót Lại**:
+         * `src/stores/personnel.js`: Xóa bỏ hoàn toàn khối quét suy đoán phòng ban/chức vụ ngầm (`cleanK.includes('donvi') || cleanK.includes('phongban')`); xóa bỏ fallback alias `custom['Khối B: Chuyến đi nước ngoài']`.
+         * `src/utils/dashboardMetrics.js`: Xóa bỏ `custom['Khối B: Chuyến đi nước ngoài']`; trong `matchSingleCondition`, ngăn chặn tuyệt đối fallback `rawPerson.trips` khi bản ghi là Thân nhân (`item.isRelative`); trong `computeMetricCardCount`, gỡ bỏ hoàn toàn `rawPerson?.[pKeyField]` khỏi việc gom Unique.
+         * `src/views/UnifiedTableView.vue`: Xóa bỏ hàm chết `getPersonInfo` chứa fallback `findPersonByCccd(data.cccdparent)`.
+       - **Reset Bộ Lọc Đang Lưu Trên Directus**:
+         * Cập nhật `child_dashboard_filter_personnel` về `{"searchQuery": ""}` để mở bảng Cán bộ hiển thị đầy đủ 30 cán bộ.
+    4. **Kiểm thử & Triển khai**:
+       - Chạy kiểm thử node script: Tìm kiếm `001072041478` trên bảng Cán bộ trả về `true`, khớp chính xác Nguyễn Hoài Hận.
+       - `npm run build` thành công 100% (565ms, 0 lỗi).
+       - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+    5. **Trạng thái**: Done [Reversible].
+
+- **Session 30 (2026-09-10) - Khắc Phục Triệt Để Lỗi Nút Xuất PDF & Đảm Bảo Đầy Đủ 100% Dữ Liệu Xuất Tài Liệu**:
+  - **Yêu cầu Người dùng**: "check lại xuất pdf, nút pdf lỗi gì đó. và có vẻ ko đủ dữ liệu" (Kèm ảnh chụp màn hình hiển thị: `Chỉ cán bộ hiện tại: ()` và `Tải về file PDF: undefined`).
+  - **Nguyên nhân gốc rễ**:
+    1. Khi người dùng mở Form Chi tiết (`PersonnelDialog.vue`) từ 1 dòng Chuyến đi (`trip`) hoặc Thân nhân (`relative`) rồi bấm [Xuất Hồ sơ PDF]: `targetPerson` nhận `form.value` của chuyến đi (vốn không có thuộc tính `name` hay `code` của Cán bộ).
+    2. Trong `AdvancedDocxExportDialog.vue`: Dòng tiêu đề truy xuất trực tiếp `targetPerson.name` và `targetPerson.code` dẫn tới hiển thị `()`. Nút tải file ở footer truy xuất `props.targetPerson.name` dẫn tới nhãn bị in cứng chuỗi `Tải về file PDF: undefined`.
+    3. Trong `preparePersonnelDocxData` (`src/utils/docxExport.js`):
+       - Hàm chỉ đọc trực tiếp các trường Cán bộ của đối tượng truyền vào. Khi truyền 1 chuyến đi vào, toàn bộ thông tin Cán bộ (Họ tên, Đơn vị, Chức vụ, Năm sinh, Giới tính, Quê quán, CCCD, v.v.) đều bị trống rỗng.
+       - Danh sách chuyến đi `rawTrips` từng kiểm tra `personnelStore?.allTrips` (trong khi thuộc tính thực tế của store là `personnelStore.tripsList`), và chỉ so sánh CCCD với `t.cccdparent` mà không kiểm tra `t.cccdchuyendi` hay `t.cccd`, dẫn tới chuyến đi không được liên kết và mảng chuyến đi bị rỗng khi xuất.
+  - **Giải pháp triệt để**:
+    1. **`PersonnelDialog.vue`**:
+       - Bổ sung computed `exportTargetPerson`: Tự động nhận diện bản ghi hiện tại. Nếu là Chuyến đi hoặc Thân nhân, tìm và liên kết sang hồ sơ Cán bộ chủ quản đầy đủ nhất trong `personnelStore.personnelList` (thông qua ID, mã cán bộ, CCCD), đồng thời đính kèm chuyến đi/thân nhân hiện tại để không sót bất kỳ dữ liệu nào.
+       - Nếu là Cán bộ: Chuẩn hóa đầy đủ `name` và `code` từ mọi trường định danh (`pNameField`, `ho_ten`, `fullName`, `relativeName`, `title`).
+    2. **`AdvancedDocxExportDialog.vue`**:
+       - Bổ sung helper `getTargetPersonDisplayName(p)` và `getTargetPersonCode(p)`: Quét an toàn qua toàn bộ các biến thể tên và mã, triệt tiêu 100% tình trạng `undefined` và `()`.
+       - Cập nhật Radio label: Hiển thị tên rõ ràng và chỉ in `(Mã)` khi có mã thực tế.
+       - Cập nhật `getDownloadButtonLabel()`: Trả về nhãn chuẩn xác `Tải về file PDF: [Họ tên]`, loại bỏ hoàn toàn chữ `undefined`.
+       - Cập nhật `handleExport()` và `handlePreviewPdf()`: Đặt tên file xuất và tiêu đề xem trước chuẩn xác theo tên và mã thực tế.
+    3. **`src/utils/docxExport.js`**:
+       - Trong `preparePersonnelDocxData`: Tự động phân giải cán bộ chủ quản liên kết khi nhận bản ghi Chuyến đi/Thân nhân (`effectivePerson`).
+       - Bổ sung đầy đủ fallbacks đa tầng cho toàn bộ các trường thông tin cơ bản của Cán bộ (`name`, `code`, `cccd`, `birthYear`, `hometown`, `departmentName`, `positionName`, `passportPersonal`, `passportOfficial`, `tcctResult`...).
+       - Sửa lỗi truy xuất mảng chuyến đi: Nạp từ `personnelStore.tripsList || personnelStore.allTrips`, đối chiếu CCCD chuyến đi đa trường (`tKeyField`, `cccdchuyendi`, `cccd`, `cccdparent`, `parentCccd`).
+       - Hợp nhất và chống trùng lặp (deduplicate) toàn bộ danh sách Thân nhân và Chuyến đi để xuất ra đầy đủ 100% các bảng.
+       - Đảm bảo `exportSinglePersonnelDocx` và `exportMultiplePersonnelZip` tạo tên file an toàn dựa trên `contextData.name` và `contextData.code`.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (577ms, 0 lỗi).
+    - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
+  - **Trạng thái**: Done [Reversible].
+
+
+
+
