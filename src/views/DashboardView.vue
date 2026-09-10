@@ -2020,26 +2020,6 @@ const initialRecordIdForDialog = ref(null);
 
 const openPersonnelDetail = (p) => {
   if (!p) return;
-  const isRel = p._recordType === 'relative' || p.relationshipName || drilldownSourceType.value === 'relatives';
-  if (isRel) {
-    const parent = personnelStore.findParentPersonForRelative ? personnelStore.findParentPersonForRelative(p) : null;
-    if (parent) {
-      selectedPersonForDialog.value = parent;
-      dialogTableId.value = 'personnel';
-      initialTabForDialog.value = 'relatives';
-      initialRecordIdForDialog.value = p.id || p.uniqueKey;
-      const allCols = getUnifiedTableColumns('personnel', {
-        personnelStore,
-        customDashboards: availableTopicDashboards.value,
-        systemBranding: systemBranding.value,
-      });
-      selectedColumnsForDialog.value = (allCols || []).filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
-      isPersonDialogOpen.value = true;
-      return;
-    }
-  }
-
-  // Otherwise open flat record
   selectedPersonForDialog.value = p;
   initialTabForDialog.value = 'info';
   initialRecordIdForDialog.value = null;

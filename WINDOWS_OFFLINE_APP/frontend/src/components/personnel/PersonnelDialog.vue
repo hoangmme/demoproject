@@ -126,16 +126,18 @@ import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDial
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import PersonnelRelatedTabs from '@/components/personnel/PersonnelRelatedTabs.vue';
 import { getColItemStyle } from '@/utils/formatters';
+import { getUnifiedTableColumns } from '@/utils/tableRegistry';
 
 const isDocxExportOpen = ref(false);
 const isDynamicDataEntryOpen = ref(false);
 const activeTab = ref('info');
 
 const recordSource = computed(() => {
-  if (props.tableId) return props.tableId;
+  if (form.value._recordType === 'relative' || form.value.relationshipName || form.value.relativeName) return 'relatives';
+  if (form.value._recordType === 'trip' || form.value.departureDate) return 'trips';
+  if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-'))) return 'personnel';
   if (form.value._tableId) return form.value._tableId;
-  if (form.value._recordType === 'trip') return 'trips';
-  if (form.value._recordType === 'relative') return 'relatives';
+  if (props.tableId) return props.tableId;
   if (form.value._recordType === 'blank') return 'blank';
   return 'personnel';
 });
@@ -197,17 +199,38 @@ const isColumnVisibleInDetail = (c) => {
 };
 
 const allTableColumns = computed(() => {
-  if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
-    return props.columns.filter(isColumnVisibleInDetail);
+  // 1. Dynamic table registry columns for this record source
+  const srcCols = getUnifiedTableColumns(recordSource.value, { personnelStore });
+  if (srcCols && Array.isArray(srcCols) && srcCols.length > 0) {
+    const valid = srcCols.filter(isColumnVisibleInDetail);
+    if (valid.length > 0) return valid;
   }
-  const allGroups = [
-    ...(personnelStore.importMappingPersonnel || []),
-    ...(personnelStore.importMappingRelative || []),
-    ...(personnelStore.importMappingTrips || []),
-  ];
+
+  // 2. Props columns if passed and valid
+  if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
+    const valid = props.columns.filter(isColumnVisibleInDetail);
+    if (valid.length > 0) return valid;
+  }
+
+  // 3. Fallback to specific group in store mapping
+  let mappingGroups = [];
+  if (recordSource.value === 'relatives') {
+    mappingGroups = personnelStore.importMappingRelative || [];
+  } else if (recordSource.value === 'trips') {
+    mappingGroups = personnelStore.importMappingTrips || [];
+  } else if (recordSource.value === 'personnel') {
+    mappingGroups = personnelStore.importMappingPersonnel || [];
+  } else {
+    mappingGroups = [
+      ...(personnelStore.importMappingPersonnel || []),
+      ...(personnelStore.importMappingRelative || []),
+      ...(personnelStore.importMappingTrips || []),
+    ];
+  }
+
   const list = [];
   const seen = new Set();
-  allGroups.forEach((grp) => {
+  mappingGroups.forEach((grp) => {
     (grp.columns || []).forEach((col) => {
       if (col && isColumnVisibleInDetail(col) && !seen.has(col.id)) {
         seen.add(col.id);
@@ -219,13 +242,17 @@ const allTableColumns = computed(() => {
 });
 
 const dialogHeader = computed(() => {
-  if (form.value._recordType === 'trip') {
+  if (recordSource.value === 'trips' || form.value._recordType === 'trip') {
     const dest = form.value.countryName || form.value.quoc_gia_xuat_canh || form.value.country || '';
     return isEdit.value ? (dest ? `Chi tiết Chuyến đi: ${dest}` : `Chi tiết Chuyến đi`) : `Thêm mới Chuyến đi`;
   }
+  if (recordSource.value === 'relatives' || form.value._recordType === 'relative') {
+    const rName = form.value.relativeName || form.value.name || form.value.fullName || form.value.ho_ten || '';
+    return isEdit.value ? (rName ? `Chi tiết Thân nhân: ${rName}` : `Chi tiết Thân nhân`) : `Thêm mới Thân nhân`;
+  }
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
-  const nameVal = form.value[pNameField] || form.value.name || (form.value._recordType === 'relative' ? (form.value.relativeName || form.value.name) : '') || form.value.title || form.value.id || '';
-  return isEdit.value ? `Chi tiết: ${nameVal || 'Kết quả'}` : `Thêm mới kết quả`;
+  const nameVal = form.value[pNameField] || form.value.name || form.value.fullName || form.value.title || form.value.id || '';
+  return isEdit.value ? `Chi tiết: ${nameVal || 'Cán bộ'}` : `Thêm mới cán bộ`;
 });
 
 const safeClone = (obj) => {

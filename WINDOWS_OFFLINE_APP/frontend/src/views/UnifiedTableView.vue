@@ -994,8 +994,8 @@
     <PersonnelDialog
       v-model="isPersonnelDialogOpen"
       :personData="activePersonData"
-      :columns="allAvailableColumnsList"
-      :tableId="currentDashboardConfig?.id || topicId"
+      :columns="dialogColumnsForRecord"
+      :tableId="dialogTableIdForRecord"
       :initialTab="initialTabForDialog"
       :initialRecordId="initialRecordIdForDialog"
       @saved="handlePersonnelSaved"
@@ -1154,7 +1154,7 @@ import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import ExportImportMenu from '@/components/common/ExportImportMenu.vue';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import UnifiedTableViewTabs from '@/components/unified-table/UnifiedTableViewTabs.vue';
-import { ensureStandardDashboards } from '@/utils/tableRegistry';
+import { ensureStandardDashboards, getUnifiedTableColumns } from '@/utils/tableRegistry';
 import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 import { useTableViews } from '@/composables/unified-table/useTableViews';
 import { useTableGridInteraction } from '@/composables/unified-table/useTableGridInteraction';
@@ -2824,20 +2824,32 @@ const saveColumnSelection = async () => {
 const initialTabForDialog = ref('info');
 const initialRecordIdForDialog = ref(null);
 
+// Dynamic Table & Column Resolution for Detail Dialog
+const dialogTableIdForRecord = computed(() => {
+  const rec = activePersonData.value;
+  if (!rec) return currentDashboardConfig.value?.id || topicId.value;
+  if (rec._tableId) return rec._tableId;
+  if (rec._recordType === 'relative' || rec.relationshipName) return 'relatives';
+  if (rec._recordType === 'trip' || rec.departureDate) return 'trips';
+  if (rec._recordType === 'personnel' || (rec.code && String(rec.code).startsWith('CB-'))) return 'personnel';
+  return currentDashboardConfig.value?.id || topicId.value;
+});
+
+const dialogColumnsForRecord = computed(() => {
+  const tid = dialogTableIdForRecord.value;
+  const cols = getUnifiedTableColumns(tid, {
+    personnelStore,
+    customDashboards: customDashboards.value,
+    systemBranding: systemBranding.value,
+  });
+  if (cols && cols.length > 0) {
+    return cols.filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false && c.showInDetail !== 'false');
+  }
+  return allAvailableColumnsList.value;
+});
+
 function openPersonnelDetail(record) {
   if (!record) return;
-  const isRel = record._recordType === 'relative' || record.relationshipName || topicId.value === 'relatives';
-  if (isRel) {
-    const parent = personnelStore.findParentPersonForRelative ? personnelStore.findParentPersonForRelative(record) : null;
-    if (parent) {
-      activePersonData.value = parent;
-      initialTabForDialog.value = 'relatives';
-      initialRecordIdForDialog.value = record.id || record.uniqueKey;
-      isPersonnelDialogOpen.value = true;
-      return;
-    }
-  }
-
   activePersonData.value = record;
   initialTabForDialog.value = 'info';
   initialRecordIdForDialog.value = null;

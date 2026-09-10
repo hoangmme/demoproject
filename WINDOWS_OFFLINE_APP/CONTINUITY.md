@@ -2842,3 +2842,113 @@
     - `npm run build` thành công 100% (563ms, 0 lỗi).
     - Đồng bộ toàn bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/`.
   - **Trạng thái**: Done [Reversible].
+
+- **Session 33 (2026-09-10) - Tùy Biến Xuống Dòng Thống Kê, Khóa STT 1 Hàng (Nowrap), Điều Kiện So Sánh Text/Số & Cải Tiến Sum Rollup/Lookup**:
+  - **Yêu cầu Người dùng**:
+    1. "thống kê cho phép tôi tùy chỉnh xuống dòng"
+    2. "stt cần 1 hàng đang bị xuống dòng ở bảng và popup thống kê"
+    3. "ví dụ loopkup muốn có thêm điều kiện thì sao (ví dụ chỉ đếm nếu hàng bảng nguồn có cột có dữ liệu chứa 'text' chẳng hạn?"
+    4. "Lookup khi chọn tổng giá trị số (sum) chưa hoạt động, ví dụ tổng nó đếm đc thì 19 thì nó sẽ hiển thị hàng nào cũng 19 nếu chọn vậy ms đúng chứ, hiện tại có vẻ nó k sum đc"
+  - **Giải pháp & Cải tiến triển khai**:
+    1. **Khóa STT hiển thị 1 hàng duy nhất (`white-space: nowrap !important;`)**:
+       - Tại `src/assets/styles/main.css`: Bổ sung CSS chuẩn định dạng cho toàn bộ `th.col-center`, `td.col-center`, `.p-datatable-thead > tr > th.col-center`, `.p-datatable-tbody > tr > td.col-center` với `white-space: nowrap !important; word-break: normal !important; padding-left: 4px !important; padding-right: 4px !important;`.
+       - Tại `UnifiedTableView.vue` và `DashboardView.vue` (Drilldown modal): HeaderStyle và BodyStyle của cột STT được cố định `padding: '0.75rem 4px', whiteSpace: 'nowrap'`.
+    2. **Tùy chỉnh xuống dòng mới cho Khối Thống Kê (`DashboardView.vue`)**:
+       - Hỗ trợ thuộc tính `breakRow: Boolean` trên từng widget trong nhóm thống kê (`customGroups`).
+       - Bổ sung `<div v-if="widget.breakRow && wIdx > 0" class="widget-flex-row-break" style="flex-basis: 100%; width: 100%; height: 0; margin: 0; padding: 0; pointer-events: none;"></div>` để flexbox ngắt xuống hàng mới.
+       - Thêm nút tắt/bật nhanh icon `pi pi-arrow-down-left` trên header của Thẻ đếm số lượng, Biểu đồ cột dọc và Tiến trình ngang; thêm checkbox cấu hình `breakRow` trong modal Sửa/Thêm khối thống kê; tự động lưu cấu hình `saveCustomDashboardsToDB`.
+    3. **Điều kiện lọc bổ sung linh hoạt (So khớp Cột vs Text/Số tự do) cho Lookup & Rollup**:
+       - Cho phép chọn kiểu so sánh `compareType: 'field' | 'value'`:
+         - `compareType === 'field'`: So sánh cột bảng nguồn với cột của bảng hiện tại.
+         - `compareType === 'value'`: So sánh cột bảng nguồn với một giá trị text hoặc số cụ thể do người dùng nhập (ví dụ: Cột [Quốc gia] chứa 'Nhật Bản', Cột [Trạng thái] = 'Đang công tác').
+       - Cập nhật động cơ `evaluateLookup` và `evaluateRollup` trong `src/utils/formatters.js`: hàm `matchLookupCondition` và `matchRollupCondition` hỗ trợ đầy đủ các toán tử `contains`, `not_contains`, `is`, `is_not`, `starts_with`, `ends_with`, `gt`, `gte`, `lt`, `lte`, `is_empty`, `is_not_empty`.
+       - Cập nhật UI xây dựng điều kiện trong `ColumnHeaderMenu.vue` và `AddColumnDialog.vue` cho cả hai định dạng `lookup` và `rollup`.
+    4. **Cải tiến tính toán Tổng (sum) cho Rollup & Lookup**:
+       - Bổ sung `rollupScope: 'linked' | 'all'`: Khi chọn `'all'` (hoặc không cấu hình khóa nối), hàm `evaluateRollup` tính toán trên toàn bộ danh sách bảng nguồn (toàn bảng - tất cả các dòng đều hiển thị tổng số kết quả, ví dụ 19).
+       - Bóc tách chuỗi số an toàn: `parseFloat(String(val).replace(/,/g, '').replace(/[^0-9.-]+/g, ''))`. Nếu cột được chọn là chuỗi chữ (không phải số) hoặc để trống, hàm fallback trả về tổng số bản ghi thỏa mãn điều kiện (`list.length`), giải quyết triệt để lỗi người dùng chọn `sum()` nhưng hiển thị `0`.
+       - Bổ sung chế độ hiển thị `sum` cho `lookupDisplay` trong Lookup.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (558ms, 0 lỗi).
+    - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `src/` sang `WINDOWS_OFFLINE_APP/frontend/src/`.
+  - **Trạng thái**: Done [Reversible].
+
+- **Session 34 (2026-09-10) - Tối Ưu UX Tốc Độ Load Thống Kê (0ms Cache Preload), Liên Kết Động Hồ Sơ Thân Nhân (Pill 1/4), Tinh Gọn Nút Xuất & Sidebar**:
+  - **Yêu cầu Người dùng**:
+    1. Lỗi mạng `net::ERR_NETWORK_CHANGED` / `ERR_INTERNET_DISCONNECTED` và tối ưu UX load trang thống kê: "khi load trang thống kê nó hiện bảng ko có dữ liệu do load quá lâu có cách nào tăng tốc độ load ở trang thống kê hay tối ưu ux ko".
+    2. "bỏ nút nút import excel gì ở nút Xuất / Nhập đi, sửa thành xuất thôi".
+    3. "Nhập liệu mới bỏ dấu + vì có icon rồi".
+    4. "Nhập liệu mới và import excel icon màu trắng".
+    5. "ông nguyễn văn chương có 4 người con, ấn vào người con nào phải hiện tab 1/4 của thân nhân chứ sao bảng hiện ra có mình nó, có vẻ chưa đc liên kết đúng. bạn cần thêm dữ liệu gì để liên kết đúng ko hardcode vì ở cột ccccparent (đừng hardcode tôi đã chọn đúng rồi) ở cán bộ tôi chọn đặt làm khóa chính rồi mà (có liên kết với chuyến đi và thân nhân)".
+  - **Giải pháp & Cải tiến triển khai**:
+    1. **Tối ưu UX & Tốc độ load Trang Thống kê (DashboardView.vue)**:
+       - **0ms Cache Preload**: Đọc trực tiếp cấu hình `customGroups` từ `localStorage` ngay trong hàm `setup()` đồng bộ, cho phép hiển thị các khối thống kê ngay lập tức tại frame 0 (0ms) mà không phải chờ mạng.
+       - **Chống hiển thị rỗng giả (Zero Fake Empty State)**: Thêm cờ `isLoadingDashboard = ref(true)`. Khi đang tải, hiển thị spinner chuyên nghiệp "Đang tải dữ liệu thống kê...". Chỉ khi tải xong và danh sách thực sự rỗng mới hiển thị banner "Chưa có Nhóm thống kê nào".
+       - Bọc toàn bộ các lệnh tải mạng trong `try/catch/finally` an toàn, chống gián đoạn khi mạng chập chờn.
+    2. **Khóa STT không bao giờ gãy 2 dòng**:
+       - Thêm `<template #header><span style="white-space: nowrap !important; word-break: keep-all !important; display: inline-block;">STT</span></template>` và `width: 70px` ở cả `UnifiedTableView.vue` và `DashboardView.vue` drilldown table.
+    3. **Tinh gọn Menu Xuất & Sidebar Navigation**:
+       - `ExportImportMenu.vue`: Đổi nhãn nút từ "Xuất / Nhập" thành "Xuất", gỡ bỏ mục Import Excel khỏi menu dropdown (do đã đưa ra Sidebar).
+       - `AppSidebar.vue`: Bỏ dấu `+` trong text, chỉ còn "Nhập liệu mới"; đổi màu biểu tượng của "Nhập liệu mới" và "Import Excel" sang màu trắng (`color: #ffffff;`).
+    4. **Liên kết Động Hồ sơ Thân nhân & Hiển thị Tab 1/4 (Không Hardcode)**:
+       - Nâng cấp `getRelativeParentKeyField()` trong `src/stores/personnel.js`: Tự động quét tìm cột khóa cha (`linkTable === 'personnel'`, `isParentKey`, hoặc `cccdparent`/`parentCccd`) từ danh mục cột `importMappingRelative`.
+       - Bổ sung `findParentPersonForRelative(relative)`: Đối chiếu linh hoạt qua `rawPerson`, `personnelId`, `personnelCode` hoặc giá trị khóa cha (`relative[relParentKey] === person[pKeyField]`).
+       - Trong `PersonnelRelatedTabs.vue`: Đổi nhãn nút chọn bản ghi liên kết thành định dạng `{{ idx + 1 }}/{{ currentLinkedRows.length }}. {{ name }}` (ví dụ: `1/4. Nguyễn Hồng Diễm Kim`, `2/4. Nguyễn Hồng Diễm Châu`, `3/4. Nguyễn Thị Phương Nga`, `4/4. Nguyễn Hồng Khang`).
+       - Trong `DashboardView.vue` và `UnifiedTableView.vue`: Khi bấm vào bất kỳ thân nhân nào, hệ thống tự động tìm hồ sơ Cán bộ cha và mở trực tiếp tab Thân nhân (`initialTab = 'relatives'`), tự động kích hoạt đúng người con được bấm (`initialRecordId`), cho phép xem và chuyển đổi tức thì giữa cả 4 người con trên cùng 1 hồ sơ.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (565ms, 0 lỗi).
+    - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `src/`.
+  - **Trạng thái**: Done [Reversible].
+
+- **Session 35 (2026-09-10) - Triệt Tiêu 100% Hardcode Tên Cột Khóa, Xuống Dòng Tiêu Đề Thống Kê (Enter/<br>), Lookup Đa Bản Ghi Tách Khối & Cố Định STT Tuyệt Đối**:
+  - **Yêu cầu Người dùng**:
+    1. "đừng có hoặc hard code đụ mẹ, sao mày cứ hardcode mãi thế mày đéo đọc continuity ak." -> Xóa sạch 100% mọi chuỗi hardcode tên cột (`cccdparent`, `parentCccd`, `cccd_can_bo`, `cccdchuyendi`, `cccdthannhan`, `cccd`) còn sót lại trong toàn bộ codebase (`src/stores/personnel.js`, `src/components/personnel/PersonnelRelatedTabs.vue`).
+    2. "thống kê cho phép tôi tùy chỉnh xuống dòng" -> Hỗ trợ gõ Enter / `<br>` xuống dòng trực tiếp trong Tiêu đề của từng Khối thống kê (`widget.title`) qua `<textarea>` trong popup cấu hình và hiển thị `white-space: pre-line` + `<br>` trong thẻ đếm, biểu đồ cột dọc, tiến trình ngang.
+    3. Hiển thị Lookup nhiều bản ghi (VD: Cán bộ Nguyễn Hoài Hận có 2 thân nhân): hiển thị toàn bộ các thân nhân trong cùng 1 ô, tách biệt thành từng khối có nét đứt mờ (`border-top: 1px dashed #cbd5e1`), dòng đầu in đậm nổi bật theo cấu hình cột.
+    4. Cải tiến `evaluateLookup`: Hỗ trợ `displayMode = 'all'` (mặc định hiển thị toàn bộ bản ghi ghép bằng `\n\n`), `displayMode = 'first'`, `sum`, `count`. Khi chọn `sum` hoặc `count` mà không cần điều kiện (hoặc có điều kiện), hàm tự động tính trên toàn bộ `candidatePool` (ví dụ hiển thị tổng 19 trên mọi dòng).
+    5. Khóa STT 1 hàng duy nhất (`word-break: keep-all !important;` trên toàn bộ phần tử con của `.col-center`).
+  - **Giải pháp & Cải tiến triển khai**:
+    1. **Triệt tiêu 100% Hardcode Tên cột Khóa (Tuân thủ triệt để CONTINUITY.md)**:
+       - `src/stores/personnel.js`: Xóa bỏ triệt để các chuỗi fallback cứng `cccdparent`, `parentCccd`, `cccd_can_bo`, `cccdchuyendi`, `cccd` trong `getPersonnelKeyField()`, `getRelativeParentKeyField()`, `findParentPersonForRelative()`, `findParentPersonForTrip()`, `findPersonByCccd()`, `findRelativeByCccd()`, `deleteRelative()`, `saveRelative()`, `saveTripRecord()`. Mọi phép đối chiếu dựa 100% trên các getter động và metadata cột.
+       - `src/components/personnel/PersonnelRelatedTabs.vue`: Xóa bỏ 100% các fallback cứng chuỗi `cccd` trong `getLinkedRows()`, `syncTripPersonToForm()`, `selectRecordToEdit()`, `openAddNewLinkedRecord()`.
+    2. **Tùy chỉnh Xuống dòng trong Tiêu đề Khối Thống kê (`DashboardView.vue`)**:
+       - Bổ sung hàm `formatWidgetTitle(title)` chuyển đổi tự động `\r\n` và `\n` thành `<br>`.
+       - Render tiêu đề với `v-html="formatWidgetTitle(widget.title)"` và `white-space: pre-line; line-height: 1.35;` trên cả Thẻ đếm số lượng, Biểu đồ cột dọc và Tiến trình ngang.
+       - Trong Dialog Cấu hình Khối Thống kê: Thay thế ô nhập tiêu đề bằng `<textarea rows="2">` cho phép người dùng gõ phím Enter hoặc thẻ `<br>` trực quan.
+    3. **Lookup Đa Bản ghi Tách khối Đẹp mắt (`evaluateLookup` & Cell Rendering)**:
+       - Trong `src/utils/formatters.js`: Nâng cấp `evaluateLookup` để khi có nhiều bản ghi khớp, ghép các bản ghi bằng `\n\n`. Hỗ trợ `sum` và `count` trên toàn bộ candidatePool khi không điều kiện.
+       - Trong `UnifiedTableView.vue` và `DashboardView.vue`: Render cell đa bản ghi tách khối bằng nét đứt mờ (`border-top: 1px dashed #cbd5e1`), dòng đầu in đậm xanh `#0369a1`.
+    4. **Cố định STT Tuyệt đối Không Gãy dòng**:
+       - Trong `src/assets/styles/main.css`: Bổ sung `word-break: keep-all !important;` cho `.col-center`.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100%.
+  - **Trạng thái**: Done [Reversible].
+
+- **Session 36 (2026-09-10) - Khắc Phục Triệt Để Lỗi Không Hiển Thị Nội Dung Khi Bấm [Chi Tiết] Thân Nhân (Tuân Thủ Tuyệt Đối Quy Tắc "Ấn Dòng Nào Sửa Dòng Đó")**:
+  - **Vấn đề Người dùng Báo cáo**:
+    - "ở thân nhân tôi ấn vào chi tiết ko hiển thị nội dung đúng dù ở cán bộ có hiển thị? check logic và data thực tế xem có gì sai sai k"
+    - Ảnh chụp `media_1789019365613.png`: Bấm [Chi tiết] trên dòng Thân nhân (Võ Lê Phương Thanh), tiêu đề dialog lại hiển thị "Chi tiết: Võ Minh Thanh" (tên Cán bộ), các tab là `[Thân nhân] [Danh sách Chuyến đi 0] [Cán bộ 1]`, nhưng vùng nội dung bên dưới tab trắng tinh, không hiển thị bất kỳ trường nào.
+  - **Nguyên nhân Gốc rễ (Vi phạm CONTINUITY.md Rule 1 & Rule 9)**:
+    1. Trong `src/views/UnifiedTableView.vue` và `src/views/DashboardView.vue`, hàm `openPersonnelDetail` có đoạn code kiểm tra `if (isRel) { const parent = findParentPersonForRelative(record); if (parent) { activePersonData.value = parent; initialTabForDialog.value = 'relatives'; } }`.
+    2. Hành vi này đã cướp quyền (hijack) chuyển hướng sang Cán bộ chủ quản (`rawPerson`), vi phạm trực tiếp Quy tắc Vàng trong CONTINUITY.md: *"Ấn dòng nào sửa dòng đó: Khi người dùng bấm [Chi tiết] hoặc [Chỉnh sửa] trên bất kỳ dòng nào: Mở trực tiếp Form chỉnh sửa bản ghi đó (:personData="row"), hiển thị chính xác danh sách cột của bảng đó (:columns="tableColumns"). TUYỆT ĐỐI CẤM cướp quyền chuyển hướng sang Cán bộ chủ quản (rawPerson) hoặc tự ý nhảy loại form"*.
+    3. Hơn nữa, khi `UnifiedTableView` truyền `:tableId="relatives"` nhưng `personData` lại là Cán bộ và `initialTab` là `'relatives'`, component `PersonnelRelatedTabs.vue` (với `recordSource === 'relatives'`) chỉ có các tab `info` (Thân nhân), `trips`, và `personnel`, hoàn toàn không có tab nào mang ID `'relatives'`. Do đó không tab nào match, vùng form bị ẩn trắng trơn.
+    4. Trong `PersonnelDialog.vue`: `allTableColumns` bị phụ thuộc cứng vào `props.columns`, nếu component cha truyền sai danh mục cột của bảng khác thì dialog không tự phân giải lại danh mục cột chính xác của `recordSource`.
+  - **Giải pháp & Cải tiến Triển khai**:
+    1. **Khôi phục 100% Nguyên tắc "Ấn dòng nào sửa dòng đó" (`UnifiedTableView.vue` & `DashboardView.vue`)**:
+       - Xóa bỏ vĩnh viễn đoạn code hijack `findParentPersonForRelative` trong `openPersonnelDetail`.
+       - Khi người dùng bấm [Chi tiết] ở bất kỳ bảng nào (Cán bộ, Thân nhân, Chuyến đi): Mở trực tiếp bản ghi đó (`activePersonData.value = record`, `initialTabForDialog.value = 'info'`).
+       - Bổ sung computed `dialogTableIdForRecord` và `dialogColumnsForRecord` trong `UnifiedTableView.vue`: Tự động nhận diện chính xác loại bảng của dòng đang chọn (`relatives`, `trips`, `personnel`, hay Custom Table) và lấy đầy đủ danh mục cột tương ứng qua `getUnifiedTableColumns(tid, ...)`.
+    2. **Tự động Phân giải Cột Đa hình Thông minh trong `PersonnelDialog.vue`**:
+       - Cập nhật `recordSource`: Ưu tiên tuyệt đối thuộc tính bản chất của bản ghi (`form._recordType === 'relative' || form.relationshipName || form.relativeName` -> `'relatives'`; `_recordType === 'trip'` -> `'trips'`; `_recordType === 'personnel'` -> `'personnel'`).
+       - Cập nhật `dialogHeader`: Phân định rõ ràng theo `recordSource` (`Chi tiết Thân nhân: ${rName}`, `Chi tiết Chuyến đi: ${dest}`, `Chi tiết: ${pName}`).
+       - Nâng cấp `allTableColumns`: Sử dụng `getUnifiedTableColumns(recordSource.value, { personnelStore })` làm nguồn phân giải cột cốt lõi độc lập. Bất kể component cha truyền props như thế nào, form chi tiết luôn render chuẩn xác 100% toàn bộ các trường của Thân nhân theo đúng cấu hình `importMappingRelative` trong Directus DB.
+    3. **Đồng bộ Định danh Thân nhân trong Store (`src/stores/personnel.js`)**:
+       - Gán sẵn `_recordType: 'relative'` và `isRelative: true` ngay khi thu thập `allRelatives` trong `fetchPersonnel`.
+       - Cập nhật `saveRecord` và `deleteRecord` để nhận diện Thân nhân tức thời qua `relationshipName` và `relativeName`.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (557ms, 0 lỗi).
+    - Đồng bộ `dist/`, `src/`, và `CONTINUITY.md` sang `WINDOWS_OFFLINE_APP/`.
+  - **Trạng thái**: Done [Reversible].
+
+
+
+

@@ -322,6 +322,8 @@ export const usePersonnelStore = defineStore('personnel', {
               allRelatives.push({
                 ...rCustom,
                 ...r,
+                _recordType: 'relative',
+                isRelative: true,
                 id: r.id,
                 uniqueKey: r.id,
                 trips: relTrips,
@@ -1431,7 +1433,7 @@ export const usePersonnelStore = defineStore('personnel', {
         }
         return record;
       }
-      if (record._recordType === 'relative' || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
+      if (record._recordType === 'relative' || record.relationshipName || record.relativeName || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
         return await this.saveRelative(record);
       }
       if (record._recordType === 'trip' || record.rawTrip || record.uniqueKey) {
@@ -1475,7 +1477,7 @@ export const usePersonnelStore = defineStore('personnel', {
         }
         return;
       }
-      if (record._recordType === 'relative' || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
+      if (record._recordType === 'relative' || record.relationshipName || record.relativeName || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
         return await this.deleteRelative(record);
       }
       if (record._recordType === 'trip' || record.rawTrip || record.uniqueKey) {

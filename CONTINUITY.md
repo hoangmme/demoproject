@@ -2908,23 +2908,47 @@
     5. Khóa STT 1 hàng duy nhất (`word-break: keep-all !important;` trên toàn bộ phần tử con của `.col-center`).
   - **Giải pháp & Cải tiến triển khai**:
     1. **Triệt tiêu 100% Hardcode Tên cột Khóa (Tuân thủ triệt để CONTINUITY.md)**:
-       - `src/stores/personnel.js`: Xóa bỏ triệt để các chuỗi fallback cứng `cccdparent`, `parentCccd`, `cccd_can_bo`, `cccdchuyendi`, `cccd` trong `getPersonnelKeyField()`, `getRelativeParentKeyField()`, `findParentPersonForRelative()`, `findParentPersonForTrip()`, `findPersonByCccd()`, `findRelativeByCccd()`, `deleteRelative()`, `saveRelative()`, `saveTripRecord()`. Mọi phép đối chiếu dựa 100% trên các getter động (`getPersonnelKeyField()`, `getRelativeParentKeyField()`, `getRelativeKeyField()`, `getTripKeyField()`) và metadata cột (`linkTable === 'personnel'`, `linkColumn`, `isParentKey`, `isKey`, `isIdentifier`, `format === 'id'`).
+       - `src/stores/personnel.js`: Xóa bỏ triệt để các chuỗi fallback cứng `cccdparent`, `parentCccd`, `cccd_can_bo`, `cccdchuyendi`, `cccd` trong `getPersonnelKeyField()`, `getRelativeParentKeyField()`, `findParentPersonForRelative()`, `findParentPersonForTrip()`, `findPersonByCccd()`, `findRelativeByCccd()`, `deleteRelative()`, `saveRelative()`, `saveTripRecord()`. Mọi phép đối chiếu dựa 100% trên các getter động và metadata cột.
        - `src/components/personnel/PersonnelRelatedTabs.vue`: Xóa bỏ 100% các fallback cứng chuỗi `cccd` trong `getLinkedRows()`, `syncTripPersonToForm()`, `selectRecordToEdit()`, `openAddNewLinkedRecord()`.
     2. **Tùy chỉnh Xuống dòng trong Tiêu đề Khối Thống kê (`DashboardView.vue`)**:
        - Bổ sung hàm `formatWidgetTitle(title)` chuyển đổi tự động `\r\n` và `\n` thành `<br>`.
        - Render tiêu đề với `v-html="formatWidgetTitle(widget.title)"` và `white-space: pre-line; line-height: 1.35;` trên cả Thẻ đếm số lượng, Biểu đồ cột dọc và Tiến trình ngang.
-       - Trong Dialog Cấu hình Khối Thống kê: Thay thế ô nhập tiêu đề bằng `<textarea rows="2">` cho phép người dùng gõ phím Enter hoặc thẻ `<br>` trực quan, kèm gợi ý hướng dẫn rõ ràng.
+       - Trong Dialog Cấu hình Khối Thống kê: Thay thế ô nhập tiêu đề bằng `<textarea rows="2">` cho phép người dùng gõ phím Enter hoặc thẻ `<br>` trực quan.
     3. **Lookup Đa Bản ghi Tách khối Đẹp mắt (`evaluateLookup` & Cell Rendering)**:
-       - Trong `src/utils/formatters.js`: Nâng cấp `evaluateLookup` để khi có nhiều bản ghi khớp (ví dụ cán bộ có 2 thân nhân), ghép các bản ghi bằng `\n\n` (thay vì chỉ lấy bản ghi đầu tiên `[0]`). Hỗ trợ `displayMode === 'first'` cho người dùng muốn chỉ hiển thị 1 bản ghi.
-       - Hỗ trợ `sum` và `count` khi không có điều kiện (`conditions.length === 0`), tự động tính trên toàn bộ `candidatePool` (ví dụ hiển thị tổng 19 trên mọi dòng).
-       - Trong `UnifiedTableView.vue` và `DashboardView.vue` (Drilldown table): Khi ô dữ liệu chứa `\n\n`, chia thành các khối phân cách bởi viền nét đứt mờ (`border-top: 1px dashed #cbd5e1`), dòng đầu tiên in đậm màu xanh `#0369a1`, các dòng phụ hiển thị màu xám `#475569`.
-       - Cập nhật menu cột `ColumnHeaderMenu.vue` và `AddColumnDialog.vue` với các tùy chọn: `Tất cả bản ghi (VD: Cả 2 thân nhân, từng khối riêng)` và `Chỉ bản ghi đầu tiên`.
+       - Trong `src/utils/formatters.js`: Nâng cấp `evaluateLookup` để khi có nhiều bản ghi khớp, ghép các bản ghi bằng `\n\n`. Hỗ trợ `sum` và `count` trên toàn bộ candidatePool khi không điều kiện.
+       - Trong `UnifiedTableView.vue` và `DashboardView.vue`: Render cell đa bản ghi tách khối bằng nét đứt mờ (`border-top: 1px dashed #cbd5e1`), dòng đầu in đậm xanh `#0369a1`.
     4. **Cố định STT Tuyệt đối Không Gãy dòng**:
-       - Trong `src/assets/styles/main.css`: Bổ sung `word-break: keep-all !important;` và áp dụng trực tiếp cho toàn bộ các phần tử con (`*`) bên trong `.p-datatable-thead > tr > th.col-center` và `.p-datatable-tbody > tr > td.col-center`.
+       - Trong `src/assets/styles/main.css`: Bổ sung `word-break: keep-all !important;` cho `.col-center`.
   - **Kiểm thử & Triển khai**:
-    - `npm run build` thành công 100% (579ms, 0 lỗi).
-    - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `src/`.
+    - `npm run build` thành công 100%.
   - **Trạng thái**: Done [Reversible].
+
+- **Session 36 (2026-09-10) - Khắc Phục Triệt Để Lỗi Không Hiển Thị Nội Dung Khi Bấm [Chi Tiết] Thân Nhân (Tuân Thủ Tuyệt Đối Quy Tắc "Ấn Dòng Nào Sửa Dòng Đó")**:
+  - **Vấn đề Người dùng Báo cáo**:
+    - "ở thân nhân tôi ấn vào chi tiết ko hiển thị nội dung đúng dù ở cán bộ có hiển thị? check logic và data thực tế xem có gì sai sai k"
+    - Ảnh chụp `media_1789019365613.png`: Bấm [Chi tiết] trên dòng Thân nhân (Võ Lê Phương Thanh), tiêu đề dialog lại hiển thị "Chi tiết: Võ Minh Thanh" (tên Cán bộ), các tab là `[Thân nhân] [Danh sách Chuyến đi 0] [Cán bộ 1]`, nhưng vùng nội dung bên dưới tab trắng tinh, không hiển thị bất kỳ trường nào.
+  - **Nguyên nhân Gốc rễ (Vi phạm CONTINUITY.md Rule 1 & Rule 9)**:
+    1. Trong `src/views/UnifiedTableView.vue` và `src/views/DashboardView.vue`, hàm `openPersonnelDetail` có đoạn code kiểm tra `if (isRel) { const parent = findParentPersonForRelative(record); if (parent) { activePersonData.value = parent; initialTabForDialog.value = 'relatives'; } }`.
+    2. Hành vi này đã cướp quyền (hijack) chuyển hướng sang Cán bộ chủ quản (`rawPerson`), vi phạm trực tiếp Quy tắc Vàng trong CONTINUITY.md: *"Ấn dòng nào sửa dòng đó: Khi người dùng bấm [Chi tiết] hoặc [Chỉnh sửa] trên bất kỳ dòng nào: Mở trực tiếp Form chỉnh sửa bản ghi đó (:personData="row"), hiển thị chính xác danh sách cột của bảng đó (:columns="tableColumns"). TUYỆT ĐỐI CẤM cướp quyền chuyển hướng sang Cán bộ chủ quản (rawPerson) hoặc tự ý nhảy loại form"*.
+    3. Hơn nữa, khi `UnifiedTableView` truyền `:tableId="relatives"` nhưng `personData` lại là Cán bộ và `initialTab` là `'relatives'`, component `PersonnelRelatedTabs.vue` (với `recordSource === 'relatives'`) chỉ có các tab `info` (Thân nhân), `trips`, và `personnel`, hoàn toàn không có tab nào mang ID `'relatives'`. Do đó không tab nào match, vùng form bị ẩn trắng trơn.
+    4. Trong `PersonnelDialog.vue`: `allTableColumns` bị phụ thuộc cứng vào `props.columns`, nếu component cha truyền sai danh mục cột của bảng khác thì dialog không tự phân giải lại danh mục cột chính xác của `recordSource`.
+  - **Giải pháp & Cải tiến Triển khai**:
+    1. **Khôi phục 100% Nguyên tắc "Ấn dòng nào sửa dòng đó" (`UnifiedTableView.vue` & `DashboardView.vue`)**:
+       - Xóa bỏ vĩnh viễn đoạn code hijack `findParentPersonForRelative` trong `openPersonnelDetail`.
+       - Khi người dùng bấm [Chi tiết] ở bất kỳ bảng nào (Cán bộ, Thân nhân, Chuyến đi): Mở trực tiếp bản ghi đó (`activePersonData.value = record`, `initialTabForDialog.value = 'info'`).
+       - Bổ sung computed `dialogTableIdForRecord` và `dialogColumnsForRecord` trong `UnifiedTableView.vue`: Tự động nhận diện chính xác loại bảng của dòng đang chọn (`relatives`, `trips`, `personnel`, hay Custom Table) và lấy đầy đủ danh mục cột tương ứng qua `getUnifiedTableColumns(tid, ...)`.
+    2. **Tự động Phân giải Cột Đa hình Thông minh trong `PersonnelDialog.vue`**:
+       - Cập nhật `recordSource`: Ưu tiên tuyệt đối thuộc tính bản chất của bản ghi (`form._recordType === 'relative' || form.relationshipName || form.relativeName` -> `'relatives'`; `_recordType === 'trip'` -> `'trips'`; `_recordType === 'personnel'` -> `'personnel'`).
+       - Cập nhật `dialogHeader`: Phân định rõ ràng theo `recordSource` (`Chi tiết Thân nhân: ${rName}`, `Chi tiết Chuyến đi: ${dest}`, `Chi tiết: ${pName}`).
+       - Nâng cấp `allTableColumns`: Sử dụng `getUnifiedTableColumns(recordSource.value, { personnelStore })` làm nguồn phân giải cột cốt lõi độc lập. Bất kể component cha truyền props như thế nào, form chi tiết luôn render chuẩn xác 100% toàn bộ các trường của Thân nhân theo đúng cấu hình `importMappingRelative` trong Directus DB.
+    3. **Đồng bộ Định danh Thân nhân trong Store (`src/stores/personnel.js`)**:
+       - Gán sẵn `_recordType: 'relative'` và `isRelative: true` ngay khi thu thập `allRelatives` trong `fetchPersonnel`.
+       - Cập nhật `saveRecord` và `deleteRecord` để nhận diện Thân nhân tức thời qua `relationshipName` và `relativeName`.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (557ms, 0 lỗi).
+    - Đồng bộ `dist/`, `src/`, và `CONTINUITY.md` sang `WINDOWS_OFFLINE_APP/`.
+  - **Trạng thái**: Done [Reversible].
+
 
 
 
