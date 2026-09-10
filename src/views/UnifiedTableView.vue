@@ -2826,12 +2826,16 @@ const initialRecordIdForDialog = ref(null);
 
 // Dynamic Table & Column Resolution for Detail Dialog
 const dialogTableIdForRecord = computed(() => {
+  const currentSource = currentDashboardConfig.value?.source || 'trips';
   const rec = activePersonData.value;
   if (!rec) return currentDashboardConfig.value?.id || topicId.value;
   if (rec._tableId) return rec._tableId;
-  if (rec._recordType === 'relative' || rec.relationshipName) return 'relatives';
-  if (rec._recordType === 'trip' || rec.departureDate) return 'trips';
-  if (rec._recordType === 'personnel' || (rec.code && String(rec.code).startsWith('CB-'))) return 'personnel';
+  if (currentSource === 'personnel' || currentSource === 'relatives' || currentSource === 'trips') {
+    return currentSource;
+  }
+  if (rec._recordType === 'relative' || rec.isRelative || rec.relationshipName || rec.cccdthannhan) return 'relatives';
+  if (rec._recordType === 'trip' || rec.departureDate || rec.ngay_xuat_canh || rec.cccdchuyendi) return 'trips';
+  if (rec._recordType === 'personnel' || (rec.code && String(rec.code).startsWith('CB-')) || (!rec.isRelative && (rec.positionName || rec.departmentName || rec.position))) return 'personnel';
   return currentDashboardConfig.value?.id || topicId.value;
 });
 

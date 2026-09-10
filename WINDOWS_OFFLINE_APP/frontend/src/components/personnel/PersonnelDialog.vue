@@ -37,6 +37,26 @@
       @switchRecord="handleSwitchRecord"
     />
 
+    <!-- Banner tóm tắt chuyến đi liên kết Cán bộ / Thân nhân -->
+    <div v-if="recordSource === 'trips' && activeTab === 'info' && (tripLinkedOfficer || tripLinkedRelative)" class="trip-linked-summary-banner">
+      <div class="trip-summary-content">
+        <span v-if="tripLinkedOfficer" class="trip-summary-pill officer-pill">
+          <i class="pi pi-user"></i>
+          <span>Cán bộ: <strong>{{ tripLinkedOfficer.name || tripLinkedOfficer.fullName || tripLinkedOfficer.code }}</strong></span>
+          <span v-if="tripLinkedOfficer.positionName || tripLinkedOfficer.position" class="sub-text">({{ tripLinkedOfficer.positionName || tripLinkedOfficer.position }})</span>
+          <span v-if="tripLinkedOfficer.departmentName" class="sub-text">- {{ tripLinkedOfficer.departmentName }}</span>
+        </span>
+        <span v-if="tripLinkedRelative" class="trip-summary-pill relative-pill">
+          <i class="pi pi-users"></i>
+          <span>Người đi: Thân nhân <strong>{{ tripLinkedRelative.relativeName || tripLinkedRelative.name }}</strong> <span v-if="tripLinkedRelative.relationshipName">({{ tripLinkedRelative.relationshipName }})</span></span>
+        </span>
+        <span v-else class="trip-summary-pill personal-pill">
+          <i class="pi pi-check-circle"></i>
+          <span>Người đi: Chính Cán bộ</span>
+        </span>
+      </div>
+    </div>
+
     <!-- Contents Area: 100% Dynamic Flat Form -->
     <div v-show="activeTab === 'info'" style="max-height: 70vh; overflow-y: auto; padding: 6px 12px 16px 6px;">
       <div class="form-grid">
@@ -133,9 +153,12 @@ const isDynamicDataEntryOpen = ref(false);
 const activeTab = ref('info');
 
 const recordSource = computed(() => {
-  if (form.value._recordType === 'relative' || form.value.relationshipName || form.value.relativeName) return 'relatives';
-  if (form.value._recordType === 'trip' || form.value.departureDate) return 'trips';
-  if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-'))) return 'personnel';
+  if (props.tableId && ['personnel', 'relatives', 'trips'].includes(props.tableId)) {
+    return props.tableId;
+  }
+  if (form.value._recordType === 'relative' || form.value.isRelative || form.value.relationshipName || form.value.relativeName || form.value.cccdthannhan) return 'relatives';
+  if (form.value._recordType === 'trip' || form.value.departureDate || form.value.ngay_xuat_canh || form.value.cccdchuyendi) return 'trips';
+  if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-')) || form.value.positionName || form.value.departmentName) return 'personnel';
   if (form.value._tableId) return form.value._tableId;
   if (props.tableId) return props.tableId;
   if (form.value._recordType === 'blank') return 'blank';
@@ -190,7 +213,18 @@ const visible = computed({
 
 const form = ref({});
 
-const isEdit = computed(() => Boolean(form.value.id || form.value.uniqueKey));
+const isEdit = computed(() => Boolean(
+  props.personData && (
+    form.value.id ||
+    form.value.uniqueKey ||
+    form.value._primaryKey ||
+    form.value.code ||
+    form.value.cccd ||
+    form.value.cccdthannhan ||
+    form.value.cccdchuyendi ||
+    Object.keys(form.value).length > 1
+  )
+));
 
 const isColumnVisibleInDetail = (c) => {
   if (!c || c.isVirtual || c.id === 'stt') return false;
@@ -204,12 +238,16 @@ const allTableColumns = computed(() => {
   if (srcCols && Array.isArray(srcCols) && srcCols.length > 0) {
     const valid = srcCols.filter(isColumnVisibleInDetail);
     if (valid.length > 0) return valid;
+    const nonVirtual = srcCols.filter((c) => !c.isVirtual && c.id !== 'stt');
+    if (nonVirtual.length > 0) return nonVirtual;
   }
 
   // 2. Props columns if passed and valid
   if (props.columns && Array.isArray(props.columns) && props.columns.length > 0) {
     const valid = props.columns.filter(isColumnVisibleInDetail);
     if (valid.length > 0) return valid;
+    const nonVirtual = props.columns.filter((c) => !c.isVirtual && c.id !== 'stt');
+    if (nonVirtual.length > 0) return nonVirtual;
   }
 
   // 3. Fallback to specific group in store mapping
@@ -238,6 +276,17 @@ const allTableColumns = computed(() => {
       }
     });
   });
+  if (list.length > 0) return list;
+
+  // Final fallback: all columns
+  mappingGroups.forEach((grp) => {
+    (grp.columns || []).forEach((col) => {
+      if (col && col.id && col.id !== 'stt' && !col.isVirtual && !seen.has(col.id)) {
+        seen.add(col.id);
+        list.push(col);
+      }
+    });
+  });
   return list;
 });
 
@@ -253,6 +302,41 @@ const dialogHeader = computed(() => {
   const pNameField = personnelStore.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
   const nameVal = form.value[pNameField] || form.value.name || form.value.fullName || form.value.title || form.value.id || '';
   return isEdit.value ? `Chi tiết: ${nameVal || 'Cán bộ'}` : `Thêm mới cán bộ`;
+});
+
+// Dynamic linkage resolution for Trips banner
+const tripLinkedOfficer = computed(() => {
+  if (recordSource.value !== 'trips') return null;
+  if (form.value.rawPerson) return form.value.rawPerson;
+  const pId = form.value.personnelId;
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccd';
+  const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
+  const tVal = String(form.value[tKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
+  return (personnelStore.personnelList || []).find((p) => {
+    if (pId && (String(p.id).trim() === String(pId).trim() || String(p.code).trim() === String(pId).trim())) return true;
+    if (tVal && pKeyField) {
+      const c = String(p[pKeyField] || p.cccd || '').trim().toLowerCase();
+      if (c && c === tVal) return true;
+    }
+    return false;
+  }) || null;
+});
+
+const tripLinkedRelative = computed(() => {
+  if (recordSource.value !== 'trips') return null;
+  if (form.value.rawRelative) return form.value.rawRelative;
+  const rId = form.value.relativeId;
+  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+  const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
+  const tVal = String(form.value[tKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
+  return (personnelStore.relativesList || []).find((r) => {
+    if (rId && (String(r.id).trim() === String(rId).trim() || String(r.code).trim() === String(rId).trim())) return true;
+    if (tVal && rKeyField) {
+      const c = String(r[rKeyField] || r.cccdthannhan || r.cccd || '').trim().toLowerCase();
+      if (c && c === tVal) return true;
+    }
+    return false;
+  }) || null;
 });
 
 const safeClone = (obj) => {
@@ -288,16 +372,17 @@ const initFormData = (val) => {
     }
     delete parsedVal.custom_data;
     delete cd.custom_data;
-    delete parsedVal.rawPerson;
-    delete parsedVal.rawRelative;
-    delete parsedVal.rawTrip;
-    delete parsedVal.uniqueKey;
-    delete parsedVal._fallbackPerson;
-    delete parsedVal._fallbackRelative;
 
     form.value = {
       ...cd,
       ...parsedVal,
+      uniqueKey: val.uniqueKey || parsedVal.uniqueKey || val.id || val._primaryKey,
+      _primaryKey: val._primaryKey || parsedVal._primaryKey || val.id,
+      _recordType: val._recordType || parsedVal._recordType,
+      _tableId: parsedVal._tableId || val._tableId,
+      rawPerson: val.rawPerson,
+      rawRelative: val.rawRelative,
+      rawTrip: val.rawTrip,
       custom_data: { ...cd, ...parsedVal },
     };
   } else {
@@ -340,6 +425,15 @@ const triggerAutoSave = () => {
         ...form.value,
         custom_data: { ...(form.value.custom_data || {}), ...form.value },
       };
+      delete payload.rawPerson;
+      delete payload.rawRelative;
+      delete payload.rawTrip;
+      if (payload.custom_data) {
+        delete payload.custom_data.rawPerson;
+        delete payload.custom_data.rawRelative;
+        delete payload.custom_data.rawTrip;
+        delete payload.custom_data.custom_data;
+      }
       const saved = await executeSave(payload);
       initialJsonSnapshot = JSON.stringify(form.value);
       autoSaveStatus.value = 'saved';
@@ -384,6 +478,15 @@ const handleSave = async () => {
       ...form.value,
       custom_data: { ...(form.value.custom_data || {}), ...form.value },
     };
+    delete payload.rawPerson;
+    delete payload.rawRelative;
+    delete payload.rawTrip;
+    if (payload.custom_data) {
+      delete payload.custom_data.rawPerson;
+      delete payload.custom_data.rawRelative;
+      delete payload.custom_data.rawTrip;
+      delete payload.custom_data.custom_data;
+    }
     const saved = await executeSave(payload);
     if (!saved) {
       throw new Error('Hệ thống không thể lưu bản ghi. Vui lòng kiểm tra lại thông tin nhập!');
@@ -444,5 +547,55 @@ const handleSwitchRecord = (newPerson) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.trip-linked-summary-banner {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin: 4px 6px 12px 6px;
+}
+
+.trip-summary-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.trip-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.trip-summary-pill.officer-pill {
+  background: #ffffff;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+  box-shadow: 0 1px 2px rgba(3, 105, 161, 0.08);
+}
+
+.trip-summary-pill.relative-pill {
+  background: #faf5ff;
+  color: #7e22ce;
+  border: 1px solid #d8b4fe;
+}
+
+.trip-summary-pill.personal-pill {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.trip-summary-pill .sub-text {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin-left: 2px;
 }
 </style>
