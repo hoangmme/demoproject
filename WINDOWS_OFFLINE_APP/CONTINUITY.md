@@ -3087,3 +3087,70 @@
   - `npm run build`: Thành công 100% (584ms, 0 lỗi).
   - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/frontend/src/`.
 - **Trạng thái**: Done [Reversible].
+
+## SESSION 40 (2026-09-10) - XÓA TÙY CHỌN NGẮT HÀNG THỐNG KÊ & TRA CỨU BẮC CẦU CÁN BỘ (TRANSITIVE LOOKUP)
+- **Yêu cầu Người dùng**:
+  1. Xóa tùy chọn `Xuống dòng mới (Ngắt hàng - bắt đầu khối thống kê này ở đầu hàng tiếp theo)` trong cài đặt khối thống kê ở trang Dashboard.
+  2. Kiểm tra hiện tượng cột Lookup "Thông tin cán bộ" ở bảng chuyến đi hiển thị `-` (trống) cho một số dòng thân nhân; giải thích nguyên nhân và hỗ trợ cột lookup/rollup ở chuyến đi hiển thị được thông tin Cán bộ dù CCCD là của Cán bộ hay Thân nhân.
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. `breakRow` trong DashboardView.vue: Khối checkbox cài đặt tại dòng 1039-1045.
+  2. Cột Lookup "Thông tin cán bộ" ở bảng Chuyến đi:
+     - Người dùng cấu hình điều kiện `Số CCCD (cccdparent) is Cột CCCD chuyến đi (cccdchuyendi)`.
+     - Với chuyến đi của Cán bộ (Võ Minh Thanh `074079000344`, Đinh Thị Thúy `079176030333`, Nguyễn Hoài Hận `001072041478`): `cccdchuyendi` là số CCCD của Cán bộ nên khớp điều kiện trực tiếp 1-1.
+     - Với chuyến đi của Thân nhân (Phạm Thị Như Hạnh `079075017457`, Phạm Thị Kim `079071017573`): `cccdchuyendi` là số CCCD của Thân nhân. Không có Cán bộ nào có CCCD bằng số CCCD thân nhân nên phép so khớp trực tiếp trả về rỗng `[]`, dẫn đến hiển thị `-`.
+- **Giải pháp Đã Triển khai**:
+  1. `src/views/DashboardView.vue`:
+     - Xóa hoàn toàn khối checkbox `breakRow` khỏi dialog cài đặt Widget.
+  2. `src/utils/formatters.js` (`evaluateLookup` & `evaluateRollup`):
+     - Bổ sung cơ chế **Tra cứu Bắc cầu Quan hệ ĐỘNG 100% (Transitive Relational Lookup)**:
+       - **Triệt tiêu 100% hardcode tên cột (`cccdthannhan`, `cccdparent`)**:
+         - Đọc động từ danh mục cấu hình bảng Thân nhân (`importMappingRelative`):
+           + Cột Khóa chính Thân nhân: Đọc qua `c.isKey` / `c.isPrimaryKey` / `c.format === 'id'` / `getRelativeKeyField()`.
+           + Cột Khóa ngoại Thân nhân trỏ tới Cán bộ: Đọc qua `checkTableMatchesLink(c.linkTable, 'personnel')` (hộp kiểm "Liên kết cột này tới Cán bộ" do người dùng tick) hoặc `c.linkColumn`.
+           + Cột Khóa Cán bộ: Đọc qua `c.isKey` trong Cán bộ hoặc cột người dùng chọn trong điều kiện `cond.targetField`.
+         - Khi tra cứu bảng `Cán bộ` (`target === 'personnel'`):
+           + So khớp trực tiếp theo điều kiện của người dùng.
+           + Nếu không có kết quả (`matched.length === 0`): Kiểm tra cột nguồn `cond.sourceField` có cấu hình `linkTable` tới `relatives` (như trong ảnh người dùng tick chọn cả Cán bộ và Thân nhân), tự động tìm thân nhân có giá trị tại cột Khóa chính (`rKeyField`) khớp với `sVal`, rồi đọc cột Khóa ngoại (`rParentField`) để tìm ra Cán bộ bảo lãnh tương ứng.
+           + Trích xuất đúng các cột người dùng chọn trong `col.lookupFields`.
+         - Chiều ngược lại (`target === 'relatives'`): Nếu tìm kiếm thân nhân mà mã định danh lại là khóa Cán bộ, tự động tìm các thân nhân của Cán bộ đó qua cột Khóa ngoại (`rParentField`).
+       - Áp dụng đồng bộ cho cả `evaluateRollup`.
+  3. **Kiểm thử & Triển khai**:
+     - Kiểm thử tự động với dữ liệu thực tế và các khóa tùy biến: Đảm bảo khi người dùng đổi tên cột bất kỳ (không còn chữ `cccdthannhan` hay `cccdparent`) thì chỉ cần gán `isKey` hoặc tick `linkTable: personnel`, hệ thống đều tự động nhận diện và bắc cầu chính xác 100%.
+     - `npm run build`: Thành công 100% (588ms, 0 lỗi).
+     - Đồng bộ toàn bộ `dist/` và `src/` sang `WINDOWS_OFFLINE_APP/`.
+- **Trạng thái**: Done [Reversible].
+
+## SESSION 41 (2026-09-10) - ĐỊNH DANH ĐƠN LẺ & KHỚP CHÍNH XÁC THÂN NHÂN CHO CỘT LOOKUP CHUYẾN ĐI (SPECIFIC RELATIVE TRIP LOOKUP)
+- **Yêu cầu Người dùng**:
+  - Khi nhân bản cột "THÔNG TIN CÁN BỘ" (đổi tên thành "THÔNG TIN CÁN BỘ (BẢN SAO)") và chuyển đối tượng tra cứu sang bảng Thân nhân (`relatives`), người dùng nhận thấy:
+    1. Một số chuyến đi hiển thị tới 3 thân nhân cùng lúc trong 1 ô (hàng 5 và 6 hiển thị cả `Nguyễn Ngọc Như Quỳnh\n\nNguyền Ngọc Khánh Linh\n\nNguyễn Ngọc Anh`).
+    2. Một số chuyến đi thân nhân khác lại hiển thị `-` (hàng 2 và 3 là chuyến đi của thân nhân Phạm Anh Phú).
+  - Yêu cầu: Giải thích nguyên nhân cốt lõi và xử lý để cột hiển thị chính xác đúng 1 thân nhân đi chuyến đó, ô có thân nhân thì phải hiện đầy đủ, không để ô có ô không hay 1 ô hiện cả 3 người.
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. *Hiện tượng 1 chuyến đi hiện 3 thân nhân (Hàng 5 & 6)*:
+     - Khi nhân bản từ cột tra cứu Cán bộ, điều kiện lookup giữ nguyên: `Số CCCD Cán bộ liên quan (cccdparent) = CCCD chuyến đi (cccdchuyendi)`.
+     - Cán bộ Nguyễn Hoài Hận (`001072041478`) có 3 người thân trong bảng Thân nhân. Cả 3 người đều có `cccdparent = 001072041478`.
+     - Do đó, điều kiện khớp với cả 3 người. Với chế độ hiển thị mặc định `all`, hệ thống in ra danh sách của cả 3 thân nhân, dù chuyến đi hàng 5 chỉ do 1 người đi và hàng 6 do người khác đi.
+  2. *Hiện tượng hiển thị `-` (Hàng 2 & 3)*:
+     - Hàng 2 và 3 là chuyến đi của thân nhân thuộc Cán bộ Phạm Anh Phú (`Phạm Thị Như Hạnh` CCCD `079075017457` và `Phạm Thị Kim` CCCD `079071017573`).
+     - Giá trị trên dòng chuyến đi (`cccdchuyendi`) là số CCCD của chính thân nhân đó.
+     - Khi so với trường `cccdparent` (vốn chứa CCCD của Cán bộ `079073017437`), không có thân nhân nào có `cccdparent` bằng số CCCD thân nhân -> Phép so khớp trả về 0 kết quả -> Hiển thị `-`.
+  3. *Tính chất của bản ghi chuyến đi*:
+     - Mỗi chuyến đi của thân nhân đã mang sẵn định danh người đi cụ thể qua `item.relativeId` và `item.rawRelative`.
+     - Động cơ `evaluateLookup` trước đây khi `target === 'relatives'` chưa tận dụng thuộc tính này để thu hẹp kết quả về đúng 1 người đi chuyến đó, cũng như chưa thử đối chiếu với khóa chính Thân nhân (`rKeyField`) khi điều kiện cấu hình trỏ vào khóa ngoại Cán bộ.
+- **Giải pháp Đã Triển khai (100% Động - Zero Hardcode v7.4)**:
+  1. `src/utils/formatters.js` (`evaluateLookup`):
+     - Xác định động các trường khóa của bảng Thân nhân (`rKeyField` và `rParentField`) từ cấu hình `importMappingRelative`.
+     - Nhận diện bản ghi chuyến đi (`isTripItem`).
+     - **Quy tắc 1 (Chuyến đi cán bộ độc lập)**: Nếu là chuyến đi của riêng Cán bộ (`!item.isRelative && !item.relativeId && !item.rawRelative`), không có thân nhân nào tham gia -> trả về `-` (không gán nhầm thân nhân vào chuyến đi cá nhân của cán bộ).
+     - **Quy tắc 2 (Thu hẹp khi khớp nhiều thân nhân)**: Nếu điều kiện người dùng tạo ra nhiều kết quả (`matched.length > 1`) do cùng chung người bảo lãnh, nhưng chuyến đi có `item.relativeId` hoặc `item.rawRelative` -> Tự động thu hẹp `matched = [specific]` về đúng 1 thân nhân thực tế của chuyến đi đó.
+     - **Quy tắc 3 (Khớp trực tiếp khi 0 kết quả)**:
+       + Ưu tiên lấy trực tiếp thân nhân gắn kèm chuyến đi (`item.rawRelative` / `item.relativeId`).
+       + Tự động đối chiếu giá trị nguồn (`sVal` - ví dụ CCCD chuyến đi) với khóa chính Thân nhân (`rKeyField`).
+       + Nếu khớp qua khóa ngoại Cán bộ (`rParentField`), vẫn tự động thu hẹp về thân nhân của chuyến đi nếu có.
+  2. Đồng bộ giải pháp cho cả `evaluateRollup`.
+  3. **Kiểm thử & Triển khai**:
+     - `npm run build`: Thành công 100% (564ms, 0 lỗi).
+     - Đồng bộ `dist/` và `src/` sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
+
