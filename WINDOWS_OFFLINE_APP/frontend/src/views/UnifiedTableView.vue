@@ -525,6 +525,30 @@
                   />
                 </div>
 
+                <!-- Hiển thị nhiều khối bản ghi phân cách bởi \n\n (VD: nhiều thân nhân trong 1 ô Lookup) -->
+                <div
+                  v-else-if="String(getCellValue(data, col.id)).includes('\n\n')"
+                  style="display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left;"
+                >
+                  <div
+                    v-for="(block, bIdx) in String(getCellValue(data, col.id)).split('\n\n')"
+                    :key="bIdx"
+                    :style="{
+                      borderTop: bIdx > 0 ? '1px dashed #cbd5e1' : 'none',
+                      paddingTop: bIdx > 0 ? '4px' : '0',
+                      lineHeight: '1.45',
+                      fontSize: '1.05rem'
+                    }"
+                  >
+                    <div :style="{ fontWeight: col.boldFirstLine !== false ? '700' : 'normal', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
+                      {{ block.split('\n')[0] }}
+                    </div>
+                    <div v-if="block.split('\n').slice(1).join('\n')" style="font-size: 0.95rem; color: #475569; margin-top: 2px; white-space: pre-line;">
+                      {{ block.split('\n').slice(1).join('\n') }}
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Hiển thị giá trị bình thường (có kiểm tra col.boldFirstLine hoặc xuống dòng) -->
                 <div
                   v-else-if="String(getCellValue(data, col.id)).includes('\n')"

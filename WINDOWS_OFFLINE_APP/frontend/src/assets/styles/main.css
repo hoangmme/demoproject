@@ -651,13 +651,13 @@ html, body {
 
 /* Cố định tiêu đề và ô STT luôn nằm trên 1 hàng, không bao giờ bị ngắt dòng */
 .p-datatable-thead > tr > th.col-center,
-.p-datatable-thead > tr > th.col-center .p-column-title,
-.p-datatable-thead > tr > th.col-center .p-column-header-content,
+.p-datatable-thead > tr > th.col-center *,
 .p-datatable-tbody > tr > td.col-center,
+.p-datatable-tbody > tr > td.col-center *,
 th.col-center,
 td.col-center {
   white-space: nowrap !important;
-  word-break: normal !important;
+  word-break: keep-all !important;
   overflow-wrap: normal !important;
   padding-left: 4px !important;
   padding-right: 4px !important;
@@ -668,7 +668,7 @@ td.col-center {
   justify-content: center !important;
   text-align: center !important;
   white-space: nowrap !important;
-  word-break: normal !important;
+  word-break: keep-all !important;
 }
 
 .p-datatable-thead > tr > th.p-sortable-column {

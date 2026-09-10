@@ -264,7 +264,9 @@
                 Hiển thị dữ liệu (Display as):
               </label>
               <select v-model="editLookupDisplay" class="menu-select" style="font-size: 0.7rem;" @change="handleSaveLookup">
-                <option value="value">Giá trị (Khớp đầu tiên)</option>
+                <option value="all">Tất cả bản ghi (VD: Cả 2 thân nhân, từng khối riêng)</option>
+                <option value="first">Chỉ bản ghi đầu tiên</option>
+                <option value="value">Tất cả bản ghi (Khớp toàn bộ)</option>
                 <option value="join">Gộp tất cả (, )</option>
                 <option value="count">Đếm số lượng</option>
                 <option value="sum">sum() - Tính tổng số</option>

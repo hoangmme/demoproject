@@ -538,10 +538,10 @@ export const usePersonnelStore = defineStore('personnel', {
         return this.systemKeyConfig.personnelKeyField;
       }
       const pCols = (this.importMappingPersonnel || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
-      const keyCol = pCols.find((c) => c.isKey || c.isIdentifier || c.format === 'id' || c.id === 'cccdparent' || c.id === 'cccd');
+      const keyCol = pCols.find((c) => c.isKey || c.isIdentifier || c.format === 'id' || c.isParentKey);
       if (keyCol) return keyCol.id;
       if (pCols.length > 0) return pCols[0].id;
-      return 'cccdparent';
+      return 'id';
     },
     getPersonnelNameField() {
       if (this.systemKeyConfig?.personnelNameField) {
@@ -575,7 +575,7 @@ export const usePersonnelStore = defineStore('personnel', {
         return this.systemKeyConfig.relativeParentKeyField;
       }
       const rCols = (this.importMappingRelative || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
-      const parentCol = rCols.find((c) => c.linkTable === 'personnel' || c.isParentKey || c.id === 'cccdparent' || c.id === 'parentCccd' || c.id === 'cccd_can_bo');
+      const parentCol = rCols.find((c) => c.linkTable === 'personnel' || c.isParentKey || c.linkColumn);
       if (parentCol) return parentCol.id;
       return this.getPersonnelKeyField();
     },
@@ -592,10 +592,10 @@ export const usePersonnelStore = defineStore('personnel', {
       }
       const pKeyField = this.getPersonnelKeyField();
       const parentKeyField = this.getRelativeParentKeyField();
-      const parentVal = String(relative[parentKeyField] || relative.cccdparent || relative.parentCccd || relative.cccd_can_bo || '').trim().toLowerCase();
+      const parentVal = String(relative[parentKeyField] || '').trim().toLowerCase();
       if (parentVal) {
         const found = (this.personnelList || []).find((p) => {
-          const pVal = String(p[pKeyField] || p.cccd || p.cccdparent || '').trim().toLowerCase();
+          const pVal = String(p[pKeyField] || '').trim().toLowerCase();
           return pVal && pVal === parentVal;
         });
         if (found) return found;
@@ -611,10 +611,10 @@ export const usePersonnelStore = defineStore('personnel', {
       }
       const pKeyField = this.getPersonnelKeyField();
       const tripKeyField = this.getTripKeyField();
-      const tripVal = String(trip[tripKeyField] || trip.cccdchuyendi || trip.cccd || '').trim().toLowerCase();
+      const tripVal = String(trip[tripKeyField] || '').trim().toLowerCase();
       if (tripVal) {
         const found = (this.personnelList || []).find((p) => {
-          const pVal = String(p[pKeyField] || p.cccd || '').trim().toLowerCase();
+          const pVal = String(p[pKeyField] || '').trim().toLowerCase();
           return pVal && pVal === tripVal;
         });
         if (found) return found;
@@ -878,8 +878,10 @@ export const usePersonnelStore = defineStore('personnel', {
       if (!rel) return;
       this.loading = true;
       try {
+        const parentKeyField = this.getRelativeParentKeyField();
+        const pKeyField = this.getPersonnelKeyField();
         const targetParentId = rel.personnelId || rel.rawPerson?.id;
-        const targetParentCccd = String(rel.cccdparent || rel.parentCccd || rel.rawPerson?.cccd || rel.rawPerson?.cccdparent || '').trim().toLowerCase();
+        const targetParentVal = String(rel[parentKeyField] || rel.rawPerson?.[pKeyField] || '').trim().toLowerCase();
         const targetRelId = rel.id ? String(rel.id).trim() : '';
         const targetRelUniqueKey = rel.uniqueKey ? String(rel.uniqueKey).trim() : '';
         const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'id';
@@ -924,11 +926,11 @@ export const usePersonnelStore = defineStore('personnel', {
         if (targetParentId) {
           targetPerson = this.personnelList.find((p) => String(p.id) === String(targetParentId));
         }
-        // Priority 2: Match by parent CCCD
-        if (!targetPerson && targetParentCccd) {
+        // Priority 2: Match by dynamic parent key value
+        if (!targetPerson && targetParentVal) {
           targetPerson = this.personnelList.find((p) => {
-            const pCccd = String(p.cccd || p.cccdparent || '').trim().toLowerCase();
-            return pCccd && pCccd === targetParentCccd;
+            const pVal = String(p[pKeyField] || '').trim().toLowerCase();
+            return pVal && pVal === targetParentVal;
           });
         }
         // Priority 3: Search within personnel who actually contain this relative by strict ID or object reference
@@ -1034,8 +1036,10 @@ export const usePersonnelStore = defineStore('personnel', {
       if (!relData) return null;
       this.loading = true;
       try {
+        const parentKeyField = this.getRelativeParentKeyField();
+        const pKeyField = this.getPersonnelKeyField();
         const targetParentId = relData.personnelId || relData.rawPerson?.id;
-        const targetParentCccd = String(relData.cccdparent || relData.parentCccd || relData.cccd_can_bo || relData.rawPerson?.cccd || '').trim().toLowerCase();
+        const targetParentVal = String(relData[parentKeyField] || relData.rawPerson?.[pKeyField] || '').trim().toLowerCase();
         const targetRelId = relData.id ? String(relData.id).trim() : '';
 
         const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'id';
@@ -1089,15 +1093,15 @@ export const usePersonnelStore = defineStore('personnel', {
           }
         }
 
-        // Find parent person: Prioritize personnelId, then cccdparent
+        // Find parent person: Prioritize personnelId, then dynamic parent key
         let targetPerson = null;
         if (targetParentId) {
           targetPerson = this.personnelList.find((p) => String(p.id) === String(targetParentId) || String(p.code) === String(targetParentId));
         }
-        if (!targetPerson && targetParentCccd) {
+        if (!targetPerson && targetParentVal) {
           targetPerson = this.personnelList.find((p) => {
-            const pCccd = String(p.cccd || p.cccdparent || '').trim().toLowerCase();
-            return pCccd && pCccd === targetParentCccd;
+            const pVal = String(p[pKeyField] || '').trim().toLowerCase();
+            return pVal && pVal === targetParentVal;
           });
         }
         if (!targetPerson) {
@@ -1201,10 +1205,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
         const tripKeyVal = String(
           cleanTrip[tKeyField] ??
-          cleanTrip.cccdchuyendi ??
-          cleanTrip.cccd ??
-          cleanTrip.cccdparent ??
-          cleanTrip.cccdthannhan ??
+          cleanTrip.custom_data?.[tKeyField] ??
           ''
         ).trim().toLowerCase();
 
@@ -1234,7 +1235,7 @@ export const usePersonnelStore = defineStore('personnel', {
             for (let rI = 0; rI < relsInP.length; rI++) {
               const r = relsInP[rI];
               const rId = String(r.id || r.code || '').trim().toLowerCase();
-              const rKeyVal = String(r[rKeyField] ?? r.cccdthannhan ?? r.cccd ?? '').trim().toLowerCase();
+              const rKeyVal = rKeyField ? String(r[rKeyField] ?? r.custom_data?.[rKeyField] ?? '').trim().toLowerCase() : '';
               if (
                 (cleanTrip.relativeId && String(cleanTrip.relativeId).trim().toLowerCase() === rId) ||
                 (tripKeyVal && rKeyVal && tripKeyVal === rKeyVal)
@@ -1246,7 +1247,7 @@ export const usePersonnelStore = defineStore('personnel', {
             }
           }
 
-          const personKeyVal = String(p[pKeyField] ?? p.cccdparent ?? p.cccd ?? custom[pKeyField] ?? custom.cccdparent ?? '').trim().toLowerCase();
+          const personKeyVal = pKeyField ? String(p[pKeyField] ?? custom[pKeyField] ?? '').trim().toLowerCase() : '';
           const personIdMatch = cleanTrip.personnelId && (String(p.id).trim().toLowerCase() === String(cleanTrip.personnelId).trim().toLowerCase() || String(p.code || '').trim().toLowerCase() === String(cleanTrip.personnelId).trim().toLowerCase());
           const personKeyMatch = !cleanTrip.isRelative && tripKeyVal && personKeyVal && tripKeyVal === personKeyVal;
 

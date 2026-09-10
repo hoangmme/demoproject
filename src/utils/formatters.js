@@ -1597,18 +1597,21 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     }
   }
 
-  // 2. Kiểm tra nếu có cấu hình điều kiện liên kết (lookupConditions)
+  // 2. Kiểm tra nếu có cấu hình điều kiện liên kết (lookupConditions) hoặc displayMode là count/sum
   const conditions = Array.isArray(col.lookupConditions) ? col.lookupConditions.filter(c => c && c.targetField) : [];
-  if (conditions.length > 0) {
-    const isOr = String(col.lookupLogicOp || 'AND').toUpperCase() === 'OR';
-    const matched = candidatePool.filter(cand => {
-      if (isOr) {
-        return conditions.some(c => matchCondition(cand, c));
-      }
-      return conditions.every(c => matchCondition(cand, c));
-    });
+  const displayMode = col.lookupDisplay || 'all';
 
-    const displayMode = col.lookupDisplay || 'value';
+  if (conditions.length > 0 || displayMode === 'count' || displayMode === 'sum') {
+    const isOr = String(col.lookupLogicOp || 'AND').toUpperCase() === 'OR';
+    const matched = conditions.length > 0
+      ? candidatePool.filter(cand => {
+          if (isOr) {
+            return conditions.some(c => matchCondition(cand, c));
+          }
+          return conditions.every(c => matchCondition(cand, c));
+        })
+      : candidatePool;
+
     if (displayMode === 'count') {
       return matched.length;
     }
@@ -1636,12 +1639,13 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
       const values = matched.map(extractCandidateValue).filter(Boolean);
       return values.length > 0 ? values.join(col.lookupJoinSeparator || ', ') : '-';
     }
-    if (displayMode === 'array') {
-      const values = matched.map(extractCandidateValue).filter(Boolean);
-      return values.length > 0 ? values.join('\n') : '-';
+    if (displayMode === 'first') {
+      return matched.length > 0 ? (extractCandidateValue(matched[0]) || '-') : '-';
     }
-    // Mặc định: 'value' (bản ghi đầu tiên)
-    return matched.length > 0 ? (extractCandidateValue(matched[0]) || '-') : '-';
+
+    // Mặc định: 'all' / 'value' / 'array' -> Hiển thị tất cả bản ghi ghép bằng \n\n (để bảng hiển thị thành từng khối riêng biệt)
+    const allValues = matched.map(extractCandidateValue).filter(Boolean);
+    return allValues.length > 0 ? allValues.join('\n\n') : '-';
   }
 
   // 3. Nếu dùng lookupLinkCol chỉ định rõ ràng

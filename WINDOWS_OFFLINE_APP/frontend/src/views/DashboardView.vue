@@ -227,7 +227,7 @@
                 <!-- Tiêu đề thẻ và các nút tác vụ điều khiển bên dưới -->
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 4px;">
                   <div style="flex: 1; padding-right: 6px;">
-                    <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
+                    <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35', whiteSpace: 'pre-line' }" v-html="formatWidgetTitle(widget.title)"></span>
                   </div>
                   <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;" @click.stop>
                     <!-- Nút dời trái < (lên trước) -->
@@ -291,8 +291,8 @@
               <div style="display: flex; align-items: center; gap: 6px;">
                 <i :class="['pi', widget.icon || 'pi-chart-bar']" :style="{ color: widget.color || '#2e7d32', fontSize: '1.05rem' }"></i>
                 <div>
-                  <h4 style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin: 0;">
-                    {{ widget.title }} ({{ getWidgetChartData(widget).list.length }} phân loại)
+                  <h4 style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin: 0; white-space: pre-line; line-height: 1.35;">
+                    <span v-html="formatWidgetTitle(widget.title)"></span> ({{ getWidgetChartData(widget).list.length }} phân loại)
                   </h4>
                 </div>
               </div>
@@ -404,8 +404,8 @@
               <div style="display: flex; align-items: center; gap: 6px;">
                 <i :class="['pi', widget.icon || 'pi-bars']" :style="{ color: widget.color || '#2e7d32', fontSize: '1.05rem' }"></i>
                 <div>
-                  <h4 style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin: 0;">
-                    {{ widget.title }} ({{ getWidgetChartData(widget).list.length }} phân loại)
+                  <h4 style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin: 0; white-space: pre-line; line-height: 1.35;">
+                    <span v-html="formatWidgetTitle(widget.title)"></span> ({{ getWidgetChartData(widget).list.length }} phân loại)
                   </h4>
                 </div>
               </div>
@@ -943,8 +943,20 @@
 
         <!-- 3. TIÊU ĐỀ KHỐI -->
         <div class="field-item">
-          <label class="field-label" style="font-weight: 700; color: #1e293b;">3. Tiêu đề hiển thị của Khối Thống kê <span style="color: #ef4444;">*</span></label>
-          <InputText v-model="widgetForm.title" placeholder="VD: Cán bộ xuất cảnh từ 2 lần trở lên / Cán bộ đang ở nước ngoài" style="width: 100%; font-size: 0.85rem;" />
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px;">
+            <label class="field-label" style="font-weight: 700; color: #1e293b; margin-bottom: 0;">
+              3. Tiêu đề hiển thị của Khối Thống kê <span style="color: #ef4444;">*</span>
+            </label>
+            <span style="font-size: 0.72rem; color: #0284c7; font-weight: 500;">
+              💡 Có thể gõ <strong>Enter</strong> hoặc <strong>&lt;br&gt;</strong> để tùy chỉnh xuống dòng
+            </span>
+          </div>
+          <textarea
+            v-model="widgetForm.title"
+            rows="2"
+            placeholder="VD: Cán bộ xuất cảnh từ 2 lần trở lên&#10;(Có thể gõ Enter để xuống dòng trong tiêu đề)"
+            style="width: 100%; font-size: 0.85rem; padding: 6px 10px; line-height: 1.4; resize: vertical; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit;"
+          ></textarea>
         </div>
 
         <!-- 4. ĐỘ RỘNG, MÀU VIỀN & MÀU NỀN & THỨ TỰ -->
@@ -1293,6 +1305,30 @@
                   {{ getPresenceBadge(data).text }}
                 </span>
               </template>
+
+              <!-- Hiển thị nhiều khối bản ghi phân cách bởi \n\n (VD: nhiều thân nhân trong 1 ô Lookup) -->
+              <div
+                v-else-if="String(getRowFieldValue(data, col.id, col) || '').includes('\n\n')"
+                style="display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left;"
+              >
+                <div
+                  v-for="(block, bIdx) in String(getRowFieldValue(data, col.id, col) || '').split('\n\n')"
+                  :key="bIdx"
+                  :style="{
+                    borderTop: bIdx > 0 ? '1px dashed #cbd5e1' : 'none',
+                    paddingTop: bIdx > 0 ? '4px' : '0',
+                    lineHeight: '1.45',
+                    fontSize: '1.05rem'
+                  }"
+                >
+                  <div :style="{ fontWeight: col.boldFirstLine !== false ? '700' : 'normal', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
+                    {{ block.split('\n')[0] }}
+                  </div>
+                  <div v-if="block.split('\n').slice(1).join('\n')" style="font-size: 0.95rem; color: #475569; margin-top: 2px; white-space: pre-line;">
+                    {{ block.split('\n').slice(1).join('\n') }}
+                  </div>
+                </div>
+              </div>
 
               <!-- Cột có xuống dòng (Họ tên + chức vụ/đơn vị, hoặc công thức nhiều dòng: dòng 1 tô đậm theo cấu hình hoặc mặc định) -->
               <div
@@ -3414,6 +3450,13 @@ const getLightColor = (hex = '#2e7d32') => {
   if (hex === '#dc2626') return '#fee2e2';
   if (hex === '#0d9488') return '#ccfbf1';
   return '#f1f5f9';
+};
+
+const formatWidgetTitle = (title) => {
+  if (!title) return '';
+  return String(title)
+    .replace(/\r\n/g, '<br>')
+    .replace(/\n/g, '<br>');
 };
 
 function computeWidgetCount(widget) {

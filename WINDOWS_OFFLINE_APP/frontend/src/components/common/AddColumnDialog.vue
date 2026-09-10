@@ -228,7 +228,9 @@
               Hiển thị dữ liệu (Display data as):
             </label>
             <select v-model="form.lookupDisplay" class="dialog-select">
-              <option value="value">Giá trị (Bản ghi đầu tiên)</option>
+              <option value="all">Tất cả bản ghi (VD: Cả 2 thân nhân, từng khối riêng)</option>
+              <option value="first">Chỉ bản ghi đầu tiên</option>
+              <option value="value">Tất cả bản ghi (Khớp toàn bộ)</option>
               <option value="join">Gộp tất cả (, )</option>
               <option value="count">Đếm số lượng</option>
               <option value="sum">sum() - Tính tổng số</option>

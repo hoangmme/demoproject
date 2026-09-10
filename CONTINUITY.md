@@ -2899,4 +2899,32 @@
     - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `src/`.
   - **Trạng thái**: Done [Reversible].
 
+- **Session 35 (2026-09-10) - Triệt Tiêu 100% Hardcode Tên Cột Khóa, Xuống Dòng Tiêu Đề Thống Kê (Enter/<br>), Lookup Đa Bản Ghi Tách Khối & Cố Định STT Tuyệt Đối**:
+  - **Yêu cầu Người dùng**:
+    1. "đừng có hoặc hard code đụ mẹ, sao mày cứ hardcode mãi thế mày đéo đọc continuity ak." -> Xóa sạch 100% mọi chuỗi hardcode tên cột (`cccdparent`, `parentCccd`, `cccd_can_bo`, `cccdchuyendi`, `cccdthannhan`, `cccd`) còn sót lại trong toàn bộ codebase (`src/stores/personnel.js`, `src/components/personnel/PersonnelRelatedTabs.vue`).
+    2. "thống kê cho phép tôi tùy chỉnh xuống dòng" -> Hỗ trợ gõ Enter / `<br>` xuống dòng trực tiếp trong Tiêu đề của từng Khối thống kê (`widget.title`) qua `<textarea>` trong popup cấu hình và hiển thị `white-space: pre-line` + `<br>` trong thẻ đếm, biểu đồ cột dọc, tiến trình ngang.
+    3. Hiển thị Lookup nhiều bản ghi (VD: Cán bộ Nguyễn Hoài Hận có 2 thân nhân): hiển thị toàn bộ các thân nhân trong cùng 1 ô, tách biệt thành từng khối có nét đứt mờ (`border-top: 1px dashed #cbd5e1`), dòng đầu in đậm nổi bật theo cấu hình cột.
+    4. Cải tiến `evaluateLookup`: Hỗ trợ `displayMode = 'all'` (mặc định hiển thị toàn bộ bản ghi ghép bằng `\n\n`), `displayMode = 'first'`, `sum`, `count`. Khi chọn `sum` hoặc `count` mà không cần điều kiện (hoặc có điều kiện), hàm tự động tính trên toàn bộ `candidatePool` (ví dụ hiển thị tổng 19 trên mọi dòng).
+    5. Khóa STT 1 hàng duy nhất (`word-break: keep-all !important;` trên toàn bộ phần tử con của `.col-center`).
+  - **Giải pháp & Cải tiến triển khai**:
+    1. **Triệt tiêu 100% Hardcode Tên cột Khóa (Tuân thủ triệt để CONTINUITY.md)**:
+       - `src/stores/personnel.js`: Xóa bỏ triệt để các chuỗi fallback cứng `cccdparent`, `parentCccd`, `cccd_can_bo`, `cccdchuyendi`, `cccd` trong `getPersonnelKeyField()`, `getRelativeParentKeyField()`, `findParentPersonForRelative()`, `findParentPersonForTrip()`, `findPersonByCccd()`, `findRelativeByCccd()`, `deleteRelative()`, `saveRelative()`, `saveTripRecord()`. Mọi phép đối chiếu dựa 100% trên các getter động (`getPersonnelKeyField()`, `getRelativeParentKeyField()`, `getRelativeKeyField()`, `getTripKeyField()`) và metadata cột (`linkTable === 'personnel'`, `linkColumn`, `isParentKey`, `isKey`, `isIdentifier`, `format === 'id'`).
+       - `src/components/personnel/PersonnelRelatedTabs.vue`: Xóa bỏ 100% các fallback cứng chuỗi `cccd` trong `getLinkedRows()`, `syncTripPersonToForm()`, `selectRecordToEdit()`, `openAddNewLinkedRecord()`.
+    2. **Tùy chỉnh Xuống dòng trong Tiêu đề Khối Thống kê (`DashboardView.vue`)**:
+       - Bổ sung hàm `formatWidgetTitle(title)` chuyển đổi tự động `\r\n` và `\n` thành `<br>`.
+       - Render tiêu đề với `v-html="formatWidgetTitle(widget.title)"` và `white-space: pre-line; line-height: 1.35;` trên cả Thẻ đếm số lượng, Biểu đồ cột dọc và Tiến trình ngang.
+       - Trong Dialog Cấu hình Khối Thống kê: Thay thế ô nhập tiêu đề bằng `<textarea rows="2">` cho phép người dùng gõ phím Enter hoặc thẻ `<br>` trực quan, kèm gợi ý hướng dẫn rõ ràng.
+    3. **Lookup Đa Bản ghi Tách khối Đẹp mắt (`evaluateLookup` & Cell Rendering)**:
+       - Trong `src/utils/formatters.js`: Nâng cấp `evaluateLookup` để khi có nhiều bản ghi khớp (ví dụ cán bộ có 2 thân nhân), ghép các bản ghi bằng `\n\n` (thay vì chỉ lấy bản ghi đầu tiên `[0]`). Hỗ trợ `displayMode === 'first'` cho người dùng muốn chỉ hiển thị 1 bản ghi.
+       - Hỗ trợ `sum` và `count` khi không có điều kiện (`conditions.length === 0`), tự động tính trên toàn bộ `candidatePool` (ví dụ hiển thị tổng 19 trên mọi dòng).
+       - Trong `UnifiedTableView.vue` và `DashboardView.vue` (Drilldown table): Khi ô dữ liệu chứa `\n\n`, chia thành các khối phân cách bởi viền nét đứt mờ (`border-top: 1px dashed #cbd5e1`), dòng đầu tiên in đậm màu xanh `#0369a1`, các dòng phụ hiển thị màu xám `#475569`.
+       - Cập nhật menu cột `ColumnHeaderMenu.vue` và `AddColumnDialog.vue` với các tùy chọn: `Tất cả bản ghi (VD: Cả 2 thân nhân, từng khối riêng)` và `Chỉ bản ghi đầu tiên`.
+    4. **Cố định STT Tuyệt đối Không Gãy dòng**:
+       - Trong `src/assets/styles/main.css`: Bổ sung `word-break: keep-all !important;` và áp dụng trực tiếp cho toàn bộ các phần tử con (`*`) bên trong `.p-datatable-thead > tr > th.col-center` và `.p-datatable-tbody > tr > td.col-center`.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (579ms, 0 lỗi).
+    - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `src/`.
+  - **Trạng thái**: Done [Reversible].
+
+
 
