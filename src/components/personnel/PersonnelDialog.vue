@@ -38,7 +38,7 @@
     />
 
     <!-- Thẻ Nhận diện Người đi & Điều hướng Chuyển Tab Nhanh (Traveler Identity Card) -->
-    <div v-if="recordSource === 'trips' && activeTab === 'info'" class="trip-traveler-card">
+    <div v-if="recordSource === 'trips' && activeTab === 'info' && (tripLinkedOfficer || tripLinkedRelative)" class="trip-traveler-card">
       <div class="traveler-card-main">
         <div class="traveler-badge" :class="isRelativeTrip ? 'is-relative' : 'is-officer'">
           <i :class="isRelativeTrip ? 'pi pi-users' : 'pi pi-user'"></i>
@@ -48,7 +48,7 @@
           <div class="traveler-name-row">
             <span class="label">Người đi:</span>
             <strong class="name-highlight">
-              {{ isRelativeTrip ? (tripLinkedRelative?.relativeName || form.relativeName || form.name || 'Thân nhân') : (tripLinkedOfficer?.name || form.personnelName || form.name || 'Cán bộ') }}
+              {{ isRelativeTrip ? (tripLinkedRelative?.relativeName || tripLinkedRelative?.name || 'Thân nhân') : (tripLinkedOfficer?.name || 'Cán bộ') }}
             </strong>
             <span v-if="isRelativeTrip && (tripLinkedRelative?.relationshipName || form.relationshipName)" class="relation-badge">
               ({{ tripLinkedRelative?.relationshipName || form.relationshipName }})
@@ -92,7 +92,7 @@
       <!-- Danh sách chuyển đổi các chuyến đi của người này (nếu có > 1 chuyến) -->
       <div v-if="travelerTrips.length > 1" class="traveler-trips-switcher">
         <span class="switcher-label">
-          <i class="pi pi-list"></i> Các chuyến đi của cán bộ ({{ travelerTrips.length }} chuyến):
+          <i class="pi pi-list"></i> Các chuyến đi của {{ isRelativeTrip ? 'thân nhân' : 'cán bộ' }} ({{ travelerTrips.length }} chuyến):
         </span>
         <div class="trips-pills">
           <button
@@ -108,6 +108,15 @@
             {{ getTripDisplayLabel(t, idx) }}
           </button>
         </div>
+      </div>
+    </div>
+    <div v-else-if="recordSource === 'trips' && activeTab === 'info'" class="trip-unlinked-card">
+      <div class="unlinked-icon">
+        <i class="pi pi-info-circle"></i>
+      </div>
+      <div class="unlinked-text">
+        <strong>Chuyến đi độc lập / Chưa liên kết:</strong>
+        <span> Cột CCCD chuyến đi đang để trống hoặc chưa khớp với bất kỳ Cán bộ / Thân nhân nào trong hệ thống.</span>
       </div>
     </div>
 
@@ -379,46 +388,23 @@ const dialogHeader = computed(() => {
   return isEdit.value ? `Chi tiết: ${nameVal || 'Cán bộ'}` : `Thêm mới cán bộ`;
 });
 
-// Dynamic linkage resolution for Trips banner
+// Dynamic linkage resolution for Trips banner (Zero Fallback / Pure Key Matching)
 const tripLinkedRelative = computed(() => {
   if (recordSource.value !== 'trips') return null;
-  if (form.value.rawRelative) return form.value.rawRelative;
-  const allRelatives = personnelStore.relativesList || [];
-  const rId = form.value.relativeId;
-  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
   const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
   const tVal = String(form.value[tKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
 
-  // 1. Direct ID match
-  if (rId) {
-    const r = allRelatives.find((rel) => String(rel.id).trim() === String(rId).trim() || String(rel.code).trim() === String(rId).trim());
-    if (r) return r;
-  }
-  // 2. Direct Key match
-  if (tVal && rKeyField) {
+  // ZERO FALLBACK: If trip linking key is empty, it does NOT link to anyone!
+  if (!tVal) return null;
+
+  const allRelatives = personnelStore.relativesList || [];
+  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+
+  // Direct Key match with Relative Key (e.g. cccdthannhan)
+  if (rKeyField) {
     const r = allRelatives.find((rel) => {
       const c = String(rel[rKeyField] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
       return c && c === tVal;
-    });
-    if (r) return r;
-  }
-  // 3. Match by name if trip marked as relative or has relativeName
-  if (form.value.isRelative || form.value.relativeName) {
-    const relName = String(form.value.relativeName || form.value.name || '').trim().toLowerCase();
-    if (relName) {
-      const r = allRelatives.find((rel) => {
-        const n = String(rel.relativeName || rel.name || '').trim().toLowerCase();
-        return n && n === relName;
-      });
-      if (r) return r;
-    }
-  }
-  // 4. If relative trip, find relative by parent's key
-  if (form.value.isRelative) {
-    const pId = form.value.personnelId;
-    const r = allRelatives.find((rel) => {
-      const parentVal = String(rel.cccdparent || rel.parentCccd || '').trim().toLowerCase();
-      return (pId && String(rel.personnelId).trim() === String(pId).trim()) || (tVal && parentVal === tVal);
     });
     if (r) return r;
   }
@@ -427,36 +413,29 @@ const tripLinkedRelative = computed(() => {
 
 const tripLinkedOfficer = computed(() => {
   if (recordSource.value !== 'trips') return null;
-  if (form.value.rawPerson) return form.value.rawPerson;
-  const allPersonnel = personnelStore.personnelList || [];
-  const pId = form.value.personnelId;
-  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccd';
   const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
   const tVal = String(form.value[tKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
 
-  // 1. Direct ID match
-  if (pId) {
-    const p = allPersonnel.find((pers) => String(pers.id).trim() === String(pId).trim() || String(pers.code).trim() === String(pId).trim());
-    if (p) return p;
-  }
-  // 2. Direct Key match
-  if (tVal && pKeyField) {
+  // ZERO FALLBACK: If trip linking key is empty, it does NOT link to anyone!
+  if (!tVal) return null;
+
+  const allPersonnel = personnelStore.personnelList || [];
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccd';
+
+  // 1. Direct Key match with Personnel Key (e.g. cccd)
+  if (pKeyField) {
     const p = allPersonnel.find((pers) => {
-      const c = String(pers[pKeyField] || pers.cccd || pers.id || '').trim().toLowerCase();
+      const c = String(pers[pKeyField] || pers.cccd || '').trim().toLowerCase();
       return c && c === tVal;
     });
     if (p) return p;
   }
-  // 3. Via linked relative
+
+  // 2. Via linked relative (only if trip was matched to a relative, find that relative's parent officer)
   const rel = tripLinkedRelative.value;
   if (rel) {
     const relParentKey = personnelStore.getRelativeParentKeyField ? personnelStore.getRelativeParentKeyField() : 'cccdparent';
     const parentVal = String(rel[relParentKey] || rel.cccdparent || rel.parentCccd || '').trim().toLowerCase();
-    const parentId = String(rel.personnelId || '').trim();
-    if (parentId) {
-      const p = allPersonnel.find((pers) => String(pers.id).trim() === parentId || String(pers.code).trim() === parentId);
-      if (p) return p;
-    }
     if (parentVal && pKeyField) {
       const p = allPersonnel.find((pers) => {
         const c = String(pers[pKeyField] || pers.cccd || '').trim().toLowerCase();
@@ -464,57 +443,42 @@ const tripLinkedOfficer = computed(() => {
       });
       if (p) return p;
     }
-    if (rel.rawPerson) return rel.rawPerson;
   }
   return null;
 });
 
 const isRelativeTrip = computed(() => {
   if (recordSource.value !== 'trips') return false;
-  return Boolean(
-    form.value.isRelative ||
-    form.value.rawRelative ||
-    form.value.relativeId ||
-    tripLinkedRelative.value ||
-    (form.value.relativeName && form.value.relativeName !== form.value.parentName)
-  );
+  return Boolean(tripLinkedRelative.value);
 });
 
 const travelerTrips = computed(() => {
   if (recordSource.value !== 'trips') return [];
   const officer = tripLinkedOfficer.value;
   const rel = tripLinkedRelative.value;
-  const allTrips = personnelStore.tripsList || [];
+  if (!officer && !rel) return [];
 
+  const allTrips = personnelStore.tripsList || [];
   const tripKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
   const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccd';
   const relKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
 
-  const officerId = officer?.id || form.value.personnelId;
-  const officerKeyVal = officer ? String(officer[pKeyField] || officer.cccd || officer.id || '').trim().toLowerCase() : '';
-  const currentTripKeyVal = String(form.value[tripKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
-
-  const relId = rel?.id || form.value.relativeId;
-  const relKeyVal = rel ? String(rel[relKeyField] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase() : '';
-
-  if (isRelativeTrip.value) {
+  if (isRelativeTrip.value && rel) {
+    const relKeyVal = String(rel[relKeyField] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
+    if (!relKeyVal) return [];
     return allTrips.filter((t) => {
-      if (!t.isRelative) return false;
       const tVal = String(t[tripKeyField] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
-      if (relId && t.relativeId && String(t.relativeId).trim() === String(relId).trim()) return true;
-      if (relKeyVal && tVal && tVal === relKeyVal) return true;
-      return false;
+      return tVal && tVal === relKeyVal;
     });
-  } else {
+  } else if (officer) {
+    const officerKeyVal = String(officer[pKeyField] || officer.cccd || '').trim().toLowerCase();
+    if (!officerKeyVal) return [];
     return allTrips.filter((t) => {
-      if (t.isRelative) return false;
       const tVal = String(t[tripKeyField] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
-      if (officerId && t.personnelId && String(t.personnelId).trim() === String(officerId).trim()) return true;
-      if (officerKeyVal && tVal && tVal === officerKeyVal) return true;
-      if (currentTripKeyVal && tVal && tVal === currentTripKeyVal) return true;
-      return false;
+      return tVal && tVal === officerKeyVal;
     });
   }
+  return [];
 });
 
 const getTripDisplayLabel = (t, index) => {
@@ -801,6 +765,31 @@ const handleSwitchRecord = (newPerson, targetTableId = null) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.trip-unlinked-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin: 4px 6px 12px 6px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.trip-unlinked-card .unlinked-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 1.1rem;
+}
+
+.trip-unlinked-card .unlinked-text strong {
+  color: #475569;
 }
 
 .trip-traveler-card {

@@ -26,6 +26,8 @@ const TRANSIENT_KEYS = [
   'travelerTrips',
   'activeTrip',
   'isDeleted',
+  'trips',
+  'relatives',
 ];
 
 export function sanitizeEntity(obj) {

@@ -3007,11 +3007,36 @@
     - Đồng bộ `PersonnelDialog.vue`, `PersonnelRelatedTabs.vue`, `UnifiedTableView.vue`, và `CONTINUITY.md` sang `WINDOWS_OFFLINE_APP/`.
   - **Trạng thái**: Done [Reversible].
 
+---
 
+### PHIÊN LÀM VIỆC (SESSION 34): XÓA BỎ TRIỆT ĐỂ FALLBACK LIÊN KẾT CHUYẾN ĐI (ZERO FALLBACK / PURE KEY MATCHING) & SỬA LỖI TIMEOUT PHÌNH TO THÂN NHÂN
+- **Vấn đề từ người dùng**:
+  1. *Thân nhân / Chuyến đi không có CCCD nhưng form vẫn tự ý liên kết đến Cán bộ Phan Phát Ngọc*:
+     - Bản ghi Chuyến đi có ô `CCCD chuyến đi` hoàn toàn rỗng (`""`), nhưng đầu form lại hiển thị huy hiệu `[CHUYẾN ĐI CỦA CÁN BỘ]`, `Người đi: Phan Phát Ngọc`, và gom luôn cả 2 chuyến đi của Phan Phát Ngọc vào thẻ switcher.
+     - Vi phạm nghiêm trọng CONTINUITY.md (Mục 1 & Mục 4): Cấm fallback ngầm, cấm lấy `rawPerson`/`personnelId` đắp vào khi cột khóa rỗng.
+  2. *Lỗi không lưu được "Chị ruột" / Xoay miết (Axios Timeout 30000ms) của Phạm Thị Kim*:
+     - Thân nhân Phạm Thị Kim bị nhồi nhét mảng `trips` (420 KB) và `custom_data` (421 KB) lồng nhau, khiến kích thước bản ghi thân nhân phình to tới 854 KB! Khi lưu, request payload gửi lên Directus gần 1MB gây timeout và lỗi 401 TOKEN_EXPIRED.
 
+- **Nguyên nhân cốt lõi & Giải pháp xử lý triệt để**:
+  1. *Xóa bỏ toàn bộ Fallback ngầm trong `PersonnelDialog.vue` và `PersonnelRelatedTabs.vue`*:
+     - **Nguyên nhân**:
+       + Trong `PersonnelDialog.vue`, `tripLinkedOfficer` có nhánh `if (form.value.rawPerson) return form.value.rawPerson;` và `if (pId) ...` chạy trước khi kiểm tra xem cột CCCD có giá trị hay không. Khiến mọi chuyến đi nằm trong hồ sơ Cán bộ (kể cả khi đã xóa trắng CCCD) đều bị coi là của Cán bộ đó.
+       + Trong `travelerTrips`, điều kiện `if (officerId && t.personnelId...)` gom tất cả chuyến đi có cùng `personnelId`, bất kể chuyến đi đó có CCCD hay không.
+       + Trong `PersonnelRelatedTabs.vue`, các nhánh `matchId` và `rawPerson` làm rò rỉ liên kết sang các chuyến đi không có CCCD.
+     - **Giải pháp**:
+       + Viết lại `tripLinkedOfficer` và `tripLinkedRelative` trong `PersonnelDialog.vue`: Yêu cầu bắt buộc phải có giá trị khóa `tVal = form.value[tripKeyField] || form.value.cccdchuyendi`. Nếu `!tVal` (rỗng), lập tức trả về `null`! Tuyệt đối không fallback sang `rawPerson`, `rawRelative`, hay `personnelId`.
+       + Cập nhật `travelerTrips`: Chỉ gom các chuyến đi có `tVal` trùng khớp 1-1 với CCCD của Cán bộ hoặc Thân nhân. Nếu không có người liên kết (`!officer && !rel`), trả về `[]`.
+       + Template `PersonnelDialog.vue`: Chỉ hiển thị Thẻ nhận diện người đi (`trip-traveler-card`) khi có người đi được liên kết qua khóa (`tripLinkedOfficer || tripLinkedRelative`). Khi chưa có CCCD hoặc chưa liên kết, hiển thị Thẻ thông báo trung thực: `[Chuyến đi độc lập / Chưa liên kết: Cột CCCD chuyến đi đang để trống hoặc chưa khớp với bất kỳ Cán bộ / Thân nhân nào trong hệ thống]`.
+       + Trong `PersonnelRelatedTabs.vue`: Xóa bỏ toàn bộ `matchId` và `rawPerson` fallbacks ở cả 2 chiều liên kết Cán bộ <-> Chuyến đi và Thân nhân <-> Chuyến đi, chỉ giữ lại `matchKey` thuần túy.
+  2. *Triệt tiêu phình to 854 KB và Tự động Retry khi Directus Token hết hạn*:
+     - Thêm `trips` và `relatives` vào `TRANSIENT_KEYS` trong `src/stores/personnel.js` để hàm `sanitizeEntity` tự động dọn sạch mọi mảng lồng nhau trước khi lưu vào `custom_data.relatives`. Kích thước của Phạm Thị Kim đã giảm từ 854 KB xuống chỉ còn 3 KB!
+     - Trong `src/api/client.js`: Thêm cơ chế tự động retry với `STATIC_TOKEN` khi API trả về mã lỗi `401` hoặc `403` (TOKEN_EXPIRED), giúp toàn bộ các thao tác lưu dữ liệu luôn diễn ra thông suốt, không bao giờ bị nghẽn do session JWT hết hạn.
 
-
-
+- **Kiểm thử & Triển khai**:
+  - `npm run build`: Thành công 100% (578ms, 0 lỗi).
+  - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/`.
+  - Bản ghi Phạm Thị Kim trong Directus đã được làm sạch xuống 3 KB và cập nhật quan hệ thành "Chị ruột".
+- **Trạng thái**: Done [Reversible].
 
 
 ## SESSION 35 (2026-09-10) - TRIỆT TIÊU TOÀN BỘ FALLBACK QUỐC GIA & CƠ CHẾ SỐNG LẠI DỮ LIỆU CŨ (ZERO COUNTRY FALLBACK)

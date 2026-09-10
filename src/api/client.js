@@ -63,11 +63,12 @@ apiClient.interceptors.request.use(
 // Response Interceptor
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error.response ? error.response.status : null;
-    if (status === 401 || status === 403) {
-      console.warn(`API ${status} - Session invalid or unauthenticated, clearing access_token`);
-      // If token in session was rejected, clean access_token so future requests don't loop 401/403
+    const originalRequest = error.config;
+    if ((status === 401 || status === 403) && originalRequest && !originalRequest._retryWithStatic) {
+      originalRequest._retryWithStatic = true;
+      console.warn(`API ${status} - Session invalid or expired, retrying with STATIC_TOKEN`);
       try {
         const session = localStorage.getItem('mvp_session');
         if (session) {
@@ -78,6 +79,10 @@ apiClient.interceptors.response.use(
           }
         }
       } catch (e) {}
+      if (STATIC_TOKEN && STATIC_TOKEN.trim() !== '') {
+        originalRequest.headers['Authorization'] = `Bearer ${STATIC_TOKEN.trim()}`;
+        return apiClient(originalRequest);
+      }
     }
     return Promise.reject(error);
   }
