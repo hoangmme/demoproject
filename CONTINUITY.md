@@ -3012,3 +3012,37 @@
 
 
 
+
+
+## SESSION 35 (2026-09-10) - TRIỆT TIÊU TOÀN BỘ FALLBACK QUỐC GIA & CƠ CHẾ SỐNG LẠI DỮ LIỆU CŨ (ZERO COUNTRY FALLBACK)
+- **Vấn đề người dùng phản ánh**:
+  - Khi xóa dữ liệu ô "Quốc gia xuất cảnh" của Cán bộ Võ Minh Thanh, mở lại form chỉnh sửa vẫn tự động gọi ra quốc gia "Mỹ". Yêu cầu xóa sạch toàn bộ cơ chế fallback ngầm.
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. saveTrip trong src/stores/personnel.js:
+     - Có đoạn Object.assign(cleanTrip, cleanTrip.custom_data). Khi người dùng xóa quoc_gia_xuat_canh trên form thành "", thuộc tính cũ trong custom_data (hoặc countryName) ghi đè ngược lại làm sống lại giá trị "Mỹ".
+     - Vòng lặp countryAliases: Khi cleanTrip.quoc_gia_xuat_canh === "", nếu trường alias khác (như countryName) còn giá trị "Mỹ", vòng lặp gán lại "Mỹ" cho toàn bộ các alias.
+     - Phân nhánh if (hasTripInRel) { ... } else { ... }: Hồ sơ Võ Minh Thanh có chuyến đi xuất hiện đồng thời trong cả p.trips và p.relatives[0].trips. Code cũ chỉ lưu vào relatives.trips và bỏ qua p.trips, khiến p.trips vẫn lưu nguyên vẹn "quoc_gia_xuat_canh": "Mỹ".
+  2. PersonnelDialog.vue:
+     - dialogHeader kiểm tra form.value.countryName trước quoc_gia_xuat_canh, nên khi countryName còn sót "Mỹ", tiêu đề popup luôn hiển thị "Chi tiết Chuyến đi: Mỹ".
+     - recordSource kiểm tra isRelative trước _recordType === "trip", khiến chuyến đi thân nhân bị nhận diện nhầm thành bảng Thân nhân.
+  3. PersonnelRelatedTabs.vue, docxExport.js, formatters.js, AdvancedSearchView.vue, UnifiedTableView.vue:
+     - Tồn tại các biểu thức fallback || t.countryName || "" khiến khi quoc_gia_xuat_canh là chuỗi rỗng "", JS tự động nhảy sang fallback countryName.
+- **Giải pháp đã thực hiện**:
+  1. src/stores/personnel.js (saveTrip):
+     - Unnest và sanitize đệ quy custom_data. Direct fields từ tripData (form nhập của người dùng) luôn có độ ưu tiên cao nhất, đè lên custom_data.
+     - Xử lý làm sạch triệt để: Nếu người dùng xóa quoc_gia_xuat_canh thành rỗng "", lập tức gán "" cho toàn bộ các alias (quoc_gia_xuat_canh, countryName, country, quoc_gia, quoc_gia_den) và xóa khỏi custom_data.
+     - Cập nhật đồng bộ cả trong p.trips và rel.trips khi chuyến đi được liên kết.
+  2. src/components/personnel/PersonnelDialog.vue:
+     - Cập nhật recordSource ưu tiên _recordType === "trip" trước isRelative.
+     - dialogHeader ưu tiên quoc_gia_xuat_canh không fallback ngầm.
+     - Unnest đệ quy custom_data trong initFormData và dọn sạch alias trong buildSavePayload.
+  3. src/composables/unified-table/useTableGridInteraction.js:
+     - Đồng bộ dọn dẹp các alias khi chỉnh sửa inline trên bảng và xóa rỗng giá trị.
+  4. src/utils/formatters.js, docxExport.js, PersonnelRelatedTabs.vue, AdvancedSearchView.vue, UnifiedTableView.vue:
+     - Xóa bỏ toàn bộ chuỗi fallback || t.countryName, kiểm tra chặt chẽ !== undefined.
+  5. Dữ liệu Directus:
+     - Đã gửi API PATCH trực tiếp làm sạch bản ghi của Cán bộ Võ Minh Thanh (074079000344), xóa vĩnh viễn "Mỹ" khỏi chuyến đi và các tầng custom_data lồng nhau.
+  6. Đóng gói & Triển khai:
+     - npm run build thành công 100% (585ms).
+     - Đồng bộ dist sang WINDOWS_OFFLINE_APP/frontend/.
+- **Trạng thái**: Done [Reversible].

@@ -1172,34 +1172,65 @@ export const usePersonnelStore = defineStore('personnel', {
           return false;
         };
 
-        const cleanTrip = { ...tripData };
-        if (cleanTrip.custom_data) {
-          if (typeof cleanTrip.custom_data === 'string') {
-            try { cleanTrip.custom_data = JSON.parse(cleanTrip.custom_data); } catch (e) {}
+        const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
+
+        // 1. Unnest and sanitize custom_data from tripData
+        let tripCustom = {};
+        if (tripData.custom_data) {
+          let cd = tripData.custom_data;
+          if (typeof cd === 'string') {
+            try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
           }
-          if (typeof cleanTrip.custom_data === 'object') {
-            Object.assign(cleanTrip, cleanTrip.custom_data);
+          if (typeof cd === 'object' && cd !== null) {
+            tripCustom = { ...cd };
           }
         }
+        let unnestDepth = 0;
+        while (tripCustom.custom_data && unnestDepth < 10) {
+          unnestDepth++;
+          let nested = tripCustom.custom_data;
+          delete tripCustom.custom_data;
+          if (typeof nested === 'string') {
+            try { nested = JSON.parse(nested); } catch (e) { nested = null; }
+          }
+          if (nested && typeof nested === 'object') {
+            tripCustom = { ...nested, ...tripCustom };
+          }
+        }
+
+        // Direct user edits on tripData must take precedence over custom_data!
+        const cleanTrip = { ...tripCustom, ...tripData };
         delete cleanTrip.rawPerson;
         delete cleanTrip.rawRelative;
         delete cleanTrip.rawTrip;
 
-        // Đồng bộ hóa triệt để và làm sạch các alias của trường Quốc gia
-        const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
-        let updatedCountryVal = undefined;
-        for (const alias of countryAliases) {
-          if (cleanTrip[alias] !== undefined) {
-            updatedCountryVal = cleanTrip[alias];
-            break;
-          }
+        // 2. Strict country resolution: If user explicitly cleared or set country, propagate to all aliases
+        let explicitCountry = undefined;
+        if (tripData.quoc_gia_xuat_canh !== undefined) {
+          explicitCountry = String(tripData.quoc_gia_xuat_canh || '').trim();
+        } else if (tripData.countryName !== undefined) {
+          explicitCountry = String(tripData.countryName || '').trim();
+        } else if (tripData.country !== undefined) {
+          explicitCountry = String(tripData.country || '').trim();
+        } else if (tripData.quoc_gia !== undefined) {
+          explicitCountry = String(tripData.quoc_gia || '').trim();
         }
-        if (updatedCountryVal !== undefined) {
-          const trimmedVal = String(updatedCountryVal || '').trim();
+
+        const isCountryCleared = explicitCountry !== undefined && explicitCountry === '';
+
+        if (isCountryCleared) {
           for (const alias of countryAliases) {
-            cleanTrip[alias] = trimmedVal;
+            cleanTrip[alias] = '';
+            delete tripCustom[alias];
+          }
+        } else if (explicitCountry !== undefined && explicitCountry !== '') {
+          for (const alias of countryAliases) {
+            cleanTrip[alias] = explicitCountry;
+            tripCustom[alias] = explicitCountry;
           }
         }
+        delete tripCustom.custom_data;
+        cleanTrip.custom_data = tripCustom;
 
         const pKeyField = this.getPersonnelKeyField ? this.getPersonnelKeyField() : 'id';
         const tKeyField = this.getTripKeyField ? this.getTripKeyField() : 'id';
@@ -1262,36 +1293,53 @@ export const usePersonnelStore = defineStore('personnel', {
               try { updatedP.custom_data = JSON.parse(updatedP.custom_data); } catch (e) { updatedP.custom_data = {}; }
             }
 
+            let updatedInRel = false;
+            // 1. Cập nhật trong relatives nếu tìm thấy hoặc thuộc thân nhân
             if (hasTripInRel && matchedRelIdx !== -1) {
               if (!Array.isArray(updatedP.relatives)) updatedP.relatives = [];
               const relObj = updatedP.relatives[matchedRelIdx];
               if (!relObj.trips) relObj.trips = [];
               const tIdx = relObj.trips.findIndex(isSameTrip);
               if (tIdx !== -1) {
-                if (updatedCountryVal !== undefined && !String(updatedCountryVal).trim()) {
+                if (isCountryCleared) {
                   for (const alias of countryAliases) {
                     delete relObj.trips[tIdx][alias];
                     if (relObj.trips[tIdx].custom_data) delete relObj.trips[tIdx].custom_data[alias];
                   }
                 }
                 relObj.trips[tIdx] = { ...relObj.trips[tIdx], ...cleanTrip };
-              } else {
+                if (isCountryCleared) {
+                  for (const alias of countryAliases) {
+                    relObj.trips[tIdx][alias] = '';
+                  }
+                }
+              } else if (cleanTrip.isRelative) {
                 if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
                 relObj.trips.push(cleanTrip);
               }
               updatedP.custom_data.relatives = updatedP.relatives;
-            } else {
+              updatedInRel = true;
+            }
+
+            // 2. Cập nhật trong personnel trips (Cán bộ)
+            // QUY TẮC: Cập nhật CẢ p.trips nếu chuyến đi có trong p.trips hoặc nếu là chuyến đi Cán bộ
+            if (hasTrip || (!cleanTrip.isRelative && matchesPerson) || !updatedInRel) {
               let pTrips = Array.isArray(updatedP.trips) ? [...updatedP.trips] : [];
               const tIdx = pTrips.findIndex(isSameTrip);
               if (tIdx !== -1) {
-                if (updatedCountryVal !== undefined && !String(updatedCountryVal).trim()) {
+                if (isCountryCleared) {
                   for (const alias of countryAliases) {
                     delete pTrips[tIdx][alias];
                     if (pTrips[tIdx].custom_data) delete pTrips[tIdx].custom_data[alias];
                   }
                 }
                 pTrips[tIdx] = { ...pTrips[tIdx], ...cleanTrip };
-              } else {
+                if (isCountryCleared) {
+                  for (const alias of countryAliases) {
+                    pTrips[tIdx][alias] = '';
+                  }
+                }
+              } else if (!cleanTrip.isRelative) {
                 if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
                 pTrips.push(cleanTrip);
               }
@@ -1315,18 +1363,23 @@ export const usePersonnelStore = defineStore('personnel', {
         if (Array.isArray(this.standaloneTrips)) {
           const sIdx = this.standaloneTrips.findIndex(isSameTrip);
           if (sIdx !== -1) {
-            if (updatedCountryVal !== undefined && !String(updatedCountryVal).trim()) {
+            if (isCountryCleared) {
               for (const alias of countryAliases) {
                 delete this.standaloneTrips[sIdx][alias];
                 if (this.standaloneTrips[sIdx].custom_data) delete this.standaloneTrips[sIdx].custom_data[alias];
               }
             }
             this.standaloneTrips[sIdx] = { ...this.standaloneTrips[sIdx], ...cleanTrip };
+            if (isCountryCleared) {
+              for (const alias of countryAliases) {
+                this.standaloneTrips[sIdx][alias] = '';
+              }
+            }
             await saveAppSettings('standalone_trips', this.standaloneTrips);
           }
         }
 
-        await logActivity('Cập nhật Chuyến đi', `Cập nhật chuyến đi: ${cleanTrip.countryName || cleanTrip.quoc_gia_xuat_canh || cleanTrip.id}`).catch(() => {});
+        await logActivity('Cập nhật Chuyến đi', `Cập nhật chuyến đi: ${cleanTrip.quoc_gia_xuat_canh || cleanTrip.countryName || cleanTrip.id}`).catch(() => {});
         await this.fetchPersonnel();
         return cleanTrip;
       } catch (e) {

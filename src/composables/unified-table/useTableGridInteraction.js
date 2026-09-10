@@ -57,6 +57,19 @@ export function useTableGridInteraction({
       }
       row.custom_data[colId] = value;
 
+      const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
+      if (countryAliases.includes(colId)) {
+        const trimmed = String(value || '').trim();
+        for (const alias of countryAliases) {
+          row[alias] = trimmed;
+          if (trimmed === '') {
+            delete row.custom_data[alias];
+          } else {
+            row.custom_data[alias] = trimmed;
+          }
+        }
+      }
+
       if (currentDashboardConfig.value?.source === 'blank') {
         const tid = topicId.value;
         const list = [...(customTableRows.value || [])];

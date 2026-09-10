@@ -2928,8 +2928,8 @@ const handleDeleteItem = async (item) => {
 
 const handleDeleteTrip = async (trip) => {
   const name = trip.personnelName || trip.name || 'Cán bộ';
-  const cName = trip.countryName || trip.quoc_gia_xuat_canh || trip.country || 'chuyến đi';
-  if (!confirm(`Bạn có chắc chắn muốn xóa chuyến đi "${cName}" của ${name}?`)) return;
+  const cName = trip.quoc_gia_xuat_canh !== undefined ? trip.quoc_gia_xuat_canh : (trip.countryName || trip.country || 'chuyến đi');
+  if (!confirm(`Bạn có chắc chắn muốn xóa chuyến đi "${cName || 'chuyến đi'}" của ${name}?`)) return;
 
   const targetPerson = resolveTargetPersonnel(trip);
   if (!targetPerson) {

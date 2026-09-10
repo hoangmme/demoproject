@@ -433,7 +433,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   if (!data.so_cccd && data.cccd) data.so_cccd = data.cccd;
   if (!data.ngay_sinh && data.birthYear) data.ngay_sinh = data.birthYear;
   if (!data.nam_sinh && data.birthYear) data.nam_sinh = data.birthYear;
-  if (!data.quoc_gia && (data.countryName || data.quoc_gia_xuat_canh)) data.quoc_gia = data.countryName || data.quoc_gia_xuat_canh;
+  if (!data.quoc_gia && (data.quoc_gia_xuat_canh || data.countryName)) data.quoc_gia = data.quoc_gia_xuat_canh || data.countryName;
   if (!data.ngay_di && (data.departureDate || data.ngay_xuat_canh)) data.ngay_di = data.departureDate || data.ngay_xuat_canh;
   if (!data.ngay_ve && (data.arrivalDate || data.ngay_nhap_canh)) data.ngay_ve = data.arrivalDate || data.ngay_nhap_canh;
   if (!data.so_quyet_dinh && (data.decisionNumber || data.so_qd)) data.so_quyet_dinh = data.decisionNumber || data.so_qd;
@@ -494,10 +494,11 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     const tripCols = (personnelStore?.importMappingTrips || []).flatMap((g) => g.columns || []);
     processedTrips = (rawTrips || []).map((trip, tIdx) => {
       const tcd = trip.custom_data || {};
+      const resolvedTripCountry = trip.quoc_gia_xuat_canh !== undefined ? trip.quoc_gia_xuat_canh : (trip.countryName || trip.country || '');
       const tripObj = {
         stt: tIdx + 1,
-        countryName: trip.countryName || trip.quoc_gia_xuat_canh || trip.quoc_gia || '',
-        quoc_gia: trip.countryName || trip.quoc_gia_xuat_canh || trip.quoc_gia || '',
+        countryName: resolvedTripCountry,
+        quoc_gia: resolvedTripCountry,
         purpose: trip.purpose || trip.muc_dich_xuat_canh || trip.muc_dich || '',
         muc_dich: trip.purpose || trip.muc_dich_xuat_canh || trip.muc_dich || '',
         departureDate: formatDate(trip.departureDate || trip.approvedDepartureDate || trip.ngay_xuat_canh),

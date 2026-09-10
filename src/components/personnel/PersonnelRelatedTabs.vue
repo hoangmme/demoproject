@@ -794,7 +794,15 @@ const getRecordDisplayName = (record, table) => {
     return record[relativeNameField.value] || record.relativeName || record.name || record.code || 'Thân nhân';
   }
   if (table?.id === 'trips' || table?.source === 'trips') {
-    const dest = record.countryName || record.country || record.quoc_gia_xuat_canh || '';
+    let dest = '';
+    if (record.quoc_gia_xuat_canh !== undefined) {
+      dest = record.quoc_gia_xuat_canh;
+    } else if (record.countryName !== undefined) {
+      dest = record.countryName;
+    } else if (record.country !== undefined) {
+      dest = record.country;
+    }
+    dest = String(dest || '').trim();
     const date = record.departureDate || record.ngay_xuat_canh || '';
     return dest ? `${dest} (${formatDate(date) || date})` : 'Chuyến đi';
   }
@@ -923,10 +931,28 @@ const handleSaveLinkedRecord = async () => {
 
   isSaving.value = true;
   try {
+    if (targetTable.id === 'trips' || targetTable.source === 'trips') {
+      syncTripPersonToForm();
+    }
+
     const payload = {
       ...editForm.value,
       custom_data: { ...(editForm.value.custom_data || {}), ...editForm.value },
     };
+
+    // Sanitize country aliases if cleared
+    const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
+    if (editForm.value.quoc_gia_xuat_canh !== undefined && !String(editForm.value.quoc_gia_xuat_canh || '').trim()) {
+      for (const alias of countryAliases) {
+        payload[alias] = '';
+        if (payload.custom_data) delete payload.custom_data[alias];
+      }
+    } else if (editForm.value.countryName !== undefined && !String(editForm.value.countryName || '').trim()) {
+      for (const alias of countryAliases) {
+        payload[alias] = '';
+        if (payload.custom_data) delete payload.custom_data[alias];
+      }
+    }
 
     if (targetTable.id === 'personnel' || targetTable.source === 'personnel') {
       await personnelStore.savePerson(payload);
@@ -935,7 +961,6 @@ const handleSaveLinkedRecord = async () => {
       await personnelStore.saveRelative(payload);
     } else if (targetTable.id === 'trips' || targetTable.source === 'trips') {
       payload._recordType = 'trip';
-      syncTripPersonToForm();
       await personnelStore.saveTrip(payload);
     } else {
       // Custom table save

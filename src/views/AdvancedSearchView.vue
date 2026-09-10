@@ -747,9 +747,7 @@ const buildDataset = () => {
       const arrDate = t.ngay_nhap_canh || tCustom.ngay_nhap_canh || t.ngayVe || tCustom.ngayVe || t.arrivalDate || tCustom.arrivalDate || '';
       const appArrDate = t.thoi_gian_duyet_ve || tCustom.thoi_gian_duyet_ve || t.thoiGianDuyetVe || t.approvedArrivalDate || tCustom.approvedArrivalDate || '';
       const extDate = t.thoi_gian_duyet_gia_han || tCustom.thoi_gian_duyet_gia_han || t.gia_han_den_ngay || tCustom.gia_han_den_ngay || t.approvedExtensionDate || tCustom.approvedExtensionDate || '';
-      const decNum = t.so_quyet_dinh || tCustom.so_quyet_dinh || t.decisionNumber || tCustom.decisionNumber || t.decision || '';
-      const cName = t.quoc_gia_xuat_canh || tCustom.quoc_gia_xuat_canh || t.countryName || tCustom.countryName || t.country || '';
-      const fName = t.nguon_kinh_phi || tCustom.nguon_kinh_phi || t.fundingName || t.funding || t.kinh_phi || t.nguonKinhPhi || t.kinhPhi || tCustom.fundingName || tCustom.funding || '';
+      const cName = t.quoc_gia_xuat_canh !== undefined ? t.quoc_gia_xuat_canh : (tCustom.quoc_gia_xuat_canh !== undefined ? tCustom.quoc_gia_xuat_canh : (t.countryName || tCustom.countryName || t.country || ''));
       const purp = t.muc_dich_xuat_canh || tCustom.muc_dich_xuat_canh || t.purpose || tCustom.purpose || '';
 
       // Skip empty/dummy placeholder trip objects

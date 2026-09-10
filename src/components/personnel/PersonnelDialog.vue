@@ -156,8 +156,8 @@ const recordSource = computed(() => {
   if (props.tableId && ['personnel', 'relatives', 'trips'].includes(props.tableId)) {
     return props.tableId;
   }
-  if (form.value._recordType === 'relative' || form.value.isRelative || form.value.relationshipName || form.value.relativeName || form.value.cccdthannhan) return 'relatives';
-  if (form.value._recordType === 'trip' || form.value.departureDate || form.value.ngay_xuat_canh || form.value.cccdchuyendi) return 'trips';
+  if (form.value._recordType === 'trip' || form.value.rawTrip || form.value.departureDate || form.value.ngay_xuat_canh || form.value.cccdchuyendi) return 'trips';
+  if (form.value._recordType === 'relative' || form.value.rawRelative || form.value.relationshipName || form.value.relativeName || form.value.cccdthannhan || form.value.isRelative) return 'relatives';
   if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-')) || form.value.positionName || form.value.departmentName) return 'personnel';
   if (form.value._tableId) return form.value._tableId;
   if (props.tableId) return props.tableId;
@@ -292,7 +292,15 @@ const allTableColumns = computed(() => {
 
 const dialogHeader = computed(() => {
   if (recordSource.value === 'trips' || form.value._recordType === 'trip') {
-    const dest = form.value.countryName || form.value.quoc_gia_xuat_canh || form.value.country || '';
+    let dest = '';
+    if (form.value.quoc_gia_xuat_canh !== undefined) {
+      dest = form.value.quoc_gia_xuat_canh;
+    } else if (form.value.countryName !== undefined) {
+      dest = form.value.countryName;
+    } else if (form.value.country !== undefined) {
+      dest = form.value.country;
+    }
+    dest = String(dest || '').trim();
     return isEdit.value ? (dest ? `Chi tiết Chuyến đi: ${dest}` : `Chi tiết Chuyến đi`) : `Thêm mới Chuyến đi`;
   }
   if (recordSource.value === 'relatives' || form.value._recordType === 'relative') {
@@ -365,6 +373,18 @@ const initFormData = (val) => {
         cd = {};
       }
     }
+    let unnestDepth = 0;
+    while (cd.custom_data && unnestDepth < 10) {
+      unnestDepth++;
+      let nested = cd.custom_data;
+      delete cd.custom_data;
+      if (typeof nested === 'string') {
+        try { nested = JSON.parse(nested); } catch (e) { nested = null; }
+      }
+      if (nested && typeof nested === 'object') {
+        cd = { ...nested, ...cd };
+      }
+    }
     const parsedVal = safeClone(val);
     const STANDARD_CORE_TABLES = ['personnel', 'relatives', 'trips'];
     if (props.tableId && !STANDARD_CORE_TABLES.includes(props.tableId) && !parsedVal._tableId) {
@@ -373,9 +393,23 @@ const initFormData = (val) => {
     delete parsedVal.custom_data;
     delete cd.custom_data;
 
+    // Direct values in parsedVal override cd
+    const merged = { ...cd, ...parsedVal };
+
+    // If country was explicitly cleared on parsedVal, ensure all aliases are cleared
+    const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
+    if (parsedVal.quoc_gia_xuat_canh !== undefined && !String(parsedVal.quoc_gia_xuat_canh || '').trim()) {
+      for (const alias of countryAliases) {
+        merged[alias] = '';
+      }
+    } else if (parsedVal.countryName !== undefined && !String(parsedVal.countryName || '').trim()) {
+      for (const alias of countryAliases) {
+        merged[alias] = '';
+      }
+    }
+
     form.value = {
-      ...cd,
-      ...parsedVal,
+      ...merged,
       uniqueKey: val.uniqueKey || parsedVal.uniqueKey || val.id || val._primaryKey,
       _primaryKey: val._primaryKey || parsedVal._primaryKey || val.id,
       _recordType: val._recordType || parsedVal._recordType,
@@ -383,7 +417,7 @@ const initFormData = (val) => {
       rawPerson: val.rawPerson,
       rawRelative: val.rawRelative,
       rawTrip: val.rawTrip,
-      custom_data: { ...cd, ...parsedVal },
+      custom_data: { ...merged },
     };
   } else {
     form.value = {
@@ -411,6 +445,38 @@ const executeSave = async (payload) => {
   return await personnelStore.saveRecord(payload);
 };
 
+const buildSavePayload = () => {
+  const payload = {
+    ...form.value,
+    custom_data: { ...(form.value.custom_data || {}), ...form.value },
+  };
+  delete payload.rawPerson;
+  delete payload.rawRelative;
+  delete payload.rawTrip;
+  if (payload.custom_data) {
+    delete payload.custom_data.rawPerson;
+    delete payload.custom_data.rawRelative;
+    delete payload.custom_data.rawTrip;
+    delete payload.custom_data.custom_data;
+  }
+
+  // Country alias synchronization: If user cleared country, propagate empty string to all aliases
+  const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
+  if (form.value.quoc_gia_xuat_canh !== undefined && !String(form.value.quoc_gia_xuat_canh || '').trim()) {
+    for (const alias of countryAliases) {
+      payload[alias] = '';
+      if (payload.custom_data) delete payload.custom_data[alias];
+    }
+  } else if (form.value.countryName !== undefined && !String(form.value.countryName || '').trim()) {
+    for (const alias of countryAliases) {
+      payload[alias] = '';
+      if (payload.custom_data) delete payload.custom_data[alias];
+    }
+  }
+
+  return payload;
+};
+
 const triggerAutoSave = () => {
   if (!isEdit.value || isSavingInternal || saving.value) return;
 
@@ -421,19 +487,7 @@ const triggerAutoSave = () => {
     isSavingInternal = true;
     autoSaveStatus.value = 'saving';
     try {
-      const payload = {
-        ...form.value,
-        custom_data: { ...(form.value.custom_data || {}), ...form.value },
-      };
-      delete payload.rawPerson;
-      delete payload.rawRelative;
-      delete payload.rawTrip;
-      if (payload.custom_data) {
-        delete payload.custom_data.rawPerson;
-        delete payload.custom_data.rawRelative;
-        delete payload.custom_data.rawTrip;
-        delete payload.custom_data.custom_data;
-      }
+      const payload = buildSavePayload();
       const saved = await executeSave(payload);
       initialJsonSnapshot = JSON.stringify(form.value);
       autoSaveStatus.value = 'saved';
@@ -474,19 +528,7 @@ const handleSave = async () => {
   isSavingInternal = true;
   autoSaveStatus.value = 'saving';
   try {
-    const payload = {
-      ...form.value,
-      custom_data: { ...(form.value.custom_data || {}), ...form.value },
-    };
-    delete payload.rawPerson;
-    delete payload.rawRelative;
-    delete payload.rawTrip;
-    if (payload.custom_data) {
-      delete payload.custom_data.rawPerson;
-      delete payload.custom_data.rawRelative;
-      delete payload.custom_data.rawTrip;
-      delete payload.custom_data.custom_data;
-    }
+    const payload = buildSavePayload();
     const saved = await executeSave(payload);
     if (!saved) {
       throw new Error('Hệ thống không thể lưu bản ghi. Vui lòng kiểm tra lại thông tin nhập!');
