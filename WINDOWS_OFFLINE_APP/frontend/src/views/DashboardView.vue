@@ -53,9 +53,21 @@
       </div>
     </div>
 
+    <!-- Trạng thái Đang tải dữ liệu Thống kê -->
+    <div
+      v-if="isLoadingDashboard && (!customGroups || customGroups.length === 0)"
+      style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;"
+    >
+      <i class="pi pi-spin pi-spinner" style="font-size: 2.2rem; color: #16a34a; margin-bottom: 12px;"></i>
+      <h3 style="font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0 0 6px 0;">Đang tải dữ liệu thống kê...</h3>
+      <p style="font-size: 0.8rem; color: #64748b; margin: 0; line-height: 1.45;">
+        Hệ thống đang đồng bộ dữ liệu cán bộ, thân nhân và xuất nhập cảnh.
+      </p>
+    </div>
+
     <!-- Trạng thái trống khi Trang chưa có nhóm thống kê -->
     <div
-      v-if="!customGroups || customGroups.length === 0"
+      v-else-if="!customGroups || customGroups.length === 0"
       style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; background: #ffffff; border-radius: 12px; border: 2px dashed #cbd5e1; text-align: center; margin-bottom: 1.5rem;"
     >
       <div style="width: 56px; height: 56px; border-radius: 16px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
@@ -1238,7 +1250,10 @@
         >
           <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '46px', minWidth: '46px' }" :bodyStyle="{ width: '46px', minWidth: '46px' }" />
 
-          <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '65px', minWidth: '65px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }" :bodyStyle="{ width: '65px', minWidth: '65px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }">
+          <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }" :bodyStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }">
+            <template #header>
+              <span style="white-space: nowrap !important; word-break: keep-all !important; display: inline-block;">STT</span>
+            </template>
             <template #body="{ index }">
               <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem; white-space: nowrap;">{{ drilldownDtFirst + index + 1 }}</span>
             </template>
@@ -1365,6 +1380,8 @@
       :personData="selectedPersonForDialog"
       :columns="selectedColumnsForDialog"
       :tableId="dialogTableId"
+      :initialTab="initialTabForDialog"
+      :initialRecordId="initialRecordIdForDialog"
       @saved="onPersonSaved"
       @deleted="onPersonSaved"
     />
@@ -1962,10 +1979,34 @@ const isPersonDialogOpen = ref(false);
 const selectedPersonForDialog = ref(null);
 const selectedColumnsForDialog = ref([]);
 const dialogTableId = ref('');
+const initialTabForDialog = ref('info');
+const initialRecordIdForDialog = ref(null);
 
 const openPersonnelDetail = (p) => {
   if (!p) return;
+  const isRel = p._recordType === 'relative' || p.relationshipName || drilldownSourceType.value === 'relatives';
+  if (isRel) {
+    const parent = personnelStore.findParentPersonForRelative ? personnelStore.findParentPersonForRelative(p) : null;
+    if (parent) {
+      selectedPersonForDialog.value = parent;
+      dialogTableId.value = 'personnel';
+      initialTabForDialog.value = 'relatives';
+      initialRecordIdForDialog.value = p.id || p.uniqueKey;
+      const allCols = getUnifiedTableColumns('personnel', {
+        personnelStore,
+        customDashboards: availableTopicDashboards.value,
+        systemBranding: systemBranding.value,
+      });
+      selectedColumnsForDialog.value = (allCols || []).filter((c) => !c.isVirtual && c.id !== 'stt' && c.showInDetail !== false);
+      isPersonDialogOpen.value = true;
+      return;
+    }
+  }
+
+  // Otherwise open flat record
   selectedPersonForDialog.value = p;
+  initialTabForDialog.value = 'info';
+  initialRecordIdForDialog.value = null;
   const src = p._recordType === 'relative' || p.relationshipName
     ? 'relatives'
     : (p._recordType === 'trip' || p.departureDate || p.destination || p.decisionNumber ? 'trips' : (drilldownSourceType.value || 'personnel'));
@@ -2041,6 +2082,19 @@ const openSingleSetting = (type) => {
 // 2. CUSTOM DASHBOARD GROUPS & DYNAMIC WIDGETS
 // =========================================================================
 const customGroups = ref([]);
+const isLoadingDashboard = ref(true);
+
+// Tải tức thì từ LocalStorage ngay khi khởi tạo Component (0ms) để không bị nhấp nháy hoặc hiển thị rỗng giả
+try {
+  const sKey = dashboardId.value === 'root' ? 'dashboard_custom_groups' : `dashboard_custom_groups_${dashboardId.value}`;
+  const cached = localStorage.getItem(sKey);
+  if (cached) {
+    const parsed = JSON.parse(cached);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      customGroups.value = parsed;
+    }
+  }
+} catch (e) {}
 
 
 const isGroupDialogOpen = ref(false);
@@ -4117,17 +4171,23 @@ onMounted(async () => {
   window.addEventListener('system-branding-updated', onSystemBrandingUpdated);
   loadSystemBranding();
   await loadCustomDashboardPages();
-  await Promise.all([
-    personnelStore.loadSettings(),
-    personnelStore.fetchPersonnel(),
-    loadDashboardSettings(),
-    loadTopicDashboards(),
-    loadCustomGroups(),
-    loadDeletedTopicGroupIds(),
-  ]);
-  // Chỉ tự động khởi tạo nhóm ban đầu cho Dashboard chính nếu chưa từng có cấu hình nào
-  if (dashboardId.value === 'root' && (!customGroups.value || customGroups.value.length === 0)) {
-    await reconcileGroupsWithTopics(true);
+  try {
+    await Promise.all([
+      personnelStore.loadSettings(),
+      personnelStore.fetchPersonnel(),
+      loadDashboardSettings(),
+      loadTopicDashboards(),
+      loadCustomGroups(),
+      loadDeletedTopicGroupIds(),
+    ]);
+    // Chỉ tự động khởi tạo nhóm ban đầu cho Dashboard chính nếu chưa từng có cấu hình nào
+    if (dashboardId.value === 'root' && (!customGroups.value || customGroups.value.length === 0)) {
+      await reconcileGroupsWithTopics(true);
+    }
+  } catch (err) {
+    console.warn('Network sync error during dashboard mount, using cached data:', err);
+  } finally {
+    isLoadingDashboard.value = false;
   }
 });
 

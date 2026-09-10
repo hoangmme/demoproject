@@ -57,7 +57,7 @@
             @click="selectRecordToEdit(row)"
           >
             <i class="pi pi-user" style="font-size: 0.72rem;"></i>
-            <span>{{ idx + 1 }}. {{ getRecordDisplayName(row, currentLinkedTable) }}</span>
+            <span>{{ idx + 1 }}/{{ currentLinkedRows.length }}. {{ getRecordDisplayName(row, currentLinkedTable) }}</span>
           </button>
           <button
             type="button"
@@ -264,6 +264,10 @@ const props = defineProps({
   modelValue: {
     type: String,
     default: 'info',
+  },
+  initialRecordId: {
+    type: [String, Number],
+    default: null,
   },
 });
 
@@ -866,8 +870,17 @@ watch(
     }
     if (len === 0) {
       openAddNewLinkedRecord();
-    } else if (!selectedRecord.value && !isAddingNew.value) {
-      selectRecordToEdit(currentLinkedRows.value[0]);
+    } else if (!isAddingNew.value) {
+      let targetRow = null;
+      if (props.initialRecordId) {
+        targetRow = currentLinkedRows.value.find((r) => String(r.id) === String(props.initialRecordId) || String(r.uniqueKey) === String(props.initialRecordId));
+      }
+      if (!targetRow && !selectedRecord.value) {
+        targetRow = currentLinkedRows.value[0];
+      }
+      if (targetRow) {
+        selectRecordToEdit(targetRow);
+      }
     }
   },
   { immediate: true }

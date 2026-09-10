@@ -2872,3 +2872,31 @@
     - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `src/` sang `WINDOWS_OFFLINE_APP/frontend/src/`.
   - **Trạng thái**: Done [Reversible].
 
+- **Session 34 (2026-09-10) - Tối Ưu UX Tốc Độ Load Thống Kê (0ms Cache Preload), Liên Kết Động Hồ Sơ Thân Nhân (Pill 1/4), Tinh Gọn Nút Xuất & Sidebar**:
+  - **Yêu cầu Người dùng**:
+    1. Lỗi mạng `net::ERR_NETWORK_CHANGED` / `ERR_INTERNET_DISCONNECTED` và tối ưu UX load trang thống kê: "khi load trang thống kê nó hiện bảng ko có dữ liệu do load quá lâu có cách nào tăng tốc độ load ở trang thống kê hay tối ưu ux ko".
+    2. "bỏ nút nút import excel gì ở nút Xuất / Nhập đi, sửa thành xuất thôi".
+    3. "Nhập liệu mới bỏ dấu + vì có icon rồi".
+    4. "Nhập liệu mới và import excel icon màu trắng".
+    5. "ông nguyễn văn chương có 4 người con, ấn vào người con nào phải hiện tab 1/4 của thân nhân chứ sao bảng hiện ra có mình nó, có vẻ chưa đc liên kết đúng. bạn cần thêm dữ liệu gì để liên kết đúng ko hardcode vì ở cột ccccparent (đừng hardcode tôi đã chọn đúng rồi) ở cán bộ tôi chọn đặt làm khóa chính rồi mà (có liên kết với chuyến đi và thân nhân)".
+  - **Giải pháp & Cải tiến triển khai**:
+    1. **Tối ưu UX & Tốc độ load Trang Thống kê (DashboardView.vue)**:
+       - **0ms Cache Preload**: Đọc trực tiếp cấu hình `customGroups` từ `localStorage` ngay trong hàm `setup()` đồng bộ, cho phép hiển thị các khối thống kê ngay lập tức tại frame 0 (0ms) mà không phải chờ mạng.
+       - **Chống hiển thị rỗng giả (Zero Fake Empty State)**: Thêm cờ `isLoadingDashboard = ref(true)`. Khi đang tải, hiển thị spinner chuyên nghiệp "Đang tải dữ liệu thống kê...". Chỉ khi tải xong và danh sách thực sự rỗng mới hiển thị banner "Chưa có Nhóm thống kê nào".
+       - Bọc toàn bộ các lệnh tải mạng trong `try/catch/finally` an toàn, chống gián đoạn khi mạng chập chờn.
+    2. **Khóa STT không bao giờ gãy 2 dòng**:
+       - Thêm `<template #header><span style="white-space: nowrap !important; word-break: keep-all !important; display: inline-block;">STT</span></template>` và `width: 70px` ở cả `UnifiedTableView.vue` và `DashboardView.vue` drilldown table.
+    3. **Tinh gọn Menu Xuất & Sidebar Navigation**:
+       - `ExportImportMenu.vue`: Đổi nhãn nút từ "Xuất / Nhập" thành "Xuất", gỡ bỏ mục Import Excel khỏi menu dropdown (do đã đưa ra Sidebar).
+       - `AppSidebar.vue`: Bỏ dấu `+` trong text, chỉ còn "Nhập liệu mới"; đổi màu biểu tượng của "Nhập liệu mới" và "Import Excel" sang màu trắng (`color: #ffffff;`).
+    4. **Liên kết Động Hồ sơ Thân nhân & Hiển thị Tab 1/4 (Không Hardcode)**:
+       - Nâng cấp `getRelativeParentKeyField()` trong `src/stores/personnel.js`: Tự động quét tìm cột khóa cha (`linkTable === 'personnel'`, `isParentKey`, hoặc `cccdparent`/`parentCccd`) từ danh mục cột `importMappingRelative`.
+       - Bổ sung `findParentPersonForRelative(relative)`: Đối chiếu linh hoạt qua `rawPerson`, `personnelId`, `personnelCode` hoặc giá trị khóa cha (`relative[relParentKey] === person[pKeyField]`).
+       - Trong `PersonnelRelatedTabs.vue`: Đổi nhãn nút chọn bản ghi liên kết thành định dạng `{{ idx + 1 }}/{{ currentLinkedRows.length }}. {{ name }}` (ví dụ: `1/4. Nguyễn Hồng Diễm Kim`, `2/4. Nguyễn Hồng Diễm Châu`, `3/4. Nguyễn Thị Phương Nga`, `4/4. Nguyễn Hồng Khang`).
+       - Trong `DashboardView.vue` và `UnifiedTableView.vue`: Khi bấm vào bất kỳ thân nhân nào, hệ thống tự động tìm hồ sơ Cán bộ cha và mở trực tiếp tab Thân nhân (`initialTab = 'relatives'`), tự động kích hoạt đúng người con được bấm (`initialRecordId`), cho phép xem và chuyển đổi tức thì giữa cả 4 người con trên cùng 1 hồ sơ.
+  - **Kiểm thử & Triển khai**:
+    - `npm run build` thành công 100% (565ms, 0 lỗi).
+    - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/dist/` và `src/`.
+  - **Trạng thái**: Done [Reversible].
+
+

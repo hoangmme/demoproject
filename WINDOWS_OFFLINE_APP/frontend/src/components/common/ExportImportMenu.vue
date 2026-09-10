@@ -1,7 +1,7 @@
 <template>
   <div class="header-menu-wrapper" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
     <Button
-      label="Xuất / Nhập"
+      label="Xuất"
       icon="pi pi-download"
       severity="secondary"
       outlined
@@ -11,20 +11,7 @@
     />
 
     <div v-show="isOpen" class="header-menu-dropdown data-menu-dropdown" @click.stop>
-      <!-- 1. Nhập Excel (Wizard 4 Bước) -->
-      <div v-if="showImport" class="menu-action-item" @click="handleImport">
-        <div class="action-icon-box" style="background: #e0f2fe; color: #0284c7;">
-          <i class="pi pi-upload"></i>
-        </div>
-        <div>
-          <div class="menu-action-title">
-            Import Excel {{ tableTitle }} (Wizard 4 Bước)
-          </div>
-          <div class="menu-action-sub">Tải dữ liệu từ tệp Excel .xlsx vào hệ thống</div>
-        </div>
-      </div>
-
-      <!-- 2. Xuất Hồ sơ PDF / Word -->
+      <!-- 1. Xuất Hồ sơ PDF / Word -->
       <div v-if="showPdf" class="menu-action-item" @click="handleExportPdf">
         <div class="action-icon-box" style="background: #fee2e2; color: #dc2626;">
           <i class="pi pi-file-pdf"></i>
@@ -66,7 +53,7 @@ const props = defineProps({
   },
   showImport: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   showPdf: {
     type: Boolean,

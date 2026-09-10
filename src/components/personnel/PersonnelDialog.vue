@@ -32,6 +32,7 @@
       :currentRecord="form"
       :recordSource="recordSource"
       :tableId="recordSource"
+      :initialRecordId="initialRecordId"
       @refresh="handleTabRefresh"
       @switchRecord="handleSwitchRecord"
     />
@@ -157,8 +158,12 @@ const props = defineProps({
     default: () => [],
   },
   initialTab: {
-    type: Number,
-    default: 0,
+    type: [String, Number],
+    default: 'info',
+  },
+  initialRecordId: {
+    type: [String, Number],
+    default: null,
   },
   targetRelativeCode: {
     type: String,
@@ -280,7 +285,7 @@ watch(
   () => [props.modelValue, props.personData],
   ([isOpen, pData]) => {
     if (isOpen) {
-      activeTab.value = 'info';
+      activeTab.value = props.initialTab || 'info';
       initFormData(pData || props.personData);
     } else {
       if (autoSaveTimer) clearTimeout(autoSaveTimer);

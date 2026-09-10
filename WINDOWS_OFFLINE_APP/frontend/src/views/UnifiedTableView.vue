@@ -256,7 +256,10 @@
         @page="e => dtFirst = e.first"
       >
         <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
-        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '65px', minWidth: '65px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }" :bodyStyle="{ width: '65px', minWidth: '65px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }">
+        <Column field="stt" header="STT" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }" :bodyStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }">
+          <template #header>
+            <span style="white-space: nowrap !important; word-break: keep-all !important; display: inline-block;">STT</span>
+          </template>
           <template #body="{ index }">
             <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem; white-space: nowrap;">{{ dtFirst + index + 1 }}</span>
           </template>
@@ -969,6 +972,8 @@
       :personData="activePersonData"
       :columns="allAvailableColumnsList"
       :tableId="currentDashboardConfig?.id || topicId"
+      :initialTab="initialTabForDialog"
+      :initialRecordId="initialRecordIdForDialog"
       @saved="handlePersonnelSaved"
       @deleted="handlePersonnelSaved"
     />
@@ -2792,9 +2797,26 @@ const saveColumnSelection = async () => {
 };
 
 // Actions
+const initialTabForDialog = ref('info');
+const initialRecordIdForDialog = ref(null);
+
 function openPersonnelDetail(record) {
   if (!record) return;
+  const isRel = record._recordType === 'relative' || record.relationshipName || topicId.value === 'relatives';
+  if (isRel) {
+    const parent = personnelStore.findParentPersonForRelative ? personnelStore.findParentPersonForRelative(record) : null;
+    if (parent) {
+      activePersonData.value = parent;
+      initialTabForDialog.value = 'relatives';
+      initialRecordIdForDialog.value = record.id || record.uniqueKey;
+      isPersonnelDialogOpen.value = true;
+      return;
+    }
+  }
+
   activePersonData.value = record;
+  initialTabForDialog.value = 'info';
+  initialRecordIdForDialog.value = null;
   isPersonnelDialogOpen.value = true;
 }
 

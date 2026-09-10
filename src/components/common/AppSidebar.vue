@@ -291,13 +291,13 @@
       </div>
 
       <a class="app-nav-item" href="javascript:void(0)" @click="isDynamicDataEntryOpen = true" title="Nhập liệu mới cho bất kỳ bảng nào trong hệ thống">
-        <i class="pi pi-plus-circle" style="color: #0284c7;"></i>
-        <span>+ Nhập liệu mới</span>
+        <i class="pi pi-plus-circle" style="color: #ffffff;"></i>
+        <span>Nhập liệu mới</span>
       </a>
 
       <!-- Nút Import Excel trực tiếp trên Sidebar -->
       <a class="app-nav-item" href="javascript:void(0)" @click="openSidebarImportWizard" title="Import dữ liệu từ tệp Excel vào hệ thống (Wizard 4 Bước)">
-        <i class="pi pi-file-import" style="color: #10b981;"></i>
+        <i class="pi pi-file-import" style="color: #ffffff;"></i>
         <span>Import Excel</span>
       </a>
 

@@ -571,7 +571,55 @@ export const usePersonnelStore = defineStore('personnel', {
       return 'departmentName';
     },
     getRelativeParentKeyField() {
-      return this.systemKeyConfig?.relativeParentKeyField || this.getPersonnelKeyField();
+      if (this.systemKeyConfig?.relativeParentKeyField) {
+        return this.systemKeyConfig.relativeParentKeyField;
+      }
+      const rCols = (this.importMappingRelative || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
+      const parentCol = rCols.find((c) => c.linkTable === 'personnel' || c.isParentKey || c.id === 'cccdparent' || c.id === 'parentCccd' || c.id === 'cccd_can_bo');
+      if (parentCol) return parentCol.id;
+      return this.getPersonnelKeyField();
+    },
+    findParentPersonForRelative(relative) {
+      if (!relative) return null;
+      if (relative.rawPerson) return relative.rawPerson;
+      if (relative.personnelId) {
+        const found = (this.personnelList || []).find((p) => String(p.id).trim() === String(relative.personnelId).trim());
+        if (found) return found;
+      }
+      if (relative.personnelCode) {
+        const found = (this.personnelList || []).find((p) => String(p.code).trim() === String(relative.personnelCode).trim());
+        if (found) return found;
+      }
+      const pKeyField = this.getPersonnelKeyField();
+      const parentKeyField = this.getRelativeParentKeyField();
+      const parentVal = String(relative[parentKeyField] || relative.cccdparent || relative.parentCccd || relative.cccd_can_bo || '').trim().toLowerCase();
+      if (parentVal) {
+        const found = (this.personnelList || []).find((p) => {
+          const pVal = String(p[pKeyField] || p.cccd || p.cccdparent || '').trim().toLowerCase();
+          return pVal && pVal === parentVal;
+        });
+        if (found) return found;
+      }
+      return null;
+    },
+    findParentPersonForTrip(trip) {
+      if (!trip) return null;
+      if (trip.rawPerson) return trip.rawPerson;
+      if (trip.personnelId) {
+        const found = (this.personnelList || []).find((p) => String(p.id).trim() === String(trip.personnelId).trim());
+        if (found) return found;
+      }
+      const pKeyField = this.getPersonnelKeyField();
+      const tripKeyField = this.getTripKeyField();
+      const tripVal = String(trip[tripKeyField] || trip.cccdchuyendi || trip.cccd || '').trim().toLowerCase();
+      if (tripVal) {
+        const found = (this.personnelList || []).find((p) => {
+          const pVal = String(p[pKeyField] || p.cccd || '').trim().toLowerCase();
+          return pVal && pVal === tripVal;
+        });
+        if (found) return found;
+      }
+      return null;
     },
     getRelativeKeyField() {
       if (this.systemKeyConfig?.relativeKeyField) {
