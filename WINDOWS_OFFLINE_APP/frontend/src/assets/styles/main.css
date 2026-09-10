@@ -621,16 +621,24 @@ html, body {
 .p-datatable.p-datatable-sm .p-datatable-thead > tr > th {
   background: #f9fafb !important;
   color: #4b5563 !important;
-  font-size: 0.98rem !important;
+  font-family: var(--table-font-family, inherit) !important;
+  font-size: var(--table-header-font-size, 0.98rem) !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
   padding: 0.75rem 0.85rem !important;
   border: none !important;
   border-bottom: 1px solid #e5e7eb !important;
+  border-right: 1px solid #e2e8f0 !important;
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
   line-height: 1.4 !important;
+}
+
+.p-datatable-thead > tr > th:last-child,
+.p-datatable .p-datatable-thead > tr > th:last-child,
+.p-datatable.p-datatable-sm .p-datatable-thead > tr > th:last-child {
+  border-right: none !important;
 }
 
 .p-datatable-thead > tr > th .p-column-title,
@@ -677,7 +685,9 @@ html, body {
   padding: 0.75rem 0.85rem !important;
   border: none !important;
   border-bottom: 1px solid #f3f4f6 !important;
-  font-size: 1.15rem !important;
+  border-right: 1px solid #e2e8f0 !important;
+  font-family: var(--table-font-family, inherit) !important;
+  font-size: var(--table-body-font-size, 1.15rem) !important;
   color: #1e293b !important;
   vertical-align: middle !important;
   white-space: normal !important;
@@ -686,15 +696,23 @@ html, body {
   line-height: 1.5 !important;
 }
 
+.p-datatable-tbody > tr > td:last-child,
+.p-datatable .p-datatable-tbody > tr > td:last-child,
+.p-datatable.p-datatable-sm .p-datatable-tbody > tr > td:last-child {
+  border-right: none !important;
+}
+
 .p-datatable-tbody > tr > td strong,
 .p-datatable .p-datatable-tbody > tr > td strong,
 .clickable-name {
-  font-size: 1.18rem !important;
+  font-family: var(--table-font-family, inherit) !important;
+  font-size: calc(var(--table-body-font-size, 1.15rem) + 0.03rem) !important;
 }
 
 .p-datatable-tbody > tr > td.col-center,
 .p-datatable .p-datatable-tbody > tr > td.col-center {
-  font-size: 1.12rem !important;
+  font-family: var(--table-font-family, inherit) !important;
+  font-size: calc(var(--table-body-font-size, 1.15rem) - 0.03rem) !important;
 }
 
 /* Cho phép nội dung bảng xuống dòng tự nhiên khi dài */

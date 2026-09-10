@@ -199,7 +199,16 @@
             style="cursor: pointer;"
           >
             <div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+              <!-- Dời số lượng lên trên cùng để thẳng hàng nhau -->
+              <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px;">
+                <span class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '0' }">
+                  {{ computeWidgetCount(widget) }}
+                </span>
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">trường hợp</span>
+              </div>
+
+              <!-- Tiêu đề thẻ và các nút tác vụ điều khiển bên dưới -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 4px;">
                 <div style="flex: 1; padding-right: 6px;">
                   <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
                 </div>
@@ -237,9 +246,6 @@
                     <i class="pi pi-trash"></i>
                   </button>
                 </div>
-              </div>
-              <div class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '4px 0 0 0' }">
-                {{ computeWidgetCount(widget) }}
               </div>
             </div>
             <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">
@@ -1124,21 +1130,6 @@
 
           <!-- Actions Toolbar inside Drilldown Header -->
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <!-- Dropdown chọn Chế độ xem (View) để áp dụng thứ tự cột -->
-            <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 8px; height: 32px;">
-              <i class="pi pi-sliders-h" style="font-size: 0.75rem; color: #2563eb;"></i>
-              <span style="font-size: 0.74rem; font-weight: 600; color: #475569; white-space: nowrap;">Chế độ xem:</span>
-              <select
-                v-model="drilldownSelectedViewId"
-                @change="onDrilldownViewChange"
-                style="height: 26px; font-size: 0.75rem; font-weight: 600; border: none; background: transparent; outline: none; color: #1e293b; cursor: pointer; max-width: 170px;"
-                title="Chọn Chế độ xem để áp dụng thứ tự và danh sách cột"
-              >
-                <option v-for="v in drilldownAvailableViews" :key="v.id" :value="v.id">
-                  {{ v.label }}
-                </option>
-              </select>
-            </div>
 
             <!-- Tùy chỉnh cột riêng cho Chế độ xem đang chọn -->
             <ColumnSelector
@@ -1244,16 +1235,29 @@
                 </span>
               </template>
 
-              <!-- Họ tên Cán bộ / Bản ghi chính (dòng đậm) -->
-              <template v-else-if="col.id === '_parentPersonnelName' || col.id === 'name' || col.id === 'ho_va_ten'">
-                <strong style="color: #0284c7; font-weight: 700; font-size: 1.18rem;">
+              <!-- Cột có xuống dòng (Họ tên + chức vụ/đơn vị, hoặc công thức nhiều dòng: dòng 1 tô đậm theo cấu hình hoặc mặc định) -->
+              <div
+                v-else-if="String(getRowFieldValue(data, col.id, col) || '').includes('\n')"
+                style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; color: #1e293b; text-align: left;"
+              >
+                <div :style="{ fontWeight: col.boldFirstLine !== false ? '700' : 'normal', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
+                  {{ String(getRowFieldValue(data, col.id, col) || '').split('\n')[0] }}
+                </div>
+                <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
+                  {{ String(getRowFieldValue(data, col.id, col) || '').split('\n').slice(1).join('\n') }}
+                </div>
+              </div>
+
+              <!-- Cột được cấu hình In đậm dòng đầu hoặc là cột tên -->
+              <template v-else-if="col.boldFirstLine || col.id === '_parentPersonnelName' || col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen' || col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan' || col.id?.toLowerCase().includes('name') || col.label?.toLowerCase().includes('tên')">
+                <strong :style="{ color: col.firstLineColor || '#0369a1', fontWeight: '700', fontSize: '1.15rem', whiteSpace: 'pre-line', display: 'inline-block', lineHeight: '1.45', textAlign: 'left' }">
                   {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </strong>
               </template>
 
               <!-- Cột thông thường -->
               <template v-else>
-                <span style="font-size: 1.15rem; color: #334155; line-height: 1.45; word-break: break-word;">
+                <span style="font-size: 1.15rem; color: #334155; line-height: 1.45; word-break: break-word; white-space: pre-line; display: inline-block; text-align: left;">
                   {{ getRowFieldValue(data, col.id, col) || '-' }}
                 </span>
               </template>
@@ -1316,6 +1320,7 @@
       v-model="isPersonDialogOpen"
       :personData="selectedPersonForDialog"
       :columns="selectedColumnsForDialog"
+      :tableId="dialogTableId"
       @saved="onPersonSaved"
       @deleted="onPersonSaved"
     />
@@ -1325,6 +1330,8 @@
       v-model="isDocxExportOpen"
       :selectedPersonnel="drilldownSelectedPersonnel"
       :allPersonnel="drilldownAllPersonnel"
+      :tableId="drilldownSourceType || 'trips'"
+      :columns="drilldownColumns"
     />
 
     <!-- Popup Xem trước PDF trực tiếp của từng hàng -->
@@ -1703,26 +1710,7 @@ const filteredDrilldownList = computed(() => {
 
 const drilldownSelectedPersonnel = computed(() => {
   const selected = drilldownSelectedRows.value || [];
-  const list = selected.length > 0 ? selected : filteredDrilldownList.value;
-  const personMap = new Map();
-  const pKeyField = personnelStore.getPersonnelKeyField();
-
-  list.forEach((r) => {
-    let p = r.rawPerson;
-    if (!p) {
-      const pKey = r[pKeyField] || r.parentCccd || r.cccdparent || r.cccd || r.id;
-      p = (personnelStore.personnelList || []).find(
-        (x) => (pKey && (x[pKeyField] === pKey || x.cccdparent === pKey || x.cccd === pKey || x.id === pKey)) ||
-               (r.personnelId && x.id === r.personnelId) ||
-               (r.personnelCode && x.code === r.personnelCode)
-      );
-    }
-    if (p && p.id && !personMap.has(p.id)) {
-      personMap.set(p.id, p);
-    }
-  });
-
-  return Array.from(personMap.values());
+  return selected.length > 0 ? selected : (filteredDrilldownList.value || []);
 });
 
 const showRowPdfPreview = ref(false);
@@ -1737,36 +1725,37 @@ const previewPdfForRow = async (row) => {
   rowPreviewingKey.value = rowKey;
 
   try {
-    const pKeyField = personnelStore.getPersonnelKeyField();
-    let p = row.rawPerson;
-    if (!p) {
-      const pKey = row[pKeyField] || row.parentCccd || row.cccdparent || row.cccd || row.id;
-      p = (personnelStore.personnelList || []).find(
-        (x) => (pKey && (x[pKeyField] === pKey || x.cccdparent === pKey || x.cccd === pKey || x.id === pKey)) ||
-               (row.personnelId && x.id === row.personnelId) ||
-               (row.personnelCode && x.code === row.personnelCode)
-      );
-    }
-    if (!p) {
-      if (row.name || row.ho_ten || row.code) {
-        p = row;
-      } else {
-        alert('Không tìm thấy thông tin hồ sơ cán bộ tương ứng.');
-        return;
-      }
-    }
+    const curSource = drilldownSourceType.value || 'trips';
+    const curCols = drilldownColumns.value || [];
+    const curTitle = drilldownExtraTitle.value || drilldownWidget.value?.title || 'Thống kê';
 
     const exportOpts = {
-      includeRelatives: true,
-      includeTrips: true,
+      tableId: curSource,
+      columns: curCols,
+      selectedFieldIds: curCols.map((c) => c.id),
+      includePersonnel: curSource !== 'personnel',
+      includeRelatives: curSource !== 'relatives',
+      includeTrips: curSource !== 'trips',
       showColumnNumbers: false,
+      tableTitles: {
+        personnel: 'Cán bộ',
+        relatives: 'Thân nhân',
+        trips: 'Chuyến đi',
+        main: curTitle,
+      },
     };
+
     const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
-    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, p, personnelStore, authStore.currentUser, exportOpts);
+    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, row, personnelStore, authStore.currentUser, exportOpts);
+
+    const titleCol = curCols.find((c) => c.isTitle || c.isIdentifier);
+    const pName = (titleCol && row[titleCol.id]) || row.name || row.personnelName || row.ho_ten || row.fullName || row.title || 'Ban_ghi';
+    const keyCol = curCols.find((c) => c.isKey);
+    const pCode = (keyCol && row[keyCol.id]) || row.code || row.cccd || '';
 
     rowPreviewPdfBlob.value = blob;
-    rowPreviewTitle.value = `Hồ sơ: ${p.name || p.ho_ten || 'Cán bộ'}`;
-    rowPreviewFileName.value = `Ho_so_${(p.name || p.ho_ten || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    rowPreviewTitle.value = `Hồ sơ: ${pName}${pCode ? ' (' + pCode + ')' : ''}`;
+    rowPreviewFileName.value = `Ho_so_${(pName || 'Ban_ghi').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
     showRowPdfPreview.value = true;
   } catch (err) {
     console.error('Lỗi khi xem PDF:', err);
@@ -1777,7 +1766,7 @@ const previewPdfForRow = async (row) => {
 };
 
 const drilldownAllPersonnel = computed(() => {
-  return personnelStore.personnelList || [];
+  return filteredDrilldownList.value || [];
 });
 
 const openDrilldownDocxExport = () => {
@@ -1928,6 +1917,7 @@ const getPersonnelForTrip = (t) => {
 const isPersonDialogOpen = ref(false);
 const selectedPersonForDialog = ref(null);
 const selectedColumnsForDialog = ref([]);
+const dialogTableId = ref('');
 
 const openPersonnelDetail = (p) => {
   if (!p) return;
@@ -1935,6 +1925,7 @@ const openPersonnelDetail = (p) => {
   const src = p._recordType === 'relative' || p.relationshipName
     ? 'relatives'
     : (p._recordType === 'trip' || p.departureDate || p.destination || p.decisionNumber ? 'trips' : (drilldownSourceType.value || 'personnel'));
+  dialogTableId.value = src;
 
   // Luôn nạp ĐẦY ĐỦ các cột của bảng nguồn cho Form Chỉnh sửa (không bị giới hạn theo 5 cột của View)
   const allCols = getUnifiedTableColumns(src, {

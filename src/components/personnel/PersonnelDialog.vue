@@ -250,7 +250,8 @@ const initFormData = (val) => {
       }
     }
     const parsedVal = safeClone(val);
-    if (props.tableId && !parsedVal._tableId) {
+    const STANDARD_CORE_TABLES = ['personnel', 'relatives', 'trips'];
+    if (props.tableId && !STANDARD_CORE_TABLES.includes(props.tableId) && !parsedVal._tableId) {
       parsedVal._tableId = props.tableId;
     }
     delete parsedVal.custom_data;

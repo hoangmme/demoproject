@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bản thiết kế - Quản lý thông tin nhân sự và đảng viên đi nước ngoài</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,'Segoe UI',sans-serif;font-size:14px;color:#1A1815;background:#F5F3EE}
+header{background:#fff;border-bottom:1px solid #E3DFD6;padding:22px 32px;display:flex;align-items:center;gap:18px}
+header img{width:62px;height:auto;display:block}
+header .t1{font-size:13.5px;color:#7A736A}
+header .t2{font-size:18.5px;font-weight:700;letter-spacing:0.02em}
+main{max-width:1180px;margin:0 auto;padding:26px 32px 60px}
+.dan{font-size:13px;color:#7A736A;line-height:1.65;margin:0 0 24px;max-width:760px}
+.nhom{font-size:10.5px;font-weight:600;letter-spacing:0.09em;color:#7A736A;padding:22px 0 10px;border-top:1px solid #E3DFD6;margin-top:22px}
+.nhom:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.luoi{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+.the{display:flex;flex-direction:column;gap:5px;padding:14px 16px;background:#fff;border:1px solid #E3DFD6;border-radius:6px;text-decoration:none;color:inherit}
+.the:hover{border-color:#C4D7F5;background:#F3F7FE}
+.the .ma{font-size:10.5px;font-weight:600;letter-spacing:0.08em;color:#1D4ED8}
+.the .ten{font-size:14px;font-weight:600}
+.the .mo{font-size:12px;color:#7A736A;line-height:1.5}
+footer{max-width:1180px;margin:0 auto;padding:0 32px 40px;font-size:12px;color:#7A736A;line-height:1.6}
+</style>
+</head>
+<body>
+<header>
+  <img src="logo-cong-an.png" alt="Logo Bộ Công an">
+  <div>
+    <div class="t1">Công an Thành phố Hồ Chí Minh · Phòng An ninh chính trị nội bộ</div>
+    <div class="t2">QUẢN LÝ THÔNG TIN NHÂN SỰ VÀ ĐẢNG VIÊN ĐI NƯỚC NGOÀI</div>
+  </div>
+</header>
+<main>
+  <p class="dan">Bản thiết kế giao diện, 15 màn hình. Bấm vào một màn để mở; từ trong màn dùng thanh bên trái đi qua lại giữa các màn như phần mềm thật. Xem tốt nhất trên màn hình rộng từ 1366 điểm ảnh trở lên, bằng Chrome hoặc Edge.</p>
+<div class="nhom">TRA CỨU</div>
+<div class="luoi">
+<a class="the" href="01-dang-nhap.html"><span class="ma">01</span><span class="ten">Đăng nhập</span><span class="mo">Mật khẩu thử: matkhau</span></a>
+<a class="the" href="02-bang-dieu-khien.html"><span class="ma">02</span><span class="ten">Bảng điều khiển</span><span class="mo">5 ô cảnh báo, số liệu nhanh, sắp đi 30 ngày, hai biểu đồ</span></a>
+<a class="the" href="15-canh-bao.html"><span class="ma">15</span><span class="ten">Cảnh báo</span><span class="mo">Bảng đầy đủ, lọc theo 5 loại cảnh báo</span></a>
+<a class="the" href="03-danh-sach-chuyen-di.html"><span class="ma">03</span><span class="ten">Danh sách chuyến đi</span><span class="mo">30 cột, chọn cột hiển thị, kéo đổi thứ tự cột</span></a>
+<a class="the" href="04-danh-sach-can-bo.html"><span class="ma">04</span><span class="ten">Danh sách cán bộ</span><span class="mo">17 cột, chọn cột hiển thị</span></a>
+<a class="the" href="05-chi-tiet-can-bo.html"><span class="ma">05</span><span class="ten">Chi tiết cán bộ</span><span class="mo">Trang cuộn 5 mục, thân nhân theo phả hệ</span></a>
+<a class="the" href="06-tim-kiem-nang-cao.html"><span class="ma">06</span><span class="ten">Tìm kiếm nâng cao</span><span class="mo">Dựng điều kiện, bộ lọc đã lưu</span></a>
+</div>
+<div class="nhom">NHẬP LIỆU</div>
+<div class="luoi">
+<a class="the" href="07-form-can-bo.html"><span class="ma">07</span><span class="ten">Form cán bộ</span><span class="mo">13 trường cá nhân, 13 mục cần lưu ý</span></a>
+<a class="the" href="08-form-chuyen-di.html"><span class="ma">08</span><span class="ten">Form chuyến đi</span><span class="mo">7 nhóm trường, chọn nhiều quốc gia</span></a>
+<a class="the" href="09-form-than-nhan.html"><span class="ma">09</span><span class="ten">Form thân nhân</span><span class="mo">25 trường, yếu tố nước ngoài</span></a>
+</div>
+<div class="nhom">DỮ LIỆU</div>
+<div class="luoi">
+<a class="the" href="10-nhap-du-lieu-excel.html"><span class="ma">10</span><span class="ten">Nhập dữ liệu từ Excel</span><span class="mo">4 bước, sửa trực tiếp trong bảng</span></a>
+<a class="the" href="11-xuat-file.html"><span class="ma">11</span><span class="ten">Xuất file</span><span class="mo">Định dạng ràng buộc theo mẫu</span></a>
+</div>
+<div class="nhom">QUẢN TRỊ</div>
+<div class="luoi">
+<a class="the" href="12-nhat-ky.html"><span class="ma">12</span><span class="ten">Nhật ký</span><span class="mo">Lọc theo loại hành động</span></a>
+<a class="the" href="13-nguoi-dung-va-vai-tro.html"><span class="ma">13</span><span class="ten">Người dùng và vai trò</span><span class="mo">Hộp thoại thêm sửa, khóa tài khoản</span></a>
+<a class="the" href="14-danh-muc.html"><span class="ma">14</span><span class="ten">Danh mục</span><span class="mo">4 loại, sửa trong dòng</span></a>
+</div>
+</main>
+<footer>Bản ngày 20/8/2026. Toàn bộ số liệu trong bản thiết kế là dữ liệu mẫu hư cấu, không phải dữ liệu thật.<br>Tài liệu kỹ thuật cho lập trình viên nằm trong thư mục <b>ban-giao</b>.</footer>
+</body>
+</html>

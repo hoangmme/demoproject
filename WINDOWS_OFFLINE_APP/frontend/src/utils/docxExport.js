@@ -2,8 +2,18 @@ import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
-import { formatDate, evaluateFormula, resolveVirtualColumnValue, resolvePresence, isPresenceField } from './formatters';
+import {
+  formatDate,
+  evaluateFormula,
+  evaluateLookup,
+  evaluateRollup,
+  resolveVirtualColumnValue,
+  resolvePresence,
+  isPresenceField,
+  generateSlug,
+} from './formatters';
 import { getAppSettings } from '@/api/settings';
+import { getLinkedRowsByConfig, findUnifiedTable, getTableKeyColId } from './tableRegistry';
 
 /**
  * Chuyển đổi giá trị của một cột thành chuỗi hiển thị chuẩn cho file xuất (Word / PDF)
@@ -215,16 +225,56 @@ export function formatFieldValueForDocx(val, col = {}) {
 export function preparePersonnelDocxData(person, index = 0, personnelStore = null, currentUser = null, exportOptions = {}) {
   if (!person) return {};
 
-  const cd = person.custom_data || {};
+  // TUYỆT ĐỐI KHÔNG FALLBACK / KHÔNG HOÁN ĐỔI BẢN GHI:
+  // Xuất tài liệu phản ánh trung thực 100% bản ghi được chọn (person)
+  const effectivePerson = { ...person };
+  let cd = effectivePerson.custom_data || {};
+  if (typeof cd === 'string') {
+    try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+  }
 
-  // Lấy khóa chính CCCD Cán bộ, Chuyến đi, Thân nhân theo Cài đặt hệ thống (Primary Unique Key)
+  // 1. Nhận diện bảng của bản ghi hiện tại
+  const curTableId = exportOptions?.tableId || effectivePerson._tableId || (effectivePerson._recordType === 'trip' ? 'trips' : effectivePerson._recordType === 'relative' ? 'relatives' : 'personnel');
+  const curTable = findUnifiedTable(curTableId, { personnelStore });
+
+  // 2. Thu thập danh mục cột động của bảng hiện tại
+  let curCols = exportOptions?.columns;
+  if (!curCols || !curCols.length) {
+    curCols = curTable?.getColumns ? curTable.getColumns(personnelStore) : (curTable?.columns || []);
+  }
+  if (!curCols || !curCols.length) {
+    if (curTableId === 'trips') {
+      curCols = (personnelStore?.importMappingTrips || []).flatMap((g) => g.columns || []);
+    } else if (curTableId === 'relatives') {
+      curCols = (personnelStore?.importMappingRelative || []).flatMap((g) => g.columns || []);
+    } else {
+      curCols = (personnelStore?.importMappingPersonnel || []).flatMap((g) => g.columns || []);
+    }
+  }
+
+  // 3. Khóa chính và Tiêu đề bản ghi hiện tại (Dựa trên cấu hình cột isKey & isTitle)
+  const keyCol = (curCols || []).find((c) => c.isKey || c.format === 'id');
   const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-  const tKeyField = personnelStore?.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
-  const rKeyField = personnelStore?.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
-  const canBoCccd = String(person[pKeyField] ?? cd?.[pKeyField] ?? person.cccdparent ?? cd?.cccdparent ?? '').trim();
-  const pId = String(person.id || '').trim();
-  const pCode = String(person.code || '').trim();
+  const curKeyVal = String(
+    (keyCol ? (effectivePerson[keyCol.id] ?? cd[keyCol.id]) : null) ??
+    effectivePerson[pKeyField] ?? cd[pKeyField] ??
+    effectivePerson.code ?? cd.code ?? effectivePerson.id ?? ''
+  ).trim();
 
+  const titleCol = (curCols || []).find((c) => c.isTitle);
+  const pNameField = personnelStore?.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
+  const curTitleVal = String(
+    (titleCol ? (effectivePerson[titleCol.id] ?? cd[titleCol.id]) : null) ??
+    effectivePerson[pNameField] ?? cd[pNameField] ??
+    effectivePerson.name ?? cd.name ??
+    effectivePerson.ho_ten ?? cd.ho_ten ??
+    effectivePerson.relativeName ?? cd.relativeName ??
+    effectivePerson.countryName ?? cd.countryName ??
+    effectivePerson.title ?? cd.title ??
+    'Bản ghi'
+  ).trim();
+
+  // 4. Thời gian và Người xuất
   const today = new Date();
   const dayStr = String(today.getDate()).padStart(2, '0');
   const monthStr = String(today.getMonth() + 1).padStart(2, '0');
@@ -238,7 +288,6 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     const fn = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
     exporterName = fn || currentUser.name || currentUser.fullName || currentUser.first_name || (currentUser.email ? currentUser.email.split('@')[0] : '');
   }
-
   if (!exporterName || exporterName === 'Quản trị viên') {
     try {
       const raw = localStorage.getItem('mvp_session');
@@ -253,13 +302,12 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       }
     } catch (e) {}
   }
-
   if (!exporterName || exporterName === 'Quản trị viên') {
     exporterName = currentUser?.first_name || 'Admin';
   }
 
   const data = {
-    // 1. Hệ thống & Người xuất & Ngày giờ
+    // Thông tin hệ thống
     stt: index + 1,
     ho_ten_nguoi_xuat: exporterName,
     current_date: `${dayStr}/${monthStr}/${yearStr}`,
@@ -281,434 +329,196 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     gio_phut_xuat: `${hourStr}:${minuteStr}`,
     ngay_gio_xuat: `${dayStr}/${monthStr}/${yearStr} ${hourStr}:${minuteStr}`,
 
-    // 2. Thông tin cơ bản
-    code: person.code || '',
-    ma_can_bo: person.code || '',
-    name: person.name || '',
-    ho_ten: person.name || '',
-    otherName: person.otherName || '',
-    ten_khac: person.otherName || '',
-    birthYear: formatDate(person.birthYear || cd.birthYear),
-    nam_sinh: formatDate(person.birthYear || cd.birthYear),
-    ngay_sinh: formatDate(person.birthYear || cd.birthYear),
-    gender: person.gender || cd.gender || '',
-    gioi_tinh: person.gender || cd.gender || '',
-    ethnicity: person.ethnicity || cd.ethnicity || 'Kinh',
-    dan_toc: person.ethnicity || cd.ethnicity || 'Kinh',
-    religion: person.religion || cd.religion || 'Không',
-    ton_giao: person.religion || cd.religion || 'Không',
-    hometown: person.hometown || cd.hometown || '',
-    que_quan: person.hometown || cd.hometown || '',
-
-    // 3. Đơn vị & Chức vụ
-    departmentName: person.departmentName || (person.departmentId && personnelStore ? personnelStore.getDepartmentName(person.departmentId) : '') || cd.departmentName || '',
-    don_vi: person.departmentName || (person.departmentId && personnelStore ? personnelStore.getDepartmentName(person.departmentId) : '') || cd.departmentName || '',
-    positionName: person.positionName || person.position || cd.positionName || cd.position || '',
-    chuc_vu: person.positionName || person.position || cd.positionName || cd.position || '',
-
-    // 4. Cư trú & Giấy tờ
-    thuongTru: person.thuongTru || cd.thuongTru || '',
-    thuong_tru: person.thuongTru || cd.thuongTru || '',
-    tamTru: person.tamTru || cd.tamTru || '',
-    tam_tru: person.tamTru || cd.tamTru || '',
-    cccdparent: person.cccdparent || cd.cccdparent || '',
-    passportPersonal: person.passportPersonal || person.hcCaNhan || cd.passportPersonal || cd.hcCaNhan || '',
-    ho_chieu_ca_nhan: person.passportPersonal || person.hcCaNhan || cd.passportPersonal || cd.hcCaNhan || '',
-    passportOfficial: person.passportOfficial || person.hcCongVu || cd.passportOfficial || cd.hcCongVu || '',
-    ho_chieu_cong_vu: person.passportOfficial || person.hcCongVu || cd.passportOfficial || cd.hcCongVu || '',
-    tcctResult: person.tcctResult || person.kqThamTra || cd.tcctResult || cd.kqThamTra || '',
-    ket_qua_tham_tra: person.tcctResult || person.kqThamTra || cd.tcctResult || cd.kqThamTra || '',
+    // Định danh bản ghi chính
+    code: curKeyVal,
+    id: String(effectivePerson.id || curKeyVal),
+    name: curTitleVal,
+    ho_ten: curTitleVal,
+    title: curTitleVal,
   };
 
-  const generateSlug = (str) => {
-    if (!str) return '';
-    return str
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[đĐ]/g, 'd')
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
-  };
+  // 5. Trích xuất 100% ĐỘNG tất cả các cột của bản ghi chính
+  (curCols || []).forEach((col) => {
+    if (!col.id || col.id === 'stt') return;
+    let val = effectivePerson[col.id] !== undefined ? effectivePerson[col.id] : cd[col.id];
 
-  // 5. Làm phẳng toàn bộ custom_data & các cột tùy chỉnh
-  Object.entries(cd).forEach(([key, val]) => {
-    if (val !== undefined && val !== null) {
-      if (Array.isArray(val)) {
-        // Nếu là mảng table_loop dạng [{ col0, col1... }]
-        data[key] = val.map((row, rIdx) => {
-          if (typeof row === 'object' && row !== null) {
-            return { stt: rIdx + 1, ...row };
-          }
-          return { stt: rIdx + 1, val: row };
-        });
-      } else if (typeof val === 'object' && val instanceof Date) {
-        data[key] = formatDate(val);
-      } else {
-        const str = String(val).trim();
-        if (/^\d{4}-\d{2}-\d{2}/.test(str) || str.includes('GMT') || str.includes('T00:')) {
-          data[key] = formatDate(str);
-        } else {
-          data[key] = str;
-        }
+    if (col.format === 'formula') {
+      const res = evaluateFormula(effectivePerson, col);
+      val = res?.label || res?.shortLabel || '';
+    } else if (col.format === 'lookup') {
+      val = evaluateLookup ? evaluateLookup(effectivePerson, col, personnelStore) : val;
+    } else if (col.format === 'rollup') {
+      val = evaluateRollup ? evaluateRollup(effectivePerson, col, personnelStore) : val;
+    } else if (col.format === 'presence' || col.id === 'presenceStatus' || col.id === '_presenceStatus' || isPresenceField(col.id)) {
+      const pRes = resolvePresence(effectivePerson);
+      val = pRes?.label || pRes?.shortLabel || '';
+    } else if (col.format === 'date') {
+      val = formatDate(val);
+    } else if (col.isVirtual || col.id.startsWith('_')) {
+      val = resolveVirtualColumnValue(effectivePerson, col.id);
+    } else {
+      val = formatFieldValueForDocx(val, col);
+    }
 
-        // Tự động phân rã trường Hộp kiểm + Nhập Text (checkbox_text) và Hộp kiểm (checkbox)
-        const parts = str.split(/[,;]/);
-        const allLabels = [];
-        const allDetails = [];
+    data[col.id] = val ?? '';
+    data[`label_${col.id}`] = col.label || col.id;
 
-        parts.forEach((p) => {
-          const trimmed = p.trim();
-          if (trimmed) {
-            const colon = trimmed.indexOf(':');
-            if (colon !== -1) {
-              const optName = trimmed.substring(0, colon).trim();
-              const optDetail = trimmed.substring(colon + 1).trim();
-              const optSlug = generateSlug(optName);
-              if (optName) allLabels.push(optName);
-              if (optDetail) allDetails.push(optDetail);
-              if (optSlug) {
-                data[`label_${key}_${optSlug}`] = optName;
-                data[`name_${key}_${optSlug}`] = optName;
-                data[`${key}_${optSlug}`] = optDetail || optName;
-                data[`detail_${key}_${optSlug}`] = optDetail;
-                data[`full_${key}_${optSlug}`] = optDetail ? `${optName}: ${optDetail}` : optName;
-                data[`is_${key}_${optSlug}`] = 'X';
-                data[`check_${key}_${optSlug}`] = '☑';
-              }
-            } else {
-              const optSlug = generateSlug(trimmed);
-              allLabels.push(trimmed);
-              if (optSlug) {
-                data[`label_${key}_${optSlug}`] = trimmed;
-                data[`name_${key}_${optSlug}`] = trimmed;
-                data[`${key}_${optSlug}`] = trimmed;
-                data[`detail_${key}_${optSlug}`] = '';
-                data[`full_${key}_${optSlug}`] = trimmed;
-                data[`is_${key}_${optSlug}`] = 'X';
-                data[`check_${key}_${optSlug}`] = '☑';
-              }
+    // Phân rã options & chips nếu có nhiều giá trị hoặc dấu hai chấm
+    if (typeof val === 'string' && (val.includes(':') || val.includes(';') || val.includes(','))) {
+      const parts = val.split(/[,;]/);
+      const allLabels = [];
+      const allDetails = [];
+      parts.forEach((p) => {
+        const trimmed = p.trim();
+        if (trimmed) {
+          const colon = trimmed.indexOf(':');
+          if (colon !== -1) {
+            const optName = trimmed.substring(0, colon).trim();
+            const optDetail = trimmed.substring(colon + 1).trim();
+            const optSlug = generateSlug(optName);
+            if (optName) allLabels.push(optName);
+            if (optDetail) allDetails.push(optDetail);
+            if (optSlug) {
+              data[`label_${col.id}_${optSlug}`] = optName;
+              data[`name_${col.id}_${optSlug}`] = optName;
+              data[`${col.id}_${optSlug}`] = optDetail || optName;
+              data[`detail_${col.id}_${optSlug}`] = optDetail;
+              data[`full_${col.id}_${optSlug}`] = optDetail ? `${optName}: ${optDetail}` : optName;
+              data[`is_${col.id}_${optSlug}`] = 'X';
+              data[`check_${col.id}_${optSlug}`] = '☑';
+            }
+          } else {
+            const optSlug = generateSlug(trimmed);
+            allLabels.push(trimmed);
+            if (optSlug) {
+              data[`label_${col.id}_${optSlug}`] = trimmed;
+              data[`name_${col.id}_${optSlug}`] = trimmed;
+              data[`${col.id}_${optSlug}`] = trimmed;
+              data[`detail_${col.id}_${optSlug}`] = '';
+              data[`full_${col.id}_${optSlug}`] = trimmed;
+              data[`is_${col.id}_${optSlug}`] = 'X';
+              data[`check_${col.id}_${optSlug}`] = '☑';
             }
           }
-        });
+        }
+      });
+      data[`label_${col.id}`] = allLabels.join(', ') || val;
+      data[`detail_${col.id}`] = allDetails.join('; ');
+    }
+  });
 
-        // Thẻ CHUNG cho toàn bộ trường (Ví dụ {label_purpose}, {detail_purpose})
-        data[`label_${key}`] = allLabels.join(', ');
-        data[`name_${key}`] = allLabels.join(', ');
-        data[`detail_${key}`] = allDetails.join('; ');
-        data[`content_${key}`] = allDetails.join('; ');
+  // Nạp thêm các thuộc tính custom_data còn lại (ngoài danh mục cột)
+  Object.entries(cd).forEach(([k, v]) => {
+    if (data[k] === undefined && v !== undefined && v !== null) {
+      if (Array.isArray(v)) {
+        data[k] = v.map((r, idx) => (typeof r === 'object' && r !== null ? { stt: idx + 1, ...r } : { stt: idx + 1, val: r }));
+      } else if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) {
+        data[k] = formatDate(v);
+      } else {
+        data[k] = formatFieldValueForDocx(v);
       }
     }
   });
 
-  // 5b. Đánh giá các cột công thức (formula) & cột ảo (virtual) của Cán bộ
-  const pGroups = personnelStore?.importMappingPersonnel || [];
-  pGroups.forEach((grp) => {
-    (grp.columns || []).forEach((col) => {
-      if (!col.id || col.id === 'stt') return;
-      if (col.format === 'formula') {
-        const res = evaluateFormula(person, col);
-        const val = res?.label || res?.shortLabel || '';
-        if (val) {
-          data[col.id] = val;
-        }
-      } else if (col.isVirtual || col.id?.startsWith('_')) {
-        const val = resolveVirtualColumnValue(person, col.id);
-        if (val) {
-          data[col.id] = val;
-        }
-      }
-    });
-  });
+  // Các alias phổ biến tiện cho template Word đã tạo trước đây (backward-compatible)
+  if (!data.gioi_tinh && data.gender) data.gioi_tinh = data.gender;
+  if (!data.dan_toc && data.ethnicity) data.dan_toc = data.ethnicity;
+  if (!data.ton_giao && data.religion) data.ton_giao = data.religion;
+  if (!data.que_quan && data.hometown) data.que_quan = data.hometown;
+  if (!data.don_vi && (data.departmentName || data.don_vi_cong_tac)) data.don_vi = data.departmentName || data.don_vi_cong_tac;
+  if (!data.chuc_vu && (data.positionName || data.position)) data.chuc_vu = data.positionName || data.position;
+  if (!data.thuong_tru && (data.thuongTru || data.permanentAddress)) data.thuong_tru = data.thuongTru || data.permanentAddress;
+  if (!data.tam_tru && (data.tamTru || data.currentAddress)) data.tam_tru = data.tamTru || data.currentAddress;
+  if (!data.cccd && (data.cccdparent || data.cccdthannhan || data.cccdchuyendi)) data.cccd = data.cccdparent || data.cccdthannhan || data.cccdchuyendi;
+  if (!data.so_cccd && data.cccd) data.so_cccd = data.cccd;
+  if (!data.ngay_sinh && data.birthYear) data.ngay_sinh = data.birthYear;
+  if (!data.nam_sinh && data.birthYear) data.nam_sinh = data.birthYear;
+  if (!data.quoc_gia && (data.countryName || data.quoc_gia_xuat_canh)) data.quoc_gia = data.countryName || data.quoc_gia_xuat_canh;
+  if (!data.ngay_di && (data.departureDate || data.ngay_xuat_canh)) data.ngay_di = data.departureDate || data.ngay_xuat_canh;
+  if (!data.ngay_ve && (data.arrivalDate || data.ngay_nhap_canh)) data.ngay_ve = data.arrivalDate || data.ngay_nhap_canh;
+  if (!data.so_quyet_dinh && (data.decisionNumber || data.so_qd)) data.so_quyet_dinh = data.decisionNumber || data.so_qd;
 
-  // 6. Danh sách Thân nhân (Loop {#than_nhan} / {#relatives})
-  let rawRelatives = Array.isArray(person.relatives) && person.relatives.length > 0 ? person.relatives : (cd.relatives || []);
-  if ((!rawRelatives || rawRelatives.length === 0) && personnelStore?.relativesList?.length > 0) {
-    rawRelatives = personnelStore.relativesList.filter((r) => {
-      const rParent = String(r.cccdparent || r.personnelId || r.personnelCode || '').trim();
-      return (canBoCccd && rParent === canBoCccd) || (pId && rParent === pId) || (pCode && rParent === pCode);
+  // 6. NẠP CÁC BẢNG LIÊN KẾT 100% ĐỘNG THEO TÍNH NĂNG "KHÓA & LIÊN KẾT BẢNG"
+  const canIncludeRelatives = exportOptions?.includeRelatives !== false;
+  const canIncludeTrips = exportOptions?.includeTrips !== false;
+  const canIncludePersonnel = exportOptions?.includePersonnel !== false;
+
+  // A. Thân nhân liên kết
+  let processedRelatives = [];
+  if (curTableId !== 'relatives' && canIncludeRelatives) {
+    const rawRelatives = getLinkedRowsByConfig(effectivePerson, curTableId, 'relatives', personnelStore);
+    const relCols = (personnelStore?.importMappingRelative || []).flatMap((g) => g.columns || []);
+    processedRelatives = (rawRelatives || []).map((rel, rIdx) => {
+      const rcd = rel.custom_data || {};
+      const relObj = {
+        stt: rIdx + 1,
+        code: rel.code || `TN-${String(rIdx + 1).padStart(4, '0')}`,
+        name: rel.relativeName || rel.name || rel.ho_ten || '',
+        ho_ten: rel.relativeName || rel.name || rel.ho_ten || '',
+        relativeName: rel.relativeName || rel.name || rel.ho_ten || '',
+        relationshipName: rel.relationshipName || rel.relationship || rel.quan_he || '',
+        quan_he: rel.relationshipName || rel.relationship || rel.quan_he || '',
+      };
+      relCols.forEach((col) => {
+        if (!col.id || col.id === 'stt') return;
+        let rVal = rel[col.id] !== undefined ? rel[col.id] : rcd[col.id];
+        if (col.format === 'formula') rVal = evaluateFormula(rel, col)?.label || '';
+        else if (col.format === 'date') rVal = formatDate(rVal);
+        else rVal = formatFieldValueForDocx(rVal, col);
+        relObj[col.id] = rVal ?? '';
+        relObj[`tn_${col.id}`] = rVal ?? '';
+      });
+      return relObj;
     });
   }
-
-  const processedRelatives = (rawRelatives || []).map((rel, rIdx) => {
-    const rcd = rel.custom_data || {};
-    const relObj = {
-      stt: rIdx + 1,
-      code: rel.code || `TN-${String(rIdx + 1).padStart(4, '0')}`,
-      ma_than_nhan: rel.code || `TN-${String(rIdx + 1).padStart(4, '0')}`,
-      relativeName: rel.relativeName || rel.name || rel.ho_ten || '',
-      ho_ten_tn: rel.relativeName || rel.name || rel.ho_ten || '',
-      ho_ten: rel.relativeName || rel.name || rel.ho_ten || '',
-      name: rel.relativeName || rel.name || rel.ho_ten || '',
-      relationshipName: rel.relationshipName || rel.relationship || rel.quan_he || '',
-      relationship: rel.relationshipName || rel.relationship || rel.quan_he || '',
-      quan_he: rel.relationshipName || rel.relationship || rel.quan_he || '',
-      birthYear: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
-      nam_sinh: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
-      ngay_sinh: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
-      tn_nam_sinh: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
-      tn_ngay_sinh: formatDate(rel.birthYear || rcd.birthYear || rel.nam_sinh),
-      gender: rel.gender || rcd.gender || rel.gioi_tinh || '',
-      gioi_tinh: rel.gender || rcd.gender || rel.gioi_tinh || '',
-      tn_gioi_tinh: rel.gender || rcd.gender || rel.gioi_tinh || '',
-      countryName: rel.countryName || rel.country || rel.quoc_gia || '',
-      quoc_gia: rel.countryName || rel.country || rel.quoc_gia || '',
-      tn_quoc_gia: rel.countryName || rel.country || rel.quoc_gia || '',
-      nationality: rel.nationality || rcd.nationality || rel.quoc_tich || '',
-      quoc_tich: rel.nationality || rcd.nationality || rel.quoc_tich || '',
-      residenceStatus: rel.residenceStatus || rcd.residenceStatus || '',
-      tinh_trang_cu_tru: rel.residenceStatus || rcd.residenceStatus || '',
-      job: rel.job || rel.occupation || rcd.job || rel.nghe_nghiep || '',
-      nghe_nghiep: rel.job || rel.occupation || rcd.job || rel.nghe_nghiep || '',
-      tn_nghe_nghiep: rel.job || rel.occupation || rcd.job || rel.nghe_nghiep || '',
-      workplace: rel.workplace || rcd.workplace || rel.noi_lam_viec || '',
-      noi_lam_viec: rel.workplace || rcd.workplace || rel.noi_lam_viec || '',
-      address: rel.address || rel.currentAddress || rcd.address || rel.dia_chi || '',
-      dia_chi: rel.address || rel.currentAddress || rcd.address || rel.dia_chi || '',
-      tn_dia_chi: rel.address || rel.currentAddress || rcd.address || rel.dia_chi || '',
-      cccdparent: rel.cccdparent || rcd.cccdparent || person.cccdparent || '',
-      cccdthannhan: rel.cccdthannhan || rel.cccd || rcd.cccdthannhan || '',
-      tn_cccd: rel.cccdthannhan || rcd.cccdthannhan || rel.cccd || '',
-    };
-
-    // Đẩy các cột custom của thân nhân vào (với cả key gốc và key có prefix tn_)
-    Object.entries({ ...rcd, ...rel }).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && k !== 'custom_data') {
-        const cleanV = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : formatFieldValueForDocx(v);
-        relObj[k] = cleanV;
-        relObj[`tn_${k}`] = cleanV;
-      }
-    });
-
-    // Đánh giá các cột công thức & cột ảo của Thân nhân
-    const rGroups = personnelStore?.importMappingRelative || [];
-    rGroups.forEach((grp) => {
-      (grp.columns || []).forEach((col) => {
-        if (!col.id || col.id === 'stt') return;
-        if (col.format === 'formula') {
-          const res = evaluateFormula(rel, col);
-          const val = res?.label || res?.shortLabel || '';
-          if (val) {
-            relObj[col.id] = val;
-            relObj[`tn_${col.id}`] = val;
-          }
-        } else if (col.isVirtual || col.id?.startsWith('_')) {
-          const val = resolveVirtualColumnValue({ ...rel, rawPerson: person }, col.id);
-          if (val) {
-            relObj[col.id] = val;
-            relObj[`tn_${col.id}`] = val;
-          }
-        }
-      });
-    });
-
-    return relObj;
-  });
-
   data.than_nhan = processedRelatives;
   data.relatives = processedRelatives;
   data.so_luong_than_nhan = processedRelatives.length;
   data.total_relatives = processedRelatives.length;
-
-  // Flatten top 10 thân nhân ra ngoài root context để dùng được ngay cả khi mẫu Word không dùng thẻ lặp
+  // Flatten top 10 thân nhân ra root context
   processedRelatives.forEach((relItem, idx) => {
     const num = idx + 1;
     data[`tn_${num}_ho_ten`] = relItem.ho_ten;
     data[`tn_${num}_quan_he`] = relItem.quan_he;
-    data[`tn_${num}_nam_sinh`] = relItem.nam_sinh;
-    data[`tn_${num}_nghe_nghiep`] = relItem.nghe_nghiep;
-    data[`tn_${num}_quoc_gia`] = relItem.quoc_gia;
-    data[`tn_${num}_dia_chi`] = relItem.dia_chi;
-    data[`tn_${num}_cccd`] = relItem.cccdthannhan;
+    data[`tn_${num}_nam_sinh`] = relItem.nam_sinh || relItem.birthYear || '';
+    data[`tn_${num}_nghe_nghiep`] = relItem.job || relItem.nghe_nghiep || '';
+    data[`tn_${num}_quoc_gia`] = relItem.countryName || relItem.quoc_gia || '';
+    data[`tn_${num}_dia_chi`] = relItem.address || relItem.dia_chi || '';
+    data[`tn_${num}_cccd`] = relItem.cccdthannhan || relItem.cccd || '';
   });
 
-  // 7. Danh sách Chuyến đi Nước ngoài (Loop {#xuatnhapcanh} / {#chuyen_di} / {#trips})
-  let rawTrips = Array.isArray(person.trips) && person.trips.length > 0
-    ? person.trips
-    : (cd.trips || cd['Khối B: Chuyến đi nước ngoài'] || []);
-
-  if (typeof rawTrips === 'string' && rawTrips.trim()) {
-    try {
-      const parsed = JSON.parse(rawTrips);
-      if (Array.isArray(parsed)) rawTrips = parsed;
-    } catch (e) {}
-  }
-
-  // Nếu vẫn rỗng, tìm trong personnelStore.tripsList / allTrips
-  if ((!rawTrips || rawTrips.length === 0) && personnelStore?.allTrips?.length > 0) {
-    rawTrips = personnelStore.allTrips.filter((t) => {
-      const tPId = String(t.personnelId || t.rawPerson?.id || '').trim();
-      const tCode = String(t.personnelCode || t.rawPerson?.code || '').trim();
-      const tCccd = String(t.cccdparent || t.parentCccd || '').trim();
-      return (pId && tPId === pId) || (pCode && tCode === pCode) || (canBoCccd && tCccd === canBoCccd);
-    });
-  }
-
-  const processedTrips = (rawTrips || []).map((trip, tIdx) => {
-    let tcd = {};
-    if (trip.custom_data) {
-      try {
-        tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data) : trip.custom_data;
-      } catch (e) {}
-    }
-    const combinedTrip = { ...tcd, ...trip };
-
-    const tripObj = {
-      stt: tIdx + 1,
-      countryName: combinedTrip.countryName || combinedTrip.country || combinedTrip.quoc_gia_xuat_canh || combinedTrip.quoc_gia || '',
-      quoc_gia: combinedTrip.countryName || combinedTrip.country || combinedTrip.quoc_gia_xuat_canh || combinedTrip.quoc_gia || '',
-      quoc_gia_den: combinedTrip.countryName || combinedTrip.country || combinedTrip.quoc_gia_xuat_canh || combinedTrip.quoc_gia || '',
-      quoc_gia_xuat_canh: combinedTrip.countryName || combinedTrip.country || combinedTrip.quoc_gia_xuat_canh || combinedTrip.quoc_gia || '',
-      purpose: combinedTrip.purpose || combinedTrip.muc_dich_xuat_canh || combinedTrip.muc_dich || '',
-      muc_dich: combinedTrip.purpose || combinedTrip.muc_dich_xuat_canh || combinedTrip.muc_dich || '',
-      muc_dich_xuat_canh: combinedTrip.purpose || combinedTrip.muc_dich_xuat_canh || combinedTrip.muc_dich || '',
-      departureDate: formatDate(combinedTrip.departureDate || combinedTrip.approvedDepartureDate || combinedTrip.ngay_xuat_canh),
-      ngay_di: formatDate(combinedTrip.departureDate || combinedTrip.approvedDepartureDate || combinedTrip.ngay_xuat_canh),
-      ngay_xuat_canh: formatDate(combinedTrip.departureDate || combinedTrip.approvedDepartureDate || combinedTrip.ngay_xuat_canh),
-      arrivalDate: formatDate(combinedTrip.arrivalDate || combinedTrip.approvedArrivalDate || combinedTrip.ngay_nhap_canh),
-      ngay_ve: formatDate(combinedTrip.arrivalDate || combinedTrip.approvedArrivalDate || combinedTrip.ngay_nhap_canh),
-      ngay_nhap_canh: formatDate(combinedTrip.arrivalDate || combinedTrip.approvedArrivalDate || combinedTrip.ngay_nhap_canh),
-      approvedDepartureDate: formatDate(combinedTrip.approvedDepartureDate || combinedTrip.departureDate || combinedTrip.ngay_xuat_canh),
-      ngay_di_duoc_duyet: formatDate(combinedTrip.approvedDepartureDate || combinedTrip.departureDate || combinedTrip.ngay_xuat_canh),
-      approvedArrivalDate: formatDate(combinedTrip.approvedArrivalDate || combinedTrip.arrivalDate || combinedTrip.thoi_gian_duyet_ve),
-      ngay_ve_duoc_duyet: formatDate(combinedTrip.approvedArrivalDate || combinedTrip.arrivalDate || combinedTrip.thoi_gian_duyet_ve),
-      thoi_gian_duyet_ve: formatDate(combinedTrip.approvedArrivalDate || combinedTrip.arrivalDate || combinedTrip.thoi_gian_duyet_ve),
-      approvedExtensionDate: formatDate(combinedTrip.approvedExtensionDate || combinedTrip.gia_han_den_ngay),
-      ngay_gia_han: formatDate(combinedTrip.approvedExtensionDate || combinedTrip.gia_han_den_ngay),
-      gia_han_den_ngay: formatDate(combinedTrip.approvedExtensionDate || combinedTrip.gia_han_den_ngay),
-      decisionNumber: combinedTrip.decisionNumber || combinedTrip.decision || combinedTrip.so_quyet_dinh || '',
-      so_quyet_dinh: combinedTrip.decisionNumber || combinedTrip.decision || combinedTrip.so_quyet_dinh || '',
-      decisionDate: formatDate(combinedTrip.decisionDate || combinedTrip.ngay_ban_hanh || combinedTrip.ngay_quyet_dinh),
-      ngay_ban_hanh: formatDate(combinedTrip.decisionDate || combinedTrip.ngay_ban_hanh || combinedTrip.ngay_quyet_dinh),
-      decisionIssuer: combinedTrip.decisionIssuer || combinedTrip.co_quan_ban_hanh || '',
-      co_quan_ban_hanh: combinedTrip.decisionIssuer || combinedTrip.co_quan_ban_hanh || '',
-      tripCount: combinedTrip.tripCount || '1',
-      so_lan: combinedTrip.tripCount || '1',
-      dienDaoTao: combinedTrip.dienDaoTao || '',
-      dien_dao_tao: combinedTrip.dienDaoTao || '',
-      noiDaoTao: combinedTrip.noiDaoTao || '',
-      noi_dao_tao: combinedTrip.noiDaoTao || '',
-      vaiTroDaoTao: combinedTrip.vaiTroDaoTao || '',
-      vai_tro_dao_tao: combinedTrip.vaiTroDaoTao || '',
-      donViChonCu: combinedTrip.donViChonCu || '',
-      don_vi_chon_cu: combinedTrip.donViChonCu || '',
-      kinhPhiDaoTao: combinedTrip.kinhPhiDaoTao || '',
-      kinh_phi_dao_tao: combinedTrip.kinhPhiDaoTao || '',
-      thoiGianDaoTao: combinedTrip.thoiGianDaoTao || '',
-      thoi_gian_dao_tao: combinedTrip.thoiGianDaoTao || '',
-      truongDoan: combinedTrip.truongDoan || '',
-      truong_doan: combinedTrip.truongDoan || '',
-      thanhPhanDoan: combinedTrip.thanhPhanDoan || '',
-      thanh_phan_doan: combinedTrip.thanhPhanDoan || '',
-      soLuongThanhVien: combinedTrip.soLuongThanhVien || '',
-      so_luong_thanh_vien: combinedTrip.soLuongThanhVien || '',
-      fundingName: combinedTrip.fundingName || combinedTrip.funding || combinedTrip.nguon_kinh_phi || combinedTrip.kinh_phi || '',
-      kinh_phi: combinedTrip.fundingName || combinedTrip.funding || combinedTrip.nguon_kinh_phi || combinedTrip.kinh_phi || '',
-      nguon_kinh_phi: combinedTrip.fundingName || combinedTrip.funding || combinedTrip.nguon_kinh_phi || combinedTrip.kinh_phi || '',
-      bao_cao_ket_qua: combinedTrip.bao_cao_ket_qua || combinedTrip.baoCaoKetQua || '',
-      nop_ho_chieu_cong_vu: combinedTrip.nop_ho_chieu_cong_vu || combinedTrip.nopHoChieuCongVu || '',
-      destinationDetails: combinedTrip.destinationDetails || '',
-      dia_diem_cu_the: combinedTrip.destinationDetails || '',
-      status: combinedTrip.status || '',
-      trang_thai: combinedTrip.status || '',
-    };
-
-    const isInternalId = (val) => !val || String(val).startsWith('cd_') || String(val).startsWith('trip_') || String(val).startsWith('rel_') || String(val).startsWith('p_');
-    const directTripCccd = combinedTrip[tKeyField] ?? combinedTrip.cccdchuyendi ?? combinedTrip.cccd;
-    const travelerCccd = !isInternalId(directTripCccd) ? String(directTripCccd).trim() : '';
-    
-    tripObj.cccdchuyendi = travelerCccd;
-    tripObj.cccd_chuyen_di = travelerCccd;
-    tripObj.cccd_nguoi_di = travelerCccd;
-    tripObj.cccd = travelerCccd;
-    tripObj.cccdparent = canBoCccd;
-    tripObj.cccd_can_bo = canBoCccd;
-
-    Object.entries(combinedTrip).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && k !== 'custom_data') {
-        tripObj[k] = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : formatFieldValueForDocx(v);
-      }
-    });
-
-    // Phân rã tự động các trường checkbox / checkbox_text trong chuyến đi (purpose, fundingName, kinhPhiDaoTao, v.v.)
-    Object.entries(tripObj).forEach(([k, v]) => {
-      if (typeof v === 'string' && (v.includes(':') || v.includes(';') || v.includes(','))) {
-        const parts = v.split(/[,;]/);
-        const allLabels = [];
-        const allDetails = [];
-        parts.forEach((p) => {
-          const trimmed = p.trim();
-          if (trimmed) {
-            const colon = trimmed.indexOf(':');
-            if (colon !== -1) {
-              const optName = trimmed.substring(0, colon).trim();
-              const optDetail = trimmed.substring(colon + 1).trim();
-              const optSlug = generateSlug(optName);
-              if (optName) allLabels.push(optName);
-              if (optDetail) allDetails.push(optDetail);
-              if (optSlug) {
-                tripObj[`label_${k}_${optSlug}`] = optName;
-                tripObj[`${k}_${optSlug}`] = optDetail || optName;
-                tripObj[`detail_${k}_${optSlug}`] = optDetail;
-                tripObj[`is_${k}_${optSlug}`] = 'X';
-              }
-            } else {
-              const optSlug = generateSlug(trimmed);
-              allLabels.push(trimmed);
-              if (optSlug) {
-                tripObj[`label_${k}_${optSlug}`] = trimmed;
-                tripObj[`${k}_${optSlug}`] = trimmed;
-                tripObj[`is_${k}_${optSlug}`] = 'X';
-              }
-            }
-          }
-        });
-        tripObj[`label_${k}`] = allLabels.join(', ');
-        tripObj[`name_${k}`] = allLabels.join(', ');
-        tripObj[`detail_${k}`] = allDetails.join('; ');
-        tripObj[`content_${k}`] = allDetails.join('; ');
-      } else if (typeof v === 'string' && v) {
-        tripObj[`label_${k}`] = v;
-      }
-    });
-
-    // Aliases đặc biệt cho kinh phí chuyến đi (label_funding2, label_funding, label_kinh_phi)
-    if (tripObj.fundingName) {
-      tripObj.label_funding2 = tripObj.label_fundingName || tripObj.fundingName;
-      tripObj.label_funding = tripObj.label_fundingName || tripObj.fundingName;
-      tripObj.label_kinh_phi = tripObj.label_fundingName || tripObj.fundingName;
-    }
-    if (tripObj.kinhPhiDaoTao) {
-      tripObj.label_kinhPhiDaoTao = tripObj.label_kinhPhiDaoTao || tripObj.kinhPhiDaoTao;
-        tripObj.label_kinh_phi_dao_tao = tripObj.label_kinhPhiDaoTao || tripObj.kinhPhiDaoTao;
-    }
-
-    // Đánh giá các cột công thức, cột ảo và trạng thái hiện diện của Chuyến đi
-    const tGroups = personnelStore?.importMappingTrips || [];
-    tGroups.forEach((grp) => {
-      (grp.columns || []).forEach((col) => {
+  // B. Chuyến đi liên kết
+  let processedTrips = [];
+  if (curTableId !== 'trips' && canIncludeTrips) {
+    const rawTrips = getLinkedRowsByConfig(effectivePerson, curTableId, 'trips', personnelStore);
+    const tripCols = (personnelStore?.importMappingTrips || []).flatMap((g) => g.columns || []);
+    processedTrips = (rawTrips || []).map((trip, tIdx) => {
+      const tcd = trip.custom_data || {};
+      const tripObj = {
+        stt: tIdx + 1,
+        countryName: trip.countryName || trip.quoc_gia_xuat_canh || trip.quoc_gia || '',
+        quoc_gia: trip.countryName || trip.quoc_gia_xuat_canh || trip.quoc_gia || '',
+        purpose: trip.purpose || trip.muc_dich_xuat_canh || trip.muc_dich || '',
+        muc_dich: trip.purpose || trip.muc_dich_xuat_canh || trip.muc_dich || '',
+        departureDate: formatDate(trip.departureDate || trip.approvedDepartureDate || trip.ngay_xuat_canh),
+        ngay_xuat_canh: formatDate(trip.departureDate || trip.approvedDepartureDate || trip.ngay_xuat_canh),
+        arrivalDate: formatDate(trip.arrivalDate || trip.approvedArrivalDate || trip.ngay_nhap_canh),
+        ngay_nhap_canh: formatDate(trip.arrivalDate || trip.approvedArrivalDate || trip.ngay_nhap_canh),
+        decisionNumber: trip.decisionNumber || trip.so_quyet_dinh || '',
+        so_quyet_dinh: trip.decisionNumber || trip.so_quyet_dinh || '',
+      };
+      tripCols.forEach((col) => {
         if (!col.id || col.id === 'stt') return;
-        if (col.format === 'formula') {
-          const res = evaluateFormula(combinedTrip, col);
-          const val = res?.label || res?.shortLabel || '';
-          if (val) {
-            tripObj[col.id] = val;
-          }
-        } else if (col.format === 'presence' || col.id === 'presenceStatus' || col.id === '_presenceStatus' || isPresenceField(col.id)) {
-          const pRes = resolvePresence(combinedTrip);
-          tripObj[col.id] = pRes.label || pRes.shortLabel || '';
-        } else if (col.isVirtual || col.id?.startsWith('_')) {
-          const val = resolveVirtualColumnValue({ ...combinedTrip, rawPerson: person }, col.id);
-          if (val) {
-            tripObj[col.id] = val;
-          }
-        }
+        let tVal = trip[col.id] !== undefined ? trip[col.id] : tcd[col.id];
+        if (col.format === 'formula') tVal = evaluateFormula(trip, col)?.label || '';
+        else if (col.format === 'presence' || isPresenceField(col.id)) tVal = resolvePresence(trip)?.label || '';
+        else if (col.format === 'date') tVal = formatDate(tVal);
+        else tVal = formatFieldValueForDocx(tVal, col);
+        tripObj[col.id] = tVal ?? '';
       });
+      return tripObj;
     });
-
-    return tripObj;
-  });
-
+  }
   data.xuatnhapcanh = processedTrips;
   data.xuat_nhap_canh = processedTrips;
   data.chuyen_di = processedTrips;
@@ -716,27 +526,52 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   data.so_luong_chuyen_di = processedTrips.length;
   data.total_trips = processedTrips.length;
 
-  // 7b. Các bảng tùy chọn / Bảng mới (Custom Tables)
+  // C. Cán bộ liên kết (Khi xuất dữ liệu Chuyến đi hoặc Thân nhân)
+  let processedPersonnel = [];
+  if (curTableId !== 'personnel' && canIncludePersonnel) {
+    const rawPersonnel = getLinkedRowsByConfig(effectivePerson, curTableId, 'personnel', personnelStore);
+    const pCols = (personnelStore?.importMappingPersonnel || []).flatMap((g) => g.columns || []);
+    processedPersonnel = (rawPersonnel || []).map((p, pIdx) => {
+      const pcd = p.custom_data || {};
+      const pObj = {
+        stt: pIdx + 1,
+        code: p.code || '',
+        name: p.name || p.fullName || p.ho_ten || '',
+        ho_ten: p.name || p.fullName || p.ho_ten || '',
+      };
+      pCols.forEach((col) => {
+        if (!col.id || col.id === 'stt') return;
+        let pVal = p[col.id] !== undefined ? p[col.id] : pcd[col.id];
+        if (col.format === 'formula') pVal = evaluateFormula(p, col)?.label || '';
+        else if (col.format === 'date') pVal = formatDate(pVal);
+        else pVal = formatFieldValueForDocx(pVal, col);
+        pObj[col.id] = pVal ?? '';
+      });
+      return pObj;
+    });
+    if (processedPersonnel.length > 0) {
+      const p0 = processedPersonnel[0];
+      data.ten_can_bo = p0.name;
+      data.ma_can_bo = p0.code;
+      Object.entries(p0).forEach(([k, v]) => {
+        data[`cb_${k}`] = v;
+        data[`can_bo_${k}`] = v;
+      });
+    }
+  }
+  data.can_bo = processedPersonnel;
+  data.personnel = processedPersonnel;
+  data.so_luong_can_bo = processedPersonnel.length;
+
+  // D. Các bảng tùy chọn / Bảng mới (Custom Tables) liên kết
   const customTables = (exportOptions && Array.isArray(exportOptions.customTables)) ? exportOptions.customTables : [];
   customTables.forEach((ct) => {
     const loopTag = `bang_${ct.id.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-    const rawRows = ct.rows || [];
-    let matchedRows = rawRows;
-    const hasPersonLink = rawRows.some((r) => r.personnelId || r.cccdparent || r.personnelCode);
-    if (hasPersonLink) {
-      matchedRows = rawRows.filter((r) => {
-        const rPId = String(r.personnelId || '').trim();
-        const rCode = String(r.personnelCode || '').trim();
-        const rCccd = String(r.cccdparent || r.cccd || '').trim();
-        return (pId && rPId === pId) || (pCode && rCode === pCode) || (canBoCccd && rCccd === canBoCccd);
-      });
-    }
-    const processedRows = matchedRows.map((row, rIdx) => {
+    const rawRows = getLinkedRowsByConfig(effectivePerson, curTableId, ct.id, personnelStore);
+    const processedRows = (rawRows || []).map((row, rIdx) => {
       const rowObj = { stt: rIdx + 1 };
-      Object.entries(row).forEach(([k, v]) => {
-        if (v !== undefined && v !== null) {
-          rowObj[k] = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : formatFieldValueForDocx(v);
-        }
+      (ct.columns || []).forEach((c) => {
+        rowObj[c.id] = formatFieldValueForDocx(row[c.id] ?? row.custom_data?.[c.id], c);
       });
       return rowObj;
     });
@@ -744,173 +579,59 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     data[`so_luong_${loopTag}`] = processedRows.length;
   });
 
-  // 8. Tự động sinh nội dung toàn bộ các nhóm {formgroup} (Khối A + các Khối bổ sung + Thân nhân)
+  // 7. Sinh nội dung {formgroup} động 100% từ cấu hình
   const formgroupLines = [];
   const selFields = exportOptions?.selectedFieldIds;
-  const selRelFields = exportOptions?.selectedRelativeFieldIds;
-
-  const isFieldSelected = (id, fallbackIds = []) => {
-    if (!selFields || !Array.isArray(selFields)) return true;
-    if (selFields.includes(id)) return true;
-    return fallbackIds.some((fId) => selFields.includes(fId));
-  };
-
   const showColNumbers = exportOptions?.showColumnNumbers === true;
   let runningColIndex = 1;
   const pfx = () => (showColNumbers ? ` (${runningColIndex++})` : '');
 
-  const group0Lines = [];
-  if (isFieldSelected('name', ['ho_ten', 'full_name'])) group0Lines.push(`- Họ và tên${pfx()}: ${data.name || ''}`);
-  if (isFieldSelected('otherName', ['ten_khac', 'bi_danh']) && data.otherName) group0Lines.push(`- Tên gọi khác${pfx()}: ${data.otherName}`);
-  if (isFieldSelected('birthYear', ['nam_sinh', 'ngay_sinh', 'dob'])) group0Lines.push(`- Ngày, tháng, năm sinh${pfx()}: ${data.birthYear || ''}`);
-  if (isFieldSelected('gender', ['gioi_tinh', 'sex'])) group0Lines.push(`- Giới tính${pfx()}: ${data.gender || ''}`);
-  if (isFieldSelected('ethnicity', ['dan_toc'])) group0Lines.push(`- Dân tộc${pfx()}: ${data.ethnicity || 'Kinh'}`);
-  if (isFieldSelected('religion', ['ton_giao'])) group0Lines.push(`- Tôn giáo${pfx()}: ${data.religion || 'Không'}`);
-  if (isFieldSelected('hometown', ['que_quan', 'native_place'])) group0Lines.push(`- Quê quán${pfx()}: ${data.hometown || ''}`);
-  if (isFieldSelected('departmentName', ['departmentId', 'don_vi', 'don_vi_cong_tac'])) group0Lines.push(`- Đơn vị công tác${pfx()}: ${data.departmentName || ''}`);
-  if (isFieldSelected('chuc_vu', ['position', 'chuc_danh'])) group0Lines.push(`- Chức vụ${pfx()}: ${data.chuc_vu || ''}`);
-  if (isFieldSelected('thuongTru', ['permanentAddress', 'ho_khau', 'thuong_tru'])) group0Lines.push(`- Nơi đăng ký hộ khẩu thường trú${pfx()}: ${data.thuongTru || ''}`);
-  if (isFieldSelected('tamTru', ['currentAddress', 'noi_o', 'tam_tru'])) group0Lines.push(`- Nơi ở hiện nay${pfx()}: ${data.tamTru || ''}`);
-  if (isFieldSelected('cccdparent', ['cccd', 'so_cccd', 'so_cmnd'])) group0Lines.push(`- Số Căn cước công dân${pfx()}: ${data.cccdparent || ''}`);
-  if (isFieldSelected('passportPersonal', ['hcCaNhan', 'ho_chieu_ca_nhan'])) group0Lines.push(`- Số Hộ chiếu cá nhân${pfx()}: ${data.passportPersonal || ''}`);
-  if (isFieldSelected('passportOfficial', ['hcCongVu', 'ho_chieu_cong_vu'])) group0Lines.push(`- Số Hộ chiếu công vụ${pfx()}: ${data.passportOfficial || ''}`);
-  if (isFieldSelected('politicalVerificationResult', ['tcctResult', 'ket_qua_tham_tra', 'tcct'])) group0Lines.push(`- Kết quả thẩm tra tiêu chuẩn chính trị${pfx()}: ${data.politicalVerificationResult || ''}`);
+  // Nhóm 1: Bản ghi chính
+  const mainLines = [];
+  (curCols || []).forEach((col) => {
+    if (!col.id || col.id === 'stt' || col.includeInExport === false) return;
+    if (selFields && Array.isArray(selFields) && !selFields.includes(col.id)) return;
+    const label = col.label || col.id;
+    const val = data[col.id] !== undefined ? data[col.id] : formatFieldValueForDocx(effectivePerson[col.id], col);
+    mainLines.push(`- ${label}${pfx()}: ${val || ''}`);
+  });
 
   let secNum = 1;
-  if (group0Lines.length > 0) {
-    formgroupLines.push(`${secNum++}. Thông tin cá nhân`);
-    formgroupLines.push(...group0Lines);
+  if (mainLines.length > 0) {
+    const tableTitle = exportOptions?.tableTitles?.main || curTable?.title || (curTableId === 'trips' ? 'Thông tin Chuyến đi' : curTableId === 'relatives' ? 'Thông tin Thân nhân' : 'Thông tin Cán bộ');
+    formgroupLines.push(`${secNum++}. ${tableTitle}`);
+    formgroupLines.push(...mainLines);
   }
 
-  // Thêm các nhóm bổ sung từ store theo tùy chọn tích chọn
-  const allowedGroups = exportOptions?.selectedGroupIndices;
-  if (personnelStore?.importMappingPersonnel) {
-    personnelStore.importMappingPersonnel.forEach((grp, gIdx) => {
-      if (gIdx === 0) return;
-      if (allowedGroups && !allowedGroups.includes(gIdx)) return;
-      
-      const groupLines = [];
-      (grp.columns || []).forEach((col) => {
-        if (!col.id || col.id === 'stt' || col.includeInExport === false) return;
-        if (selFields && Array.isArray(selFields) && !selFields.includes(col.id)) return;
-        let label = col.label || col.id;
-        if (showColNumbers && !label.includes('(')) label = `${label}${pfx()}`;
-        const rawVal = cd[col.id] !== undefined ? cd[col.id] : (person[col.id] !== undefined ? person[col.id] : data[col.id]);
-        const formattedVal = formatFieldValueForDocx(rawVal, col);
-        groupLines.push(`- ${label}: ${formattedVal}`);
-      });
-
-      if (groupLines.length > 0) {
-        formgroupLines.push('');
-        const grpTitle = (grp.group || 'Thông tin bổ sung').replace(/^[\*\-\d\.\s]+/, '').trim();
-        formgroupLines.push(`${secNum++}. ${grpTitle}`);
-        formgroupLines.push(...groupLines);
+  // Nhóm 2: Cán bộ liên quan (nếu bản ghi chính không phải cán bộ và có liên kết)
+  if (curTableId !== 'personnel' && processedPersonnel.length > 0) {
+    formgroupLines.push('');
+    formgroupLines.push(`${secNum++}. Cán bộ chủ quản / liên quan`);
+    const p0 = processedPersonnel[0];
+    const pCols = (personnelStore?.importMappingPersonnel || []).flatMap((g) => g.columns || []);
+    pCols.forEach((col) => {
+      if (!col.id || col.id === 'stt' || col.includeInExport === false) return;
+      if (p0[col.id]) {
+        formgroupLines.push(`   - ${col.label || col.id}: ${p0[col.id]}`);
       }
     });
   }
 
-  // Thêm thân nhân nếu được tích chọn
-  const canIncludeRelatives = exportOptions?.includeRelatives !== false;
-  if (canIncludeRelatives && processedRelatives.length > 0) {
+  // Nhóm 3: Thân nhân liên quan
+  if (curTableId !== 'relatives' && canIncludeRelatives && processedRelatives.length > 0) {
     formgroupLines.push('');
-    formgroupLines.push(`${secNum++}. Thông tin thân nhân liên quan`);
-    
-    // Lấy cấu hình các nhóm cột thân nhân từ store
-    const relGroups = personnelStore?.importMappingRelative || [];
-    
+    formgroupLines.push(`${secNum++}. Thông tin thân nhân liên quan (${processedRelatives.length})`);
     processedRelatives.forEach((rel, rIdx) => {
-      const rcd = rel.custom_data || {};
-      const relHeader = `▶ Thân nhân ${rIdx + 1} (${rel.relationshipName || rel.quan_he || 'Thân nhân'}): ${rel.relativeName || rel.name || rel.ho_ten || ''}`;
-      formgroupLines.push(relHeader);
-      
-      let rColIdx = 1;
-      if (relGroups.length > 0) {
-        relGroups.forEach((rGrp) => {
-          (rGrp.columns || []).forEach((col) => {
-            if (!col.id || col.id === 'stt' || col.includeInExport === false) return;
-            if (selRelFields && Array.isArray(selRelFields) && !selRelFields.includes(col.id)) return;
-            
-            let label = col.label || col.id;
-            if (showColNumbers && !label.includes('(')) label = `${label} (${rColIdx++})`;
-            
-            const rawVal = rcd[col.id] !== undefined ? rcd[col.id] : (rel[col.id] !== undefined ? rel[col.id] : rel[`tn_${col.id}`]);
-            const formattedVal = formatFieldValueForDocx(rawVal, col);
-            formgroupLines.push(`   - ${label}: ${formattedVal !== undefined && formattedVal !== null ? formattedVal : ''}`);
-          });
-        });
-      } else {
-        const defaultFields = [
-          { id: 'relativeName', label: 'Họ và tên' },
-          { id: 'relationshipName', label: 'Quan hệ' },
-          { id: 'birthYear', label: 'Năm sinh' },
-          { id: 'gender', label: 'Giới tính' },
-          { id: 'countryName', label: 'Quốc gia' },
-          { id: 'job', label: 'Nghề nghiệp' },
-          { id: 'address', label: 'Nơi ở hiện nay' },
-          { id: 'cccdthannhan', label: 'Số Căn cước công dân' },
-        ];
-        defaultFields.forEach((col, idx) => {
-          if (!selRelFields || selRelFields.includes(col.id) || selRelFields.includes(`tn_${col.id}`) || selRelFields.includes('name') || selRelFields.includes('ho_ten')) {
-            const rawVal = rel[col.id];
-            const formattedVal = formatFieldValueForDocx(rawVal, col);
-            const numSuffix = showColNumbers ? ` (${idx + 1})` : '';
-            formgroupLines.push(`   - ${col.label}${numSuffix}: ${formattedVal || ''}`);
-          }
-        });
-      }
+      formgroupLines.push(`▶ Thân nhân ${rIdx + 1}: ${rel.ho_ten || rel.name} (${rel.quan_he || rel.relationshipName || 'Thân nhân'})`);
     });
   }
 
-  // Thêm chuyến đi nước ngoài nếu được tích chọn
-  const canIncludeTrips = exportOptions?.includeTrips !== false;
-  const selTripFields = exportOptions?.selectedTripFieldIds;
-  if (canIncludeTrips && processedTrips.length > 0) {
+  // Nhóm 4: Chuyến đi liên quan
+  if (curTableId !== 'trips' && canIncludeTrips && processedTrips.length > 0) {
     formgroupLines.push('');
-    formgroupLines.push(`${secNum++}. Thông tin chuyến đi nước ngoài (xuất nhập cảnh)`);
-
-    const tripGroups = personnelStore?.importMappingTrips || [];
-
+    formgroupLines.push(`${secNum++}. Thông tin chuyến đi nước ngoài (${processedTrips.length})`);
     processedTrips.forEach((trip, tIdx) => {
-      const dFrom = formatDate(trip.ngay_xuat_canh || trip.ngay_di || trip.departureDate);
-      const dTo = formatDate(trip.ngay_nhap_canh || trip.ngay_ve || trip.arrivalDate);
-      const dateRangeStr = (dFrom || dTo) ? ` (Từ ${dFrom || '-'} đến ${dTo || '-'})` : '';
-      const tripHeader = `▶ Chuyến ${tIdx + 1}: Quốc gia ${trip.quoc_gia || trip.countryName || 'Chưa rõ'}${dateRangeStr}`;
-      formgroupLines.push(tripHeader);
-
-      let tColIdx = 1;
-      if (tripGroups.length > 0) {
-        tripGroups.forEach((tGrp) => {
-          (tGrp.columns || []).forEach((col) => {
-            if (!col.id || col.id === 'stt' || col.includeInExport === false) return;
-            if (selTripFields && Array.isArray(selTripFields) && !selTripFields.includes(col.id)) return;
-
-            let label = col.label || col.id;
-            if (showColNumbers && !label.includes('(')) label = `${label} (${tColIdx++})`;
-
-            const rawVal = trip[col.id];
-            const formattedVal = formatFieldValueForDocx(rawVal, col);
-            formgroupLines.push(`   - ${label}: ${formattedVal !== undefined && formattedVal !== null ? formattedVal : ''}`);
-          });
-        });
-      } else {
-        const defaultTripFields = [
-          { id: 'quoc_gia', label: 'Quốc gia / Nơi đến' },
-          { id: 'ngay_xuat_canh', label: 'Ngày xuất cảnh' },
-          { id: 'ngay_nhap_canh', label: 'Ngày nhập cảnh' },
-          { id: 'thoi_gian_duyet_ve', label: 'Thời gian duyệt về' },
-          { id: 'so_quyet_dinh', label: 'Số quyết định duyệt' },
-          { id: 'kinh_phi', label: 'Nguồn kinh phí' },
-          { id: 'muc_dich', label: 'Mục đích chuyến đi' },
-        ];
-        defaultTripFields.forEach((col, idx) => {
-          if (!selTripFields || selTripFields.includes(col.id)) {
-            const rawVal = trip[col.id];
-            const formattedVal = formatFieldValueForDocx(rawVal, col);
-            const numSuffix = showColNumbers ? ` (${idx + 1})` : '';
-            formgroupLines.push(`   - ${col.label}${numSuffix}: ${formattedVal || ''}`);
-          }
-        });
-      }
+      formgroupLines.push(`▶ Chuyến ${tIdx + 1}: ${trip.quoc_gia || trip.countryName || 'Chưa rõ'} (${trip.ngay_xuat_canh || '-'} đến ${trip.ngay_nhap_canh || '-'})`);
     });
   }
 
@@ -935,7 +656,14 @@ export function generateDocxBlob(templateBuffer, contextData) {
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
-      nullGetter: () => '', // Tránh hiện undefined nếu thẻ tag trống
+      nullGetter: (part) => {
+        // Nếu là thẻ lặp (loop) hoặc thẻ điều kiện, trả về mảng rỗng để không phá vỡ cấu trúc lặp
+        if (part && (part.module === 'loop' || part.module === 'condition' || part.type === 'placeholder' && part.raw?.startsWith('#'))) {
+          return [];
+        }
+        // Với các trường dữ liệu bình thường, nếu không có dữ liệu trả về '-' trang nhã thay vì để trống trơn
+        return '-';
+      },
     });
 
     doc.render(contextData);
@@ -1198,7 +926,9 @@ export async function convertDocxBlobToPdfBlob(docxBlob) {
 export async function exportSinglePersonnelDocx(templateBuffer, person, filename, personnelStore, outputFormat = 'docx', currentUser = null, exportOptions = {}) {
   const contextData = preparePersonnelDocxData(person, 0, personnelStore, currentUser, exportOptions);
   const docxBlob = generateDocxBlob(templateBuffer, contextData);
-  const baseName = filename || `Ho_so_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}`;
+  const pName = contextData.name || person?.name || person?.personnelName || person?.ho_ten || 'Can_bo';
+  const pCode = contextData.code || person?.code || '';
+  const baseName = filename || `Ho_so_${pName.replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}${pCode ? '_' + pCode : ''}`;
 
   if (outputFormat === 'pdf') {
     const pdfBlob = await convertDocxBlobToPdfBlob(docxBlob);
@@ -1236,7 +966,9 @@ export async function exportMultiplePersonnelZip(templateBuffer, personnelList, 
     const person = personnelList[i];
     const contextData = preparePersonnelDocxData(person, i, personnelStore, currentUser, exportOptions);
     const docxBlob = generateDocxBlob(templateBuffer, contextData);
-    const baseName = `${String(i + 1).padStart(3, '0')}_${(person.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}_${person.code || ''}`;
+    const pName = contextData.name || person.name || person.personnelName || person.ho_ten || 'Can_bo';
+    const pCode = contextData.code || person.code || '';
+    const baseName = `${String(i + 1).padStart(3, '0')}_${pName.replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}${pCode ? '_' + pCode : ''}`;
 
     if (outputFormat === 'pdf') {
       const pdfBlob = await convertDocxBlobToPdfBlob(docxBlob);
@@ -1309,8 +1041,13 @@ export async function createDynamicDocxTemplateBlob(
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`;
 
+  const curTableId = options?.tableId || 'personnel';
+  const showColNumbers = options?.showColumnNumbers === true;
+  let dynColIdx = 1;
+  const pfx = () => (showColNumbers ? ` (${dynColIdx++})` : '');
+
+  // Header
   let bodyContent = `
-    <!-- HEADER CHUẨN QUỐC GIA -->
     <w:p>
       <w:pPr><w:jc w:val="center"/></w:pPr>
       <w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="1E293B"/></w:rPr><w:t>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</w:t></w:r>
@@ -1326,175 +1063,91 @@ export async function createDynamicDocxTemplateBlob(
     <w:p/>
     <w:p>
       <w:pPr><w:jc w:val="center"/></w:pPr>
-      <w:r><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="0F172A"/></w:rPr><w:t>THÔNG TIN CÁN BỘ, THÂN NHÂN</w:t></w:r>
+      <w:r><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="0F172A"/></w:rPr><w:t>THÔNG TIN TRÍCH XUẤT HỒ SƠ DỮ LIỆU</w:t></w:r>
     </w:p>
     <w:p/>
   `;
 
-  const showColNumbers = typeof options === 'object' && options !== null && options.showColumnNumbers === true;
-  let dynColIdx = 1;
-  const pfx = () => (showColNumbers ? ` (${dynColIdx++})` : '');
-
-  const isFieldIncluded = (id, fallbackIds = []) => {
-    if (!selectedFieldIds || !Array.isArray(selectedFieldIds)) return true;
-    if (selectedFieldIds.includes(id)) return true;
-    return fallbackIds.some((fId) => selectedFieldIds.includes(fId));
-  };
-
-  const romanNumerals = ['I', 'II', 'III', 'IV', 'V'];
+  const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
   let secIdx = 0;
 
-  // 1. BẢNG CÁN BỘ (HỒ SƠ CHÍNH)
-  let personnelTableBody = '';
-  const processedFieldIds = new Set();
-
-  if (isFieldIncluded('name', ['ho_ten', 'full_name'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Họ và tên${pfx()}: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>`;
-    processedFieldIds.add('name');
-  }
-  if (isFieldIncluded('otherName', ['ten_khac', 'bi_danh'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tên gọi khác${pfx()}: </w:t></w:r><w:r><w:t>{otherName}</w:t></w:r></w:p>`;
-    processedFieldIds.add('otherName');
-  }
-  if (isFieldIncluded('birthYear', ['nam_sinh', 'ngay_sinh', 'dob'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Ngày, tháng, năm sinh${pfx()}: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>`;
-    processedFieldIds.add('birthYear');
-  }
-  if (isFieldIncluded('gender', ['gioi_tinh', 'sex'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Giới tính${pfx()}: </w:t></w:r><w:r><w:t>{gender}</w:t></w:r></w:p>`;
-    processedFieldIds.add('gender');
-  }
-  if (isFieldIncluded('ethnicity', ['dan_toc'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Dân tộc${pfx()}: </w:t></w:r><w:r><w:t>{ethnicity}</w:t></w:r></w:p>`;
-    processedFieldIds.add('ethnicity');
-  }
-  if (isFieldIncluded('religion', ['ton_giao'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Tôn giáo${pfx()}: </w:t></w:r><w:r><w:t>{religion}</w:t></w:r></w:p>`;
-    processedFieldIds.add('religion');
-  }
-  if (isFieldIncluded('hometown', ['que_quan', 'native_place'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Quê quán${pfx()}: </w:t></w:r><w:r><w:t>{hometown}</w:t></w:r></w:p>`;
-    processedFieldIds.add('hometown');
-  }
-  if (isFieldIncluded('departmentName', ['departmentId', 'don_vi', 'don_vi_cong_tac'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Đơn vị công tác${pfx()}: </w:t></w:r><w:r><w:t>{departmentName}</w:t></w:r></w:p>`;
-    processedFieldIds.add('departmentName');
-    processedFieldIds.add('departmentId');
-  }
-  if (isFieldIncluded('chuc_vu', ['position', 'chuc_danh'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Chức vụ${pfx()}: </w:t></w:r><w:r><w:t>{chuc_vu}</w:t></w:r></w:p>`;
-    processedFieldIds.add('chuc_vu');
-    processedFieldIds.add('position');
-  }
-  if (isFieldIncluded('thuongTru', ['permanentAddress', 'ho_khau', 'thuong_tru'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi đăng ký hộ khẩu thường trú${pfx()}: </w:t></w:r><w:r><w:t>{thuongTru}</w:t></w:r></w:p>`;
-    processedFieldIds.add('thuongTru');
-  }
-  if (isFieldIncluded('tamTru', ['currentAddress', 'noi_o', 'tam_tru'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Nơi ở hiện nay${pfx()}: </w:t></w:r><w:r><w:t>{tamTru}</w:t></w:r></w:p>`;
-    processedFieldIds.add('tamTru');
-  }
-  if (isFieldIncluded('cccdparent', ['cccd', 'so_cccd', 'so_cmnd'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Căn cước công dân${pfx()}: </w:t></w:r><w:r><w:t>{cccdparent}</w:t></w:r></w:p>`;
-    processedFieldIds.add('cccdparent');
-    processedFieldIds.add('cccd');
-  }
-  if (isFieldIncluded('passportPersonal', ['hcCaNhan', 'ho_chieu_ca_nhan'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu cá nhân${pfx()}: </w:t></w:r><w:r><w:t>{hcCaNhan}</w:t></w:r></w:p>`;
-    processedFieldIds.add('passportPersonal');
-    processedFieldIds.add('hcCaNhan');
-  }
-  if (isFieldIncluded('passportOfficial', ['hcCongVu', 'ho_chieu_cong_vu'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Số Hộ chiếu công vụ${pfx()}: </w:t></w:r><w:r><w:t>{hcCongVu}</w:t></w:r></w:p>`;
-    processedFieldIds.add('passportOfficial');
-    processedFieldIds.add('hcCongVu');
-  }
-  if (isFieldIncluded('politicalVerificationResult', ['tcctResult', 'ket_qua_tham_tra', 'tcct'])) {
-    personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- Kết quả thẩm tra tiêu chuẩn chính trị${pfx()}: </w:t></w:r><w:r><w:t>{tcctResult}</w:t></w:r></w:p>`;
-    processedFieldIds.add('politicalVerificationResult');
-    processedFieldIds.add('tcctResult');
+  // 1. BẢNG CHÍNH (DYNAMIC 100% THEO CỘT ĐƯỢC CHỌN)
+  let mainCols = options?.columns;
+  if (!mainCols || !mainCols.length) {
+    if (curTableId === 'trips') {
+      mainCols = (tripsGroups || []).flatMap((g) => g.columns || []);
+    } else if (curTableId === 'relatives') {
+      mainCols = (relativeGroups || []).flatMap((g) => g.columns || []);
+    } else {
+      mainCols = (personnelGroups || []).flatMap((g) => g.columns || []);
+    }
   }
 
-  // Bổ sung các cột khác của Bảng Cán bộ phẳng hoàn toàn
-  (personnelGroups || []).forEach((grp) => {
-    (grp.columns || []).forEach((col) => {
-      if (!col.id || col.id === 'stt' || col.includeInExport === false || processedFieldIds.has(col.id)) return;
-      if (selectedFieldIds && Array.isArray(selectedFieldIds) && !selectedFieldIds.includes(col.id)) return;
-      processedFieldIds.add(col.id);
+  let mainTableBody = '';
+  const processedMainCols = new Set();
+  (mainCols || []).forEach((col) => {
+    if (!col.id || col.id === 'stt' || col.includeInExport === false || processedMainCols.has(col.id)) return;
+    if (selectedFieldIds && Array.isArray(selectedFieldIds) && !selectedFieldIds.includes(col.id)) return;
+    processedMainCols.add(col.id);
 
-      let colLabel = escapeXml(col.label || col.id);
-      if (showColNumbers && !colLabel.includes('(')) {
-        colLabel = `${colLabel}${pfx()}`;
-      }
-      const colId = escapeXml(col.id);
-      if (col.format === 'table_loop') {
-        personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}:</w:t></w:r></w:p>`;
-        personnelTableBody += `<w:p><w:r><w:t>{#${colId}}+ Dòng {stt}: {col0} | {col1} | {col2} | {col3}{/${colId}}</w:t></w:r></w:p>`;
-      } else {
-        personnelTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
-      }
-    });
+    let colLabel = escapeXml(col.label || col.id);
+    if (showColNumbers && !colLabel.includes('(')) {
+      colLabel = `${colLabel}${pfx()}`;
+    }
+    const colId = escapeXml(col.id);
+    if (col.format === 'table_loop') {
+      mainTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}:</w:t></w:r></w:p>`;
+      mainTableBody += `<w:p><w:r><w:t>{#${colId}}+ Dòng {stt}: {col0} | {col1} | {col2} | {col3}{/${colId}}</w:t></w:r></w:p>`;
+    } else {
+      mainTableBody += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>- ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
+    }
   });
 
-  const formatTableTitle = (title, defaultTitle) => {
-    const t = (title || defaultTitle || '').trim();
-    if (!t) return defaultTitle.toUpperCase();
-    if (/^(bảng|thông tin)/i.test(t)) return t.toUpperCase();
-    return `BẢNG ${t}`.toUpperCase();
-  };
-
-  const mainTitle = formatTableTitle(options?.tableTitles?.personnel, 'THÔNG TIN CÁN BỘ (HỒ SƠ CHÍNH)');
-  const relTitle = formatTableTitle(options?.tableTitles?.relatives, 'THÔNG TIN THÂN NHÂN LIÊN QUAN');
-  const tripTitle = formatTableTitle(options?.tableTitles?.trips, 'THÔNG TIN CHUYẾN ĐI (XUẤT NHẬP CẢNH)');
-
-  if (personnelTableBody) {
+  const mainTitle = escapeXml((options?.tableTitles?.main || options?.tableTitles?.[curTableId] || 'THÔNG TIN BẢN GHI').toUpperCase());
+  if (mainTableBody) {
     const secPrefix = romanNumerals[secIdx++] || 'I';
     bodyContent += `<w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. ${mainTitle}</w:t></w:r></w:p>`;
-    bodyContent += personnelTableBody;
+    bodyContent += mainTableBody;
     bodyContent += `<w:p/>`;
   }
 
-  // 2. BẢNG THÂN NHÂN LIÊN QUAN
-  if (includeRelatives) {
+  // 2. BẢNG CÁN BỘ LIÊN KẾT (Nếu bản ghi chính không phải là Cán bộ và có includePersonnel)
+  const includePersonnel = options?.includePersonnel === true;
+  if (curTableId !== 'personnel' && includePersonnel) {
     const secPrefix = romanNumerals[secIdx++] || 'II';
+    const pTitle = escapeXml((options?.tableTitles?.personnel || 'CÁN BỘ LIÊN HỆ / CHỦ QUẢN').toUpperCase());
+    bodyContent += `
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. ${pTitle}</w:t></w:r></w:p>
+      <w:p><w:r><w:t>{#can_bo}</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Cán bộ {stt}: {name} ({code})</w:t></w:r></w:p>
+    `;
+    const activePCols = (personnelGroups || []).flatMap((g) => g.columns || []).filter((c) => c.id && c.id !== 'stt' && (!options?.selectedPersonnelFieldIds || options.selectedPersonnelFieldIds.includes(c.id)));
+    activePCols.forEach((col) => {
+      bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${escapeXml(col.label || col.id)}: </w:t></w:r><w:r><w:t>{${escapeXml(col.id)}}</w:t></w:r></w:p>`;
+    });
+    bodyContent += `
+      <w:p/>
+      <w:p><w:r><w:t>{/can_bo}</w:t></w:r></w:p>
+      <w:p/>
+    `;
+  }
+
+  // 3. BẢNG THÂN NHÂN LIÊN QUAN (Nếu bản ghi chính không phải là Thân nhân và có includeRelatives)
+  if (curTableId !== 'relatives' && includeRelatives) {
+    const secPrefix = romanNumerals[secIdx++] || 'III';
+    const relTitle = escapeXml((options?.tableTitles?.relatives || 'THÔNG TIN THÂN NHÂN LIÊN QUAN').toUpperCase());
     bodyContent += `
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. ${relTitle}</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#than_nhan}</w:t></w:r></w:p>
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Thân nhân {stt} ({relationshipName}): {name}</w:t></w:r></w:p>
     `;
 
-    const activeRelCols = [];
-    (relativeGroups || []).forEach((rGrp) => {
-      (rGrp.columns || []).forEach((col) => {
-        if (col.id && col.id !== 'stt' && col.includeInExport !== false && !activeRelCols.some((x) => x.id === col.id)) {
-          if (!selectedRelativeFieldIds || selectedRelativeFieldIds.includes(col.id)) {
-            activeRelCols.push(col);
-          }
-        }
-      });
+    const activeRelCols = (relativeGroups || []).flatMap((rGrp) => rGrp.columns || []).filter((c) => c.id && c.id !== 'stt' && (!selectedRelativeFieldIds || selectedRelativeFieldIds.includes(c.id)));
+    activeRelCols.forEach((col, relColIdx) => {
+      let colLabel = escapeXml(col.label || col.id);
+      if (showColNumbers && !colLabel.includes('(')) colLabel = `${colLabel} (${relColIdx + 1})`;
+      bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${colLabel}: </w:t></w:r><w:r><w:t>{${escapeXml(col.id)}}</w:t></w:r></w:p>`;
     });
-
-    if (activeRelCols.length > 0) {
-      activeRelCols.forEach((col, relColIdx) => {
-        let colLabel = escapeXml(col.label || col.id);
-        if (showColNumbers && !colLabel.includes('(')) {
-          colLabel = `${colLabel} (${relColIdx + 1})`;
-        }
-        const colId = escapeXml(col.id);
-        bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
-      });
-    } else {
-      const pTN = (num) => (showColNumbers ? ` (${num})` : '');
-      bodyContent += `
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Họ và tên${pTN(1)}: </w:t></w:r><w:r><w:t>{name}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quan hệ${pTN(2)}: </w:t></w:r><w:r><w:t>{relationshipName}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Năm sinh${pTN(3)}: </w:t></w:r><w:r><w:t>{birthYear}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quê quán${pTN(4)}: </w:t></w:r><w:r><w:t>{hometownTN}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nghề nghiệp${pTN(5)}: </w:t></w:r><w:r><w:t>{occupation}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nơi ở hiện nay${pTN(6)}: </w:t></w:r><w:r><w:t>{currentAddress}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Số Căn cước công dân${pTN(7)}: </w:t></w:r><w:r><w:t>{cccdthannhan}</w:t></w:r></w:p>
-      `;
-    }
 
     bodyContent += `
       <w:p/>
@@ -1503,42 +1156,20 @@ export async function createDynamicDocxTemplateBlob(
     `;
   }
 
-  // 3. BẢNG CHUYẾN ĐI (XUẤT NHẬP CẢNH)
-  if (includeTrips) {
-    const secPrefix = romanNumerals[secIdx++] || 'III';
+  // 4. BẢNG CHUYẾN ĐI (Nếu bản ghi chính không phải là Chuyến đi và có includeTrips)
+  if (curTableId !== 'trips' && includeTrips) {
+    const secPrefix = romanNumerals[secIdx++] || 'IV';
+    const tripTitle = escapeXml((options?.tableTitles?.trips || 'THÔNG TIN CHUYẾN ĐI (XUẤT NHẬP CẢNH)').toUpperCase());
     bodyContent += `
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="0369A1"/></w:rPr><w:t>${secPrefix}. ${tripTitle}</w:t></w:r></w:p>
       <w:p><w:r><w:t>{#xuatnhapcanh}</w:t></w:r></w:p>
       <w:p><w:r><w:rPr><w:b/><w:sz w:val="21"/><w:color w:val="1E40AF"/></w:rPr><w:t>▶ Chuyến {stt}: Quốc gia {quoc_gia} (Từ {ngay_xuat_canh} đến {ngay_nhap_canh})</w:t></w:r></w:p>
     `;
 
-    const activeTripCols = [];
-    (tripsGroups || []).forEach((tGrp) => {
-      (tGrp.columns || []).forEach((col) => {
-        if (col.id && col.id !== 'stt' && col.includeInExport !== false && !activeTripCols.some((x) => x.id === col.id)) {
-          if (!selectedTripFieldIds || selectedTripFieldIds.includes(col.id)) {
-            activeTripCols.push(col);
-          }
-        }
-      });
+    const activeTripCols = (tripsGroups || []).flatMap((tGrp) => tGrp.columns || []).filter((c) => c.id && c.id !== 'stt' && (!selectedTripFieldIds || selectedTripFieldIds.includes(c.id)));
+    activeTripCols.forEach((col) => {
+      bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${escapeXml(col.label || col.id)}: </w:t></w:r><w:r><w:t>{${escapeXml(col.id)}}</w:t></w:r></w:p>`;
     });
-
-    if (activeTripCols.length > 0) {
-      activeTripCols.forEach((col, tripColIdx) => {
-        let colLabel = escapeXml(col.label || col.id);
-        const colId = escapeXml(col.id);
-        bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
-      });
-    } else {
-      bodyContent += `
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Quốc gia / Nơi đến: </w:t></w:r><w:r><w:t>{countryName}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Ngày xuất cảnh: </w:t></w:r><w:r><w:t>{departureDate}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Ngày nhập cảnh: </w:t></w:r><w:r><w:t>{arrivalDate}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Số quyết định: </w:t></w:r><w:r><w:t>{decisionNumber}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Nguồn kinh phí: </w:t></w:r><w:r><w:t>{fundingName}</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - Mục đích: </w:t></w:r><w:r><w:t>{purpose}</w:t></w:r></w:p>
-      `;
-    }
 
     bodyContent += `
       <w:p/>
@@ -1547,7 +1178,7 @@ export async function createDynamicDocxTemplateBlob(
     `;
   }
 
-  // 3b. CÁC BẢNG DỮ LIỆU TÙY CHỌN / BẢNG MỚI (CUSTOM TABLES)
+  // 5. CÁC BẢNG DỮ LIỆU TÙY CHỌN / BẢNG MỚI (CUSTOM TABLES)
   const customTables = (options && Array.isArray(options.customTables)) ? options.customTables : [];
   customTables.forEach((ct) => {
     if (!ct || !ct.selectedFieldIds || ct.selectedFieldIds.length === 0) return;
@@ -1562,9 +1193,7 @@ export async function createDynamicDocxTemplateBlob(
 
     const activeCols = (ct.columns || []).filter((col) => ct.selectedFieldIds.includes(col.id) && col.includeInExport !== false);
     activeCols.forEach((col) => {
-      const colLabel = escapeXml(col.label || col.id);
-      const colId = escapeXml(col.id);
-      bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${colLabel}: </w:t></w:r><w:r><w:t>{${colId}}</w:t></w:r></w:p>`;
+      bodyContent += `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>   - ${escapeXml(col.label || col.id)}: </w:t></w:r><w:r><w:t>{${escapeXml(col.id)}}</w:t></w:r></w:p>`;
     });
 
     bodyContent += `
@@ -1574,7 +1203,7 @@ export async function createDynamicDocxTemplateBlob(
     `;
   });
 
-  // 4. FOOTER CHUẨN
+  // Footer & Section layout
   bodyContent += `
     <w:p>
       <w:pPr><w:jc w:val="right"/></w:pPr>
@@ -1584,10 +1213,6 @@ export async function createDynamicDocxTemplateBlob(
       <w:pPr><w:jc w:val="right"/></w:pPr>
       <w:r><w:rPr><w:b/></w:rPr><w:t>Người lập biểu / Người xuất: {ho_ten_nguoi_xuat}</w:t></w:r>
     </w:p>
-  `;
-
-  // Thêm thiết lập lề trang và kích thước A4 chuẩn Nghị định 30/2020/NĐ-CP (Trái 30mm, Phải 20mm, Trên/Dưới 25mm)
-  bodyContent += `
     <w:sectPr>
       <w:pgSz w:w="11906" w:h="16838"/>
       <w:pgMar w:top="1418" w:right="1134" w:bottom="1418" w:left="1701" w:header="708" w:footer="708" w:gutter="0"/>
@@ -1626,6 +1251,9 @@ export async function createSampleDocxTemplateBlob() {
  * @returns {Promise<ArrayBuffer>}
  */
 export async function getEffectiveExportTemplateBuffer(options = {}, personnelStore = null) {
+  if (options.templateBuffer) {
+    return options.templateBuffer;
+  }
   if (options.templateFile) {
     return await options.templateFile.arrayBuffer();
   }
@@ -1633,6 +1261,27 @@ export async function getEffectiveExportTemplateBuffer(options = {}, personnelSt
     const res = await fetch(options.templateUrl);
     return await res.arrayBuffer();
   }
+
+  // Kiểm tra xem hệ thống có mẫu Word mặc định đã lưu hay không (nếu không cấm dùng mẫu lưu)
+  if (options.useSavedDefault !== false) {
+    try {
+      let savedTemplates = await getAppSettings('system_docx_templates', []);
+      if (!savedTemplates || !savedTemplates.length) {
+        const local = localStorage.getItem('system_docx_templates');
+        if (local) savedTemplates = JSON.parse(local);
+      }
+      const defTpl = (savedTemplates || []).find((t) => t.isDefault && t.base64);
+      if (defTpl && defTpl.base64) {
+        const binaryString = window.atob(defTpl.base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+        return bytes.buffer;
+      }
+    } catch (e) {
+      console.warn('Could not load saved default template:', e);
+    }
+  }
+
   const dynamicBlob = await createDynamicDocxTemplateBlob(
     options.selectedGroupIndices || [0, 1, 2, 3, 4],
     personnelStore?.importMappingPersonnel || [],

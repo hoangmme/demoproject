@@ -148,12 +148,12 @@
         <!-- Nút Nhập liệu mới đa bảng đồng bộ với Menu -->
         <Button
           icon="pi pi-plus-circle"
-          label="Nhập liệu"
+          label="+ Nhập liệu mới"
           severity="info"
           outlined
           size="small"
           @click="isDynamicDataEntryOpen = true"
-          title="Nhập liệu mới cho bất kỳ bảng nào trong hệ thống (giống mục Nhập liệu ở menu)"
+          title="Nhập liệu mới cho bất kỳ bảng nào trong hệ thống (đồng bộ với Menu bên trái)"
           style="font-size: 0.8rem;"
         />
 
@@ -522,19 +522,24 @@
                   />
                 </div>
 
-                <!-- Hiển thị giá trị bình thường -->
+                <!-- Hiển thị giá trị bình thường (có kiểm tra col.boldFirstLine hoặc xuống dòng) -->
                 <div
                   v-else-if="String(getCellValue(data, col.id)).includes('\n')"
                   style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; color: #1e293b;"
                 >
-                  <div style="font-weight: 700; color: #0369a1; font-size: 1.12rem;">
+                  <div :style="{ fontWeight: col.boldFirstLine !== false ? '700' : 'normal', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
                     {{ String(getCellValue(data, col.id)).split('\n')[0] }}
                   </div>
                   <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
                     {{ String(getCellValue(data, col.id)).split('\n').slice(1).join('\n') }}
                   </div>
                 </div>
-                <span v-else style="word-break: break-word; line-height: 1.45; font-size: 1.15rem;">{{ getCellValue(data, col.id) }}</span>
+                <template v-else-if="col.boldFirstLine">
+                  <strong :style="{ color: col.firstLineColor || '#0369a1', fontWeight: '700', fontSize: '1.15rem', whiteSpace: 'pre-line', display: 'inline-block', lineHeight: '1.45' }">
+                    {{ getCellValue(data, col.id) }}
+                  </strong>
+                </template>
+                <span v-else style="word-break: break-word; line-height: 1.45; font-size: 1.15rem; white-space: pre-line;">{{ getCellValue(data, col.id) }}</span>
               </div>
             </template>
             </template>
@@ -963,6 +968,7 @@
       v-model="isPersonnelDialogOpen"
       :personData="activePersonData"
       :columns="allAvailableColumnsList"
+      :tableId="currentDashboardConfig?.id || topicId"
       @saved="handlePersonnelSaved"
       @deleted="handlePersonnelSaved"
     />
@@ -984,6 +990,8 @@
       v-model="isExportDocxDialogOpen"
       :selectedPersonnel="selectedPersonnelForExport"
       :allPersonnel="allPersonnelForExport"
+      :tableId="currentDashboardConfig?.source || 'trips'"
+      :columns="allAvailableColumnsList"
     />
 
     <!-- PDF Preview Dialog (Direct browser preview & print/download) -->
@@ -1058,6 +1066,8 @@
       @change-include-export="onChildChangeColumnIncludeExport"
       @change-show-in-detail="onChildChangeColumnShowInDetail"
       @change-collapse-duplicates="onChildChangeColumnCollapseDuplicates"
+      @change-column-unique="onChildChangeColumnUnique"
+      @change-bold-first-line="onChildChangeBoldFirstLine"
       @change-lookup="onChildChangeColumnLookup"
       @change-rollup="onChildChangeColumnRollup"
       @change-name-col-field="toggleNameColField"
@@ -1067,6 +1077,8 @@
       @insert-left="onInsertChildColLeft"
       @insert-right="onInsertChildColRight"
       @duplicate-column="onDuplicateChildCol"
+      @change-key="onChildChangeColumnKey"
+      @change-link-table="onChildChangeColumnLinkTable"
       @open-key-config="isKeyLinkDialogOpen = true"
     />
 
@@ -1145,23 +1157,37 @@ const previewPdfForRow = async (row) => {
   rowPreviewingKey.value = rowKey;
 
   try {
-    const p = resolvePersonFromItem(row) || row.rawPerson || (row.name ? row : null);
-    if (!p) {
-      alert('Không tìm thấy hồ sơ cán bộ tương ứng để xuất PDF!');
-      return;
-    }
+    const curSource = currentDashboardConfig.value?.source || 'trips';
+    const curCols = allAvailableColumnsList.value || [];
+    const curTitle = currentDashboardConfig.value?.title || 'Bảng dữ liệu';
 
     const exportOpts = {
-      includeRelatives: true,
-      includeTrips: true,
+      tableId: curSource,
+      columns: curCols,
+      selectedFieldIds: curCols.map((c) => c.id),
+      includePersonnel: curSource !== 'personnel',
+      includeRelatives: curSource !== 'relatives',
+      includeTrips: curSource !== 'trips',
       showColumnNumbers: false,
+      tableTitles: {
+        personnel: 'Cán bộ',
+        relatives: 'Thân nhân',
+        trips: 'Chuyến đi',
+        main: curTitle,
+      },
     };
+
     const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
-    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, p, personnelStore, authStore.currentUser, exportOpts);
+    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, row, personnelStore, authStore.currentUser, exportOpts);
+
+    const titleCol = curCols.find((c) => c.isTitle || c.isIdentifier);
+    const pName = (titleCol && row[titleCol.id]) || row.name || row.personnelName || row.ho_ten || row.fullName || row.title || curTitle;
+    const keyCol = curCols.find((c) => c.isKey);
+    const pCode = (keyCol && row[keyCol.id]) || row.code || row.cccd || '';
 
     rowPreviewPdfBlob.value = blob;
-    rowPreviewTitle.value = `Hồ sơ: ${p.name || p.ho_ten || 'Cán bộ'}`;
-    rowPreviewFileName.value = `Ho_so_${(p.name || p.ho_ten || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    rowPreviewTitle.value = `Hồ sơ: ${pName}${pCode ? ' (' + pCode + ')' : ''}`;
+    rowPreviewFileName.value = `Ho_so_${(pName || 'Ban_ghi').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
     showRowPdfPreview.value = true;
   } catch (err) {
     console.error('Lỗi khi xem PDF:', err);
@@ -1434,36 +1460,11 @@ const resolvePersonFromItem = (item) => {
 };
 
 const selectedPersonnelForExport = computed(() => {
-  if (selectedTrips.value && selectedTrips.value.length > 0) {
-    const list = [];
-    const seenIds = new Set();
-    selectedTrips.value.forEach((t) => {
-      const p = resolvePersonFromItem(t);
-      if (p && p.id && !seenIds.has(p.id)) {
-        seenIds.add(p.id);
-        list.push(p);
-      }
-    });
-    return list;
-  }
-  return [];
+  return selectedTrips.value && selectedTrips.value.length > 0 ? selectedTrips.value : [];
 });
 
 const allPersonnelForExport = computed(() => {
-  const rows = filteredList.value || [];
-  if (rows.length > 0) {
-    const list = [];
-    const seenIds = new Set();
-    rows.forEach((t) => {
-      const p = resolvePersonFromItem(t);
-      if (p && p.id && !seenIds.has(p.id)) {
-        seenIds.add(p.id);
-        list.push(p);
-      }
-    });
-    if (list.length > 0) return list;
-  }
-  return personnelStore.personnelList || [];
+  return filteredList.value && filteredList.value.length > 0 ? filteredList.value : [];
 });
 
 // Dynamic Dashboard Topic State
@@ -1855,29 +1856,7 @@ const getActiveCardCellValue = (row) => {
   return '-';
 };
 
-const getPersonInfo = (data) => {
-  if (!data) return { name: '-', cccdCB: '', position: '', department: '' };
 
-  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
-  const posField = personnelStore.getPersonnelPositionField ? personnelStore.getPersonnelPositionField() : 'position';
-  const deptField = personnelStore.getPersonnelDepartmentField ? personnelStore.getPersonnelDepartmentField() : 'departmentName';
-
-  const isValidId = (val) => val && String(val).trim() !== '' && String(val).trim() !== '-' && !String(val).startsWith('p_') && !String(val).startsWith('cd_') && !String(val).startsWith('rel_') && !String(val).startsWith('trip_');
-
-  // Lấy thông tin Cán bộ liên quan (hoặc cán bộ chính)
-  const parentPerson = data.rawPerson || (data.cccdparent ? personnelStore.findPersonByCccd(data.cccdparent) : null);
-  const cbName = parentPerson?.name || data.parentPersonnelName || data.parentName || (!data.isRelative ? (data.personnelName || data.name) : '') || '-';
-  const cbCccd = parentPerson?.[pKeyField] || parentPerson?.cccd || parentPerson?.cccdparent || data.parentCccd || data.cccdparent || (!data.isRelative ? (data[pKeyField] || data.cccd) : '') || '';
-  const cbPos = parentPerson?.[posField] || parentPerson?.positionName || parentPerson?.position || data.parentPosition || (!data.isRelative ? (data[posField] || data.positionName || data.position) : '') || '';
-  const cbDept = parentPerson?.[deptField] || parentPerson?.departmentName || (parentPerson?.departmentId ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || (!data.isRelative ? (data[deptField] || data.departmentName) : '') || '';
-
-  return {
-    name: cbName,
-    cccdCB: isValidId(cbCccd) ? `CCCD-CB: ${String(cbCccd).trim()}` : '',
-    position: cbPos && String(cbPos).trim() !== '-' && String(cbPos).trim() !== 'Chưa phân bổ' ? String(cbPos).trim() : '',
-    department: cbDept && String(cbDept).trim() !== '-' ? String(cbDept).trim() : '',
-  };
-};
 
 const getCardDisplayLabel = (card) => {
   if (!card) return '';
@@ -2249,6 +2228,8 @@ const {
   onChildChangeColumnIncludeExport,
   onChildChangeColumnShowInDetail,
   onChildChangeColumnCollapseDuplicates,
+  onChildChangeColumnUnique,
+  onChildChangeBoldFirstLine,
   onChildChangeColumnFormat,
   onChildChangeColumnLookup,
   onChildChangeColumnRollup,
@@ -2261,6 +2242,8 @@ const {
   onInsertChildColRight,
   onDuplicateChildCol,
   onChildChangeFormulaType,
+  onChildChangeColumnKey,
+  onChildChangeColumnLinkTable,
   NAME_COL_IDS,
   isNameColumn,
   isChildPrimaryKey,
@@ -2560,7 +2543,8 @@ const shouldCollapseDuplicate = (data, index, col) => {
   return String(currentVal).trim().toLowerCase() === String(prevVal).trim().toLowerCase();
 };
 
-const getCellValue = (trip, colId, depth = 0) => {
+const getCellValue = (trip, colOrId, depth = 0) => {
+  const colId = typeof colOrId === 'object' && colOrId !== null ? (colOrId.id || colOrId.field) : colOrId;
   if (!trip || !colId || depth > 5) return '-';
 
   // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
@@ -2584,7 +2568,7 @@ const getCellValue = (trip, colId, depth = 0) => {
     if (c.id) allMap[c.id] = c;
   });
 
-  const colDef = allMap[colId];
+  const colDef = (typeof colOrId === 'object' && colOrId !== null && colOrId.id) ? colOrId : allMap[colId];
   if (colDef && colDef.format === 'formula') {
     const configWithResolver = {
       ...colDef,

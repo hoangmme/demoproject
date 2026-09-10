@@ -122,7 +122,24 @@
     - Khi click các Thẻ tiếp theo (`cIdx > 0`): Hệ thống lọc trực tiếp trong 100 người cơ sở theo điều kiện của thẻ đó (ví dụ thẻ lọc chuyến đi ra 2 người thì bảng hiển thị đúng 2 người). Click lại sẽ tắt lọc và quay về 100 người cơ sở.
     - Khi thẻ con gọi dữ liệu từ Bảng Chuyến đi hoặc Cột ảo Hiện diện (`presenceStatus`): Tự động đối chiếu thông qua mảng chuyến đi `item.trips`, chuyến đi hoạt động `item.activeTrip` và trạng thái hiện diện tổng thể `resolvePresence(item)`.
 
-### 11. QUY CHUẨN NÚT HÀNH ĐỘNG & HỢP NHẤT NÚT LƯU CẤU HÌNH (BUTTON STANDARDIZATION & UNIFIED SAVE)
+### 11. KHẮC PHỤC LỖI LƯU BẢN GHI, MENU IMPORT EXCEL SIDEBAR, SỐ THỐNG KÊ & CHUẨN HÓA LOOKUP CCCD (SESSION 33)
+- **Sửa Triệt Để Lỗi Lưu Bản Ghi Báo Thành Công Nhưng Không Lưu (Bug Save Persistence)**:
+  - *Nguyên nhân cốt lõi*: Trong `PersonnelDialog.vue`, hệ thống gán `_tableId: 'personnel'` vào form. Hàm `saveRecord` trong store kiểm tra `if (record._tableId)` thấy có giá trị nên tự điều hướng nhầm vào nhánh Bảng Tự Tạo (Custom Table) và ghi tạm vào `localStorage` thay vì gọi Directus API (`savePerson`, `saveRelative`, `saveTrip`).
+  - *Khắc phục*:
+    - Sửa `saveRecord` và `deleteRecord` trong `src/stores/personnel.js`: Khai báo `STANDARD_CORE_TABLES = ['personnel', 'relatives', 'trips']` và loại trừ các bảng chuẩn khỏi nhánh Custom Table.
+    - Sửa `initFormData` trong `src/components/personnel/PersonnelDialog.vue`: Chỉ gán `_tableId` cho các bảng tùy biến tự tạo, không gán cho bảng chuẩn.
+    - Thêm `_tableId`, `_recordType`, `tableId` vào `skipKeys` trong `savePerson` để không gửi các thuộc tính tạm thời lên Directus API.
+- **Dời Nút "Import Excel" Ra Menu Bên Trái (AppSidebar.vue)**:
+  - Bổ sung nút bấm trực tiếp **`Import Excel`** (icon `pi-file-import` xanh lá) ngay dưới mục `+ Nhập liệu mới` trong khối **Nhập liệu** ở thanh Sidebar bên trái (`AppSidebar.vue`).
+  - Nhúng trực tiếp `<ExcelImportWizard>` 4 bước vào Sidebar, tự động nhận diện bảng đang xem để đặt mục tiêu import (Cán bộ / Thân nhân / Chuyến đi), hoàn thành tự động refresh store.
+  - Đồng bộ nhãn nút trên toolbar của `UnifiedTableView.vue` thành `+ Nhập liệu mới`.
+- **Dời Số Thống Kê Lên Trên Cùng Để Thẳng Hàng (DashboardView.vue)**:
+  - Sắp xếp lại cấu trúc thẻ Stat Card dạng đếm số lượng (`widget.displayType === 'count'`): Đưa số lượng lớn `{{ computeWidgetCount(widget) }}` lên hàng trên cùng (kèm chữ `trường hợp` nhỏ màu xám nhạt `font-size: 0.75rem`), tiêu đề thẻ và các nút quản trị đưa xuống dưới. Toàn bộ các số trên các thẻ thống kê giờ đây thẳng hàng tăm tắp.
+- **Chuẩn Hóa So Khớp Cột Lookup CCCD Không Fallback Lung Tung (`formatters.js`, `personnel.js`)**:
+  - Đảm bảo 100% bản ghi Thân nhân (`allRelatives`) trong store luôn có trường `cccdparent` chuẩn theo đúng cấu hình cột `importMappingRelative`.
+  - Nâng cấp hàm so khớp trong `evaluateLookup` (`formatters.js`): Chuẩn hóa chuỗi số định danh / CCCD (loại bỏ ký tự khoảng trắng thừa, dấu chấm vô tình ở cuối chuỗi số, khớp đủ 12 chữ số) giúp các phép so khớp điều kiện chính xác tuyệt đối mà không cần đoán mò hay fallback sang bản ghi khác.
+
+### 12. QUY CHUẨN NÚT HÀNH ĐỘNG & HỢP NHẤT NÚT LƯU CẤU HÌNH (BUTTON STANDARDIZATION & UNIFIED SAVE)
 - **Chuẩn hóa Nút Icon-Only (Vuông bo nhẹ 6px đồng bộ hoàn hảo với nút text)** (`src/views/DashboardView.vue` & `src/assets/styles/main.css`):
   - Khắc phục triệt để lỗi nút icon bị bo tròn (circle 50%) không đồng bộ với nút text và icon lệch tâm:
   - Cố định kích thước `.btn-icon-square` và `.p-button-icon-only` chuẩn `width: 32px; height: 32px; border-radius: 6px;` (bo góc nhẹ 6px vuông vắn, giống hoàn toàn style của nút `+ Thêm Khối Thống kê` và `Sắp xếp vị trí`).

@@ -199,7 +199,16 @@
             style="cursor: pointer;"
           >
             <div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+              <!-- Dời số lượng lên trên cùng để thẳng hàng nhau -->
+              <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px;">
+                <span class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '0' }">
+                  {{ computeWidgetCount(widget) }}
+                </span>
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">trường hợp</span>
+              </div>
+
+              <!-- Tiêu đề thẻ và các nút tác vụ điều khiển bên dưới -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 4px;">
                 <div style="flex: 1; padding-right: 6px;">
                   <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35' }">{{ widget.title }}</span>
                 </div>
@@ -237,9 +246,6 @@
                     <i class="pi pi-trash"></i>
                   </button>
                 </div>
-              </div>
-              <div class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '4px 0 0 0' }">
-                {{ computeWidgetCount(widget) }}
               </div>
             </div>
             <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">

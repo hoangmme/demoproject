@@ -295,6 +295,12 @@
         <span>+ Nhập liệu mới</span>
       </a>
 
+      <!-- Nút Import Excel trực tiếp trên Sidebar -->
+      <a class="app-nav-item" href="javascript:void(0)" @click="openSidebarImportWizard" title="Import dữ liệu từ tệp Excel vào hệ thống (Wizard 4 Bước)">
+        <i class="pi pi-file-import" style="color: #10b981;"></i>
+        <span>Import Excel</span>
+      </a>
+
       <div class="app-nav-heading" v-if="appendixDashboards.length > 0">Báo cáo phụ lục</div>
 
       <router-link
@@ -660,6 +666,13 @@
     <!-- Dialog Nhập Liệu Bản Ghi Mới Đa Năng -->
     <TableDataEntryDialog v-model="isDynamicDataEntryOpen" />
 
+    <!-- Excel Import Wizard (Wizard 4 Bước) trực tiếp từ Sidebar -->
+    <ExcelImportWizard
+      v-model:visible="isSidebarImportWizardOpen"
+      :defaultTarget="sidebarImportTarget"
+      @imported="onSidebarWizardImported"
+    />
+
     <!-- Dialog Tùy chỉnh Biểu tượng & Màu sắc Bảng -->
     <TableIconColorDialog
       v-model:visible="isIconColorDialogOpen"
@@ -680,6 +693,7 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
+import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import { useAuthStore } from '@/stores/auth';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
@@ -693,6 +707,26 @@ const personnelStore = usePersonnelStore();
 
 // Dialog Nhập liệu mới đa hình
 const isDynamicDataEntryOpen = ref(false);
+
+// Excel Import Wizard điều khiển từ Sidebar
+const isSidebarImportWizardOpen = ref(false);
+const sidebarImportTarget = ref('personnel');
+
+const openSidebarImportWizard = () => {
+  const currentPath = route.path || '';
+  if (currentPath.includes('/relatives')) {
+    sidebarImportTarget.value = 'relative';
+  } else if (currentPath.includes('/trips')) {
+    sidebarImportTarget.value = 'trips';
+  } else {
+    sidebarImportTarget.value = 'personnel';
+  }
+  isSidebarImportWizardOpen.value = true;
+};
+
+const onSidebarWizardImported = async () => {
+  await personnelStore.fetchPersonnel();
+};
 
 // Dialog lựa chọn Tạo mới (Bảng vs Thống kê)
 const isAddChooserDialogOpen = ref(false);

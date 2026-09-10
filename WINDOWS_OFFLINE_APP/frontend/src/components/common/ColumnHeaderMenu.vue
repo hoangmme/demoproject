@@ -284,7 +284,7 @@
             </select>
           </div>
 
-          <!-- Trình soạn thảo Biểu thức Tự do (Custom Expression Editor) -->
+          <!-- 1. Biểu thức Công thức Tự do (Custom Expression) -->
           <div v-if="editFormulaType === 'custom_expression'" style="margin-top: 8px;">
             <label style="font-size: 0.68rem; color: #701a75; font-weight: 700; display: block; margin-bottom: 3px;">
               Biểu thức tính toán (Formula Expression):
@@ -344,14 +344,233 @@
                 <div style="font-size: 0.64rem; color: #64748b; font-family: monospace;">{{ fn.syntax }}</div>
               </div>
             </div>
+          </div>
 
-            <!-- Live Preview -->
-            <div style="margin-top: 6px; background: #fae8ff; border: 1px solid #f0abfc; border-radius: 4px; padding: 5px 8px; display: flex; align-items: center; justify-content: space-between;">
-              <span style="font-size: 0.68rem; color: #701a75; font-weight: 600;">Xem trước (Dòng 1):</span>
-              <span style="font-size: 0.72rem; font-weight: 700; color: #86198f; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                {{ formulaPreviewResult }}
-              </span>
+          <!-- 2. Trạng thái Hiện diện (presence_status) -->
+          <div v-else-if="editFormulaType === 'presence_status'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-size: 0.7rem; color: #0284c7; line-height: 1.4; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 5px 8px;">
+              💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày xuất cảnh</strong>, <strong>Ngày nhập cảnh</strong> và <strong>Thời gian duyệt về</strong> để xác định: <em>Trong nước</em>, <em>Đang ở nước ngoài</em>, hoặc <em>Quá hạn chưa về</em>.
             </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày xuất cảnh (Đi):</span>
+                <select v-model="editFormulaDepCol" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Mặc định (departureDate) --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày nhập cảnh (Về):</span>
+                <select v-model="editFormulaArrivalCol" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Mặc định (arrivalDate) --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Thời gian duyệt về (Deadline):</span>
+              <select v-model="editFormulaApprovedArrivalCol" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                <option value="">-- Mặc định (approvedArrivalDate) --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Trong nước:</span>
+                <input v-model="editFormulaLabelDomestic" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Trong nước" @blur="handleSaveFormulaType" />
+              </div>
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Nước ngoài:</span>
+                <input v-model="editFormulaLabelAbroad" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Đang ở nước ngoài" @blur="handleSaveFormulaType" />
+              </div>
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Quá hạn:</span>
+                <input v-model="editFormulaLabelOverdue" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Quá hạn" @blur="handleSaveFormulaType" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Quá hạn chưa về (overdue_status) -->
+          <div v-else-if="editFormulaType === 'overdue_status'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-size: 0.7rem; color: #b91c1c; line-height: 1.4; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 5px 8px;">
+              💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày nhập cảnh thực tế</strong> với <strong>Thời gian duyệt về (Deadline)</strong>. Nếu chưa về và Today vượt Deadline → <strong>Quá hạn</strong>.
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày nhập cảnh (Về):</span>
+                <select v-model="editFormulaArrivalCol" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Mặc định (arrivalDate) --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Thời gian duyệt về:</span>
+                <select v-model="editFormulaApprovedArrivalCol" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Mặc định (approvedArrivalDate) --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Quá hạn:</span>
+                <input v-model="editFormulaLabelOverdue" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Quá hạn" @blur="handleSaveFormulaType" />
+              </div>
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Đúng hạn:</span>
+                <input v-model="editFormulaLabelOnTime" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Đúng hạn" @blur="handleSaveFormulaType" />
+              </div>
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Chưa quá hạn:</span>
+                <input v-model="editFormulaLabelNotYet" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Chưa quá hạn" @blur="handleSaveFormulaType" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. So sánh 2 cột ngày (date_delta) -->
+          <div v-else-if="editFormulaType === 'date_delta'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-size: 0.7rem; color: #0369a1; line-height: 1.4; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; padding: 5px 8px;">
+              💡 <strong>Nguyên lý:</strong> So sánh <strong>Cột Ngày A (thực tế)</strong> với <strong>Cột Ngày B (kế hoạch)</strong>. A &lt; B → <em>Sớm</em>, A &gt; B → <em>Muộn</em>, A = B → <em>Đúng lịch</em>.
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày A (Thực tế):</span>
+                <select v-model="editFormulaColA" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Chọn cột Ngày A --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày B (Kế hoạch):</span>
+                <select v-model="editFormulaColB" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Chọn cột Ngày B --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Sớm:</span>
+                <input v-model="editFormulaLabelEarly" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Sớm" @blur="handleSaveFormulaType" />
+              </div>
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Muộn:</span>
+                <input v-model="editFormulaLabelLate" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Muộn" @blur="handleSaveFormulaType" />
+              </div>
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Đúng lịch:</span>
+                <input v-model="editFormulaLabelOnTime" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Đúng lịch" @blur="handleSaveFormulaType" />
+              </div>
+            </div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: #475569; cursor: pointer; margin-top: 2px;">
+              <input type="checkbox" v-model="editFormulaShowDays" @change="handleSaveFormulaType" style="accent-color: #0284c7;" />
+              <span>Hiển thị kèm số ngày chênh lệch</span>
+            </label>
+          </div>
+
+          <!-- 5. Kiểm tra điều kiện (conditional_check) -->
+          <div v-else-if="editFormulaType === 'conditional_check'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-size: 0.7rem; color: #c2410c; line-height: 1.4; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 4px; padding: 5px 8px;">
+              💡 <strong>Nguyên lý:</strong> Nếu <strong>Cột Điều kiện</strong> có dữ liệu nhưng <strong>Cột Kiểm tra</strong> rỗng → ⚠️ Cảnh báo.
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Điều kiện (Phải có):</span>
+                <select v-model="editFormulaColCondition" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Chọn cột điều kiện --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Kiểm tra (Rỗng → Cảnh báo):</span>
+                <select v-model="editFormulaColCheck" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Chọn cột kiểm tra --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Cảnh báo:</span>
+                <input v-model="editFormulaLabelWarning" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="⚠️ Cảnh báo" @blur="handleSaveFormulaType" />
+              </div>
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Hợp lệ (Tùy chọn):</span>
+                <input v-model="editFormulaLabelOk" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Để trống nếu không cần" @blur="handleSaveFormulaType" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. Đi khi chưa có cấp thẩm quyền quyết định (depart_before_decision) -->
+          <div v-else-if="editFormulaType === 'depart_before_decision'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-size: 0.7rem; color: #b91c1c; line-height: 1.4; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 5px 8px;">
+              💡 <strong>Nguyên lý:</strong> So sánh <strong>Ngày xuất cảnh</strong> với <strong>Thời gian duyệt đi</strong> và kiểm tra có <strong>Số quyết định</strong> hay không.
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày xuất cảnh:</span>
+                <select v-model="editFormulaDepCol" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Mặc định (departureDate) --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Thời gian duyệt đi:</span>
+                <select v-model="editFormulaApprovedDepCol" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Mặc định (approvedDepartureDate) --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Số quyết định / Quyết định:</span>
+              <select v-model="editFormulaColDecision" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                <option value="">-- Mặc định (decisionNumber / so_quyet_dinh) --</option>
+                <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+              </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn khi Vi phạm:</span>
+                <input v-model="editFormulaLabelWarning" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Đi khi chưa có cấp thẩm quyền quyết định" @blur="handleSaveFormulaType" />
+              </div>
+              <div>
+                <span style="font-size: 0.64rem; color: #64748b;">Nhãn Đúng quyết định:</span>
+                <input v-model="editFormulaLabelOnTime" class="menu-input" style="font-size: 0.7rem; height: 24px; padding: 2px 4px;" placeholder="Đi đúng quyết định" @blur="handleSaveFormulaType" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. Số lần xuất cảnh trong năm (trips_count_in_year) -->
+          <div v-else-if="editFormulaType === 'trips_count_in_year'" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-size: 0.7rem; color: #166534; line-height: 1.4; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 5px 8px;">
+              💡 <strong>Nguyên lý:</strong> Tự động tính tổng <strong>số lần xuất cảnh</strong> của cán bộ trong cùng một năm (dựa trên cột ngày xuất cảnh).
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Cột Ngày xuất cảnh để lấy năm:</span>
+                <select v-model="editFormulaDepCol" class="menu-select" style="font-size: 0.7rem; height: 26px;" @change="handleSaveFormulaType">
+                  <option value="">-- Mặc định (departureDate) --</option>
+                  <option v-for="c in currentTableCols" :key="c.id" :value="c.id">{{ c.label }} ({{ c.id }})</option>
+                </select>
+              </div>
+              <div>
+                <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Năm tính toán:</span>
+                <input v-model="editFormulaTargetYear" class="menu-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Để trống = Năm hiện tại" @blur="handleSaveFormulaType" />
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: #475569; font-weight: 600;">Đơn vị hiển thị:</span>
+              <input v-model="editFormulaUnit" class="menu-input" style="font-size: 0.7rem; height: 26px; padding: 2px 6px;" placeholder="Mặc định: lần" @blur="handleSaveFormulaType" />
+            </div>
+          </div>
+
+          <!-- Live Preview chung cho tất cả công thức -->
+          <div style="margin-top: 8px; background: #fae8ff; border: 1px solid #f0abfc; border-radius: 4px; padding: 5px 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.68rem; color: #701a75; font-weight: 600;">Xem trước (Dòng 1):</span>
+            <span style="font-size: 0.72rem; font-weight: 700; color: #86198f; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              {{ formulaPreviewResult }}
+            </span>
           </div>
         </div>
 
@@ -527,6 +746,113 @@
             />
             <span style="font-weight: 600; color: #0369a1;">Gộp / Ẩn giá trị lặp liên tiếp (Dấu lặp ″)</span>
           </label>
+
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #334155; cursor: pointer; user-select: none; background: #faf5ff; border: 1px solid #e9d5ff; padding: 4px 6px; border-radius: 4px;">
+            <input
+              type="checkbox"
+              v-model="editIsUnique"
+              @change="handleToggleIsUnique"
+              style="accent-color: #9333ea; cursor: pointer;"
+            />
+            <span style="font-weight: 600; color: #7e22ce;">🔘 Lọc duy nhất theo cột này (Unique - Gộp dòng trùng)</span>
+          </label>
+
+          <!-- Tùy chọn In đậm & Đổi màu dòng đầu tiên -->
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 6px; display: flex; flex-direction: column; gap: 6px;">
+            <label style="display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: #166534; cursor: pointer; user-select: none;">
+              <input
+                type="checkbox"
+                v-model="editBoldFirstLine"
+                @change="handleSaveBoldFirstLine"
+                style="accent-color: #16a34a; cursor: pointer;"
+              />
+              <span style="font-weight: 700;">✨ In đậm & Đổi màu dòng đầu tiên</span>
+            </label>
+            <div v-if="editBoldFirstLine" style="display: flex; align-items: center; gap: 6px; padding-left: 20px;">
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">Màu chữ dòng đầu:</span>
+              <input
+                type="color"
+                v-model="editFirstLineColor"
+                @change="handleSaveBoldFirstLine"
+                style="width: 28px; height: 24px; padding: 0; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;"
+              />
+              <span style="font-size: 0.72rem; font-family: monospace; color: #334155;">{{ editFirstLineColor }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5c. Khóa chính & Liên kết Bảng (Primary Key & Table Link) -->
+        <div class="menu-field" style="margin-top: 6px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: 700; color: #166534; font-size: 0.76rem; display: flex; align-items: center; gap: 5px;">
+              <i class="pi pi-key" style="color: #15803d;"></i>
+              Khóa & Liên kết Bảng:
+            </span>
+          </div>
+
+          <!-- Đặt làm khóa chính -->
+          <label style="display: flex; align-items: center; gap: 7px; font-size: 0.75rem; color: #1e293b; cursor: pointer; user-select: none;">
+            <input
+              type="checkbox"
+              v-model="editIsKey"
+              @change="handleToggleIsKey"
+              style="accent-color: #16a34a; cursor: pointer;"
+            />
+            <span style="font-weight: 600;">🔑 Đặt làm Khóa chính của bảng này (Primary Key)</span>
+          </label>
+
+          <!-- Liên kết tới bảng khác (Hỗ trợ liên kết đồng thời nhiều bảng / khóa chính) -->
+          <div style="border-top: 1px dashed #bbf7d0; padding-top: 6px; display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: #15803d;">
+                🔗 Liên kết cột này tới Bảng khác (Foreign Key):
+              </label>
+              <button
+                v-if="selectedLinkTables.length > 0"
+                type="button"
+                @click="clearAllLinkTables"
+                style="font-size: 0.65rem; color: #ef4444; background: transparent; border: none; cursor: pointer; text-decoration: underline;"
+              >
+                Gỡ liên kết
+              </button>
+            </div>
+            <div style="font-size: 0.64rem; color: #64748b; line-height: 1.35;">
+              Tích chọn bảng đích. Có thể chọn cùng lúc 2 hoặc nhiều bảng (VD: cột CCCD chuyến đi liên kết cả Cán bộ và Thân nhân).
+            </div>
+
+            <!-- Danh sách bảng liên kết dạng Checklist -->
+            <div style="display: flex; flex-direction: column; gap: 4px; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 8px; max-height: 120px; overflow-y: auto;">
+              <label
+                v-for="t in availableTargetTables"
+                :key="t.id"
+                style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: #1e293b; cursor: pointer; user-select: none;"
+              >
+                <input
+                  type="checkbox"
+                  :checked="isLinkTableSelected(t.id)"
+                  @change="toggleLinkTable(t.id)"
+                  style="accent-color: #16a34a; cursor: pointer;"
+                />
+                <span :style="{ fontWeight: isLinkTableSelected(t.id) ? '700' : 'normal', color: isLinkTableSelected(t.id) ? '#15803d' : '#334155' }">
+                  {{ t.title }} <small style="color: #64748b;">({{ t.id }})</small>
+                </span>
+              </label>
+            </div>
+
+            <!-- Tùy chọn cột nối khi chỉ chọn 1 bảng -->
+            <div v-if="selectedLinkTables.length === 1" style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
+              <span style="font-size: 0.65rem; color: #64748b;">Cột ở bảng đích để nối (tùy chọn):</span>
+              <select v-model="editLinkColumn" class="menu-select" style="font-size: 0.7rem;" @change="handleSaveLinkTable">
+                <option value="">-- Mặc định (Khóa chính bảng đích) --</option>
+                <option v-for="c in targetLinkCols" :key="c.id" :value="c.id">
+                  {{ c.label }} ({{ c.id }})
+                </option>
+              </select>
+            </div>
+            <div style="font-size: 0.63rem; color: #64748b; line-height: 1.35; margin-top: 2px;">
+              💡 Khi liên kết bảng, Form Chi tiết sẽ tự động hiển thị Tab mang tên bảng đó để bạn mở và chỉnh sửa trực tiếp. Nếu không chọn bảng nào, sẽ không hiện tab thừa.
+            </div>
+          </div>
         </div>
 
         <!-- 5b. Gợi ý tự điền từ bảng khác (Autocomplete / Suggest Lookup) -->
@@ -550,24 +876,36 @@
 
           <template v-if="editSuggestEnabled">
             <div style="font-size: 0.7rem; color: #701a75; line-height: 1.35;">
-              Khi nhập liệu ở ô này, bạn gõ tìm kiếm theo tên hoặc mã từ bảng khác, hệ thống sẽ gợi ý và tự động điền giá trị tương ứng vào ô (dạng Flat độc lập).
+              Khi nhập liệu ở ô này, bạn gõ tìm kiếm theo tên hoặc mã từ bảng khác, hệ thống sẽ gợi ý và tự động điền giá trị tương ứng vào ô.
             </div>
 
-            <!-- Chọn Bảng nguồn gợi ý -->
-            <div style="display: flex; flex-direction: column; gap: 2px;">
-              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">1. Bảng nguồn dữ liệu gợi ý:</span>
-              <select v-model="editSuggestTarget" class="menu-select" @change="handleSuggestTargetChange">
-                <option v-for="t in availableTargetTables" :key="t.id" :value="t.id">
-                  {{ t.title }} ({{ t.id }})
-                </option>
-              </select>
+            <!-- Chọn Bảng nguồn gợi ý dạng Checklist đa chọn -->
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">1. Bảng nguồn dữ liệu gợi ý (Có thể chọn nhiều bảng):</span>
+              <div style="display: flex; flex-direction: column; gap: 4px; background: #ffffff; border: 1px solid #f0abfc; border-radius: 6px; padding: 6px 8px; max-height: 120px; overflow-y: auto;">
+                <label
+                  v-for="t in availableTargetTables"
+                  :key="t.id"
+                  style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: #1e293b; cursor: pointer; user-select: none;"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="isSuggestTargetSelected(t.id)"
+                    @change="toggleSuggestTarget(t.id)"
+                    style="accent-color: #c026d3; cursor: pointer;"
+                  />
+                  <span :style="{ fontWeight: isSuggestTargetSelected(t.id) ? '700' : 'normal', color: isSuggestTargetSelected(t.id) ? '#86198f' : '#334155' }">
+                    {{ t.title }} <small style="color: #64748b;">({{ t.id }})</small>
+                  </span>
+                </label>
+              </div>
             </div>
 
             <!-- Chọn Cột để gõ tìm kiếm -->
             <div style="display: flex; flex-direction: column; gap: 2px;">
               <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">2. Cột dùng để gõ tìm kiếm (VD: Họ và tên):</span>
               <select v-model="editSuggestSearchCol" class="menu-select" @change="handleSaveSuggest">
-                <option value="">-- Chọn cột tìm kiếm --</option>
+                <option value="">-- Mặc định (Tên / Họ và tên) --</option>
                 <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
                   {{ c.label }} ({{ c.id }})
                 </option>
@@ -578,7 +916,7 @@
             <div style="display: flex; flex-direction: column; gap: 2px;">
               <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">3. Cột lấy giá trị điền vào ô (VD: CCCD, Mã):</span>
               <select v-model="editSuggestFillCol" class="menu-select" @change="handleSaveSuggest">
-                <option value="">-- Chọn cột lấy giá trị điền --</option>
+                <option value="">-- Mặc định (Khóa chính / CCCD / Mã) --</option>
                 <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
                   {{ c.label }} ({{ c.id }})
                 </option>
@@ -655,6 +993,7 @@ import {
   formWidthOptions,
   lookupOperators,
   evaluateCustomFormula,
+  evaluateFormula,
   evaluateLookup,
   evaluateRollup,
   getRecordFieldValue,
@@ -703,9 +1042,13 @@ const emit = defineEmits([
   "change-required",
   "change-include-export",
   "change-show-in-detail",
+  "change-key",
+  "change-link-table",
   "change-lookup",
   "change-rollup",
   "change-collapse-duplicates",
+  "change-column-unique",
+  "change-bold-first-line",
   "change-name-col-field",
   "change-suggest",
   "delete-column",
@@ -723,6 +1066,28 @@ const editLabel = ref("");
 const editFormat = ref("text");
 const editFormulaType = ref("presence_status");
 const editFormulaExpression = ref("");
+const editFormulaDepCol = ref("");
+const editFormulaArrivalCol = ref("");
+const editFormulaApprovedArrivalCol = ref("");
+const editFormulaApprovedDepCol = ref("");
+const editFormulaColA = ref("");
+const editFormulaColB = ref("");
+const editFormulaColCondition = ref("");
+const editFormulaColCheck = ref("");
+const editFormulaColDecision = ref("");
+const editFormulaLabelEarly = ref("");
+const editFormulaLabelLate = ref("");
+const editFormulaLabelOnTime = ref("");
+const editFormulaLabelWarning = ref("");
+const editFormulaLabelOk = ref("");
+const editFormulaLabelMissing = ref("");
+const editFormulaLabelDomestic = ref("");
+const editFormulaLabelAbroad = ref("");
+const editFormulaLabelOverdue = ref("");
+const editFormulaLabelNotYet = ref("");
+const editFormulaShowDays = ref(false);
+const editFormulaTargetYear = ref("");
+const editFormulaUnit = ref("");
 const formulaTab = ref("fields");
 const editOptions = ref("");
 const editFormWidth = ref("50");
@@ -730,6 +1095,12 @@ const editRequired = ref(false);
 const editIncludeInExport = ref(true);
 const editShowInDetail = ref(true);
 const editCollapseDuplicates = ref(false);
+const editIsUnique = ref(false);
+const editBoldFirstLine = ref(false);
+const editFirstLineColor = ref("#0369a1");
+const editIsKey = ref(false);
+const editLinkTable = ref("");
+const editLinkColumn = ref("");
 
 const editSuggestEnabled = ref(false);
 const editSuggestTarget = ref("personnel");
@@ -831,8 +1202,69 @@ const targetRollupCols = computed(() => {
   return getColumnsForTargetTable(editRollupTarget.value);
 });
 
+const selectedLinkTables = computed(() => {
+  if (!editLinkTable.value) return [];
+  return String(editLinkTable.value).split(',').map((s) => s.trim()).filter(Boolean);
+});
+
+const isLinkTableSelected = (tableId) => {
+  return selectedLinkTables.value.includes(tableId);
+};
+
+const toggleLinkTable = (tableId) => {
+  const current = new Set(selectedLinkTables.value);
+  if (current.has(tableId)) {
+    current.delete(tableId);
+  } else {
+    current.add(tableId);
+  }
+  editLinkTable.value = Array.from(current).join(',');
+  if (current.size !== 1) {
+    editLinkColumn.value = '';
+  }
+  handleSaveLinkTable();
+};
+
+const clearAllLinkTables = () => {
+  editLinkTable.value = '';
+  editLinkColumn.value = '';
+  handleSaveLinkTable();
+};
+
+const selectedSuggestTargets = computed(() => {
+  if (!editSuggestTarget.value) return ['personnel'];
+  return String(editSuggestTarget.value).split(',').map((s) => s.trim()).filter(Boolean);
+});
+
+const isSuggestTargetSelected = (tableId) => {
+  return selectedSuggestTargets.value.includes(tableId);
+};
+
+const toggleSuggestTarget = (tableId) => {
+  const current = new Set(selectedSuggestTargets.value);
+  if (current.has(tableId)) {
+    if (current.size > 1) {
+      current.delete(tableId);
+    }
+  } else {
+    current.add(tableId);
+  }
+  editSuggestTarget.value = Array.from(current).join(',');
+  handleSuggestTargetChange();
+};
+
 const suggestTargetCols = computed(() => {
-  return getColumnsForTargetTable(editSuggestTarget.value);
+  const targets = selectedSuggestTargets.value;
+  const colMap = new Map();
+  targets.forEach((tId) => {
+    const cols = getColumnsForTargetTable(tId) || [];
+    cols.forEach((c) => {
+      if (!colMap.has(c.id)) {
+        colMap.set(c.id, c);
+      }
+    });
+  });
+  return Array.from(colMap.values());
 });
 
 const handleSuggestTargetChange = () => {
@@ -872,6 +1304,35 @@ const selectedFieldCount = computed(() => {
   return effectiveParentFieldOptions.value.filter(opt => Boolean(props.nameColFields?.[opt.key])).length;
 });
 
+const targetLinkCols = computed(() => {
+  if (selectedLinkTables.value.length === 1) {
+    return getColumnsForTargetTable(selectedLinkTables.value[0]);
+  }
+  return [];
+});
+
+const handleToggleIsKey = () => {
+  if (props.column) {
+    props.column.isKey = editIsKey.value;
+  }
+  emit("change-key", {
+    colId: props.column?.id,
+    isKey: editIsKey.value,
+  });
+};
+
+const handleSaveLinkTable = () => {
+  if (props.column) {
+    props.column.linkTable = editLinkTable.value;
+    props.column.linkColumn = editLinkColumn.value;
+  }
+  emit("change-link-table", {
+    colId: props.column?.id,
+    linkTable: editLinkTable.value,
+    linkColumn: editLinkColumn.value,
+  });
+};
+
 watch(
   () => props.column,
   (col) => {
@@ -899,6 +1360,28 @@ watch(
       editLookupFormat.value = col.lookupFormat || "default";
       editFormulaType.value = col.formulaType || "presence_status";
       editFormulaExpression.value = col.formulaExpression || "";
+      editFormulaDepCol.value = col.formulaDepCol || "";
+      editFormulaArrivalCol.value = col.formulaArrivalCol || "";
+      editFormulaApprovedArrivalCol.value = col.formulaApprovedArrivalCol || "";
+      editFormulaApprovedDepCol.value = col.formulaApprovedDepCol || "";
+      editFormulaColA.value = col.formulaColA || "";
+      editFormulaColB.value = col.formulaColB || "";
+      editFormulaColCondition.value = col.formulaColCondition || "";
+      editFormulaColCheck.value = col.formulaColCheck || "";
+      editFormulaColDecision.value = col.formulaColDecision || "";
+      editFormulaLabelEarly.value = col.formulaLabelEarly || "";
+      editFormulaLabelLate.value = col.formulaLabelLate || "";
+      editFormulaLabelOnTime.value = col.formulaLabelOnTime || "";
+      editFormulaLabelWarning.value = col.formulaLabelWarning || "";
+      editFormulaLabelOk.value = col.formulaLabelOk || "";
+      editFormulaLabelMissing.value = col.formulaLabelMissing || "";
+      editFormulaLabelDomestic.value = col.formulaLabelDomestic || "";
+      editFormulaLabelAbroad.value = col.formulaLabelAbroad || "";
+      editFormulaLabelOverdue.value = col.formulaLabelOverdue || "";
+      editFormulaLabelNotYet.value = col.formulaLabelNotYet || "";
+      editFormulaShowDays.value = Boolean(col.formulaShowDays);
+      editFormulaTargetYear.value = col.formulaTargetYear || "";
+      editFormulaUnit.value = col.formulaUnit || "";
       editRollupTarget.value = col.rollupTarget || "trips";
       editRollupField.value = col.rollupField || "";
       editRollupFunction.value = col.rollupFunction || "count";
@@ -907,6 +1390,12 @@ watch(
       editIncludeInExport.value = col.includeInExport !== false && col.includeInExport !== 'false';
       editShowInDetail.value = col.showInDetail !== false && col.showInDetail !== 'false';
       editCollapseDuplicates.value = Boolean(col.collapseDuplicates);
+      editIsUnique.value = Boolean(col.isUnique);
+      editBoldFirstLine.value = Boolean(col.boldFirstLine);
+      editFirstLineColor.value = col.firstLineColor || "#0369a1";
+      editIsKey.value = Boolean(col.isKey);
+      editLinkTable.value = col.linkTable || "";
+      editLinkColumn.value = col.linkColumn || "";
     }
   },
   { immediate: true }
@@ -935,23 +1424,60 @@ const rollupPreviewResult = computed(() => {
 });
 
 const formulaPreviewResult = computed(() => {
-  if (!editFormulaExpression.value) return '(chưa có)';
-  try {
-    const resolver = (targetColId) => {
-      const c = (currentTableCols.value || []).find((col) => col.id === targetColId || col.label === targetColId);
-      if (c && c.format === 'lookup') {
-        const val = evaluateLookup(sampleRow.value, c, personnelStore);
-        return val !== '-' ? val : '';
-      }
-      return getRecordFieldValue(sampleRow.value, targetColId);
-    };
-    const res = evaluateCustomFormula(sampleRow.value, editFormulaExpression.value, currentTableCols.value, resolver);
-    if (!res) return '(trống)';
-    const val = (res && typeof res === 'object' && 'label' in res) ? res.label : res;
-    if (val === null || val === undefined || val === '') return '(trống)';
-    return String(val);
-  } catch (e) {
-    return 'Lỗi: ' + e.message;
+  if (editFormulaType.value === 'custom_expression') {
+    if (!editFormulaExpression.value) return '(chưa có)';
+    try {
+      const resolver = (targetColId) => {
+        const c = (currentTableCols.value || []).find((col) => col.id === targetColId || col.label === targetColId);
+        if (c && c.format === 'lookup') {
+          const val = evaluateLookup(sampleRow.value, c, personnelStore);
+          return val !== '-' ? val : '';
+        }
+        return getRecordFieldValue(sampleRow.value, targetColId);
+      };
+      const res = evaluateCustomFormula(sampleRow.value, editFormulaExpression.value, currentTableCols.value, resolver);
+      if (!res) return '(trống)';
+      const val = (res && typeof res === 'object' && 'label' in res) ? res.label : res;
+      if (val === null || val === undefined || val === '') return '(trống)';
+      return String(val);
+    } catch (e) {
+      return 'Lỗi: ' + e.message;
+    }
+  } else {
+    try {
+      const dummyCol = {
+        id: props.column?.id,
+        format: 'formula',
+        formulaType: editFormulaType.value,
+        formulaDepCol: editFormulaDepCol.value,
+        formulaArrivalCol: editFormulaArrivalCol.value,
+        formulaApprovedArrivalCol: editFormulaApprovedArrivalCol.value,
+        formulaApprovedDepCol: editFormulaApprovedDepCol.value,
+        formulaColA: editFormulaColA.value,
+        formulaColB: editFormulaColB.value,
+        formulaColCondition: editFormulaColCondition.value,
+        formulaColCheck: editFormulaColCheck.value,
+        formulaColDecision: editFormulaColDecision.value,
+        formulaLabelEarly: editFormulaLabelEarly.value,
+        formulaLabelLate: editFormulaLabelLate.value,
+        formulaLabelOnTime: editFormulaLabelOnTime.value,
+        formulaLabelWarning: editFormulaLabelWarning.value,
+        formulaLabelOk: editFormulaLabelOk.value,
+        formulaLabelMissing: editFormulaLabelMissing.value,
+        formulaLabelDomestic: editFormulaLabelDomestic.value,
+        formulaLabelAbroad: editFormulaLabelAbroad.value,
+        formulaLabelOverdue: editFormulaLabelOverdue.value,
+        formulaLabelNotYet: editFormulaLabelNotYet.value,
+        formulaShowDays: editFormulaShowDays.value,
+        formulaTargetYear: editFormulaTargetYear.value,
+        formulaUnit: editFormulaUnit.value,
+      };
+      const res = evaluateFormula(sampleRow.value, dummyCol);
+      const val = res?.label || res?.shortLabel || res || '(trống)';
+      return String(val);
+    } catch (e) {
+      return 'Lỗi: ' + e.message;
+    }
   }
 });
 
@@ -1038,6 +1564,28 @@ const handleSaveFormulaType = () => {
     colId: props.column.id,
     formulaType: editFormulaType.value,
     formulaExpression: editFormulaExpression.value,
+    formulaDepCol: editFormulaDepCol.value,
+    formulaArrivalCol: editFormulaArrivalCol.value,
+    formulaApprovedArrivalCol: editFormulaApprovedArrivalCol.value,
+    formulaApprovedDepCol: editFormulaApprovedDepCol.value,
+    formulaColA: editFormulaColA.value,
+    formulaColB: editFormulaColB.value,
+    formulaColCondition: editFormulaColCondition.value,
+    formulaColCheck: editFormulaColCheck.value,
+    formulaColDecision: editFormulaColDecision.value,
+    formulaLabelEarly: editFormulaLabelEarly.value,
+    formulaLabelLate: editFormulaLabelLate.value,
+    formulaLabelOnTime: editFormulaLabelOnTime.value,
+    formulaLabelWarning: editFormulaLabelWarning.value,
+    formulaLabelOk: editFormulaLabelOk.value,
+    formulaLabelMissing: editFormulaLabelMissing.value,
+    formulaLabelDomestic: editFormulaLabelDomestic.value,
+    formulaLabelAbroad: editFormulaLabelAbroad.value,
+    formulaLabelOverdue: editFormulaLabelOverdue.value,
+    formulaLabelNotYet: editFormulaLabelNotYet.value,
+    formulaShowDays: editFormulaShowDays.value,
+    formulaTargetYear: editFormulaTargetYear.value,
+    formulaUnit: editFormulaUnit.value,
   });
 };
 
@@ -1096,6 +1644,22 @@ const handleToggleShowInDetail = () => {
 
 const handleToggleCollapseDuplicates = () => {
   emit("change-collapse-duplicates", { colId: props.column.id, collapseDuplicates: editCollapseDuplicates.value });
+};
+
+const handleToggleIsUnique = () => {
+  emit("change-column-unique", { colId: props.column.id, isUnique: editIsUnique.value });
+};
+
+const handleSaveBoldFirstLine = () => {
+  if (props.column) {
+    props.column.boldFirstLine = editBoldFirstLine.value;
+    props.column.firstLineColor = editFirstLineColor.value;
+  }
+  emit("change-bold-first-line", {
+    colId: props.column?.id,
+    boldFirstLine: editBoldFirstLine.value,
+    firstLineColor: editFirstLineColor.value,
+  });
 };
 
 const handleInsertLeft = () => {

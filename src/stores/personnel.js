@@ -329,6 +329,7 @@ export const usePersonnelStore = defineStore('personnel', {
                 personnelCode: p.code || '',
                 parentPersonnelName: p.name || '',
                 parentCccd: personCccd,
+                cccdparent: r.cccdparent || rCustom.cccdparent || r.cccd_can_bo || rCustom.cccd_can_bo || personCccd,
                 relativeIndex: rIdx,
                 rawRelative: r,
                 rawPerson: p,
@@ -685,6 +686,9 @@ export const usePersonnelStore = defineStore('personnel', {
           'flags',
           'files',
           'isDeleted',
+          '_tableId',
+          '_recordType',
+          'tableId',
         ];
 
         // 2. Gán trực tiếp 100% tất cả các trường dữ liệu vào payload Directus và customData
@@ -1354,8 +1358,10 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     async saveRecord(record) {
       if (!record) throw new Error('Không có dữ liệu để lưu!');
-      if (record._recordType === 'blank' || String(record.id || '').startsWith('row_') || record._tableId) {
-        const tid = record._tableId || record.tableId;
+      const STANDARD_CORE_TABLES = ['personnel', 'relatives', 'trips'];
+      const tid = record._tableId || record.tableId;
+      const isCustomTable = tid && !STANDARD_CORE_TABLES.includes(tid);
+      if (record._recordType === 'blank' || String(record.id || '').startsWith('row_') || isCustomTable) {
         if (tid) {
           let rows = [];
           try {
@@ -1400,8 +1406,10 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     async deleteRecord(record) {
       if (!record) return;
-      if (record._recordType === 'blank' || String(record.id || '').startsWith('row_') || record._tableId) {
-        const tid = record._tableId || record.tableId;
+      const STANDARD_CORE_TABLES = ['personnel', 'relatives', 'trips'];
+      const tid = record._tableId || record.tableId;
+      const isCustomTable = tid && !STANDARD_CORE_TABLES.includes(tid);
+      if (record._recordType === 'blank' || String(record.id || '').startsWith('row_') || isCustomTable) {
         if (tid) {
           let rows = [];
           try {

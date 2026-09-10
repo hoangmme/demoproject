@@ -1514,9 +1514,26 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     const strT = String(targetVal).trim().toLowerCase();
     const strS = String(sourceVal).trim().toLowerCase();
 
-    if (op === 'is') return strT === strS;
-    if (op === 'is_not') return strT !== strS;
-    if (op === 'contains') return strT.includes(strS);
+    // Chuẩn hóa định dạng số/mã định danh nếu là chuỗi số (tránh lỗi lệch khoảng trắng thừa, dấu chấm cuối)
+    const cleanNumT = strT.replace(/[^0-9]/g, '');
+    const cleanNumS = strS.replace(/[^0-9]/g, '');
+    const isBothDigits = cleanNumT.length >= 8 && cleanNumS.length >= 8 && /^\d+$/.test(cleanNumT) && /^\d+$/.test(cleanNumS);
+
+    if (op === 'is') {
+      if (strT === strS) return true;
+      if (isBothDigits) {
+        // So khớp số CCCD linh hoạt nếu bị mất số 0 đầu hoặc có khoảng trắng vô tình
+        return cleanNumT === cleanNumS || cleanNumT.padStart(12, '0') === cleanNumS.padStart(12, '0');
+      }
+      return false;
+    }
+    if (op === 'is_not') {
+      if (isBothDigits) {
+        return cleanNumT !== cleanNumS && cleanNumT.padStart(12, '0') !== cleanNumS.padStart(12, '0');
+      }
+      return strT !== strS;
+    }
+    if (op === 'contains') return strT.includes(strS) || (isBothDigits && cleanNumT.includes(cleanNumS));
     if (op === 'does_not_contain') return !strT.includes(strS);
     if (op === 'starts_with') return strT.startsWith(strS);
     if (op === 'ends_with') return strT.endsWith(strS);

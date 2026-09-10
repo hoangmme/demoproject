@@ -2,7 +2,7 @@
   <Dialog
     v-model:visible="visible"
     modal
-    header="Xuất Hồ sơ Cán bộ (PDF)"
+    :header="dialogTitle"
     :baseZIndex="16000"
     :style="{ width: '840px', maxWidth: '96vw', zIndex: 16000 }"
     :contentStyle="{ maxHeight: '82vh', overflowY: 'auto' }"
@@ -13,7 +13,7 @@
       <div class="export-box">
         <div class="box-title">
           <i class="pi pi-users" style="color: #0284c7;"></i>
-          <span>1. Chọn Phạm vi xuất Cán bộ</span>
+          <span>1. Chọn Phạm vi xuất ({{ mainTableTitle }})</span>
         </div>
         <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
           <label
@@ -23,8 +23,13 @@
           >
             <input type="radio" v-model="exportScope" value="single" style="accent-color: #0284c7;" />
             <div>
-              <strong style="color: #1e293b;">Chỉ cán bộ hiện tại:</strong>
-              <span style="color: #0284c7; margin-left: 4px; font-weight: 600;">{{ targetPerson.name }} ({{ targetPerson.code }})</span>
+              <strong style="color: #1e293b;">Chỉ bản ghi hiện tại:</strong>
+              <span style="color: #0284c7; margin-left: 4px; font-weight: 600;">
+                {{ getTargetPersonDisplayName(targetPerson) }}
+                <template v-if="getTargetPersonCode(targetPerson)">
+                  ({{ getTargetPersonCode(targetPerson) }})
+                </template>
+              </span>
             </div>
           </label>
 
@@ -35,8 +40,8 @@
           >
             <input type="radio" v-model="exportScope" value="selected" style="accent-color: #0284c7;" />
             <div>
-              <strong style="color: #1e293b;">Các cán bộ được tích chọn:</strong>
-              <span style="color: #7c3aed; margin-left: 4px; font-weight: 700;">{{ selectedCount }} cán bộ</span>
+              <strong style="color: #1e293b;">Các bản ghi được tích chọn:</strong>
+              <span style="color: #7c3aed; margin-left: 4px; font-weight: 700;">{{ selectedCount }} bản ghi</span>
             </div>
           </label>
 
@@ -46,8 +51,8 @@
           >
             <input type="radio" v-model="exportScope" value="all" style="accent-color: #0284c7;" />
             <div>
-              <strong style="color: #1e293b;">Toàn bộ cán bộ trong danh sách:</strong>
-              <span style="color: #16a34a; margin-left: 4px; font-weight: 700;">{{ totalPersonnelCount }} cán bộ</span>
+              <strong style="color: #1e293b;">Toàn bộ bản ghi trong danh sách:</strong>
+              <span style="color: #16a34a; margin-left: 4px; font-weight: 700;">{{ totalPersonnelCount }} bản ghi</span>
             </div>
           </label>
         </div>
@@ -101,22 +106,22 @@
             </div>
 
             <div class="tree-container">
-              <!-- BẢNG 1: CÁN BỘ / HỒ SƠ CHÍNH -->
+              <!-- BẢNG 1: BẢNG CHÍNH ĐƯỢC XUẤT (Cán bộ / Chuyến đi / Thân nhân / ...) -->
               <div class="tree-table-box">
                 <div class="tree-table-header">
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <i class="pi pi-user" style="color: #2563eb; font-size: 0.95rem;"></i>
+                    <i :class="mainTableIcon" style="color: #2563eb; font-size: 0.95rem;"></i>
                     <span style="font-weight: 700; color: #1e293b; font-size: 0.82rem;">1. Bảng {{ mainTableTitle }} (Hồ sơ chính)</span>
-                    <span class="tree-badge-count">({{ selectedFieldIds.length }}/{{ flatPersonnelCols.length }} trường)</span>
+                    <span class="tree-badge-count">({{ selectedFieldIds.length }}/{{ flatMainCols.length }} trường)</span>
                   </div>
                   <div style="display: flex; gap: 6px;">
-                    <button type="button" class="btn-tree-action" @click="toggleAllPersonnel(true)">Chọn tất cả</button>
-                    <button type="button" class="btn-tree-action" @click="toggleAllPersonnel(false)">Bỏ chọn</button>
+                    <button type="button" class="btn-tree-action" @click="toggleAllMain(true)">Chọn tất cả</button>
+                    <button type="button" class="btn-tree-action" @click="toggleAllMain(false)">Bỏ chọn</button>
                   </div>
                 </div>
                 <div class="tree-fields-inline-wrap" style="padding: 10px 12px;">
                   <label
-                    v-for="col in flatPersonnelCols"
+                    v-for="col in flatMainCols"
                     :key="col.id"
                     class="tree-field-chip"
                     :class="{ 'chip-selected': selectedFieldIds.includes(col.id) }"
@@ -132,8 +137,51 @@
                 </div>
               </div>
 
-              <!-- BẢNG 2: THÂN NHÂN LIÊN QUAN -->
-              <div class="tree-table-box rel-table-box" style="margin-top: 10px;">
+              <!-- BẢNG CÁN BỘ LIÊN KẾT (Khi bảng chính không phải cán bộ) -->
+              <div v-if="currentTableId !== 'personnel'" class="tree-table-box" style="margin-top: 10px;">
+                <div class="tree-table-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
+                      <input
+                        type="checkbox"
+                        v-model="includePersonnel"
+                        style="accent-color: #2563eb; width: 15px; height: 15px;"
+                      />
+                      <i class="pi pi-user" style="color: #2563eb; font-size: 0.95rem;"></i>
+                      <span style="font-weight: 700; color: #1e40af; font-size: 0.82rem;">2. Bảng {{ personnelTableTitle }} liên quan</span>
+                    </label>
+                    <span class="tree-badge-count" v-if="includePersonnel">
+                      ({{ selectedPersonnelFieldIds.length }}/{{ flatPersonnelCols.length }} trường)
+                    </span>
+                    <span v-else style="font-size: 0.72rem; color: #94a3b8;">
+                      (Bỏ qua cán bộ)
+                    </span>
+                  </div>
+                  <div v-if="includePersonnel" style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-tree-action" @click="toggleAllPersonnel(true)">Chọn tất cả</button>
+                    <button type="button" class="btn-tree-action" @click="toggleAllPersonnel(false)">Bỏ chọn</button>
+                  </div>
+                </div>
+                <div v-if="includePersonnel" class="tree-fields-inline-wrap" style="padding: 10px 12px;">
+                  <label
+                    v-for="col in flatPersonnelCols"
+                    :key="'p_col_' + col.id"
+                    class="tree-field-chip"
+                    :class="{ 'chip-selected': selectedPersonnelFieldIds.includes(col.id) }"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="col.id"
+                      v-model="selectedPersonnelFieldIds"
+                      style="accent-color: #2563eb; cursor: pointer;"
+                    />
+                    <span>{{ col.label || col.id }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- BẢNG THÂN NHÂN LIÊN QUAN (Khi bảng chính không phải thân nhân) -->
+              <div v-if="currentTableId !== 'relatives'" class="tree-table-box rel-table-box" style="margin-top: 10px;">
                 <div class="tree-table-header rel-table-header">
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
@@ -143,7 +191,7 @@
                         style="accent-color: #7c3aed; width: 15px; height: 15px;"
                       />
                       <i class="pi pi-users" style="color: #7c3aed; font-size: 0.95rem;"></i>
-                      <span style="font-weight: 700; color: #6b21a8; font-size: 0.82rem;">2. Bảng {{ relativeTableTitle }} liên quan</span>
+                      <span style="font-weight: 700; color: #6b21a8; font-size: 0.82rem;">{{ currentTableId === 'personnel' ? '2' : '3' }}. Bảng {{ relativeTableTitle }} liên quan</span>
                     </label>
                     <span class="tree-badge-count tree-badge-purple" v-if="includeRelatives">
                       ({{ selectedRelativeFieldIds.length }}/{{ flatRelativeCols.length }} trường)
@@ -175,8 +223,8 @@
                 </div>
               </div>
 
-              <!-- BẢNG 3: CHUYẾN ĐI (XUẤT NHẬP CẢNH) -->
-              <div class="tree-table-box trip-table-box" style="margin-top: 10px;">
+              <!-- BẢNG CHUYẾN ĐI (XUẤT NHẬP CẢNH) (Khi bảng chính không phải chuyến đi) -->
+              <div v-if="currentTableId !== 'trips'" class="tree-table-box trip-table-box" style="margin-top: 10px;">
                 <div class="tree-table-header trip-table-header">
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
@@ -186,7 +234,7 @@
                         style="accent-color: #0284c7; width: 15px; height: 15px;"
                       />
                       <i class="pi pi-send" style="color: #0284c7; font-size: 0.95rem;"></i>
-                      <span style="font-weight: 700; color: #0369a1; font-size: 0.82rem;">3. Bảng {{ tripsTableTitle }} (Xuất nhập cảnh)</span>
+                      <span style="font-weight: 700; color: #0369a1; font-size: 0.82rem;">{{ currentTableId === 'personnel' ? '3' : '4' }}. Bảng {{ tripsTableTitle }} (Xuất nhập cảnh)</span>
                     </label>
                     <span class="tree-badge-count" style="background: #e0f2fe; color: #0369a1;" v-if="includeTrips">
                       ({{ selectedTripFieldIds.length }}/{{ flatTripCols.length }} trường)
@@ -413,7 +461,7 @@
         <div class="progress-info-row">
           <div class="progress-status-text">
             <i class="pi pi-spin pi-spinner" style="color: #2563eb; margin-right: 6px;"></i>
-            <span>Đang tạo tài liệu: <strong>{{ progressCurrent }} / {{ progressTotal }}</strong> hồ sơ cán bộ</span>
+            <span>Đang tạo tài liệu: <strong>{{ progressCurrent }} / {{ progressTotal }}</strong> hồ sơ {{ mainTableTitle ? mainTableTitle.toLowerCase() : 'bản ghi' }}</span>
           </div>
           <div class="progress-percent-badge">
             {{ Math.round((progressCurrent / progressTotal) * 100) }}%
@@ -488,12 +536,15 @@ import {
 } from '@/utils/docxExport';
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
+import { findUnifiedTable } from '@/utils/tableRegistry';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   targetPerson: { type: Object, default: null },
   selectedPersonnel: { type: Array, default: () => [] },
   allPersonnel: { type: Array, default: () => [] },
+  tableId: { type: String, default: 'personnel' },
+  columns: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -509,8 +560,40 @@ const outputFormat = ref('pdf');
 const exportScope = ref('single');
 const templateSource = ref('sample'); // 'sample' (Group) | 'upload'
 
+const currentTableId = computed(() => {
+  if (props.tableId) return props.tableId;
+  const p = props.targetPerson;
+  if (p?._tableId) return p._tableId;
+  if (p?._recordType === 'trip') return 'trips';
+  if (p?._recordType === 'relative') return 'relatives';
+  return 'personnel';
+});
+
+const getTargetPersonDisplayName = (p) => {
+  if (!p) return 'Bản ghi';
+  const cols = props.columns?.length > 0 ? props.columns : [];
+  const titleCol = cols.find((c) => c.isTitle);
+  if (titleCol && (p[titleCol.id] || p.custom_data?.[titleCol.id])) {
+    return p[titleCol.id] || p.custom_data?.[titleCol.id];
+  }
+  const pNameField = personnelStore?.getPersonnelNameField ? personnelStore.getPersonnelNameField() : 'name';
+  const name = p[pNameField] || p.name || p.title || p.countryName || p.relativeName || p.ho_ten || p.fullName;
+  if (name) return name;
+  return 'Bản ghi';
+};
+
+const getTargetPersonCode = (p) => {
+  if (!p) return '';
+  const cols = props.columns?.length > 0 ? props.columns : [];
+  const keyCol = cols.find((c) => c.isKey);
+  if (keyCol && (p[keyCol.id] || p.custom_data?.[keyCol.id])) {
+    return String(p[keyCol.id] || p.custom_data?.[keyCol.id]);
+  }
+  return p.code || p.personnelCode || (p.id ? String(p.id) : '');
+};
+
 // Dynamic titles cho các bảng chính theo Cài đặt hệ thống
-const mainTableTitle = computed(() => {
+const personnelTableTitle = computed(() => {
   try {
     const local = localStorage.getItem('system_branding_config');
     if (local) {
@@ -543,10 +626,37 @@ const tripsTableTitle = computed(() => {
   return 'Chuyến đi';
 });
 
+const mainTableTitle = computed(() => {
+  const tId = currentTableId.value;
+  if (tId === 'trips') return tripsTableTitle.value;
+  if (tId === 'relatives') return relativeTableTitle.value;
+  if (tId === 'personnel') return personnelTableTitle.value;
+  const t = findUnifiedTable(tId, { personnelStore });
+  return t?.title || 'Dữ liệu';
+});
+
+const mainTableIcon = computed(() => {
+  const tId = currentTableId.value;
+  if (tId === 'trips') return 'pi pi-send';
+  if (tId === 'relatives') return 'pi pi-users';
+  if (tId === 'personnel') return 'pi pi-user';
+  return 'pi pi-table';
+});
+
+const dialogTitle = computed(() => {
+  const fmt = outputFormat.value.toUpperCase();
+  return `Xuất ${mainTableTitle.value} (${fmt})`;
+});
+
 // Group & Field selector state (Dạng phân cấp Tree)
 const selectedFieldIds = ref([]);
+const selectedPersonnelFieldIds = ref([]);
 const selectedRelativeFieldIds = ref([]);
 const selectedTripFieldIds = ref([]);
+
+const includePersonnel = ref(true);
+const includeRelatives = ref(true);
+const includeTrips = ref(true);
 
 const customTables = ref([]);
 
@@ -620,8 +730,6 @@ const toggleAllCustomTableFields = (ct, selectAll = true) => {
 };
 
 const selectedGroupIndices = ref([0, 1, 2, 3, 4, 5]);
-const includeRelatives = ref(true);
-const includeTrips = ref(true);
 const selectedRelativeGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 
 const personnelGroups = computed(() => personnelStore.importMappingPersonnel || []);
@@ -665,11 +773,28 @@ const flatTripCols = computed(() => {
   return list;
 });
 
-const toggleAllPersonnel = (selectAll = true) => {
+const flatMainCols = computed(() => {
+  if (props.columns && props.columns.length > 0) {
+    return props.columns.filter((c) => c.id && c.id !== 'stt');
+  }
+  if (currentTableId.value === 'trips') return flatTripCols.value;
+  if (currentTableId.value === 'relatives') return flatRelativeCols.value;
+  return flatPersonnelCols.value;
+});
+
+const toggleAllMain = (selectAll = true) => {
   if (selectAll) {
-    selectedFieldIds.value = flatPersonnelCols.value.map((c) => c.id);
+    selectedFieldIds.value = flatMainCols.value.map((c) => c.id);
   } else {
     selectedFieldIds.value = [];
+  }
+};
+
+const toggleAllPersonnel = (selectAll = true) => {
+  if (selectAll) {
+    selectedPersonnelFieldIds.value = flatPersonnelCols.value.map((c) => c.id);
+  } else {
+    selectedPersonnelFieldIds.value = [];
   }
 };
 
@@ -690,33 +815,15 @@ const toggleAllTrips = (selectAll = true) => {
 };
 
 const initAllFields = () => {
-  const pIds = [];
-  (personnelGroups.value || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt') pIds.push(c.id);
-    });
-  });
-  selectedFieldIds.value = pIds;
-
-  const rIds = [];
-  (relativeGroups.value || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt') rIds.push(c.id);
-    });
-  });
-  selectedRelativeFieldIds.value = rIds;
-
-  const tIds = [];
-  (tripsGroups.value || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.id && c.id !== 'stt') tIds.push(c.id);
-    });
-  });
-  selectedTripFieldIds.value = tIds;
+  selectedFieldIds.value = flatMainCols.value.map((c) => c.id);
+  selectedPersonnelFieldIds.value = flatPersonnelCols.value.map((c) => c.id);
+  selectedRelativeFieldIds.value = flatRelativeCols.value.map((c) => c.id);
+  selectedTripFieldIds.value = flatTripCols.value.map((c) => c.id);
 };
 
 const selectAllFields = () => {
   initAllFields();
+  includePersonnel.value = true;
   includeRelatives.value = true;
   includeTrips.value = true;
   customTables.value.forEach((ct) => {
@@ -727,6 +834,7 @@ const selectAllFields = () => {
 
 const deselectAllFields = () => {
   selectedFieldIds.value = [];
+  selectedPersonnelFieldIds.value = [];
   selectedRelativeFieldIds.value = [];
   selectedTripFieldIds.value = [];
   customTables.value.forEach((ct) => {
@@ -876,18 +984,22 @@ const progressTotal = ref(0);
 const selectedCount = computed(() => props.selectedPersonnel?.length || 0);
 const totalPersonnelCount = computed(() => {
   if (props.allPersonnel && props.allPersonnel.length > 0) return props.allPersonnel.length;
+  if (currentTableId.value === 'trips') return personnelStore.tripsList?.length || 0;
+  if (currentTableId.value === 'relatives') return personnelStore.relativesList?.length || 0;
   return personnelStore.personnelList.length;
 });
 
 const effectiveTemplateBuffer = computed(() => {
-  if (templateSource.value === 'upload' && customTemplateBuffer.value) {
-    return customTemplateBuffer.value;
+  if (templateSource.value === 'upload') {
+    if (customTemplateBuffer.value) {
+      return customTemplateBuffer.value;
+    }
+    if (defaultSavedTemplate.value?.base64) {
+      return base64ToArrayBuffer(defaultSavedTemplate.value.base64);
+    }
   }
-  // Khi ở tab 'sample' (Theo Nhóm Cột Group):
-  // Ưu tiên tệp mẫu được đánh dấu là Mặc định cho Group (nếu có trong hệ thống)
-  if (defaultSavedTemplate.value?.base64) {
-    return base64ToArrayBuffer(defaultSavedTemplate.value.base64);
-  }
+  // Khi ở tab 'sample' (Theo Bảng Dữ Liệu):
+  // 100% sử dụng mẫu động theo đúng danh mục cột và liên kết được tích chọn
   return sampleTemplateBuffer.value;
 });
 
@@ -945,6 +1057,16 @@ const loadSampleTemplate = async () => {
       selectedFieldIds.value,
       selectedRelativeFieldIds.value,
       {
+        tableId: currentTableId.value,
+        columns: flatMainCols.value,
+        includePersonnel: includePersonnel.value,
+        selectedPersonnelFieldIds: selectedPersonnelFieldIds.value,
+        tableTitles: {
+          personnel: personnelTableTitle.value,
+          relatives: relativeTableTitle.value,
+          trips: tripsTableTitle.value,
+          main: mainTableTitle.value,
+        },
         showColumnNumbers: showColumnNumbers.value,
         customTables: customTables.value.filter((t) => t.enabled && t.selectedFieldIds.length > 0),
       },
@@ -961,6 +1083,8 @@ const loadSampleTemplate = async () => {
 watch(
   () => [
     selectedFieldIds.value,
+    includePersonnel.value,
+    selectedPersonnelFieldIds.value,
     includeRelatives.value,
     selectedRelativeFieldIds.value,
     includeTrips.value,
@@ -1111,12 +1235,13 @@ const getDownloadButtonLabel = () => {
   }
 
   if (isSingle) {
-    const pName = (exportScope.value === 'single' && props.targetPerson)
-      ? props.targetPerson.name
-      : (props.selectedPersonnel[0]?.name || 'Cán bộ');
+    const targetP = (exportScope.value === 'single' && props.targetPerson)
+      ? props.targetPerson
+      : (props.selectedPersonnel && props.selectedPersonnel.length > 0 ? props.selectedPersonnel[0] : null);
+    const pName = getTargetPersonDisplayName(targetP);
     return `Tải về file PDF: ${pName}`;
   }
-  return `Tải file ZIP PDF (${exportScope.value === 'selected' ? selectedCount.value : totalPersonnelCount.value} Cán bộ)`;
+  return `Tải file ZIP PDF (${exportScope.value === 'selected' ? selectedCount.value : totalPersonnelCount.value} ${mainTableTitle.value || 'bản ghi'})`;
 };
 
 const handleExport = async () => {
@@ -1126,7 +1251,11 @@ const handleExport = async () => {
   progressCurrent.value = 0;
   try {
     const exportOptions = {
+      tableId: currentTableId.value,
+      columns: flatMainCols.value,
       selectedGroupIndices: (personnelGroups.value || []).map((_, i) => i),
+      includePersonnel: includePersonnel.value,
+      selectedPersonnelFieldIds: selectedPersonnelFieldIds.value,
       includeRelatives: includeRelatives.value,
       selectedRelativeGroupIndices: (relativeGroups.value || []).map((_, i) => i),
       selectedFieldIds: selectedFieldIds.value,
@@ -1143,22 +1272,33 @@ const handleExport = async () => {
         rows: t.rows,
       })),
       tableTitles: {
-        personnel: mainTableTitle.value,
+        personnel: personnelTableTitle.value,
         relatives: relativeTableTitle.value,
         trips: tripsTableTitle.value,
+        main: mainTableTitle.value,
       },
     };
     const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
     const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
     if (isSingle && targetP) {
-      const fileName = `Ho_so_${(targetP.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}_${targetP.code || ''}`;
+      const pName = getTargetPersonDisplayName(targetP);
+      const pCode = getTargetPersonCode(targetP);
+      const fileName = `Ho_so_${(pName || 'Ban_ghi').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}${pCode ? '_' + pCode : ''}`;
       await exportSinglePersonnelDocx(buf, targetP, fileName, personnelStore, outputFormat.value, authStore.user, exportOptions);
       visible.value = false;
     } else {
-      let list = exportScope.value === 'selected' ? props.selectedPersonnel : (props.allPersonnel?.length > 0 ? props.allPersonnel : personnelStore.personnelList);
-      if (!list?.length) return alert('Không có dữ liệu cán bộ!');
+      let list = exportScope.value === 'selected'
+        ? props.selectedPersonnel
+        : (props.allPersonnel?.length > 0
+            ? props.allPersonnel
+            : (currentTableId.value === 'trips'
+                ? personnelStore.tripsList
+                : (currentTableId.value === 'relatives'
+                    ? personnelStore.relativesList
+                    : personnelStore.personnelList)));
+      if (!list?.length) return alert(`Không có dữ liệu ${mainTableTitle.value || 'bản ghi'}!`);
       progressTotal.value = list.length;
-      const zipName = `Ho_so_${list.length}_can_bo.zip`;
+      const zipName = `Ho_so_${list.length}_${(currentTableId.value || 'ban_ghi')}.zip`;
       await exportMultiplePersonnelZip(buf, list, zipName, personnelStore, (curr, total) => { progressCurrent.value = curr; progressTotal.value = total; }, outputFormat.value, authStore.user, exportOptions);
       visible.value = false;
     }
@@ -1176,12 +1316,16 @@ const handlePreviewPdf = async () => {
   if (!buf) return alert('Vui lòng chọn hoặc tải lên tệp mẫu Word (.docx)');
   const isSingle = exportScope.value === 'single' || (exportScope.value === 'selected' && selectedCount.value === 1);
   const targetP = (exportScope.value === 'single' && props.targetPerson) ? props.targetPerson : (exportScope.value === 'selected' && selectedCount.value === 1 ? props.selectedPersonnel[0] : null);
-  if (!targetP) return alert('Xem trước chỉ hỗ trợ cho 1 cán bộ. Vui lòng chọn 1 cán bộ để xem trước.');
+  if (!targetP) return alert(`Xem trước chỉ hỗ trợ cho 1 ${mainTableTitle.value || 'bản ghi'}. Vui lòng chọn 1 bản ghi để xem trước.`);
 
   previewingPdf.value = true;
   try {
     const exportOptions = {
+      tableId: currentTableId.value,
+      columns: flatMainCols.value,
       selectedGroupIndices: (personnelGroups.value || []).map((_, i) => i),
+      includePersonnel: includePersonnel.value,
+      selectedPersonnelFieldIds: selectedPersonnelFieldIds.value,
       includeRelatives: includeRelatives.value,
       selectedRelativeGroupIndices: (relativeGroups.value || []).map((_, i) => i),
       selectedFieldIds: selectedFieldIds.value,
@@ -1198,15 +1342,18 @@ const handlePreviewPdf = async () => {
         rows: t.rows,
       })),
       tableTitles: {
-        personnel: mainTableTitle.value,
+        personnel: personnelTableTitle.value,
         relatives: relativeTableTitle.value,
         trips: tripsTableTitle.value,
+        main: mainTableTitle.value,
       },
     };
+    const pName = getTargetPersonDisplayName(targetP);
+    const pCode = getTargetPersonCode(targetP);
     const blob = await generateSinglePersonnelPdfBlob(buf, targetP, personnelStore, authStore.user, exportOptions);
     previewPdfBlob.value = blob;
-    previewPdfTitle.value = `Hồ sơ: ${targetP.name || 'Cán bộ'} (${targetP.code || ''})`;
-    previewPdfFileName.value = `Ho_so_${(targetP.name || 'Can_bo').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
+    previewPdfTitle.value = `Hồ sơ: ${pName}${pCode ? ' (' + pCode + ')' : ''}`;
+    previewPdfFileName.value = `Ho_so_${(pName || 'Ban_ghi').replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
     showPdfPreview.value = true;
   } catch (err) {
     console.error('Lỗi tạo bản xem trước PDF:', err);

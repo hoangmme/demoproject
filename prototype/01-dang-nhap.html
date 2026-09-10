@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="text/plain" id="__van-ban-goc"><!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"><\/script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body { margin: 0; background: #F5F3EE; }
+a { color: #1D4ED8; text-decoration: none; }
+a:hover { color: #1E3A8A; text-decoration: underline; }
+input::placeholder { color: #A69F95; }
+</style>
+</helmet>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1E3A8A"/><text x="50" y="58" font-family="Inter,sans-serif" font-size="26" font-weight="700" fill="#FFFFFF" text-anchor="middle">QL</text></svg></template>
+
+<div id="trang-dang-nhap" style="--kem:#F5F3EE;--xanh:#1D4ED8;--xanh-dam:#1E3A8A;--nen:#FFFFFF;--nen2:#F4F1EA;--chu:#1A1815;--chu2:#7A736A;--vien:#E3DFD6;--dat:#15803D;--luuy:#B07C10;--loi:#A83A2F;font-family:Inter,'Segoe UI',sans-serif;font-size:14px;color:var(--chu);background:var(--nen2);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;box-sizing:border-box">
+
+  <img id="logo-co-quan" src="logo-cong-an.png" alt="Logo Bộ Công an" style="width:96px;height:auto;margin-bottom:20px;display:block">
+
+  <div id="khoi-ten-phan-mem" style="max-width:620px;text-align:center;margin-bottom:28px">
+    <div style="margin-bottom:18px;font-size:13.5px;line-height:1.6;color:var(--chu2)">
+      <div style="font-weight:600;letter-spacing:0.02em">Công an Thành phố Hồ Chí Minh</div>
+      <div>Phòng An ninh chính trị nội bộ</div>
+    </div>
+    <div style="font-size:26px;line-height:1.32;font-weight:700;letter-spacing:0.01em;text-wrap:balance">QUẢN LÝ THÔNG TIN NHÂN SỰ VÀ ĐẢNG VIÊN ĐI NƯỚC NGOÀI</div>
+    <div style="margin-top:10px;font-size:15px;font-weight:500;color:var(--chu2);letter-spacing:0.04em">Phòng ANCTNB</div>
+  </div>
+
+  <form id="the-dang-nhap" onSubmit="{{ guiForm }}" style="width:400px;background:var(--nen);border:1px solid var(--vien);border-radius:6px;padding:28px 28px 24px;display:flex;flex-direction:column;gap:16px">
+
+    <div style="font-size:15px;font-weight:600">Đăng nhập hệ thống</div>
+
+    <sc-if value="{{ coLoi }}" hint-placeholder-val="{{ false }}">
+      <div id="bang-thong-bao-loi" style="display:flex;gap:10px;align-items:flex-start;background:#FBEDEB;border:1px solid #EFC9C3;border-left:3px solid var(--loi);border-radius:4px;padding:10px 12px">
+        <span style="color:var(--loi);font-weight:700;line-height:1.4">!</span>
+        <div style="font-size:13px;line-height:1.5;color:#7A2119">
+          Tên đăng nhập hoặc mật khẩu không đúng. Bạn còn <b>{{ soLanConLai }}</b> lần thử trước khi tài khoản bị tạm khóa.
+        </div>
+      </div>
+    </sc-if>
+
+    <div id="o-ten-dang-nhap" style="display:flex;flex-direction:column;gap:6px">
+      <label for="nhap-ten" style="font-size:13px;font-weight:500;color:var(--chu2)">Tên đăng nhập <span style="color:var(--loi)">*</span></label>
+      <input id="nhap-ten" type="text" value="{{ ten }}" onChange="{{ doiTen }}" placeholder="vd: nguyenvana" style="height:38px;padding:0 10px;font-family:inherit;font-size:14px;color:var(--chu);background:var(--nen);border:1px solid {{ vienTen }};border-radius:4px;outline:none;box-sizing:border-box">
+      <sc-if value="{{ coLoi }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:12px;color:var(--loi)">Kiểm tra lại tên đăng nhập</div>
+      </sc-if>
+    </div>
+
+    <div id="o-mat-khau" style="display:flex;flex-direction:column;gap:6px">
+      <label for="nhap-mat-khau" style="font-size:13px;font-weight:500;color:var(--chu2)">Mật khẩu <span style="color:var(--loi)">*</span></label>
+      <div style="display:flex;gap:6px">
+        <input id="nhap-mat-khau" type="{{ kieuMatKhau }}" value="{{ matKhau }}" onChange="{{ doiMatKhau }}" placeholder="Nhập mật khẩu" style="flex:1;height:38px;padding:0 10px;font-family:inherit;font-size:14px;color:var(--chu);background:var(--nen);border:1px solid {{ vienMatKhau }};border-radius:4px;outline:none;box-sizing:border-box">
+        <button type="button" onClick="{{ hienMatKhau }}" style="width:64px;height:38px;font-family:inherit;font-size:13px;color:var(--chu2);background:var(--nen2);border:1px solid var(--vien);border-radius:4px;cursor:pointer" style-hover="background:#EFEBE3;color:var(--chu)">{{ nhanHien }}</button>
+      </div>
+      <sc-if value="{{ coLoi }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:12px;color:var(--loi)">Mật khẩu không đúng</div>
+      </sc-if>
+    </div>
+
+    <button type="submit" disabled="{{ dangXuLy }}" style="height:40px;margin-top:4px;font-family:inherit;font-size:14px;font-weight:600;color:#FFFFFF;background:var(--xanh);border:1px solid var(--xanh);border-radius:4px;cursor:pointer;opacity:{{ moNut }}" style-hover="background:var(--xanh-dam);border-color:var(--xanh-dam)">{{ nhanNut }}</button>
+
+    <div style="border-top:1px solid var(--vien);padding-top:14px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--chu2)">
+      <span>Quên mật khẩu? Liên hệ quản trị hệ thống.</span>
+      <span>Phiên bản 1.0</span>
+    </div>
+  </form>
+
+  <div style="margin-top:22px;font-size:12px;color:var(--chu2);text-align:center;line-height:1.6">
+    Phần mềm dùng trong mạng nội bộ. Mọi truy cập đều được ghi nhật ký.<br>
+    Mật khẩu thử của bản thiết kế: <b style="color:var(--chu)">matkhau</b> - nhập khác sẽ ra trạng thái báo lỗi.
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;batTrangThaiLoi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Trạng thái&quot;}}">
+class Component extends DCLogic {
+  state = { ten: 'nguyenvana', matKhau: '', loi: false, hien: false, dangXuLy: false, soLan: 4 };
+
+  renderVals() {
+    const coLoi = this.props.batTrangThaiLoi === true || this.state.loi;
+    return {
+      ten: this.state.ten,
+      matKhau: this.state.matKhau,
+      coLoi,
+      soLanConLai: this.state.soLan,
+      kieuMatKhau: this.state.hien ? 'text' : 'password',
+      nhanHien: this.state.hien ? 'Ẩn' : 'Hiện',
+      vienTen: coLoi ? 'var(--loi)' : 'var(--vien)',
+      vienMatKhau: coLoi ? 'var(--loi)' : 'var(--vien)',
+      dangXuLy: this.state.dangXuLy,
+      moNut: this.state.dangXuLy ? 0.55 : 1,
+      nhanNut: this.state.dangXuLy ? 'Đang kiểm tra…' : 'Đăng nhập',
+      doiTen: (e) => this.setState({ ten: e.target.value, loi: false }),
+      doiMatKhau: (e) => this.setState({ matKhau: e.target.value, loi: false }),
+      hienMatKhau: () => this.setState(s => ({ hien: !s.hien })),
+      guiForm: (e) => {
+        e.preventDefault();
+        this.setState({ dangXuLy: true });
+        setTimeout(() => {
+          const dung = this.state.matKhau.trim() === 'matkhau' && this.state.ten.trim() !== '';
+          if (dung) { window.location.href = '02-bang-dieu-khien.html'; return; }
+          this.setState(s => ({ dangXuLy: false, loi: true, soLan: Math.max(0, s.soLan - 1) }));
+        }, 500);
+      }
+    };
+  }
+}
+<\/script>
+</body>
+</html>
+</script>
+<script>
+window.__vanBanGoc = document.getElementById("__van-ban-goc").textContent;
+(function () {
+  var _f = window.fetch ? window.fetch.bind(window) : null;
+  window.fetch = function (u) {
+    var s = String(u && u.url ? u.url : u);
+    if (s === location.href || s === location.pathname || s.indexOf(location.pathname) >= 0) {
+      return Promise.resolve(new Response(window.__vanBanGoc, { status: 200, headers: { "Content-Type": "text/html" } }));
+    }
+    return _f ? _f.apply(null, arguments) : Promise.reject(new Error("khong co fetch"));
+  };
+})();
+</script>
+<script>
+(function () {
+  var NGUON = [
+    ['https://unpkg.com/react@18.3.1/umd/react.production.min.js', 'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'],
+    ['https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js', 'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js'],
+    ['https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js'],
+    ['https://esm.sh/react@18.3.1/umd/react.production.min.js', 'https://esm.sh/react-dom@18.3.1/umd/react-dom.production.min.js']
+  ];
+  function nap(src) {
+    return new Promise(function (ok, loi) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = function () { ok(); };
+      s.onerror = function () { loi(new Error(src)); };
+      document.head.appendChild(s);
+    });
+  }
+  function thu(i) {
+    if (i >= NGUON.length) return Promise.reject(new Error('het nguon'));
+    return nap(NGUON[i][0])
+      .then(function () { return nap(NGUON[i][1]); })
+      .then(function () {
+        if (!window.React || !window.ReactDOM) throw new Error('thieu');
+      })
+      .catch(function () { return thu(i + 1); });
+  }
+  function baoLoi() {
+    var d = document.createElement('div');
+    d.setAttribute('style', 'position:fixed;inset:0;z-index:9999;background:#F5F3EE;font-family:Inter,\'Segoe UI\',sans-serif;color:#1A1815;display:flex;align-items:center;justify-content:center;padding:40px');
+    d.innerHTML = '<div style="max-width:560px;background:#fff;border:1px solid #E3DFD6;border-left:3px solid #A83A2F;border-radius:6px;padding:22px 26px">'
+      + '<div style="font-size:16px;font-weight:600;margin-bottom:10px">Không tải được thư viện hiển thị</div>'
+      + '<div style="font-size:13.5px;line-height:1.7;color:#4A443D">Bản thiết kế cần tải một thư viện hiển thị từ internet ở lần mở đầu tiên. '
+      + 'Máy này không ra được internet, hoặc mạng đang chặn các địa chỉ đó.<br><br>'
+      + 'Cách xử lý: mở bản thiết kế trên máy có internet, hoặc nhờ bộ phận kỹ thuật cho phép truy cập '
+      + '<b>unpkg.com</b>, <b>cdn.jsdelivr.net</b> hoặc <b>cdnjs.cloudflare.com</b>.<br><br>'
+      + 'Khung giao diện vẫn hiện nhưng mọi số liệu sẽ trống cho tới khi tải được thư viện.</div></div>';
+    document.body.appendChild(d);
+  }
+  window.__napXong = thu(0).then(function () {
+    return nap('support.js');
+  }).catch(function () {
+    if (document.body) baoLoi(); else document.addEventListener('DOMContentLoaded', baoLoi);
+  });
+})();
+</script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body { margin: 0; background: #F5F3EE; }
+a { color: #1D4ED8; text-decoration: none; }
+a:hover { color: #1E3A8A; text-decoration: underline; }
+input::placeholder { color: #A69F95; }
+</style>
+</helmet>
+
+
+<div id="trang-dang-nhap" style="--kem:#F5F3EE;--xanh:#1D4ED8;--xanh-dam:#1E3A8A;--nen:#FFFFFF;--nen2:#F4F1EA;--chu:#1A1815;--chu2:#7A736A;--vien:#E3DFD6;--dat:#15803D;--luuy:#B07C10;--loi:#A83A2F;font-family:Inter,'Segoe UI',sans-serif;font-size:14px;color:var(--chu);background:var(--nen2);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;box-sizing:border-box">
+
+  <img id="logo-co-quan" src="logo-cong-an.png" alt="Logo Bộ Công an" style="width:96px;height:auto;margin-bottom:20px;display:block">
+
+  <div id="khoi-ten-phan-mem" style="max-width:620px;text-align:center;margin-bottom:28px">
+    <div style="margin-bottom:18px;font-size:13.5px;line-height:1.6;color:var(--chu2)">
+      <div style="font-weight:600;letter-spacing:0.02em">Công an Thành phố Hồ Chí Minh</div>
+      <div>Phòng An ninh chính trị nội bộ</div>
+    </div>
+    <div style="font-size:26px;line-height:1.32;font-weight:700;letter-spacing:0.01em;text-wrap:balance">QUẢN LÝ THÔNG TIN NHÂN SỰ VÀ ĐẢNG VIÊN ĐI NƯỚC NGOÀI</div>
+    <div style="margin-top:10px;font-size:15px;font-weight:500;color:var(--chu2);letter-spacing:0.04em">Phòng ANCTNB</div>
+  </div>
+
+  <form id="the-dang-nhap" onSubmit="{{ guiForm }}" style="width:400px;background:var(--nen);border:1px solid var(--vien);border-radius:6px;padding:28px 28px 24px;display:flex;flex-direction:column;gap:16px">
+
+    <div style="font-size:15px;font-weight:600">Đăng nhập hệ thống</div>
+
+    <sc-if value="{{ coLoi }}" hint-placeholder-val="{{ false }}">
+      <div id="bang-thong-bao-loi" style="display:flex;gap:10px;align-items:flex-start;background:#FBEDEB;border:1px solid #EFC9C3;border-left:3px solid var(--loi);border-radius:4px;padding:10px 12px">
+        <span style="color:var(--loi);font-weight:700;line-height:1.4">!</span>
+        <div style="font-size:13px;line-height:1.5;color:#7A2119">
+          Tên đăng nhập hoặc mật khẩu không đúng. Bạn còn <b>{{ soLanConLai }}</b> lần thử trước khi tài khoản bị tạm khóa.
+        </div>
+      </div>
+    </sc-if>
+
+    <div id="o-ten-dang-nhap" style="display:flex;flex-direction:column;gap:6px">
+      <label for="nhap-ten" style="font-size:13px;font-weight:500;color:var(--chu2)">Tên đăng nhập <span style="color:var(--loi)">*</span></label>
+      <input id="nhap-ten" type="text" value="{{ ten }}" onChange="{{ doiTen }}" placeholder="vd: nguyenvana" style="height:38px;padding:0 10px;font-family:inherit;font-size:14px;color:var(--chu);background:var(--nen);border:1px solid {{ vienTen }};border-radius:4px;outline:none;box-sizing:border-box">
+      <sc-if value="{{ coLoi }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:12px;color:var(--loi)">Kiểm tra lại tên đăng nhập</div>
+      </sc-if>
+    </div>
+
+    <div id="o-mat-khau" style="display:flex;flex-direction:column;gap:6px">
+      <label for="nhap-mat-khau" style="font-size:13px;font-weight:500;color:var(--chu2)">Mật khẩu <span style="color:var(--loi)">*</span></label>
+      <div style="display:flex;gap:6px">
+        <input id="nhap-mat-khau" type="{{ kieuMatKhau }}" value="{{ matKhau }}" onChange="{{ doiMatKhau }}" placeholder="Nhập mật khẩu" style="flex:1;height:38px;padding:0 10px;font-family:inherit;font-size:14px;color:var(--chu);background:var(--nen);border:1px solid {{ vienMatKhau }};border-radius:4px;outline:none;box-sizing:border-box">
+        <button type="button" onClick="{{ hienMatKhau }}" style="width:64px;height:38px;font-family:inherit;font-size:13px;color:var(--chu2);background:var(--nen2);border:1px solid var(--vien);border-radius:4px;cursor:pointer" style-hover="background:#EFEBE3;color:var(--chu)">{{ nhanHien }}</button>
+      </div>
+      <sc-if value="{{ coLoi }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:12px;color:var(--loi)">Mật khẩu không đúng</div>
+      </sc-if>
+    </div>
+
+    <button type="submit" disabled="{{ dangXuLy }}" style="height:40px;margin-top:4px;font-family:inherit;font-size:14px;font-weight:600;color:#FFFFFF;background:var(--xanh);border:1px solid var(--xanh);border-radius:4px;cursor:pointer;opacity:{{ moNut }}" style-hover="background:var(--xanh-dam);border-color:var(--xanh-dam)">{{ nhanNut }}</button>
+
+    <div style="border-top:1px solid var(--vien);padding-top:14px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--chu2)">
+      <span>Quên mật khẩu? Liên hệ quản trị hệ thống.</span>
+      <span>Phiên bản 1.0</span>
+    </div>
+  </form>
+
+  <div style="margin-top:22px;font-size:12px;color:var(--chu2);text-align:center;line-height:1.6">
+    Phần mềm dùng trong mạng nội bộ. Mọi truy cập đều được ghi nhật ký.<br>
+    Mật khẩu thử của bản thiết kế: <b style="color:var(--chu)">matkhau</b> - nhập khác sẽ ra trạng thái báo lỗi.
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;batTrangThaiLoi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Trạng thái&quot;}}">
+class Component extends DCLogic {
+  state = { ten: 'nguyenvana', matKhau: '', loi: false, hien: false, dangXuLy: false, soLan: 4 };
+
+  renderVals() {
+    const coLoi = this.props.batTrangThaiLoi === true || this.state.loi;
+    return {
+      ten: this.state.ten,
+      matKhau: this.state.matKhau,
+      coLoi,
+      soLanConLai: this.state.soLan,
+      kieuMatKhau: this.state.hien ? 'text' : 'password',
+      nhanHien: this.state.hien ? 'Ẩn' : 'Hiện',
+      vienTen: coLoi ? 'var(--loi)' : 'var(--vien)',
+      vienMatKhau: coLoi ? 'var(--loi)' : 'var(--vien)',
+      dangXuLy: this.state.dangXuLy,
+      moNut: this.state.dangXuLy ? 0.55 : 1,
+      nhanNut: this.state.dangXuLy ? 'Đang kiểm tra…' : 'Đăng nhập',
+      doiTen: (e) => this.setState({ ten: e.target.value, loi: false }),
+      doiMatKhau: (e) => this.setState({ matKhau: e.target.value, loi: false }),
+      hienMatKhau: () => this.setState(s => ({ hien: !s.hien })),
+      guiForm: (e) => {
+        e.preventDefault();
+        this.setState({ dangXuLy: true });
+        setTimeout(() => {
+          const dung = this.state.matKhau.trim() === 'matkhau' && this.state.ten.trim() !== '';
+          if (dung) { window.location.href = '02-bang-dieu-khien.html'; return; }
+          this.setState(s => ({ dangXuLy: false, loi: true, soLan: Math.max(0, s.soLan - 1) }));
+        }, 500);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

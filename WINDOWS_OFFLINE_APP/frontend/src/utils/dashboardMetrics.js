@@ -219,9 +219,7 @@ export const buildTopicSourceList = (source, personnelStore) => {
     }
     const pTrips = Array.isArray(p.trips)
       ? p.trips
-      : (Array.isArray(pCustom.trips)
-          ? pCustom.trips
-          : (Array.isArray(pCustom['Khối B: Chuyến đi nước ngoài']) ? pCustom['Khối B: Chuyến đi nước ngoài'] : []));
+      : (Array.isArray(pCustom.trips) ? pCustom.trips : []);
     pTrips.forEach((t) => {
       rawTripsPool.push({
         ...t,
@@ -683,7 +681,7 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
     if (isNaN(count)) {
       const personTrips = Array.isArray(item.trips)
         ? item.trips
-        : (Array.isArray(item.rawPerson?.trips) ? item.rawPerson.trips : []);
+        : (item.isRelative ? (Array.isArray(item.rawRelative?.trips) ? item.rawRelative.trips : []) : (Array.isArray(item.rawPerson?.trips) ? item.rawPerson.trips : []));
       count = personTrips.length;
     }
 
@@ -802,7 +800,7 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
     const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
     const uniqueSet = new Set();
     targetItems.forEach((item) => {
-      const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.rawPerson?.[pKeyField] ?? item.rawPerson?.custom_data?.[pKeyField] ?? item.personnelId ?? item.id;
+      const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.personnelId ?? item.id;
       if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
         uniqueSet.add(String(keyVal).trim());
       }

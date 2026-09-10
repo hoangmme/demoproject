@@ -148,12 +148,12 @@
         <!-- Nút Nhập liệu mới đa bảng đồng bộ với Menu -->
         <Button
           icon="pi pi-plus-circle"
-          label="Nhập liệu"
+          label="+ Nhập liệu mới"
           severity="info"
           outlined
           size="small"
           @click="isDynamicDataEntryOpen = true"
-          title="Nhập liệu mới cho bất kỳ bảng nào trong hệ thống (giống mục Nhập liệu ở menu)"
+          title="Nhập liệu mới cho bất kỳ bảng nào trong hệ thống (đồng bộ với Menu bên trái)"
           style="font-size: 0.8rem;"
         />
 
