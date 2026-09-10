@@ -2625,7 +2625,7 @@ const getCellValue = (trip, colOrId, depth = 0) => {
     const configWithResolver = {
       ...colDef,
       personnelStore,
-      allTrips: tripsList.value || personnelStore.tripsList || [],
+      allTrips: personnelStore.tripsList || [],
       allPersonnel: personnelStore.personnelList || [],
       columns: allAvailableColumnsList.value || [],
       cellResolver: (targetColId) => {

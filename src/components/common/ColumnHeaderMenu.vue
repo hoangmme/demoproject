@@ -1064,27 +1064,74 @@
               </div>
             </div>
 
-            <!-- Chọn Cột để gõ tìm kiếm -->
-            <div style="display: flex; flex-direction: column; gap: 2px;">
-              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">2. Cột dùng để gõ tìm kiếm (VD: Họ và tên):</span>
-              <select v-model="editSuggestSearchCol" class="menu-select" @change="handleSaveSuggest">
-                <option value="">-- Mặc định (Tên / Họ và tên) --</option>
-                <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
-                  {{ c.label }} ({{ c.id }})
-                </option>
-              </select>
+            <!-- Cấu hình Cột tìm kiếm & Cột điền cho từng bảng khi chọn nhiều bảng -->
+            <div v-if="selectedSuggestTargets.length > 1" style="display: flex; flex-direction: column; gap: 6px; margin-top: 2px;">
+              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">2. Cấu hình tìm kiếm & điền cho từng bảng đã chọn:</span>
+              <div
+                v-for="tId in selectedSuggestTargets"
+                :key="tId"
+                style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px;"
+              >
+                <div style="font-size: 0.72rem; font-weight: 700; color: #7e22ce; display: flex; align-items: center; gap: 4px;">
+                  <span>📋 Bảng: {{ getTableTitle(tId) }}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                  <div>
+                    <span style="font-size: 0.66rem; color: #475569; font-weight: 600;">Cột tìm kiếm:</span>
+                    <select
+                      v-model="getSuggestConfig(tId).searchCol"
+                      class="menu-select"
+                      @change="handleSaveSuggest"
+                      style="margin-top: 2px; height: 26px; font-size: 0.72rem; padding: 1px 4px;"
+                    >
+                      <option value="">-- Mặc định --</option>
+                      <option v-for="c in getColumnsForTargetTable(tId)" :key="c.id" :value="c.id">
+                        {{ c.label }} ({{ c.id }})
+                      </option>
+                    </select>
+                  </div>
+                  <div>
+                    <span style="font-size: 0.66rem; color: #475569; font-weight: 600;">Cột điền vào ô:</span>
+                    <select
+                      v-model="getSuggestConfig(tId).fillCol"
+                      class="menu-select"
+                      @change="handleSaveSuggest"
+                      style="margin-top: 2px; height: 26px; font-size: 0.72rem; padding: 1px 4px;"
+                    >
+                      <option value="">-- Mặc định --</option>
+                      <option v-for="c in getColumnsForTargetTable(tId)" :key="c.id" :value="c.id">
+                        {{ c.label }} ({{ c.id }})
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- Chọn Cột lấy giá trị điền vào ô -->
-            <div style="display: flex; flex-direction: column; gap: 2px;">
-              <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">3. Cột lấy giá trị điền vào ô (VD: CCCD, Mã):</span>
-              <select v-model="editSuggestFillCol" class="menu-select" @change="handleSaveSuggest">
-                <option value="">-- Mặc định (Khóa chính / CCCD / Mã) --</option>
-                <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
-                  {{ c.label }} ({{ c.id }})
-                </option>
-              </select>
-            </div>
+            <!-- Nếu chỉ chọn 1 bảng: hiển thị 2 dropdown đơn giản -->
+            <template v-else>
+              <!-- Chọn Cột để gõ tìm kiếm -->
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">2. Cột dùng để gõ tìm kiếm (VD: Họ và tên):</span>
+                <select v-model="editSuggestSearchCol" class="menu-select" @change="handleSaveSuggest">
+                  <option value="">-- Mặc định (Tên / Họ và tên) --</option>
+                  <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
+                    {{ c.label }} ({{ c.id }})
+                  </option>
+                </select>
+              </div>
+
+              <!-- Chọn Cột lấy giá trị điền vào ô -->
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.7rem; color: #475569; font-weight: 600;">3. Cột lấy giá trị điền vào ô (VD: CCCD, Mã):</span>
+                <select v-model="editSuggestFillCol" class="menu-select" @change="handleSaveSuggest">
+                  <option value="">-- Mặc định (Khóa chính / CCCD / Mã) --</option>
+                  <option v-for="c in suggestTargetCols" :key="c.id" :value="c.id">
+                    {{ c.label }} ({{ c.id }})
+                  </option>
+                </select>
+              </div>
+            </template>
           </template>
         </div>
 
@@ -1269,6 +1316,7 @@ const editSuggestEnabled = ref(false);
 const editSuggestTarget = ref("personnel");
 const editSuggestSearchCol = ref("");
 const editSuggestFillCol = ref("");
+const editSuggestConfigByTable = ref({});
 
 const editLookupTarget = ref("personnel");
 const editLookupLinkCol = ref("");
@@ -1433,6 +1481,29 @@ const suggestTargetCols = computed(() => {
   return Array.from(colMap.values());
 });
 
+const getSuggestConfig = (tId) => {
+  if (!editSuggestConfigByTable.value) {
+    editSuggestConfigByTable.value = {};
+  }
+  if (!editSuggestConfigByTable.value[tId]) {
+    const cols = getColumnsForTargetTable(tId) || [];
+    let defSearch = tId === 'relatives' ? 'relativeName' : 'name';
+    let defFill = tId === 'relatives' ? 'cccdthannhan' : 'cccd';
+    const foundSearch = cols.find(c => c.id === defSearch) || cols.find(c => c.id.toLowerCase().includes('name') || c.id.toLowerCase().includes('ten'));
+    const foundFill = cols.find(c => c.id === defFill) || cols.find(c => c.id.toLowerCase().includes('cccd') || c.id.toLowerCase().includes('code') || c.id.toLowerCase().includes('id'));
+    editSuggestConfigByTable.value[tId] = {
+      searchCol: foundSearch ? foundSearch.id : (cols[0]?.id || ''),
+      fillCol: foundFill ? foundFill.id : (cols[1]?.id || cols[0]?.id || ''),
+    };
+  }
+  return editSuggestConfigByTable.value[tId];
+};
+
+const getTableTitle = (tId) => {
+  const found = availableTargetTables.value.find((t) => t.id === tId);
+  return found ? found.title : tId;
+};
+
 const handleSuggestTargetChange = () => {
   const cols = suggestTargetCols.value || [];
   const foundName = cols.find((c) => c.id === 'name' || c.id === 'relativeName' || c.id === 'fullName' || c.id === 'title' || (c.label && c.label.toLowerCase().includes('tên')));
@@ -1449,6 +1520,7 @@ const handleSaveSuggest = () => {
     suggestTarget: editSuggestTarget.value,
     suggestSearchCol: editSuggestSearchCol.value,
     suggestFillCol: editSuggestFillCol.value,
+    suggestConfigByTable: JSON.parse(JSON.stringify(editSuggestConfigByTable.value || {})),
   });
 };
 
@@ -1512,6 +1584,9 @@ watch(
       editSuggestTarget.value = col.suggestTarget || "personnel";
       editSuggestSearchCol.value = col.suggestSearchCol || "";
       editSuggestFillCol.value = col.suggestFillCol || "";
+      editSuggestConfigByTable.value = (col.suggestConfigByTable && typeof col.suggestConfigByTable === 'object')
+        ? JSON.parse(JSON.stringify(col.suggestConfigByTable))
+        : {};
       editLookupTarget.value = col.lookupTarget || "personnel";
       editLookupLinkCol.value = col.lookupLinkCol || "";
       editLookupFields.value = Array.isArray(col.lookupFields) && col.lookupFields.length > 0

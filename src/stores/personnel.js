@@ -12,6 +12,34 @@ import { getAppSettings, saveAppSettings } from '@/api/settings';
 import { logActivity } from '@/api/audit';
 import { cleanObjectWhitespace, computeColumnIndexMap } from '@/utils/formatters';
 
+const TRANSIENT_KEYS = [
+  'rawPerson',
+  'rawRelative',
+  'rawTrip',
+  'parentPerson',
+  'parentPersonnel',
+  'uniqueKey',
+  '_tableId',
+  '_recordType',
+  'tableId',
+  '_primaryKey',
+  'travelerTrips',
+  'activeTrip',
+  'isDeleted',
+];
+
+export function sanitizeEntity(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const clean = { ...obj };
+  TRANSIENT_KEYS.forEach((k) => delete clean[k]);
+  if (clean.custom_data && typeof clean.custom_data === 'object') {
+    clean.custom_data = { ...clean.custom_data };
+    TRANSIENT_KEYS.forEach((k) => delete clean.custom_data[k]);
+    delete clean.custom_data.custom_data;
+  }
+  return clean;
+}
+
 export const usePersonnelStore = defineStore('personnel', {
   state: () => ({
     personnelList: [],
@@ -765,22 +793,10 @@ export const usePersonnelStore = defineStore('personnel', {
 
         // 3. Đính kèm danh sách chuyến đi, thân nhân, cờ cảnh báo, tệp tin
         if (Array.isArray(formData.trips)) {
-          customData.trips = formData.trips.map((t) => {
-            const cleanT = { ...t };
-            delete cleanT.rawPerson;
-            delete cleanT.rawRelative;
-            delete cleanT.rawTrip;
-            return cleanT;
-          });
+          customData.trips = formData.trips.map((t) => sanitizeEntity(t));
         }
         if (Array.isArray(formData.relatives)) {
-          customData.relatives = formData.relatives.map((r) => {
-            const cleanR = { ...r };
-            delete cleanR.rawPerson;
-            delete cleanR.rawRelative;
-            delete cleanR.rawTrip;
-            return cleanR;
-          });
+          customData.relatives = formData.relatives.map((r) => sanitizeEntity(r));
         }
         if (formData.flags && typeof formData.flags === 'object') {
           customData.flags = formData.flags;
@@ -821,17 +837,6 @@ export const usePersonnelStore = defineStore('personnel', {
         delete cleanCustomData.custom_data;
         cleanPayload.custom_data = JSON.stringify(cleanCustomData);
 
-        let saved = null;
-        if (cleanPayload.id) {
-          saved = await updatePersonnel(cleanPayload.id, cleanPayload);
-          logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name || cleanPayload.name} (${formData.code || cleanPayload.code || cleanPayload.id})`).catch(() => {});
-        } else {
-          cleanPayload.id = 'CB-' + Date.now();
-          if (!cleanPayload.code) cleanPayload.code = cleanPayload.id;
-          saved = await createPersonnel(cleanPayload);
-          logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name || cleanPayload.name}`).catch(() => {});
-        }
-
         // 7. Fast optimistic in-memory update
         const fullSavedObj = {
           ...cleanPayload,
@@ -843,11 +848,22 @@ export const usePersonnelStore = defineStore('personnel', {
           files: cleanCustomData.files || [],
         };
 
-        const existingIdx = this.personnelList.findIndex((p) => String(p.id) === String(payload.id));
+        const existingIdx = this.personnelList.findIndex((p) => String(p.id) === String(cleanPayload.id || payload.id));
         if (existingIdx !== -1) {
           this.personnelList[existingIdx] = { ...this.personnelList[existingIdx], ...fullSavedObj };
         } else {
           this.personnelList.unshift(fullSavedObj);
+        }
+
+        let saved = null;
+        if (cleanPayload.id) {
+          saved = await updatePersonnel(cleanPayload.id, cleanPayload);
+          logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name || cleanPayload.name} (${formData.code || cleanPayload.code || cleanPayload.id})`).catch(() => {});
+        } else {
+          cleanPayload.id = 'CB-' + Date.now();
+          if (!cleanPayload.code) cleanPayload.code = cleanPayload.id;
+          saved = await createPersonnel(cleanPayload);
+          logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name || cleanPayload.name}`).catch(() => {});
         }
 
         // Đồng bộ ngầm trong background mà không block giao diện
@@ -1102,19 +1118,15 @@ export const usePersonnelStore = defineStore('personnel', {
         delete relCustom.custom_data;
 
         // Direct user edits on relData MUST take precedence over relCustom!
-        const cleanRelData = { ...relCustom, ...relData };
-        delete cleanRelData.rawPerson;
-        delete cleanRelData.rawRelative;
-        delete cleanRelData.rawTrip;
-        delete cleanRelData.uniqueKey;
+        const cleanRelData = sanitizeEntity({ ...relCustom, ...relData });
+        delete cleanRelData.custom_data;
 
         if (!cleanRelData.id || String(cleanRelData.id).trim() === '' || String(cleanRelData.id) === 'undefined') {
           cleanRelData.id = targetRelId || `rel_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
         }
 
         // Clean out custom_data and keep it in sync with top-level fields
-        cleanRelData.custom_data = { ...cleanRelData };
-        delete cleanRelData.custom_data.custom_data;
+        cleanRelData.custom_data = sanitizeEntity({ ...cleanRelData });
 
         // Validate required columns
         const allRelativeCols = (this.importMappingRelative || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
@@ -1162,6 +1174,8 @@ export const usePersonnelStore = defineStore('personnel', {
           try { custom = typeof updatedP.custom_data === 'string' ? JSON.parse(updatedP.custom_data) : updatedP.custom_data; } catch (e) {}
         }
         let relsInP = Array.isArray(updatedP.relatives) ? [...updatedP.relatives] : (Array.isArray(custom.relatives) ? [...custom.relatives] : []);
+        // Sanitize existing relatives in array to remove historical circular references
+        relsInP = relsInP.map((r) => sanitizeEntity(r));
 
         const relIdx = relsInP.findIndex(isSameRel);
         if (relIdx !== -1) {
@@ -1169,11 +1183,8 @@ export const usePersonnelStore = defineStore('personnel', {
           if (relsInP[relIdx].code) cleanRelData.code = relsInP[relIdx].code;
           cleanRelData.personnelId = targetPerson.id;
           cleanRelData.parentName = targetPerson.name;
-          const mergedRel = { ...relsInP[relIdx], ...cleanRelData };
-          if (mergedRel.custom_data && typeof mergedRel.custom_data === 'object') {
-            mergedRel.custom_data = { ...mergedRel.custom_data, ...cleanRelData };
-            delete mergedRel.custom_data.custom_data;
-          }
+          const mergedRel = sanitizeEntity({ ...relsInP[relIdx], ...cleanRelData });
+          mergedRel.custom_data = sanitizeEntity({ ...(mergedRel.custom_data || {}), ...cleanRelData });
           relsInP[relIdx] = mergedRel;
         } else {
           if (!cleanRelData.code) {
@@ -1181,18 +1192,26 @@ export const usePersonnelStore = defineStore('personnel', {
           }
           cleanRelData.personnelId = targetPerson.id;
           cleanRelData.parentName = targetPerson.name;
-          cleanRelData.custom_data = { ...cleanRelData };
-          delete cleanRelData.custom_data.custom_data;
+          cleanRelData.custom_data = sanitizeEntity({ ...cleanRelData });
           relsInP.push(cleanRelData);
         }
 
         updatedP.relatives = relsInP;
         custom.relatives = relsInP;
         updatedP.custom_data = custom;
+
+        // Fast optimistic in-memory update for relativesList
+        const relListIdx = (this.relativesList || []).findIndex(isSameRel);
+        if (relListIdx !== -1) {
+          this.relativesList[relListIdx] = { ...this.relativesList[relListIdx], ...cleanRelData };
+        } else {
+          this.relativesList.push(cleanRelData);
+        }
+
         await this.savePerson(updatedP);
 
         await logActivity('Cập nhật Thân nhân', `Cập nhật thân nhân: ${cleanRelData.relativeName || cleanRelData.name || cleanRelData.code}`).catch(() => {});
-        await this.fetchPersonnel();
+        this.fetchPersonnel().catch((err) => console.warn('Background sync failed:', err));
         return cleanRelData;
       } catch (e) {
         console.error('Error saving relative:', e);
@@ -1260,10 +1279,7 @@ export const usePersonnelStore = defineStore('personnel', {
         }
 
         // Direct user edits on tripData must take precedence over custom_data!
-        const cleanTrip = { ...tripCustom, ...tripData };
-        delete cleanTrip.rawPerson;
-        delete cleanTrip.rawRelative;
-        delete cleanTrip.rawTrip;
+        const cleanTrip = sanitizeEntity({ ...tripCustom, ...tripData });
 
         // 2. Strict country resolution: If user explicitly cleared or set country, propagate to all aliases
         let explicitCountry = undefined;
@@ -1461,8 +1477,16 @@ export const usePersonnelStore = defineStore('personnel', {
           }
         }
 
+        // Fast optimistic in-memory update for tripsList
+        const tripListIdx = (this.tripsList || []).findIndex(isSameTrip);
+        if (tripListIdx !== -1) {
+          this.tripsList[tripListIdx] = { ...this.tripsList[tripListIdx], ...cleanTrip };
+        } else {
+          this.tripsList.push(cleanTrip);
+        }
+
         await logActivity('Cập nhật Chuyến đi', `Cập nhật chuyến đi: ${cleanTrip.quoc_gia_xuat_canh || cleanTrip.countryName || cleanTrip.id}`).catch(() => {});
-        await this.fetchPersonnel();
+        this.fetchPersonnel().catch((err) => console.warn('Background sync failed:', err));
         return cleanTrip;
       } catch (e) {
         console.error('Error saving trip:', e);
@@ -1569,6 +1593,18 @@ export const usePersonnelStore = defineStore('personnel', {
         return record;
       }
       if (
+        record._tableId === 'relatives' ||
+        record._recordType === 'relative' ||
+        record.rawRelative ||
+        (record.code && String(record.code).startsWith('TN-')) ||
+        (record.id && String(record.id).startsWith('rel_')) ||
+        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
+        record.cccdthannhan !== undefined ||
+        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel' && record._recordType !== 'trip')
+      ) {
+        return await this.saveRelative(record);
+      }
+      if (
         record._tableId === 'trips' ||
         record._recordType === 'trip' ||
         record.rawTrip ||
@@ -1580,18 +1616,6 @@ export const usePersonnelStore = defineStore('personnel', {
         record.cccdchuyendi !== undefined
       ) {
         return await this.saveTrip(record);
-      }
-      if (
-        record._tableId === 'relatives' ||
-        record._recordType === 'relative' ||
-        record.rawRelative ||
-        (record.code && String(record.code).startsWith('TN-')) ||
-        (record.id && String(record.id).startsWith('rel_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
-        record.cccdthannhan !== undefined ||
-        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel')
-      ) {
-        return await this.saveRelative(record);
       }
       const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
       if (p) {

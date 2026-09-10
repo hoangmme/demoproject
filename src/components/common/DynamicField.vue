@@ -43,14 +43,34 @@
           >
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span v-if="item.tableTag" style="font-size: 0.65rem; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 1px 5px; border-radius: 4px;">
+                <span
+                  v-if="item.tableTag"
+                  :style="{
+                    fontSize: '0.65rem',
+                    fontWeight: '700',
+                    color: item.target === 'relatives' ? '#7e22ce' : '#0284c7',
+                    background: item.target === 'relatives' ? '#f3e8ff' : '#e0f2fe',
+                    padding: '1px 5px',
+                    borderRadius: '4px'
+                  }"
+                >
                   {{ item.tableTag }}
                 </span>
                 <span style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">
                   {{ item.displayLabel }}
                 </span>
               </div>
-              <span style="font-size: 0.72rem; color: #0284c7; font-weight: 700; background: #e0f2fe; padding: 1px 6px; border-radius: 4px; font-family: monospace;">
+              <span
+                :style="{
+                  fontSize: '0.72rem',
+                  color: item.target === 'relatives' ? '#7e22ce' : '#0284c7',
+                  fontWeight: '700',
+                  background: item.target === 'relatives' ? '#f3e8ff' : '#e0f2fe',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace'
+                }"
+              >
                 {{ item.fillValue }}
               </span>
             </div>
@@ -64,42 +84,62 @@
         <div
           v-if="matchedSuggestRecord"
           class="suggest-matched-card"
-          style="margin-top: 6px; padding: 6px 10px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 6px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;"
+          :style="{
+            marginTop: '6px',
+            padding: '6px 10px',
+            background: matchedSuggestRecord.target === 'relatives' ? '#faf5ff' : '#f0fdf4',
+            border: matchedSuggestRecord.target === 'relatives' ? '1.5px solid #d8b4fe' : '1.5px solid #86efac',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '8px'
+          }"
         >
           <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <span style="font-size: 0.66rem; font-weight: 700; color: #15803d; background: #dcfce7; padding: 1px 6px; border-radius: 4px; border: 1px solid #bbf7d0;">
+              <span
+                :style="{
+                  fontSize: '0.66rem',
+                  fontWeight: '700',
+                  color: matchedSuggestRecord.target === 'relatives' ? '#7e22ce' : '#15803d',
+                  background: matchedSuggestRecord.target === 'relatives' ? '#f3e8ff' : '#dcfce7',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  border: matchedSuggestRecord.target === 'relatives' ? '1px solid #e9d5ff' : '1px solid #bbf7d0'
+                }"
+              >
                 {{ matchedSuggestRecord.tableTitle }}
               </span>
-              <span style="font-weight: 700; color: #0f172a; font-size: 0.82rem;">
+              <span :style="{ fontWeight: '700', color: matchedSuggestRecord.target === 'relatives' ? '#581c87' : '#0f172a', fontSize: '0.82rem' }">
                 {{ matchedSuggestRecord.name }}
               </span>
-              <span style="font-size: 0.72rem; color: #166534; font-family: monospace; font-weight: 600;">
+              <span :style="{ fontSize: '0.72rem', color: matchedSuggestRecord.target === 'relatives' ? '#7e22ce' : '#166534', fontFamily: 'monospace', fontWeight: '600' }">
                 ({{ matchedSuggestRecord.fillValue }})
               </span>
             </div>
             <div style="font-size: 0.7rem; color: #475569; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px;">
+              <span v-if="matchedSuggestRecord.relation" style="font-weight: 600; color: #7c3aed;">
+                Quan hệ: {{ matchedSuggestRecord.relation }}
+              </span>
+              <span v-if="matchedSuggestRecord.parentPersonName" style="color: #0369a1; font-weight: 500;">
+                👤 Cán bộ: {{ matchedSuggestRecord.parentPersonName }}
+              </span>
               <span v-if="matchedSuggestRecord.position" style="font-weight: 500;">
                 💼 {{ matchedSuggestRecord.position }}
               </span>
               <span v-if="matchedSuggestRecord.department" style="color: #64748b;">
                 🏢 {{ matchedSuggestRecord.department }}
               </span>
-              <span v-if="matchedSuggestRecord.relation" style="color: #0284c7; font-weight: 600;">
-                👥 {{ matchedSuggestRecord.relation }}
-              </span>
-              <span v-if="matchedSuggestRecord.parentPersonName" style="color: #64748b;">
-                (Cán bộ liên quan: {{ matchedSuggestRecord.parentPersonName }})
-              </span>
             </div>
           </div>
           <button
             type="button"
             @click="model = ''"
-            style="border: none; background: transparent; color: #94a3b8; cursor: pointer; padding: 2px 4px; border-radius: 4px;"
-            title="Xóa và chọn lại"
+            style="border: none; background: transparent; color: #94a3b8; cursor: pointer; padding: 2px;"
+            title="Xóa lựa chọn"
           >
-            <i class="pi pi-times" style="font-size: 0.8rem;"></i>
+            <i class="pi pi-times" style="font-size: 0.72rem;"></i>
           </button>
         </div>
       </div>
@@ -724,33 +764,53 @@ const getTableDisplayName = (target) => {
   return target;
 };
 
+const getSuggestConfigForTarget = (target) => {
+  const tableCfg = props.col?.suggestConfigByTable?.[target] || {};
+  let searchCol = tableCfg.searchCol;
+  let fillCol = tableCfg.fillCol;
+
+  if (!searchCol) {
+    if (target === 'relatives') {
+      searchCol = 'relativeName';
+    } else {
+      searchCol = props.col?.suggestSearchCol || 'name';
+    }
+  }
+
+  if (!fillCol) {
+    if (target === 'relatives') {
+      fillCol = 'cccdthannhan';
+    } else {
+      fillCol = props.col?.suggestFillCol || 'cccd';
+    }
+  }
+
+  return { searchCol, fillCol };
+};
+
 const filteredSuggestList = computed(() => {
   if (!props.col?.suggestEnabled || !props.col?.suggestTarget) return [];
 
   const targets = targetTablesList.value;
-  const searchCol = props.col.suggestSearchCol || 'name';
-  const fillCol = props.col.suggestFillCol || 'cccd';
   const query = String(model.value || '').trim().toLowerCase();
 
   const results = [];
   for (const target of targets) {
     const rawList = getRowsForTarget(target);
     const tableTag = getTableDisplayName(target);
+    const { searchCol, fillCol } = getSuggestConfigForTarget(target);
 
     for (const row of rawList) {
       const sVal = String(
         getRowCustomField(row, searchCol) ||
-        row.name ||
-        row.relativeName ||
-        row.fullName ||
+        row[searchCol] ||
+        (target === 'relatives' ? (row.relativeName || row.name || row.fullName) : (row.name || row.fullName || row.relativeName)) ||
         ''
       ).trim();
       const fVal = String(
         getRowCustomField(row, fillCol) ||
-        row.cccd ||
-        row.cccdthannhan ||
-        row.code ||
-        row.id ||
+        row[fillCol] ||
+        (target === 'relatives' ? (row.cccdthannhan || row.cccd || row.code || row.id) : (row.cccd || row.cccdparent || row.code || row.id)) ||
         ''
       ).trim();
 
@@ -764,6 +824,7 @@ const filteredSuggestList = computed(() => {
         if (dept) extraParts.push(dept);
 
         results.push({
+          target,
           tableTag: targets.length > 1 ? tableTag : '',
           displayLabel: sVal || fVal || 'Bản ghi',
           fillValue: fVal || sVal,
@@ -784,17 +845,23 @@ const matchedSuggestRecord = computed(() => {
   if (!val) return null;
 
   const targets = targetTablesList.value;
-  const fillCol = props.col.suggestFillCol || 'cccd';
-  const searchCol = props.col.suggestSearchCol || 'name';
 
   for (const target of targets) {
     const list = getRowsForTarget(target);
     const tableTitle = getTableDisplayName(target);
+    const { searchCol, fillCol } = getSuggestConfigForTarget(target);
 
     const found = list.find((row) => {
-      const fVal = String(getRowCustomField(row, fillCol) || row.cccd || row.cccdthannhan || row.code || row.id || '').trim();
+      const fVal = String(
+        getRowCustomField(row, fillCol) ||
+        row[fillCol] ||
+        (target === 'relatives' ? (row.cccdthannhan || row.cccd) : (row.cccd || row.cccdparent)) ||
+        row.code ||
+        row.id ||
+        ''
+      ).trim();
       if (fVal && fVal.toLowerCase() === val.toLowerCase()) return true;
-      const fallbackCccd = String(row.cccd || row.cccdthannhan || row.code || row.id || '').trim();
+      const fallbackCccd = String(row.cccd || row.cccdthannhan || row.cccdparent || row.code || row.id || '').trim();
       return fallbackCccd && fallbackCccd.toLowerCase() === val.toLowerCase();
     });
 
@@ -812,7 +879,12 @@ const matchedSuggestRecord = computed(() => {
       return {
         tableTitle,
         target,
-        name: String(getRowCustomField(found, searchCol) || found.name || found.relativeName || found.fullName || 'Đối tượng').trim(),
+        name: String(
+          getRowCustomField(found, searchCol) ||
+          found[searchCol] ||
+          (target === 'relatives' ? (found.relativeName || found.name) : (found.name || found.fullName)) ||
+          'Đối tượng'
+        ).trim(),
         fillValue: val,
         position: found.position || getRowCustomField(found, 'position') || '',
         department: found.departmentName || getRowCustomField(found, 'departmentName') || '',

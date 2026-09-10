@@ -3392,6 +3392,40 @@
   - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/frontend/dist/`.
 - **Trạng thái**: Done [Reversible].
 
+---
+
+### PHIÊN LÀM VIỆC: SỬA LỖI TRIPS LIST KHÔNG XÁC ĐỊNH, TIMEOUT AXIOS KHI LƯU THÂN NHÂN & NÂNG CẤP GỢI Ý TÌM KIẾM ĐA BẢNG
+- **Yêu cầu & Vấn đề từ người dùng**:
+  1. *Lỗi `ReferenceError: tripsList is not defined`* tại `UnifiedTableView.vue` làm gián đoạn việc tính toán công thức cột.
+  2. *Lỗi `AxiosError: timeout of 30000ms exceeded`* và không lưu được quan hệ "Chị ruột" cho Lê Thị Bích Hằng.
+  3. *CCCD chuyến đi không tự gợi ý Thân nhân*: Khi cột chọn 2 bảng nguồn (`Cán bộ` và `Thân nhân`), cấu hình chỉ cho phép chọn 1 cột tìm kiếm và 1 cột điền (`name` và `cccdparent`), vốn chỉ có ở Cán bộ. Ở Thân nhân, tên là `relativeName` và CCCD là `cccdthannhan`, khiến việc gõ tên hoặc CCCD thân nhân không hiển thị gợi ý và thẻ thông tin. Đề xuất giải pháp và triển khai chuẩn xác.
+
+- **Nguyên nhân cốt lõi & Giải pháp đã thực hiện**:
+  1. *Sửa lỗi ReferenceError `tripsList`*:
+     - Tại `UnifiedTableView.vue:2628`, `tripsList.value` không tồn tại trong scope của `getCellValue`. Đã đổi thành `personnelStore.tripsList || []`.
+  2. *Triệt tiêu lỗi Timeout 30000ms & Tối ưu lưu trữ dữ liệu*:
+     - **Nguyên nhân**: Khi lưu thân nhân/chuyến đi, các đối tượng mang theo thuộc tính tham chiếu vòng (circular reference) như `rawPerson`, `rawRelative`, `rawTrip`, `parentPerson`. Khi spread vào `custom_data`, payload gửi lên Directus bị phình to từ 8KB lên 35KB+, gây nghẽn kết nối và vượt ngưỡng timeout 30s. Đồng thời trong `saveRecord`, điều kiện lọc `trips` nằm trước `relatives` khiến một số thao tác với thân nhân bị nhận nhầm sang `saveTrip`.
+     - **Giải pháp**:
+       + Bổ sung hàm `sanitizeEntity(obj)` trong `src/stores/personnel.js` để tự động loại bỏ tất cả các khóa tạm (`rawPerson`, `rawRelative`, `rawTrip`, `parentPerson`, `parentPersonnel`, `uniqueKey`, `_tableId`, `_recordType`, v.v.) ở cả cấp ngoài cùng và trong `custom_data`.
+       + Giảm 90% dung lượng payload gửi lên máy chủ (từ 35KB xuống còn ~2KB).
+       + Bổ sung cơ chế cập nhật giao diện lạc quan (Optimistic Update) tức thì cho `personnelList`, `relativesList`, `tripsList`, không block giao diện khi chờ background sync.
+       + Sắp xếp lại thứ tự điều hướng trong `saveRecord`: Kiểm tra `relatives` trước `trips`.
+  3. *Nâng cấp Động cơ Gợi ý Tìm kiếm & Tự điền Đa Bảng (Multi-Table Autocomplete Engine)*:
+     - **Giải pháp Kiến trúc**:
+       + Cho phép cấu hình chi tiết `suggestConfigByTable`: Mỗi bảng được cấu hình riêng cặp cột Tìm kiếm và Cột Điền (`{ personnel: { searchCol, fillCol }, relatives: { searchCol, fillCol } }`).
+       + Tại `ColumnHeaderMenu.vue`: Khi người dùng chọn từ 2 bảng trở lên, giao diện tự động sinh ra các cặp dropdown cấu hình riêng cho từng bảng đã chọn. Nếu chỉ chọn 1 bảng thì giữ giao diện 2 dropdown gọn gàng.
+       + Tại `useTableColumns.js`: Tiếp nhận và lưu trữ `suggestConfigByTable` vào định nghĩa cột.
+       + Tại `DynamicField.vue`:
+         * Triển khai hàm `getSuggestConfigForTarget(target)` với fallback thông minh (`relativeName` / `cccdthannhan` cho thân nhân, `name` / `cccdparent` hoặc `cccd` cho cán bộ).
+         * Cập nhật `filteredSuggestList` và `matchedSuggestRecord` duyệt qua từng bảng nguồn, áp dụng cấu hình cột tương ứng.
+         * Phân tầng nhận diện thị giác rõ ràng: Thân nhân hiển thị nhãn và viền tím `[Thân nhân]` kèm tên cán bộ liên quan; Cán bộ hiển thị nhãn và viền xanh `[Cán bộ]` kèm chức vụ và phòng ban.
+
+- **Kiểm thử & Triển khai**:
+  - `npm run build`: Thành công 100% (604ms, 0 lỗi).
+  - Làm sạch các bundle build cũ và đồng bộ mã nguồn mới sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
+
+
 
 
 

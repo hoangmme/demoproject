@@ -979,7 +979,7 @@ export function useTableColumns({
     }
   };
 
-  const onChildChangeColumnSuggest = async ({ colId, suggestEnabled, suggestTarget, suggestSearchCol, suggestFillCol }) => {
+  const onChildChangeColumnSuggest = async ({ colId, suggestEnabled, suggestTarget, suggestSearchCol, suggestFillCol, suggestConfigByTable }) => {
     const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
     let found = false;
 
@@ -991,6 +991,9 @@ export function useTableColumns({
           c.suggestTarget = suggestTarget;
           c.suggestSearchCol = suggestSearchCol;
           c.suggestFillCol = suggestFillCol;
+          if (suggestConfigByTable !== undefined) {
+            c.suggestConfigByTable = suggestConfigByTable;
+          }
           found = true;
           break;
         }
@@ -1010,6 +1013,9 @@ export function useTableColumns({
             c.suggestTarget = suggestTarget;
             c.suggestSearchCol = suggestSearchCol;
             c.suggestFillCol = suggestFillCol;
+            if (suggestConfigByTable !== undefined) {
+              c.suggestConfigByTable = suggestConfigByTable;
+            }
             found = true;
             break;
           }
