@@ -3410,18 +3410,17 @@
        + Giảm 90% dung lượng payload gửi lên máy chủ (từ 35KB xuống còn ~2KB).
        + Bổ sung cơ chế cập nhật giao diện lạc quan (Optimistic Update) tức thì cho `personnelList`, `relativesList`, `tripsList`, không block giao diện khi chờ background sync.
        + Sắp xếp lại thứ tự điều hướng trong `saveRecord`: Kiểm tra `relatives` trước `trips`.
-  3. *Nâng cấp Động cơ Gợi ý Tìm kiếm & Tự điền Đa Bảng (Multi-Table Autocomplete Engine)*:
+  3. *Động cơ Gợi ý Tìm kiếm & Tự điền Đa Bảng Thuần Khiết (Zero-Fallback Dynamic Dropdowns)*:
      - **Giải pháp Kiến trúc**:
-       + Cho phép cấu hình chi tiết `suggestConfigByTable`: Mỗi bảng được cấu hình riêng cặp cột Tìm kiếm và Cột Điền (`{ personnel: { searchCol, fillCol }, relatives: { searchCol, fillCol } }`).
-       + Tại `ColumnHeaderMenu.vue`: Khi người dùng chọn từ 2 bảng trở lên, giao diện tự động sinh ra các cặp dropdown cấu hình riêng cho từng bảng đã chọn. Nếu chỉ chọn 1 bảng thì giữ giao diện 2 dropdown gọn gàng.
-       + Tại `useTableColumns.js`: Tiếp nhận và lưu trữ `suggestConfigByTable` vào định nghĩa cột.
+       + Triệt tiêu hoàn toàn các logic đoán ngầm / fallback cứng (`name`, `relativeName`, `cccd`, `cccdthannhan`, `cccdparent`) trong mã nguồn.
+       + Tại `ColumnHeaderMenu.vue`: Khi chọn nhiều bảng nguồn, giao diện hiển thị trực tiếp các ô dropdown chọn Cột tìm kiếm và Cột điền cho từng bảng. Người dùng chủ động chọn cột nào từ dropdown thì hệ thống lưu chính xác cột đó vào `suggestConfigByTable`.
        + Tại `DynamicField.vue`:
-         * Triển khai hàm `getSuggestConfigForTarget(target)` với fallback thông minh (`relativeName` / `cccdthannhan` cho thân nhân, `name` / `cccdparent` hoặc `cccd` cho cán bộ).
-         * Cập nhật `filteredSuggestList` và `matchedSuggestRecord` duyệt qua từng bảng nguồn, áp dụng cấu hình cột tương ứng.
-         * Phân tầng nhận diện thị giác rõ ràng: Thân nhân hiển thị nhãn và viền tím `[Thân nhân]` kèm tên cán bộ liên quan; Cán bộ hiển thị nhãn và viền xanh `[Cán bộ]` kèm chức vụ và phòng ban.
+         * `getSuggestConfigForTarget(target)` chỉ đọc đúng `searchCol` và `fillCol` do người dùng cấu hình từ dropdown.
+         * `filteredSuggestList` và `matchedSuggestRecord` chỉ trích xuất giá trị đúng theo `searchCol` và `fillCol` của bảng đó. Tuyệt đối không phỏng đoán, không nạp bù trường khác.
+         * Thẻ hiển thị và danh sách gợi ý thiết kế phẳng, trung thực theo giá trị cột được chọn, không hardcode trường quan hệ hay chức vụ.
 
 - **Kiểm thử & Triển khai**:
-  - `npm run build`: Thành công 100% (604ms, 0 lỗi).
+  - `npm run build`: Thành công 100% (568ms, 0 lỗi).
   - Làm sạch các bundle build cũ và đồng bộ mã nguồn mới sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 

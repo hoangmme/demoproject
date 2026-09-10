@@ -1486,14 +1486,9 @@ const getSuggestConfig = (tId) => {
     editSuggestConfigByTable.value = {};
   }
   if (!editSuggestConfigByTable.value[tId]) {
-    const cols = getColumnsForTargetTable(tId) || [];
-    let defSearch = tId === 'relatives' ? 'relativeName' : 'name';
-    let defFill = tId === 'relatives' ? 'cccdthannhan' : 'cccd';
-    const foundSearch = cols.find(c => c.id === defSearch) || cols.find(c => c.id.toLowerCase().includes('name') || c.id.toLowerCase().includes('ten'));
-    const foundFill = cols.find(c => c.id === defFill) || cols.find(c => c.id.toLowerCase().includes('cccd') || c.id.toLowerCase().includes('code') || c.id.toLowerCase().includes('id'));
     editSuggestConfigByTable.value[tId] = {
-      searchCol: foundSearch ? foundSearch.id : (cols[0]?.id || ''),
-      fillCol: foundFill ? foundFill.id : (cols[1]?.id || cols[0]?.id || ''),
+      searchCol: editSuggestSearchCol.value || '',
+      fillCol: editSuggestFillCol.value || '',
     };
   }
   return editSuggestConfigByTable.value[tId];
@@ -1505,11 +1500,6 @@ const getTableTitle = (tId) => {
 };
 
 const handleSuggestTargetChange = () => {
-  const cols = suggestTargetCols.value || [];
-  const foundName = cols.find((c) => c.id === 'name' || c.id === 'relativeName' || c.id === 'fullName' || c.id === 'title' || (c.label && c.label.toLowerCase().includes('tên')));
-  editSuggestSearchCol.value = foundName?.id || (cols[0]?.id || '');
-  const foundCccd = cols.find((c) => c.id === 'cccd' || c.id === 'cccdthannhan' || c.id === 'code' || (c.label && c.label.toLowerCase().includes('cccd')));
-  editSuggestFillCol.value = foundCccd?.id || (cols[1]?.id || cols[0]?.id || '');
   handleSaveSuggest();
 };
 

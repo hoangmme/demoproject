@@ -37,101 +37,45 @@
             :key="idx"
             class="suggest-item"
             @mousedown.prevent="selectSuggestItem(item)"
-            style="padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 2px; transition: background 0.15s;"
+            style="padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; gap: 8px; transition: background 0.15s;"
             onmouseover="this.style.background='#f0f9ff'"
             onmouseout="this.style.background='#ffffff'"
           >
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span
-                  v-if="item.tableTag"
-                  :style="{
-                    fontSize: '0.65rem',
-                    fontWeight: '700',
-                    color: item.target === 'relatives' ? '#7e22ce' : '#0284c7',
-                    background: item.target === 'relatives' ? '#f3e8ff' : '#e0f2fe',
-                    padding: '1px 5px',
-                    borderRadius: '4px'
-                  }"
-                >
-                  {{ item.tableTag }}
-                </span>
-                <span style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">
-                  {{ item.displayLabel }}
-                </span>
-              </div>
+            <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
               <span
-                :style="{
-                  fontSize: '0.72rem',
-                  color: item.target === 'relatives' ? '#7e22ce' : '#0284c7',
-                  fontWeight: '700',
-                  background: item.target === 'relatives' ? '#f3e8ff' : '#e0f2fe',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  fontFamily: 'monospace'
-                }"
+                v-if="item.tableTag"
+                style="font-size: 0.65rem; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 1px 5px; border-radius: 4px;"
               >
-                {{ item.fillValue }}
+                {{ item.tableTag }}
+              </span>
+              <span style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">
+                {{ item.displayLabel }}
               </span>
             </div>
-            <div v-if="item.subInfo" style="font-size: 0.68rem; color: #64748b;">
-              {{ item.subInfo }}
-            </div>
+            <span
+              style="font-size: 0.72rem; color: #0284c7; font-weight: 700; background: #e0f2fe; padding: 1px 6px; border-radius: 4px; font-family: monospace;"
+            >
+              {{ item.fillValue }}
+            </span>
           </div>
         </div>
 
-        <!-- Thẻ hiển thị thêm thông tin phong phú khi đã điền xong -->
+        <!-- Thẻ hiển thị thông tin bản ghi khớp -->
         <div
           v-if="matchedSuggestRecord"
           class="suggest-matched-card"
-          :style="{
-            marginTop: '6px',
-            padding: '6px 10px',
-            background: matchedSuggestRecord.target === 'relatives' ? '#faf5ff' : '#f0fdf4',
-            border: matchedSuggestRecord.target === 'relatives' ? '1.5px solid #d8b4fe' : '1.5px solid #86efac',
-            borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: '8px'
-          }"
+          style="margin-top: 6px; padding: 4px 8px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px;"
         >
-          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
-            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <span
-                :style="{
-                  fontSize: '0.66rem',
-                  fontWeight: '700',
-                  color: matchedSuggestRecord.target === 'relatives' ? '#7e22ce' : '#15803d',
-                  background: matchedSuggestRecord.target === 'relatives' ? '#f3e8ff' : '#dcfce7',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  border: matchedSuggestRecord.target === 'relatives' ? '1px solid #e9d5ff' : '1px solid #bbf7d0'
-                }"
-              >
-                {{ matchedSuggestRecord.tableTitle }}
-              </span>
-              <span :style="{ fontWeight: '700', color: matchedSuggestRecord.target === 'relatives' ? '#581c87' : '#0f172a', fontSize: '0.82rem' }">
-                {{ matchedSuggestRecord.name }}
-              </span>
-              <span :style="{ fontSize: '0.72rem', color: matchedSuggestRecord.target === 'relatives' ? '#7e22ce' : '#166534', fontFamily: 'monospace', fontWeight: '600' }">
-                ({{ matchedSuggestRecord.fillValue }})
-              </span>
-            </div>
-            <div style="font-size: 0.7rem; color: #475569; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px;">
-              <span v-if="matchedSuggestRecord.relation" style="font-weight: 600; color: #7c3aed;">
-                Quan hệ: {{ matchedSuggestRecord.relation }}
-              </span>
-              <span v-if="matchedSuggestRecord.parentPersonName" style="color: #0369a1; font-weight: 500;">
-                👤 Cán bộ: {{ matchedSuggestRecord.parentPersonName }}
-              </span>
-              <span v-if="matchedSuggestRecord.position" style="font-weight: 500;">
-                💼 {{ matchedSuggestRecord.position }}
-              </span>
-              <span v-if="matchedSuggestRecord.department" style="color: #64748b;">
-                🏢 {{ matchedSuggestRecord.department }}
-              </span>
-            </div>
+          <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+            <span style="font-size: 0.68rem; font-weight: 700; color: #475569; background: #e2e8f0; padding: 1px 6px; border-radius: 4px;">
+              {{ matchedSuggestRecord.tableTitle }}
+            </span>
+            <span style="font-weight: 700; color: #0f172a; font-size: 0.8rem;">
+              {{ matchedSuggestRecord.name }}
+            </span>
+            <span style="font-size: 0.72rem; color: #64748b; font-family: monospace;">
+              ({{ matchedSuggestRecord.fillValue }})
+            </span>
           </div>
           <button
             type="button"
@@ -766,25 +710,8 @@ const getTableDisplayName = (target) => {
 
 const getSuggestConfigForTarget = (target) => {
   const tableCfg = props.col?.suggestConfigByTable?.[target] || {};
-  let searchCol = tableCfg.searchCol;
-  let fillCol = tableCfg.fillCol;
-
-  if (!searchCol) {
-    if (target === 'relatives') {
-      searchCol = 'relativeName';
-    } else {
-      searchCol = props.col?.suggestSearchCol || 'name';
-    }
-  }
-
-  if (!fillCol) {
-    if (target === 'relatives') {
-      fillCol = 'cccdthannhan';
-    } else {
-      fillCol = props.col?.suggestFillCol || 'cccd';
-    }
-  }
-
+  const searchCol = tableCfg.searchCol || props.col?.suggestSearchCol || '';
+  const fillCol = tableCfg.fillCol || props.col?.suggestFillCol || '';
   return { searchCol, fillCol };
 };
 
@@ -799,36 +726,18 @@ const filteredSuggestList = computed(() => {
     const rawList = getRowsForTarget(target);
     const tableTag = getTableDisplayName(target);
     const { searchCol, fillCol } = getSuggestConfigForTarget(target);
+    if (!searchCol && !fillCol) continue;
 
     for (const row of rawList) {
-      const sVal = String(
-        getRowCustomField(row, searchCol) ||
-        row[searchCol] ||
-        (target === 'relatives' ? (row.relativeName || row.name || row.fullName) : (row.name || row.fullName || row.relativeName)) ||
-        ''
-      ).trim();
-      const fVal = String(
-        getRowCustomField(row, fillCol) ||
-        row[fillCol] ||
-        (target === 'relatives' ? (row.cccdthannhan || row.cccd || row.code || row.id) : (row.cccd || row.cccdparent || row.code || row.id)) ||
-        ''
-      ).trim();
+      const sVal = searchCol ? String(getRowCustomField(row, searchCol) ?? '').trim() : '';
+      const fVal = fillCol ? String(getRowCustomField(row, fillCol) ?? '').trim() : '';
 
-      if (!query || sVal.toLowerCase().includes(query) || fVal.toLowerCase().includes(query)) {
-        const extraParts = [];
-        const dept = row.departmentName || getRowCustomField(row, 'departmentName') || '';
-        const pos = row.position || getRowCustomField(row, 'position') || '';
-        const rel = row.relationshipName || getRowCustomField(row, 'relationshipName') || '';
-        if (rel) extraParts.push(`Quan hệ: ${rel}`);
-        if (pos) extraParts.push(pos);
-        if (dept) extraParts.push(dept);
-
+      if (!query || (sVal && sVal.toLowerCase().includes(query)) || (fVal && fVal.toLowerCase().includes(query))) {
         results.push({
           target,
           tableTag: targets.length > 1 ? tableTag : '',
-          displayLabel: sVal || fVal || 'Bản ghi',
+          displayLabel: sVal || fVal,
           fillValue: fVal || sVal,
-          subInfo: extraParts.join(' • '),
         });
         if (results.length >= 30) break;
       }
@@ -850,47 +759,20 @@ const matchedSuggestRecord = computed(() => {
     const list = getRowsForTarget(target);
     const tableTitle = getTableDisplayName(target);
     const { searchCol, fillCol } = getSuggestConfigForTarget(target);
+    if (!fillCol) continue;
 
     const found = list.find((row) => {
-      const fVal = String(
-        getRowCustomField(row, fillCol) ||
-        row[fillCol] ||
-        (target === 'relatives' ? (row.cccdthannhan || row.cccd) : (row.cccd || row.cccdparent)) ||
-        row.code ||
-        row.id ||
-        ''
-      ).trim();
-      if (fVal && fVal.toLowerCase() === val.toLowerCase()) return true;
-      const fallbackCccd = String(row.cccd || row.cccdthannhan || row.cccdparent || row.code || row.id || '').trim();
-      return fallbackCccd && fallbackCccd.toLowerCase() === val.toLowerCase();
+      const fVal = String(getRowCustomField(row, fillCol) ?? '').trim();
+      return fVal && fVal.toLowerCase() === val.toLowerCase();
     });
 
     if (found) {
-      let parentName = '';
-      if (target === 'relatives') {
-        const parentCccd = found.cccdparent || getRowCustomField(found, 'cccdparent');
-        if (parentCccd) {
-          const parent = (personnelStore.personnelList || []).find(
-            (p) => String(p.cccd || p.id).trim().toLowerCase() === String(parentCccd).trim().toLowerCase()
-          );
-          if (parent) parentName = parent.name || parent.fullName || '';
-        }
-      }
+      const sVal = searchCol ? String(getRowCustomField(found, searchCol) ?? '').trim() : '';
       return {
         tableTitle,
         target,
-        name: String(
-          getRowCustomField(found, searchCol) ||
-          found[searchCol] ||
-          (target === 'relatives' ? (found.relativeName || found.name) : (found.name || found.fullName)) ||
-          'Đối tượng'
-        ).trim(),
+        name: sVal || val,
         fillValue: val,
-        position: found.position || getRowCustomField(found, 'position') || '',
-        department: found.departmentName || getRowCustomField(found, 'departmentName') || '',
-        relation: found.relationshipName || getRowCustomField(found, 'relationshipName') || '',
-        parentPersonName: parentName,
-        code: found.code || found.id || '',
       };
     }
   }
