@@ -3046,3 +3046,44 @@
      - npm run build thành công 100% (585ms).
      - Đồng bộ dist sang WINDOWS_OFFLINE_APP/frontend/.
 - **Trạng thái**: Done [Reversible].
+
+## SESSION 39 (2026-09-10) - SỬA TRIỆT ĐỂ LUỒNG LƯU CHUYẾN ĐI, THẺ ĐỊNH DANH NGƯỜI ĐI & CỘT UNIQUE ĐỘNG
+- **Yêu cầu của Người dùng**:
+  1. "Chuyến đi ông Võ Minh Thanh vẫn không xóa mỹ đc (xóa hết fallback, hardcode gì đi)" -> Giải quyết dứt điểm việc quốc gia Mỹ còn xuất hiện sau khi xóa.
+  2. "ở chuyến đi nên có tab dựa trên key liên kết (hiện tại là cán bộ, thân nhân) chứ hiển thị như hiện tại (ảnh) không rõ (mong muốn là tab chuyến đi bên trong đó có tab cán bộ, thân nhân << chuyến đi của ai nhìn là biết hoặc bạn có đề xuất gì hay hơn nói tôi duyệt)" -> Tab liên kết rõ ràng và nhận biết ngay chuyến đi của ai.
+  3. "Thống kê unique view unique (chưa có bổ sung logic luôn đi) cần chọn cột nào là unique chứ (hiện tại đang hardcode cccd thì phải?)" -> Bổ sung cấu hình chọn cột khóa Unique động thay vì hardcode CCCD.
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. **Lỗi định tuyến bản ghi trong `src/stores/personnel.js` (`saveRecord`)**:
+     - Chuyến đi liên quan đến ông Võ Minh Thanh là chuyến đi của thân nhân Võ Lê Phương Thanh, trên dòng chuyến đi có sẵn `relativeName: 'Võ Lê Phương Thanh'` và `relationshipName: 'Con ruột'`.
+     - `saveRecord` kiểm tra `record.relativeName` TRƯỚC chuyến đi nên tưởng nhầm là Thân nhân, gọi `saveRelative`, tạo ra thân nhân ảo rác `TN-00024` (`id: trip_...`), hoàn toàn không gọi `saveTrip`!
+     - Trong `saveTrip`: `updatedP.trips` và `updatedP.relatives` được đọc từ thuộc tính cấp 1 trong khi Directus lưu trong `custom_data.trips` và `custom_data.relatives`.
+  2. **Nhận diện liên kết Chuyến đi (`PersonnelDialog.vue` & `PersonnelRelatedTabs.vue`)**:
+     - Chưa kiểm tra trường hợp chuyến đi thân nhân nhưng cột CCCD mang số CCCD của Cán bộ bảo lãnh dẫn tới hiển thị "Người đi: Chính Cán bộ" sai thực tế.
+     - Thanh tab hiển thị nhãn chung chung "Thông tin chính", không chỉ rõ Cán bộ/Thân nhân nào liên quan.
+  3. **Hardcode Unique CCCD**:
+     - `DashboardView.vue` (dòng 938, 3475, 3567), `dashboardMetrics.js` (dòng 800), và `useTableFilters.js` (dòng 110) đều hardcode lấy `cccd` / `cccdparent`.
+- **Giải pháp Triển khai**:
+  1. **Sửa dứt điểm Luồng Lưu Chuyến đi (`src/stores/personnel.js`)**:
+     - `saveRecord` & `deleteRecord`: Ưu tiên nhận diện `_tableId === 'trips' || _recordType === 'trip' || rawTrip || id.startsWith('trip_') || uniqueKey.startsWith('trip_') || quoc_gia_xuat_canh !== undefined` TRƯỚC thân nhân.
+     - `saveTrip`: Đọc `pTrips` và `pRels` từ cả cấp 1 và `custom_data`. Cập nhật và dọn sạch toàn bộ alias quốc gia ở cả `pTrips`, `pTrips.custom_data`, `relObj.trips`, `relObj.custom_data.trips`.
+     - Directus: Đã chạy script PATCH trực tiếp dọn sạch bản ghi `074079000344`, xóa thân nhân rác `TN-00024` và xóa vĩnh viễn "Mỹ" trong `trips` và `relatives.trips`.
+  2. **Thẻ Định danh Người đi (Traveler Identity Card) & Tab Liên kết Động (`PersonnelDialog.vue` & `PersonnelRelatedTabs.vue`)**:
+     - Thay thế banner cũ bằng Thẻ nhận diện người đi cao cấp `trip-traveler-card`:
+       - Hiển thị badge rõ ràng: `CHUYẾN ĐI CỦA THÂN NHÂN` (tím) hoặc `CHUYẾN ĐI CỦA CÁN BỘ` (xanh dương).
+       - Hiển thị tên người đi nổi bật kèm quan hệ và Cán bộ bảo lãnh.
+       - Nút chuyển nhanh `[Hồ sơ Cán bộ]` và `[Hồ sơ Thân nhân]` để xem ngay thông tin liên quan.
+     - `PersonnelRelatedTabs.vue`: Đổi nhãn tab thông minh kèm họ tên cụ thể:
+       - Tab 1: `✈️ Chi tiết Chuyến đi`
+       - Tab 2: `👤 Cán bộ: [Tên Cán bộ]`
+       - Tab 3: `👥 Thân nhân: [Tên Thân nhân]`
+  3. **Cấu hình Cột khóa Unique Động (100% Zero Hardcoding)**:
+     - `DashboardView.vue`: Bổ sung dropdown "Cột khóa định danh Unique" (`uniqueKeyCol`) hiển thị toàn bộ cột của nguồn dữ liệu khi tick chọn Unique.
+     - `computeWidgetCount`: Khử trùng lặp và đếm duy nhất theo `widget.uniqueKeyCol` qua `getRowFieldValue`.
+     - `openDrilldownForWidget`: Khử trùng lặp danh sách hiển thị bảng theo `widget.uniqueKeyCol`.
+     - `dashboardMetrics.js`: `computeMetricCardCount` khử trùng lặp theo `card.uniqueKeyCol` qua `extractRowFieldValue`.
+     - `useTableFilters.js`: Khử trùng lặp View Unique theo `targetCard.uniqueKeyCol || baselineCard.uniqueKeyCol || uniqueCol.id`.
+- **Kiểm thử & Triển khai**:
+  - Live query Directus: `quoc_gia_xuat_canh` = `""` cho cả `trips` và `relatives.trips` của Võ Minh Thanh; relatives count = 1 (đã xóa sạch bản ghi rác).
+  - `npm run build`: Thành công 100% (584ms, 0 lỗi).
+  - Đồng bộ sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/frontend/src/`.
+- **Trạng thái**: Done [Reversible].

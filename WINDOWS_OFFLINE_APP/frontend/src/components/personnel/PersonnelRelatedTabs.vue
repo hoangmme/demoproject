@@ -616,6 +616,16 @@ const getLinkedRows = (targetTable) => {
       if (r) return [r];
     }
     if (curRecord.rawRelative) return [curRecord.rawRelative];
+    if (curRecord.isRelative || curRecord.relativeName) {
+      const relName = String(curRecord.relativeName || curRecord.name || '').trim().toLowerCase();
+      if (relName) {
+        const rByName = allRelatives.find((rel) => {
+          const n = String(rel.relativeName || rel.name || '').trim().toLowerCase();
+          return n && n === relName;
+        });
+        if (rByName) return [rByName];
+      }
+    }
 
     // 6b. If this trip was by an officer, find and return all relatives of that officer
     const persTable = allTables.value.find((t) => t.id === 'personnel');
@@ -716,20 +726,28 @@ const isTableLinked = (targetTable) => {
 
 // Available Tabs
 const availableTabs = computed(() => {
+  const curId = currentTable.value?.id || props.recordSource || 'personnel';
+  const isTrip = curId === 'trips';
   const tabs = [
     {
       id: 'info',
-      label: currentTable.value?.title || 'Thông tin chính',
-      icon: currentTable.value?.icon || 'pi pi-id-card',
+      label: isTrip ? 'Chi tiết Chuyến đi' : (currentTable.value?.title || 'Thông tin chính'),
+      icon: isTrip ? 'pi pi-send' : (currentTable.value?.icon || 'pi pi-id-card'),
     },
   ];
 
   (allTables.value || []).forEach((t) => {
     if (isTableLinked(t)) {
       const rows = getLinkedRows(t);
+      let tabLabel = t.title;
+      if (t.id === 'personnel' && rows.length === 1) {
+        tabLabel = `Cán bộ: ${rows[0].name || rows[0].fullName || rows[0].code || 'Cán bộ'}`;
+      } else if (t.id === 'relatives' && rows.length === 1) {
+        tabLabel = `Thân nhân: ${rows[0].relativeName || rows[0].name || rows[0].code || 'Thân nhân'}`;
+      }
       tabs.push({
         id: t.id,
-        label: t.title,
+        label: tabLabel,
         icon: t.icon || 'pi pi-table',
         count: rows.length,
         table: t,
@@ -794,7 +812,15 @@ const getRecordDisplayName = (record, table) => {
     return record[relativeNameField.value] || record.relativeName || record.name || record.code || 'Thân nhân';
   }
   if (table?.id === 'trips' || table?.source === 'trips') {
-    const dest = record.countryName || record.country || record.quoc_gia_xuat_canh || '';
+    let dest = '';
+    if (record.quoc_gia_xuat_canh !== undefined) {
+      dest = record.quoc_gia_xuat_canh;
+    } else if (record.countryName !== undefined) {
+      dest = record.countryName;
+    } else if (record.country !== undefined) {
+      dest = record.country;
+    }
+    dest = String(dest || '').trim();
     const date = record.departureDate || record.ngay_xuat_canh || '';
     return dest ? `${dest} (${formatDate(date) || date})` : 'Chuyến đi';
   }
@@ -923,10 +949,28 @@ const handleSaveLinkedRecord = async () => {
 
   isSaving.value = true;
   try {
+    if (targetTable.id === 'trips' || targetTable.source === 'trips') {
+      syncTripPersonToForm();
+    }
+
     const payload = {
       ...editForm.value,
       custom_data: { ...(editForm.value.custom_data || {}), ...editForm.value },
     };
+
+    // Sanitize country aliases if cleared
+    const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
+    if (editForm.value.quoc_gia_xuat_canh !== undefined && !String(editForm.value.quoc_gia_xuat_canh || '').trim()) {
+      for (const alias of countryAliases) {
+        payload[alias] = '';
+        if (payload.custom_data) delete payload.custom_data[alias];
+      }
+    } else if (editForm.value.countryName !== undefined && !String(editForm.value.countryName || '').trim()) {
+      for (const alias of countryAliases) {
+        payload[alias] = '';
+        if (payload.custom_data) delete payload.custom_data[alias];
+      }
+    }
 
     if (targetTable.id === 'personnel' || targetTable.source === 'personnel') {
       await personnelStore.savePerson(payload);
@@ -935,7 +979,6 @@ const handleSaveLinkedRecord = async () => {
       await personnelStore.saveRelative(payload);
     } else if (targetTable.id === 'trips' || targetTable.source === 'trips') {
       payload._recordType = 'trip';
-      syncTripPersonToForm();
       await personnelStore.saveTrip(payload);
     } else {
       // Custom table save

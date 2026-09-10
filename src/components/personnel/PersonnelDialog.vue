@@ -37,23 +37,56 @@
       @switchRecord="handleSwitchRecord"
     />
 
-    <!-- Banner tóm tắt chuyến đi liên kết Cán bộ / Thân nhân -->
-    <div v-if="recordSource === 'trips' && activeTab === 'info' && (tripLinkedOfficer || tripLinkedRelative)" class="trip-linked-summary-banner">
-      <div class="trip-summary-content">
-        <span v-if="tripLinkedOfficer" class="trip-summary-pill officer-pill">
+    <!-- Thẻ Nhận diện Người đi & Điều hướng Chuyển Tab Nhanh (Traveler Identity Card) -->
+    <div v-if="recordSource === 'trips' && activeTab === 'info'" class="trip-traveler-card">
+      <div class="traveler-card-main">
+        <div class="traveler-badge" :class="isRelativeTrip ? 'is-relative' : 'is-officer'">
+          <i :class="isRelativeTrip ? 'pi pi-users' : 'pi pi-user'"></i>
+          <span>{{ isRelativeTrip ? 'CHUYẾN ĐI CỦA THÂN NHÂN' : 'CHUYẾN ĐI CỦA CÁN BỘ' }}</span>
+        </div>
+        <div class="traveler-info-body">
+          <div class="traveler-name-row">
+            <span class="label">Người đi:</span>
+            <strong class="name-highlight">
+              {{ isRelativeTrip ? (tripLinkedRelative?.relativeName || form.relativeName || form.name || 'Thân nhân') : (tripLinkedOfficer?.name || form.personnelName || form.name || 'Cán bộ') }}
+            </strong>
+            <span v-if="isRelativeTrip && (tripLinkedRelative?.relationshipName || form.relationshipName)" class="relation-badge">
+              ({{ tripLinkedRelative?.relationshipName || form.relationshipName }})
+            </span>
+          </div>
+          <div v-if="tripLinkedOfficer" class="traveler-officer-row">
+            <span class="label">{{ isRelativeTrip ? 'Cán bộ bảo lãnh:' : 'Đơn vị / Chức vụ:' }}</span>
+            <span class="officer-detail">
+              <strong v-if="isRelativeTrip">{{ tripLinkedOfficer.name }}</strong>
+              <span v-if="tripLinkedOfficer.positionName || tripLinkedOfficer.position"> - {{ tripLinkedOfficer.positionName || tripLinkedOfficer.position }}</span>
+              <span v-if="tripLinkedOfficer.departmentName"> ({{ tripLinkedOfficer.departmentName }})</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nút chuyển nhanh sang hồ sơ Cán bộ hoặc Thân nhân liên quan -->
+      <div class="traveler-quick-nav">
+        <button
+          v-if="tripLinkedOfficer"
+          type="button"
+          class="quick-nav-btn officer"
+          @click="activeTab = 'personnel'"
+          title="Bấm để xem thông tin hồ sơ Cán bộ"
+        >
           <i class="pi pi-user"></i>
-          <span>Cán bộ: <strong>{{ tripLinkedOfficer.name || tripLinkedOfficer.fullName || tripLinkedOfficer.code }}</strong></span>
-          <span v-if="tripLinkedOfficer.positionName || tripLinkedOfficer.position" class="sub-text">({{ tripLinkedOfficer.positionName || tripLinkedOfficer.position }})</span>
-          <span v-if="tripLinkedOfficer.departmentName" class="sub-text">- {{ tripLinkedOfficer.departmentName }}</span>
-        </span>
-        <span v-if="tripLinkedRelative" class="trip-summary-pill relative-pill">
+          <span>Hồ sơ Cán bộ</span>
+        </button>
+        <button
+          v-if="isRelativeTrip || tripLinkedRelative"
+          type="button"
+          class="quick-nav-btn relative"
+          @click="activeTab = 'relatives'"
+          title="Bấm để xem thông tin hồ sơ Thân nhân"
+        >
           <i class="pi pi-users"></i>
-          <span>Người đi: Thân nhân <strong>{{ tripLinkedRelative.relativeName || tripLinkedRelative.name }}</strong> <span v-if="tripLinkedRelative.relationshipName">({{ tripLinkedRelative.relationshipName }})</span></span>
-        </span>
-        <span v-else class="trip-summary-pill personal-pill">
-          <i class="pi pi-check-circle"></i>
-          <span>Người đi: Chính Cán bộ</span>
-        </span>
+          <span>Hồ sơ Thân nhân</span>
+        </button>
       </div>
     </div>
 
@@ -313,38 +346,104 @@ const dialogHeader = computed(() => {
 });
 
 // Dynamic linkage resolution for Trips banner
-const tripLinkedOfficer = computed(() => {
-  if (recordSource.value !== 'trips') return null;
-  if (form.value.rawPerson) return form.value.rawPerson;
-  const pId = form.value.personnelId;
-  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccd';
-  const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
-  const tVal = String(form.value[tKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
-  return (personnelStore.personnelList || []).find((p) => {
-    if (pId && (String(p.id).trim() === String(pId).trim() || String(p.code).trim() === String(pId).trim())) return true;
-    if (tVal && pKeyField) {
-      const c = String(p[pKeyField] || p.cccd || '').trim().toLowerCase();
-      if (c && c === tVal) return true;
-    }
-    return false;
-  }) || null;
-});
-
 const tripLinkedRelative = computed(() => {
   if (recordSource.value !== 'trips') return null;
   if (form.value.rawRelative) return form.value.rawRelative;
+  const allRelatives = personnelStore.relativesList || [];
   const rId = form.value.relativeId;
   const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
   const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
   const tVal = String(form.value[tKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
-  return (personnelStore.relativesList || []).find((r) => {
-    if (rId && (String(r.id).trim() === String(rId).trim() || String(r.code).trim() === String(rId).trim())) return true;
-    if (tVal && rKeyField) {
-      const c = String(r[rKeyField] || r.cccdthannhan || r.cccd || '').trim().toLowerCase();
-      if (c && c === tVal) return true;
+
+  // 1. Direct ID match
+  if (rId) {
+    const r = allRelatives.find((rel) => String(rel.id).trim() === String(rId).trim() || String(rel.code).trim() === String(rId).trim());
+    if (r) return r;
+  }
+  // 2. Direct Key match
+  if (tVal && rKeyField) {
+    const r = allRelatives.find((rel) => {
+      const c = String(rel[rKeyField] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase();
+      return c && c === tVal;
+    });
+    if (r) return r;
+  }
+  // 3. Match by name if trip marked as relative or has relativeName
+  if (form.value.isRelative || form.value.relativeName) {
+    const relName = String(form.value.relativeName || form.value.name || '').trim().toLowerCase();
+    if (relName) {
+      const r = allRelatives.find((rel) => {
+        const n = String(rel.relativeName || rel.name || '').trim().toLowerCase();
+        return n && n === relName;
+      });
+      if (r) return r;
     }
-    return false;
-  }) || null;
+  }
+  // 4. If relative trip, find relative by parent's key
+  if (form.value.isRelative) {
+    const pId = form.value.personnelId;
+    const r = allRelatives.find((rel) => {
+      const parentVal = String(rel.cccdparent || rel.parentCccd || '').trim().toLowerCase();
+      return (pId && String(rel.personnelId).trim() === String(pId).trim()) || (tVal && parentVal === tVal);
+    });
+    if (r) return r;
+  }
+  return null;
+});
+
+const tripLinkedOfficer = computed(() => {
+  if (recordSource.value !== 'trips') return null;
+  if (form.value.rawPerson) return form.value.rawPerson;
+  const allPersonnel = personnelStore.personnelList || [];
+  const pId = form.value.personnelId;
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccd';
+  const tKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
+  const tVal = String(form.value[tKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
+
+  // 1. Direct ID match
+  if (pId) {
+    const p = allPersonnel.find((pers) => String(pers.id).trim() === String(pId).trim() || String(pers.code).trim() === String(pId).trim());
+    if (p) return p;
+  }
+  // 2. Direct Key match
+  if (tVal && pKeyField) {
+    const p = allPersonnel.find((pers) => {
+      const c = String(pers[pKeyField] || pers.cccd || pers.id || '').trim().toLowerCase();
+      return c && c === tVal;
+    });
+    if (p) return p;
+  }
+  // 3. Via linked relative
+  const rel = tripLinkedRelative.value;
+  if (rel) {
+    const relParentKey = personnelStore.getRelativeParentKeyField ? personnelStore.getRelativeParentKeyField() : 'cccdparent';
+    const parentVal = String(rel[relParentKey] || rel.cccdparent || rel.parentCccd || '').trim().toLowerCase();
+    const parentId = String(rel.personnelId || '').trim();
+    if (parentId) {
+      const p = allPersonnel.find((pers) => String(pers.id).trim() === parentId || String(pers.code).trim() === parentId);
+      if (p) return p;
+    }
+    if (parentVal && pKeyField) {
+      const p = allPersonnel.find((pers) => {
+        const c = String(pers[pKeyField] || pers.cccd || '').trim().toLowerCase();
+        return c && c === parentVal;
+      });
+      if (p) return p;
+    }
+    if (rel.rawPerson) return rel.rawPerson;
+  }
+  return null;
+});
+
+const isRelativeTrip = computed(() => {
+  if (recordSource.value !== 'trips') return false;
+  return Boolean(
+    form.value.isRelative ||
+    form.value.rawRelative ||
+    form.value.relativeId ||
+    tripLinkedRelative.value ||
+    (form.value.relativeName && form.value.relativeName !== form.value.parentName)
+  );
 });
 
 const safeClone = (obj) => {
@@ -446,8 +545,11 @@ const executeSave = async (payload) => {
 };
 
 const buildSavePayload = () => {
+  const curSrc = recordSource.value;
   const payload = {
     ...form.value,
+    _tableId: curSrc,
+    _recordType: curSrc === 'trips' ? 'trip' : (curSrc === 'relatives' ? 'relative' : (curSrc === 'personnel' ? 'personnel' : form.value._recordType)),
     custom_data: { ...(form.value.custom_data || {}), ...form.value },
   };
   delete payload.rawPerson;
@@ -591,53 +693,138 @@ const handleSwitchRecord = (newPerson) => {
   white-space: nowrap;
 }
 
-.trip-linked-summary-banner {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
-  border-radius: 8px;
-  padding: 8px 14px;
-  margin: 4px 6px 12px 6px;
-}
-
-.trip-summary-content {
+.trip-traveler-card {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 4px 6px 12px 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.trip-summary-pill {
+.traveler-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.traveler-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  padding: 3px 10px;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
   border-radius: 6px;
-  font-weight: 500;
+  text-transform: uppercase;
+  flex-shrink: 0;
 }
 
-.trip-summary-pill.officer-pill {
-  background: #ffffff;
-  color: #0369a1;
-  border: 1px solid #7dd3fc;
-  box-shadow: 0 1px 2px rgba(3, 105, 161, 0.08);
+.traveler-badge.is-officer {
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.25);
 }
 
-.trip-summary-pill.relative-pill {
-  background: #faf5ff;
-  color: #7e22ce;
-  border: 1px solid #d8b4fe;
+.traveler-badge.is-relative {
+  background: #9333ea;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(147, 51, 234, 0.25);
 }
 
-.trip-summary-pill.personal-pill {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+.traveler-info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.trip-summary-pill .sub-text {
-  font-size: 0.74rem;
+.traveler-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.traveler-name-row .label {
   color: #64748b;
-  margin-left: 2px;
+  font-size: 0.76rem;
+}
+
+.traveler-name-row .name-highlight {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.traveler-name-row .relation-badge {
+  color: #7e22ce;
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.traveler-officer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: #475569;
+}
+
+.traveler-officer-row .label {
+  color: #94a3b8;
+}
+
+.traveler-officer-row .officer-detail {
+  color: #334155;
+}
+
+.traveler-quick-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #ffffff;
+}
+
+.quick-nav-btn.officer {
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+.quick-nav-btn.officer:hover {
+  background: #e0f2fe;
+  border-color: #0284c7;
+}
+
+.quick-nav-btn.relative {
+  color: #7e22ce;
+  border-color: #e9d5ff;
+}
+.quick-nav-btn.relative:hover {
+  background: #f3e8ff;
+  border-color: #9333ea;
 }
 </style>

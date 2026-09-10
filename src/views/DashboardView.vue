@@ -923,21 +923,41 @@
             </div>
           </div>
 
-          <!-- Nút thêm dòng điều kiện & Checkbox Unique -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-            <button
-              type="button"
-              @click="addWidgetCondition"
-              style="display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px dashed #3b82f6; color: #2563eb; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer;"
-            >
-              <i class="pi pi-plus" style="font-size: 0.7rem;"></i> Thêm điều kiện lọc
-            </button>
+          <!-- Nút thêm dòng điều kiện & Tùy chọn Unique -->
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+            <div style="display: flex; justify-content: flex-start;">
+              <button
+                type="button"
+                @click="addWidgetCondition"
+                style="display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px dashed #3b82f6; color: #2563eb; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer;"
+              >
+                <i class="pi pi-plus" style="font-size: 0.7rem;"></i> Thêm điều kiện lọc
+              </button>
+            </div>
 
-            <!-- Checkbox Đếm duy nhất -->
-            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #334155; cursor: pointer; font-weight: 600;">
-              <input type="checkbox" v-model="widgetForm.isUnique" style="accent-color: #2563eb; cursor: pointer;" />
-              <span>Đếm số cá nhân duy nhất (Unique theo CCCD)</span>
-            </label>
+            <!-- Checkbox & Cột Đếm duy nhất (Unique) -->
+            <div style="display: flex; flex-direction: column; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; width: 100%;">
+              <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #334155; cursor: pointer; font-weight: 600;">
+                <input type="checkbox" v-model="widgetForm.isUnique" style="accent-color: #2563eb; cursor: pointer;" />
+                <span>🔘 Đếm số bản ghi duy nhất (Unique / Khử trùng lặp)</span>
+              </label>
+
+              <div v-if="widgetForm.isUnique" style="display: flex; align-items: center; gap: 8px; padding-left: 20px;">
+                <span style="font-size: 0.72rem; color: #475569; font-weight: 600; white-space: nowrap;">Cột khóa định danh Unique:</span>
+                <select
+                  v-model="widgetForm.uniqueKeyCol"
+                  class="settings-select"
+                  style="flex: 1; font-size: 0.75rem; height: 28px; padding: 2px 8px;"
+                >
+                  <option value="">-- Mặc định (Theo khóa chính / CCCD / ID) --</option>
+                  <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
+                    <option v-for="c in grp.columns" :key="c.id" :value="c.id">
+                      {{ c.label || c.id }} ({{ c.id }})
+                    </option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2155,6 +2175,7 @@ const widgetForm = ref({
   logicOp: 'AND',
   conditions: [],
   isUnique: false,
+  uniqueKeyCol: '',
   color: '#0284c7',
   bgColor: '#ffffff',
   icon: 'pi-chart-line',
@@ -2327,6 +2348,7 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
           color: colorMap[card.color] || card.color || '#2e7d32',
           icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
           isUnique: !!card.isUnique,
+          uniqueKeyCol: card.uniqueKeyCol || '',
           inheritBaseline: card.inheritBaseline !== false,
         };
       });
@@ -2423,6 +2445,7 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
           value: card.value || '',
           source: topic.source || 'trips',
           isUnique: !!card.isUnique,
+          uniqueKeyCol: card.uniqueKeyCol || '',
           inheritBaseline: card.inheritBaseline !== false,
           hidden: targetWp === 0,
           widthPercent: targetWp,
@@ -2453,6 +2476,7 @@ const reconcileGroupsWithTopics = async (silent = true, targetGroupIdentifier = 
           color: colorMap[card.color] || card.color || '#2e7d32',
           icon: topic.icon ? `pi ${topic.icon}` : 'pi-chart-bar',
           isUnique: !!card.isUnique,
+          uniqueKeyCol: card.uniqueKeyCol || '',
           inheritBaseline: card.inheritBaseline !== false,
         });
         hasChanges = true;
@@ -3002,6 +3026,7 @@ function hydrateWidgetConditions(w, group) {
           clone.conditions = JSON.parse(JSON.stringify(card.conditions));
           if (card.logicOp) clone.logicOp = card.logicOp;
           if (card.isUnique !== undefined) clone.isUnique = !!card.isUnique;
+          if (card.uniqueKeyCol !== undefined) clone.uniqueKeyCol = card.uniqueKeyCol || '';
           return clone;
         }
         if (card.field) {
@@ -3012,6 +3037,7 @@ function hydrateWidgetConditions(w, group) {
             value: card.value !== undefined ? card.value : '',
           }];
           if (card.isUnique !== undefined) clone.isUnique = !!card.isUnique;
+          if (card.uniqueKeyCol !== undefined) clone.uniqueKeyCol = card.uniqueKeyCol || '';
           return clone;
         }
         if (card.condition && card.condition !== 'all') {
@@ -3094,6 +3120,7 @@ const openAddWidgetDialog = async (group) => {
     ],
     breakRow: false,
     isUnique: false,
+    uniqueKeyCol: '',
     color: '#0284c7',
     bgColor: '#ffffff',
     icon: 'pi-chart-line',
@@ -3113,6 +3140,8 @@ const openEditWidgetDialog = async (group, widget) => {
   widgetForm.value = {
     ...JSON.parse(JSON.stringify(hydrated)),
     breakRow: Boolean(hydrated.breakRow),
+    isUnique: Boolean(hydrated.isUnique),
+    uniqueKeyCol: hydrated.uniqueKeyCol || '',
     viewId: hydrated.viewId || hydrated.cardId || 'all',
     subColumnId: hydrated.subColumnId || '',
     subColumnLabel: hydrated.subColumnLabel || '',
@@ -3471,9 +3500,17 @@ function computeWidgetCount(widget) {
 
   if (widget.isUnique) {
     const seen = new Set();
+    const uCol = widget.uniqueKeyCol;
     filtered.forEach((r) => {
-      const cccd = r.cccd || r.rawPerson?.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
-      if (cccd) seen.add(cccd);
+      let val;
+      if (uCol) {
+        val = getRowFieldValue(r, uCol);
+      } else {
+        val = r.cccd || r.rawPerson?.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
+      }
+      if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') {
+        seen.add(String(val).trim().toLowerCase());
+      }
     });
     return seen.size;
   }
@@ -3563,10 +3600,21 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
   if (widget.isUnique) {
     const seen = new Set();
     const uniqueResult = [];
+    const uCol = widget.uniqueKeyCol;
     filtered.forEach((r) => {
-      const cccd = r.cccd || r.rawPerson?.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
-      if (cccd && !seen.has(cccd)) {
-        seen.add(cccd);
+      let val;
+      if (uCol) {
+        val = getRowFieldValue(r, uCol);
+      } else {
+        val = r.cccd || r.rawPerson?.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
+      }
+      if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') {
+        const key = String(val).trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueResult.push(r);
+        }
+      } else {
         uniqueResult.push(r);
       }
     });

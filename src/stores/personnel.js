@@ -1294,37 +1294,46 @@ export const usePersonnelStore = defineStore('personnel', {
             }
 
             let updatedInRel = false;
+            let pRels = Array.isArray(updatedP.relatives) ? [...updatedP.relatives] : (Array.isArray(updatedP.custom_data?.relatives) ? [...updatedP.custom_data.relatives] : []);
             // 1. Cập nhật trong relatives nếu tìm thấy hoặc thuộc thân nhân
             if (hasTripInRel && matchedRelIdx !== -1) {
-              if (!Array.isArray(updatedP.relatives)) updatedP.relatives = [];
-              const relObj = updatedP.relatives[matchedRelIdx];
-              if (!relObj.trips) relObj.trips = [];
-              const tIdx = relObj.trips.findIndex(isSameTrip);
-              if (tIdx !== -1) {
-                if (isCountryCleared) {
-                  for (const alias of countryAliases) {
-                    delete relObj.trips[tIdx][alias];
-                    if (relObj.trips[tIdx].custom_data) delete relObj.trips[tIdx].custom_data[alias];
-                  }
+              const relObj = pRels[matchedRelIdx];
+              if (relObj) {
+                if (!Array.isArray(relObj.trips)) {
+                  relObj.trips = Array.isArray(relObj.custom_data?.trips) ? [...relObj.custom_data.trips] : [];
                 }
-                relObj.trips[tIdx] = { ...relObj.trips[tIdx], ...cleanTrip };
-                if (isCountryCleared) {
-                  for (const alias of countryAliases) {
-                    relObj.trips[tIdx][alias] = '';
+                const tIdx = relObj.trips.findIndex(isSameTrip);
+                if (tIdx !== -1) {
+                  if (isCountryCleared) {
+                    for (const alias of countryAliases) {
+                      delete relObj.trips[tIdx][alias];
+                      if (relObj.trips[tIdx].custom_data) delete relObj.trips[tIdx].custom_data[alias];
+                    }
                   }
+                  relObj.trips[tIdx] = { ...relObj.trips[tIdx], ...cleanTrip };
+                  if (isCountryCleared) {
+                    for (const alias of countryAliases) {
+                      relObj.trips[tIdx][alias] = '';
+                      if (relObj.trips[tIdx].custom_data) relObj.trips[tIdx].custom_data[alias] = '';
+                    }
+                  }
+                } else if (cleanTrip.isRelative) {
+                  if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
+                  relObj.trips.push(cleanTrip);
                 }
-              } else if (cleanTrip.isRelative) {
-                if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
-                relObj.trips.push(cleanTrip);
+                if (relObj.custom_data && Array.isArray(relObj.custom_data.trips)) {
+                  relObj.custom_data.trips = relObj.trips;
+                }
+                updatedP.relatives = pRels;
+                updatedP.custom_data.relatives = pRels;
+                updatedInRel = true;
               }
-              updatedP.custom_data.relatives = updatedP.relatives;
-              updatedInRel = true;
             }
 
             // 2. Cập nhật trong personnel trips (Cán bộ)
             // QUY TẮC: Cập nhật CẢ p.trips nếu chuyến đi có trong p.trips hoặc nếu là chuyến đi Cán bộ
+            let pTrips = Array.isArray(updatedP.trips) ? [...updatedP.trips] : (Array.isArray(updatedP.custom_data?.trips) ? [...updatedP.custom_data.trips] : []);
             if (hasTrip || (!cleanTrip.isRelative && matchesPerson) || !updatedInRel) {
-              let pTrips = Array.isArray(updatedP.trips) ? [...updatedP.trips] : [];
               const tIdx = pTrips.findIndex(isSameTrip);
               if (tIdx !== -1) {
                 if (isCountryCleared) {
@@ -1337,6 +1346,7 @@ export const usePersonnelStore = defineStore('personnel', {
                 if (isCountryCleared) {
                   for (const alias of countryAliases) {
                     pTrips[tIdx][alias] = '';
+                    if (pTrips[tIdx].custom_data) pTrips[tIdx].custom_data[alias] = '';
                   }
                 }
               } else if (!cleanTrip.isRelative) {
@@ -1345,6 +1355,17 @@ export const usePersonnelStore = defineStore('personnel', {
               }
               updatedP.trips = pTrips;
               updatedP.custom_data.trips = pTrips;
+            } else if (isCountryCleared) {
+              // Ngay cả khi chuyến đi thuộc thân nhân, dọn sạch nếu pTrips còn lưu bản sao cũ
+              const tIdx = pTrips.findIndex(isSameTrip);
+              if (tIdx !== -1) {
+                for (const alias of countryAliases) {
+                  pTrips[tIdx][alias] = '';
+                  if (pTrips[tIdx].custom_data) pTrips[tIdx].custom_data[alias] = '';
+                }
+                updatedP.trips = pTrips;
+                updatedP.custom_data.trips = pTrips;
+              }
             }
 
             await this.savePerson(updatedP);
@@ -1486,24 +1507,43 @@ export const usePersonnelStore = defineStore('personnel', {
         }
         return record;
       }
-      if (record._recordType === 'relative' || record.relationshipName || record.relativeName || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
-        return await this.saveRelative(record);
-      }
-      if (record._recordType === 'trip' || record.rawTrip || record.uniqueKey) {
+      if (
+        record._tableId === 'trips' ||
+        record._recordType === 'trip' ||
+        record.rawTrip ||
+        (record.id && String(record.id).startsWith('trip_')) ||
+        (record.uniqueKey && String(record.uniqueKey).startsWith('trip_')) ||
+        record.quoc_gia_xuat_canh !== undefined ||
+        record.ngay_xuat_canh !== undefined ||
+        record.departureDate !== undefined ||
+        record.cccdchuyendi !== undefined
+      ) {
         return await this.saveTrip(record);
+      }
+      if (
+        record._tableId === 'relatives' ||
+        record._recordType === 'relative' ||
+        record.rawRelative ||
+        (record.code && String(record.code).startsWith('TN-')) ||
+        (record.id && String(record.id).startsWith('rel_')) ||
+        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
+        record.cccdthannhan !== undefined ||
+        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel')
+      ) {
+        return await this.saveRelative(record);
       }
       const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
       if (p) {
         return await this.savePerson(record);
       }
       for (const pers of this.personnelList) {
-        if (Array.isArray(pers.relatives) && pers.relatives.some((r) => r.id === record.id || r.code === record.code)) {
-          return await this.saveRelative(record);
+        if (Array.isArray(pers.trips) && pers.trips.some((t) => t.id === record.id || t.uniqueKey === record.uniqueKey)) {
+          return await this.saveTrip(record);
         }
       }
       for (const pers of this.personnelList) {
-        if (Array.isArray(pers.trips) && pers.trips.some((t) => t.id === record.id || t.uniqueKey === record.uniqueKey)) {
-          return await this.saveTrip(record);
+        if (Array.isArray(pers.relatives) && pers.relatives.some((r) => r.id === record.id || r.code === record.code)) {
+          return await this.saveRelative(record);
         }
       }
       return await this.savePerson(record);
@@ -1530,24 +1570,43 @@ export const usePersonnelStore = defineStore('personnel', {
         }
         return;
       }
-      if (record._recordType === 'relative' || record.relationshipName || record.relativeName || record.rawRelative || (record.code && String(record.code).startsWith('TN-'))) {
-        return await this.deleteRelative(record);
-      }
-      if (record._recordType === 'trip' || record.rawTrip || record.uniqueKey) {
+      if (
+        record._tableId === 'trips' ||
+        record._recordType === 'trip' ||
+        record.rawTrip ||
+        (record.id && String(record.id).startsWith('trip_')) ||
+        (record.uniqueKey && String(record.uniqueKey).startsWith('trip_')) ||
+        record.quoc_gia_xuat_canh !== undefined ||
+        record.ngay_xuat_canh !== undefined ||
+        record.departureDate !== undefined ||
+        record.cccdchuyendi !== undefined
+      ) {
         return await this.deleteTrip(record);
+      }
+      if (
+        record._tableId === 'relatives' ||
+        record._recordType === 'relative' ||
+        record.rawRelative ||
+        (record.code && String(record.code).startsWith('TN-')) ||
+        (record.id && String(record.id).startsWith('rel_')) ||
+        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
+        record.cccdthannhan !== undefined ||
+        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel')
+      ) {
+        return await this.deleteRelative(record);
       }
       const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
       if (p) {
         return await this.deletePerson(record);
       }
       for (const pers of this.personnelList) {
-        if (Array.isArray(pers.relatives) && pers.relatives.some((r) => r.id === record.id || r.code === record.code)) {
-          return await this.deleteRelative(record);
+        if (Array.isArray(pers.trips) && pers.trips.some((t) => t.id === record.id || t.uniqueKey === record.uniqueKey)) {
+          return await this.deleteTrip(record);
         }
       }
       for (const pers of this.personnelList) {
-        if (Array.isArray(pers.trips) && pers.trips.some((t) => t.id === record.id || t.uniqueKey === record.uniqueKey)) {
-          return await this.deleteTrip(record);
+        if (Array.isArray(pers.relatives) && pers.relatives.some((r) => r.id === record.id || r.code === record.code)) {
+          return await this.deleteRelative(record);
         }
       }
       return await this.deletePerson(record);

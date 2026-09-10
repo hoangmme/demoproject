@@ -800,12 +800,24 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   let count = 0;
   const matchedTrips = [];
 
+  const resolveTripCountry = (rec) => {
+    if (!rec) return '';
+    if (countryCol) {
+      const v = getRecordFieldValue(rec, countryCol);
+      if (v !== undefined && v !== null && String(v).trim() !== '-' && String(v).trim() !== '') return String(v).trim();
+    }
+    if (rec.quoc_gia_xuat_canh !== undefined) return String(rec.quoc_gia_xuat_canh || '').trim();
+    if (rec.countryName !== undefined) return String(rec.countryName || '').trim();
+    if (rec.country !== undefined) return String(rec.country || '').trim();
+    return '';
+  };
+
   for (const t of personTrips) {
     const rawDep = getRecordFieldValue(t, depCol) || t.departureDate || t.approvedDepartureDate || t.ngay_xuat_canh || t.ngayDi;
     const d = parseDateValue(rawDep);
     if (d && d.getFullYear() === targetYear) {
       count++;
-      const country = getRecordFieldValue(t, countryCol) || getRecordFieldValue(t, 'quoc_gia_xuat_canh') || t.quoc_gia_xuat_canh || t.countryName || '';
+      const country = resolveTripCountry(t);
       matchedTrips.push({
         date: d,
         dateStr: formatDate(d) || formatDate(rawDep) || '',
@@ -818,7 +830,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   // Nếu bản ghi hiện tại là 1 chuyến đi nhưng personTrips rỗng hoặc chỉ có 1
   if (count === 0 && currentDepDate) {
     count = 1;
-    const country = getRecordFieldValue(record, countryCol) || getRecordFieldValue(record, 'quoc_gia_xuat_canh') || record.quoc_gia_xuat_canh || record.countryName || '';
+    const country = resolveTripCountry(record);
     matchedTrips.push({
       date: currentDepDate,
       dateStr: formatDate(currentDepDate) || formatDate(rawCurrentDep) || '',
@@ -849,7 +861,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
       const mtId = mt.trip?.id || mt.trip?.uniqueKey;
       if (tripRecId && mtId && String(tripRecId) === String(mtId)) return true;
       const recDateStr = formatDate(currentDepDate) || formatDate(rawCurrentDep) || '';
-      const recCountry = getRecordFieldValue(record, countryCol) || getRecordFieldValue(record, 'quoc_gia_xuat_canh') || record.quoc_gia_xuat_canh || record.countryName || '';
+      const recCountry = resolveTripCountry(record);
       return mt.dateStr === recDateStr && mt.country === recCountry;
     });
 
@@ -870,7 +882,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
         cssClass: '',
       };
     } else if (currentDepDate) {
-      const recCountry = getRecordFieldValue(record, countryCol) || getRecordFieldValue(record, 'quoc_gia_xuat_canh') || record.quoc_gia_xuat_canh || record.countryName || 'Chưa rõ nơi đến';
+      const recCountry = resolveTripCountry(record) || 'Chưa rõ nơi đến';
       const recDateStr = formatDate(currentDepDate) || formatDate(rawCurrentDep) || '';
       const fullStr = `- Chuyến 1: ${recCountry} - ${recDateStr}`;
       return {
@@ -960,9 +972,19 @@ export const computeTripPresence = (t, formulaConfig = {}) => {
     ? getRecordFieldValue(t, userAppArrCol)
     : (t.approvedExtensionDate || t.approvedArrivalDate || t.thoi_gian_duyet_ve || t.thoiGianDuyetVe || t.gia_han_den_ngay || getRecordFieldValue(t, 'approvedArrivalDate') || getRecordFieldValue(t, 'thoi_gian_duyet_ve'));
 
-  const country = userCountryCol
-    ? (getRecordFieldValue(t, userCountryCol) || '')
-    : (getRecordFieldValue(t, 'quoc_gia_xuat_canh') || t.countryName || '');
+  let country = '';
+  if (userCountryCol) {
+    const v = getRecordFieldValue(t, userCountryCol);
+    if (v !== undefined && v !== null && String(v).trim() !== '-' && String(v).trim() !== '') {
+      country = String(v).trim();
+    }
+  } else if (t.quoc_gia_xuat_canh !== undefined) {
+    country = String(t.quoc_gia_xuat_canh || '').trim();
+  } else if (t.countryName !== undefined) {
+    country = String(t.countryName || '').trim();
+  } else if (t.country !== undefined) {
+    country = String(t.country || '').trim();
+  }
 
   const depDate = parseDateValue(depRaw);
   const arrDate = parseDateValue(arrRaw);

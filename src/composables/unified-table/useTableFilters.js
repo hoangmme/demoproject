@@ -93,18 +93,19 @@ export function useTableFilters({
       Boolean(uniqueCol);
 
     if (isUniqueCount) {
-      const pKeyField = uniqueCol?.id || (personnelStore?.getPersonnelKeyField
+      const uColId = uniqueCol?.id || targetCard?.uniqueKeyCol || targetCard?.uniqueField || baselineCard?.uniqueKeyCol;
+      const pKeyField = uColId || (personnelStore?.getPersonnelKeyField
         ? personnelStore.getPersonnelKeyField()
         : 'cccdparent');
       const seenKeys = new Set();
       list = list.filter((item) => {
         let keyVal;
-        if (uniqueCol) {
+        if (uColId) {
           keyVal = typeof extractRowFieldValue === 'function'
-            ? extractRowFieldValue(item, uniqueCol.id, personnelStore)
-            : item[uniqueCol.id];
+            ? extractRowFieldValue(item, uColId, personnelStore)
+            : item[uColId];
           if (!keyVal && typeof getCellValue === 'function') {
-            keyVal = getCellValue(item, uniqueCol.id);
+            keyVal = getCellValue(item, uColId);
           }
         } else {
           keyVal =
@@ -116,7 +117,7 @@ export function useTableFilters({
             item.personnelId ??
             item.id;
         }
-        if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
+        if (keyVal !== undefined && keyVal !== null && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
           const strKey = String(keyVal).trim().toLowerCase();
           if (seenKeys.has(strKey)) return false;
           seenKeys.add(strKey);

@@ -616,6 +616,16 @@ const getLinkedRows = (targetTable) => {
       if (r) return [r];
     }
     if (curRecord.rawRelative) return [curRecord.rawRelative];
+    if (curRecord.isRelative || curRecord.relativeName) {
+      const relName = String(curRecord.relativeName || curRecord.name || '').trim().toLowerCase();
+      if (relName) {
+        const rByName = allRelatives.find((rel) => {
+          const n = String(rel.relativeName || rel.name || '').trim().toLowerCase();
+          return n && n === relName;
+        });
+        if (rByName) return [rByName];
+      }
+    }
 
     // 6b. If this trip was by an officer, find and return all relatives of that officer
     const persTable = allTables.value.find((t) => t.id === 'personnel');
@@ -716,20 +726,28 @@ const isTableLinked = (targetTable) => {
 
 // Available Tabs
 const availableTabs = computed(() => {
+  const curId = currentTable.value?.id || props.recordSource || 'personnel';
+  const isTrip = curId === 'trips';
   const tabs = [
     {
       id: 'info',
-      label: currentTable.value?.title || 'Thông tin chính',
-      icon: currentTable.value?.icon || 'pi pi-id-card',
+      label: isTrip ? 'Chi tiết Chuyến đi' : (currentTable.value?.title || 'Thông tin chính'),
+      icon: isTrip ? 'pi pi-send' : (currentTable.value?.icon || 'pi pi-id-card'),
     },
   ];
 
   (allTables.value || []).forEach((t) => {
     if (isTableLinked(t)) {
       const rows = getLinkedRows(t);
+      let tabLabel = t.title;
+      if (t.id === 'personnel' && rows.length === 1) {
+        tabLabel = `Cán bộ: ${rows[0].name || rows[0].fullName || rows[0].code || 'Cán bộ'}`;
+      } else if (t.id === 'relatives' && rows.length === 1) {
+        tabLabel = `Thân nhân: ${rows[0].relativeName || rows[0].name || rows[0].code || 'Thân nhân'}`;
+      }
       tabs.push({
         id: t.id,
-        label: t.title,
+        label: tabLabel,
         icon: t.icon || 'pi pi-table',
         count: rows.length,
         table: t,

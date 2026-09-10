@@ -797,12 +797,18 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
   const isUniqueCount = card.isUnique || (shouldInheritBaseline && !!firstCard?.isUnique) || (isFirst && !!firstCard?.isUnique);
 
   if (isUniqueCount) {
+    const uCol = card.uniqueKeyCol || card.uniqueField || (shouldInheritBaseline ? firstCard?.uniqueKeyCol : '');
     const pKeyField = personnelStore?.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccdparent';
     const uniqueSet = new Set();
     targetItems.forEach((item) => {
-      const keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.personnelId ?? item.id;
-      if (keyVal && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
-        uniqueSet.add(String(keyVal).trim());
+      let keyVal;
+      if (uCol) {
+        keyVal = extractRowFieldValue(item, uCol, personnelStore);
+      } else {
+        keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.personnelId ?? item.id;
+      }
+      if (keyVal !== undefined && keyVal !== null && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
+        uniqueSet.add(String(keyVal).trim().toLowerCase());
       }
     });
     return uniqueSet.size;
