@@ -486,6 +486,71 @@ export function getLinkedRowsByConfig(curRecord, curTableId, targetTableId, stor
   const targetCols = targetTable.getColumns ? targetTable.getColumns(store) : (targetTable.columns || []);
   const targetRows = targetTable.getRows ? targetTable.getRows(store) : [];
 
+  // Core table specialized relations
+  if (curId === 'personnel' && targetId === 'trips') {
+    const pKeyCol = getTableKeyColId(curTable, store);
+    const pKeyVal = String(curRecord[pKeyCol] ?? curRecord.cccd ?? curRecord.code ?? curRecord.id ?? '').trim().toLowerCase();
+    const pId = String(curRecord.id ?? curRecord.code ?? '').trim();
+    
+    // Also find relatives to include their trips
+    const relRows = getLinkedRowsByConfig(curRecord, 'personnel', 'relatives', store);
+    const relKeys = new Set(relRows.map((r) => String(r.cccdthannhan || r.cccd || r.id || '').trim().toLowerCase()).filter(Boolean));
+    const relIds = new Set(relRows.map((r) => String(r.id || '').trim()).filter(Boolean));
+
+    const seen = new Set();
+    const res = [];
+    targetRows.forEach((t, idx) => {
+      const uKey = t.uniqueKey || t.id || `trip_${idx}`;
+      if (seen.has(uKey)) return;
+      const tVal = String(t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
+      const matchOfficer = (pId && t.personnelId && String(t.personnelId).trim() === pId) || (pKeyVal && tVal && tVal === pKeyVal);
+      const matchRel = (t.relativeId && relIds.has(String(t.relativeId).trim())) || (tVal && relKeys.has(tVal));
+      if (matchOfficer || matchRel) {
+        seen.add(uKey);
+        res.push(t);
+      }
+    });
+    return res;
+  }
+
+  if (curId === 'trips' && targetId === 'personnel') {
+    if (curRecord.rawPerson) return [curRecord.rawPerson];
+    if (store.findParentPersonForTrip) {
+      const p = store.findParentPersonForTrip(curRecord);
+      if (p) return [p];
+    }
+    const tVal = String(curRecord.cccdchuyendi || curRecord.cccd || '').trim().toLowerCase();
+    const pId = String(curRecord.personnelId || '').trim();
+    const p = targetRows.find((pers) => {
+      if (pId && (String(pers.id).trim() === pId || String(pers.code).trim() === pId)) return true;
+      if (tVal) {
+        const val = String(pers.cccd || pers.id || '').trim().toLowerCase();
+        if (val && val === tVal) return true;
+      }
+      return false;
+    });
+    if (p) return [p];
+  }
+
+  if (curId === 'relatives' && targetId === 'personnel') {
+    if (curRecord.rawPerson) return [curRecord.rawPerson];
+    if (store.findParentPersonForRelative) {
+      const p = store.findParentPersonForRelative(curRecord);
+      if (p) return [p];
+    }
+    const parentVal = String(curRecord.cccdparent || curRecord.parentCccd || '').trim().toLowerCase();
+    const pId = String(curRecord.personnelId || '').trim();
+    const p = targetRows.find((pers) => {
+      if (pId && (String(pers.id).trim() === pId || String(pers.code).trim() === pId)) return true;
+      if (parentVal) {
+        const val = String(pers.cccd || pers.id || '').trim().toLowerCase();
+        if (val && val === parentVal) return true;
+      }
+      return false;
+    });
+    if (p) return [p];
+  }
+
   // 1. Cột ở targetTable có linkTable trỏ tới curTable (Target -> Current)
   const fkColInTarget = targetCols.find(
     (c) => checkTableMatchesLink(c.linkTable, curId, curTable?.source)

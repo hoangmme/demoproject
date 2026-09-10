@@ -1160,7 +1160,7 @@ import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import ExportImportMenu from '@/components/common/ExportImportMenu.vue';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import UnifiedTableViewTabs from '@/components/unified-table/UnifiedTableViewTabs.vue';
-import { ensureStandardDashboards, getUnifiedTableColumns } from '@/utils/tableRegistry';
+import { ensureStandardDashboards, getUnifiedTableColumns, getLinkedRowsByConfig } from '@/utils/tableRegistry';
 import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 import { useTableViews } from '@/composables/unified-table/useTableViews';
 import { useTableGridInteraction } from '@/composables/unified-table/useTableGridInteraction';
@@ -1200,9 +1200,9 @@ const previewPdfForRow = async (row) => {
       tableId: curSource,
       columns: curCols,
       selectedFieldIds: curCols.map((c) => c.id),
-      includePersonnel: curSource !== 'personnel',
-      includeRelatives: curSource !== 'relatives',
-      includeTrips: curSource !== 'trips',
+      includePersonnel: true,
+      includeRelatives: true,
+      includeTrips: true,
       showColumnNumbers: false,
       tableTitles: {
         personnel: 'Cán bộ',
@@ -1215,14 +1215,26 @@ const previewPdfForRow = async (row) => {
     const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
     const blob = await generateSinglePersonnelPdfBlob(tplBuffer, row, personnelStore, authStore.user || authStore.currentUser, exportOpts);
 
+    let linkedOfficer = null;
+    if (curSource !== 'personnel') {
+      const linked = getLinkedRowsByConfig(row, curSource, 'personnel', personnelStore);
+      if (linked && linked.length > 0) linkedOfficer = linked[0];
+      else if (row.rawPerson) linkedOfficer = row.rawPerson;
+      else if (personnelStore.findParentPersonForTrip && (curSource === 'trips' || row.departureDate || row.ngay_xuat_canh)) linkedOfficer = personnelStore.findParentPersonForTrip(row);
+      else if (personnelStore.findParentPersonForRelative && (curSource === 'relatives' || row.relationshipName || row.relativeName)) linkedOfficer = personnelStore.findParentPersonForRelative(row);
+    }
+
+    const titlePerson = linkedOfficer || row;
     const titleCol = curCols.find((c) => c.isTitle || c.isIdentifier);
-    const pName = (titleCol && (row[titleCol.id] || row.custom_data?.[titleCol.id])) ||
+    const pName = titlePerson.name || titlePerson.fullName || titlePerson.ho_ten ||
+                  (titleCol && (row[titleCol.id] || row.custom_data?.[titleCol.id])) ||
                   row.name || row.fullName || row.pName || row.personnelName ||
                   row.relativeName || row.rName || row.countryName || row.quoc_gia_xuat_canh ||
                   row.rawPerson?.fullName || row.rawPerson?.name ||
                   row.rawRelative?.relativeName || row.title || curTitle || 'Hồ sơ';
     const keyCol = curCols.find((c) => c.isKey);
-    const pCode = (keyCol && (row[keyCol.id] || row.custom_data?.[keyCol.id])) ||
+    const pCode = titlePerson.cccd || titlePerson.so_cccd || titlePerson.code ||
+                  (keyCol && (row[keyCol.id] || row.custom_data?.[keyCol.id])) ||
                   row.cccdchuyendi || row.cccdthannhan || row.cccdparent || row.code || row.cccd || '';
 
     rowPreviewPdfBlob.value = blob;

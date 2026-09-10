@@ -1086,7 +1086,23 @@ export const usePersonnelStore = defineStore('personnel', {
           return false;
         };
 
-        const cleanRelData = { ...relData };
+        let relCustom = {};
+        if (relData.custom_data) {
+          let cd = relData.custom_data;
+          if (typeof cd === 'string') {
+            try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
+          }
+          if (typeof cd === 'object' && cd !== null) {
+            relCustom = { ...cd };
+          }
+        }
+        delete relCustom.rawPerson;
+        delete relCustom.rawRelative;
+        delete relCustom.rawTrip;
+        delete relCustom.custom_data;
+
+        // Direct user edits on relData MUST take precedence over relCustom!
+        const cleanRelData = { ...relCustom, ...relData };
         delete cleanRelData.rawPerson;
         delete cleanRelData.rawRelative;
         delete cleanRelData.rawTrip;
@@ -1096,18 +1112,9 @@ export const usePersonnelStore = defineStore('personnel', {
           cleanRelData.id = targetRelId || `rel_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
         }
 
-        // Clean custom_data
-        if (cleanRelData.custom_data) {
-          if (typeof cleanRelData.custom_data === 'string') {
-            try {
-              const parsedCd = JSON.parse(cleanRelData.custom_data);
-              cleanRelData.custom_data = parsedCd;
-            } catch (e) {}
-          }
-          if (typeof cleanRelData.custom_data === 'object') {
-            Object.assign(cleanRelData, cleanRelData.custom_data);
-          }
-        }
+        // Clean out custom_data and keep it in sync with top-level fields
+        cleanRelData.custom_data = { ...cleanRelData };
+        delete cleanRelData.custom_data.custom_data;
 
         // Validate required columns
         const allRelativeCols = (this.importMappingRelative || []).flatMap((g) => g.columns || []).filter((c) => c && c.id && c.id !== 'stt');
@@ -1162,13 +1169,20 @@ export const usePersonnelStore = defineStore('personnel', {
           if (relsInP[relIdx].code) cleanRelData.code = relsInP[relIdx].code;
           cleanRelData.personnelId = targetPerson.id;
           cleanRelData.parentName = targetPerson.name;
-          relsInP[relIdx] = { ...relsInP[relIdx], ...cleanRelData };
+          const mergedRel = { ...relsInP[relIdx], ...cleanRelData };
+          if (mergedRel.custom_data && typeof mergedRel.custom_data === 'object') {
+            mergedRel.custom_data = { ...mergedRel.custom_data, ...cleanRelData };
+            delete mergedRel.custom_data.custom_data;
+          }
+          relsInP[relIdx] = mergedRel;
         } else {
           if (!cleanRelData.code) {
             cleanRelData.code = `TN-${String((this.relativesList || []).length + 1).padStart(5, '0')}`;
           }
           cleanRelData.personnelId = targetPerson.id;
           cleanRelData.parentName = targetPerson.name;
+          cleanRelData.custom_data = { ...cleanRelData };
+          delete cleanRelData.custom_data.custom_data;
           relsInP.push(cleanRelData);
         }
 

@@ -71,8 +71,8 @@
           v-if="tripLinkedOfficer"
           type="button"
           class="quick-nav-btn officer"
-          @click="activeTab = 'personnel'"
-          title="Bấm để xem thông tin hồ sơ Cán bộ"
+          @click="handleSwitchRecord(tripLinkedOfficer)"
+          title="Bấm để mở toàn bộ hồ sơ Cán bộ (Bao gồm danh sách chuyến đi & thân nhân)"
         >
           <i class="pi pi-user"></i>
           <span>Hồ sơ Cán bộ</span>
@@ -81,12 +81,33 @@
           v-if="isRelativeTrip || tripLinkedRelative"
           type="button"
           class="quick-nav-btn relative"
-          @click="activeTab = 'relatives'"
-          title="Bấm để xem thông tin hồ sơ Thân nhân"
+          @click="handleSwitchRecord(tripLinkedRelative)"
+          title="Bấm để mở hồ sơ Thân nhân"
         >
           <i class="pi pi-users"></i>
           <span>Hồ sơ Thân nhân</span>
         </button>
+      </div>
+
+      <!-- Danh sách chuyển đổi các chuyến đi của người này (nếu có > 1 chuyến) -->
+      <div v-if="travelerTrips.length > 1" class="traveler-trips-switcher">
+        <span class="switcher-label">
+          <i class="pi pi-list"></i> Các chuyến đi của cán bộ ({{ travelerTrips.length }} chuyến):
+        </span>
+        <div class="trips-pills">
+          <button
+            v-for="(t, idx) in travelerTrips"
+            :key="t.id || t.uniqueKey || idx"
+            type="button"
+            class="trip-pill-btn"
+            :class="{ active: isCurrentTrip(t) }"
+            @click="initFormData(t)"
+            :title="'Bấm để xem chi tiết ' + getTripDisplayLabel(t, idx)"
+          >
+            <i class="pi pi-send"></i>
+            {{ getTripDisplayLabel(t, idx) }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -178,14 +199,16 @@ import DynamicField from '@/components/common/DynamicField.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import PersonnelRelatedTabs from '@/components/personnel/PersonnelRelatedTabs.vue';
-import { getColItemStyle } from '@/utils/formatters';
-import { getUnifiedTableColumns } from '@/utils/tableRegistry';
+import { getColItemStyle, formatDate } from '@/utils/formatters';
+import { getUnifiedTableColumns, getUnifiedTableDefinitions } from '@/utils/tableRegistry';
 
 const isDocxExportOpen = ref(false);
 const isDynamicDataEntryOpen = ref(false);
 const activeTab = ref('info');
+const switchedSource = ref(null);
 
 const recordSource = computed(() => {
+  if (switchedSource.value) return switchedSource.value;
   if (props.tableId && ['personnel', 'relatives', 'trips'].includes(props.tableId)) {
     return props.tableId;
   }
@@ -457,6 +480,57 @@ const isRelativeTrip = computed(() => {
   );
 });
 
+const travelerTrips = computed(() => {
+  if (recordSource.value !== 'trips') return [];
+  const officer = tripLinkedOfficer.value;
+  const rel = tripLinkedRelative.value;
+  const allTrips = personnelStore.tripsList || [];
+
+  const tripKeyField = personnelStore.getTripKeyField ? personnelStore.getTripKeyField() : 'cccdchuyendi';
+  const pKeyField = personnelStore.getPersonnelKeyField ? personnelStore.getPersonnelKeyField() : 'cccd';
+  const relKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+
+  const officerId = officer?.id || form.value.personnelId;
+  const officerKeyVal = officer ? String(officer[pKeyField] || officer.cccd || officer.id || '').trim().toLowerCase() : '';
+  const currentTripKeyVal = String(form.value[tripKeyField] || form.value.cccdchuyendi || form.value.cccd || '').trim().toLowerCase();
+
+  const relId = rel?.id || form.value.relativeId;
+  const relKeyVal = rel ? String(rel[relKeyField] || rel.cccdthannhan || rel.cccd || '').trim().toLowerCase() : '';
+
+  if (isRelativeTrip.value) {
+    return allTrips.filter((t) => {
+      if (!t.isRelative) return false;
+      const tVal = String(t[tripKeyField] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
+      if (relId && t.relativeId && String(t.relativeId).trim() === String(relId).trim()) return true;
+      if (relKeyVal && tVal && tVal === relKeyVal) return true;
+      return false;
+    });
+  } else {
+    return allTrips.filter((t) => {
+      if (t.isRelative) return false;
+      const tVal = String(t[tripKeyField] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
+      if (officerId && t.personnelId && String(t.personnelId).trim() === String(officerId).trim()) return true;
+      if (officerKeyVal && tVal && tVal === officerKeyVal) return true;
+      if (currentTripKeyVal && tVal && tVal === currentTripKeyVal) return true;
+      return false;
+    });
+  }
+});
+
+const getTripDisplayLabel = (t, index) => {
+  const dest = t.quoc_gia_xuat_canh || t.countryName || t.country || t.quoc_gia || t.quoc_gia_den || 'Chuyến đi';
+  const d = t.departureDate || t.ngay_xuat_canh;
+  const formattedD = d ? formatDate(d) : '';
+  return `Chuyến ${index + 1}: ${dest}${formattedD ? ` (${formattedD})` : ''}`;
+};
+
+const isCurrentTrip = (t) => {
+  if (!t) return false;
+  if (form.value.id && t.id && String(form.value.id) === String(t.id)) return true;
+  if (form.value.uniqueKey && t.uniqueKey && form.value.uniqueKey === t.uniqueKey) return true;
+  return false;
+};
+
 const safeClone = (obj) => {
   if (!obj || typeof obj !== 'object') return obj;
   try {
@@ -541,6 +615,7 @@ watch(
   () => [props.modelValue, props.personData],
   ([isOpen, pData]) => {
     if (isOpen) {
+      switchedSource.value = null;
       activeTab.value = props.initialTab || 'info';
       initFormData(pData || props.personData);
     } else {
@@ -680,8 +755,32 @@ const handleTabRefresh = async () => {
   emit('saved', form.value);
 };
 
-const handleSwitchRecord = (newPerson) => {
+const handleSwitchRecord = (newPerson, targetTableId = null) => {
   if (newPerson) {
+    if (targetTableId) {
+      switchedSource.value = targetTableId;
+    } else if (newPerson._tableId) {
+      switchedSource.value = newPerson._tableId;
+    } else {
+      const allTables = getUnifiedTableDefinitions({ personnelStore });
+      const matchedTable = allTables.find((t) => {
+        if (t.id === newPerson._recordType || t.source === newPerson._recordType) return true;
+        const cols = t.getColumns ? t.getColumns(personnelStore) : [];
+        const keyCol = cols.find((c) => c.isKey);
+        return keyCol && newPerson[keyCol.id] !== undefined && String(newPerson[keyCol.id]).trim() !== '';
+      });
+      if (matchedTable) {
+        switchedSource.value = matchedTable.id;
+      } else if (newPerson._recordType === 'personnel' || (newPerson.code && String(newPerson.code).startsWith('CB-')) || (newPerson.departmentName && !newPerson.isRelative)) {
+        switchedSource.value = 'personnel';
+      } else if (newPerson._recordType === 'relative' || newPerson.relationshipName || newPerson.relativeName || newPerson.cccdthannhan) {
+        switchedSource.value = 'relatives';
+      } else if (newPerson._recordType === 'trip' || newPerson.departureDate || newPerson.ngay_xuat_canh || newPerson.cccdchuyendi) {
+        switchedSource.value = 'trips';
+      } else {
+        switchedSource.value = 'personnel';
+      }
+    }
     initFormData(newPerson);
     activeTab.value = 'info';
   }
@@ -837,5 +936,59 @@ const handleSwitchRecord = (newPerson) => {
 .quick-nav-btn.relative:hover {
   background: #f3e8ff;
   border-color: #9333ea;
+}
+
+.traveler-trips-switcher {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed #cbd5e1;
+  flex-wrap: wrap;
+}
+
+.switcher-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.trips-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.trip-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.trip-pill-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.trip-pill-btn.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.35);
+  font-weight: 700;
 }
 </style>

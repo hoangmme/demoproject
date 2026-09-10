@@ -86,13 +86,13 @@
               <i class="pi pi-check-circle"></i> Đã lưu thành công!
             </span>
             <Button
-              v-if="!isAddingNew && isParentPerson(selectedRecord)"
+              v-if="!isAddingNew && selectedRecord"
               label="Mở toàn màn hình"
               icon="pi pi-external-link"
               size="small"
               severity="info"
               outlined
-              @click="$emit('switchRecord', selectedRecord)"
+              @click="$emit('switchRecord', selectedRecord, currentLinkedTable?.id)"
               style="font-size: 0.72rem; padding: 2px 8px; height: 26px;"
             />
           </div>
@@ -800,7 +800,7 @@ const isSameRow = (r1, r2) => {
 
 const isParentPerson = (record) => {
   const curId = currentTable.value?.id || props.recordSource;
-  return curId === 'relatives' && currentLinkedTable.value?.id === 'personnel' && record;
+  return (curId === 'relatives' || curId === 'trips') && currentLinkedTable.value?.id === 'personnel' && record;
 };
 
 const getRecordDisplayName = (record, table) => {
@@ -846,7 +846,7 @@ const selectRecordToEdit = (row) => {
   selectedRecord.value = row;
   isAddingNew.value = false;
   saveSuccessBanner.value = false;
-  editForm.value = { ...row, ...(row.custom_data || {}) };
+  editForm.value = { ...(row.custom_data || {}), ...row };
 
   if (isTripUnderPersonnel.value) {
     if (row._isPersonnelTrip || !row.isRelative) {
@@ -953,9 +953,11 @@ const handleSaveLinkedRecord = async () => {
       syncTripPersonToForm();
     }
 
+    const cleanEditForm = { ...editForm.value };
+    delete cleanEditForm.custom_data;
     const payload = {
-      ...editForm.value,
-      custom_data: { ...(editForm.value.custom_data || {}), ...editForm.value },
+      ...cleanEditForm,
+      custom_data: { ...(editForm.value.custom_data || {}), ...cleanEditForm },
     };
 
     // Sanitize country aliases if cleared

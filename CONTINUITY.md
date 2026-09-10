@@ -3345,6 +3345,53 @@
   - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 
+---
+
+### PHIÊN LÀM VIỆC: ĐỒNG BỘ DỮ LIỆU THÂN NHÂN/CHUYẾN ĐI, XEM TẤT CẢ CHUYẾN ĐI CỦA CÁN BỘ, JUSTIFY TIÊU ĐỀ THỐNG KÊ & XUẤT HỒ SƠ PDF QUA LIÊN KẾT BẢNG
+- **Yêu cầu từ người dùng**:
+  1. *Lỗi không đổi sang "Chị ruột" được*: Kiểm tra lại bảng và form chỉnh sửa xem có đồng bộ hay bị dữ liệu tĩnh không (trước đó select dropdown vẫn hiện `Chị (Hiện tại)`).
+  2. *Phan Phát Ngọc có 2 chuyến đi nước ngoài mà bấm vào chỉ thấy có 1 chuyến*: Cơ sở dữ liệu có 2 chuyến đi của Phan Phát Ngọc (Trung Quốc & Singapore), nhưng khi bấm vào chuyến đi thì dialog chỉ hiển thị 1 chuyến lẻ loi, không có nút chuyển giữa các chuyến đi của cùng cán bộ, và nút `[Hồ sơ Cán bộ]` không mở ra toàn bộ hồ sơ.
+  3. *Tiêu đề thống kê*: Thêm tính năng tick chọn để căn đều 2 bên (`justify`) tiêu đề khối thống kê.
+  4. *Xem/In PDF ở thống kê & bảng*: Nút xem PDF luôn luôn in toàn bộ dữ liệu hồ sơ của Cán bộ (dù bấm ở dòng Thân nhân hay dòng Chuyến đi), dựa trên tính năng động "Khóa & Liên kết Bảng" (`getLinkedRowsByConfig`), tuyệt đối không hardcode.
+
+- **Nguyên nhân cốt lõi & Giải pháp đã thực hiện**:
+  1. *Đồng bộ dữ liệu Dropdown Thân nhân ("Chị ruột")*:
+     - **Nguyên nhân**:
+       + `src/stores/personnel.js` (`saveRelative`): Khi cập nhật thân nhân, `cleanRelData = { ...relData }` sau đó `Object.assign(cleanRelData, cleanRelData.custom_data)` khiến `custom_data` cũ (vẫn chứa `"Chị"`) ghi đè lên trường `relData.relationshipName` mới (`"Chị ruột"`).
+       + `src/components/personnel/PersonnelRelatedTabs.vue`: `editForm.value = { ...row, ...(row.custom_data || {}) }` khiến dữ liệu cũ trong `custom_data` đè lên `row`.
+       + `src/views/DashboardView.vue`: `drilldownRawList` là snapshot mảng tĩnh, hàm `onPersonSaved` chỉ gọi `fetchPersonnel()` mà không cập nhật lại bản ghi trong `drilldownRawList`, dẫn tới việc mở lại form vẫn nhận dữ liệu cũ.
+     - **Giải pháp**:
+       + Đảo thứ tự spread: Direct user edits luôn có độ ưu tiên cao nhất (`{ ...relCustom, ...relData }` và `{ ...(row.custom_data || {}), ...row }`).
+       + Đồng bộ `cleanRelData.custom_data` và `mergedRel.custom_data` ngay tại `saveRelative`.
+       + Trong `onPersonSaved` của `DashboardView.vue`: Cập nhật trực tiếp bản ghi vừa lưu vào `drilldownRawList.value` và gọi lại `openDrilldownForWidget` để làm mới danh sách hiển thị với dữ liệu store mới nhất.
+  2. *Bộ chuyển đổi Chuyến đi & Mở toàn bộ hồ sơ Cán bộ*:
+     - **Nguyên nhân**:
+       + Khi bấm vào chuyến đi, `recordSource = 'trips'` và bị khóa theo `props.tableId`. Khi gọi `handleSwitchRecord` sang Cán bộ, `recordSource` vẫn giữ `'trips'` khiến form và tabs không chuyển sang Cán bộ.
+       + Thiếu danh sách các chuyến đi liên quan của cùng người đi (Traveler Trips Switcher).
+     - **Giải pháp**:
+       + Thêm `switchedSource` ref trong `PersonnelDialog.vue` để khi chuyển record sang Cán bộ (`handleSwitchRecord`), `recordSource` lập tức chuyển thành `'personnel'`, nạp toàn bộ danh mục cột Cán bộ và mở tabs Chuyến đi (hiển thị đầy đủ cả 2 chuyến đi của Phan Phát Ngọc) cùng Thân nhân.
+       + Tính toán `travelerTrips`: Tìm toàn bộ chuyến đi thuộc cùng cán bộ/thân nhân đó. Nếu có > 1 chuyến đi, hiển thị dải pills chuyển nhanh (`traveler-trips-switcher`): `[ Chuyến 1: Trung Quốc (...) ] [ Chuyến 2: Singapore (...) ]`. Người dùng bấm pill nào thì form cập nhật ngay tức thì sang chuyến đi đó.
+       + Nút `[Hồ sơ Cán bộ]` trên thẻ người đi chuyển sang gọi `handleSwitchRecord(tripLinkedOfficer)` để mở trọn vẹn hồ sơ Cán bộ.
+  3. *Căn đều 2 bên tiêu đề Thống kê (Justify Title)*:
+     - **Giải pháp**:
+       + Thêm thuộc tính `justifyTitle: Boolean` vào cấu hình widget trong `DashboardView.vue`.
+       + Thêm checkbox `Căn đều 2 bên tiêu đề (Justify hai bên)` ngay dưới ô nhập Tiêu đề trong Dialog cài đặt khối thống kê.
+       + Áp dụng `textAlign: widget.justifyTitle ? 'justify' : 'left'` và `textAlignLast: widget.justifyTitle ? 'justify' : 'auto'` trên `.stat-label`.
+  4. *In & Xem trước PDF Hồ sơ Cán bộ toàn diện qua Khóa & Liên kết Bảng*:
+     - **Nguyên nhân**:
+       + Khi xem trước PDF từ dòng Chuyến đi hoặc Thân nhân, `curTableId !== 'personnel'`. Trong `preparePersonnelDocxData` (`docxExport.js`), các trường gốc của hồ sơ (`ho_ten`, `cccd`, `chuc_vu`, `don_vi`) không được lấy từ Cán bộ liên kết mà lấy từ dòng Chuyến đi (vốn không có các trường này), đồng thời danh sách `than_nhan` và `chuyen_di` không được gom đầy đủ.
+       + `getEffectiveExportTemplateBuffer` chỉ tìm template theo `options.tableId`, nếu bảng `trips` chưa có mẫu riêng thì không fallback về mẫu mặc định của `personnel`.
+     - **Giải pháp**:
+       + Nâng cấp `getLinkedRowsByConfig` trong `src/utils/tableRegistry.js` hỗ trợ tự động bắc cầu 2 chiều giữa Cán bộ, Thân nhân, và Chuyến đi dựa trên cấu hình khóa định danh.
+       + Nâng cấp `preparePersonnelDocxData`: Khi xuất PDF từ bất kỳ bảng nào (kể cả Thân nhân hay Chuyến đi), tự động truy vết Cán bộ bảo lãnh / chủ quản (`linkedOfficer`). Đổ toàn bộ thông tin Cán bộ vào gốc dữ liệu của dossier (`ho_ten`, `cccd`, `chuc_vu`, `don_vi`, `nam_sinh`, `que_quan`, `thuong_tru`, ...), đồng thời nạp trọn vẹn danh sách tất cả Thân nhân và tất cả Chuyến đi của Cán bộ đó vào `than_nhan` và `chuyen_di`.
+       + Nâng cấp `getEffectiveExportTemplateBuffer`: Tự động fallback về mẫu Cán bộ mặc định nếu bảng hiện tại chưa cài đặt mẫu riêng.
+       + Cập nhật `previewPdfForRow` tại cả `DashboardView.vue` và `UnifiedTableView.vue` để tiêu đề xem trước và tên file PDF luôn hiển thị chuẩn tên Cán bộ.
+
+- **Kiểm thử & Triển khai**:
+  - `npm run build`: Thành công 100% (592ms, 0 lỗi).
+  - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/` và `WINDOWS_OFFLINE_APP/frontend/dist/`.
+- **Trạng thái**: Done [Reversible].
+
 
 
 

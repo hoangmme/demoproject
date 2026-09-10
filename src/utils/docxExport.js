@@ -443,10 +443,28 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   const canIncludeTrips = exportOptions?.includeTrips !== false;
   const canIncludePersonnel = exportOptions?.includePersonnel !== false;
 
-  // A. Thân nhân liên kết
+  // Cán bộ liên kết (Khi xuất dữ liệu Chuyến đi hoặc Thân nhân)
+  let linkedOfficer = null;
+  if (curTableId !== 'personnel') {
+    const rawPersonnel = getLinkedRowsByConfig(effectivePerson, curTableId, 'personnel', personnelStore);
+    if (rawPersonnel && rawPersonnel.length > 0) {
+      linkedOfficer = rawPersonnel[0];
+    } else if (effectivePerson.rawPerson) {
+      linkedOfficer = effectivePerson.rawPerson;
+    } else if (personnelStore?.findParentPersonForTrip && (curTableId === 'trips' || effectivePerson.departureDate || effectivePerson.ngay_xuat_canh)) {
+      linkedOfficer = personnelStore.findParentPersonForTrip(effectivePerson);
+    } else if (personnelStore?.findParentPersonForRelative && (curTableId === 'relatives' || effectivePerson.relationshipName || effectivePerson.relativeName)) {
+      linkedOfficer = personnelStore.findParentPersonForRelative(effectivePerson);
+    }
+  }
+
+  // A. Thân nhân liên kết (Của Cán bộ hoặc của bản ghi hiện tại)
   let processedRelatives = [];
-  if (curTableId !== 'relatives' && canIncludeRelatives) {
-    const rawRelatives = getLinkedRowsByConfig(effectivePerson, curTableId, 'relatives', personnelStore);
+  if (canIncludeRelatives) {
+    const targetPersonForRel = linkedOfficer || (curTableId === 'personnel' ? effectivePerson : null);
+    const rawRelatives = targetPersonForRel 
+      ? getLinkedRowsByConfig(targetPersonForRel, 'personnel', 'relatives', personnelStore)
+      : (curTableId !== 'relatives' ? getLinkedRowsByConfig(effectivePerson, curTableId, 'relatives', personnelStore) : []);
     const relCols = (personnelStore?.importMappingRelative || []).flatMap((g) => g.columns || []);
     processedRelatives = (rawRelatives || []).map((rel, rIdx) => {
       const rcd = rel.custom_data || {};
@@ -487,10 +505,13 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     data[`tn_${num}_cccd`] = relItem.cccdthannhan || relItem.cccd || '';
   });
 
-  // B. Chuyến đi liên kết
+  // B. Chuyến đi liên kết (Của Cán bộ hoặc của bản ghi hiện tại)
   let processedTrips = [];
-  if (curTableId !== 'trips' && canIncludeTrips) {
-    const rawTrips = getLinkedRowsByConfig(effectivePerson, curTableId, 'trips', personnelStore);
+  if (canIncludeTrips) {
+    const targetPersonForTrips = linkedOfficer || (curTableId === 'personnel' ? effectivePerson : null);
+    const rawTrips = targetPersonForTrips
+      ? getLinkedRowsByConfig(targetPersonForTrips, 'personnel', 'trips', personnelStore)
+      : (curTableId !== 'trips' ? getLinkedRowsByConfig(effectivePerson, curTableId, 'trips', personnelStore) : [effectivePerson]);
     const tripCols = (personnelStore?.importMappingTrips || []).flatMap((g) => g.columns || []);
     processedTrips = (rawTrips || []).map((trip, tIdx) => {
       const tcd = trip.custom_data || {};
@@ -527,10 +548,10 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
   data.so_luong_chuyen_di = processedTrips.length;
   data.total_trips = processedTrips.length;
 
-  // C. Cán bộ liên kết (Khi xuất dữ liệu Chuyến đi hoặc Thân nhân)
+  // C. Cán bộ liên kết
   let processedPersonnel = [];
   if (curTableId !== 'personnel' && canIncludePersonnel) {
-    const rawPersonnel = getLinkedRowsByConfig(effectivePerson, curTableId, 'personnel', personnelStore);
+    const rawPersonnel = linkedOfficer ? [linkedOfficer] : getLinkedRowsByConfig(effectivePerson, curTableId, 'personnel', personnelStore);
     const pCols = (personnelStore?.importMappingPersonnel || []).flatMap((g) => g.columns || []);
     processedPersonnel = (rawPersonnel || []).map((p, pIdx) => {
       const pcd = p.custom_data || {};
@@ -559,6 +580,66 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
         data[`can_bo_${k}`] = v;
       });
     }
+  }
+
+  // ĐỒNG BỘ TOÀN DIỆN THÔNG TIN CÁN BỘ LÊN GỐC DỮ LIỆU KHI XUẤT TỪ THÂN NHÂN / CHUYẾN ĐI (Zero hardcode)
+  if (linkedOfficer) {
+    const pcd = linkedOfficer.custom_data || {};
+    const pCols = (personnelStore?.importMappingPersonnel || []).flatMap((g) => g.columns || []);
+    pCols.forEach((col) => {
+      if (!col.id || col.id === 'stt') return;
+      let pVal = linkedOfficer[col.id] !== undefined ? linkedOfficer[col.id] : pcd[col.id];
+      if (col.format === 'formula') pVal = evaluateFormula ? evaluateFormula(linkedOfficer, col)?.label : pVal;
+      else if (col.format === 'date') pVal = formatDate(pVal);
+      else pVal = formatFieldValueForDocx(pVal, col);
+      data[col.id] = pVal ?? '';
+      data[`cb_${col.id}`] = pVal ?? '';
+      data[`can_bo_${col.id}`] = pVal ?? '';
+    });
+
+    const oName = linkedOfficer.name || linkedOfficer.fullName || linkedOfficer.ho_ten || '';
+    if (oName) {
+      data.ho_ten = oName;
+      data.name = oName;
+      data.fullName = oName;
+      data.ten_can_bo = oName;
+    }
+    const oCode = linkedOfficer.code || '';
+    if (oCode) {
+      data.code = oCode;
+      data.ma_can_bo = oCode;
+    }
+    const oCccd = linkedOfficer.cccd || linkedOfficer.so_cccd || '';
+    if (oCccd) {
+      data.cccd = oCccd;
+      data.so_cccd = oCccd;
+    }
+    if (linkedOfficer.positionName || linkedOfficer.position) {
+      data.chuc_vu = linkedOfficer.positionName || linkedOfficer.position;
+    }
+    if (linkedOfficer.departmentName || linkedOfficer.don_vi) {
+      data.don_vi = linkedOfficer.departmentName || linkedOfficer.don_vi;
+    }
+    if (linkedOfficer.birthYear || linkedOfficer.nam_sinh) {
+      data.nam_sinh = linkedOfficer.birthYear || linkedOfficer.nam_sinh;
+      data.ngay_sinh = data.nam_sinh;
+    }
+    if (linkedOfficer.hometown || linkedOfficer.que_quan) {
+      data.que_quan = linkedOfficer.hometown || linkedOfficer.que_quan;
+    }
+    if (linkedOfficer.thuongTru || linkedOfficer.permanentAddress) {
+      data.thuong_tru = linkedOfficer.thuongTru || linkedOfficer.permanentAddress;
+    }
+    if (linkedOfficer.gender || linkedOfficer.gioi_tinh) {
+      data.gioi_tinh = linkedOfficer.gender || linkedOfficer.gioi_tinh;
+    }
+  }
+
+  // Giữ lại bản ghi cụ thể đang xem nếu là Chuyến đi hoặc Thân nhân
+  if (curTableId === 'trips') {
+    data.current_trip = { ...effectivePerson };
+  } else if (curTableId === 'relatives') {
+    data.current_relative = { ...effectivePerson };
   }
   data.can_bo = processedPersonnel;
   data.personnel = processedPersonnel;
@@ -1273,7 +1354,13 @@ export async function getEffectiveExportTemplateBuffer(options = {}, personnelSt
         if (local) savedTemplates = JSON.parse(local);
       }
       const targetTbl = options.tableId || 'personnel';
-      const defTpl = (savedTemplates || []).find((t) => t.isDefault && (t.tableId ? t.tableId === targetTbl : targetTbl === 'personnel') && t.base64);
+      let defTpl = (savedTemplates || []).find((t) => t.isDefault && (t.tableId ? t.tableId === targetTbl : targetTbl === 'personnel') && t.base64);
+      if (!defTpl && targetTbl !== 'personnel') {
+        defTpl = (savedTemplates || []).find((t) => t.isDefault && (!t.tableId || t.tableId === 'personnel') && t.base64);
+      }
+      if (!defTpl && savedTemplates && savedTemplates.length > 0) {
+        defTpl = (savedTemplates || []).find((t) => t.isDefault && t.base64) || savedTemplates.find((t) => t.base64);
+      }
       if (defTpl && defTpl.base64) {
         const binaryString = window.atob(defTpl.base64);
         const bytes = new Uint8Array(binaryString.length);

@@ -242,7 +242,7 @@
 
                 <!-- Tiêu đề thẻ chiếm trọn 100% width -->
                 <div style="width: 100%; margin-top: 4px;">
-                  <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35', whiteSpace: 'pre-line', display: 'block', width: '100%' }" v-html="formatWidgetTitle(widget.title)"></span>
+                  <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35', whiteSpace: 'pre-line', display: 'block', width: '100%', textAlign: widget.justifyTitle ? 'justify' : 'left', textAlignLast: widget.justifyTitle ? 'justify' : 'auto' }" v-html="formatWidgetTitle(widget.title)"></span>
                 </div>
               </div>
               <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">
@@ -927,6 +927,17 @@
             placeholder="VD: Cán bộ xuất cảnh từ 2 lần trở lên&#10;(Có thể gõ Enter để xuống dòng trong tiêu đề)"
             style="width: 100%; font-size: 0.85rem; padding: 6px 10px; line-height: 1.4; resize: vertical; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit;"
           ></textarea>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+            <input
+              type="checkbox"
+              id="justifyTitleInput"
+              v-model="widgetForm.justifyTitle"
+              style="accent-color: #2563eb; cursor: pointer;"
+            />
+            <label for="justifyTitleInput" style="font-size: 0.78rem; font-weight: 600; color: #334155; cursor: pointer;">
+              Căn đều 2 bên tiêu đề (Justify hai bên)
+            </label>
+          </div>
         </div>
 
         <!-- 4. ĐỘ RỘNG, MÀU VIỀN & MÀU NỀN & THỨ TỰ -->
@@ -1439,6 +1450,7 @@ import {
   getUnifiedTableLabel,
   findUnifiedTable,
   ensureStandardDashboards,
+  getLinkedRowsByConfig,
 } from '@/utils/tableRegistry';
 
 const route = useRoute();
@@ -1534,6 +1546,7 @@ const allUnifiedTables = computed(() => {
 const isDrilldownModalOpen = ref(false);
 const isDynamicDataEntryOpen = ref(false);
 const drilldownWidget = ref(null);
+const drilldownExtraCondition = ref(null);
 const drilldownExtraTitle = ref('');
 const drilldownSourceType = ref('trips');
 const drilldownRawList = ref([]);
@@ -1792,9 +1805,9 @@ const previewPdfForRow = async (row) => {
       tableId: curSource,
       columns: curCols,
       selectedFieldIds: curCols.map((c) => c.id),
-      includePersonnel: curSource !== 'personnel',
-      includeRelatives: curSource !== 'relatives',
-      includeTrips: curSource !== 'trips',
+      includePersonnel: true,
+      includeRelatives: true,
+      includeTrips: true,
       showColumnNumbers: false,
       tableTitles: {
         personnel: 'Cán bộ',
@@ -1807,14 +1820,26 @@ const previewPdfForRow = async (row) => {
     const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
     const blob = await generateSinglePersonnelPdfBlob(tplBuffer, row, personnelStore, authStore.user || authStore.currentUser, exportOpts);
 
+    let linkedOfficer = null;
+    if (curSource !== 'personnel') {
+      const linked = getLinkedRowsByConfig(row, curSource, 'personnel', personnelStore);
+      if (linked && linked.length > 0) linkedOfficer = linked[0];
+      else if (row.rawPerson) linkedOfficer = row.rawPerson;
+      else if (personnelStore.findParentPersonForTrip && (curSource === 'trips' || row.departureDate || row.ngay_xuat_canh)) linkedOfficer = personnelStore.findParentPersonForTrip(row);
+      else if (personnelStore.findParentPersonForRelative && (curSource === 'relatives' || row.relationshipName || row.relativeName)) linkedOfficer = personnelStore.findParentPersonForRelative(row);
+    }
+
+    const titlePerson = linkedOfficer || row;
     const titleCol = curCols.find((c) => c.isTitle || c.isIdentifier);
-    const pName = (titleCol && (row[titleCol.id] || row.custom_data?.[titleCol.id])) ||
+    const pName = titlePerson.name || titlePerson.fullName || titlePerson.ho_ten ||
+                  (titleCol && (row[titleCol.id] || row.custom_data?.[titleCol.id])) ||
                   row.name || row.fullName || row.pName || row.personnelName ||
                   row.relativeName || row.rName || row.countryName || row.quoc_gia_xuat_canh ||
                   row.rawPerson?.fullName || row.rawPerson?.name ||
                   row.rawRelative?.relativeName || row.title || 'Hồ sơ';
     const keyCol = curCols.find((c) => c.isKey);
-    const pCode = (keyCol && (row[keyCol.id] || row.custom_data?.[keyCol.id])) ||
+    const pCode = titlePerson.cccd || titlePerson.so_cccd || titlePerson.code ||
+                  (keyCol && (row[keyCol.id] || row.custom_data?.[keyCol.id])) ||
                   row.cccdchuyendi || row.cccdthannhan || row.cccdparent || row.code || row.cccd || '';
 
     rowPreviewPdfBlob.value = blob;
@@ -2008,8 +2033,24 @@ const openPersonnelDetail = (p) => {
   isPersonDialogOpen.value = true;
 };
 
-const onPersonSaved = async () => {
+const onPersonSaved = async (savedRecord) => {
   await personnelStore.fetchPersonnel();
+  if (savedRecord && drilldownRawList.value && drilldownRawList.value.length > 0) {
+    const sId = String(savedRecord.id || savedRecord.uniqueKey || savedRecord.code || '').trim();
+    const idx = drilldownRawList.value.findIndex((r) => {
+      if (sId && (String(r.id || '').trim() === sId || String(r.uniqueKey || '').trim() === sId || String(r.code || '').trim() === sId)) return true;
+      if (savedRecord.relativeName && r.relativeName && savedRecord.relativeName === r.relativeName) return true;
+      if (savedRecord.personnelName && r.personnelName && savedRecord.personnelName === r.personnelName) return true;
+      return false;
+    });
+    if (idx !== -1) {
+      drilldownRawList.value[idx] = { ...drilldownRawList.value[idx], ...savedRecord };
+      drilldownRawList.value = [...drilldownRawList.value];
+    }
+  }
+  if (isDrilldownModalOpen.value && drilldownWidget.value) {
+    openDrilldownForWidget(drilldownWidget.value, drilldownExtraCondition.value);
+  }
 };
 
 // =========================================================================
@@ -2126,6 +2167,7 @@ const widgetForm = ref({
   conditions: [],
   isUnique: false,
   uniqueKeyCol: '',
+  justifyTitle: false,
   color: '#0284c7',
   bgColor: '#ffffff',
   icon: 'pi-chart-line',
@@ -3074,6 +3116,7 @@ const openAddWidgetDialog = async (group) => {
     breakRow: false,
     isUnique: false,
     uniqueKeyCol: '',
+    justifyTitle: false,
     color: '#0284c7',
     bgColor: '#ffffff',
     icon: 'pi-chart-line',
@@ -3095,6 +3138,7 @@ const openEditWidgetDialog = async (group, widget) => {
     breakRow: Boolean(hydrated.breakRow),
     isUnique: Boolean(hydrated.isUnique),
     uniqueKeyCol: hydrated.uniqueKeyCol || '',
+    justifyTitle: Boolean(hydrated.justifyTitle),
     viewId: hydrated.viewId || hydrated.cardId || 'all',
     subColumnId: hydrated.subColumnId || '',
     subColumnLabel: hydrated.subColumnLabel || '',
@@ -3168,6 +3212,7 @@ const saveWidget = async () => {
     const payload = {
       ...widgetForm.value,
       breakRow: Boolean(widgetForm.value.breakRow),
+      justifyTitle: Boolean(widgetForm.value.justifyTitle),
       subColumnId: widgetForm.value.subColumnId || '',
       subColumnLabel: widgetForm.value.subColumnLabel || '',
       conditions: cleanedConditions,
@@ -3606,6 +3651,7 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
   })();
 
   drilldownWidget.value = widget;
+  drilldownExtraCondition.value = extraCondition;
   if (Array.isArray(extraCondition) && extraCondition.length > 0) {
     drilldownExtraTitle.value = `${widget.title || 'Thống kê'}: ${extraCondition.map((c) => `"${c.value}"`).join(' • ')}`;
   } else if (extraCondition && extraCondition.value) {
