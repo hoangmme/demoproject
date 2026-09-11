@@ -3466,7 +3466,57 @@
   - Làm sạch các bundle build cũ và đồng bộ mã nguồn mới sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 
+---
 
+### SECTION 17: TRIỆT TIÊU ĐÈ CỘT ASYNC & TỐI ƯU HÓA TÙY CHỌN CỘT CHO POPUP WIDGET THỐNG KÊ (0ms INSTANT ISOLATION)
+- **Vấn đề từ người dùng**: Khi mở popup thống kê từ thẻ Widget trên Dashboard, hệ thống load cột chung/cũ trước rồi mới load cột widget sau (bị nhấp nháy/đổi cột), làm mất tính độc lập của từng widget.
+- **Nguyên nhân cốt lõi**:
+  1. Trong `openDrilldownForWidget` có một IIFE bất đồng bộ `(async () => { ... })()` chạy ngầm gọi API `getAppSettings('child_dashboard_cols_${tid}_${targetViewId}')`. Khi API này phản hồi từ Directus DB (sau 100-300ms), nó gán đè `drilldownSavedColIds.value = sanitized`, làm thay đổi cột của widget đang xem sau khi popup đã hiển thị.
+  2. `drilldownWidget.value = widget` bị gán sau khi tính toán `initialCols`, dẫn đến nguy cơ xung đột ngữ cảnh widget.
+  3. `ColumnSelector` trong popup dùng `:key` không chứa `widget.id`, khiến component không được remount riêng biệt khi đổi widget.
+  4. Cấu hình lưu trữ trong `onDrilldownColumnsChange` bị hardcode `'dashboard_custom_groups'` thay vì sử dụng `groupsStorageKey.value`.
+- **Giải pháp xử lý**:
+  1. **Tải cột 0ms hoàn toàn đồng bộ**: `openDrilldownForWidget` gán ngay `drilldownWidget.value = widget` ở đầu hàm và trích xuất cấu hình cột riêng biệt qua `getSetupColumnIdsForTable` với ưu tiên cao nhất tuyệt đối: `widget.columns` (bộ nhớ) -> `stat_widget_cols_${wId}` (localStorage/cache) -> Thẻ chuyên đề tương ứng -> Mặc định.
+  2. **Triệt tiêu lệnh ghi đè async**: Xóa bỏ hoàn toàn việc gọi API DB ngầm để đè `child_dashboard_cols_*` vào widget.
+  3. **Bảo đảm định danh ColumnSelector**: Bổ sung `(drilldownWidget?.id || 'w')` vào `:key` của `ColumnSelector`.
+  4. **Lưu trữ chuẩn xác theo Dashboard ID**: Sử dụng `groupsStorageKey.value` trong `onDrilldownColumnsChange`.
+- **Kiểm thử**:
+  - `npm run build`: Thành công 100% (591ms, 0 lỗi).
+  - Cập nhật bản build vào `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
 
+---
 
+### SECTION 18: HỢP NHẤT TÙY CHỌN BẢNG (TÊN, BIỂU TƯỢNG, MÀU SẮC & GOM NHÓM CỘT) VÀ TỐI ƯU HÓA TÙY CHỌN CỘT
+- **Yêu cầu từ người dùng**:
+  1. Đổi "Import Excel" thành "Nhập liệu Excel" trên Sidebar.
+  2. Đồng bộ icon plus (`+`) ở mục "NHẬP LIỆU" giống 100% với icon plus ở mục "BẢNG DỮ LIỆU" trên Sidebar.
+  3. Gộp "Sửa tên bảng", "Sửa icon/màu sắc" và "Tùy chọn bảng" vào CHUNG một nơi (trước đây có nút đổi tên, nút bảng màu, và tùy chọn bảng rời rạc).
+  4. Trả lời & tư vấn về Tùy chọn cột: Xác nhận Tùy chọn Cột ở bảng có áp dụng cho view hiện tại hay không, và nên giữ cả 2 nơi (ngoài toolbar và trong popup Sửa View) hay chỉ giữ 1 nơi.
+- **Giải pháp & Kiến trúc triển khai**:
+  1. **Sidebar Navigation Updates**:
+     - Trong `src/components/common/AppSidebar.vue`: Đổi nhãn menu sang "Nhập liệu Excel" kèm tooltip.
+     - Thay class `.btn-sidebar-add-record` bằng `.btn-heading-add` kèm `<i class="pi pi-plus" style="font-weight: 800;"></i>`, đồng bộ phong cách tối giản không viền với "BẢNG DỮ LIỆU".
+  2. **Hợp nhất Toàn diện vào `TableOptionsDialog.vue`**:
+     - Tạo module hằng số dùng chung `src/utils/tableIcons.js` (`PRESET_COLORS`, `AVAILABLE_ICONS`, `getIconLabel`).
+     - Tích hợp **Identity Bar** vào đỉnh `TableOptionsDialog.vue`:
+       + Nhập / sửa Tên Bảng hiển thị trực tiếp (`localTitle`).
+       + Nút chọn Biểu tượng (Icon) có dropdown tìm kiếm icon nhanh qua từ khóa tiếng Việt / Anh.
+       + Dải màu nhận diện trực quan (`PRESET_COLORS`) và bộ chọn mã màu Hex tùy do (`<input type="color">`).
+     - Cơ chế Tự nạp & Lưu đồng nhất (`handleSave`):
+       + Tự nạp tên, icon, màu sắc và cấu hình nhóm cột cho mọi bảng (Cán bộ, Thân nhân, Chuyến đi, và các bảng tự tạo).
+       + Khi bấm "Lưu cấu hình Bảng", tự động cập nhật đồng thời: `system_branding_config` (cho các bảng hệ thống), `custom_dashboards_config` (toàn bộ bảng), và nhóm cột (`personnelStore.importMapping...` / `custom_table_groups_...`).
+       + Kích hoạt các sự kiện toàn hệ thống `custom-dashboards-updated`, `system-branding-updated` để Sidebar và Header bảng cập nhật tức thời 0ms.
+  3. **Đơn giản hóa Thao tác trên Sidebar & Header Bảng**:
+     - Tại `AppSidebar.vue`: Thay thế hai nút rời (🎨 đổi icon/màu + ✏️ đổi tên) bằng một nút duy nhất: ⚙️ `Tùy chọn Bảng` (`openTableOptionsModal`), mở thẳng `TableOptionsDialog`.
+     - Tại `UnifiedTableView.vue`:
+       + Click vào huy hiệu Icon bảng hoặc nút "Tùy chọn Bảng" trên thanh công cụ đều mở `TableOptionsDialog`.
+       + Lược bỏ component độc lập `TableIconColorDialog` vì đã được tích hợp hoàn toàn vào `TableOptionsDialog`.
+  4. **Tư vấn Kiến trúc Quản lý Cột (Column Management Advisory)**:
+     - *Xác nhận*: "Tùy chọn Cột" trên thanh công cụ hiện tại **chỉ áp dụng riêng cho Chế độ xem (View / Thẻ) đang active**.
+     - *Đề xuất chuyên gia*: Nên để quản lý cột duy nhất tại thanh công cụ (Toolbar) theo chuẩn UX Lark Base / Airtable, lược bỏ danh sách checkbox cột trong popup Sửa View để tránh rối và trùng lặp thao tác.
+- **Kiểm thử**:
+  - `npm run build`: Thành công 100% (599ms, 0 lỗi).
+  - Đồng bộ sản phẩm build sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
 

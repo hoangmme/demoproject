@@ -20,8 +20,8 @@
             borderColor: getTableIconColor(currentDashboardId) + '40',
             background: getTableIconColor(currentDashboardId) + '15'
           }"
-          @click="openIconColorDialog(currentDashboardId, currentDashboardConfig.title || 'Bảng dữ liệu')"
-          title="Nhấn để đổi biểu tượng (Icon) & màu sắc bảng"
+          @click="isTableOptionsDialogOpen = true"
+          title="Nhấn để Tùy chọn Bảng (Đổi tên, biểu tượng, màu sắc & gom nhóm cột)"
         >
           <i :class="['pi', getTableIcon(currentDashboardId)]" style="font-size: 1.25rem;"></i>
         </button>
@@ -77,15 +77,15 @@
           style="font-size: 0.8rem;"
         />
 
-        <!-- ⚙️ Tùy chọn Bảng (Gom nhóm, thứ tự, độ rộng, ẩn/hiện, bắt buộc) -->
+        <!-- ⚙️ Tùy chọn Bảng (Đổi tên, biểu tượng, màu sắc & gom nhóm cột) -->
         <Button
           v-if="authStore.isAdmin"
-          icon="pi pi-table"
+          icon="pi pi-cog"
           label="Tùy chọn Bảng"
           severity="secondary"
           size="small"
           @click="isTableOptionsDialogOpen = true"
-          title="Quản lý gom nhóm cột, thứ tự, độ rộng bảng/form, ẩn/hiện và bắt buộc nhập cho toàn bảng"
+          title="Quản lý tên bảng, biểu tượng, màu sắc nhận diện và gom nhóm cột"
           style="font-size: 0.8rem; font-weight: 600;"
         />
 
@@ -1035,8 +1035,10 @@
     <!-- Dialog Tùy chọn Bảng (Gom nhóm cột, thứ tự, độ rộng bảng/form, ẩn/hiện, bắt buộc) -->
     <TableOptionsDialog
       v-model="isTableOptionsDialogOpen"
-      :tableId="currentDashboardConfig?.source || 'trips'"
+      :tableId="currentDashboardConfig?.source || currentDashboardId || 'trips'"
       :tableTitle="currentDashboardConfig?.title || 'Bảng dữ liệu'"
+      :tableIcon="getTableIcon(currentDashboardId)"
+      :tableColor="getTableIconColor(currentDashboardId)"
       :groups="currentTableGroups"
       :customDashboards="customDashboards"
       @save="handleTableOptionsSaved"
@@ -1145,16 +1147,6 @@
       :activeSource="currentDashboardConfig.source || 'trips'"
     />
 
-    <!-- Dialog Tùy chỉnh Biểu tượng & Màu sắc Bảng -->
-    <TableIconColorDialog
-      v-model:visible="isIconColorDialogOpen"
-      :tableId="iconDialogTableId"
-      :tableTitle="iconDialogTableTitle"
-      :currentIcon="iconDialogCurrentIcon"
-      :currentColor="iconDialogCurrentColor"
-      @saved="onIconColorSaved"
-    />
-
 </template>
 
 <script setup>
@@ -1175,7 +1167,6 @@ import ColumnSelector from '@/components/common/ColumnSelector.vue';
 import ColumnHeaderMenu from '@/components/common/ColumnHeaderMenu.vue';
 import AddColumnDialog from '@/components/common/AddColumnDialog.vue';
 import TableKeyLinkDialog from '@/components/common/TableKeyLinkDialog.vue';
-import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
 import TableViewManagerDialog from '@/components/common/TableViewManagerDialog.vue';
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
@@ -1382,7 +1373,16 @@ const currentTableGroups = computed(() => {
   return [{ title: 'Thông tin chung', columns: [] }];
 });
 
-const handleTableOptionsSaved = async (newGroups) => {
+const handleTableOptionsSaved = async (payload) => {
+  const newGroups = Array.isArray(payload) ? payload : (payload?.groups || []);
+  const newTitle = payload?.title;
+  const newIcon = payload?.icon;
+  const newColor = payload?.iconColor;
+
+  if (newTitle && currentDashboardConfig.value) currentDashboardConfig.value.title = newTitle;
+  if (newIcon && currentDashboardConfig.value) currentDashboardConfig.value.icon = newIcon;
+  if (newColor && currentDashboardConfig.value) currentDashboardConfig.value.iconColor = newColor;
+
   const src = currentDashboardConfig.value?.source || 'trips';
   if (src === 'trips') personnelStore.importMappingTrips = newGroups;
   else if (src === 'personnel') personnelStore.importMappingPersonnel = newGroups;
@@ -1391,6 +1391,9 @@ const handleTableOptionsSaved = async (newGroups) => {
     const tid = topicId.value;
     const cDash = (customDashboards.value || []).find((d) => d.id === tid);
     if (cDash) {
+      if (newTitle) cDash.title = newTitle;
+      if (newIcon) cDash.icon = newIcon;
+      if (newColor) cDash.iconColor = newColor;
       cDash.groups = newGroups;
       cDash.customColumns = newGroups.flatMap((g) => g.columns || []);
       try {

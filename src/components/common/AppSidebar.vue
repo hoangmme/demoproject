@@ -123,18 +123,10 @@
             v-if="authStore.isAdmin"
             type="button"
             class="sidebar-item-action-btn"
-            @click.stop="openIconColorDialog('personnel', systemBranding.menuLabelPersonnel || 'Cán bộ')"
-            title="Đổi biểu tượng & màu sắc"
+            @click.stop="openTableOptionsModal('personnel', systemBranding.menuLabelPersonnel || 'Cán bộ')"
+            title="Tùy chọn Bảng (Đổi tên, biểu tượng, màu sắc & gom nhóm cột)"
           >
-            <i class="pi pi-palette"></i>
-          </button>
-          <button
-            type="button"
-            class="sidebar-item-action-btn"
-            @click.stop="openRenameFixedTableDialog('personnel')"
-            title="Đổi tên bảng Cán bộ"
-          >
-            <i class="pi pi-pencil"></i>
+            <i class="pi pi-cog"></i>
           </button>
           <button
             type="button"
@@ -167,18 +159,10 @@
             v-if="authStore.isAdmin"
             type="button"
             class="sidebar-item-action-btn"
-            @click.stop="openIconColorDialog('relatives', systemBranding.menuLabelRelatives || 'Thân nhân')"
-            title="Đổi biểu tượng & màu sắc"
+            @click.stop="openTableOptionsModal('relatives', systemBranding.menuLabelRelatives || 'Thân nhân')"
+            title="Tùy chọn Bảng (Đổi tên, biểu tượng, màu sắc & gom nhóm cột)"
           >
-            <i class="pi pi-palette"></i>
-          </button>
-          <button
-            type="button"
-            class="sidebar-item-action-btn"
-            @click.stop="openRenameFixedTableDialog('relatives')"
-            title="Đổi tên bảng Thân nhân"
-          >
-            <i class="pi pi-pencil"></i>
+            <i class="pi pi-cog"></i>
           </button>
           <button
             type="button"
@@ -208,18 +192,10 @@
             v-if="authStore.isAdmin"
             type="button"
             class="sidebar-item-action-btn"
-            @click.stop="openIconColorDialog('trips', systemBranding.menuLabelTrips || 'Chuyến đi')"
-            title="Đổi biểu tượng & màu sắc"
+            @click.stop="openTableOptionsModal('trips', systemBranding.menuLabelTrips || 'Chuyến đi')"
+            title="Tùy chọn Bảng (Đổi tên, biểu tượng, màu sắc & gom nhóm cột)"
           >
-            <i class="pi pi-palette"></i>
-          </button>
-          <button
-            type="button"
-            class="sidebar-item-action-btn"
-            @click.stop="openRenameFixedTableDialog('trips')"
-            title="Đổi tên bảng Chuyến đi"
-          >
-            <i class="pi pi-pencil"></i>
+            <i class="pi pi-cog"></i>
           </button>
           <button
             type="button"
@@ -253,18 +229,10 @@
             v-if="authStore.isAdmin"
             type="button"
             class="sidebar-item-action-btn"
-            @click.stop="openIconColorDialog(dash.id, dash.title)"
-            title="Đổi biểu tượng & màu sắc"
+            @click.stop="openTableOptionsModal(dash.id, dash.title)"
+            title="Tùy chọn Bảng (Đổi tên, biểu tượng, màu sắc & gom nhóm cột)"
           >
-            <i class="pi pi-palette"></i>
-          </button>
-          <button
-            type="button"
-            class="sidebar-item-action-btn"
-            @click.stop="openEditTableDialog(dash)"
-            title="Đổi tên bảng"
-          >
-            <i class="pi pi-pencil"></i>
+            <i class="pi pi-cog"></i>
           </button>
           <button
             type="button"
@@ -282,11 +250,11 @@
         <span>Nhập liệu</span>
         <button
           type="button"
-          class="btn-sidebar-add-record"
+          class="btn-heading-add"
           @click="isDynamicDataEntryOpen = true"
           title="Nhập liệu mới (Chọn bảng & liên kết)"
         >
-          <i class="pi pi-plus" style="font-size: 0.65rem;"></i>
+          <i class="pi pi-plus" style="font-weight: 800;"></i>
         </button>
       </div>
 
@@ -295,10 +263,10 @@
         <span>Nhập liệu mới</span>
       </a>
 
-      <!-- Nút Import Excel trực tiếp trên Sidebar -->
-      <a class="app-nav-item" href="javascript:void(0)" @click="openSidebarImportWizard" title="Import dữ liệu từ tệp Excel vào hệ thống (Wizard 4 Bước)">
+      <!-- Nút Nhập liệu Excel trực tiếp trên Sidebar -->
+      <a class="app-nav-item" href="javascript:void(0)" @click="openSidebarImportWizard" title="Nhập liệu từ tệp Excel vào hệ thống (Wizard 4 Bước)">
         <i class="pi pi-file-import" style="color: #ffffff;"></i>
-        <span>Import Excel</span>
+        <span>Nhập liệu Excel</span>
       </a>
 
       <div class="app-nav-heading" v-if="appendixDashboards.length > 0">Báo cáo phụ lục</div>
@@ -673,14 +641,15 @@
       @imported="onSidebarWizardImported"
     />
 
-    <!-- Dialog Tùy chỉnh Biểu tượng & Màu sắc Bảng -->
-    <TableIconColorDialog
-      v-model:visible="isIconColorDialogOpen"
-      :tableId="iconDialogTableId"
-      :tableTitle="iconDialogTableTitle"
-      :currentIcon="iconDialogCurrentIcon"
-      :currentColor="iconDialogCurrentColor"
-      @saved="onIconColorSaved"
+    <!-- Dialog Tùy chọn Bảng (Gộp Đổi tên, Biểu tượng, Màu sắc, Gom nhóm cột) -->
+    <TableOptionsDialog
+      v-model="isTableOptionsDialogOpen"
+      :tableId="tableOptionsId"
+      :tableTitle="tableOptionsTitle"
+      :tableIcon="getTableIcon(tableOptionsId)"
+      :tableColor="getTableIconColor(tableOptionsId)"
+      :customDashboards="dynamicDashboards"
+      @save="onTableOptionsSavedInSidebar"
     />
   </aside>
 </template>
@@ -692,7 +661,7 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
-import TableIconColorDialog from '@/components/common/TableIconColorDialog.vue';
+import TableOptionsDialog from '@/components/common/TableOptionsDialog.vue';
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import { useAuthStore } from '@/stores/auth';
 import { usePersonnelStore } from '@/stores/personnel';
@@ -1211,6 +1180,27 @@ const iconDialogTableTitle = ref('Cán bộ');
 const iconDialogCurrentIcon = ref('pi-users');
 const iconDialogCurrentColor = ref('#0284c7');
 
+// Tùy chọn Bảng (Gộp Đổi tên, Biểu tượng, Màu sắc, Gom nhóm cột)
+const isTableOptionsDialogOpen = ref(false);
+const tableOptionsId = ref('trips');
+const tableOptionsTitle = ref('');
+
+const openTableOptionsModal = (tableId, defaultTitle = '') => {
+  tableOptionsId.value = tableId;
+  tableOptionsTitle.value = defaultTitle || '';
+  isTableOptionsDialogOpen.value = true;
+};
+
+const onTableOptionsSavedInSidebar = ({ tableId, title, icon, iconColor }) => {
+  const idx = (dynamicDashboards.value || []).findIndex((d) => d.id === tableId);
+  if (idx !== -1) {
+    if (title) dynamicDashboards.value[idx].title = title;
+    if (icon) dynamicDashboards.value[idx].icon = icon;
+    if (iconColor) dynamicDashboards.value[idx].iconColor = iconColor;
+  }
+  loadSystemBranding();
+};
+
 const getTableConfig = (tableId) => {
   return (dynamicDashboards.value || []).find((d) => d.id === tableId) || null;
 };
@@ -1226,11 +1216,7 @@ const getTableIconColor = (tableId, defaultColor = '#0284c7') => {
 };
 
 const openIconColorDialog = (tableId, defaultTitle) => {
-  iconDialogTableId.value = tableId;
-  iconDialogTableTitle.value = defaultTitle || 'Bảng dữ liệu';
-  iconDialogCurrentIcon.value = getTableIcon(tableId);
-  iconDialogCurrentColor.value = getTableIconColor(tableId);
-  isIconColorDialogOpen.value = true;
+  openTableOptionsModal(tableId, defaultTitle);
 };
 
 const onIconColorSaved = ({ tableId, icon, iconColor }) => {

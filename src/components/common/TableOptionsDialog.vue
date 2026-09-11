@@ -11,24 +11,124 @@
     <!-- Custom Dialog Header -->
     <div class="options-header">
       <div class="header-left">
-        <div class="header-icon-badge">
-          <i class="pi pi-sliders-h"></i>
+        <div
+          class="header-icon-badge"
+          :style="{
+            borderColor: (localColor || '#0284c7') + '50',
+            background: (localColor || '#0284c7') + '1a',
+            color: localColor || '#0284c7',
+          }"
+        >
+          <i :class="['pi', localIcon || 'pi-table']"></i>
         </div>
         <div>
           <div class="header-title-row">
-            <h2 class="header-title">Tùy chọn & Cấu hình Bảng: {{ tableTitle || 'Dữ liệu' }}</h2>
+            <h2 class="header-title">Tùy chọn & Cấu hình Bảng: {{ localTitle || tableTitle || 'Dữ liệu' }}</h2>
             <span class="header-stat-pill">
               {{ localGroups.length }} nhóm · {{ totalColsCount }} cột
             </span>
           </div>
           <p class="header-subtitle">
-            Quản lý gom nhóm cột, thứ tự, độ rộng, ẩn/hiện và bắt buộc nhập. Áp dụng đồng bộ cho Bảng dữ liệu, Form chỉnh sửa và Xuất in PDF.
+            Cấu hình tên bảng, biểu tượng, màu sắc nhận diện và gom nhóm cột. Áp dụng đồng bộ toàn hệ thống.
           </p>
         </div>
       </div>
       <div class="header-actions">
         <button type="button" class="header-close-btn" @click="$emit('update:modelValue', false)" title="Đóng">
           <i class="pi pi-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Identity Bar: Tên Bảng, Biểu tượng & Màu sắc -->
+    <div class="options-identity-bar">
+      <!-- Live Preview & Icon Trigger -->
+      <div class="identity-item">
+        <label class="identity-label">Biểu tượng bảng:</label>
+        <button
+          type="button"
+          class="identity-icon-btn"
+          :style="{
+            borderColor: (localColor || '#0284c7') + '60',
+            background: (localColor || '#0284c7') + '18',
+            color: localColor || '#0284c7',
+          }"
+          @click="showIconPicker = !showIconPicker"
+          title="Bấm để chọn Biểu tượng (Icon)"
+        >
+          <i :class="['pi', localIcon || 'pi-table']"></i>
+          <span class="icon-label-inline">{{ getIconLabel(localIcon) }}</span>
+          <i :class="showIconPicker ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" style="font-size: 0.65rem; margin-left: 2px;"></i>
+        </button>
+      </div>
+
+      <!-- Tên Bảng -->
+      <div class="identity-item" style="flex: 1; min-width: 220px;">
+        <label class="identity-label">Tên Bảng hiển thị:</label>
+        <InputText
+          v-model="localTitle"
+          placeholder="Nhập tên bảng dữ liệu..."
+          class="identity-title-input"
+        />
+      </div>
+
+      <!-- Màu sắc nhận diện -->
+      <div class="identity-item">
+        <label class="identity-label">Màu sắc nhận diện:</label>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <div class="color-swatches-inline">
+            <button
+              v-for="color in PRESET_COLORS.slice(0, 8)"
+              :key="color.hex"
+              type="button"
+              class="color-dot-btn"
+              :class="{ active: (localColor || '').toLowerCase() === color.hex.toLowerCase() }"
+              :style="{ background: color.hex }"
+              :title="color.name"
+              @click="localColor = color.hex"
+            >
+              <i v-if="(localColor || '').toLowerCase() === color.hex.toLowerCase()" class="pi pi-check" style="color: #fff; font-size: 0.55rem; font-weight: 800;"></i>
+            </button>
+          </div>
+          <input
+            type="color"
+            v-model="localColor"
+            class="color-picker-input"
+            title="Chọn mã màu tùy biến"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Icon Picker Panel (Hiển thị khi showIconPicker = true) -->
+    <div v-if="showIconPicker" class="icon-picker-panel">
+      <div class="icon-picker-header">
+        <div style="font-size: 0.78rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
+          <i class="pi pi-palette" :style="{ color: localColor }"></i>
+          <span>Chọn Biểu tượng (Icon) cho bảng:</span>
+        </div>
+        <div style="position: relative; width: 220px;">
+          <i class="pi pi-search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 0.72rem; color: #94a3b8;"></i>
+          <input
+            v-model="iconSearchQuery"
+            placeholder="Tìm kiếm icon..."
+            style="width: 100%; height: 28px; font-size: 0.75rem; padding: 2px 8px 2px 26px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;"
+          />
+        </div>
+      </div>
+      <div class="icon-picker-grid">
+        <button
+          v-for="item in filteredIcons"
+          :key="item.icon"
+          type="button"
+          class="icon-grid-btn"
+          :class="{ active: localIcon === item.icon }"
+          :style="localIcon === item.icon ? { borderColor: localColor, color: localColor, background: localColor + '18' } : {}"
+          :title="item.label"
+          @click="localIcon = item.icon; showIconPicker = false;"
+        >
+          <i :class="['pi', item.icon]" style="font-size: 1.15rem;"></i>
+          <span class="icon-btn-label">{{ item.label }}</span>
         </button>
       </div>
     </div>
@@ -304,8 +404,11 @@
 import { ref, computed, watch } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
 import { saveAppSettings } from '@/api/settings';
 import { usePersonnelStore } from '@/stores/personnel';
+import { PRESET_COLORS, AVAILABLE_ICONS, getIconLabel } from '@/utils/tableIcons';
+import { ensureStandardDashboards, DEFAULT_UNIFIED_DASHBOARDS } from '@/utils/tableRegistry';
 
 const props = defineProps({
   modelValue: {
@@ -317,6 +420,14 @@ const props = defineProps({
     default: 'trips',
   },
   tableTitle: {
+    type: String,
+    default: '',
+  },
+  tableIcon: {
+    type: String,
+    default: '',
+  },
+  tableColor: {
     type: String,
     default: '',
   },
@@ -333,11 +444,65 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'save']);
 
 const personnelStore = usePersonnelStore();
+const localTitle = ref('');
+const localIcon = ref('pi-table');
+const localColor = ref('#0284c7');
+const showIconPicker = ref(false);
+const iconSearchQuery = ref('');
 const localGroups = ref([]);
 const searchColQuery = ref('');
 const saving = ref(false);
 
-const initLocalGroups = () => {
+const filteredIcons = computed(() => {
+  const q = iconSearchQuery.value.trim().toLowerCase();
+  if (!q) return AVAILABLE_ICONS;
+  return AVAILABLE_ICONS.filter((item) =>
+    item.icon.toLowerCase().includes(q) ||
+    item.label.toLowerCase().includes(q) ||
+    item.keywords.toLowerCase().includes(q)
+  );
+});
+
+const initIdentityAndGroups = () => {
+  // 1. Tên Bảng
+  if (props.tableTitle) {
+    localTitle.value = props.tableTitle;
+  } else if (props.tableId === 'trips') {
+    localTitle.value = 'Chuyến đi';
+  } else if (props.tableId === 'personnel') {
+    localTitle.value = 'Cán bộ';
+  } else if (props.tableId === 'relatives') {
+    localTitle.value = 'Thân nhân';
+  } else {
+    const d = (props.customDashboards || []).find((x) => x.id === props.tableId);
+    localTitle.value = d?.title || 'Bảng dữ liệu';
+  }
+
+  // 2. Biểu tượng (Icon)
+  if (props.tableIcon) {
+    localIcon.value = props.tableIcon;
+  } else {
+    const d = (props.customDashboards || []).find((x) => x.id === props.tableId);
+    if (d?.icon) localIcon.value = d.icon;
+    else if (props.tableId === 'trips') localIcon.value = 'pi-send';
+    else if (props.tableId === 'personnel') localIcon.value = 'pi-users';
+    else if (props.tableId === 'relatives') localIcon.value = 'pi-heart';
+    else localIcon.value = 'pi-table';
+  }
+
+  // 3. Màu sắc nhận diện (Color)
+  if (props.tableColor) {
+    localColor.value = props.tableColor;
+  } else {
+    const d = (props.customDashboards || []).find((x) => x.id === props.tableId);
+    if (d?.iconColor) localColor.value = d.iconColor;
+    else if (props.tableId === 'trips') localColor.value = '#10b981';
+    else if (props.tableId === 'personnel') localColor.value = '#0284c7';
+    else if (props.tableId === 'relatives') localColor.value = '#a855f7';
+    else localColor.value = '#0284c7';
+  }
+
+  // 4. Nhóm cột
   if (Array.isArray(props.groups) && props.groups.length > 0) {
     localGroups.value = JSON.parse(JSON.stringify(props.groups)).map((g, idx) => ({
       ...g,
@@ -346,23 +511,44 @@ const initLocalGroups = () => {
       columns: Array.isArray(g.columns) ? g.columns : [],
     }));
   } else {
-    localGroups.value = [
-      {
-        _tempId: 'grp_' + Date.now() + '_0',
-        title: 'Thông tin chung',
+    let loaded = null;
+    if (props.tableId === 'trips') loaded = personnelStore.importMappingTrips;
+    else if (props.tableId === 'personnel') loaded = personnelStore.importMappingPersonnel;
+    else if (props.tableId === 'relatives') loaded = personnelStore.importMappingRelative;
+    else {
+      try {
+        const raw = localStorage.getItem('custom_table_groups_' + props.tableId);
+        if (raw) loaded = JSON.parse(raw);
+      } catch (e) {}
+    }
+    if (Array.isArray(loaded) && loaded.length > 0) {
+      localGroups.value = JSON.parse(JSON.stringify(loaded)).map((g, idx) => ({
+        ...g,
+        _tempId: 'grp_' + Date.now() + '_' + idx,
         collapsed: false,
-        columns: [],
-      },
-    ];
+        columns: Array.isArray(g.columns) ? g.columns : [],
+      }));
+    } else {
+      localGroups.value = [
+        {
+          _tempId: 'grp_' + Date.now() + '_0',
+          title: 'Thông tin chung',
+          collapsed: false,
+          columns: [],
+        },
+      ];
+    }
   }
 };
 
 watch(
-  () => [props.modelValue, props.groups],
+  () => [props.modelValue, props.tableId, props.tableTitle, props.groups],
   ([isOpen]) => {
     if (isOpen) {
-      initLocalGroups();
+      initIdentityAndGroups();
       searchColQuery.value = '';
+      showIconPicker.value = false;
+      iconSearchQuery.value = '';
     }
   },
   { immediate: true, deep: true }
@@ -470,7 +656,11 @@ const handleSave = async () => {
     });
 
     const src = props.tableId || 'trips';
+    const newTitle = (localTitle.value || '').trim() || props.tableTitle || 'Bảng dữ liệu';
+    const newIcon = localIcon.value || 'pi-table';
+    const newColor = localColor.value || '#0284c7';
 
+    // 1. Lưu cấu hình nhóm cột
     if (src === 'trips') {
       personnelStore.importMappingTrips = cleanedGroups;
       const keys = ['mapping_config_trips', 'import_mapping_trips', 'importMappingTrips'];
@@ -500,7 +690,54 @@ const handleSave = async () => {
       } catch (e) {}
     }
 
-    emit('save', cleanedGroups);
+    // 2. Lưu Tên bảng vào branding nếu là bảng mặc định
+    if (src === 'personnel' || src === 'relatives' || src === 'trips') {
+      try {
+        const rawBranding = localStorage.getItem('system_branding_config');
+        const branding = rawBranding ? JSON.parse(rawBranding) : {};
+        if (src === 'personnel') branding.menuLabelPersonnel = newTitle;
+        if (src === 'relatives') branding.menuLabelRelatives = newTitle;
+        if (src === 'trips') branding.menuLabelTrips = newTitle;
+        localStorage.setItem('system_branding_config', JSON.stringify(branding));
+        await saveAppSettings('system_branding_config', branding);
+        window.dispatchEvent(new CustomEvent('system-branding-updated', { detail: branding }));
+      } catch (e) {}
+    }
+
+    // 3. Đồng bộ Tên bảng, Icon & Màu sắc vào custom_dashboards_config
+    try {
+      const local = localStorage.getItem('custom_dashboards_config');
+      let list = local ? JSON.parse(local) : [...DEFAULT_UNIFIED_DASHBOARDS];
+      list = ensureStandardDashboards(list);
+
+      const idx = list.findIndex((d) => d.id === src);
+      if (idx !== -1) {
+        list[idx] = {
+          ...list[idx],
+          title: newTitle,
+          icon: newIcon,
+          iconColor: newColor,
+        };
+      } else {
+        list.push({
+          id: src,
+          title: newTitle,
+          icon: newIcon,
+          iconColor: newColor,
+        });
+      }
+      localStorage.setItem('custom_dashboards_config', JSON.stringify(list));
+      await saveAppSettings('custom_dashboards_config', list);
+      window.dispatchEvent(new CustomEvent('custom-dashboards-updated', { detail: list }));
+    } catch (e) {}
+
+    emit('save', {
+      groups: cleanedGroups,
+      tableId: src,
+      title: newTitle,
+      icon: newIcon,
+      iconColor: newColor,
+    });
     emit('update:modelValue', false);
   } catch (err) {
     console.error('Save table options error:', err);
@@ -519,6 +756,155 @@ const handleSave = async () => {
   padding: 14px 20px;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-bottom: 1px solid #e2e8f0;
+}
+
+/* Identity Bar: Tên, Biểu tượng & Màu sắc */
+.options-identity-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.identity-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.identity-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.identity-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1.5px solid;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+}
+
+.identity-icon-btn:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.icon-label-inline {
+  font-size: 0.78rem;
+  color: #1e293b;
+}
+
+.color-swatches-inline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.color-dot-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  padding: 0;
+}
+
+.color-dot-btn:hover {
+  transform: scale(1.15);
+}
+
+.color-dot-btn.active {
+  border-color: #0f172a;
+  transform: scale(1.15);
+}
+
+.color-picker-input {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+}
+
+/* Icon Picker Dropdown Panel */
+.icon-picker-panel {
+  padding: 12px 20px;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.icon-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.icon-grid-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #334155;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.icon-grid-btn:hover {
+  border-color: #0284c7;
+  color: #0284c7;
+  background: #f0f9ff;
+}
+
+.icon-grid-btn.active {
+  font-weight: 700;
+  border-width: 1.5px;
+}
+
+.icon-btn-label {
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-left {

@@ -1175,7 +1175,7 @@
             <!-- Tùy chỉnh cột riêng cho Chế độ xem đang chọn -->
             <ColumnSelector
               :inline="false"
-              :key="drilldownSelectedViewId + '_' + (drilldownWidget?.topicId || drilldownSourceType)"
+              :key="(drilldownWidget?.id || 'w') + '_' + drilldownSelectedViewId + '_' + (drilldownWidget?.topicId || drilldownSourceType)"
               :modelValue="drilldownColumns.map((c) => c.id)"
               :options="allAvailableDrilldownColumns"
               @change="onDrilldownColumnsChange"
@@ -1587,12 +1587,17 @@ const getSetupColumnIdsForTable = (tableId, cardId = null, widget = null) => {
 
   const allDashboards = ensureStandardDashboards(availableTopicDashboards.value);
 
-  // 0. Cấu hình riêng biệt của từng Khối / Thẻ Thống kê (Per-Widget Isolated Columns)
+  // 0. Cấu hình riêng biệt của từng Khối / Thẻ Thống kê (Per-Widget Isolated Columns) - ƯU TIÊN CAO NHẤT (0ms)
   if (widget) {
+    // 0a. Trực tiếp từ object widget trong bộ nhớ (0ms)
+    if (widget.columns && Array.isArray(widget.columns) && widget.columns.length > 0) {
+      return sanitizeRelCols(widget.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+    }
+    // 0b. Trực tiếp từ LocalStorage theo ID của widget (0ms)
     const wId = widget.id || widget._id;
     if (wId) {
       try {
-        const wLocal = localStorage.getItem(`stat_widget_cols_${wId}`);
+        const wLocal = localStorage.getItem(`stat_widget_cols_${wId}`) || localStorage.getItem(`app_settings_stat_widget_cols_${wId}`);
         if (wLocal) {
           const parsed = JSON.parse(wLocal);
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -1601,8 +1606,18 @@ const getSetupColumnIdsForTable = (tableId, cardId = null, widget = null) => {
         }
       } catch (e) {}
     }
-    if (widget.columns && Array.isArray(widget.columns) && widget.columns.length > 0) {
-      return sanitizeRelCols(widget.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+    // 0c. Nếu widget gắn với một Chuyên đề cụ thể -> Kế thừa cấu hình cột của Chuyên đề/Thẻ đó
+    if (widget.topicId) {
+      const topic = allDashboards.find((t) => t.id === widget.topicId);
+      if (topic && Array.isArray(topic.metricCards)) {
+        const card = topic.metricCards.find((c) => c.id === widget.cardId || c.label === widget.title);
+        if (card?.columns && Array.isArray(card.columns) && card.columns.length > 0) {
+          return sanitizeRelCols(card.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+        }
+      }
+      if (topic?.columns && Array.isArray(topic.columns) && topic.columns.length > 0) {
+        return sanitizeRelCols(topic.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+      }
     }
   }
 
@@ -1754,6 +1769,7 @@ const onDrilldownColumnsChange = async (newColIds) => {
   if (w) {
     w.columns = sanitized;
     try {
+      const storageKey = groupsStorageKey.value;
       if (Array.isArray(customGroups.value)) {
         for (const grp of customGroups.value) {
           const m = (grp.widgets || []).find((x) => x.id === wId || x === w);
@@ -1762,8 +1778,8 @@ const onDrilldownColumnsChange = async (newColIds) => {
             break;
           }
         }
-        localStorage.setItem('dashboard_custom_groups', JSON.stringify(customGroups.value));
-        saveAppSettings('dashboard_custom_groups', customGroups.value).catch(() => {});
+        localStorage.setItem(storageKey, JSON.stringify(customGroups.value));
+        saveAppSettings(storageKey, customGroups.value).catch(() => {});
       }
     } catch (e) {}
   }
@@ -3632,38 +3648,6 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
     filtered = uniqueResult;
   }
 
-  const tid = widget.topicId || source;
-  const targetViewId = widget.viewId || widget.cardId || 'all';
-  drilldownSelectedViewId.value = targetViewId;
-  const initialCols = getSetupColumnIdsForTable(tid, targetViewId, widget);
-  if (initialCols && initialCols.length > 0) {
-    drilldownSavedColIds.value = initialCols;
-  }
-
-  (async () => {
-    try {
-      const wId = widget.id || widget._id;
-      if (wId) {
-        const wDbVal = await getAppSettings(`stat_widget_cols_${wId}`, null);
-        if (Array.isArray(wDbVal) && wDbVal.length > 0) {
-          const sanitized = wDbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
-          if (sanitized.length > 0) {
-            drilldownSavedColIds.value = sanitized;
-            return;
-          }
-        }
-      }
-      const k = `child_dashboard_cols_${tid}_${targetViewId}`;
-      const dbVal = await getAppSettings(k, null);
-      if (Array.isArray(dbVal) && dbVal.length > 0) {
-        const sanitized = dbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
-        if (sanitized.length > 0) {
-          drilldownSavedColIds.value = sanitized;
-        }
-      }
-    } catch (e) {}
-  })();
-
   drilldownWidget.value = widget;
   drilldownExtraCondition.value = extraCondition;
   if (Array.isArray(extraCondition) && extraCondition.length > 0) {
@@ -3678,6 +3662,22 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
   drilldownSearchText.value = '';
   drilldownDtFirst.value = 0;
   drilldownSelectedRows.value = [];
+
+  const tid = widget.topicId || source;
+  const targetViewId = widget.viewId || widget.cardId || 'all';
+  drilldownSelectedViewId.value = targetViewId;
+
+  // Ưu tiên cao nhất: Lấy cấu hình cột riêng của Widget này (0ms hoàn toàn đồng bộ, không bị nhấp nháy hay load đè)
+  const initialCols = getSetupColumnIdsForTable(tid, targetViewId, widget);
+  if (initialCols && initialCols.length > 0) {
+    drilldownSavedColIds.value = initialCols;
+    if (!widget.columns || widget.columns.length === 0) {
+      widget.columns = initialCols;
+    }
+  } else {
+    drilldownSavedColIds.value = null;
+  }
+
   isDrilldownModalOpen.value = true;
 };
 
