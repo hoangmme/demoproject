@@ -4,8 +4,8 @@
     @update:visible="$emit('update:modelValue', $event)"
     modal
     :header="false"
-    :style="{ width: '92vw', maxWidth: '1100px', maxHeight: '92vh' }"
-    :contentStyle="{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }"
+    :style="{ width: '92vw', maxWidth: '1100px', height: '90vh', maxHeight: '94vh' }"
+    :contentStyle="{ height: '100%', maxHeight: '100%', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }"
     class="table-options-dialog"
   >
     <!-- Custom Dialog Header -->
@@ -749,7 +749,17 @@ const handleSave = async () => {
 </script>
 
 <style scoped>
+:deep(.p-dialog-content) {
+  height: 100% !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
 .options-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -760,6 +770,7 @@ const handleSave = async () => {
 
 /* Identity Bar: Tên, Biểu tượng & Màu sắc */
 .options-identity-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -847,6 +858,7 @@ const handleSave = async () => {
 
 /* Icon Picker Dropdown Panel */
 .icon-picker-panel {
+  flex-shrink: 0;
   padding: 12px 20px;
   background: #f8fafc;
   border-bottom: 2px solid #e2e8f0;
@@ -977,6 +989,7 @@ const handleSave = async () => {
 }
 
 .options-toolbar {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1031,14 +1044,14 @@ const handleSave = async () => {
 }
 
 .options-body {
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   padding: 14px 20px;
   background: #f8fafc;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-height: calc(92vh - 160px);
 }
 
 .group-card {
@@ -1405,6 +1418,7 @@ const handleSave = async () => {
 }
 
 .options-footer {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
