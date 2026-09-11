@@ -119,21 +119,44 @@
                     <button type="button" class="btn-tree-action" @click="toggleAllMain(false)">Bỏ chọn</button>
                   </div>
                 </div>
-                <div class="tree-fields-inline-wrap" style="padding: 10px 12px;">
-                  <label
-                    v-for="col in flatMainCols"
-                    :key="col.id"
-                    class="tree-field-chip"
-                    :class="{ 'chip-selected': selectedFieldIds.includes(col.id) }"
+
+                <!-- Phân cấp: Bảng > Nhóm > Field -->
+                <div class="tree-groups-container">
+                  <div
+                    v-for="(grp, gIdx) in mainTableGroups"
+                    :key="'main_grp_' + (grp.title || gIdx)"
+                    class="tree-group-section"
                   >
-                    <input
-                      type="checkbox"
-                      :value="col.id"
-                      v-model="selectedFieldIds"
-                      style="accent-color: #2563eb; cursor: pointer;"
-                    />
-                    <span>{{ col.label || col.id }}</span>
-                  </label>
+                    <div class="tree-group-header">
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="pi pi-folder" style="color: #2563eb; font-size: 0.82rem;"></i>
+                        <span class="tree-group-title">{{ grp.title || ('Nhóm ' + (gIdx + 1)) }}</span>
+                        <span class="tree-group-badge">
+                          ({{ getSelectedCountInGroup(grp, selectedFieldIds) }}/{{ (grp.columns || []).length }} trường)
+                        </span>
+                      </div>
+                      <div style="display: flex; gap: 4px;">
+                        <button type="button" class="btn-tree-action-sm" @click="toggleGroupFields(grp, selectedFieldIds, true)">Chọn nhóm</button>
+                        <button type="button" class="btn-tree-action-sm" @click="toggleGroupFields(grp, selectedFieldIds, false)">Bỏ chọn</button>
+                      </div>
+                    </div>
+                    <div class="tree-fields-inline-wrap" style="padding: 6px 10px;">
+                      <label
+                        v-for="col in grp.columns"
+                        :key="col.id"
+                        class="tree-field-chip"
+                        :class="{ 'chip-selected': selectedFieldIds.includes(col.id) }"
+                      >
+                        <input
+                          type="checkbox"
+                          :value="col.id"
+                          v-model="selectedFieldIds"
+                          style="accent-color: #2563eb; cursor: pointer;"
+                        />
+                        <span>{{ col.label || col.id }}</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -162,21 +185,44 @@
                     <button type="button" class="btn-tree-action" @click="toggleAllPersonnel(false)">Bỏ chọn</button>
                   </div>
                 </div>
-                <div v-if="includePersonnel" class="tree-fields-inline-wrap" style="padding: 10px 12px;">
-                  <label
-                    v-for="col in flatPersonnelCols"
-                    :key="'p_col_' + col.id"
-                    class="tree-field-chip"
-                    :class="{ 'chip-selected': selectedPersonnelFieldIds.includes(col.id) }"
+
+                <!-- Phân cấp: Bảng > Nhóm > Field cho Cán bộ -->
+                <div v-if="includePersonnel" class="tree-groups-container">
+                  <div
+                    v-for="(grp, gIdx) in displayPersonnelGroups"
+                    :key="'p_grp_' + (grp.title || gIdx)"
+                    class="tree-group-section"
                   >
-                    <input
-                      type="checkbox"
-                      :value="col.id"
-                      v-model="selectedPersonnelFieldIds"
-                      style="accent-color: #2563eb; cursor: pointer;"
-                    />
-                    <span>{{ col.label || col.id }}</span>
-                  </label>
+                    <div class="tree-group-header">
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="pi pi-folder" style="color: #2563eb; font-size: 0.82rem;"></i>
+                        <span class="tree-group-title">{{ grp.title || ('Nhóm ' + (gIdx + 1)) }}</span>
+                        <span class="tree-group-badge">
+                          ({{ getSelectedCountInGroup(grp, selectedPersonnelFieldIds) }}/{{ (grp.columns || []).length }} trường)
+                        </span>
+                      </div>
+                      <div style="display: flex; gap: 4px;">
+                        <button type="button" class="btn-tree-action-sm" @click="toggleGroupFields(grp, selectedPersonnelFieldIds, true)">Chọn nhóm</button>
+                        <button type="button" class="btn-tree-action-sm" @click="toggleGroupFields(grp, selectedPersonnelFieldIds, false)">Bỏ chọn</button>
+                      </div>
+                    </div>
+                    <div class="tree-fields-inline-wrap" style="padding: 6px 10px;">
+                      <label
+                        v-for="col in grp.columns"
+                        :key="'p_col_' + col.id"
+                        class="tree-field-chip"
+                        :class="{ 'chip-selected': selectedPersonnelFieldIds.includes(col.id) }"
+                      >
+                        <input
+                          type="checkbox"
+                          :value="col.id"
+                          v-model="selectedPersonnelFieldIds"
+                          style="accent-color: #2563eb; cursor: pointer;"
+                        />
+                        <span>{{ col.label || col.id }}</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -205,21 +251,44 @@
                     <button type="button" class="btn-tree-action" @click="toggleAllRelatives(false)">Bỏ chọn</button>
                   </div>
                 </div>
-                <div v-if="includeRelatives" class="tree-fields-inline-wrap" style="padding: 10px 12px;">
-                  <label
-                    v-for="col in flatRelativeCols"
-                    :key="'r_col_' + col.id"
-                    class="tree-field-chip rel-field-chip"
-                    :class="{ 'rel-chip-selected': selectedRelativeFieldIds.includes(col.id) }"
+
+                <!-- Phân cấp: Bảng > Nhóm > Field cho Thân nhân -->
+                <div v-if="includeRelatives" class="tree-groups-container">
+                  <div
+                    v-for="(grp, gIdx) in displayRelativeGroups"
+                    :key="'r_grp_' + (grp.title || gIdx)"
+                    class="tree-group-section rel-group-section"
                   >
-                    <input
-                      type="checkbox"
-                      :value="col.id"
-                      v-model="selectedRelativeFieldIds"
-                      style="accent-color: #7c3aed; cursor: pointer;"
-                    />
-                    <span>{{ col.label || col.id }}</span>
-                  </label>
+                    <div class="tree-group-header rel-group-header">
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="pi pi-folder" style="color: #7c3aed; font-size: 0.82rem;"></i>
+                        <span class="tree-group-title" style="color: #6b21a8;">{{ grp.title || ('Nhóm ' + (gIdx + 1)) }}</span>
+                        <span class="tree-group-badge tree-badge-purple">
+                          ({{ getSelectedCountInGroup(grp, selectedRelativeFieldIds) }}/{{ (grp.columns || []).length }} trường)
+                        </span>
+                      </div>
+                      <div style="display: flex; gap: 4px;">
+                        <button type="button" class="btn-tree-action-sm" @click="toggleGroupFields(grp, selectedRelativeFieldIds, true)">Chọn nhóm</button>
+                        <button type="button" class="btn-tree-action-sm" @click="toggleGroupFields(grp, selectedRelativeFieldIds, false)">Bỏ chọn</button>
+                      </div>
+                    </div>
+                    <div class="tree-fields-inline-wrap" style="padding: 6px 10px;">
+                      <label
+                        v-for="col in grp.columns"
+                        :key="'r_col_' + col.id"
+                        class="tree-field-chip rel-field-chip"
+                        :class="{ 'rel-chip-selected': selectedRelativeFieldIds.includes(col.id) }"
+                      >
+                        <input
+                          type="checkbox"
+                          :value="col.id"
+                          v-model="selectedRelativeFieldIds"
+                          style="accent-color: #7c3aed; cursor: pointer;"
+                        />
+                        <span>{{ col.label || col.id }}</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -248,21 +317,44 @@
                     <button type="button" class="btn-tree-action" @click="toggleAllTrips(false)">Bỏ chọn</button>
                   </div>
                 </div>
-                <div v-if="includeTrips" class="tree-fields-inline-wrap" style="padding: 10px 12px;">
-                  <label
-                    v-for="col in flatTripCols"
-                    :key="'t_col_' + col.id"
-                    class="tree-field-chip trip-field-chip"
-                    :class="{ 'chip-selected': selectedTripFieldIds.includes(col.id) }"
+
+                <!-- Phân cấp: Bảng > Nhóm > Field cho Chuyến đi -->
+                <div v-if="includeTrips" class="tree-groups-container">
+                  <div
+                    v-for="(grp, gIdx) in displayTripsGroups"
+                    :key="'t_grp_' + (grp.title || gIdx)"
+                    class="tree-group-section trip-group-section"
                   >
-                    <input
-                      type="checkbox"
-                      :value="col.id"
-                      v-model="selectedTripFieldIds"
-                      style="accent-color: #0284c7; cursor: pointer;"
-                    />
-                    <span>{{ col.label || col.id }}</span>
-                  </label>
+                    <div class="tree-group-header trip-group-header">
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="pi pi-folder" style="color: #0284c7; font-size: 0.82rem;"></i>
+                        <span class="tree-group-title" style="color: #0369a1;">{{ grp.title || ('Nhóm ' + (gIdx + 1)) }}</span>
+                        <span class="tree-group-badge" style="background: #e0f2fe; color: #0369a1;">
+                          ({{ getSelectedCountInGroup(grp, selectedTripFieldIds) }}/{{ (grp.columns || []).length }} trường)
+                        </span>
+                      </div>
+                      <div style="display: flex; gap: 4px;">
+                        <button type="button" class="btn-tree-action-sm" @click="toggleGroupFields(grp, selectedTripFieldIds, true)">Chọn nhóm</button>
+                        <button type="button" class="btn-tree-action-sm" @click="toggleGroupFields(grp, selectedTripFieldIds, false)">Bỏ chọn</button>
+                      </div>
+                    </div>
+                    <div class="tree-fields-inline-wrap" style="padding: 6px 10px;">
+                      <label
+                        v-for="col in grp.columns"
+                        :key="'t_col_' + col.id"
+                        class="tree-field-chip trip-field-chip"
+                        :class="{ 'chip-selected': selectedTripFieldIds.includes(col.id) }"
+                      >
+                        <input
+                          type="checkbox"
+                          :value="col.id"
+                          v-model="selectedTripFieldIds"
+                          style="accent-color: #0284c7; cursor: pointer;"
+                        />
+                        <span>{{ col.label || col.id }}</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -737,6 +829,27 @@ const otherPersonnelGroups = computed(() => personnelGroups.value.slice(1));
 const relativeGroups = computed(() => personnelStore.importMappingRelative || []);
 const tripsGroups = computed(() => personnelStore.importMappingTrips || []);
 
+const cleanGroupsWithCols = (groups) => {
+  if (!Array.isArray(groups)) return [];
+  const list = [];
+  const seen = new Set();
+  groups.forEach((g) => {
+    const valid = (g.columns || []).filter((c) => c.id && c.id !== 'stt' && !seen.has(c.id));
+    valid.forEach((c) => seen.add(c.id));
+    if (valid.length > 0) {
+      list.push({
+        title: g.title || 'Nhóm',
+        columns: valid,
+      });
+    }
+  });
+  return list;
+};
+
+const displayPersonnelGroups = computed(() => cleanGroupsWithCols(personnelGroups.value));
+const displayRelativeGroups = computed(() => cleanGroupsWithCols(relativeGroups.value));
+const displayTripsGroups = computed(() => cleanGroupsWithCols(tripsGroups.value));
+
 const flatPersonnelCols = computed(() => {
   const list = [];
   (personnelGroups.value || []).forEach((g) => {
@@ -781,6 +894,64 @@ const flatMainCols = computed(() => {
   if (currentTableId.value === 'relatives') return flatRelativeCols.value;
   return flatPersonnelCols.value;
 });
+
+const mainTableGroups = computed(() => {
+  const tId = currentTableId.value;
+  let raw = [];
+  if (tId === 'trips') raw = tripsGroups.value;
+  else if (tId === 'personnel') raw = personnelGroups.value;
+  else if (tId === 'relatives') raw = relativeGroups.value;
+  else {
+    try {
+      const local = localStorage.getItem(`custom_table_groups_${tId}`);
+      if (local) raw = JSON.parse(local);
+    } catch (e) {}
+  }
+  if (Array.isArray(raw) && raw.length > 0) {
+    const list = [];
+    const seen = new Set();
+    raw.forEach((g) => {
+      const valid = (g.columns || []).filter((c) => c.id && c.id !== 'stt' && !seen.has(c.id));
+      valid.forEach((c) => seen.add(c.id));
+      if (valid.length > 0) {
+        list.push({
+          title: g.title || 'Nhóm',
+          columns: valid,
+        });
+      }
+    });
+    const remaining = (flatMainCols.value || []).filter((c) => !seen.has(c.id));
+    if (remaining.length > 0) {
+      if (list.length > 0) {
+        list[0].columns.push(...remaining);
+      } else {
+        list.push({ title: 'Thông tin chung', columns: remaining });
+      }
+    }
+    if (list.length > 0) return list;
+  }
+  return [{ title: 'Thông tin chung', columns: flatMainCols.value || [] }];
+});
+
+const getSelectedCountInGroup = (group, selectedIds) => {
+  if (!group || !Array.isArray(group.columns) || !Array.isArray(selectedIds)) return 0;
+  return group.columns.filter((c) => selectedIds.includes(c.id)).length;
+};
+
+const toggleGroupFields = (group, targetSelectedArr, selectAll = true) => {
+  if (!group || !Array.isArray(group.columns)) return;
+  const colIds = group.columns.map((c) => c.id).filter(Boolean);
+  if (selectAll) {
+    colIds.forEach((id) => {
+      if (!targetSelectedArr.includes(id)) targetSelectedArr.push(id);
+    });
+  } else {
+    colIds.forEach((id) => {
+      const idx = targetSelectedArr.indexOf(id);
+      if (idx !== -1) targetSelectedArr.splice(idx, 1);
+    });
+  }
+};
 
 const toggleAllMain = (selectAll = true) => {
   if (selectAll) {
@@ -1103,9 +1274,10 @@ watch(() => [props.modelValue], ([isOpen]) => {
     if (props.targetPerson) exportScope.value = 'single';
     else if (selectedCount.value > 0) exportScope.value = 'selected';
     else exportScope.value = 'all';
-    if (selectedFieldIds.value.length === 0) {
-      initAllFields();
-    }
+    
+    // Mặc định chọn toàn bộ Bảng > Nhóm > Field
+    selectAllFields();
+    
     loadCustomTables();
     loadSampleTemplate();
     loadSavedTemplate();
@@ -1531,21 +1703,78 @@ onMounted(() => {
   border-left-color: #e9d5ff;
 }
 
+.tree-groups-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+}
+
+.tree-group-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.rel-group-section {
+  border-color: #f3e8ff;
+}
+
+.trip-group-section {
+  border-color: #e0f2fe;
+}
+
 .tree-group-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #1e293b;
-  padding: 3px 6px;
-  background: #f1f5f9;
-  border-radius: 4px;
-  cursor: pointer;
-  user-select: none;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
-.tree-group-header:hover {
+
+.rel-group-header {
+  background: #faf5ff;
+  border-bottom-color: #f3e8ff;
+}
+
+.trip-group-header {
+  background: #f0f9ff;
+  border-bottom-color: #e0f2fe;
+}
+
+.tree-group-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.tree-group-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 9999px;
   background: #e2e8f0;
+  color: #475569;
+}
+
+.btn-tree-action-sm {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #475569;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.btn-tree-action-sm:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 .tree-table-box {
   background: #ffffff;

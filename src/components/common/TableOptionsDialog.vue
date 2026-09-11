@@ -133,241 +133,261 @@
       </div>
     </div>
 
-    <!-- Toolbar: Search & Add Group -->
-    <div class="options-toolbar">
-      <div class="toolbar-search">
-        <i class="pi pi-search search-icon"></i>
-        <input
-          v-model="searchColQuery"
-          type="text"
-          placeholder="Tìm cột theo tên hoặc mã trường..."
-          class="search-input"
-        />
-        <button v-if="searchColQuery" type="button" class="clear-search-btn" @click="searchColQuery = ''">
-          <i class="pi pi-times"></i>
+    <!-- Chrome-Style Tabs Bar -->
+    <div class="chrome-tabs-bar">
+      <div class="chrome-tabs-scroll">
+        <button
+          v-for="(group, gIdx) in localGroups"
+          :key="group._tempId || gIdx"
+          type="button"
+          class="chrome-tab-btn"
+          :class="{ active: activeTabIdx === gIdx }"
+          @click="activeTabIdx = gIdx"
+          :title="group.title"
+        >
+          <i class="pi pi-folder tab-folder-icon"></i>
+          <span class="chrome-tab-title">{{ group.title || ('Nhóm ' + (gIdx + 1)) }}</span>
+          <span class="chrome-tab-badge">{{ (group.columns || []).length }}</span>
+          <button
+            v-if="localGroups.length > 1"
+            type="button"
+            class="chrome-tab-close"
+            @click.stop="removeGroup(gIdx)"
+            title="Xóa nhóm này"
+          >
+            <i class="pi pi-times"></i>
+          </button>
         </button>
       </div>
 
-      <div class="toolbar-btns">
-        <Button
-          icon="pi pi-plus-circle"
-          label="Thêm nhóm mới"
-          severity="success"
-          size="small"
-          @click="addNewGroup"
-          style="font-size: 0.8rem; font-weight: 600;"
-        />
-      </div>
+      <!-- Add New Tab Button (Chrome + style) -->
+      <button
+        type="button"
+        class="chrome-new-tab-btn"
+        @click="addNewGroup"
+        title="Thêm nhóm cột mới"
+      >
+        <i class="pi pi-plus"></i>
+        <span>Thêm nhóm</span>
+      </button>
     </div>
 
-    <!-- Main Content: Groups List -->
-    <div class="options-body">
-      <div v-if="localGroups.length === 0" class="empty-state">
-        <i class="pi pi-folder-open" style="font-size: 2.5rem; color: #94a3b8; margin-bottom: 8px;"></i>
-        <div style="font-size: 0.95rem; font-weight: 600; color: #475569;">Chưa có nhóm cột nào</div>
-        <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">Bấm nút "+ Thêm nhóm mới" để bắt đầu tổ chức cột.</div>
+    <!-- Active Tab Content Panel (Independent Vertical Scroll, Sticky Header) -->
+    <div class="chrome-tab-panel">
+      <!-- Active Tab Toolbar -->
+      <div class="active-tab-toolbar">
+        <div class="active-tab-info">
+          <span class="tab-label-prefix">Tên nhóm:</span>
+          <input
+            v-if="activeGroup"
+            v-model="activeGroup.title"
+            type="text"
+            class="active-group-title-input"
+            placeholder="Nhập tên nhóm cột..."
+            title="Bấm để chỉnh sửa tên nhóm"
+          />
+          <div class="tab-reorder-btns">
+            <button
+              type="button"
+              class="tab-icon-btn"
+              :disabled="activeTabIdx === 0"
+              @click="moveGroup(activeTabIdx, -1)"
+              title="Chuyển tab sang trái"
+            >
+              <i class="pi pi-arrow-left"></i>
+              <span>Sang trái</span>
+            </button>
+            <button
+              type="button"
+              class="tab-icon-btn"
+              :disabled="activeTabIdx === localGroups.length - 1"
+              @click="moveGroup(activeTabIdx, 1)"
+              title="Chuyển tab sang phải"
+            >
+              <span>Sang phải</span>
+              <i class="pi pi-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="active-tab-actions">
+          <!-- Filter cols inside active tab -->
+          <div class="tab-col-search">
+            <i class="pi pi-search search-icon"></i>
+            <input
+              v-model="searchColQuery"
+              type="text"
+              placeholder="Tìm cột trong nhóm..."
+              class="tab-search-input"
+            />
+            <button v-if="searchColQuery" type="button" class="clear-search-btn" @click="searchColQuery = ''">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+
+          <!-- Delete Group Button -->
+          <button
+            v-if="localGroups.length > 1"
+            type="button"
+            class="tab-delete-btn"
+            @click="removeGroup(activeTabIdx)"
+            title="Xóa nhóm hiện tại"
+          >
+            <i class="pi pi-trash"></i>
+            <span>Xóa nhóm</span>
+          </button>
+        </div>
       </div>
 
-      <div
-        v-for="(group, gIdx) in filteredGroups"
-        :key="group._tempId || gIdx"
-        class="group-card"
-        :class="{ collapsed: group.collapsed }"
-      >
-        <!-- Group Header -->
-        <div class="group-header">
-          <div class="group-header-left">
-            <button
-              type="button"
-              class="collapse-toggle-btn"
-              @click="group.collapsed = !group.collapsed"
-              :title="group.collapsed ? 'Mở rộng nhóm' : 'Thu gọn nhóm'"
-            >
-              <i :class="group.collapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'"></i>
-            </button>
-            <i class="pi pi-folder group-folder-icon"></i>
-            <input
-              v-model="group.title"
-              type="text"
-              class="group-title-input"
-              placeholder="Nhập tên nhóm cột..."
-              title="Bấm để đổi tên nhóm"
-            />
-            <span class="group-count-badge">{{ (group.columns || []).length }} cột</span>
-          </div>
-
-          <div class="group-header-right">
-            <!-- Move Group Up -->
-            <button
-              type="button"
-              class="icon-action-btn"
-              :disabled="gIdx === 0"
-              @click="moveGroup(gIdx, -1)"
-              title="Di chuyển nhóm lên trên"
-            >
-              <i class="pi pi-arrow-up"></i>
-            </button>
-            <!-- Move Group Down -->
-            <button
-              type="button"
-              class="icon-action-btn"
-              :disabled="gIdx === localGroups.length - 1"
-              @click="moveGroup(gIdx, 1)"
-              title="Di chuyển nhóm xuống dưới"
-            >
-              <i class="pi pi-arrow-down"></i>
-            </button>
-            <!-- Delete Group -->
-            <button
-              type="button"
-              class="icon-action-btn delete"
-              @click="removeGroup(gIdx)"
-              title="Xóa nhóm này"
-            >
-              <i class="pi pi-trash"></i>
-            </button>
+      <!-- Active Tab Columns Table Area (Smooth Scroll & Sticky Header) -->
+      <div class="active-tab-table-scroll-area">
+        <div v-if="!activeGroup || !activeGroup.columns || activeGroup.columns.length === 0" class="empty-col-msg">
+          <i class="pi pi-folder-open" style="font-size: 2.2rem; color: #94a3b8; margin-bottom: 8px;"></i>
+          <div style="font-size: 0.92rem; font-weight: 700; color: #475569;">Nhóm này hiện chưa có cột nào</div>
+          <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 4px;">
+            Bạn có thể chuyển cột từ nhóm khác sang đây bằng cách đổi tên nhóm ở cột "Chuyển nhóm".
           </div>
         </div>
 
-        <!-- Group Body: Columns Table -->
-        <div v-show="!group.collapsed" class="group-columns-container">
-          <div v-if="!group.columns || group.columns.length === 0" class="empty-col-msg">
-            <i class="pi pi-info-circle"></i> Nhóm này hiện chưa có cột nào. Hãy chuyển cột từ nhóm khác sang hoặc tạo cột mới.
+        <div v-else-if="filteredActiveCols.length === 0" class="empty-col-msg">
+          <i class="pi pi-search" style="font-size: 1.8rem; color: #94a3b8; margin-bottom: 6px;"></i>
+          <div style="font-size: 0.85rem; color: #64748b;">
+            Không tìm thấy cột nào khớp với từ khóa "<strong>{{ searchColQuery }}</strong>" trong nhóm này.
           </div>
+        </div>
 
-          <table v-else class="options-col-table">
-            <thead>
-              <tr>
-                <th style="width: 70px; text-align: center;">Thứ tự</th>
-                <th style="min-width: 220px;">Tên cột / Field ID</th>
-                <th style="width: 170px;">Chuyển nhóm</th>
-                <th style="width: 130px; text-align: center;">Độ rộng Bảng</th>
-                <th style="width: 130px; text-align: center;">Độ rộng Form</th>
-                <th style="width: 100px; text-align: center;">Bắt buộc</th>
-                <th style="width: 90px; text-align: center;">Hiển thị</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(col, cIdx) in group.columns"
-                :key="col.id || cIdx"
-                class="col-row"
-                :class="{ 'is-hidden': col.hidden, 'is-required': col.required }"
-              >
-                <!-- 1. Thứ tự (Move up / down) -->
-                <td style="text-align: center;">
-                  <div class="order-controls">
-                    <button
-                      type="button"
-                      class="mini-order-btn"
-                      :disabled="cIdx === 0"
-                      @click="moveColInGroup(group, cIdx, -1)"
-                      title="Chuyển lên"
-                    >
-                      <i class="pi pi-chevron-up"></i>
-                    </button>
-                    <span class="order-num">#{{ cIdx + 1 }}</span>
-                    <button
-                      type="button"
-                      class="mini-order-btn"
-                      :disabled="cIdx === group.columns.length - 1"
-                      @click="moveColInGroup(group, cIdx, 1)"
-                      title="Chuyển xuống"
-                    >
-                      <i class="pi pi-chevron-down"></i>
-                    </button>
-                  </div>
-                </td>
-
-                <!-- 2. Tên cột / ID / Badge -->
-                <td>
-                  <div class="col-name-cell">
-                    <div class="col-label-row">
-                      <strong class="col-label-text">{{ col.label || col.id }}</strong>
-                      <span v-if="col.required" class="required-star" title="Trường bắt buộc nhập">*</span>
-                      <span v-if="col.format === 'formula'" class="col-type-badge formula">Công thức</span>
-                      <span v-else-if="col.format === 'lookup'" class="col-type-badge lookup">Lookup</span>
-                      <span v-else-if="col.isVirtual" class="col-type-badge virtual">Ảo</span>
-                    </div>
-                    <div class="col-id-text">
-                      <code>{{ col.id }}</code>
-                      <span v-if="col.format && col.format !== 'text'" class="format-tag">({{ col.format }})</span>
-                    </div>
-                  </div>
-                </td>
-
-                <!-- 3. Chuyển nhóm -->
-                <td>
-                  <select
-                    class="move-group-select"
-                    :value="group.title"
-                    @change="handleMoveColToOtherGroup(col, group, $event.target.value)"
-                    title="Chuyển cột sang nhóm khác"
-                  >
-                    <option v-for="targetGrp in localGroups" :key="targetGrp._tempId || targetGrp.title" :value="targetGrp.title">
-                      {{ targetGrp.title }}
-                    </option>
-                  </select>
-                </td>
-
-                <!-- 4. Độ rộng Bảng (px) -->
-                <td style="text-align: center;">
-                  <div class="width-input-wrapper">
-                    <input
-                      v-model.number="col.tableWidth"
-                      type="number"
-                      min="60"
-                      max="600"
-                      step="10"
-                      placeholder="Tự động"
-                      class="mini-num-input"
-                      title="Độ rộng hiển thị trên Bảng dữ liệu (px). Để trống = Tự động."
-                    />
-                    <span class="unit-text">px</span>
-                  </div>
-                </td>
-
-                <!-- 5. Độ rộng Form -->
-                <td style="text-align: center;">
-                  <select v-model="col.width" class="form-width-select" title="Độ rộng hiển thị trên Form chỉnh sửa">
-                    <option value="100%">100% (Cả hàng)</option>
-                    <option value="50%">50% (Nửa hàng)</option>
-                    <option value="33.33%">33% (1/3 hàng)</option>
-                    <option value="25%">25% (1/4 hàng)</option>
-                  </select>
-                </td>
-
-                <!-- 6. Bắt buộc nhập -->
-                <td style="text-align: center;">
-                  <label class="checkbox-label" title="Đánh dấu trường bắt buộc nhập">
-                    <input
-                      type="checkbox"
-                      v-model="col.required"
-                      class="custom-checkbox red-check"
-                    />
-                    <span class="check-text" :class="{ 'text-red': col.required }">
-                      {{ col.required ? 'Bắt buộc' : 'Tùy chọn' }}
-                    </span>
-                  </label>
-                </td>
-
-                <!-- 7. Hiển thị / Ẩn -->
-                <td style="text-align: center;">
+        <table v-else class="options-col-table">
+          <thead>
+            <tr>
+              <th style="width: 75px; text-align: center;">Thứ tự</th>
+              <th style="min-width: 220px;">Tên cột / Field ID</th>
+              <th style="width: 180px;">Chuyển nhóm</th>
+              <th style="width: 130px; text-align: center;">Độ rộng Bảng</th>
+              <th style="width: 130px; text-align: center;">Độ rộng Form</th>
+              <th style="width: 100px; text-align: center;">Bắt buộc</th>
+              <th style="width: 90px; text-align: center;">Hiển thị</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(col, cIdx) in filteredActiveCols"
+              :key="col.id || cIdx"
+              class="col-row"
+              :class="{ 'is-hidden': col.hidden, 'is-required': col.required }"
+            >
+              <!-- 1. Thứ tự (Move up / down) -->
+              <td style="text-align: center;">
+                <div class="order-controls">
                   <button
                     type="button"
-                    class="visibility-toggle-btn"
-                    :class="{ 'is-hidden': col.hidden }"
-                    @click="col.hidden = !col.hidden"
-                    :title="col.hidden ? 'Cột đang ẩn. Bấm để Hiện.' : 'Cột đang hiện. Bấm để Ẩn.'"
+                    class="mini-order-btn"
+                    :disabled="cIdx === 0"
+                    @click="moveColInGroup(activeGroup, cIdx, -1)"
+                    title="Chuyển lên"
                   >
-                    <i :class="col.hidden ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
-                    <span>{{ col.hidden ? 'Ẩn' : 'Hiện' }}</span>
+                    <i class="pi pi-chevron-up"></i>
                   </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  <span class="order-num">#{{ cIdx + 1 }}</span>
+                  <button
+                    type="button"
+                    class="mini-order-btn"
+                    :disabled="cIdx === activeGroup.columns.length - 1"
+                    @click="moveColInGroup(activeGroup, cIdx, 1)"
+                    title="Chuyển xuống"
+                  >
+                    <i class="pi pi-chevron-down"></i>
+                  </button>
+                </div>
+              </td>
+
+              <!-- 2. Tên cột / ID / Badge -->
+              <td>
+                <div class="col-name-cell">
+                  <div class="col-label-row">
+                    <strong class="col-label-text">{{ col.label || col.id }}</strong>
+                    <span v-if="col.required" class="required-star" title="Trường bắt buộc nhập">*</span>
+                    <span v-if="col.format === 'formula'" class="col-type-badge formula">Công thức</span>
+                    <span v-else-if="col.format === 'lookup'" class="col-type-badge lookup">Lookup</span>
+                    <span v-else-if="col.isVirtual" class="col-type-badge virtual">Ảo</span>
+                  </div>
+                  <div class="col-id-text">
+                    <code>{{ col.id }}</code>
+                    <span v-if="col.format && col.format !== 'text'" class="format-tag">({{ col.format }})</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- 3. Chuyển nhóm -->
+              <td>
+                <select
+                  class="move-group-select"
+                  :value="activeGroup.title"
+                  @change="handleMoveColToOtherGroup(col, activeGroup, $event.target.value)"
+                  title="Chuyển cột sang nhóm khác"
+                >
+                  <option v-for="targetGrp in localGroups" :key="targetGrp._tempId || targetGrp.title" :value="targetGrp.title">
+                    {{ targetGrp.title }}
+                  </option>
+                </select>
+              </td>
+
+              <!-- 4. Độ rộng Bảng (px) -->
+              <td style="text-align: center;">
+                <div class="width-input-wrapper">
+                  <input
+                    v-model.number="col.tableWidth"
+                    type="number"
+                    min="60"
+                    max="600"
+                    step="10"
+                    placeholder="Tự động"
+                    class="mini-num-input"
+                    title="Độ rộng hiển thị trên Bảng dữ liệu (px). Để trống = Tự động."
+                  />
+                  <span class="unit-text">px</span>
+                </div>
+              </td>
+
+              <!-- 5. Độ rộng Form -->
+              <td style="text-align: center;">
+                <select v-model="col.width" class="form-width-select" title="Độ rộng hiển thị trên Form chỉnh sửa">
+                  <option value="100%">100% (Cả hàng)</option>
+                  <option value="50%">50% (Nửa hàng)</option>
+                  <option value="33.33%">33% (1/3 hàng)</option>
+                  <option value="25%">25% (1/4 hàng)</option>
+                </select>
+              </td>
+
+              <!-- 6. Bắt buộc nhập -->
+              <td style="text-align: center;">
+                <label class="checkbox-label" title="Đánh dấu trường bắt buộc nhập">
+                  <input
+                    type="checkbox"
+                    v-model="col.required"
+                    class="custom-checkbox red-check"
+                  />
+                  <span class="check-text" :class="{ 'text-red': col.required }">
+                    {{ col.required ? 'Bắt buộc' : 'Tùy chọn' }}
+                  </span>
+                </label>
+              </td>
+
+              <!-- 7. Hiển thị / Ẩn -->
+              <td style="text-align: center;">
+                <button
+                  type="button"
+                  class="visibility-toggle-btn"
+                  :class="{ 'is-hidden': col.hidden }"
+                  @click="col.hidden = !col.hidden"
+                  :title="col.hidden ? 'Cột đang ẩn. Bấm để Hiện.' : 'Cột đang hiện. Bấm để Ẩn.'"
+                >
+                  <i :class="col.hidden ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                  <span>{{ col.hidden ? 'Ẩn' : 'Hiện' }}</span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -435,6 +455,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  availableColumns: {
+    type: Array,
+    default: () => [],
+  },
   customDashboards: {
     type: Array,
     default: () => [],
@@ -444,6 +468,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'save']);
 
 const personnelStore = usePersonnelStore();
+const activeTabIdx = ref(0);
 const localTitle = ref('');
 const localIcon = ref('pi-table');
 const localColor = ref('#0284c7');
@@ -460,6 +485,24 @@ const filteredIcons = computed(() => {
     item.icon.toLowerCase().includes(q) ||
     item.label.toLowerCase().includes(q) ||
     item.keywords.toLowerCase().includes(q)
+  );
+});
+
+const activeGroup = computed(() => {
+  if (!Array.isArray(localGroups.value) || localGroups.value.length === 0) return null;
+  const idx = Math.min(Math.max(0, activeTabIdx.value), localGroups.value.length - 1);
+  return localGroups.value[idx] || null;
+});
+
+const filteredActiveCols = computed(() => {
+  const grp = activeGroup.value;
+  if (!grp || !Array.isArray(grp.columns)) return [];
+  const q = searchColQuery.value?.trim().toLowerCase();
+  if (!q) return grp.columns;
+  return grp.columns.filter(
+    (c) =>
+      (c.label && c.label.toLowerCase().includes(q)) ||
+      (c.id && c.id.toLowerCase().includes(q))
   );
 });
 
@@ -502,14 +545,10 @@ const initIdentityAndGroups = () => {
     else localColor.value = '#0284c7';
   }
 
-  // 4. Nhóm cột
+  // 4. Nhóm cột - TRIỆT ĐỂ KHÔNG TRÙNG FIELD GIỮA CÁC NHÓM
+  let rawGroups = null;
   if (Array.isArray(props.groups) && props.groups.length > 0) {
-    localGroups.value = JSON.parse(JSON.stringify(props.groups)).map((g, idx) => ({
-      ...g,
-      _tempId: 'grp_' + Date.now() + '_' + idx,
-      collapsed: false,
-      columns: Array.isArray(g.columns) ? g.columns : [],
-    }));
+    rawGroups = JSON.parse(JSON.stringify(props.groups));
   } else {
     let loaded = null;
     if (props.tableId === 'trips') loaded = personnelStore.importMappingTrips;
@@ -522,27 +561,66 @@ const initIdentityAndGroups = () => {
       } catch (e) {}
     }
     if (Array.isArray(loaded) && loaded.length > 0) {
-      localGroups.value = JSON.parse(JSON.stringify(loaded)).map((g, idx) => ({
-        ...g,
-        _tempId: 'grp_' + Date.now() + '_' + idx,
-        collapsed: false,
-        columns: Array.isArray(g.columns) ? g.columns : [],
-      }));
-    } else {
-      localGroups.value = [
-        {
-          _tempId: 'grp_' + Date.now() + '_0',
-          title: 'Thông tin chung',
-          collapsed: false,
-          columns: [],
-        },
-      ];
+      rawGroups = JSON.parse(JSON.stringify(loaded));
     }
   }
+
+  const seenColIds = new Set();
+  const parsedGroups = [];
+
+  if (Array.isArray(rawGroups) && rawGroups.length > 0) {
+    rawGroups.forEach((g, gIdx) => {
+      const validCols = [];
+      (g.columns || []).forEach((c) => {
+        if (c && c.id && c.id !== 'stt' && !seenColIds.has(c.id)) {
+          seenColIds.add(c.id);
+          validCols.push({ ...c });
+        }
+      });
+      parsedGroups.push({
+        _tempId: 'grp_' + Date.now() + '_' + gIdx,
+        title: g.title || `Nhóm ${gIdx + 1}`,
+        columns: validCols,
+      });
+    });
+  }
+
+  if (parsedGroups.length === 0) {
+    parsedGroups.push({
+      _tempId: 'grp_' + Date.now() + '_0',
+      title: 'Thông tin chung',
+      columns: [],
+    });
+  }
+
+  // Tự động bổ sung các trường chưa được phân nhóm (nếu có từ props.availableColumns)
+  if (Array.isArray(props.availableColumns) && props.availableColumns.length > 0) {
+    const unassignedCols = [];
+    props.availableColumns.forEach((c) => {
+      if (c && c.id && c.id !== 'stt' && !seenColIds.has(c.id)) {
+        seenColIds.add(c.id);
+        unassignedCols.push({
+          id: c.id,
+          label: c.label || c.id,
+          format: c.format || 'text',
+          width: c.width || '100%',
+          tableWidth: c.tableWidth || null,
+          required: Boolean(c.required),
+          hidden: Boolean(c.hidden),
+        });
+      }
+    });
+    if (unassignedCols.length > 0) {
+      parsedGroups[0].columns.push(...unassignedCols);
+    }
+  }
+
+  localGroups.value = parsedGroups;
+  activeTabIdx.value = 0;
 };
 
 watch(
-  () => [props.modelValue, props.tableId, props.tableTitle, props.groups],
+  () => [props.modelValue, props.tableId, props.tableTitle, props.groups, props.availableColumns],
   ([isOpen]) => {
     if (isOpen) {
       initIdentityAndGroups();
@@ -558,38 +636,14 @@ const totalColsCount = computed(() => {
   return localGroups.value.reduce((acc, g) => acc + (g.columns?.length || 0), 0);
 });
 
-const filteredGroups = computed(() => {
-  const q = searchColQuery.value?.trim().toLowerCase();
-  if (!q) return localGroups.value;
-
-  return localGroups.value
-    .map((g) => {
-      const matchedCols = (g.columns || []).filter(
-        (c) =>
-          (c.label && c.label.toLowerCase().includes(q)) ||
-          (c.id && c.id.toLowerCase().includes(q))
-      );
-      const groupNameMatched = g.title && g.title.toLowerCase().includes(q);
-      if (groupNameMatched || matchedCols.length > 0) {
-        return {
-          ...g,
-          collapsed: false,
-          columns: groupNameMatched ? g.columns : matchedCols,
-        };
-      }
-      return null;
-    })
-    .filter(Boolean);
-});
-
 const addNewGroup = () => {
   const newIdx = localGroups.value.length + 1;
   localGroups.value.push({
     _tempId: 'grp_' + Date.now() + '_' + newIdx,
     title: 'Nhóm ' + newIdx,
-    collapsed: false,
     columns: [],
   });
+  activeTabIdx.value = localGroups.value.length - 1;
 };
 
 const moveGroup = (fromIdx, dir) => {
@@ -597,23 +651,32 @@ const moveGroup = (fromIdx, dir) => {
   if (toIdx < 0 || toIdx >= localGroups.value.length) return;
   const item = localGroups.value.splice(fromIdx, 1)[0];
   localGroups.value.splice(toIdx, 0, item);
+  activeTabIdx.value = toIdx;
 };
 
 const removeGroup = (gIdx) => {
   const grp = localGroups.value[gIdx];
   if (!grp) return;
+  if (localGroups.value.length <= 1) {
+    alert('Bảng phải có ít nhất một nhóm cột.');
+    return;
+  }
   if (grp.columns && grp.columns.length > 0) {
-    if (!confirm('Nhóm "' + grp.title + '" đang có ' + grp.columns.length + ' cột. Xóa nhóm này sẽ chuyển toàn bộ các cột sang nhóm đầu tiên. Bạn có chắc chắn không?')) {
+    if (!confirm('Nhóm "' + grp.title + '" đang có ' + grp.columns.length + ' cột. Xóa nhóm này sẽ chuyển toàn bộ các cột sang nhóm khác. Bạn có chắc chắn không?')) {
       return;
     }
     const targetIdx = gIdx === 0 ? 1 : 0;
     if (localGroups.value[targetIdx]) {
-      localGroups.value[targetIdx].columns.push(...grp.columns);
+      grp.columns.forEach((col) => {
+        if (!localGroups.value[targetIdx].columns.some((x) => x.id === col.id)) {
+          localGroups.value[targetIdx].columns.push(col);
+        }
+      });
     }
   }
   localGroups.value.splice(gIdx, 1);
-  if (localGroups.value.length === 0) {
-    addNewGroup();
+  if (activeTabIdx.value >= localGroups.value.length) {
+    activeTabIdx.value = Math.max(0, localGroups.value.length - 1);
   }
 };
 
@@ -626,7 +689,7 @@ const moveColInGroup = (group, fromIdx, dir) => {
 };
 
 const handleMoveColToOtherGroup = (col, sourceGroup, targetGroupTitle) => {
-  if (!targetGroupTitle || sourceGroup.title === targetGroupTitle) return;
+  if (!targetGroupTitle || !sourceGroup || sourceGroup.title === targetGroupTitle) return;
   const targetGroup = localGroups.value.find((g) => g.title === targetGroupTitle);
   if (!targetGroup) return;
 
@@ -634,7 +697,9 @@ const handleMoveColToOtherGroup = (col, sourceGroup, targetGroupTitle) => {
   if (sIdx >= 0) {
     const [movedCol] = sourceGroup.columns.splice(sIdx, 1);
     if (!Array.isArray(targetGroup.columns)) targetGroup.columns = [];
-    targetGroup.columns.push(movedCol);
+    if (!targetGroup.columns.some((c) => c.id === movedCol.id)) {
+      targetGroup.columns.push(movedCol);
+    }
   }
 };
 
@@ -988,195 +1053,302 @@ const handleSave = async () => {
   border-color: #fca5a5;
 }
 
-.options-toolbar {
+/* Chrome-Style Tabs Bar */
+.chrome-tabs-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 8px 16px 0 16px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #cbd5e1;
+  gap: 8px;
+}
+
+.chrome-tabs-scroll {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  flex: 1;
+  min-width: 0;
+}
+
+.chrome-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  max-width: 220px;
+  white-space: nowrap;
+  position: relative;
+  margin-bottom: -1px;
+}
+
+.chrome-tab-btn:hover:not(.active) {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.chrome-tab-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 700;
+  border-color: #cbd5e1;
+  border-bottom: 1px solid #ffffff;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.03);
+  z-index: 2;
+}
+
+.tab-folder-icon {
+  color: #eab308;
+  font-size: 0.9rem;
+}
+
+.chrome-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chrome-tab-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: #cbd5e1;
+  color: #475569;
+}
+
+.chrome-tab-btn.active .chrome-tab-badge {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.chrome-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.62rem;
+  margin-left: 2px;
+  transition: all 0.12s;
+  padding: 0;
+}
+
+.chrome-tab-close:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.chrome-new-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  margin-bottom: 4px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chrome-new-tab-btn:hover {
+  background: #bbf7d0;
+  color: #14532d;
+  box-shadow: 0 2px 4px rgba(22, 101, 52, 0.15);
+}
+
+/* Active Tab Panel */
+.chrome-tab-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.active-tab-toolbar {
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
+  padding: 10px 18px;
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.toolbar-search {
-  position: relative;
-  width: 360px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
-  font-size: 0.85rem;
-}
-
-.search-input {
-  width: 100%;
-  height: 34px;
-  padding: 4px 30px 4px 32px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  outline: none;
-  background: #f8fafc;
-  transition: all 0.15s ease;
-}
-
-.search-input:focus {
-  border-color: #6366f1;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.clear-search-btn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #94a3b8;
-  font-size: 0.75rem;
-}
-
-.options-body {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 14px 20px;
-  background: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.group-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.15s ease;
-}
-
-.group-card:hover {
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-}
-
-.group-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 14px;
-  background: #f1f5f9;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.group-header-left {
+.active-tab-info {
   display: flex;
   align-items: center;
   gap: 8px;
   flex: 1;
+  min-width: 280px;
 }
 
-.collapse-toggle-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #64748b;
-  font-size: 0.8rem;
-  padding: 4px;
+.tab-label-prefix {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
-.group-folder-icon {
-  color: #eab308;
-  font-size: 1.1rem;
-}
-
-.group-title-input {
-  font-size: 0.95rem;
+.active-group-title-input {
+  font-size: 0.92rem;
   font-weight: 700;
   color: #1e293b;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 3px 8px;
-  width: 320px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 10px;
+  width: 260px;
+  max-width: 100%;
   transition: all 0.15s;
 }
 
-.group-title-input:hover {
-  border-color: #cbd5e1;
+.active-group-title-input:focus {
   background: #ffffff;
-}
-
-.group-title-input:focus {
   border-color: #6366f1;
-  background: #ffffff;
   outline: none;
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
-.group-count-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #475569;
-  background: #e2e8f0;
-  padding: 2px 7px;
-  border-radius: 9999px;
-}
-
-.group-header-right {
+.tab-reorder-btns {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.icon-action-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #475569;
-  cursor: pointer;
-  display: flex;
+.tab-icon-btn {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
   transition: all 0.15s;
 }
 
-.icon-action-btn:hover:not(:disabled) {
+.tab-icon-btn:hover:not(:disabled) {
   background: #e2e8f0;
   color: #0f172a;
 }
 
-.icon-action-btn:disabled {
+.tab-icon-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.icon-action-btn.delete:hover:not(:disabled) {
-  background: #fee2e2;
-  color: #ef4444;
-  border-color: #fca5a5;
+.active-tab-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.group-columns-container {
-  padding: 4px;
+.tab-col-search {
+  position: relative;
+  width: 240px;
+}
+
+.tab-search-input {
+  width: 100%;
+  height: 30px;
+  padding: 2px 28px 2px 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  outline: none;
+  background: #f8fafc;
+  transition: all 0.15s;
+}
+
+.tab-search-input:focus {
+  border-color: #6366f1;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.tab-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tab-delete-btn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Active Tab Scroll Area */
+.active-tab-table-scroll-area {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: #ffffff;
+  position: relative;
+}
+
+.active-tab-table-scroll-area table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f8fafc;
+  border-bottom: 2px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .empty-col-msg {
-  padding: 16px;
+  padding: 40px 20px;
   text-align: center;
-  font-size: 0.8rem;
-  color: #94a3b8;
-  background: #fafafa;
+  font-size: 0.84rem;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .options-col-table {

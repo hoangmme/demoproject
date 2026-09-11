@@ -11,22 +11,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
       <div style="display: flex; align-items: center; gap: 10px;">
         <!-- Biểu tượng Bảng với màu sắc tùy chỉnh -->
-        <button
-          v-if="authStore.isAdmin"
-          type="button"
-          class="table-icon-badge-btn"
-          :style="{
-            color: getTableIconColor(currentDashboardId),
-            borderColor: getTableIconColor(currentDashboardId) + '40',
-            background: getTableIconColor(currentDashboardId) + '15'
-          }"
-          @click="isTableOptionsDialogOpen = true"
-          title="Nhấn để Tùy chọn Bảng (Đổi tên, biểu tượng, màu sắc & gom nhóm cột)"
-        >
-          <i :class="['pi', getTableIcon(currentDashboardId)]" style="font-size: 1.25rem;"></i>
-        </button>
         <span
-          v-else
           class="table-icon-badge"
           :style="{
             color: getTableIconColor(currentDashboardId),
@@ -75,18 +60,6 @@
           @click="openAddColumnDialog"
           title="Tạo thêm cột dữ liệu mới trực tiếp trên bảng này"
           style="font-size: 0.8rem;"
-        />
-
-        <!-- ⚙️ Tùy chọn Bảng (Đổi tên, biểu tượng, màu sắc & gom nhóm cột) -->
-        <Button
-          v-if="authStore.isAdmin"
-          icon="pi pi-cog"
-          label="Tùy chọn Bảng"
-          severity="secondary"
-          size="small"
-          @click="isTableOptionsDialogOpen = true"
-          title="Quản lý tên bảng, biểu tượng, màu sắc nhận diện và gom nhóm cột"
-          style="font-size: 0.8rem; font-weight: 600;"
         />
 
         <!-- ⚙️ Tùy chọn Cột hiển thị Popover -->
@@ -1040,6 +1013,7 @@
       :tableIcon="getTableIcon(currentDashboardId)"
       :tableColor="getTableIconColor(currentDashboardId)"
       :groups="currentTableGroups"
+      :availableColumns="allAvailableColumnsList"
       :customDashboards="customDashboards"
       @save="handleTableOptionsSaved"
     />

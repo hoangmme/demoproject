@@ -3522,3 +3522,27 @@
   - Đồng bộ sản phẩm build sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 
+### 55. GIAO DIỆN CHROME TABS CHO NHÓM CỘT ("TÙY CHỌN BẢNG") & PHÂN CẤP XUẤT PDF HIERARCHICAL (BẢNG > NHÓM > FIELD) (Session 55 - 2026-09-11)
+- **1. Xóa nút "Tùy chọn Bảng" trong thanh công cụ bảng (`UnifiedTableView.vue`)**:
+  - Đã loại bỏ nút "Tùy chọn Bảng" ở toolbar bảng và biến biểu tượng icon badge header thành static badge, chỉ giữ lại nút mở Tùy chọn Bảng tập trung ở menu Sidebar (`AppSidebar.vue`).
+- **2. Tái cấu trúc Gom nhóm Cột thành Chrome-Style Tabs (`TableOptionsDialog.vue`)**:
+  - Thay thế danh sách nhóm accordion cuộn dọc bằng thanh Tab ngang phong cách Google Chrome (`.chrome-tabs-bar`):
+    - Mỗi nhóm là 1 Tab độc lập với icon thư mục, tiêu đề nhóm, badge đếm số cột, và nút xóa `×` (khi có > 1 nhóm).
+    - Nút `+ Thêm nhóm` cạnh tab bar giúp tạo nhóm mới tức thì và chuyển ngay sang tab mới.
+    - Thanh toolbar của tab hiện tại: Cho phép đổi tên nhóm trực tiếp, đảo thứ tự tab (`[Sang trái]`, `[Sang phải]`), tìm kiếm cột trong nhóm, và xóa nhóm.
+  - **Khắc phục triệt để lỗi cuộn (`overflow-y: auto`, `position: sticky; top: 0;`)**:
+    - Khu vực bảng cột bên trong tab được đặt trong container flexbox độc lập (`min-height: 0; flex: 1 1 0; overflow-y: auto;`).
+    - Tiêu đề bảng (`thead th`) ghim dính cố định (`sticky`), cuộn nội dung mượt mà, không bao giờ bị tràn ngoài màn hình hay mất scrollbar.
+  - **Triệt tiêu 100% trùng lặp cột giữa các nhóm (Strict 1-to-1 Mapping)**:
+    - Khi khởi tạo, hệ thống ghi nhận `seenColIds = new Set()`. Một trường/cột chỉ xuất hiện duy nhất ở 1 nhóm.
+    - Thao tác chọn "Chuyển nhóm" tại dòng cột sẽ chuyển hẳn cột từ tab hiện tại sang tab đích (xóa khỏi tab nguồn, thêm vào tab đích).
+    - Các trường trong bảng chưa được phân vào nhóm tùy biến nào sẽ tự động được gộp vào nhóm đầu tiên ("Thông tin chung") để bảo toàn, không bị thất lạc.
+- **3. Phân cấp Xuất & In PDF theo cấu trúc Bảng > Nhóm > Field (`AdvancedDocxExportDialog.vue`)**:
+  - Thay thế danh sách chip phẳng trước đây bằng cấu trúc phân cấp chuẩn hóa: **`Bảng > Nhóm > Field`** cho tất cả các bảng (Bảng chính, Cán bộ liên quan, Thân nhân liên quan, Chuyến đi liên quan, Bảng tùy biến).
+  - Từng nhóm cột có header với badge đếm và 2 nút thao tác nhanh: `[Chọn nhóm]` và `[Bỏ chọn]`.
+  - **Cài đặt mặc định**: Mặc định khi mở hộp thoại Xuất/In/Xem trước PDF, hệ thống tự động chọn toàn bộ 100% các trường trong tất cả các nhóm của tất cả các bảng (`selectAllFields()`).
+- **Kiểm thử**:
+  - `npm run build`: Thành công 100% (592ms, 0 lỗi).
+  - Đồng bộ sản phẩm build sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
+
