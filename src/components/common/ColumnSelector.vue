@@ -490,6 +490,9 @@ onUnmounted(() => {
   top: calc(100% + 4px);
   right: 0;
   width: 290px;
+  max-height: min(520px, calc(100vh - 160px));
+  display: flex;
+  flex-direction: column;
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
@@ -560,7 +563,9 @@ onUnmounted(() => {
 }
 
 .column-selector-list {
-  max-height: 300px;
+  flex: 1;
+  min-height: 120px;
+  max-height: 360px;
   overflow-y: auto;
   padding: 6px;
   display: flex;

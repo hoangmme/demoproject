@@ -149,13 +149,13 @@
               </div>
             </div>
 
-            <!-- Tiêu đề Header chính & Màu sắc chữ -->
+            <!-- Tiêu đề Header chính & Màu sắc chữ & Cỡ chữ -->
             <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
               <div style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
                 <i class="pi pi-desktop" style="color: #1e3a8a;"></i>
                 Tiêu đề Header Hệ thống (Thanh tiêu đề trên cùng):
               </div>
-              <div style="display: grid; grid-template-columns: 1fr 180px; gap: 12px; align-items: flex-end;">
+              <div style="display: grid; grid-template-columns: 1fr 160px 140px; gap: 12px; align-items: flex-end;">
                 <div>
                   <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Nội dung Tiêu đề Header:</label>
                   <InputText
@@ -177,13 +177,53 @@
                       v-model="systemBranding.headerMainTitleColor"
                       placeholder="#1e3a8a"
                       size="small"
-                      style="width: 110px; font-size: 0.78rem; text-transform: uppercase;"
+                      style="width: 100px; font-size: 0.78rem; text-transform: uppercase;"
                     />
+                  </div>
+                </div>
+                <div>
+                  <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Cỡ chữ Header (px):</label>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <input
+                      type="number"
+                      v-model.number="systemBranding.headerTitleFontSize"
+                      min="11"
+                      max="32"
+                      step="1"
+                      placeholder="14"
+                      style="width: 70px; height: 32px; padding: 4px 8px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; font-weight: 600;"
+                    />
+                    <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">px</span>
                   </div>
                 </div>
               </div>
               <div style="font-size: 0.7rem; color: #64748b; line-height: 1.3;">
-                Hiển thị trên thanh Header của toàn bộ ứng dụng. Mặc định: <strong>DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</strong>.
+                Hiển thị trên thanh Header của toàn bộ ứng dụng. Mặc định: <strong>14px</strong> | <strong>DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI</strong>.
+              </div>
+            </div>
+
+            <!-- Cỡ chữ Menu Sidebar (Menu Font Size) -->
+            <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
+              <div style="font-size: 0.8rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                <i class="pi pi-bars" style="color: #2e7d32;"></i>
+                Cỡ chữ Menu Thanh bên (Sidebar Menu Font Size):
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <input
+                    type="number"
+                    v-model.number="systemBranding.sidebarMenuFontSize"
+                    min="11"
+                    max="22"
+                    step="1"
+                    placeholder="14"
+                    style="width: 80px; height: 32px; padding: 4px 8px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; font-weight: 600;"
+                  />
+                  <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">px (Mặc định: 14px, hỗ trợ 11px - 22px)</span>
+                </div>
+              </div>
+              <div style="font-size: 0.7rem; color: #64748b; line-height: 1.3;">
+                Áp dụng đồng bộ cho các mục điều hướng (Thống kê, Cán bộ, Thân nhân, Chuyến đi, v.v.) trên thanh bên trái.
               </div>
             </div>
 
@@ -1032,6 +1072,8 @@ const DEFAULT_BRANDING = {
   orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
   headerMainTitle: 'DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI',
   headerMainTitleColor: '#1e3a8a',
+  headerTitleFontSize: 14,
+  sidebarMenuFontSize: 14,
   menuLabelPersonnel: 'Cán bộ',
   sectionLabelTopics: 'Bảng dữ liệu (Tables)',
   menuLabelRelatives: 'Thân nhân',

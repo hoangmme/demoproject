@@ -201,6 +201,35 @@
 - Hỗ trợ chọn bảng màu (color picker), nhập mã hex trực tiếp, các nút gợi ý gam màu chuẩn (Đen mặc định `#000000`, Trắng sáng `#ffffff`, Vàng nhạt `#fef08a`, Xám đậm `#334155`, Xanh lục đậm `#14532d`).
 - Tự động áp dụng màu chữ cho toàn bộ menu bên trái bao gồm: tên cơ quan, các mục menu, tiêu đề phân nhóm và icon.
 
+### 20. KHẮC PHỤC LỖI LƯU DỮ LIỆU CCCD/THƯỜNG TRÚ, DROPDOWN FORM, DRILLDOWN POPUP BỊ CHE & TÙY BIẾN CỠ CHỮ HỆ THỐNG (Session 38 - 2026-09-11)
+- **1. Sửa Lỗi Sửa CCCD / Thường trú Cán bộ (Nguyễn Hải Quan) Báo Thành công Nhưng Tải Lại Mất**:
+  - *Nguyên nhân cốt lõi*: Trong `src/stores/personnel.js`, hàm `saveRecord` kiểm tra `record.departureDate !== undefined` trước khi kiểm tra loại bản ghi `personnel` hoặc mã `CB-`. Hồ sơ Cán bộ Nguyễn Hải Quan trước đó bị dính thuộc tính phẳng `departureDate` trong `custom_data`, dẫn tới việc `saveRecord` chuyển hướng nhầm bản ghi Cán bộ sang hàm `saveTrip(record)`. Hàm `saveTrip` chỉ sửa mảng `trips` của Cán bộ và bỏ qua việc cập nhật các trường gốc của Cán bộ như `cccdparent`, `thuongTru`.
+  - *Xử lý triệt để*:
+    - Cập nhật `saveRecord` và `deleteRecord`: Ưu tiên tuyệt đối hồ sơ Cán bộ (Priority 1: `_tableId === 'personnel'`, `_recordType === 'personnel'`, hoặc `code.startsWith('CB-')`), sau đó đến Thân nhân (Priority 2), và cuối cùng mới đến Chuyến đi độc lập (Priority 3).
+    - Dọn dẹp sạch sẽ 2 bản ghi nhân tạo rác trong `standalone_trips` (id: 98) và xóa các trường phẳng chuyến đi (`departureDate`, `arrivalDate`, `countryName`...) trên hồ sơ `CB-00007` và `CB-00017` trong Directus.
+    - Sửa `deleteTrip`: xóa logic so sánh lỏng lẻo `t.code === trip.code`, thêm `silentLog: true` khi xóa chuyến đi để tránh ghi log nhầm "Cập nhật Cán bộ".
+- **2. Sửa Dropdown Tùy Chọn Cột Thêm Mục Mới Không Lưu & Bị Đè Trắng**:
+  - *Nguyên nhân cốt lõi*:
+    - Trong `useTableColumns.js`, hàm `onChildChangeColumnOptions` và `onChildChangeFormulaType` gặp lỗi cú pháp `ReferenceError: selectedViewIdx is not defined`.
+    - Trong `PersonnelDialog.vue`, khi gộp cấu hình nhóm cột `colMap`, code cũ viết `{ ...colMap.get(c.id), ...c }`, khiến object `c` cũ (chưa có options mới) ghi đè lên cấu hình `options` mới nạp từ mapping.
+  - *Xử lý*:
+    - Sửa `onChildChangeColumnOptions` và `onChildChangeFormulaType` trong `useTableColumns.js`: thay thế biến chưa định nghĩa bằng `resolveList(activeMetricCards)` và `unref(activeMetricCardIdx)`.
+    - Sửa `PersonnelDialog.vue`: đảo thứ tự gộp thành `{ ...c, ...colMap.get(c.id) }` để `options` mới từ cấu hình cột luôn được giữ trọn vẹn.
+- **3. Khắc Phục Popup Drilldown Thống Kê Ít Hàng (1 hàng) Bị Kẹt Không Hiện Hết Menu Tùy Chọn Cột**:
+  - *Nguyên nhân*: Khung `Dialog` chi tiết trong `DashboardView.vue` khi chỉ có 1 dòng dữ liệu bị co chiều cao xuống dưới 200px, trong khi dropdown `.column-selector-dropdown` cao ~480px nên bị container cắt ngang.
+  - *Xử lý*:
+    - Thêm `minHeight: '560px'` cho `Dialog` `:style` và `minHeight: '440px'` cho `:contentStyle` trong `DashboardView.vue`.
+    - Cập nhật `.column-selector-dropdown` trong `ColumnSelector.vue`: thiết lập layout `display: flex; flex-direction: column; max-height: min(520px, calc(100vh - 160px)); overflow: hidden;` và cho danh sách cột `.column-selector-list` co giãn linh hoạt `flex: 1; min-height: 120px; max-height: 360px; overflow-y: auto;`.
+- **4. Tùy Biến Cỡ Chữ & Viết Hoa Tiêu Đề Nhóm Thống Kê (DashboardView.vue)**:
+  - Bổ sung cấu hình `titleFontSize` (11px - 32px) và hộp kiểm `titleUppercase` ("Tik chọn viết hoa (UPPERCASE)") trong Dialog chỉnh sửa/thêm mới Nhóm thống kê.
+  - Tiêu đề nhóm `<h3>` tự động áp dụng `fontSize`, `textTransform: uppercase`, và `letterSpacing` theo đúng cấu hình người dùng chọn.
+- **5. Cấu Hình Cỡ Chữ Menu Thanh Bên & Tiêu Đề Header Hệ Thống (SettingsImportView.vue, AppSidebar.vue, AppHeader.vue)**:
+  - Bổ sung ô cấu hình `Cỡ chữ Header (px)` trong khối Tiêu đề Header Hệ thống và `Cỡ chữ Menu Thanh bên (px)` (11px - 22px, mặc định 14px) trong Cài đặt chung.
+  - Tự động áp dụng qua biến CSS `--sidebar-menu-font-size` trong `main.css`, `AppSidebar.vue` và kích thước chữ trực tiếp trong `AppHeader.vue`.
+- **6. Kiểm thử & Đóng gói**:
+  - Build Vite thành công sạch sẽ (exit 0).
+  - Đồng bộ trọn vẹn `dist/` sang `WINDOWS_OFFLINE_APP/frontend/` bằng rsync.
+
 ### 19. GIẢI PHÓNG CHIỀU CAO TỰ NHIÊN & HIỂN THỊ ĐẦY ĐỦ 100% NHÓM BẢNG XUẤT BÁO CÁO (Session 37 - 2026-09-11)
 - **Yêu cầu người dùng**:
   1. *Không giới hạn chiều cao*: Chiều cao nhóm, bảng và danh sách trường phải co giãn tự nhiên theo nội dung (`height: auto; max-height: none`), không ép `max-height` (như 220px, 520px) gây thanh cuộn lồng nhau (nested scrollbars) và chật chội.

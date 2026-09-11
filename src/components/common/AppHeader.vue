@@ -3,7 +3,10 @@
     <div class="app-header-title">
       <div
         class="app-header-main-title"
-        :style="{ color: headerTitleColor || '#1e3a8a' }"
+        :style="{
+          color: headerTitleColor || '#1e3a8a',
+          fontSize: headerTitleFontSize ? (headerTitleFontSize + 'px') : undefined
+        }"
       >
         {{ headerTitleText || 'DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI' }}
       </div>
@@ -78,6 +81,10 @@ const headerTitleText = computed(() => {
 
 const headerTitleColor = computed(() => {
   return systemBranding.value?.headerMainTitleColor || '#1e3a8a';
+});
+
+const headerTitleFontSize = computed(() => {
+  return systemBranding.value?.headerTitleFontSize || null;
 });
 
 const handleLogout = () => {

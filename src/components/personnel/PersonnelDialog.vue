@@ -237,9 +237,17 @@ const recordSource = computed(() => {
     return props.tableId;
   }
   if (form.value._tableId) return form.value._tableId;
-  if (form.value._recordType === 'trip' || form.value.rawTrip || form.value.departureDate || form.value.ngay_xuat_canh || form.value.cccdchuyendi) return 'trips';
-  if (form.value._recordType === 'relative' || form.value.rawRelative || form.value.relationshipName || form.value.relativeName || form.value.cccdthannhan || form.value.isRelative) return 'relatives';
-  if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-')) || form.value.positionName || form.value.departmentName) return 'personnel';
+  if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-') && !form.value.rawTrip && !String(form.value.id || '').startsWith('trip_'))) {
+    return 'personnel';
+  }
+  if (form.value._recordType === 'relative' || (form.value.code && String(form.value.code).startsWith('TN-') && !String(form.value.id || '').startsWith('trip_')) || form.value.rawRelative || form.value.relationshipName || form.value.relativeName || form.value.cccdthannhan || form.value.isRelative) {
+    return 'relatives';
+  }
+  if (form.value._recordType === 'trip' || form.value.rawTrip || (form.value.id && String(form.value.id).startsWith('trip_')) || form.value.cccdchuyendi) {
+    return 'trips';
+  }
+  if (form.value.departureDate || form.value.ngay_xuat_canh) return 'trips';
+  if (form.value.positionName || form.value.departmentName) return 'personnel';
   if (form.value._recordType === 'blank') return 'blank';
   return 'personnel';
 });
@@ -442,7 +450,7 @@ const formGroups = computed(() => {
     (grp.columns || []).forEach((c) => {
       if (!c || !c.id || c.id === 'stt' || c.hidden) return;
       if (colMap.has(c.id)) {
-        grpCols.push({ ...colMap.get(c.id), ...c });
+        grpCols.push({ ...c, ...colMap.get(c.id) });
         placedColIds.add(c.id);
       } else if (isColumnVisibleInDetail(c)) {
         grpCols.push(c);

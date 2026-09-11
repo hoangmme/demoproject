@@ -887,9 +887,10 @@ export function useTableColumns({
     const colInAll = (allAvailableColumnsList.value || []).find((c) => c.id === colId);
     if (colInAll) colInAll.options = options;
 
-    const cIdx = unref(selectedViewIdx);
-    if (cIdx >= 0 && cards.value?.[cIdx]?.columns) {
-      const colInCard = cards.value[cIdx].columns.find((c) => c.id === colId);
+    const cardsList = resolveList(activeMetricCards);
+    const cIdx = unref(activeMetricCardIdx);
+    if (cIdx >= 0 && cardsList?.[cIdx]?.columns) {
+      const colInCard = cardsList[cIdx].columns.find((c) => c.id === colId);
       if (colInCard) colInCard.options = options;
     }
 
@@ -1196,9 +1197,10 @@ export function useTableColumns({
     const colInAll = (allAvailableColumnsList.value || []).find((c) => c.id === colId);
     if (colInAll) Object.assign(colInAll, formulaProps);
 
-    const cIdx = unref(selectedViewIdx);
-    if (cIdx >= 0 && cards.value?.[cIdx]?.columns) {
-      const colInCard = cards.value[cIdx].columns.find((c) => c.id === colId);
+    const cardsList = resolveList(activeMetricCards);
+    const cIdx = unref(activeMetricCardIdx);
+    if (cIdx >= 0 && cardsList?.[cIdx]?.columns) {
+      const colInCard = cardsList[cIdx].columns.find((c) => c.id === colId);
       if (colInCard) Object.assign(colInCard, formulaProps);
     }
 

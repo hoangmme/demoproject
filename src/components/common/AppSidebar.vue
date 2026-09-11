@@ -7,6 +7,7 @@
       '--sidebar-bg': sidebarCustomColor || '#889962',
       '--sidebar-text-color': sidebarCustomTextColor || '#000000',
       '--sidebar-heading-color': sidebarCustomTextColor || '#1a2e05',
+      '--sidebar-menu-font-size': systemBranding.sidebarMenuFontSize ? (systemBranding.sidebarMenuFontSize + 'px') : '0.88rem',
     }"
   >
     <!-- Lớp phủ ảnh nền tùy biến cover với độ trong suốt tùy chỉnh -->

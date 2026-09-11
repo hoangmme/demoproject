@@ -737,7 +737,7 @@ export const usePersonnelStore = defineStore('personnel', {
         this.tripsList.push(tripPayload);
       }
     },
-    async savePerson(formData) {
+    async savePerson(formData, options = {}) {
       this.loading = true;
       try {
         if (!formData) throw new Error('Dữ liệu cán bộ không hợp lệ');
@@ -872,12 +872,16 @@ export const usePersonnelStore = defineStore('personnel', {
         let saved = null;
         if (cleanPayload.id) {
           saved = await updatePersonnel(cleanPayload.id, cleanPayload);
-          logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name || cleanPayload.name} (${formData.code || cleanPayload.code || cleanPayload.id})`).catch(() => {});
+          if (!options.silentLog) {
+            logActivity('Cập nhật Cán bộ', `Cập nhật hồ sơ: ${formData.name || cleanPayload.name} (${formData.code || cleanPayload.code || cleanPayload.id})`).catch(() => {});
+          }
         } else {
           cleanPayload.id = 'CB-' + Date.now();
           if (!cleanPayload.code) cleanPayload.code = cleanPayload.id;
           saved = await createPersonnel(cleanPayload);
-          logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name || cleanPayload.name}`).catch(() => {});
+          if (!options.silentLog) {
+            logActivity('Tạo Cán bộ mới', `Tạo mới hồ sơ: ${formData.name || cleanPayload.name}`).catch(() => {});
+          }
         }
 
         // Đồng bộ ngầm trong background mà không block giao diện
@@ -1527,7 +1531,8 @@ export const usePersonnelStore = defineStore('personnel', {
           if (t.id && trip.id && String(t.id) === String(trip.id)) return true;
           if (t.uniqueKey && trip.uniqueKey && String(t.uniqueKey) === String(trip.uniqueKey)) return true;
           if (t._primaryKey && trip._primaryKey && String(t._primaryKey) === String(trip._primaryKey)) return true;
-          if (t.code && trip.code && String(t.code) === String(trip.code)) return true;
+          if (t.id && trip.uniqueKey && String(t.id) === String(trip.uniqueKey)) return true;
+          if (t.uniqueKey && trip.id && String(t.uniqueKey) === String(trip.id)) return true;
           return false;
         };
 
@@ -1548,7 +1553,9 @@ export const usePersonnelStore = defineStore('personnel', {
             }
           }
 
-          if (hasTripInP || hasTripInRel) {
+          const isFlattenedTripOnPerson = String(p.id) === String(trip.id) || String(p.id) === String(trip.personnelId);
+
+          if (hasTripInP || hasTripInRel || (isFlattenedTripOnPerson && (custom.countryName || custom.quoc_gia_xuat_canh))) {
             const updatedP = JSON.parse(JSON.stringify(p));
             if (Array.isArray(updatedP.trips)) {
               updatedP.trips = updatedP.trips.filter((t) => !isSameTrip(t));
@@ -1566,20 +1573,38 @@ export const usePersonnelStore = defineStore('personnel', {
             }
             updatedP.custom_data.trips = updatedP.trips;
             updatedP.custom_data.relatives = updatedP.relatives;
-            await this.savePerson(updatedP);
-            break;
+
+            if (isFlattenedTripOnPerson) {
+              const tripKeys = [
+                'countryName', 'quoc_gia_xuat_canh', 'quoc_gia', 'quoc_gia_den', 'country',
+                'departureDate', 'ngay_xuat_canh', 'arrivalDate', 'ngay_nhap_canh',
+                'decisionNumber', 'so_quyet_dinh', 'decisionDate', 'decisionIssuer',
+                'purpose', 'muc_dich_xuat_canh', 'funding2', 'nguon_kinh_phi', 'tripCount'
+              ];
+              for (const k of tripKeys) {
+                delete updatedP.custom_data[k];
+                delete updatedP[k];
+              }
+            }
+            await this.savePerson(updatedP, { silentLog: true });
           }
         }
 
-        // Xóa trong standaloneTrips nếu có
+        // Luôn xóa trong standaloneTrips nếu có
         if (Array.isArray(this.standaloneTrips)) {
           const prevLen = this.standaloneTrips.length;
-          this.standaloneTrips = this.standaloneTrips.filter((t) => !isSameTrip(t));
+          this.standaloneTrips = this.standaloneTrips.filter((t) => !isSameTrip(t) && String(t.id) !== String(trip.id));
           if (this.standaloneTrips.length !== prevLen) {
             await saveAppSettings('standalone_trips', this.standaloneTrips);
           }
         }
-        await logActivity('Xóa Chuyến đi', `Xóa chuyến đi: ${trip.countryName || trip.quoc_gia_xuat_canh || trip.id}`).catch(() => {});
+
+        // Cập nhật tripsList in-memory
+        if (Array.isArray(this.tripsList)) {
+          this.tripsList = this.tripsList.filter((t) => !isSameTrip(t) && String(t.id) !== String(trip.id));
+        }
+
+        await logActivity('Xóa Chuyến đi', `Xóa chuyến đi: ${trip.countryName || trip.quoc_gia_xuat_canh || trip.id || ''}`).catch(() => {});
         await this.fetchPersonnel();
       } catch (e) {
         console.error('Error deleting trip:', e);
@@ -1614,31 +1639,47 @@ export const usePersonnelStore = defineStore('personnel', {
         }
         return record;
       }
+
+      // Ưu tiên 1: Hồ sơ Cán bộ (Nếu thuộc bảng personnel, hoặc có mã CB- và không phải là chuyến đi lồng)
+      const isExplicitPersonnel =
+        record._tableId === 'personnel' ||
+        record._recordType === 'personnel' ||
+        (record.code && String(record.code).startsWith('CB-') && !record.rawTrip && !String(record.id || '').startsWith('trip_'));
+
+      if (isExplicitPersonnel) {
+        return await this.savePerson(record);
+      }
+
+      // Ưu tiên 2: Hồ sơ Thân nhân (Nếu thuộc bảng relatives, hoặc có mã TN-, hoặc quan hệ thân nhân)
+      const isExplicitRelative =
+        record._tableId === 'relatives' ||
+        record._recordType === 'relative' ||
+        record.rawRelative ||
+        (record.code && String(record.code).startsWith('TN-') && !String(record.id || '').startsWith('trip_')) ||
+        (record.id && String(record.id).startsWith('rel_')) ||
+        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
+        (record.cccdthannhan !== undefined && !record.departureDate && !record.ngay_xuat_canh) ||
+        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel' && record._recordType !== 'trip');
+
+      if (isExplicitRelative) {
+        return await this.saveRelative(record);
+      }
+
+      // Ưu tiên 3: Chuyến đi (Nếu thuộc bảng trips, hoặc là bản ghi chuyến đi)
       if (
         record._tableId === 'trips' ||
         record._recordType === 'trip' ||
         record.rawTrip ||
         (record.id && String(record.id).startsWith('trip_')) ||
         (record.uniqueKey && String(record.uniqueKey).startsWith('trip_')) ||
+        record.cccdchuyendi !== undefined ||
         record.quoc_gia_xuat_canh !== undefined ||
         record.ngay_xuat_canh !== undefined ||
-        record.departureDate !== undefined ||
-        record.cccdchuyendi !== undefined
+        record.departureDate !== undefined
       ) {
         return await this.saveTrip(record);
       }
-      if (
-        record._tableId === 'relatives' ||
-        record._recordType === 'relative' ||
-        record.rawRelative ||
-        (record.id && String(record.id).startsWith('rel_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
-        record.cccdthannhan !== undefined ||
-        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel' && record._recordType !== 'trip') ||
-        (record.code && String(record.code).startsWith('TN-') && !String(record.id || '').startsWith('trip_'))
-      ) {
-        return await this.saveRelative(record);
-      }
+
       const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
       if (p) {
         return await this.savePerson(record);
@@ -1677,6 +1718,31 @@ export const usePersonnelStore = defineStore('personnel', {
         }
         return;
       }
+
+      // Ưu tiên 1: Cán bộ
+      if (
+        record._tableId === 'personnel' ||
+        (record._recordType === 'personnel' && !record.rawTrip && !String(record.id || '').startsWith('trip_')) ||
+        (record.code && String(record.code).startsWith('CB-') && !record.rawTrip && !String(record.id || '').startsWith('trip_'))
+      ) {
+        return await this.deletePerson(record);
+      }
+
+      // Ưu tiên 2: Thân nhân
+      if (
+        record._tableId === 'relatives' ||
+        record._recordType === 'relative' ||
+        record.rawRelative ||
+        (record.code && String(record.code).startsWith('TN-') && !String(record.id || '').startsWith('trip_')) ||
+        (record.id && String(record.id).startsWith('rel_')) ||
+        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
+        record.cccdthannhan !== undefined ||
+        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel' && record._recordType !== 'trip')
+      ) {
+        return await this.deleteRelative(record);
+      }
+
+      // Ưu tiên 3: Chuyến đi
       if (
         record._tableId === 'trips' ||
         record._recordType === 'trip' ||
@@ -1690,18 +1756,7 @@ export const usePersonnelStore = defineStore('personnel', {
       ) {
         return await this.deleteTrip(record);
       }
-      if (
-        record._tableId === 'relatives' ||
-        record._recordType === 'relative' ||
-        record.rawRelative ||
-        (record.code && String(record.code).startsWith('TN-')) ||
-        (record.id && String(record.id).startsWith('rel_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
-        record.cccdthannhan !== undefined ||
-        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel')
-      ) {
-        return await this.deleteRelative(record);
-      }
+
       const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
       if (p) {
         return await this.deletePerson(record);

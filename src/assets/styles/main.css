@@ -107,7 +107,7 @@ html, body {
   gap: 0.75rem;
   padding: 0.55rem 0.75rem;
   border-radius: 0.5rem;
-  font-size: 0.88rem;
+  font-size: var(--sidebar-menu-font-size, 0.88rem);
   font-weight: 600;
   color: var(--sidebar-text-color, #000000);
   text-decoration: none;

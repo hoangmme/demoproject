@@ -109,7 +109,16 @@
         <div style="display: flex; align-items: center; gap: 8px;">
           <i :class="['pi', group.icon || 'pi-folder']" :style="{ color: group.color || '#2e7d32', fontSize: '1.1rem' }"></i>
           <div>
-            <h3 :style="{ fontSize: '0.92rem', fontWeight: '700', color: group.color || '#1e293b', margin: 0 }">{{ group.title }}</h3>
+            <h3
+              :style="{
+                fontSize: group.titleFontSize ? (group.titleFontSize + 'px') : '0.92rem',
+                textTransform: group.titleUppercase ? 'uppercase' : 'none',
+                letterSpacing: group.titleUppercase ? '0.04em' : 'normal',
+                fontWeight: '700',
+                color: group.color || '#1e293b',
+                margin: 0
+              }"
+            >{{ group.title }}</h3>
             <span v-if="group.description && !group.description.includes('Đồng bộ số liệu từ Chuyên đề')" style="font-size: 0.74rem; color: #64748b;">{{ group.description }}</span>
             <span v-else style="font-size: 0.74rem; color: #64748b;">{{ (group.widgets || []).filter(w => !isWidgetHidden(w)).length }} khối thống kê</span>
           </div>
@@ -614,6 +623,41 @@
             <option value="25">25% (1/4 hàng - 4 nhóm trên 1 hàng)</option>
             <option value="20">20% (1/5 hàng - 5 nhóm trên 1 hàng)</option>
           </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 4px;">
+          <div class="field-item" style="margin-bottom: 0;">
+            <label class="field-label" style="font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+              <i class="pi pi-text-height" style="font-size: 0.8rem; color: #0284c7;"></i>
+              Cỡ chữ Tiêu đề nhóm
+            </label>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <input
+                type="number"
+                v-model.number="groupForm.titleFontSize"
+                min="11"
+                max="32"
+                step="1"
+                placeholder="15"
+                style="width: 80px; height: 32px; padding: 4px 8px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; font-weight: 600;"
+              />
+              <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">px (11 - 32px)</span>
+            </div>
+          </div>
+          <div class="field-item" style="margin-bottom: 0;">
+            <label class="field-label" style="font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+              <i class="pi pi-check-square" style="font-size: 0.8rem; color: #16a34a;"></i>
+              Kiểu chữ
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; height: 32px; font-size: 0.82rem; font-weight: 600; color: #334155;">
+              <input
+                type="checkbox"
+                v-model="groupForm.titleUppercase"
+                style="width: 16px; height: 16px; accent-color: #2e7d32; cursor: pointer;"
+              />
+              <span>Tik chọn viết hoa (UPPERCASE)</span>
+            </label>
+          </div>
         </div>
       </div>
       <template #footer>
@@ -1142,8 +1186,8 @@
       v-model:visible="isDrilldownModalOpen"
       modal
       :baseZIndex="10000"
-      :style="{ width: '95vw', maxWidth: '1520px' }"
-      :contentStyle="{ maxHeight: '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '0 16px 16px 16px' }"
+      :style="{ width: '95vw', maxWidth: '1520px', minHeight: '560px' }"
+      :contentStyle="{ minHeight: '440px', maxHeight: '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '0 16px 16px 16px' }"
     >
       <template #header>
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding-right: 12px; gap: 12px; flex-wrap: wrap;">
@@ -2153,6 +2197,8 @@ const groupForm = ref({
   color: '#1e293b',
   bgColor: '#ffffff',
   widthPercent: '100',
+  titleFontSize: 15,
+  titleUppercase: false,
   widgets: [],
 });
 
@@ -2560,6 +2606,8 @@ const openAddGroupDialog = () => {
     color: '#1e293b',
     bgColor: '#ffffff',
     widthPercent: '100',
+    titleFontSize: 15,
+    titleUppercase: false,
     widgets: [],
   };
   isGroupDialogOpen.value = true;
@@ -2571,6 +2619,8 @@ const openEditGroupDialog = (group) => {
     color: '#1e293b',
     bgColor: '#ffffff',
     widthPercent: '100',
+    titleFontSize: group.titleFontSize || 15,
+    titleUppercase: !!group.titleUppercase,
     ...JSON.parse(JSON.stringify(group)),
   };
   isGroupDialogOpen.value = true;
