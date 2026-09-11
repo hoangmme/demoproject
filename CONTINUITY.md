@@ -3514,9 +3514,11 @@
        + Lược bỏ component độc lập `TableIconColorDialog` vì đã được tích hợp hoàn toàn vào `TableOptionsDialog`.
   4. **Tư vấn Kiến trúc Quản lý Cột (Column Management Advisory)**:
      - *Xác nhận*: "Tùy chọn Cột" trên thanh công cụ hiện tại **chỉ áp dụng riêng cho Chế độ xem (View / Thẻ) đang active**.
-     - *Đề xuất chuyên gia*: Nên để quản lý cột duy nhất tại thanh công cụ (Toolbar) theo chuẩn UX Lark Base / Airtable, lược bỏ danh sách checkbox cột trong popup Sửa View để tránh rối và trùng lặp thao tác.
+  5. **Sửa lỗi không scroll được trong hộp thoại Tùy chọn Bảng**:
+     - *Nguyên nhân*: Hộp thoại `<Dialog>` thiếu chiều cao cố định (`height: 90vh`), khiến container `.p-dialog-content` có chiều cao thả nổi và `.options-body` bị tràn đẩy chân trang (Footer) ra ngoài màn hình.
+     - *Khắc phục*: Thiết lập `:style="{ height: '90vh', maxHeight: '94vh' }"` và `:contentStyle="{ height: '100%', maxHeight: '100%' }"`. Bổ sung `:deep(.p-dialog-content)` dạng Flexbox, gán `flex-shrink: 0` cho Header/Toolbar/Footer và `flex: 1 1 0; min-height: 0; overflow-y: auto;` cho `.options-body`. Footer luôn ghim đáy màn hình và danh sách cột cuộn mượt mà.
 - **Kiểm thử**:
-  - `npm run build`: Thành công 100% (599ms, 0 lỗi).
+  - `npm run build`: Thành công 100% (579ms, 0 lỗi).
   - Đồng bộ sản phẩm build sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 
