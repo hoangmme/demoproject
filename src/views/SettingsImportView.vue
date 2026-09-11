@@ -274,6 +274,7 @@
             <img
               :src="currentLoginBg || '/login-bg.jpg'"
               alt="Login Background Preview"
+              @error="handleLoginBgError"
               style="width: 100%; height: 100%; object-fit: cover;"
             />
             <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.65); color: #ffffff; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; backdrop-filter: blur(4px);">
@@ -1169,11 +1170,18 @@ const loadLoginBg = async () => {
   try {
     const bgData = await getAppSettings('custom_login_bg', null);
     if (bgData) {
-      currentLoginBg.value = bgData;
-      localStorage.setItem('custom_login_bg', bgData);
+      currentLoginBg.value = getFileUrl(bgData);
+      localStorage.setItem('custom_login_bg', currentLoginBg.value);
     }
   } catch (err) {
     console.warn('Failed to load login bg:', err);
+  }
+};
+
+const handleLoginBgError = () => {
+  if (currentLoginBg.value && currentLoginBg.value !== '/login-bg.jpg') {
+    console.warn('Custom login bg preview failed to load, falling back to /login-bg.jpg');
+    currentLoginBg.value = '/login-bg.jpg';
   }
 };
 
@@ -1222,7 +1230,7 @@ const handleUploadLoginBg = async (event) => {
       const bgUrl = getFileUrl(uploaded.id);
       currentLoginBg.value = bgUrl;
       localStorage.setItem('custom_login_bg', bgUrl);
-      await saveAppSettings('custom_login_bg', bgUrl);
+      await saveAppSettings('custom_login_bg', uploaded.id);
       alert('Đã tải lên và lưu ảnh nền đăng nhập độ nét cao (4K) thành công!');
       return;
     }
@@ -1298,8 +1306,12 @@ const sidebarSubtitleColorPresets = [
 const loadSidebarBgSettings = async () => {
   try {
     const bgData = await getAppSettings('sidebar_custom_bg', null);
-    if (bgData) currentSidebarBg.value = typeof bgData === 'string' ? bgData : (bgData.value || '');
-    else currentSidebarBg.value = '';
+    if (bgData) {
+      const rawVal = typeof bgData === 'string' ? bgData : (bgData.value || '');
+      currentSidebarBg.value = getFileUrl(rawVal);
+    } else {
+      currentSidebarBg.value = '';
+    }
     const op = await getAppSettings('sidebar_bg_opacity', null);
     if (op !== null && op !== undefined && op !== '') {
       sidebarBgOpacity.value = Number(op);
@@ -1383,7 +1395,7 @@ const handleUploadSidebarBg = async (event) => {
       const bgUrl = getFileUrl(uploaded.id);
       currentSidebarBg.value = bgUrl;
       localStorage.setItem('sidebar_custom_bg', bgUrl);
-      await saveAppSettings('sidebar_custom_bg', bgUrl);
+      await saveAppSettings('sidebar_custom_bg', uploaded.id);
       window.dispatchEvent(new CustomEvent('sidebar-bg-updated'));
       alert('Đã tải lên và lưu ảnh nền Menu bên trái thành công!');
       return;

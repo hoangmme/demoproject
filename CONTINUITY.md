@@ -3644,4 +3644,33 @@
   - Đồng bộ sản phẩm build sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 
+### 57. KHẮC PHỤC LỖI ẢNH NỀN ĐĂNG NHẬP & SIDEBAR TRÊN BẢN OFFLINE (Session 57 - 2026-09-11)
+- **1. Nguyên nhân gốc rễ**:
+  - Tệp ảnh nền `f4c662bc-1932-41cc-9912-063465033838` và ảnh sidebar `642d4a70-6323-414b-a18e-8eacc620e6e1` đã có sẵn trong thư mục `WINDOWS_OFFLINE_APP/uploads/`.
+  - Tuy nhiên trong `WINDOWS_OFFLINE_APP/database/db.json`, `custom_login_bg` và `sidebar_custom_bg` lưu URL tuyệt đối trỏ về Cloudflare online: `https://api.hscb.online/assets/{UUID}?access_token=`.
+  - Ở bản offline (không có kết nối internet), máy khách không thể kết nối tới domain `api.hscb.online`.
+  - Đồng thời ở `LoginView.vue` và `SettingsImportView.vue`, ảnh nền không đi qua hàm phân giải `getFileUrl()`, khiến trình duyệt gửi request trực tiếp ra mạng ngoài thay vì tải từ máy chủ nội bộ `localhost:8055`.
+  - Ngoài ra, tại `LoginView.vue`, khi `customLoginBg` không tồn tại hoặc tải lỗi, CSS gán `backgroundImage: 'none'` gây ra màn hình tối đen thay vì hiển thị ảnh nền mặc định `/login-bg.jpg`.
+- **2. Đã xử lý & Hoàn thiện**:
+  - **`src/views/LoginView.vue`**:
+    - Nhập và tích hợp `getFileUrl` từ `@/api/files`.
+    - Thêm cơ chế tiền tải (`new Image()`) với fallback mặc định `DEFAULT_LOGIN_BG = '/login-bg.jpg'` khi tải lỗi hoặc không có ảnh tùy biến.
+    - Chuyển `custom_login_bg` qua `getFileUrl()` để tự động ánh xạ sang máy chủ nội bộ hiện tại (`localhost:8055` hoặc IP nội bộ).
+  - **`src/views/SettingsImportView.vue`**:
+    - `loadLoginBg`: Đọc `bgData` và bọc qua `getFileUrl(bgData)`.
+    - Thêm trình xử lý `@error="handleLoginBgError"` trên thẻ `<img>` preview ảnh nền đăng nhập (tự động fallback sang `/login-bg.jpg` nếu lỗi tải).
+    - `handleUploadLoginBg`: Lưu `uploaded.id` (mã UUID thuần túy) vào cơ sở dữ liệu `app_settings` thay vì bọc cứng tên miền online.
+    - `loadSidebarBgSettings` & `handleUploadSidebarBg`: Tương tự, áp dụng `getFileUrl` và lưu `uploaded.id` cho ảnh nền sidebar.
+  - **`src/components/common/AppSidebar.vue`**:
+    - Tích hợp `getFileUrl` cho `sidebarCustomBg` và `systemBranding.logoUrl` kèm sự kiện `@error` phục hồi logo mặc định `/bo-cong-an-logo.png`.
+  - **`WINDOWS_OFFLINE_APP/database/db.json`**:
+    - Chuẩn hóa giá trị của `custom_login_bg` thành `"f4c662bc-1932-41cc-9912-063465033838"`.
+    - Chuẩn hóa giá trị của `sidebar_custom_bg` thành `"642d4a70-6323-414b-a18e-8eacc620e6e1"`.
+- **3. Kiểm thử**:
+  - Chạy script kiểm tra chuyển đổi URL: Cả định dạng UUID lẫn URL online đều tự động chuyển đổi thành `http://localhost:8055/assets/...` khi chạy offline.
+  - `npm run build`: Thành công 100% (610ms, 0 lỗi).
+  - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
+
+
 

@@ -22,8 +22,9 @@
 
     <div class="app-sidebar-header" style="position: relative; z-index: 1; padding: 1.15rem 0.5rem; text-align: center;">
       <img
-        :src="systemBranding.logoUrl || '/bo-cong-an-logo.png'"
+        :src="(systemBranding.logoUrl ? getFileUrl(systemBranding.logoUrl) : '') || '/bo-cong-an-logo.png'"
         alt="Logo"
+        @error="(e) => { e.target.src = '/bo-cong-an-logo.png'; }"
         style="width: 85px; height: 85px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"
       />
       <!-- Khối 1: Phiên hiệu đơn vị (2 dòng gắn kết chặt chẽ thành 1 khối) -->
@@ -667,6 +668,7 @@ import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import { useAuthStore } from '@/stores/auth';
 import { usePersonnelStore } from '@/stores/personnel';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
+import { getFileUrl } from '@/api/files';
 import { buildTopicSourceList } from '@/utils/dashboardMetrics';
 import { DEFAULT_UNIFIED_DASHBOARDS, ensureStandardDashboards } from '@/utils/tableRegistry';
 
@@ -1321,7 +1323,7 @@ const confirmQuickTripNavigate = () => {
   }
 };
 
-const sidebarCustomBg = ref(localStorage.getItem('sidebar_custom_bg') || '');
+const sidebarCustomBg = ref(getFileUrl(localStorage.getItem('sidebar_custom_bg') || ''));
 const sidebarBgOpacity = ref(Number(localStorage.getItem('sidebar_bg_opacity')) || 40);
 const sidebarCustomColor = ref(localStorage.getItem('sidebar_custom_color') || '#889962');
 const sidebarCustomTextColor = ref(localStorage.getItem('sidebar_custom_text_color') || '');
@@ -1342,8 +1344,8 @@ const loadSidebarBg = async () => {
     if (bgRes.status === 'fulfilled') {
       const bg = bgRes.value;
       const val = bg ? (typeof bg === 'string' ? bg : (bg.value || '')) : '';
-      sidebarCustomBg.value = val;
-      try { localStorage.setItem('sidebar_custom_bg', val); } catch (e) {}
+      sidebarCustomBg.value = getFileUrl(val);
+      try { localStorage.setItem('sidebar_custom_bg', sidebarCustomBg.value); } catch (e) {}
     }
     if (opRes.status === 'fulfilled' && opRes.value !== null && opRes.value !== undefined && opRes.value !== '') {
       sidebarBgOpacity.value = Number(opRes.value);

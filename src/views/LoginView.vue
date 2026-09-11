@@ -1,7 +1,7 @@
 <template>
   <div
     class="login-wrapper"
-    :style="{ backgroundImage: customLoginBg ? `url(${customLoginBg})` : 'none' }"
+    :style="{ backgroundImage: `url(${resolvedLoginBg})` }"
   >
     <div class="app-card login-card-grid">
       <!-- CỘT TRÁI: LOGO & ĐƠN VỊ CHỦ QUẢN -->
@@ -65,6 +65,7 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import { useAuthStore } from '@/stores/auth';
 import { getAppSettings } from '@/api/settings';
+import { getFileUrl } from '@/api/files';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -73,14 +74,46 @@ const email = ref('');
 const password = ref('');
 const loading = ref(false);
 const customLoginBg = ref('');
+const DEFAULT_LOGIN_BG = '/login-bg.jpg';
+const resolvedLoginBg = ref(DEFAULT_LOGIN_BG);
+
+const applyLoginBg = (rawBg) => {
+  if (!rawBg) {
+    resolvedLoginBg.value = DEFAULT_LOGIN_BG;
+    return;
+  }
+  const formattedUrl = getFileUrl(rawBg);
+  if (!formattedUrl) {
+    resolvedLoginBg.value = DEFAULT_LOGIN_BG;
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    resolvedLoginBg.value = formattedUrl;
+  };
+  img.onerror = () => {
+    console.warn('Custom login background failed to load, falling back to default:', formattedUrl);
+    resolvedLoginBg.value = DEFAULT_LOGIN_BG;
+  };
+  img.src = formattedUrl;
+};
 
 onMounted(async () => {
   try {
+    const cached = localStorage.getItem('custom_login_bg');
+    if (cached) {
+      applyLoginBg(cached);
+    }
     const bgData = await getAppSettings('custom_login_bg', null);
     if (bgData) {
       customLoginBg.value = bgData;
+      applyLoginBg(bgData);
+    } else if (!cached) {
+      resolvedLoginBg.value = DEFAULT_LOGIN_BG;
     }
-  } catch (e) {}
+  } catch (e) {
+    resolvedLoginBg.value = DEFAULT_LOGIN_BG;
+  }
 });
 
 const handleLogin = async () => {
