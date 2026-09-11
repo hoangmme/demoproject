@@ -10,7 +10,7 @@ const https = require('https');
 const http = require('http');
 
 const ONLINE_API_URL = process.env.ONLINE_API_URL || 'https://api.hscb.online';
-const STATIC_TOKEN = process.env.STATIC_TOKEN || 'mvp-static-token-999';
+const STATIC_TOKEN = process.env.STATIC_TOKEN || process.env.VITE_STATIC_TOKEN || 'CooAJKTu9_NLEgtaq3qULrswZGLFfsAw';
 
 const OFFLINE_DIR = path.resolve(__dirname, '..', 'WINDOWS_OFFLINE_APP');
 const DB_FILE = path.join(OFFLINE_DIR, 'database', 'db.json');
@@ -24,7 +24,7 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 }
 
 function fetchJson(url) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const isHttps = url.startsWith('https');
     const client = isHttps ? https : http;
     const req = client.get(
@@ -40,6 +40,14 @@ function fetchJson(url) {
         let raw = '';
         res.on('data', (chunk) => (raw += chunk));
         res.on('end', () => {
+          if (res.statusCode === 401 || res.statusCode === 403) {
+            console.error(`❌ [LỖI XÁC THỰC] Token không hợp lệ khi gọi ${url} (HTTP ${res.statusCode}):`, raw);
+            return reject(new Error(`Token hết hạn hoặc không có quyền truy cập (HTTP ${res.statusCode})`));
+          }
+          if (res.statusCode >= 400) {
+            console.warn(`⚠️ [CẢNH BÁO] Máy chủ trả về HTTP ${res.statusCode} cho ${url}:`, raw.slice(0, 200));
+            return resolve([]);
+          }
           try {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed.data)) {
@@ -151,19 +159,31 @@ async function syncAll() {
   const files = await fetchJson(`${ONLINE_API_URL}/files?limit=-1`);
   console.log(`   -> Tìm thấy ${files.length} tệp đính kèm.`);
 
-  // 8. Tải Tệp thực tế về thư mục uploads/
+  // 8. Tải Tệp thực tế về thư mục uploads/ (Chạy song song 5 luồng để tăng tốc)
   if (files.length > 0) {
     console.log(`📁 [8/8] Đang tải các tệp đính kèm về thư mục WINDOWS_OFFLINE_APP/uploads/...`);
     let downloadedCount = 0;
-    for (const f of files) {
-      const fId = f.id;
-      if (fId) {
-        const dest = path.join(UPLOADS_DIR, fId);
-        const ok = await downloadFile(`${ONLINE_API_URL}/assets/${fId}`, dest);
-        if (ok) downloadedCount++;
-      }
+    const CONCURRENCY = 5;
+    for (let i = 0; i < files.length; i += CONCURRENCY) {
+      const batch = files.slice(i, i + CONCURRENCY);
+      await Promise.all(
+        batch.map(async (f) => {
+          const fId = f.id;
+          if (fId) {
+            const dest = path.join(UPLOADS_DIR, fId);
+            const ok = await downloadFile(`${ONLINE_API_URL}/assets/${fId}`, dest);
+            if (ok) downloadedCount++;
+          }
+        })
+      );
+      process.stdout.write(`   -> Tiến độ: ${downloadedCount}/${files.length} tệp...\r`);
     }
-    console.log(`   -> Đã tải thành công ${downloadedCount}/${files.length} tệp.`);
+    console.log(`\n   -> Đã tải thành công ${downloadedCount}/${files.length} tệp.`);
+  }
+
+  // Kiểm tra an toàn: Tuyệt đối không ghi đè nếu dữ liệu tải về bị rỗng
+  if ((!Array.isArray(personnels) || personnels.length === 0) && (!Array.isArray(appSettings) || appSettings.length === 0)) {
+    throw new Error('❌ Dữ liệu tải về bị trống (0 cán bộ, 0 cấu hình). HỦY BỎ để tránh ghi đè làm mất dữ liệu offline!');
   }
 
   // Ghi vào db.json

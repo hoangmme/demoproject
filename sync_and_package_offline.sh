@@ -20,14 +20,21 @@ node scripts/sync_online_db.cjs
 echo ""
 echo "🔨 [BƯỚC 2/3] Đang biên dịch Frontend (Vite Build) và cập nhật giao diện..."
 npm run build
+
+if [ ! -f dist/index.html ]; then
+  echo "❌ Lỗi: Bản build Vite không tạo ra file dist/index.html!"
+  exit 1
+fi
+
 rm -rf WINDOWS_OFFLINE_APP/frontend
-cp -r dist WINDOWS_OFFLINE_APP/frontend
+mkdir -p WINDOWS_OFFLINE_APP/frontend
+cp -r dist/* WINDOWS_OFFLINE_APP/frontend/
 
 # 3. Nén thư mục WINDOWS_OFFLINE_APP thành file ZIP
 echo ""
 echo "🗜️  [BƯỚC 3/3] Đang nén toàn bộ gói WINDOWS_OFFLINE_APP.zip..."
 rm -f WINDOWS_OFFLINE_APP.zip
-zip -r -q WINDOWS_OFFLINE_APP.zip WINDOWS_OFFLINE_APP/ -x "*.DS_Store" "*__MACOSX*"
+zip -r -q WINDOWS_OFFLINE_APP.zip WINDOWS_OFFLINE_APP/ -x "*.DS_Store" "*__MACOSX*" "WINDOWS_OFFLINE_APP/CONTINUITY.md"
 
 ZIP_SIZE=$(du -h WINDOWS_OFFLINE_APP.zip | cut -f1)
 
