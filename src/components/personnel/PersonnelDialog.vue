@@ -653,17 +653,6 @@ const initFormData = (val) => {
     // Direct values in parsedVal override cd
     const merged = { ...cd, ...parsedVal };
 
-    // If country was explicitly cleared on parsedVal, ensure all aliases are cleared
-    const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
-    if (parsedVal.quoc_gia_xuat_canh !== undefined && !String(parsedVal.quoc_gia_xuat_canh || '').trim()) {
-      for (const alias of countryAliases) {
-        merged[alias] = '';
-      }
-    } else if (parsedVal.countryName !== undefined && !String(parsedVal.countryName || '').trim()) {
-      for (const alias of countryAliases) {
-        merged[alias] = '';
-      }
-    }
 
     form.value = {
       ...merged,
@@ -721,19 +710,6 @@ const buildSavePayload = () => {
     delete payload.custom_data.custom_data;
   }
 
-  // Country alias synchronization: If user cleared country, propagate empty string to all aliases
-  const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
-  if (form.value.quoc_gia_xuat_canh !== undefined && !String(form.value.quoc_gia_xuat_canh || '').trim()) {
-    for (const alias of countryAliases) {
-      payload[alias] = '';
-      if (payload.custom_data) delete payload.custom_data[alias];
-    }
-  } else if (form.value.countryName !== undefined && !String(form.value.countryName || '').trim()) {
-    for (const alias of countryAliases) {
-      payload[alias] = '';
-      if (payload.custom_data) delete payload.custom_data[alias];
-    }
-  }
 
   return payload;
 };

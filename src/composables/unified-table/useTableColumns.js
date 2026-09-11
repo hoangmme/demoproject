@@ -916,8 +916,26 @@ export function useTableColumns({
       }
       if (found) break;
     }
+    if (!found && Array.isArray(mapping) && mapping.length > 0) {
+      const existingCol = (allAvailableColumnsList.value || []).find((c) => c.id === colId);
+      if (existingCol) {
+        mapping[0].columns = mapping[0].columns || [];
+        mapping[0].columns.push({ ...existingCol, options });
+        found = true;
+      }
+    }
     if (found) {
       await persistTableMapping(src, mapping);
+    }
+    if (cDash && Array.isArray(cDash.customColumns)) {
+      const cInDash = cDash.customColumns.find((c) => c.id === colId);
+      if (cInDash) {
+        cInDash.options = options;
+        try {
+          localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+          await saveAppSettings('custom_dashboards_config', customDashboards.value);
+        } catch (e) {}
+      }
     }
   };
 

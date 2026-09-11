@@ -3585,3 +3585,34 @@
   - Đồng bộ sản phẩm build sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 
+### 56. BẢO TOÀN GIÁ TRỊ QUỐC GIA TRONG FORM SỬA, LIST UI TÙY CHỌN DROPDOWN & DỌN DẸP THÂN NHÂN MA (Session 56 - 2026-09-11)
+- **1. Giữ nguyên gom nhóm biểu đồ (Case-sensitive intact)**:
+  - Theo đúng chỉ đạo của người dùng: `"không cần chuẩn hóa (gom nhóm để nguyên hiện tại)"`, giữ nguyên hiện trạng toàn bộ gom nhóm thống kê biểu đồ.
+- **2. Bảo toàn giá trị thực `quoc_gia_xuat_canh` trong Form sửa (`PersonnelDialog.vue`, `PersonnelRelatedTabs.vue`, `src/stores/personnel.js`)**:
+  - *Nguyên nhân cũ*: Trong `initFormData` và `buildSavePayload` của `PersonnelDialog.vue` và `PersonnelRelatedTabs.vue`, khối code kiểm tra `countryAliases` nếu thấy `countryName` rỗng thì tự động xóa trắng tất cả alias bao gồm cả `quoc_gia_xuat_canh`. Do đó hồ sơ Trần Quốc Anh có `quoc_gia_xuat_canh: "Nhật bản"` nhưng `countryName: ""` bị xóa trắng khi mở modal.
+  - *Đã xử lý*: Gỡ bỏ hoàn toàn logic xóa đè alias này. Trong `src/stores/personnel.js` (`saveTrip`), ưu tiên giữ nguyên giá trị không rỗng của `quoc_gia_xuat_canh`. Mở form hiển thị chính xác 1-1 `"Nhật bản"`.
+- **3. Nâng cấp cấu hình Tùy chọn Dropdown sang giao diện Danh sách (List UI - ul / li) (`ColumnHeaderMenu.vue`, `useTableColumns.js`)**:
+  - Thay thế ô nhập text đơn giản phân tách bằng dấu phẩy bằng danh sách động (`<ul>` / `<li>`):
+    - Mỗi tùy chọn là một dòng riêng biệt có số thứ tự, ô nhập sửa nội dung trực tiếp tại chỗ (inline input).
+    - Nút mũi tên đảo thứ tự lên/xuống.
+    - Nút thùng rác xóa từng tùy chọn.
+    - Form thêm mới ở chân danh sách: ô nhập `+ Thêm tùy chọn mới...` kèm nút `+ Thêm` (hỗ trợ cả phím `Enter`).
+  - **Tự động lưu & loại trừ lỗi**:
+    - Tự động chuẩn hóa và lưu ngay lập tức khi người dùng thêm, sửa, xóa hoặc đổi thứ tự.
+    - Hỗ trợ an toàn cả khi `col.options` là mảng hay chuỗi, xóa bỏ hoàn toàn lỗi crash `TypeError: props.column.options.trim is not a function`.
+    - Trong `useTableColumns.js`: Tự động nạp vào mapping nhóm đầu tiên và gọi `persistTableMapping` nếu cột chưa có trong mapping, đồng thời cập nhật cả `custom_dashboards_config`.
+    - Trong `TableOptionsDialog.vue`: Bảo toàn thuộc tính `options` cho các cột chưa phân nhóm.
+- **4. Triệt tiêu Bug Thân nhân ma (CCCD '079176030333' & '077079000611')**:
+  - *Nguyên nhân phát hiện*: Do thứ tự điều kiện trong `saveRecord` kiểm tra mã `TN-` trước kiểm tra chuyến đi, 2 bản ghi chuyến đi `trip_1787733561317` (hồ sơ Đinh Thị Thúy `079176030333`) và `trip_1788613598203` (hồ sơ Lê Công Minh) bị lưu nhầm vào mảng `custom_data.relatives` với tên "Thân nhân".
+  - *Xử lý trên Directus DB*: Đã quét toàn bộ hệ thống và patch API dọn sạch 2 bản ghi trip này khỏi mảng relatives, bảo toàn chuyến đi trong mảng trips.
+  - *Chốt chặn phòng vệ kép*:
+    - Trong `src/stores/personnel.js` (`fetchPersonnel`): Bỏ qua bản ghi có `trip_` trong mảng thân nhân.
+    - Trong `saveRecord`: Đưa kiểm tra chuyến đi lên trước thân nhân để không bao giờ nhận nhầm chuyến đi thành thân nhân.
+    - Trong `saveRelative`: Chặn và điều hướng sang `saveTrip` nếu là bản ghi chuyến đi.
+    - Trong `dashboardMetrics.js` (`buildTopicSourceList`): Bỏ qua các đối tượng `trip_` trong mảng thân nhân.
+- **Kiểm thử**:
+  - `npm run build`: Thành công 100% (569ms, 0 lỗi).
+  - Đồng bộ sản phẩm build sang `WINDOWS_OFFLINE_APP/frontend/`.
+- **Trạng thái**: Done [Reversible].
+
+

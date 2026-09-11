@@ -305,6 +305,15 @@ export const usePersonnelStore = defineStore('personnel', {
             const rKeyField = this.systemKeyConfig?.relativeKeyField || 'cccdthannhan';
 
             matchedRelatives.forEach((r, rIdx) => {
+              if (!r) return;
+              // Defensive check: ignore trip objects erroneously placed into relatives
+              const rIdStr = String(r.id || '');
+              if (
+                rIdStr.startsWith('trip_') ||
+                (r.so_quyet_dinh && !r.relativeName && (!r.name || r.name === 'Thân nhân') && (!r.personnelName || r.personnelName === 'Thân nhân'))
+              ) {
+                return;
+              }
               if (!r.id || String(r.id).trim() === '' || String(r.id) === 'undefined') {
                 r.id = `rel_${p.id || 'p'}_${rIdx}`;
               }
@@ -1070,6 +1079,9 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     async saveRelative(relData) {
       if (!relData) return null;
+      if (String(relData.id || '').startsWith('trip_') && !relData.relativeName && !relData.relationshipName) {
+        return await this.saveTrip(relData);
+      }
       this.loading = true;
       try {
         const parentKeyField = this.getRelativeParentKeyField();
@@ -1288,14 +1300,19 @@ export const usePersonnelStore = defineStore('personnel', {
 
         // 2. Strict country resolution: If user explicitly cleared or set country, propagate to all aliases
         let explicitCountry = undefined;
-        if (tripData.quoc_gia_xuat_canh !== undefined) {
-          explicitCountry = String(tripData.quoc_gia_xuat_canh || '').trim();
-        } else if (tripData.countryName !== undefined) {
-          explicitCountry = String(tripData.countryName || '').trim();
-        } else if (tripData.country !== undefined) {
-          explicitCountry = String(tripData.country || '').trim();
-        } else if (tripData.quoc_gia !== undefined) {
-          explicitCountry = String(tripData.quoc_gia || '').trim();
+        if (tripData.quoc_gia_xuat_canh !== undefined && String(tripData.quoc_gia_xuat_canh || '').trim() !== '') {
+          explicitCountry = String(tripData.quoc_gia_xuat_canh).trim();
+        } else if (tripData.countryName !== undefined && String(tripData.countryName || '').trim() !== '') {
+          explicitCountry = String(tripData.countryName).trim();
+        } else if (tripData.country !== undefined && String(tripData.country || '').trim() !== '') {
+          explicitCountry = String(tripData.country).trim();
+        } else if (tripData.quoc_gia !== undefined && String(tripData.quoc_gia || '').trim() !== '') {
+          explicitCountry = String(tripData.quoc_gia).trim();
+        } else if (
+          (tripData.quoc_gia_xuat_canh !== undefined && String(tripData.quoc_gia_xuat_canh || '').trim() === '') ||
+          (tripData.countryName !== undefined && String(tripData.countryName || '').trim() === '')
+        ) {
+          explicitCountry = '';
         }
 
         const isCountryCleared = explicitCountry !== undefined && explicitCountry === '';
@@ -1598,18 +1615,6 @@ export const usePersonnelStore = defineStore('personnel', {
         return record;
       }
       if (
-        record._tableId === 'relatives' ||
-        record._recordType === 'relative' ||
-        record.rawRelative ||
-        (record.code && String(record.code).startsWith('TN-')) ||
-        (record.id && String(record.id).startsWith('rel_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
-        record.cccdthannhan !== undefined ||
-        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel' && record._recordType !== 'trip')
-      ) {
-        return await this.saveRelative(record);
-      }
-      if (
         record._tableId === 'trips' ||
         record._recordType === 'trip' ||
         record.rawTrip ||
@@ -1621,6 +1626,18 @@ export const usePersonnelStore = defineStore('personnel', {
         record.cccdchuyendi !== undefined
       ) {
         return await this.saveTrip(record);
+      }
+      if (
+        record._tableId === 'relatives' ||
+        record._recordType === 'relative' ||
+        record.rawRelative ||
+        (record.id && String(record.id).startsWith('rel_')) ||
+        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
+        record.cccdthannhan !== undefined ||
+        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel' && record._recordType !== 'trip') ||
+        (record.code && String(record.code).startsWith('TN-') && !String(record.id || '').startsWith('trip_'))
+      ) {
+        return await this.saveRelative(record);
       }
       const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
       if (p) {

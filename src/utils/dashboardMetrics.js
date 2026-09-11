@@ -230,6 +230,7 @@ export const buildTopicSourceList = (source, personnelStore) => {
 
     const pRelatives = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(pCustom.relatives) ? pCustom.relatives : []);
     pRelatives.forEach((r) => {
+      if (!r || String(r.id || '').startsWith('trip_')) return;
       let rCustom = {};
       if (r.custom_data) {
         try { rCustom = typeof r.custom_data === 'string' ? JSON.parse(r.custom_data) : r.custom_data; } catch (e) {}

@@ -600,6 +600,7 @@ const initIdentityAndGroups = () => {
       if (c && c.id && c.id !== 'stt' && !seenColIds.has(c.id)) {
         seenColIds.add(c.id);
         unassignedCols.push({
+          ...c,
           id: c.id,
           label: c.label || c.id,
           format: c.format || 'text',

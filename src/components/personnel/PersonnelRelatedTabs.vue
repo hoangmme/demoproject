@@ -961,19 +961,6 @@ const handleSaveLinkedRecord = async () => {
       custom_data: { ...(editForm.value.custom_data || {}), ...cleanEditForm },
     };
 
-    // Sanitize country aliases if cleared
-    const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
-    if (editForm.value.quoc_gia_xuat_canh !== undefined && !String(editForm.value.quoc_gia_xuat_canh || '').trim()) {
-      for (const alias of countryAliases) {
-        payload[alias] = '';
-        if (payload.custom_data) delete payload.custom_data[alias];
-      }
-    } else if (editForm.value.countryName !== undefined && !String(editForm.value.countryName || '').trim()) {
-      for (const alias of countryAliases) {
-        payload[alias] = '';
-        if (payload.custom_data) delete payload.custom_data[alias];
-      }
-    }
 
     if (targetTable.id === 'personnel' || targetTable.source === 'personnel') {
       await personnelStore.savePerson(payload);

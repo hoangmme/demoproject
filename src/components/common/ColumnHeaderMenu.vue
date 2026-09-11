@@ -820,32 +820,94 @@
           </div>
         </div>
 
-        <!-- Tùy chọn Options nếu là dropdown -->
+        <!-- Tùy chọn Options dạng Danh sách (List UI - ul / li) nếu là dropdown / checkbox -->
         <div v-if="editFormat === 'dropdown' || editFormat === 'checkbox' || editFormat === 'checkbox_file_loop'" class="menu-field">
-          <label>Danh sách tùy chọn (cách nhau bởi dấu phẩy):</label>
-          <div style="display: flex; gap: 4px;">
-            <input
-              v-model="editOptions"
-              class="menu-input"
-              placeholder="VD: Lựa chọn 1, Lựa chọn 2, Lựa chọn 3"
-              @keyup.enter="handleSaveOptions"
-              @change="handleSaveOptions"
-              @blur="handleSaveOptions"
-            />
-            <button
-              type="button"
-              class="btn-save-mini"
-              :class="{ 'btn-saved-success': isOptionsSaved }"
-              @click="handleSaveOptions"
-              title="Lưu danh sách tùy chọn"
-              style="flex-shrink: 0; min-width: 32px;"
-            >
-              <i :class="isOptionsSaved ? 'pi pi-check' : 'pi pi-save'"></i>
-            </button>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+            <label style="font-weight: 700; color: #1e293b; font-size: 0.74rem; margin: 0;">
+              Danh sách tùy chọn ({{ optionsList.length }}):
+            </label>
+            <span style="font-size: 0.65rem; color: #0284c7; font-weight: 600;">Tự động lưu khi sửa</span>
           </div>
+
+          <!-- Danh sách options dạng list (ul / li) -->
+          <div class="dropdown-options-box" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; max-height: 200px; overflow-y: auto;">
+            <div v-if="optionsList.length === 0" style="padding: 8px 4px; text-align: center; color: #94a3b8; font-size: 0.72rem; font-style: italic;">
+              Chưa có tùy chọn nào. Thêm bên dưới.
+            </div>
+            <ul v-else style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px;">
+              <li
+                v-for="(opt, oIdx) in optionsList"
+                :key="oIdx"
+                style="display: flex; align-items: center; gap: 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 6px; transition: border-color 0.15s;"
+              >
+                <span style="font-size: 0.68rem; color: #64748b; font-weight: 700; min-width: 18px; text-align: right; flex-shrink: 0;">
+                  {{ oIdx + 1 }}.
+                </span>
+                <input
+                  :value="opt"
+                  @input="optionsList[oIdx] = $event.target.value"
+                  @change="saveOptionsList"
+                  @keyup.enter="$event.target.blur()"
+                  class="menu-input"
+                  style="height: 26px; font-size: 0.74rem; padding: 2px 6px; border: 1px solid transparent; border-radius: 3px; flex: 1;"
+                  placeholder="Nhập giá trị..."
+                />
+                <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0;">
+                  <button
+                    type="button"
+                    :disabled="oIdx === 0"
+                    @click="moveOption(oIdx, -1)"
+                    title="Chuyển lên"
+                    style="background: none; border: none; padding: 2px 4px; cursor: pointer; color: #64748b; font-size: 0.65rem;"
+                  >
+                    <i class="pi pi-arrow-up"></i>
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="oIdx === optionsList.length - 1"
+                    @click="moveOption(oIdx, 1)"
+                    title="Chuyển xuống"
+                    style="background: none; border: none; padding: 2px 4px; cursor: pointer; color: #64748b; font-size: 0.65rem;"
+                  >
+                    <i class="pi pi-arrow-down"></i>
+                  </button>
+                  <button
+                    type="button"
+                    @click="removeOption(oIdx)"
+                    title="Xóa tùy chọn này"
+                    style="background: none; border: none; padding: 2px 4px; cursor: pointer; color: #ef4444; font-size: 0.72rem;"
+                  >
+                    <i class="pi pi-trash"></i>
+                  </button>
+                </div>
+              </li>
+            </ul>
+
+            <!-- Form thêm mới tùy chọn -->
+            <div style="display: flex; gap: 4px; margin-top: 6px;">
+              <input
+                v-model="newOptionInput"
+                class="menu-input"
+                placeholder="+ Thêm tùy chọn mới..."
+                style="height: 28px; font-size: 0.74rem; flex: 1;"
+                @keyup.enter="addNewOption"
+              />
+              <button
+                type="button"
+                class="btn-save-mini"
+                @click="addNewOption"
+                title="Thêm vào danh sách"
+                style="flex-shrink: 0; min-width: 50px; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 3px; padding: 0 8px; background: #0284c7; color: #fff; border-color: #0284c7;"
+              >
+                <i class="pi pi-plus" style="font-size: 0.7rem;"></i>
+                <span>Thêm</span>
+              </button>
+            </div>
+          </div>
+
           <div v-if="isOptionsSaved" style="font-size: 0.68rem; color: #16a34a; font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 3px;">
             <i class="pi pi-check-circle" style="font-size: 0.72rem;"></i>
-            <span>Đã lưu danh sách tùy chọn!</span>
+            <span>Đã tự động lưu danh sách tùy chọn!</span>
           </div>
         </div>
 
@@ -1300,6 +1362,8 @@ const editFormulaTargetYear = ref("");
 const editFormulaUnit = ref("");
 const formulaTab = ref("fields");
 const editOptions = ref("");
+const optionsList = ref([]);
+const newOptionInput = ref("");
 const editFormWidth = ref("50");
 const editRequired = ref(false);
 const editIncludeInExport = ref(true);
@@ -1567,7 +1631,18 @@ watch(
     if (col) {
       editLabel.value = col.label || "";
       editFormat.value = col.format || "text";
-      editOptions.value = col.options || "";
+      const rawOpts = col.options;
+      if (Array.isArray(rawOpts)) {
+        optionsList.value = rawOpts.map((s) => String(s).trim()).filter(Boolean);
+        editOptions.value = optionsList.value.join(', ');
+      } else if (typeof rawOpts === 'string' && rawOpts.trim()) {
+        optionsList.value = rawOpts.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+        editOptions.value = rawOpts.trim();
+      } else {
+        optionsList.value = [];
+        editOptions.value = "";
+      }
+      newOptionInput.value = "";
       editFormWidth.value = String(col.formWidth || col.width || "50").replace("%", "");
       editRequired.value = Boolean(col.required);
       editSuggestEnabled.value = Boolean(col.suggestEnabled);
@@ -1764,9 +1839,6 @@ const removeRollupCondition = (index) => {
 };
 
 const closeMenu = () => {
-  if (props.column && editOptions.value !== undefined && editOptions.value.trim() !== (props.column.options || '').trim()) {
-    handleSaveOptions();
-  }
   emit("update:visible", false);
 };
 
@@ -1881,16 +1953,50 @@ const handleFormatChange = () => {
 const isOptionsSaved = ref(false);
 let optionsSavedTimer = null;
 
-const handleSaveOptions = () => {
+const saveOptionsList = () => {
   if (!props.column) return;
-  const trimmed = (editOptions.value || "").trim();
-  props.column.options = trimmed;
-  emit("change-options", { colId: props.column.id, options: trimmed });
+  const clean = (optionsList.value || []).map((s) => String(s || '').trim()).filter(Boolean);
+  const joined = clean.join(', ');
+  editOptions.value = joined;
+  props.column.options = joined;
+  emit("change-options", { colId: props.column.id, options: joined });
   isOptionsSaved.value = true;
   if (optionsSavedTimer) clearTimeout(optionsSavedTimer);
   optionsSavedTimer = setTimeout(() => {
     isOptionsSaved.value = false;
   }, 2500);
+};
+
+const addNewOption = () => {
+  const text = (newOptionInput.value || '').trim();
+  if (!text) return;
+  const parts = text.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+  parts.forEach((p) => {
+    if (!optionsList.value.includes(p)) {
+      optionsList.value.push(p);
+    }
+  });
+  newOptionInput.value = '';
+  saveOptionsList();
+};
+
+const removeOption = (idx) => {
+  if (idx >= 0 && idx < optionsList.value.length) {
+    optionsList.value.splice(idx, 1);
+    saveOptionsList();
+  }
+};
+
+const moveOption = (idx, direction) => {
+  const targetIdx = idx + direction;
+  if (targetIdx < 0 || targetIdx >= optionsList.value.length) return;
+  const [moved] = optionsList.value.splice(idx, 1);
+  optionsList.value.splice(targetIdx, 0, moved);
+  saveOptionsList();
+};
+
+const handleSaveOptions = () => {
+  saveOptionsList();
 };
 
 const handleSaveFormWidth = () => {
