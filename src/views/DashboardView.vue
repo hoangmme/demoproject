@@ -1577,7 +1577,7 @@ const drilldownAvailableViews = computed(() => {
   return views;
 });
 
-const getSetupColumnIdsForTable = (tableId, cardId = null) => {
+const getSetupColumnIdsForTable = (tableId, cardId = null, widget = null) => {
   const sanitizeRelCols = (cols) => {
     if (tableId === 'relatives' && Array.isArray(cols)) {
       return cols.map((id) => (id === 'countryName' ? 'countryNameTN' : id));
@@ -1586,6 +1586,25 @@ const getSetupColumnIdsForTable = (tableId, cardId = null) => {
   };
 
   const allDashboards = ensureStandardDashboards(availableTopicDashboards.value);
+
+  // 0. Cấu hình riêng biệt của từng Khối / Thẻ Thống kê (Per-Widget Isolated Columns)
+  if (widget) {
+    const wId = widget.id || widget._id;
+    if (wId) {
+      try {
+        const wLocal = localStorage.getItem(`stat_widget_cols_${wId}`);
+        if (wLocal) {
+          const parsed = JSON.parse(wLocal);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return sanitizeRelCols(parsed.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+          }
+        }
+      } catch (e) {}
+    }
+    if (widget.columns && Array.isArray(widget.columns) && widget.columns.length > 0) {
+      return sanitizeRelCols(widget.columns.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey'));
+    }
+  }
 
   // 1. Nếu có cardId cụ thể, kiểm tra cấu hình riêng của card đó
   if (cardId) {
@@ -1655,21 +1674,10 @@ const onDrilldownViewChange = async () => {
   drilldownDtFirst.value = 0;
   drilldownSelectedRows.value = [];
 
-  let loadedCols = getSetupColumnIdsForTable(tid, vId);
+  let loadedCols = getSetupColumnIdsForTable(tid, vId, drilldownWidget.value);
   if (loadedCols && loadedCols.length > 0) {
     drilldownSavedColIds.value = loadedCols;
   }
-
-  try {
-    const key = `child_dashboard_cols_${tid}_${vId}`;
-    const dbVal = await getAppSettings(key, null);
-    if (Array.isArray(dbVal) && dbVal.length > 0) {
-      const sanitized = dbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
-      if (sanitized.length > 0) {
-        drilldownSavedColIds.value = sanitized;
-      }
-    }
-  } catch (e) {}
 };
 
 const drilldownColumns = computed(() => {
@@ -1690,9 +1698,9 @@ const drilldownColumns = computed(() => {
     }
   });
 
-  // Ưu tiên thứ tự các cột mà người dùng đã setup trên view được chọn
+  // Ưu tiên thứ tự các cột mà người dùng đã setup riêng cho widget này hoặc view
   const activeViewId = drilldownSelectedViewId.value || drilldownWidget.value?.viewId || drilldownWidget.value?.cardId || 'all';
-  const setupColIds = drilldownSavedColIds.value || getSetupColumnIdsForTable(tid, activeViewId);
+  const setupColIds = drilldownSavedColIds.value || getSetupColumnIdsForTable(tid, activeViewId, drilldownWidget.value);
 
   if (setupColIds && Array.isArray(setupColIds) && setupColIds.length > 0) {
     const orderedCols = [];
@@ -1731,39 +1739,34 @@ const onDrilldownColumnsChange = async (newColIds) => {
   const sanitized = newColIds.filter((id) => id && id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
   drilldownSavedColIds.value = sanitized;
 
-  const tid = drilldownWidget.value?.topicId || drilldownSourceType.value || 'trips';
-  const vId = drilldownSelectedViewId.value || 'all';
-  const key = `child_dashboard_cols_${tid}_${vId}`;
+  const w = drilldownWidget.value;
+  const wId = w?.id || w?._id;
 
-  // 1. Lưu ngay vào localStorage cho View đang chọn
-  try {
-    localStorage.setItem(key, JSON.stringify(sanitized));
-  } catch (e) {}
+  // 1. Lưu cấu hình cột riêng biệt cho Khối / Thẻ Thống kê này (Isolated per-widget)
+  if (wId) {
+    try {
+      localStorage.setItem(`stat_widget_cols_${wId}`, JSON.stringify(sanitized));
+      saveAppSettings(`stat_widget_cols_${wId}`, sanitized).catch(() => {});
+    } catch (e) {}
+  }
 
-  // 2. Đồng bộ vào cấu hình View của chuyên đề/bảng nếu có
-  try {
-    const dList = availableTopicDashboards.value || [];
-    const tIdx = dList.findIndex((d) => d && (d.id === tid || d.id === drilldownSourceType.value));
-    if (tIdx >= 0) {
-      const topic = dList[tIdx];
-      if (vId === 'all') {
-        topic.columns = sanitized;
-      }
-      if (Array.isArray(topic.metricCards)) {
-        const cIdx = topic.metricCards.findIndex((c) => c && (c.id === vId || c.condition === vId));
-        if (cIdx >= 0) {
-          topic.metricCards[cIdx].columns = sanitized;
+  // 2. Gán trực tiếp vào object widget trong customGroups để lưu bền vững
+  if (w) {
+    w.columns = sanitized;
+    try {
+      if (Array.isArray(customGroups.value)) {
+        for (const grp of customGroups.value) {
+          const m = (grp.widgets || []).find((x) => x.id === wId || x === w);
+          if (m) {
+            m.columns = sanitized;
+            break;
+          }
         }
+        localStorage.setItem('dashboard_custom_groups', JSON.stringify(customGroups.value));
+        saveAppSettings('dashboard_custom_groups', customGroups.value).catch(() => {});
       }
-      localStorage.setItem('custom_dashboards_config', JSON.stringify(dList));
-      saveAppSettings('custom_dashboards_config', dList).catch(() => {});
-    }
-  } catch (e) {}
-
-  // 3. Lưu vào Directus DB bất đồng bộ
-  try {
-    await saveAppSettings(key, sanitized);
-  } catch (e) {}
+    } catch (e) {}
+  }
 };
 
 const filteredDrilldownList = computed(() => {
@@ -3632,13 +3635,24 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
   const tid = widget.topicId || source;
   const targetViewId = widget.viewId || widget.cardId || 'all';
   drilldownSelectedViewId.value = targetViewId;
-  const initialCols = getSetupColumnIdsForTable(tid, targetViewId);
+  const initialCols = getSetupColumnIdsForTable(tid, targetViewId, widget);
   if (initialCols && initialCols.length > 0) {
     drilldownSavedColIds.value = initialCols;
   }
 
   (async () => {
     try {
+      const wId = widget.id || widget._id;
+      if (wId) {
+        const wDbVal = await getAppSettings(`stat_widget_cols_${wId}`, null);
+        if (Array.isArray(wDbVal) && wDbVal.length > 0) {
+          const sanitized = wDbVal.filter((id) => id !== 'status' && id !== 'tripStatus' && id !== '_primaryKey');
+          if (sanitized.length > 0) {
+            drilldownSavedColIds.value = sanitized;
+            return;
+          }
+        }
+      }
       const k = `child_dashboard_cols_${tid}_${targetViewId}`;
       const dbVal = await getAppSettings(k, null);
       if (Array.isArray(dbVal) && dbVal.length > 0) {

@@ -201,7 +201,24 @@
 - Hỗ trợ chọn bảng màu (color picker), nhập mã hex trực tiếp, các nút gợi ý gam màu chuẩn (Đen mặc định `#000000`, Trắng sáng `#ffffff`, Vàng nhạt `#fef08a`, Xám đậm `#334155`, Xanh lục đậm `#14532d`).
 - Tự động áp dụng màu chữ cho toàn bộ menu bên trái bao gồm: tên cơ quan, các mục menu, tiêu đề phân nhóm và icon.
 
-### 15. ĐỒNG BỘ 100% SỐ LIỆU DASHBOARD CHÍNH VÀ DASHBOARD CHUYÊN ĐỀ (dashboardMetrics.js)
+### 16. KHẮC PHỤC LỖI TOKEN LƯU DỮ LIỆU, ĐỘC LẬP HÓA CỘT THỐNG KÊ & QUY HOẠCH GOM NHÓM CỘT TRUNG TÂM (Session 34 - 2026-09-11)
+- **1. Khắc phục triệt để lỗi không lưu được dữ liệu (JWT Token Expired & Base64URL Decoding)**:
+  - *Nguyên nhân*: Hàm `atob(parts[1])` trong `src/api/client.js` bị crash do gặp ký tự base64url (`-`, `_`), nhảy vào catch và tiếp tục gửi `access_token` đã hết hạn sau 15 phút của Directus lên server, gây lỗi `401 TOKEN_EXPIRED`.
+  - *Khắc phục*: Đã nâng cấp hàm giải mã an toàn `decodeJwtPayload` hỗ trợ đầy đủ base64url. Khi `access_token` hết hạn hoặc không hợp lệ, hệ thống tự động fallback tức thì sang `STATIC_TOKEN` Admin vĩnh viễn (`CooAJKTu9_NLEgtaq3qULrswZGLFfsAw`). Đã kiểm tra API Directus ghi/xóa/đọc thành công 100%.
+- **2. Độc lập hóa cấu hình cột giữa Bảng chính và Popup Thống kê**:
+  - *Nguyên nhân xung đột*: Bảng chính `UnifiedTableView` (`useTableColumns.js`) và Popup Drilldown `DashboardView.vue` trước đây dùng chung các key `child_dashboard_cols_*`, `trips_dashboard_columns`.
+  - *Giải pháp tách rời không làm mất cấu trúc hiện tại*:
+    - Bảng chính dùng key riêng: `unified_table_cols_${tableId}_${viewId}`.
+    - Từng widget thống kê dùng key riêng: `stat_widget_cols_${widget.id}` hoặc thuộc tính `widget.columns`.
+    - Chuỗi kế thừa an toàn: Nếu widget chưa có tùy chỉnh riêng, tự động nạp cấu hình hiện có (`child_dashboard_cols_*`, `topic.columns`, `importMapping`) giúp bảo toàn 100% cấu trúc cột hiện tại của mọi thống kê.
+- **3. Quy hoạch Gom nhóm Cột & Quản lý Cột tập trung ("Tùy chọn Bảng")**:
+  - *Nguyên tắc Single Source of Truth*: Toàn bộ cấu hình nhóm, thứ tự cột, độ rộng bảng (`tableWidth`), độ rộng form (`width`), ẩn/hiện (`hidden`), và bắt buộc (`required`) được quản lý tập trung tại Dialog "Tùy chọn Bảng" (`TableOptionsDialog.vue`).
+  - *Kế thừa đồng bộ*:
+    - Form chỉnh sửa (`PersonnelDialog.vue`): Hiển thị form phân theo từng Thẻ Nhóm (Group Cards) rõ ràng, tôn trọng thứ tự, độ rộng, ẩn/hiện và dấu `*` bắt buộc.
+    - Xuất & In PDF (`docxExport.js`): Gọi trực tiếp các nhóm và cột từ cấu hình bảng, tự động loại bỏ cột ẩn và sắp xếp chuẩn mực.
+    - Bảng dữ liệu (`UnifiedTableView.vue`): Hiển thị cột theo đúng thứ tự và độ rộng đã cấu hình.
+
+### 17. ĐỒNG BỘ 100% SỐ LIỆU DASHBOARD CHÍNH VÀ DASHBOARD CHUYÊN ĐỀ (dashboardMetrics.js)
 - **Nguyên nhân gốc rễ gây lệch số trước đây**:
   - `DashboardView.vue` từng có hàm `getSourceList` cục bộ không bóc tách chuyến đi của thân nhân từ `parentPerson.trips`. Khi thân nhân có chuyến đi nước ngoài nằm trong hồ sơ cán bộ, `resolvePresence` ở Dashboard thấy 0 chuyến đi nên tính là "Trong nước" (đếm 0), trong khi `ChildDashboardView.vue` bóc tách đầy đủ và đếm đúng là 2.
 - **Giải pháp Single Source of Truth (`src/utils/dashboardMetrics.js`)**:

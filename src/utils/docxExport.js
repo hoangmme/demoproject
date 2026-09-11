@@ -251,6 +251,9 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       curCols = (personnelStore?.importMappingPersonnel || []).flatMap((g) => g.columns || []);
     }
   }
+  if (Array.isArray(curCols)) {
+    curCols = curCols.filter((c) => !c.hidden);
+  }
 
   // 3. Khóa chính và Tiêu đề bản ghi hiện tại (Dựa trên cấu hình cột isKey & isTitle)
   const keyCol = (curCols || []).find((c) => c.isKey || c.format === 'id');

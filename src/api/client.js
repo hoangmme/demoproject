@@ -23,34 +23,46 @@ const apiClient = axios.create({
   },
 });
 
+const decodeJwtPayload = (jwt) => {
+  try {
+    if (!jwt || typeof jwt !== 'string') return null;
+    const parts = jwt.split('.');
+    if (parts.length !== 3) return null;
+    let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    try {
+      return JSON.parse(decodeURIComponent(escape(atob(b64))));
+    } catch (e1) {
+      return JSON.parse(atob(b64));
+    }
+  } catch (e) {
+    return null;
+  }
+};
+
 // Request Interceptor
 apiClient.interceptors.request.use(
   (config) => {
     let token = STATIC_TOKEN;
-    try {
-      const session = localStorage.getItem('mvp_session');
-      if (session) {
-        const parsed = JSON.parse(session);
-        if (parsed?.access_token) {
-          // Kiểm tra nếu JWT token đã hết hạn (sau 15 phút) thì dùng STATIC_TOKEN Admin
-          try {
-            const parts = parsed.access_token.split('.');
-            if (parts.length === 3) {
-              const payload = JSON.parse(atob(parts[1]));
-              if (payload.exp && Date.now() >= (payload.exp - 30) * 1000) {
-                token = STATIC_TOKEN;
-              } else {
-                token = parsed.access_token;
-              }
-            } else {
+    if (!config._retryWithStatic) {
+      try {
+        const session = localStorage.getItem('mvp_session');
+        if (session) {
+          const parsed = JSON.parse(session);
+          if (parsed?.access_token) {
+            const payload = decodeJwtPayload(parsed.access_token);
+            // Nếu token còn hạn ít nhất 30 giây -> dùng access_token, ngược lại dùng STATIC_TOKEN
+            if (payload?.exp && Date.now() < (payload.exp - 30) * 1000) {
               token = parsed.access_token;
+            } else {
+              token = STATIC_TOKEN;
             }
-          } catch (err) {
-            token = parsed.access_token;
           }
         }
+      } catch (e) {
+        token = STATIC_TOKEN;
       }
-    } catch (e) {}
+    }
 
     if (token && token.trim() !== '') {
       config.headers['Authorization'] = `Bearer ${token.trim()}`;

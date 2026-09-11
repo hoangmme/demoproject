@@ -55,7 +55,7 @@ export function useTableColumns({
   const getCurrentCardColKey = () => {
     const tid = unref(topicId) || 'default';
     const cid = getCurrentCardId();
-    return `child_dashboard_cols_${tid}_${cid}`;
+    return `unified_table_active_cols_${tid}_${cid}`;
   };
 
   const onColumnsChange = async (newCols) => {
@@ -64,17 +64,13 @@ export function useTableColumns({
     const tid = unref(topicId) || 'default';
     const cid = getCurrentCardId();
     const cardIdx = unref(activeMetricCardIdx) <= 0 ? 0 : unref(activeMetricCardIdx);
-    const currentKey = `child_dashboard_cols_${tid}_${cid}`;
+    const currentKey = `unified_table_active_cols_${tid}_${cid}`;
 
-    // 1. Lưu ngay vào localStorage tức thì
+    // 1. Lưu ngay vào localStorage tức thì (khóa độc lập cho Bảng chính)
     try {
       localStorage.setItem(currentKey, JSON.stringify(selectedColIds.value));
       if (cardIdx === 0) {
-        localStorage.setItem(`child_dashboard_cols_${tid}`, JSON.stringify(selectedColIds.value));
-        localStorage.setItem(`child_dashboard_cols_${tid}_all`, JSON.stringify(selectedColIds.value));
-        if (tid === 'trips') localStorage.setItem('trips_dashboard_columns', JSON.stringify(selectedColIds.value));
-        else if (tid === 'personnel') localStorage.setItem('personnel_active_columns', JSON.stringify(selectedColIds.value));
-        else if (tid === 'relatives') localStorage.setItem('relative_active_columns', JSON.stringify(selectedColIds.value));
+        localStorage.setItem(`unified_table_active_cols_${tid}`, JSON.stringify(selectedColIds.value));
       }
     } catch (e) {}
 
@@ -103,15 +99,11 @@ export function useTableColumns({
       } catch (e) {}
     }
 
-    // 3. Lưu bất đồng bộ vào DB settings
+    // 3. Lưu bất đồng bộ vào DB settings theo khóa độc lập của bảng chính
     try {
       await saveAppSettings(currentKey, selectedColIds.value);
       if (cardIdx === 0) {
-        await saveAppSettings(`child_dashboard_cols_${tid}`, selectedColIds.value);
-        await saveAppSettings(`child_dashboard_cols_${tid}_all`, selectedColIds.value);
-        if (tid === 'trips') await saveAppSettings('trips_dashboard_columns', selectedColIds.value);
-        else if (tid === 'personnel') await saveAppSettings('personnel_active_columns', selectedColIds.value);
-        else if (tid === 'relatives') await saveAppSettings('relative_active_columns', selectedColIds.value);
+        await saveAppSettings(`unified_table_active_cols_${tid}`, selectedColIds.value);
       }
     } catch (e) {}
   };
@@ -122,7 +114,7 @@ export function useTableColumns({
     const cardIdx = unref(activeMetricCardIdx) <= 0 ? 0 : unref(activeMetricCardIdx);
     const currentCard = cards[cardIdx];
     const cid = currentCard?.id || (cardIdx === 0 ? 'all' : `card_${cardIdx}`);
-    const currentKey = `child_dashboard_cols_${tid}_${cid}`;
+    const currentKey = `unified_table_active_cols_${tid}_${cid}`;
 
     const sanitizeRelCols = (cols) => {
       if (unref(currentDashboardConfig)?.source === 'relatives' && Array.isArray(cols)) {
@@ -160,11 +152,15 @@ export function useTableColumns({
       }
     }
 
-    // 2. Kiểm tra cache localStorage riêng của view này (Ưu tiên cao hơn DB fallback)
-    const keysToCheck = [currentKey];
+    // 2. Kiểm tra cache localStorage: Ưu tiên khóa riêng của Bảng chính, sau đó fallback an toàn
+    const keysToCheck = [
+      currentKey,
+      `unified_table_active_cols_${tid}`,
+      `child_dashboard_cols_${tid}_${cid}`,
+      `child_dashboard_cols_${tid}_all`,
+      `child_dashboard_cols_${tid}`,
+    ];
     if (cardIdx === 0) {
-      keysToCheck.push(`child_dashboard_cols_${tid}_all`);
-      keysToCheck.push(`child_dashboard_cols_${tid}`);
       if (tid === 'trips') keysToCheck.push('trips_dashboard_columns');
       else if (tid === 'personnel') keysToCheck.push('personnel_active_columns');
       else if (tid === 'relatives') keysToCheck.push('relative_active_columns');

@@ -120,21 +120,32 @@
       </div>
     </div>
 
-    <!-- Contents Area: 100% Dynamic Flat Form -->
-    <div v-show="activeTab === 'info'" style="max-height: 70vh; overflow-y: auto; padding: 6px 12px 16px 6px;">
-      <div class="form-grid">
-        <template v-for="col in allTableColumns" :key="col.id">
-          <div class="field-item" :style="getColItemStyle(col.formWidth || col.width)">
-            <label class="field-label" :title="col.label">
-              <span class="label-text">{{ col.label }}</span>
-              <span v-if="col.required" style="color: red; margin-left: 2px;">*</span>
-            </label>
-            <DynamicField
-              v-model="form[col.id]"
-              :col="col"
-            />
-          </div>
-        </template>
+    <!-- Contents Area: 100% Dynamic Grouped Form -->
+    <div v-show="activeTab === 'info'" class="dialog-grouped-container">
+      <div
+        v-for="(grp, gIdx) in formGroups"
+        :key="grp.title || gIdx"
+        class="form-group-section"
+      >
+        <div class="form-group-header">
+          <i class="pi pi-folder-open form-group-icon"></i>
+          <span class="form-group-title">{{ grp.title }}</span>
+          <span class="form-group-count">({{ grp.columns.length }} trường)</span>
+        </div>
+        <div class="form-grid">
+          <template v-for="col in grp.columns" :key="col.id">
+            <div class="field-item" :style="getColItemStyle(col.formWidth || col.width)">
+              <label class="field-label" :title="col.label">
+                <span class="label-text">{{ col.label }}</span>
+                <span v-if="col.required" style="color: #ef4444; font-weight: 800; margin-left: 2px;">*</span>
+              </label>
+              <DynamicField
+                v-model="form[col.id]"
+                :col="col"
+              />
+            </div>
+          </template>
+        </div>
       </div>
     </div>
 
@@ -364,6 +375,79 @@ const allTableColumns = computed(() => {
     });
   });
   return list;
+});
+
+const formGroups = computed(() => {
+  const src = recordSource.value;
+  let rawGroups = [];
+  if (src === 'trips') {
+    rawGroups = personnelStore.importMappingTrips || [];
+  } else if (src === 'relatives') {
+    rawGroups = personnelStore.importMappingRelative || [];
+  } else if (src === 'personnel') {
+    rawGroups = personnelStore.importMappingPersonnel || [];
+  } else {
+    let customDashboards = [];
+    try {
+      const local = localStorage.getItem('custom_dashboards_config');
+      if (local) customDashboards = JSON.parse(local);
+    } catch (e) {}
+    const cDash = customDashboards.find((d) => d.id === src);
+    if (cDash?.groups && cDash.groups.length > 0) rawGroups = cDash.groups;
+    else if (cDash?.customColumns) rawGroups = [{ title: 'Thông tin chung', columns: cDash.customColumns }];
+  }
+
+  const cols = allTableColumns.value;
+  const colMap = new Map();
+  cols.forEach((c) => {
+    if (c && c.id && c.id !== 'stt' && !c.hidden) {
+      colMap.set(c.id, c);
+    }
+  });
+
+  if (!rawGroups || rawGroups.length === 0) {
+    return [{ title: 'Thông tin chung', columns: Array.from(colMap.values()) }];
+  }
+
+  const result = [];
+  const placedColIds = new Set();
+
+  rawGroups.forEach((grp, idx) => {
+    const grpCols = [];
+    (grp.columns || []).forEach((c) => {
+      if (!c || !c.id || c.id === 'stt' || c.hidden) return;
+      if (colMap.has(c.id)) {
+        grpCols.push({ ...colMap.get(c.id), ...c });
+        placedColIds.add(c.id);
+      } else if (isColumnVisibleInDetail(c)) {
+        grpCols.push(c);
+        placedColIds.add(c.id);
+      }
+    });
+    if (grpCols.length > 0) {
+      result.push({
+        title: grp.title || `Nhóm ${idx + 1}`,
+        columns: grpCols,
+      });
+    }
+  });
+
+  // Collect any remaining columns
+  const remaining = [];
+  colMap.forEach((c, id) => {
+    if (!placedColIds.has(id) && isColumnVisibleInDetail(c)) {
+      remaining.push(c);
+    }
+  });
+  if (remaining.length > 0) {
+    if (result.length > 0) {
+      result[0].columns.push(...remaining);
+    } else {
+      result.push({ title: 'Thông tin chung', columns: remaining });
+    }
+  }
+
+  return result.length > 0 ? result : [{ title: 'Thông tin chung', columns: Array.from(colMap.values()) }];
 });
 
 const dialogHeader = computed(() => {
@@ -979,5 +1063,53 @@ const handleSwitchRecord = (newPerson, targetTableId = null) => {
   border-color: #0284c7;
   box-shadow: 0 1px 3px rgba(2, 132, 199, 0.35);
   font-weight: 700;
+}
+
+.dialog-grouped-container {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 8px 12px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px 14px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.form-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #e0e7ff;
+}
+
+.form-group-icon {
+  color: #6366f1;
+  font-size: 1rem;
+}
+
+.form-group-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.form-group-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 9999px;
 }
 </style>

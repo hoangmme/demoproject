@@ -77,6 +77,18 @@
           style="font-size: 0.8rem;"
         />
 
+        <!-- ⚙️ Tùy chọn Bảng (Gom nhóm, thứ tự, độ rộng, ẩn/hiện, bắt buộc) -->
+        <Button
+          v-if="authStore.isAdmin"
+          icon="pi pi-table"
+          label="Tùy chọn Bảng"
+          severity="secondary"
+          size="small"
+          @click="isTableOptionsDialogOpen = true"
+          title="Quản lý gom nhóm cột, thứ tự, độ rộng bảng/form, ẩn/hiện và bắt buộc nhập cho toàn bảng"
+          style="font-size: 0.8rem; font-weight: 600;"
+        />
+
         <!-- ⚙️ Tùy chọn Cột hiển thị Popover -->
         <div class="header-menu-wrapper" @mouseenter="onMouseEnterFilter" @mouseleave="onMouseLeaveFilter">
           <Button
@@ -1020,6 +1032,16 @@
       @delete="deleteView(selectedViewForEdit, selectedViewIdx)"
     />
 
+    <!-- Dialog Tùy chọn Bảng (Gom nhóm cột, thứ tự, độ rộng bảng/form, ẩn/hiện, bắt buộc) -->
+    <TableOptionsDialog
+      v-model="isTableOptionsDialogOpen"
+      :tableId="currentDashboardConfig?.source || 'trips'"
+      :tableTitle="currentDashboardConfig?.title || 'Bảng dữ liệu'"
+      :groups="currentTableGroups"
+      :customDashboards="customDashboards"
+      @save="handleTableOptionsSaved"
+    />
+
     <!-- Advanced Word / PDF Export Dialog -->
     <AdvancedDocxExportDialog
       v-model="isExportDocxDialogOpen"
@@ -1159,6 +1181,7 @@ import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import ExcelImportWizard from '@/components/common/ExcelImportWizard.vue';
 import ExportImportMenu from '@/components/common/ExportImportMenu.vue';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
+import TableOptionsDialog from '@/components/common/TableOptionsDialog.vue';
 import UnifiedTableViewTabs from '@/components/unified-table/UnifiedTableViewTabs.vue';
 import { ensureStandardDashboards, getUnifiedTableColumns, getLinkedRowsByConfig } from '@/utils/tableRegistry';
 import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
@@ -1339,6 +1362,50 @@ const availableRelativeColsForRollup = computed(() => {
   });
   return cols;
 });
+
+const isTableOptionsDialogOpen = ref(false);
+
+const currentTableGroups = computed(() => {
+  const src = currentDashboardConfig.value?.source || 'trips';
+  if (src === 'trips') return personnelStore.importMappingTrips || [];
+  if (src === 'personnel') return personnelStore.importMappingPersonnel || [];
+  if (src === 'relatives') return personnelStore.importMappingRelative || [];
+
+  const tid = topicId.value;
+  const cDash = (customDashboards.value || []).find((d) => d.id === tid);
+  if (cDash) {
+    if (Array.isArray(cDash.groups) && cDash.groups.length > 0) return cDash.groups;
+    if (Array.isArray(cDash.customColumns) && cDash.customColumns.length > 0) {
+      return [{ title: 'Thông tin chung', columns: cDash.customColumns }];
+    }
+  }
+  return [{ title: 'Thông tin chung', columns: [] }];
+});
+
+const handleTableOptionsSaved = async (newGroups) => {
+  const src = currentDashboardConfig.value?.source || 'trips';
+  if (src === 'trips') personnelStore.importMappingTrips = newGroups;
+  else if (src === 'personnel') personnelStore.importMappingPersonnel = newGroups;
+  else if (src === 'relatives') personnelStore.importMappingRelative = newGroups;
+  else {
+    const tid = topicId.value;
+    const cDash = (customDashboards.value || []).find((d) => d.id === tid);
+    if (cDash) {
+      cDash.groups = newGroups;
+      cDash.customColumns = newGroups.flatMap((g) => g.columns || []);
+      try {
+        localStorage.setItem('custom_dashboards_config', JSON.stringify(customDashboards.value));
+        await saveAppSettings('custom_dashboards_config', customDashboards.value);
+      } catch (e) {}
+    }
+  }
+
+  // Cập nhật danh sách cột hiển thị trên bảng
+  const visibleCols = (newGroups || []).flatMap((g) => g.columns || []).filter((c) => !c.hidden).map((c) => c.id);
+  if (visibleCols.length > 0) {
+    await onColumnsChange(visibleCols);
+  }
+};
 
 const openAddColumnDialog = () => {
   addChildColTargetIndex.value = -1;
