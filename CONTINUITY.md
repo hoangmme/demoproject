@@ -201,6 +201,25 @@
 - Hỗ trợ chọn bảng màu (color picker), nhập mã hex trực tiếp, các nút gợi ý gam màu chuẩn (Đen mặc định `#000000`, Trắng sáng `#ffffff`, Vàng nhạt `#fef08a`, Xám đậm `#334155`, Xanh lục đậm `#14532d`).
 - Tự động áp dụng màu chữ cho toàn bộ menu bên trái bao gồm: tên cơ quan, các mục menu, tiêu đề phân nhóm và icon.
 
+### 18. HIỂN THỊ ĐẦY ĐỦ 100% CÁC NHÓM CỘT TRONG DIALOG XUẤT PDF / WORD (Session 36 - 2026-09-11)
+- **Hiện tượng**:
+  - Khi mở Popup Xuất PDF/Word (`AdvancedDocxExportDialog.vue`) ở Bảng 1 (ví dụ Cán bộ 42 trường): Tổng số hiển thị đúng 42/42 trường, nhưng danh sách nhóm bên dưới chỉ hiện 1 nhóm duy nhất ("Thông tin cán bộ" 25/25 trường). Hai nhóm còn lại ("Lưu ý chính trị" 16 trường và "Quá trình công tác" 1 trường) không hiển thị.
+- **Nguyên nhân cốt lõi**:
+  1. Thiếu prop `groups`: `AdvancedDocxExportDialog` không khai báo prop `groups`. `UnifiedTableView.vue` và `PersonnelDialog.vue` không truyền mảng nhóm đang xem (`currentTableGroups` / `formGroups`) vào dialog.
+  2. Hàm `mainTableGroups` trong dialog chỉ đọc từ `personnelStore.importMappingPersonnel`. Nếu Pinia store chưa đồng bộ đủ 3 nhóm hoặc cache chỉ có 1 nhóm mặc định, dialog rơi vào tình trạng chỉ có 1 nhóm.
+  3. Khi có các trường không thuộc nhóm 1, logic cũ tự động nhồi nhét đè toàn bộ `remaining` trường vào `list[0]`, làm mất cơ hội hiển thị các nhóm tiếp theo.
+  4. Thuộc tính tiêu đề nhóm: Cũ chỉ kiểm tra `g.title`, nếu nhóm có tên ở `g.group` hoặc `g.name` thì bị fallback thành `'Nhóm'`.
+- **Giải pháp xử lý triệt để**:
+  1. `AdvancedDocxExportDialog.vue`:
+     - Khai báo prop `:groups="currentTableGroups"` với kiểu Array.
+     - Hàm `getResolvedGroupsForTable`: Ưu tiên đọc từ Store. Nếu Store chưa đủ nhóm, tự động fallback sang LocalStorage đa tầng (`mapping_config_*`, `import_mapping_*`, `app_settings_mapping_config_*`) để lấy đầy đủ 100% nhóm.
+     - `cleanGroupsWithCols` & `mainTableGroups`: Đọc tên nhóm linh hoạt `g.title || g.group || g.name || ('Nhóm ' + (gIdx + 1))`.
+     - Các trường bổ sung nếu có sẽ được đưa vào nhóm riêng biệt `Các trường bổ sung / Khác`, tuyệt đối không nhồi đè vào nhóm 1.
+  2. `UnifiedTableView.vue`:
+     - Truyền trực tiếp `:groups="currentTableGroups"` vào `<AdvancedDocxExportDialog>`.
+  3. `PersonnelDialog.vue`:
+     - Truyền trực tiếp `:groups="formGroups"` vào `<AdvancedDocxExportDialog>`.
+
 ### 16. KHẮC PHỤC LỖI TOKEN LƯU DỮ LIỆU, ĐỘC LẬP HÓA CỘT THỐNG KÊ & QUY HOẠCH GOM NHÓM CỘT TRUNG TÂM (Session 34 - 2026-09-11)
 - **1. Khắc phục triệt để lỗi không lưu được dữ liệu (JWT Token Expired & Base64URL Decoding)**:
   - *Nguyên nhân*: Hàm `atob(parts[1])` trong `src/api/client.js` bị crash do gặp ký tự base64url (`-`, `_`), nhảy vào catch và tiếp tục gửi `access_token` đã hết hạn sau 15 phút của Directus lên server, gây lỗi `401 TOKEN_EXPIRED`.

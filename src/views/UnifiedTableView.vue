@@ -1025,6 +1025,7 @@
       :allPersonnel="allPersonnelForExport"
       :tableId="currentDashboardConfig?.source || 'trips'"
       :columns="allAvailableColumnsList"
+      :groups="currentTableGroups"
     />
 
     <!-- PDF Preview Dialog (Direct browser preview & print/download) -->

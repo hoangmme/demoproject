@@ -200,6 +200,7 @@
     :targetPerson="form"
     :tableId="recordSource"
     :columns="allTableColumns"
+    :groups="formGroups"
   />
 
   <!-- Dialog Nhập liệu mới đồng bộ như ở menu -->

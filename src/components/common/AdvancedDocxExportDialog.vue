@@ -637,6 +637,7 @@ const props = defineProps({
   allPersonnel: { type: Array, default: () => [] },
   tableId: { type: String, default: 'personnel' },
   columns: { type: Array, default: () => [] },
+  groups: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -824,21 +825,51 @@ const toggleAllCustomTableFields = (ct, selectAll = true) => {
 const selectedGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 const selectedRelativeGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 
-const personnelGroups = computed(() => personnelStore.importMappingPersonnel || []);
+const getResolvedGroupsForTable = (tableId) => {
+  let list = [];
+  if (tableId === 'trips') list = personnelStore.importMappingTrips || [];
+  else if (tableId === 'personnel') list = personnelStore.importMappingPersonnel || [];
+  else if (tableId === 'relatives') list = personnelStore.importMappingRelative || [];
+
+  if (Array.isArray(list) && list.length > 1) return list;
+
+  // Fallback sang localStorage nếu store chưa tải đủ nhóm
+  try {
+    const keys = tableId === 'personnel'
+      ? ['mapping_config_personnel', 'import_mapping_personnel', 'importMappingPersonnel', 'app_settings_mapping_config_personnel']
+      : tableId === 'relatives'
+        ? ['mapping_config_relative', 'import_mapping_relative', 'importMappingRelative', 'app_settings_mapping_config_relative']
+        : tableId === 'trips'
+          ? ['mapping_config_trips', 'import_mapping_trips', 'importMappingTrips', 'app_settings_mapping_config_trips']
+          : [`custom_table_groups_${tableId}`];
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > (list?.length || 0)) {
+          return parsed;
+        }
+      }
+    }
+  } catch (e) {}
+  return list || [];
+};
+
+const personnelGroups = computed(() => getResolvedGroupsForTable('personnel'));
 const otherPersonnelGroups = computed(() => personnelGroups.value.slice(1));
-const relativeGroups = computed(() => personnelStore.importMappingRelative || []);
-const tripsGroups = computed(() => personnelStore.importMappingTrips || []);
+const relativeGroups = computed(() => getResolvedGroupsForTable('relatives'));
+const tripsGroups = computed(() => getResolvedGroupsForTable('trips'));
 
 const cleanGroupsWithCols = (groups) => {
   if (!Array.isArray(groups)) return [];
   const list = [];
   const seen = new Set();
-  groups.forEach((g) => {
-    const valid = (g.columns || []).filter((c) => c.id && c.id !== 'stt' && !seen.has(c.id));
+  groups.forEach((g, gIdx) => {
+    const valid = (g.columns || []).filter((c) => c && c.id && c.id !== 'stt' && !seen.has(c.id));
     valid.forEach((c) => seen.add(c.id));
     if (valid.length > 0) {
       list.push({
-        title: g.title || 'Nhóm',
+        title: g.title || g.group || g.name || (`Nhóm ${gIdx + 1}`),
         columns: valid,
       });
     }
@@ -898,35 +929,41 @@ const flatMainCols = computed(() => {
 const mainTableGroups = computed(() => {
   const tId = currentTableId.value;
   let raw = [];
-  if (tId === 'trips') raw = tripsGroups.value;
-  else if (tId === 'personnel') raw = personnelGroups.value;
-  else if (tId === 'relatives') raw = relativeGroups.value;
-  else {
+
+  // Ưu tiên 1: props.groups truyền trực tiếp từ Bảng dữ liệu đang xem
+  if (Array.isArray(props.groups) && props.groups.length > 0) {
+    raw = props.groups;
+  } else if (tId === 'trips') {
+    raw = tripsGroups.value;
+  } else if (tId === 'personnel') {
+    raw = personnelGroups.value;
+  } else if (tId === 'relatives') {
+    raw = relativeGroups.value;
+  } else {
     try {
       const local = localStorage.getItem(`custom_table_groups_${tId}`);
       if (local) raw = JSON.parse(local);
     } catch (e) {}
   }
+
   if (Array.isArray(raw) && raw.length > 0) {
     const list = [];
     const seen = new Set();
-    raw.forEach((g) => {
-      const valid = (g.columns || []).filter((c) => c.id && c.id !== 'stt' && !seen.has(c.id));
+    raw.forEach((g, gIdx) => {
+      const valid = (g.columns || []).filter((c) => c && c.id && c.id !== 'stt' && !seen.has(c.id));
       valid.forEach((c) => seen.add(c.id));
       if (valid.length > 0) {
         list.push({
-          title: g.title || 'Nhóm',
+          title: g.title || g.group || g.name || (`Nhóm ${gIdx + 1}`),
           columns: valid,
         });
       }
     });
+
+    // Các trường phát sinh chưa thuộc nhóm nào được gom vào nhóm bổ sung độc lập (không nhét đè vào nhóm 1)
     const remaining = (flatMainCols.value || []).filter((c) => !seen.has(c.id));
     if (remaining.length > 0) {
-      if (list.length > 0) {
-        list[0].columns.push(...remaining);
-      } else {
-        list.push({ title: 'Thông tin chung', columns: remaining });
-      }
+      list.push({ title: 'Các trường bổ sung / Khác', columns: remaining });
     }
     if (list.length > 0) return list;
   }
