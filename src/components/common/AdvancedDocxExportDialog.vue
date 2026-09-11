@@ -5,7 +5,7 @@
     :header="dialogTitle"
     :baseZIndex="16000"
     :style="{ width: '840px', maxWidth: '96vw', zIndex: 16000 }"
-    :contentStyle="{ maxHeight: '82vh', overflowY: 'auto' }"
+    :contentStyle="{ maxHeight: '88vh', overflowY: 'auto' }"
     :breakpoints="{ '640px': '98vw' }"
   >
     <div class="docx-export-container">
@@ -825,34 +825,74 @@ const toggleAllCustomTableFields = (ct, selectAll = true) => {
 const selectedGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 const selectedRelativeGroupIndices = ref([0, 1, 2, 3, 4, 5]);
 
+const countGroupCols = (arr) => {
+  if (!Array.isArray(arr)) return 0;
+  return arr.reduce((sum, g) => sum + (Array.isArray(g.columns) ? g.columns.length : 0), 0);
+};
+
 const getResolvedGroupsForTable = (tableId) => {
   let list = [];
   if (tableId === 'trips') list = personnelStore.importMappingTrips || [];
   else if (tableId === 'personnel') list = personnelStore.importMappingPersonnel || [];
   else if (tableId === 'relatives') list = personnelStore.importMappingRelative || [];
 
-  if (Array.isArray(list) && list.length > 1) return list;
+  let best = Array.isArray(list) ? list : [];
+  let maxCols = countGroupCols(best);
+  let maxGroups = best.length;
 
   // Fallback sang localStorage nếu store chưa tải đủ nhóm
   try {
     const keys = tableId === 'personnel'
-      ? ['mapping_config_personnel', 'import_mapping_personnel', 'importMappingPersonnel', 'app_settings_mapping_config_personnel']
+      ? [
+          'mapping_config_personnel',
+          'app_settings_mapping_config_personnel',
+          'import_mapping_personnel',
+          'app_settings_import_mapping_personnel',
+          'importMappingPersonnel',
+          'app_settings_importMappingPersonnel',
+        ]
       : tableId === 'relatives'
-        ? ['mapping_config_relative', 'import_mapping_relative', 'importMappingRelative', 'app_settings_mapping_config_relative']
+        ? [
+            'mapping_config_relative',
+            'app_settings_mapping_config_relative',
+            'import_mapping_relative',
+            'app_settings_import_mapping_relative',
+            'importMappingRelative',
+            'app_settings_importMappingRelative',
+          ]
         : tableId === 'trips'
-          ? ['mapping_config_trips', 'import_mapping_trips', 'importMappingTrips', 'app_settings_mapping_config_trips']
-          : [`custom_table_groups_${tableId}`];
+          ? [
+              'mapping_config_trips',
+              'app_settings_mapping_config_trips',
+              'import_mapping_trips',
+              'app_settings_import_mapping_trips',
+              'importMappingTrips',
+              'app_settings_importMappingTrips',
+            ]
+          : [
+              `custom_table_groups_${tableId}`,
+              `app_settings_custom_table_groups_${tableId}`,
+            ];
     for (const k of keys) {
       const raw = localStorage.getItem(k);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > (list?.length || 0)) {
-          return parsed;
+        let parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.groups)) {
+          parsed = parsed.groups;
+        }
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const gCount = parsed.length;
+          const cCount = countGroupCols(parsed);
+          if (gCount > maxGroups || (gCount === maxGroups && cCount > maxCols)) {
+            best = parsed;
+            maxGroups = gCount;
+            maxCols = cCount;
+          }
         }
       }
     }
   } catch (e) {}
-  return list || [];
+  return best || [];
 };
 
 const personnelGroups = computed(() => getResolvedGroupsForTable('personnel'));
@@ -917,22 +957,25 @@ const flatTripCols = computed(() => {
   return list;
 });
 
-const flatMainCols = computed(() => {
-  if (props.columns && props.columns.length > 0) {
-    return props.columns.filter((c) => c.id && c.id !== 'stt');
-  }
-  if (currentTableId.value === 'trips') return flatTripCols.value;
-  if (currentTableId.value === 'relatives') return flatRelativeCols.value;
-  return flatPersonnelCols.value;
-});
-
 const mainTableGroups = computed(() => {
   const tId = currentTableId.value;
-  let raw = [];
+  const resolved = getResolvedGroupsForTable(tId);
 
-  // Ưu tiên 1: props.groups truyền trực tiếp từ Bảng dữ liệu đang xem
+  let raw = [];
   if (Array.isArray(props.groups) && props.groups.length > 0) {
-    raw = props.groups;
+    const pGroups = props.groups.length;
+    const pCols = countGroupCols(props.groups);
+    const rGroups = Array.isArray(resolved) ? resolved.length : 0;
+    const rCols = countGroupCols(resolved);
+
+    // Nếu props.groups có nhiều hơn hoặc bằng số nhóm và cột so với resolved thì ưu tiên props.groups
+    if (pGroups >= rGroups && pCols >= rCols) {
+      raw = props.groups;
+    } else {
+      raw = resolved;
+    }
+  } else if (Array.isArray(resolved) && resolved.length > 0) {
+    raw = resolved;
   } else if (tId === 'trips') {
     raw = tripsGroups.value;
   } else if (tId === 'personnel') {
@@ -960,14 +1003,47 @@ const mainTableGroups = computed(() => {
       }
     });
 
-    // Các trường phát sinh chưa thuộc nhóm nào được gom vào nhóm bổ sung độc lập (không nhét đè vào nhóm 1)
-    const remaining = (flatMainCols.value || []).filter((c) => !seen.has(c.id));
-    if (remaining.length > 0) {
-      list.push({ title: 'Các trường bổ sung / Khác', columns: remaining });
+    // Bổ sung các trường từ props.columns nếu chưa xuất hiện trong nhóm nào
+    if (Array.isArray(props.columns) && props.columns.length > 0) {
+      const remainingPropsCols = props.columns.filter((c) => c && c.id && c.id !== 'stt' && !seen.has(c.id));
+      if (remainingPropsCols.length > 0) {
+        list.push({ title: 'Các trường bổ sung / Khác', columns: remainingPropsCols });
+      }
     }
     if (list.length > 0) return list;
   }
-  return [{ title: 'Thông tin chung', columns: flatMainCols.value || [] }];
+  const fallbackCols = Array.isArray(props.columns) && props.columns.length > 0
+    ? props.columns.filter((c) => c.id && c.id !== 'stt')
+    : (tId === 'trips' ? flatTripCols.value : tId === 'relatives' ? flatRelativeCols.value : flatPersonnelCols.value);
+  return [{ title: 'Thông tin chung', columns: fallbackCols || [] }];
+});
+
+const flatMainCols = computed(() => {
+  const list = [];
+  const seen = new Set();
+
+  (mainTableGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c && c.id && c.id !== 'stt' && !seen.has(c.id)) {
+        seen.add(c.id);
+        list.push(c);
+      }
+    });
+  });
+
+  if (Array.isArray(props.columns) && props.columns.length > 0) {
+    props.columns.forEach((c) => {
+      if (c && c.id && c.id !== 'stt' && !seen.has(c.id)) {
+        seen.add(c.id);
+        list.push(c);
+      }
+    });
+  }
+
+  if (list.length > 0) return list;
+  if (currentTableId.value === 'trips') return flatTripCols.value;
+  if (currentTableId.value === 'relatives') return flatRelativeCols.value;
+  return flatPersonnelCols.value;
 });
 
 const getSelectedCountInGroup = (group, selectedIds) => {
@@ -1589,9 +1665,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 0.9rem;
   padding: 0.25rem;
-  max-height: calc(82vh - 80px);
-  overflow-y: auto;
-  scrollbar-width: thin;
+  height: auto;
 }
 
 .tpl-src-btn {
@@ -1665,22 +1739,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 520px;
-  overflow-y: auto;
-  padding-right: 6px;
-  scrollbar-width: thin;
-  scrollbar-color: #94a3b8 #f1f5f9;
-}
-.tree-container::-webkit-scrollbar {
-  width: 6px;
-}
-.tree-container::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-.tree-container::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border-radius: 4px;
+  height: auto;
 }
 
 .btn-tree-action {
@@ -1852,20 +1911,7 @@ onMounted(() => {
   gap: 6px 8px;
   padding: 8px 10px;
   background: #ffffff;
-  max-height: 220px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f8fafc;
-}
-.tree-fields-inline-wrap::-webkit-scrollbar {
-  width: 5px;
-}
-.tree-fields-inline-wrap::-webkit-scrollbar-track {
-  background: #f8fafc;
-}
-.tree-fields-inline-wrap::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  height: auto;
 }
 
 .tree-field-chip {

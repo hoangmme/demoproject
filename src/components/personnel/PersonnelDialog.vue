@@ -398,6 +398,30 @@ const formGroups = computed(() => {
     else if (cDash?.customColumns) rawGroups = [{ title: 'Thông tin chung', columns: cDash.customColumns }];
   }
 
+  // Fallback sang localStorage nếu store chỉ có <= 1 nhóm
+  if ((!rawGroups || rawGroups.length <= 1) && (src === 'personnel' || src === 'relatives' || src === 'trips')) {
+    const keys = src === 'personnel'
+      ? ['mapping_config_personnel', 'app_settings_mapping_config_personnel', 'import_mapping_personnel', 'importMappingPersonnel']
+      : src === 'relatives'
+        ? ['mapping_config_relative', 'app_settings_mapping_config_relative', 'import_mapping_relative', 'importMappingRelative']
+        : ['mapping_config_trips', 'app_settings_mapping_config_trips', 'import_mapping_trips', 'importMappingTrips'];
+    for (const k of keys) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          let parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.groups)) {
+            parsed = parsed.groups;
+          }
+          if (Array.isArray(parsed) && parsed.length > (rawGroups?.length || 0)) {
+            rawGroups = parsed;
+            break;
+          }
+        }
+      } catch (e) {}
+    }
+  }
+
   const cols = allTableColumns.value;
   const colMap = new Map();
   cols.forEach((c) => {

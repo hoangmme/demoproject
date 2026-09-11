@@ -461,14 +461,17 @@ export const usePersonnelStore = defineStore('personnel', {
 
       this.standaloneTrips = Array.isArray(sTrips) ? sTrips : [];
 
-      // Chọn cấu hình mapping đầy đủ nhất, bảo toàn các cột tùy biến mới tạo
+      // Chọn cấu hình mapping đầy đủ nhất, bảo toàn các nhóm và cột tùy biến mới tạo
       const resolveBestMapping = (candidates) => {
         let best = null;
         let maxCols = -1;
+        let maxGroups = -1;
         for (const c of candidates) {
           if (Array.isArray(c) && c.length > 0) {
+            const groupCount = c.length;
             const colCount = c.reduce((sum, g) => sum + (Array.isArray(g.columns) ? g.columns.length : 0), 0);
-            if (colCount > maxCols) {
+            if (groupCount > maxGroups || (groupCount === maxGroups && colCount > maxCols)) {
+              maxGroups = groupCount;
               maxCols = colCount;
               best = c;
             }

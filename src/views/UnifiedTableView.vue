@@ -1331,11 +1331,87 @@ const availableRelativeColsForRollup = computed(() => {
 
 const isTableOptionsDialogOpen = ref(false);
 
+const getStoredTableGroups = (targetSrc) => {
+  const countCols = (arr) => {
+    if (!Array.isArray(arr)) return 0;
+    return arr.reduce((sum, g) => sum + (Array.isArray(g.columns) ? g.columns.length : 0), 0);
+  };
+  const keys = targetSrc === 'personnel'
+    ? [
+        'mapping_config_personnel',
+        'app_settings_mapping_config_personnel',
+        'import_mapping_personnel',
+        'app_settings_import_mapping_personnel',
+        'importMappingPersonnel',
+        'app_settings_importMappingPersonnel',
+      ]
+    : targetSrc === 'relatives'
+      ? [
+          'mapping_config_relative',
+          'app_settings_mapping_config_relative',
+          'import_mapping_relative',
+          'app_settings_import_mapping_relative',
+          'importMappingRelative',
+          'app_settings_importMappingRelative',
+        ]
+      : targetSrc === 'trips'
+        ? [
+            'mapping_config_trips',
+            'app_settings_mapping_config_trips',
+            'import_mapping_trips',
+            'app_settings_import_mapping_trips',
+            'importMappingTrips',
+            'app_settings_importMappingTrips',
+          ]
+        : [`custom_table_groups_${targetSrc}`, `app_settings_custom_table_groups_${targetSrc}`];
+
+  let best = null;
+  let maxCols = 0;
+  let maxGroups = 0;
+
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        let parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.groups)) {
+          parsed = parsed.groups;
+        }
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const gCount = parsed.length;
+          const cCount = countCols(parsed);
+          if (gCount > maxGroups || (gCount === maxGroups && cCount > maxCols)) {
+            best = parsed;
+            maxGroups = gCount;
+            maxCols = cCount;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+  return best;
+};
+
 const currentTableGroups = computed(() => {
   const src = currentDashboardConfig.value?.source || 'trips';
-  if (src === 'trips') return personnelStore.importMappingTrips || [];
-  if (src === 'personnel') return personnelStore.importMappingPersonnel || [];
-  if (src === 'relatives') return personnelStore.importMappingRelative || [];
+  let groups = [];
+  if (src === 'trips') groups = personnelStore.importMappingTrips || [];
+  else if (src === 'personnel') groups = personnelStore.importMappingPersonnel || [];
+  else if (src === 'relatives') groups = personnelStore.importMappingRelative || [];
+
+  const stored = getStoredTableGroups(src);
+  if (stored && stored.length > 0) {
+    const storeCols = Array.isArray(groups) ? groups.reduce((s, g) => s + (g.columns?.length || 0), 0) : 0;
+    const storedCols = stored.reduce((s, g) => s + (g.columns?.length || 0), 0);
+    if (stored.length > (groups?.length || 0) || (stored.length === (groups?.length || 0) && storedCols > storeCols)) {
+      groups = stored;
+      if (src === 'personnel') personnelStore.importMappingPersonnel = stored;
+      else if (src === 'relatives') personnelStore.importMappingRelative = stored;
+      else if (src === 'trips') personnelStore.importMappingTrips = stored;
+    }
+  }
+
+  if (Array.isArray(groups) && groups.length > 0) return groups;
 
   const tid = topicId.value;
   const cDash = (customDashboards.value || []).find((d) => d.id === tid);
@@ -2214,8 +2290,18 @@ const allAvailableColumnsList = computed(() => {
   }
 
   if (src === 'trips') {
-    const colMap = computeColumnIndexMap(personnelStore.importMappingTrips || []);
-    (personnelStore.importMappingTrips || []).forEach((g) => {
+    let tGroups = personnelStore.importMappingTrips || [];
+    const stored = getStoredTableGroups('trips');
+    if (stored && stored.length > 0) {
+      const storeCols = tGroups.reduce((s, g) => s + (g.columns?.length || 0), 0);
+      const storedCols = stored.reduce((s, g) => s + (g.columns?.length || 0), 0);
+      if (stored.length > tGroups.length || (stored.length === tGroups.length && storedCols > storeCols)) {
+        tGroups = stored;
+        personnelStore.importMappingTrips = stored;
+      }
+    }
+    const colMap = computeColumnIndexMap(tGroups || []);
+    (tGroups || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
@@ -2238,8 +2324,18 @@ const allAvailableColumnsList = computed(() => {
       });
     });
   } else if (src === 'relatives') {
-    const colMap = computeColumnIndexMap(personnelStore.importMappingRelative || []);
-    (personnelStore.importMappingRelative || []).forEach((g) => {
+    let rGroups = personnelStore.importMappingRelative || [];
+    const stored = getStoredTableGroups('relatives');
+    if (stored && stored.length > 0) {
+      const storeCols = rGroups.reduce((s, g) => s + (g.columns?.length || 0), 0);
+      const storedCols = stored.reduce((s, g) => s + (g.columns?.length || 0), 0);
+      if (stored.length > rGroups.length || (stored.length === rGroups.length && storedCols > storeCols)) {
+        rGroups = stored;
+        personnelStore.importMappingRelative = stored;
+      }
+    }
+    const colMap = computeColumnIndexMap(rGroups || []);
+    (rGroups || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
@@ -2263,8 +2359,18 @@ const allAvailableColumnsList = computed(() => {
     });
   } else {
     // personnel
-    const colMap = computeColumnIndexMap(personnelStore.importMappingPersonnel || []);
-    (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    let pGroups = personnelStore.importMappingPersonnel || [];
+    const stored = getStoredTableGroups('personnel');
+    if (stored && stored.length > 0) {
+      const storeCols = pGroups.reduce((s, g) => s + (g.columns?.length || 0), 0);
+      const storedCols = stored.reduce((s, g) => s + (g.columns?.length || 0), 0);
+      if (stored.length > pGroups.length || (stored.length === pGroups.length && storedCols > storeCols)) {
+        pGroups = stored;
+        personnelStore.importMappingPersonnel = stored;
+      }
+    }
+    const colMap = computeColumnIndexMap(pGroups || []);
+    (pGroups || []).forEach((g) => {
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);

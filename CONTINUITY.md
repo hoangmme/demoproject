@@ -201,6 +201,26 @@
 - Hỗ trợ chọn bảng màu (color picker), nhập mã hex trực tiếp, các nút gợi ý gam màu chuẩn (Đen mặc định `#000000`, Trắng sáng `#ffffff`, Vàng nhạt `#fef08a`, Xám đậm `#334155`, Xanh lục đậm `#14532d`).
 - Tự động áp dụng màu chữ cho toàn bộ menu bên trái bao gồm: tên cơ quan, các mục menu, tiêu đề phân nhóm và icon.
 
+### 19. GIẢI PHÓNG CHIỀU CAO TỰ NHIÊN & HIỂN THỊ ĐẦY ĐỦ 100% NHÓM BẢNG XUẤT BÁO CÁO (Session 37 - 2026-09-11)
+- **Yêu cầu người dùng**:
+  1. *Không giới hạn chiều cao*: Chiều cao nhóm, bảng và danh sách trường phải co giãn tự nhiên theo nội dung (`height: auto; max-height: none`), không ép `max-height` (như 220px, 520px) gây thanh cuộn lồng nhau (nested scrollbars) và chật chội.
+  2. *Hiển thị đầy đủ tất cả các nhóm*: Phải hiển thị đầy đủ 100% các nhóm cấu hình (ví dụ Bảng Cán bộ gồm 3 nhóm: "Thôn tin cán bộ" 25 trường, "Lưu ý chính trị" 16 trường, "Quá trình công tác" 1 trường - tổng 42 trường) thay vì chỉ hiện 1 nhóm.
+- **Nguyên nhân cốt lõi**:
+  1. *Giới hạn chiều cao cứng*: `.tree-fields-inline-wrap` có `max-height: 220px; overflow-y: auto;`, `.tree-container` có `max-height: 520px; overflow-y: auto;`, `.docx-export-container` có `max-height: calc(82vh - 80px)`. Khiến dialog có tới 4 tầng thanh cuộn, giao diện bị cắt ngang và các chip trường bị bóp nghẹt.
+  2. *Ghi đè nhóm chưa đầy đủ*: `UnifiedTableView.vue` và `AdvancedDocxExportDialog.vue` khi thấy `props.groups` có độ dài >= 1 đã chấp nhận ngay nhóm đơn lẻ từ bộ nhớ RAM (chưa kịp đồng bộ với 3 nhóm trong localStorage/database), bỏ qua hàm phân giải nhóm đa tầng.
+  3. *So khớp cấu hình mapping cũ*: Trong `personnelStore.js`, hàm `resolveBestMapping` trước đây chỉ so sánh số lượng cột (`colCount > maxCols`), chưa ưu tiên số lượng nhóm (`groupCount > maxGroups`).
+- **Giải pháp xử lý triệt để**:
+  1. **Giải phóng chiều cao tự nhiên**:
+     - `.docx-export-container`, `.tree-container`, `.tree-fields-inline-wrap` đều chuyển thành `height: auto; max-height: none; overflow: visible;`.
+     - Toàn bộ danh sách chip trường và các nhóm bảng mở rộng tự nhiên theo nội dung thực tế.
+     - Khung dialog cha của PrimeVue xử lý thanh cuộn mượt mà duy nhất `:contentStyle="{ maxHeight: '88vh', overflowY: 'auto' }"`.
+  2. **Tối ưu cơ chế phân giải nhóm đa tầng (Multi-tier Group Resolution)**:
+     - `AdvancedDocxExportDialog.vue`: `getResolvedGroupsForTable` và `mainTableGroups` tự động so sánh số lượng nhóm và số lượng cột giữa `props.groups`, `personnelStore` và các key lưu trữ (`mapping_config_*`, `app_settings_mapping_config_*`, `import_mapping_*`, `app_settings_import_mapping_*`). Luôn ưu tiên cấu hình có nhiều nhóm và nhiều cột nhất.
+     - `UnifiedTableView.vue`: `currentTableGroups` và `allAvailableColumnsList` bổ sung hàm `getStoredTableGroups` để chủ động phục hồi đầy đủ 3 nhóm (42 trường) từ storage nếu store trong RAM chỉ có 1 nhóm.
+     - `PersonnelDialog.vue`: `formGroups` tự động nạp cấu hình đầy đủ nhất từ storage dự phòng khi store chỉ có <= 1 nhóm.
+     - `personnelStore.js`: Nâng cấp `resolveBestMapping` ưu tiên số nhóm trước, số cột sau (`groupCount > maxGroups || (groupCount === maxGroups && colCount > maxCols)`).
+  3. **Kiểm thử**: Build production thành công 100%, đồng bộ trọn vẹn sang `WINDOWS_OFFLINE_APP/frontend/`.
+
 ### 18. HIỂN THỊ ĐẦY ĐỦ 100% CÁC NHÓM CỘT TRONG DIALOG XUẤT PDF / WORD (Session 36 - 2026-09-11)
 - **Hiện tượng**:
   - Khi mở Popup Xuất PDF/Word (`AdvancedDocxExportDialog.vue`) ở Bảng 1 (ví dụ Cán bộ 42 trường): Tổng số hiển thị đúng 42/42 trường, nhưng danh sách nhóm bên dưới chỉ hiện 1 nhóm duy nhất ("Thông tin cán bộ" 25/25 trường). Hai nhóm còn lại ("Lưu ý chính trị" 16 trường và "Quá trình công tác" 1 trường) không hiển thị.
