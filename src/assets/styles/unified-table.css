@@ -352,8 +352,11 @@
 }
 
 .filter-panel-dropdown {
-  width: 320px;
-  max-width: 90vw;
+  width: 460px;
+  max-width: 95vw;
+  max-height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
 }
 
 .filter-section-title {

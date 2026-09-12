@@ -76,26 +76,10 @@
           />
 
           <div v-show="isFilterMenuOpen" class="header-menu-dropdown filter-panel-dropdown" style="padding: 0; overflow: hidden;">
-            <div style="padding: 8px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
-                <div style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                  <i class="pi pi-sliders-h" style="color: #7c3aed;"></i>
-                  <span>Tùy chọn Cột hiển thị</span>
-                </div>
-                <span
-                  style="font-size: 0.68rem; font-weight: 700; color: #0284c7; background: #f0f9ff; padding: 2px 8px; border-radius: 9999px; border: 1px solid #bae6fd; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                  :title="activeMetricCardIdx <= 0 ? 'Toàn bộ chuyên đề' : (activeMetricCard?.label || 'Thẻ đang chọn')"
-                >
-                  🎯 {{ activeMetricCardIdx <= 0 ? 'Toàn bộ' : (activeMetricCard?.label || 'Thẻ đang chọn') }}
-                </span>
-              </div>
-              <div style="font-size: 0.7rem; color: #64748b; line-height: 1.3;">
-                Đang cấu hình cột riêng cho: <strong style="color: #1e293b;">{{ activeMetricCardIdx <= 0 ? 'Toàn bộ chuyên đề' : (activeMetricCard?.label || 'Thẻ đang chọn') }}</strong>
-              </div>
-            </div>
             <ColumnSelector
               :inline="true"
               :key="activeMetricCardIdx"
+              :scopeName="activeMetricCardIdx <= 0 ? 'Toàn bộ chuyên đề' : (activeMetricCard?.label || 'Thẻ đang chọn')"
               v-model="selectedColIds"
               :options="allAvailableColumnsList"
               :widthMode="colWidthMode"
@@ -244,25 +228,21 @@
           selectionMode="multiple"
           headerClass="col-center"
           bodyClass="col-center"
-          frozen
-          alignFrozen="left"
-          :headerStyle="{ width: '48px', minWidth: '48px', zIndex: 11, background: '#f8fafc' }"
-          :bodyStyle="{ width: '48px', minWidth: '48px', zIndex: 10, background: '#ffffff' }"
+          :headerStyle="{ width: '48px', minWidth: '48px' }"
+          :bodyStyle="{ width: '48px', minWidth: '48px' }"
         />
         <Column
           field="stt"
           headerClass="col-center"
           bodyClass="col-center"
-          frozen
-          alignFrozen="left"
-          :headerStyle="{ width: '56px', minWidth: '56px', padding: '0.75rem 4px', whiteSpace: 'nowrap', zIndex: 11, background: '#f8fafc' }"
-          :bodyStyle="{ width: '56px', minWidth: '56px', padding: '0.75rem 4px', whiteSpace: 'nowrap', zIndex: 10, background: '#ffffff' }"
+          :headerStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }"
+          :bodyStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }"
         >
           <template #header>
             <span style="white-space: nowrap !important; word-break: keep-all !important; display: inline-block;">STT</span>
           </template>
           <template #body="{ index }">
-            <span style="font-weight: 600; color: #4b5563; font-size: 1.05rem; white-space: nowrap;">{{ dtFirst + index + 1 }}</span>
+            <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem; white-space: nowrap;">{{ dtFirst + index + 1 }}</span>
           </template>
         </Column>
 
@@ -273,11 +253,9 @@
           :field="col.id"
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
-          :frozen="col.id === '_recordIdentifier' || col.isSystemIdentifier"
-          :alignFrozen="(col.id === '_recordIdentifier' || col.isSystemIdentifier) ? 'left' : undefined"
           :pt="{ headerCell: { 'data-column-id': col.id } }"
-          :headerStyle="getColWidthStyle(col, true)"
-          :bodyStyle="getColWidthStyle(col, false)"
+          :headerStyle="getColWidthStyle(col)"
+          :bodyStyle="getColWidthStyle(col)"
         >
           <template #header>
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">

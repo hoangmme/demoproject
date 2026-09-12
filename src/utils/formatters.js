@@ -1530,7 +1530,7 @@ export const DEFAULT_IDENTIFIER_COLUMN = {
   isSystemIdentifier: true,
   isPrimary: true,
   canDelete: false,
-  groupTitle: '📌 Cột Định danh (Cố định)',
+  groupTitle: 'Cột Định danh (Cố định)',
   width: '140',
   placeholder: 'Mã / Tiêu đề định danh',
 };
@@ -1548,7 +1548,7 @@ export const ensureDefaultIdentifierColumn = (columns = []) => {
         isSystemIdentifier: true,
         isPrimary: true,
         canDelete: false,
-        groupTitle: c.groupTitle || '📌 Cột Định danh (Cố định)',
+        groupTitle: c.groupTitle || 'Cột Định danh (Cố định)',
         label: c.label || 'Định danh bản ghi',
       };
     }

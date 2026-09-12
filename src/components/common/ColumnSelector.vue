@@ -1,5 +1,6 @@
 <template>
   <div class="column-selector-container" :class="{ 'is-inline': inline }" ref="containerRef">
+    <!-- Nút bấm kích hoạt mở dropdown khi không ở chế độ inline -->
     <button
       v-if="!inline"
       type="button"
@@ -13,64 +14,62 @@
       <i class="pi pi-chevron-down" style="font-size: 0.65rem; color: #6b7280;"></i>
     </button>
 
+    <!-- Dropdown / Popover chính -->
     <div v-if="isOpen || inline" class="column-selector-dropdown" :class="{ 'inline-dropdown': inline }">
+      <!-- 1. Header tinh gọn, hiển thị phạm vi & nút Mở rộng toàn màn hình -->
       <div class="column-selector-header">
-        <span style="font-size: 0.78rem; font-weight: 700; color: #1e293b;">
-          Tùy chọn cột hiển thị
-        </span>
-        <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
-          {{ modelValue.length }}/{{ options.length }} cột
-        </span>
-      </div>
-
-      <!-- Quick Actions Toolbar -->
-      <div class="column-quick-actions">
-        <button type="button" class="btn-text-link" @click="selectAll">Chọn tất cả</button>
-        <span style="color: #cbd5e1;">|</span>
-        <button type="button" class="btn-text-link" @click="deselectAll">Bỏ chọn</button>
-        <span style="color: #cbd5e1;">|</span>
-        <button type="button" class="btn-text-link" @click="resetOrder">Thứ tự chuẩn</button>
-      </div>
-
-      <!-- Cấu hình độ rộng hiển thị cột (Lark Base Column Width Engine) -->
-      <div class="col-width-control">
-        <div class="col-width-header">
-          <div class="col-width-title">
-            <i class="pi pi-arrows-h" style="font-size: 0.75rem; color: #0284c7;"></i>
-            <span>Độ rộng cột:</span>
-          </div>
-          <button
-            v-if="hasCustomDraggedWidths && widthMode === 'auto'"
-            type="button"
-            class="btn-reset-dragged"
-            @click="$emit('reset-dragged-widths')"
-            title="Xóa bỏ độ rộng từng cột đã kéo tay bằng chuột và quay về kích thước tự động mặc định"
-          >
-            <i class="pi pi-refresh" style="font-size: 0.65rem;"></i>
-            <span>Đặt lại kéo tay</span>
-          </button>
+        <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+          <i class="pi pi-sliders-h" style="font-size: 0.85rem; color: #7c3aed; flex-shrink: 0;"></i>
+          <span class="header-main-title">Tùy chọn cột hiển thị</span>
+          <span v-if="scopeName" class="header-scope-badge" :title="scopeName">
+            🎯 {{ scopeName }}
+          </span>
         </div>
 
-        <div class="col-width-body">
-          <!-- Chế độ Tự động (Auto) -->
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          <span class="header-stat-pill">
+            {{ modelValue.length }}/{{ options.length }} cột
+          </span>
           <button
             type="button"
-            class="btn-width-mode"
+            class="btn-expand-modal"
+            @click="isModalOpen = true"
+            title="Mở rộng toàn màn hình để tùy chọn thoải mái không giới hạn chiều cao"
+          >
+            <i class="pi pi-window-maximize" style="font-size: 0.72rem;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Quick Actions Toolbar & Compact Width Settings (Gọn gàng trong 1 thanh) -->
+      <div class="column-quick-actions">
+        <div class="quick-links-group">
+          <button type="button" class="btn-text-link" @click="selectAll">Chọn tất cả</button>
+          <span class="divider-dot">·</span>
+          <button type="button" class="btn-text-link" @click="deselectAll">Bỏ chọn</button>
+          <span class="divider-dot">·</span>
+          <button type="button" class="btn-text-link" @click="resetOrder">Thứ tự chuẩn</button>
+        </div>
+
+        <!-- Thanh chỉnh độ rộng cột siêu gọn (Compact Width Mode Pill) -->
+        <div class="width-compact-wrap">
+          <span class="width-compact-label">Rộng:</span>
+          <button
+            type="button"
+            class="btn-width-pill"
             :class="{ active: widthMode === 'auto' }"
             @click="selectWidthMode('auto')"
-            title="Ưu tiên 2: Tự động co giãn theo nội dung, hoặc hiển thị theo kích thước bạn tự kéo chuột (Tầng 1)"
+            title="Auto: Tự động co giãn hoặc nhận kích thước kéo chuột"
           >
-            <i class="pi pi-table" style="font-size: 0.7rem;"></i>
-            <span>Auto</span>
+            Auto
           </button>
-
-          <!-- Chế độ Nhập px (Cố định toàn bộ cột - Ưu tiên cao nhất) -->
           <div
-            class="width-px-input-wrap"
+            class="width-input-pill"
             :class="{ active: widthMode === 'fixed' }"
             @click="selectWidthMode('fixed')"
+            title="Nhập số px cố định cho toàn bộ cột"
           >
-            <span class="width-px-label">Cố định:</span>
+            <span>Cố định</span>
             <input
               ref="widthInputRef"
               type="number"
@@ -78,51 +77,50 @@
               min="60"
               max="800"
               step="10"
-              class="width-number-input"
-              title="Nhập px áp dụng đồng bộ cho toàn bộ cột (Ưu tiên cao nhất)"
+              class="width-compact-input"
               @input="onPxInput"
               @focus="selectWidthMode('fixed')"
             />
-            <span class="width-px-unit">px</span>
+            <span class="px-label">px</span>
           </div>
-        </div>
-
-        <!-- Chú thích nguyên lý ưu tiên -->
-        <div class="col-width-hint">
-          <span v-if="widthMode === 'fixed'">
-            ⭐ <strong>Cố định {{ localWidthPx }}px</strong>: Áp dụng đồng bộ cho toàn bộ cột (Ưu tiên cao nhất).
-          </span>
-          <span v-else>
-            💡 <strong>Auto</strong>: Tự co giãn hoặc nhận kích thước tự kéo chuột trên header (Tầng 1).
-          </span>
+          <button
+            v-if="hasCustomDraggedWidths && widthMode === 'auto'"
+            type="button"
+            class="btn-reset-pill"
+            @click="$emit('reset-dragged-widths')"
+            title="Đặt lại độ rộng từng cột đã kéo tay"
+          >
+            <i class="pi pi-refresh" style="font-size: 0.65rem;"></i>
+          </button>
         </div>
       </div>
 
-      <!-- Quick Search Bar -->
+      <!-- 3. Thanh Tìm kiếm Nhanh -->
       <div class="column-search-box">
-        <i class="pi pi-search" style="font-size: 0.72rem; color: #94a3b8;"></i>
+        <i class="pi pi-search" style="font-size: 0.78rem; color: #94a3b8;"></i>
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Tìm kiếm cột..."
+          placeholder="Tìm nhanh tên cột hoặc nhóm dữ liệu..."
           class="column-search-input"
         />
         <i
           v-if="searchQuery"
           class="pi pi-times"
-          style="font-size: 0.65rem; color: #94a3b8; cursor: pointer;"
+          style="font-size: 0.7rem; color: #94a3b8; cursor: pointer;"
           @click="searchQuery = ''"
         ></i>
       </div>
 
+      <!-- 4. Danh sách Cột Phân Nhóm (Tự động kéo dài không bị ép 400px) -->
       <div class="column-selector-list">
-        <!-- Empty state when search matches nothing -->
+        <!-- Trạng thái trống khi tìm kiếm không khớp -->
         <div v-if="groupedDisplayOptions.length === 0" class="column-empty-state">
-          <i class="pi pi-search" style="font-size: 1.1rem; color: #94a3b8; margin-bottom: 4px;"></i>
-          <span>Không tìm thấy cột phù hợp</span>
+          <i class="pi pi-search" style="font-size: 1.4rem; color: #94a3b8; margin-bottom: 6px;"></i>
+          <span>Không tìm thấy cột phù hợp với từ khóa</span>
         </div>
 
-        <!-- Groups -->
+        <!-- Nhóm cột -->
         <div
           v-for="group in groupedDisplayOptions"
           :key="group.key"
@@ -132,7 +130,7 @@
             'is-collapsed': isGroupCollapsed(group.key),
           }"
         >
-          <!-- Group Header -->
+          <!-- Group Header (Sticky khi cuộn) -->
           <div
             class="column-group-header"
             :class="{ 'header-identifier': group.isIdentifier }"
@@ -153,14 +151,14 @@
               <span v-if="group.isIdentifier" class="group-header-pin">📌</span>
               <i v-else class="pi pi-folder group-header-folder"></i>
               <span class="group-header-title" :title="group.title">
-                {{ group.title }}
+                {{ cleanGroupTitle(group.title) }}
               </span>
               <span class="group-header-count" :class="{ 'all-selected': group.allSelected }">
-                ({{ group.selectedCount }}/{{ group.totalCount }})
+                {{ group.selectedCount }}/{{ group.totalCount }}
               </span>
             </div>
 
-            <!-- Group Quick Actions -->
+            <!-- Thao tác nhanh cấp nhóm -->
             <div class="group-header-actions" @click.stop>
               <button
                 v-if="!group.allSelected"
@@ -183,7 +181,7 @@
             </div>
           </div>
 
-          <!-- Group Items List -->
+          <!-- Danh sách các cột bên trong nhóm -->
           <div v-show="!isGroupCollapsed(group.key)" class="column-group-body">
             <div
               v-for="(col, colIdx) in group.columns"
@@ -200,27 +198,27 @@
                   :value="col.id"
                   :checked="modelValue.includes(col.id)"
                   @change="toggleCol(col.id)"
-                  style="accent-color: #2e7d32; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;"
+                  style="accent-color: #2e7d32; width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;"
                 />
                 <span
                   v-if="col.isSystemIdentifier || col.id === '_recordIdentifier'"
-                  style="font-size: 0.75rem; color: #d97706; flex-shrink: 0;"
+                  style="font-size: 0.78rem; color: #d97706; flex-shrink: 0;"
                   title="Cột định danh mặc định (Không thể xóa, có thể ẩn/hiện)"
                 >
                   🔒
                 </span>
                 <span
-                  style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: #f1f5f9; color: #475569; flex-shrink: 0;"
+                  class="col-type-badge"
                   :title="'Định dạng: ' + (col.format || 'text')"
                 >
-                  <i :class="getFormatIcon(col.format)" style="font-size: 0.65rem;"></i>
+                  <i :class="getFormatIcon(col.format)" style="font-size: 0.68rem;"></i>
                 </span>
                 <span class="item-text" :title="col.label || col.id">
                   {{ col.label || col.id }}
                 </span>
               </label>
 
-              <!-- Up/Down Reorder & Copy Actions -->
+              <!-- Phím thao tác cột: Sao chép mã thẻ, Tùy chỉnh, Nhân bản, Dời thứ tự -->
               <div class="item-reorder-actions">
                 <!-- Nút Sao chép mã thẻ Word/PDF ({tag_id}) -->
                 <button
@@ -233,7 +231,7 @@
                   <i :class="copiedColId === col.id ? 'pi pi-check' : 'pi pi-copy'" style="font-size: 0.72rem;"></i>
                 </button>
 
-                <!-- Nút Tùy chỉnh cột này (Mở menu Đổi tên, Kiểu dữ liệu, Độ rộng, Xóa...) -->
+                <!-- Nút Tùy chỉnh cột này -->
                 <button
                   v-if="(col.id === '_parentPersonnelName' || !col.isVirtual) && col.id !== '_primaryKey' && col.id !== 'stt'"
                   type="button"
@@ -254,6 +252,8 @@
                 >
                   <i class="pi pi-clone" style="font-size: 0.72rem; color: #10b981;"></i>
                 </button>
+
+                <!-- Nút Dời cột lên trước / xuống sau -->
                 <button
                   type="button"
                   class="btn-reorder"
@@ -278,11 +278,226 @@
         </div>
       </div>
     </div>
+
+    <!-- 5. DIALOG TOÀN MÀN HÌNH TÙY CHỌN CỘT (Khi người dùng muốn không gian rộng rãi tối đa) -->
+    <Dialog
+      v-model:visible="isModalOpen"
+      modal
+      :header="false"
+      :style="{ width: '880px', maxWidth: '96vw', height: '88vh', maxHeight: '94vh' }"
+      :contentStyle="{ height: '100%', padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }"
+      class="column-modal-dialog"
+    >
+      <!-- Modal Header -->
+      <div class="modal-custom-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="modal-icon-badge">
+            <i class="pi pi-sliders-h" style="font-size: 1.1rem; color: #0284c7;"></i>
+          </div>
+          <div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+              <span>Quản lý & Tùy chọn Cột hiển thị</span>
+              <span v-if="scopeName" class="header-scope-badge" style="font-size: 0.78rem;">
+                🎯 {{ scopeName }}
+              </span>
+            </div>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 1px;">
+              Xem toàn bộ danh mục cột dữ liệu không giới hạn chiều cao, bật/tắt hiển thị và dời vị trí linh hoạt.
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="header-stat-pill" style="font-size: 0.8rem; padding: 4px 12px;">
+            Đang hiển thị: {{ modelValue.length }} / {{ options.length }} cột
+          </span>
+          <button type="button" class="btn-modal-close" @click="isModalOpen = false" title="Đóng">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Toolbar -->
+      <div class="modal-toolbar-bar">
+        <div class="column-search-box" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff;">
+          <i class="pi pi-search" style="font-size: 0.82rem; color: #94a3b8;"></i>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Tìm kiếm cột trong toàn bộ bảng..."
+            class="column-search-input"
+            style="font-size: 0.82rem;"
+          />
+          <i
+            v-if="searchQuery"
+            class="pi pi-times"
+            style="font-size: 0.72rem; color: #94a3b8; cursor: pointer;"
+            @click="searchQuery = ''"
+          ></i>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; margin-left: 12px;">
+          <button type="button" class="btn-text-link" style="font-size: 0.8rem;" @click="selectAll">Chọn tất cả</button>
+          <span style="color: #cbd5e1;">·</span>
+          <button type="button" class="btn-text-link" style="font-size: 0.8rem;" @click="deselectAll">Bỏ chọn</button>
+          <span style="color: #cbd5e1;">·</span>
+          <button type="button" class="btn-text-link" style="font-size: 0.8rem;" @click="resetOrder">Thứ tự chuẩn</button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Danh sách rộng rãi toàn màn hình) -->
+      <div class="modal-columns-body">
+        <div
+          v-for="group in groupedDisplayOptions"
+          :key="'modal_' + group.key"
+          class="column-group-card"
+          :class="{
+            'is-identifier-group': group.isIdentifier,
+            'is-collapsed': isGroupCollapsed(group.key),
+          }"
+          style="margin-bottom: 10px;"
+        >
+          <div
+            class="column-group-header"
+            :class="{ 'header-identifier': group.isIdentifier }"
+            @click="toggleGroupCollapse(group.key)"
+            style="padding: 8px 12px;"
+          >
+            <div class="group-header-left">
+              <button
+                type="button"
+                class="btn-group-toggle"
+                @click.stop="toggleGroupCollapse(group.key)"
+              >
+                <i
+                  class="pi"
+                  :class="isGroupCollapsed(group.key) ? 'pi-chevron-right' : 'pi-chevron-down'"
+                ></i>
+              </button>
+              <span v-if="group.isIdentifier" class="group-header-pin">📌</span>
+              <i v-else class="pi pi-folder group-header-folder" style="font-size: 0.85rem;"></i>
+              <span class="group-header-title" style="font-size: 0.88rem;">
+                {{ cleanGroupTitle(group.title) }}
+              </span>
+              <span class="group-header-count" :class="{ 'all-selected': group.allSelected }" style="font-size: 0.74rem;">
+                {{ group.selectedCount }}/{{ group.totalCount }}
+              </span>
+            </div>
+
+            <div class="group-header-actions" @click.stop>
+              <button
+                v-if="!group.allSelected"
+                type="button"
+                class="btn-group-action"
+                style="padding: 2px 8px; font-size: 0.72rem;"
+                @click="toggleGroupSelection(group, true)"
+              >
+                Chọn hết
+              </button>
+              <button
+                v-if="!group.noneSelected && !group.isIdentifier"
+                type="button"
+                class="btn-group-action btn-group-action-muted"
+                style="padding: 2px 8px; font-size: 0.72rem;"
+                @click="toggleGroupSelection(group, false)"
+              >
+                Bỏ chọn
+              </button>
+            </div>
+          </div>
+
+          <div v-show="!isGroupCollapsed(group.key)" class="column-group-body" style="padding: 6px 8px;">
+            <div
+              v-for="(col, colIdx) in group.columns"
+              :key="'m_' + col.id"
+              class="column-selector-item"
+              :class="{
+                'item-checked': modelValue.includes(col.id),
+                'item-identifier': col.isSystemIdentifier || col.id === '_recordIdentifier',
+              }"
+              style="padding: 6px 12px;"
+            >
+              <label class="item-label-group">
+                <input
+                  type="checkbox"
+                  :value="col.id"
+                  :checked="modelValue.includes(col.id)"
+                  @change="toggleCol(col.id)"
+                  style="accent-color: #2e7d32; width: 17px; height: 17px; cursor: pointer; flex-shrink: 0;"
+                />
+                <span
+                  v-if="col.isSystemIdentifier || col.id === '_recordIdentifier'"
+                  style="font-size: 0.85rem; color: #d97706; flex-shrink: 0;"
+                >
+                  🔒
+                </span>
+                <span
+                  class="col-type-badge"
+                  style="width: 22px; height: 22px;"
+                  :title="'Định dạng: ' + (col.format || 'text')"
+                >
+                  <i :class="getFormatIcon(col.format)" style="font-size: 0.75rem;"></i>
+                </span>
+                <span class="item-text" style="font-size: 0.88rem;" :title="col.label || col.id">
+                  {{ col.label || col.id }}
+                </span>
+              </label>
+
+              <div class="item-reorder-actions">
+                <button
+                  type="button"
+                  class="btn-col-action-trigger"
+                  @click.stop="copyColumnTag(col)"
+                  :title="`Sao chép mã thẻ Word/PDF: {${col.id}}`"
+                >
+                  <i :class="copiedColId === col.id ? 'pi pi-check' : 'pi pi-copy'" style="font-size: 0.75rem;"></i>
+                </button>
+                <button
+                  v-if="(col.id === '_parentPersonnelName' || !col.isVirtual) && col.id !== '_primaryKey' && col.id !== 'stt'"
+                  type="button"
+                  class="btn-col-action-trigger"
+                  @click.stop="$emit('open-col-menu', { event: $event, col })"
+                  title="Tùy chỉnh cột"
+                >
+                  <i class="pi pi-cog" style="font-size: 0.75rem;"></i>
+                </button>
+                <button
+                  v-if="(!col.isVirtual || col.id === '_parentPersonnelName') && col.id !== '_primaryKey' && col.id !== 'stt' && col.id !== 'code' && col.id !== '_recordIdentifier'"
+                  type="button"
+                  class="btn-col-action-trigger"
+                  @click.stop="$emit('duplicate-column', col)"
+                  title="Nhân bản"
+                >
+                  <i class="pi pi-clone" style="font-size: 0.75rem; color: #10b981;"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn-reorder"
+                  :disabled="colIdx === 0"
+                  @click.stop="moveColUp(col, group)"
+                >
+                  <i class="pi pi-chevron-up"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn-reorder"
+                  :disabled="colIdx === group.columns.length - 1"
+                  @click.stop="moveColDown(col, group)"
+                >
+                  <i class="pi pi-chevron-down"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import Dialog from 'primevue/dialog';
 import { getFormatIcon } from '@/utils/formatters';
 
 const props = defineProps({
@@ -301,6 +516,10 @@ const props = defineProps({
   inline: {
     type: Boolean,
     default: false,
+  },
+  scopeName: {
+    type: String,
+    default: '',
   },
   widthMode: {
     type: String,
@@ -328,16 +547,15 @@ const emit = defineEmits([
 ]);
 
 const isOpen = ref(false);
+const isModalOpen = ref(false);
 const searchQuery = ref('');
 const containerRef = ref(null);
 const customOrder = ref([]);
 const showColIndex = ref(localStorage.getItem('app_show_col_index') !== 'false');
 
-const toggleShowColIndex = () => {
-  try {
-    localStorage.setItem('app_show_col_index', String(showColIndex.value));
-    window.dispatchEvent(new CustomEvent('table-show-col-index-changed', { detail: showColIndex.value }));
-  } catch (e) {}
+const cleanGroupTitle = (title) => {
+  if (!title) return 'Thông tin chung';
+  return String(title).replace(/^📌\s*/, '').trim();
 };
 
 const localWidthPx = ref(props.widthPx || 160);
@@ -376,23 +594,6 @@ const selectedLabel = computed(() => {
   return `${count} cột được chọn`;
 });
 
-const getColIndex = (col) => {
-  if (col.isVirtual) return null;
-  if (col.colIndex !== undefined && col.colIndex !== null) return col.colIndex;
-  const baseList = (props.options || []).filter((o) => !o.isVirtual && o.id !== 'stt');
-  const foundIdx = baseList.findIndex((o) => o.id === col.id);
-  if (foundIdx !== -1) return foundIdx + 1;
-  return null;
-};
-
-const canonicalPrimaryId = computed(() => {
-  const primaryOption = (props.options || []).find((o) => o.isPrimaryField)
-    || (props.options || []).find((o) => o.id === '_parentPersonnelName' || o.id === 'name' || o.id === 'relativeName')
-    || (props.options || []).find((o) => !o.isVirtual && o.id !== 'stt' && o.id !== 'code' && o.id !== '_primaryKey')
-    || props.options?.[0];
-  return primaryOption?.id || null;
-});
-
 const copiedColId = ref('');
 const copyColumnTag = (col) => {
   if (!col || !col.id) return;
@@ -407,13 +608,6 @@ const copyColumnTag = (col) => {
     console.error('Failed to copy column tag:', e);
   }
 };
-
-watch(
-  () => props.modelValue,
-  () => {
-    // Keep customOrder intact if user only toggles visibility
-  }
-);
 
 const baseDisplayOptions = computed(() => {
   let opts = [...props.options];
@@ -464,16 +658,16 @@ const groupedDisplayOptions = computed(() => {
   if (identifierCol) {
     groupsMap.set('__system_identifier__', {
       key: '__system_identifier__',
-      title: '📌 Cột Định danh (Cố định)',
+      title: 'Cột Định danh (Cố định)',
       isIdentifier: true,
       columns: [identifierCol],
     });
   }
 
-  // 2. Data groups in the exact order they appear in filtered
+  // 2. Các nhóm nghiệp vụ chuẩn theo cấu hình bảng
   filtered.forEach((c) => {
     if (c.id === '_recordIdentifier' || c.isSystemIdentifier) return;
-    const gTitle = c.groupTitle || 'Thông tin chung';
+    const gTitle = cleanGroupTitle(c.groupTitle);
     if (!groupsMap.has(gTitle)) {
       groupsMap.set(gTitle, {
         key: gTitle,
@@ -646,8 +840,9 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  width: 320px;
-  max-height: min(540px, calc(100vh - 160px));
+  width: 460px;
+  max-width: 95vw;
+  max-height: calc(100vh - 110px);
   display: flex;
   flex-direction: column;
   background: #ffffff;
@@ -661,40 +856,14 @@ onUnmounted(() => {
 .column-selector-dropdown.inline-dropdown {
   position: static;
   width: 100%;
+  max-height: calc(100vh - 110px);
   box-shadow: none;
   border: none;
   border-radius: 0;
   z-index: auto;
 }
 
-.column-quick-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 12px;
-  background: #f8fafc;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 0.72rem;
-}
-
-.column-search-box {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: #ffffff;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.column-search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 0.75rem;
-  color: #1e293b;
-  background: transparent;
-}
-
+/* Header tinh gọn */
 .column-selector-header {
   display: flex;
   justify-content: space-between;
@@ -704,14 +873,83 @@ onUnmounted(() => {
   border-bottom: 1px solid #e2e8f0;
 }
 
+.header-main-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.header-scope-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #0284c7;
+  background: #f0f9ff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid #bae6fd;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-stat-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.btn-expand-modal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-expand-modal:hover {
+  background: #f1f5f9;
+  color: #0284c7;
+  border-color: #38bdf8;
+}
+
+/* Quick Actions Toolbar & Width Pill */
+.column-quick-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 8px;
+}
+
+.quick-links-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .btn-text-link {
   background: transparent;
   border: none;
   color: #0284c7;
-  font-size: 0.72rem;
+  font-size: 0.73rem;
   font-weight: 600;
   cursor: pointer;
-  padding: 0 2px;
+  padding: 0;
 }
 
 .btn-text-link:hover {
@@ -719,15 +957,137 @@ onUnmounted(() => {
   color: #0369a1;
 }
 
+.divider-dot {
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+/* Compact Width Mode Toolbar */
+.width-compact-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.width-compact-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.btn-width-pill {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.68rem;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 1px 6px;
+  cursor: pointer;
+  height: 22px;
+  line-height: 20px;
+  transition: all 0.1s ease;
+}
+
+.btn-width-pill.active {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #38bdf8;
+  font-weight: 700;
+}
+
+.width-input-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 4px;
+  padding: 0 4px;
+  height: 22px;
+  font-size: 0.68rem;
+  color: #475569;
+  cursor: pointer;
+}
+
+.width-input-pill.active {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #38bdf8;
+  font-weight: 700;
+}
+
+.width-compact-input {
+  width: 44px;
+  height: 18px;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  background: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  color: #0f172a;
+}
+
+.width-compact-input:focus {
+  border-color: #0284c7;
+}
+
+.px-label {
+  font-size: 0.62rem;
+  color: #64748b;
+}
+
+.btn-reset-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px dashed #cbd5e1;
+  background: transparent;
+  color: #64748b;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-reset-pill:hover {
+  border-color: #0284c7;
+  color: #0284c7;
+  background: #f0f9ff;
+}
+
+/* Search Box */
+.column-search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.column-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.76rem;
+  color: #1e293b;
+  background: transparent;
+}
+
+/* List container (không ép chiều cao cụt ngủn) */
 .column-selector-list {
   flex: 1;
-  min-height: 120px;
-  max-height: 400px;
+  min-height: 220px;
+  max-height: calc(100vh - 220px);
   overflow-y: auto;
-  padding: 6px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .column-empty-state {
@@ -735,13 +1095,14 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 12px;
+  padding: 28px 12px;
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 500;
   text-align: center;
 }
 
+/* Nhóm cột dạng phẳng, thoáng đãng */
 .column-group-card {
   border-radius: 8px;
   border: 1px solid #e2e8f0;
@@ -757,10 +1118,13 @@ onUnmounted(() => {
 }
 
 .column-group-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 8px;
+  padding: 6px 10px;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
   cursor: pointer;
@@ -784,7 +1148,7 @@ onUnmounted(() => {
 .group-header-left {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
   flex: 1;
 }
@@ -804,17 +1168,17 @@ onUnmounted(() => {
 }
 
 .group-header-pin {
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   line-height: 1;
 }
 
 .group-header-folder {
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   color: #0284c7;
 }
 
 .group-header-title {
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #1e293b;
   white-space: nowrap;
@@ -824,10 +1188,10 @@ onUnmounted(() => {
 
 .group-header-count {
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #64748b;
   background: #e2e8f0;
-  padding: 1px 5px;
+  padding: 1px 6px;
   border-radius: 999px;
   white-space: nowrap;
 }
@@ -840,19 +1204,19 @@ onUnmounted(() => {
 .group-header-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   flex-shrink: 0;
-  margin-left: 6px;
+  margin-left: 8px;
 }
 
 .btn-group-action {
   border: 1px solid #bae6fd;
   background: #f0f9ff;
   color: #0284c7;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 600;
   border-radius: 4px;
-  padding: 1px 5px;
+  padding: 2px 7px;
   cursor: pointer;
   transition: all 0.12s ease;
   line-height: 1.3;
@@ -876,21 +1240,18 @@ onUnmounted(() => {
 }
 
 .column-group-body {
-  padding: 3px 4px;
+  padding: 4px 6px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
-.item-identifier {
-  background: #fffbeb;
-}
-
+/* Item dòng cột */
 .column-selector-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px;
+  padding: 5px 8px;
   border-radius: 6px;
   transition: background 0.15s ease;
   user-select: none;
@@ -904,6 +1265,11 @@ onUnmounted(() => {
   background: #f8fafc;
 }
 
+.item-identifier {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+}
+
 .item-label-group {
   display: flex;
   align-items: center;
@@ -913,21 +1279,36 @@ onUnmounted(() => {
   min-width: 0;
 }
 
+.col-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+  flex-shrink: 0;
+}
+
 .item-text {
-  font-size: 0.8rem;
-  color: #334155;
+  font-size: 0.82rem;
+  color: #1e293b;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .item-reorder-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
-  opacity: 0.6;
+  gap: 3px;
+  opacity: 0.7;
   transition: opacity 0.15s ease;
+  flex-shrink: 0;
 }
 
 .column-selector-item:hover .item-reorder-actions {
@@ -938,8 +1319,8 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
   background: #ffffff;
@@ -947,7 +1328,6 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.12s ease;
   padding: 0;
-  margin-right: 3px;
 }
 
 .btn-col-action-trigger:hover {
@@ -960,13 +1340,13 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   background: #ffffff;
   color: #475569;
-  font-size: 0.62rem;
+  font-size: 0.65rem;
   cursor: pointer;
   transition: all 0.1s ease;
   padding: 0;
@@ -983,151 +1363,64 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-.col-width-control {
-  padding: 8px 10px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.col-width-header {
+/* Modal Dialog Toàn Màn Hình */
+.modal-custom-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 14px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.col-width-title {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #334155;
+.modal-icon-badge {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
 }
 
-.btn-reset-dragged {
+.btn-modal-close {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  background: transparent;
-  border: 1px dashed #cbd5e1;
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-size: 0.62rem;
-  color: #0284c7;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #64748b;
   cursor: pointer;
+  font-size: 0.85rem;
   transition: all 0.12s ease;
 }
 
-.btn-reset-dragged:hover {
-  background: #f0f9ff;
-  border-color: #0284c7;
+.btn-modal-close:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #ef4444;
 }
 
-.col-width-body {
+.modal-toolbar-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.btn-width-mode {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: 1px solid #cbd5e1;
+.modal-columns-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   background: #ffffff;
-  padding: 3px 8px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #64748b;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.12s ease;
-  height: 28px;
-}
-
-.btn-width-mode:hover {
-  color: #0f172a;
-  border-color: #94a3b8;
-}
-
-.btn-width-mode.active {
-  background: #e0f2fe;
-  color: #0284c7;
-  border-color: #38bdf8;
-  font-weight: 700;
-  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.1);
-}
-
-.width-px-input-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  padding: 2px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.12s ease;
-  height: 28px;
-}
-
-.width-px-input-wrap:hover {
-  border-color: #94a3b8;
-}
-
-.width-px-input-wrap.active {
-  background: #e0f2fe;
-  color: #0284c7;
-  border-color: #38bdf8;
-  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.1);
-}
-
-.width-px-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #475569;
-}
-
-.width-px-input-wrap.active .width-px-label {
-  color: #0284c7;
-  font-weight: 700;
-}
-
-.width-number-input {
-  width: 52px;
-  height: 22px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-align: center;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #ffffff;
-  color: #0f172a;
-  outline: none;
-  padding: 0 2px;
-}
-
-.width-number-input:focus {
-  border-color: #0284c7;
-  box-shadow: 0 0 0 1px #0284c7;
-}
-
-.width-px-unit {
-  font-size: 0.68rem;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.col-width-hint {
-  font-size: 0.65rem;
-  color: #64748b;
-  line-height: 1.35;
-  background: #ffffff;
-  padding: 4px 6px;
-  border-radius: 4px;
-  border: 1px solid #f1f5f9;
 }
 </style>

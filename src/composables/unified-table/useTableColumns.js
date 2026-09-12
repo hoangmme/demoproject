@@ -324,7 +324,7 @@ export function useTableColumns({
     }
   };
 
-  const getColWidthStyle = (col, isHeader = false) => {
+  const getColWidthStyle = (col) => {
     if (!col) return {};
 
     if (col.id === '_recordIdentifier' || col.isSystemIdentifier) {
@@ -333,11 +333,6 @@ export function useTableColumns({
       return {
         width: `${px}px`,
         minWidth: `${px}px`,
-        maxWidth: `${px}px`,
-        zIndex: isHeader ? 10 : 9,
-        background: isHeader ? '#f8fafc' : '#ffffff',
-        boxShadow: '4px 0 8px rgba(0, 0, 0, 0.05)',
-        borderRight: '1px solid #e2e8f0',
       };
     }
 

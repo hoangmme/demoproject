@@ -126,10 +126,13 @@
 - **Hiển thị Header & Soft Badges chuẩn Teable**:
   - Header cột hiển thị icon kiểu dữ liệu (`teable-col-format-badge`) trước tên cột + icon `🔒` cho cột định danh + nút mũi tên `▾` mở menu ngữ cảnh.
   - Cột `singleSelect` và `multipleSelect` tự động hiển thị giá trị dạng **Soft Badge** màu sắc hài hòa (`getTeableOptionColor`) chuẩn Teable.
-- **Tùy chọn Cột Phân Nhóm & Thứ Tự Chuẩn Bảng (`ColumnSelector.vue`)**:
+- **Tùy chọn Cột Phân Nhóm, UX/UI Thoáng Đãng & Fullscreen Modal (`ColumnSelector.vue`)**:
   - Đồng bộ cấu trúc nhóm và thứ tự hiển thị của `ColumnSelector` tương tự như "Tùy chọn Bảng" (`TableOptionsDialog.vue`):
-    - **Nhóm 1 (Ghim trên cùng)**: `📌 Cột Định danh (Cố định)` chứa cột `_recordIdentifier` ("Định danh bản ghi") với huy hiệu `🔒`. Người dùng có thể nhanh chóng tick chọn để Ẩn/Hiện, nút Xóa bị khóa an toàn (`canDelete: false`).
-    - **Các nhóm tiếp theo**: Gom nhóm tự động theo `groupTitle` kế thừa từ danh mục cấu hình bảng (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`, hoặc bảng tùy biến).
+    - **Nhóm 1 (Ghim trên cùng)**: `📌 Cột Định danh (Cố định)` chứa cột `_recordIdentifier` ("Định danh bản ghi") với huy hiệu `🔒`. Người dùng có thể nhanh chóng tick chọn để Ẩn/Hiện, nút Xóa bị khóa an toàn (`canDelete: false`). Sửa triệt để lỗi lặp icon `"📌 📌"`.
+    - **Khắc phục triệt để lỗi lệch cột bảng (Header / Body Misalignment)**: Gỡ bỏ `frozen` trên PrimeVue `<Column>` và styling giả lập sticky, trả về cấu trúc HTML Table tự nhiên của PrimeVue. Cột Checkbox, STT và các cột dữ liệu khớp 100% thẳng tắp, không còn hiện tượng tiêu đề đè lên nhau.
+    - **Giải phóng giới hạn chiều cao & Mở rộng chiều ngang (460px)**: Popover được mở rộng lên 460px, chiều cao tự động theo màn hình (`max-height: calc(100vh - 110px)`), danh sách cuộn linh hoạt (`max-height: calc(100vh - 220px)`), không bị co cụm hay cắt cụt tên nhóm ("Thông tin c...").
+    - **Thanh chỉnh độ rộng cột gọn nhẹ (1 dòng duy nhất)**: Tích hợp chế độ `Auto` và ô nhập `Cố định px` thành một hàng ngang thanh thoát (32px), tiết kiệm 70px chiều cao cho danh sách cột.
+    - **Chế độ Toàn Màn Hình (Fullscreen Modal Dialog - `880px x 88vh`)**: Bổ sung nút `[Mở rộng]` (`pi pi-window-maximize`) trên thanh tiêu đề, cho phép mở toàn màn hình để quản lý cột rộng rãi, thoải mái tối đa không giới hạn.
     - **Thao tác nhanh cấp nhóm**: Hỗ trợ thu gọn/mở rộng từng nhóm (Accordion `▼` / `►`), huy hiệu đếm cột hiển thị `(X/Y)`, nút `[Chọn hết]` và `[Bỏ chọn]` riêng cho từng nhóm mà vẫn đảm bảo an toàn luôn giữ ít nhất 1 cột hiển thị trên bảng.
     - **Dời thứ tự trong nhóm & Tìm kiếm thông minh**: Hỗ trợ nút dời lên/dời xuống (`▲`/`▼`) ngay trong nhóm, ô tìm kiếm nhanh tự động mở bung các nhóm chứa kết quả khớp từ khóa.
 - **Tùy chọn Ẩn/Hiện Cột Đối Chiếu (showCompareCol)**:
