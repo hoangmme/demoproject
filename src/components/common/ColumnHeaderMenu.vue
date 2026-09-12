@@ -47,16 +47,11 @@
             Mã định danh (ID Hệ thống)
           </div>
           <select v-else v-model="editFormat" class="menu-select" @change="handleFormatChange">
-            <option value="text">Văn bản (Text) - Mặc định</option>
-            <option value="number">Số (Number)</option>
-            <option value="date">Ngày tháng (Date)</option>
-            <option value="dropdown">Danh mục lựa chọn (Dropdown / Single Select)</option>
-            <option value="checkbox">Hộp kiểm đơn (Checkbox)</option>
-            <option value="checkbox_file_loop">Hộp kiểm kèm Tệp (Checkbox + File)</option>
-            <option value="file">Tệp đính kèm (Attachment / File / Ảnh / PDF)</option>
-            <option value="lookup">🔗 Tham chiếu tự động (Lookup - Lấy dữ liệu từ bảng liên kết)</option>
-            <option value="formula">⚡ Công thức Nâng cao (Formula - Lark Base / Teable)</option>
-            <option value="rollup">📊 Tính toán tổng hợp (Rollup)</option>
+            <optgroup v-for="g in TEABLE_FORMAT_GROUPS" :key="g.group" :label="g.group">
+              <option v-for="item in g.items" :key="item.value" :value="item.value">
+                {{ item.code ? item.code + ' ' : '' }}{{ item.label }}
+              </option>
+            </optgroup>
           </select>
         </div>
 
@@ -1242,7 +1237,7 @@
           </button>
 
           <button
-            v-if="!column?.isVirtual && column?.id !== '_primaryKey' && column?.id !== 'code' && column?.id !== 'stt'"
+            v-if="!column?.isVirtual && column?.id !== '_primaryKey' && column?.id !== 'code' && column?.id !== 'stt' && column?.id !== '_recordIdentifier' && !column?.isSystemIdentifier"
             type="button"
             class="menu-action-btn action-danger"
             @click="handleDeleteColumn"
@@ -1270,6 +1265,7 @@ import {
   evaluateRollup,
   getRecordFieldValue,
   formulaFunctionsCatalog,
+  TEABLE_FORMAT_GROUPS,
 } from "@/utils/formatters";
 import { getUnifiedTableDefinitions } from "@/utils/tableRegistry";
 
@@ -2058,6 +2054,10 @@ const handleDuplicate = () => {
 };
 
 const handleDeleteColumn = () => {
+  if (props.column?.id === '_recordIdentifier' || props.column?.isSystemIdentifier) {
+    alert('Cột định danh mặc định là cột hệ thống cốt lõi, không thể xóa! Bạn có thể ẩn cột này trong menu "Tùy chọn Cột".');
+    return;
+  }
   if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn cột "${props.column?.label || props.column?.id}" khỏi bảng này không?`)) return;
   emit("delete-column", props.column.id);
   closeMenu();

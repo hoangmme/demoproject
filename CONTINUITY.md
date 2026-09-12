@@ -108,6 +108,30 @@
     - `ChildDashboardView.vue`: Khi chọn Thẻ KPI / bộ lọc chuyên đề, cột ưu tiên tự động render huy hiệu Trạng thái hiện diện hoặc giá trị tương ứng.
     - `PersonnelView.vue`: Khi nhận điều hướng lọc từ Widget trên Dashboard (`routeFilterField`), tự động bổ sung cột ưu tiên `🎯 [Tên cột]` ngay sau các cột cố định ở cả Bảng Thân nhân và Bảng Cán bộ.
 
+### 11. CHUẨN HÓA FORMAT THEO TEABLE & CỘT ĐỊNH DANH MẶC ĐỊNH (PRIMARY IDENTIFIER ENGINE)
+- **Cột Định danh Mặc định (`_recordIdentifier`)**:
+  - Tự động sinh ở vị trí đầu tiên của bảng (`allAvailableColumnsList`).
+  - **TUYỆT ĐỐI KHÔNG gán cứng vào Họ và tên** (cột Họ và tên là cột dữ liệu độc lập).
+  - Cho phép người dùng **tự do Ẩn hoặc Gọi nó ra** bất cứ khi nào trong menu `ColumnSelector` (Tùy chọn Cột).
+  - **Khóa hoàn toàn nút Xóa (`canDelete: false`)**: Không cho phép xóa cột định danh để bảo toàn tính toàn vẹn định danh của hệ thống.
+  - Khi hiển thị, cột này được ghim cố định (Frozen Sticky Left) cùng Checkbox và STT, có icon ổ khóa `🔒`, font monospace và nền xanh dịu `#f0f9ff`.
+  - Giúp AI trợ lý và người dùng luôn có điểm neo (Anchor) tra cứu 1-1 chuẩn xác tuyệt đối khi rà soát dữ liệu.
+- **Chuẩn hóa Phân nhóm Định dạng Cột (`TEABLE_FORMAT_GROUPS`)**:
+  - Phân nhóm theo chuẩn Teable kết hợp icon trực quan:
+    - **Cơ bản**: `singleLineText` (A), `longText` (A≡), `number` (#), `singleSelect` (⊘), `multipleSelect` (:=), `date` (📅), `checkbox` (☑️), `attachment` (📎).
+    - **Nâng cao / Liên kết**: `formula` (fx), `linkToRecord` (🔗), `lookup` (🔍), `rollup` (📚), `autoNumber` (:=).
+    - **Hệ thống**: `createdTime` (🕒), `lastModifiedTime` (🔄).
+    - **Kế thừa & Nghiệp vụ đặc thù**: `checkbox_file_loop`, `text_file_loop`, `checkbox_file`, `checkbox_text`, `dropdown`, `text`, `file`.
+  - **Bảo toàn 100% tương thích ngược (Zero Breaking Change)**: Toàn bộ dữ liệu và cấu hình cột cũ tiếp tục hoạt động trơn tru.
+- **Hiển thị Header & Soft Badges chuẩn Teable**:
+  - Header cột hiển thị icon kiểu dữ liệu (`teable-col-format-badge`) trước tên cột + icon `🔒` cho cột định danh + nút mũi tên `▾` mở menu ngữ cảnh.
+  - Cột `singleSelect` và `multipleSelect` tự động hiển thị giá trị dạng **Soft Badge** màu sắc hài hòa (`getTeableOptionColor`) chuẩn Teable.
+- **Tùy chọn Cột Phân Nhóm & Thứ Tự Chuẩn Bảng (`ColumnSelector.vue`)**:
+  - Đồng bộ cấu trúc nhóm và thứ tự hiển thị của `ColumnSelector` tương tự như "Tùy chọn Bảng" (`TableOptionsDialog.vue`):
+    - **Nhóm 1 (Ghim trên cùng)**: `📌 Cột Định danh (Cố định)` chứa cột `_recordIdentifier` ("Định danh bản ghi") với huy hiệu `🔒`. Người dùng có thể nhanh chóng tick chọn để Ẩn/Hiện, nút Xóa bị khóa an toàn (`canDelete: false`).
+    - **Các nhóm tiếp theo**: Gom nhóm tự động theo `groupTitle` kế thừa từ danh mục cấu hình bảng (`importMappingPersonnel`, `importMappingTrips`, `importMappingRelative`, hoặc bảng tùy biến).
+    - **Thao tác nhanh cấp nhóm**: Hỗ trợ thu gọn/mở rộng từng nhóm (Accordion `▼` / `►`), huy hiệu đếm cột hiển thị `(X/Y)`, nút `[Chọn hết]` và `[Bỏ chọn]` riêng cho từng nhóm mà vẫn đảm bảo an toàn luôn giữ ít nhất 1 cột hiển thị trên bảng.
+    - **Dời thứ tự trong nhóm & Tìm kiếm thông minh**: Hỗ trợ nút dời lên/dời xuống (`▲`/`▼`) ngay trong nhóm, ô tìm kiếm nhanh tự động mở bung các nhóm chứa kết quả khớp từ khóa.
 - **Tùy chọn Ẩn/Hiện Cột Đối Chiếu (showCompareCol)**:
   - Bổ sung hộp kiểm `Hiện cột đối chiếu khi ấn vào thống kê (🎯)` trong Cấu hình Chuyên đề (`SettingsImportView.vue`).
   - Khi tick chọn: Bảng dữ liệu tự động hiển thị thêm cột đối chiếu `🎯 [Tên cột]`. Khi không tick: Bảng giữ nguyên các cột hiện có, không bị nở thêm cột đối chiếu.

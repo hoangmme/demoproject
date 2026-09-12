@@ -116,77 +116,164 @@
       </div>
 
       <div class="column-selector-list">
+        <!-- Empty state when search matches nothing -->
+        <div v-if="groupedDisplayOptions.length === 0" class="column-empty-state">
+          <i class="pi pi-search" style="font-size: 1.1rem; color: #94a3b8; margin-bottom: 4px;"></i>
+          <span>Không tìm thấy cột phù hợp</span>
+        </div>
+
+        <!-- Groups -->
         <div
-          v-for="(col, idx) in displayOptions"
-          :key="col.id"
-          class="column-selector-item"
-          :class="{ 'item-checked': modelValue.includes(col.id) }"
+          v-for="group in groupedDisplayOptions"
+          :key="group.key"
+          class="column-group-card"
+          :class="{
+            'is-identifier-group': group.isIdentifier,
+            'is-collapsed': isGroupCollapsed(group.key),
+          }"
         >
-          <label class="item-label-group">
-            <input
-              type="checkbox"
-              :value="col.id"
-              :checked="modelValue.includes(col.id)"
-              @change="toggleCol(col.id)"
-              style="accent-color: #2e7d32; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;"
-            />
-            <span class="item-text" :title="col.label || col.id">
-              {{ col.label || col.id }}
-            </span>
-          </label>
+          <!-- Group Header -->
+          <div
+            class="column-group-header"
+            :class="{ 'header-identifier': group.isIdentifier }"
+            @click="toggleGroupCollapse(group.key)"
+          >
+            <div class="group-header-left">
+              <button
+                type="button"
+                class="btn-group-toggle"
+                :title="isGroupCollapsed(group.key) ? 'Mở rộng nhóm' : 'Thu gọn nhóm'"
+                @click.stop="toggleGroupCollapse(group.key)"
+              >
+                <i
+                  class="pi"
+                  :class="isGroupCollapsed(group.key) ? 'pi-chevron-right' : 'pi-chevron-down'"
+                ></i>
+              </button>
+              <span v-if="group.isIdentifier" class="group-header-pin">📌</span>
+              <i v-else class="pi pi-folder group-header-folder"></i>
+              <span class="group-header-title" :title="group.title">
+                {{ group.title }}
+              </span>
+              <span class="group-header-count" :class="{ 'all-selected': group.allSelected }">
+                ({{ group.selectedCount }}/{{ group.totalCount }})
+              </span>
+            </div>
 
-          <!-- Up/Down Reorder & Copy Actions -->
-          <div class="item-reorder-actions">
-            <!-- Nút Sao chép mã thẻ Word/PDF ({tag_id}) -->
-            <button
-              type="button"
-              class="btn-col-action-trigger"
-              @click.stop="copyColumnTag(col)"
-              :title="copiedColId === col.id ? 'Đã chép vào Clipboard!' : `Sao chép mã thẻ Word/PDF: {${col.id}}`"
-              :style="{ color: copiedColId === col.id ? '#16a34a' : '#64748b', borderColor: copiedColId === col.id ? '#86efac' : '#cbd5e1' }"
-            >
-              <i :class="copiedColId === col.id ? 'pi pi-check' : 'pi pi-copy'" style="font-size: 0.72rem;"></i>
-            </button>
+            <!-- Group Quick Actions -->
+            <div class="group-header-actions" @click.stop>
+              <button
+                v-if="!group.allSelected"
+                type="button"
+                class="btn-group-action"
+                @click="toggleGroupSelection(group, true)"
+                title="Hiện tất cả cột trong nhóm này"
+              >
+                Chọn hết
+              </button>
+              <button
+                v-if="!group.noneSelected && !group.isIdentifier"
+                type="button"
+                class="btn-group-action btn-group-action-muted"
+                @click="toggleGroupSelection(group, false)"
+                title="Ẩn tất cả cột trong nhóm này"
+              >
+                Bỏ chọn
+              </button>
+            </div>
+          </div>
 
-            <!-- Nút Tùy chỉnh cột này (Mở menu Đổi tên, Kiểu dữ liệu, Độ rộng, Xóa...) -->
-            <button
-              v-if="(col.id === '_parentPersonnelName' || !col.isVirtual) && col.id !== '_primaryKey' && col.id !== 'stt'"
-              type="button"
-              class="btn-col-action-trigger"
-              @click.stop="$emit('open-col-menu', { event: $event, col })"
-              title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, độ rộng, xóa cột...)"
+          <!-- Group Items List -->
+          <div v-show="!isGroupCollapsed(group.key)" class="column-group-body">
+            <div
+              v-for="(col, colIdx) in group.columns"
+              :key="col.id"
+              class="column-selector-item"
+              :class="{
+                'item-checked': modelValue.includes(col.id),
+                'item-identifier': col.isSystemIdentifier || col.id === '_recordIdentifier',
+              }"
             >
-              <i class="pi pi-cog" style="font-size: 0.72rem; color: #64748b;"></i>
-            </button>
+              <label class="item-label-group">
+                <input
+                  type="checkbox"
+                  :value="col.id"
+                  :checked="modelValue.includes(col.id)"
+                  @change="toggleCol(col.id)"
+                  style="accent-color: #2e7d32; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;"
+                />
+                <span
+                  v-if="col.isSystemIdentifier || col.id === '_recordIdentifier'"
+                  style="font-size: 0.75rem; color: #d97706; flex-shrink: 0;"
+                  title="Cột định danh mặc định (Không thể xóa, có thể ẩn/hiện)"
+                >
+                  🔒
+                </span>
+                <span
+                  style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: #f1f5f9; color: #475569; flex-shrink: 0;"
+                  :title="'Định dạng: ' + (col.format || 'text')"
+                >
+                  <i :class="getFormatIcon(col.format)" style="font-size: 0.65rem;"></i>
+                </span>
+                <span class="item-text" :title="col.label || col.id">
+                  {{ col.label || col.id }}
+                </span>
+              </label>
 
-            <!-- Nút Nhân bản cột này -->
-            <button
-              v-if="(!col.isVirtual || col.id === '_parentPersonnelName') && col.id !== '_primaryKey' && col.id !== 'stt' && col.id !== 'code'"
-              type="button"
-              class="btn-col-action-trigger"
-              @click.stop="$emit('duplicate-column', col)"
-              title="Nhân bản cột này (tạo bản sao)"
-            >
-              <i class="pi pi-clone" style="font-size: 0.72rem; color: #10b981;"></i>
-            </button>
-            <button
-              type="button"
-              class="btn-reorder"
-              :disabled="idx === 0"
-              @click.stop="moveUp(idx)"
-              title="Dời cột lên trước (sang trái trên bảng)"
-            >
-              <i class="pi pi-chevron-up"></i>
-            </button>
-            <button
-              type="button"
-              class="btn-reorder"
-              :disabled="idx === displayOptions.length - 1"
-              @click.stop="moveDown(idx)"
-              title="Dời cột xuống sau (sang phải trên bảng)"
-            >
-              <i class="pi pi-chevron-down"></i>
-            </button>
+              <!-- Up/Down Reorder & Copy Actions -->
+              <div class="item-reorder-actions">
+                <!-- Nút Sao chép mã thẻ Word/PDF ({tag_id}) -->
+                <button
+                  type="button"
+                  class="btn-col-action-trigger"
+                  @click.stop="copyColumnTag(col)"
+                  :title="copiedColId === col.id ? 'Đã chép vào Clipboard!' : `Sao chép mã thẻ Word/PDF: {${col.id}}`"
+                  :style="{ color: copiedColId === col.id ? '#16a34a' : '#64748b', borderColor: copiedColId === col.id ? '#86efac' : '#cbd5e1' }"
+                >
+                  <i :class="copiedColId === col.id ? 'pi pi-check' : 'pi pi-copy'" style="font-size: 0.72rem;"></i>
+                </button>
+
+                <!-- Nút Tùy chỉnh cột này (Mở menu Đổi tên, Kiểu dữ liệu, Độ rộng, Xóa...) -->
+                <button
+                  v-if="(col.id === '_parentPersonnelName' || !col.isVirtual) && col.id !== '_primaryKey' && col.id !== 'stt'"
+                  type="button"
+                  class="btn-col-action-trigger"
+                  @click.stop="$emit('open-col-menu', { event: $event, col })"
+                  title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, độ rộng, xóa cột...)"
+                >
+                  <i class="pi pi-cog" style="font-size: 0.72rem; color: #64748b;"></i>
+                </button>
+
+                <!-- Nút Nhân bản cột này -->
+                <button
+                  v-if="(!col.isVirtual || col.id === '_parentPersonnelName') && col.id !== '_primaryKey' && col.id !== 'stt' && col.id !== 'code' && col.id !== '_recordIdentifier'"
+                  type="button"
+                  class="btn-col-action-trigger"
+                  @click.stop="$emit('duplicate-column', col)"
+                  title="Nhân bản cột này (tạo bản sao)"
+                >
+                  <i class="pi pi-clone" style="font-size: 0.72rem; color: #10b981;"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn-reorder"
+                  :disabled="colIdx === 0"
+                  @click.stop="moveColUp(col, group)"
+                  title="Dời cột lên trước (sang trái trên bảng)"
+                >
+                  <i class="pi pi-chevron-up"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn-reorder"
+                  :disabled="colIdx === group.columns.length - 1"
+                  @click.stop="moveColDown(col, group)"
+                  title="Dời cột xuống sau (sang phải trên bảng)"
+                >
+                  <i class="pi pi-chevron-down"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -196,6 +283,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { getFormatIcon } from '@/utils/formatters';
 
 const props = defineProps({
   modelValue: {
@@ -323,20 +411,13 @@ const copyColumnTag = (col) => {
 watch(
   () => props.modelValue,
   () => {
-    customOrder.value = [];
+    // Keep customOrder intact if user only toggles visibility
   }
 );
 
 const baseDisplayOptions = computed(() => {
   let opts = [...props.options];
-  if (customOrder.value.length === 0) {
-    const activeSet = new Set(props.modelValue);
-    const orderedActive = props.modelValue
-      .map((id) => opts.find((o) => id === o.id))
-      .filter(Boolean);
-    const remaining = opts.filter((o) => !activeSet.has(o.id));
-    return [...orderedActive, ...remaining];
-  } else {
+  if (customOrder.value.length > 0) {
     const map = new Map(opts.map((o) => [o.id, o]));
     const ordered = customOrder.value.map((id) => map.get(id)).filter(Boolean);
     const orderedIds = new Set(customOrder.value);
@@ -345,6 +426,7 @@ const baseDisplayOptions = computed(() => {
     });
     return ordered;
   }
+  return opts;
 });
 
 const displayOptions = computed(() => {
@@ -356,16 +438,76 @@ const displayOptions = computed(() => {
   return opts;
 });
 
-const moveUp = (idx) => {
-  if (idx <= 0) return;
-  const currentList = displayOptions.value;
-  const targetItem = currentList[idx];
-  const prevItem = currentList[idx - 1];
-  if (!targetItem || !prevItem) return;
+const collapsedGroups = ref(new Set());
+
+const toggleGroupCollapse = (groupKey) => {
+  const s = new Set(collapsedGroups.value);
+  if (s.has(groupKey)) {
+    s.delete(groupKey);
+  } else {
+    s.add(groupKey);
+  }
+  collapsedGroups.value = s;
+};
+
+const isGroupCollapsed = (groupKey) => {
+  if (searchQuery.value && searchQuery.value.trim()) return false;
+  return collapsedGroups.value.has(groupKey);
+};
+
+const groupedDisplayOptions = computed(() => {
+  const filtered = displayOptions.value;
+  const groupsMap = new Map();
+
+  // 1. Pinned Identifier Group
+  const identifierCol = filtered.find((c) => c.id === '_recordIdentifier' || c.isSystemIdentifier);
+  if (identifierCol) {
+    groupsMap.set('__system_identifier__', {
+      key: '__system_identifier__',
+      title: '📌 Cột Định danh (Cố định)',
+      isIdentifier: true,
+      columns: [identifierCol],
+    });
+  }
+
+  // 2. Data groups in the exact order they appear in filtered
+  filtered.forEach((c) => {
+    if (c.id === '_recordIdentifier' || c.isSystemIdentifier) return;
+    const gTitle = c.groupTitle || 'Thông tin chung';
+    if (!groupsMap.has(gTitle)) {
+      groupsMap.set(gTitle, {
+        key: gTitle,
+        title: gTitle,
+        isIdentifier: false,
+        columns: [],
+      });
+    }
+    groupsMap.get(gTitle).columns.push(c);
+  });
+
+  const activeSet = new Set(props.modelValue);
+  return Array.from(groupsMap.values()).map((g) => {
+    const total = g.columns.length;
+    const selected = g.columns.filter((c) => activeSet.has(c.id)).length;
+    return {
+      ...g,
+      totalCount: total,
+      selectedCount: selected,
+      allSelected: total > 0 && selected === total,
+      noneSelected: selected === 0,
+    };
+  });
+});
+
+const moveColUp = (col, group) => {
+  const groupCols = group.columns;
+  const colIdx = groupCols.findIndex((c) => c.id === col.id);
+  if (colIdx <= 0) return;
+  const prevCol = groupCols[colIdx - 1];
 
   const fullList = [...baseDisplayOptions.value.map((o) => o.id)];
-  const posA = fullList.indexOf(targetItem.id);
-  const posB = fullList.indexOf(prevItem.id);
+  const posA = fullList.indexOf(col.id);
+  const posB = fullList.indexOf(prevCol.id);
   if (posA !== -1 && posB !== -1) {
     const temp = fullList[posA];
     fullList[posA] = fullList[posB];
@@ -379,16 +521,15 @@ const moveUp = (idx) => {
   }
 };
 
-const moveDown = (idx) => {
-  const currentList = displayOptions.value;
-  if (idx < 0 || idx >= currentList.length - 1) return;
-  const targetItem = currentList[idx];
-  const nextItem = currentList[idx + 1];
-  if (!targetItem || !nextItem) return;
+const moveColDown = (col, group) => {
+  const groupCols = group.columns;
+  const colIdx = groupCols.findIndex((c) => c.id === col.id);
+  if (colIdx < 0 || colIdx >= groupCols.length - 1) return;
+  const nextCol = groupCols[colIdx + 1];
 
   const fullList = [...baseDisplayOptions.value.map((o) => o.id)];
-  const posA = fullList.indexOf(targetItem.id);
-  const posB = fullList.indexOf(nextItem.id);
+  const posA = fullList.indexOf(col.id);
+  const posB = fullList.indexOf(nextCol.id);
   if (posA !== -1 && posB !== -1) {
     const temp = fullList[posA];
     fullList[posA] = fullList[posB];
@@ -400,19 +541,36 @@ const moveDown = (idx) => {
     emit('update:modelValue', newModelValue);
     emit('change', newModelValue);
   }
+};
+
+const toggleGroupSelection = (group, selectAllBool) => {
+  const groupColIds = group.columns.map((c) => c.id);
+  const activeSet = new Set(props.modelValue);
+  if (selectAllBool) {
+    groupColIds.forEach((id) => activeSet.add(id));
+  } else {
+    groupColIds.forEach((id) => activeSet.delete(id));
+    if (activeSet.size === 0) {
+      const fallback = props.options.find((c) => c.id === '_recordIdentifier')?.id || props.options[0]?.id;
+      if (fallback) activeSet.add(fallback);
+    }
+  }
+  const fullList = baseDisplayOptions.value.map((o) => o.id);
+  const result = fullList.filter((id) => activeSet.has(id));
+  emit('update:modelValue', result);
+  emit('change', result);
 };
 
 const selectAll = () => {
-  const list = displayOptions.value.map((o) => o.id);
+  const list = baseDisplayOptions.value.map((o) => o.id);
   emit('update:modelValue', list);
   emit('change', list);
 };
 
 const deselectAll = () => {
-  // Giữ lại 1 cột đầu tiên trong danh sách đang hiển thị để bảng không bị trống hoàn toàn
-  const firstId = displayOptions.value[0]?.id || props.options[0]?.id;
-  emit('update:modelValue', firstId ? [firstId] : []);
-  emit('change', firstId ? [firstId] : []);
+  const fallback = props.options.find((c) => c.id === '_recordIdentifier')?.id || props.options[0]?.id;
+  emit('update:modelValue', fallback ? [fallback] : []);
+  emit('change', fallback ? [fallback] : []);
 };
 
 const resetOrder = () => {
@@ -423,7 +581,6 @@ const resetOrder = () => {
 };
 
 const toggleCol = (id) => {
-  const currentList = [...displayOptions.value.map((o) => o.id)];
   const activeSet = new Set(props.modelValue);
   if (activeSet.has(id)) {
     if (activeSet.size <= 1) {
@@ -434,7 +591,7 @@ const toggleCol = (id) => {
   } else {
     activeSet.add(id);
   }
-  const result = currentList.filter((item) => activeSet.has(item));
+  const result = baseDisplayOptions.value.map((o) => o.id).filter((item) => activeSet.has(item));
   emit('update:modelValue', result);
   emit('change', result);
 };
@@ -489,8 +646,8 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  width: 290px;
-  max-height: min(520px, calc(100vh - 160px));
+  width: 320px;
+  max-height: min(540px, calc(100vh - 160px));
   display: flex;
   flex-direction: column;
   background: #ffffff;
@@ -565,12 +722,168 @@ onUnmounted(() => {
 .column-selector-list {
   flex: 1;
   min-height: 120px;
-  max-height: 360px;
+  max-height: 400px;
   overflow-y: auto;
   padding: 6px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+}
+
+.column-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.column-group-card {
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.column-group-card.is-identifier-group {
+  border-color: #fde68a;
+  background: #fffdf5;
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.08);
+}
+
+.column-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease;
+}
+
+.column-group-header:hover {
+  background: #f1f5f9;
+}
+
+.column-group-header.header-identifier {
+  background: #fef3c7;
+  border-bottom-color: #fde68a;
+}
+
+.column-group-header.header-identifier:hover {
+  background: #fde68a;
+}
+
+.group-header-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.btn-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.65rem;
+}
+
+.group-header-pin {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.group-header-folder {
+  font-size: 0.7rem;
+  color: #0284c7;
+}
+
+.group-header-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.group-header-count {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #e2e8f0;
+  padding: 1px 5px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.group-header-count.all-selected {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.group-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.btn-group-action {
+  border: 1px solid #bae6fd;
+  background: #f0f9ff;
+  color: #0284c7;
+  font-size: 0.65rem;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 1px 5px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1.3;
+}
+
+.btn-group-action:hover {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+}
+
+.btn-group-action-muted {
+  border-color: #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+}
+
+.btn-group-action-muted:hover {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.column-group-body {
+  padding: 3px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.item-identifier {
+  background: #fffbeb;
 }
 
 .column-selector-item {

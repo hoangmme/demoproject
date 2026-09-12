@@ -240,13 +240,29 @@
         @row-click="onRowClick"
         @page="e => dtFirst = e.first"
       >
-        <Column selectionMode="multiple" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '48px', minWidth: '48px' }" :bodyStyle="{ width: '48px', minWidth: '48px' }" />
-        <Column field="stt" headerClass="col-center" bodyClass="col-center" :headerStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }" :bodyStyle="{ width: '70px', minWidth: '70px', padding: '0.75rem 4px', whiteSpace: 'nowrap' }">
+        <Column
+          selectionMode="multiple"
+          headerClass="col-center"
+          bodyClass="col-center"
+          frozen
+          alignFrozen="left"
+          :headerStyle="{ width: '48px', minWidth: '48px', zIndex: 11, background: '#f8fafc' }"
+          :bodyStyle="{ width: '48px', minWidth: '48px', zIndex: 10, background: '#ffffff' }"
+        />
+        <Column
+          field="stt"
+          headerClass="col-center"
+          bodyClass="col-center"
+          frozen
+          alignFrozen="left"
+          :headerStyle="{ width: '56px', minWidth: '56px', padding: '0.75rem 4px', whiteSpace: 'nowrap', zIndex: 11, background: '#f8fafc' }"
+          :bodyStyle="{ width: '56px', minWidth: '56px', padding: '0.75rem 4px', whiteSpace: 'nowrap', zIndex: 10, background: '#ffffff' }"
+        >
           <template #header>
             <span style="white-space: nowrap !important; word-break: keep-all !important; display: inline-block;">STT</span>
           </template>
           <template #body="{ index }">
-            <span style="font-weight: 600; color: #4b5563; font-size: 1.12rem; white-space: nowrap;">{{ dtFirst + index + 1 }}</span>
+            <span style="font-weight: 600; color: #4b5563; font-size: 1.05rem; white-space: nowrap;">{{ dtFirst + index + 1 }}</span>
           </template>
         </Column>
 
@@ -257,14 +273,29 @@
           :field="col.id"
           :headerClass="'col-left'"
           :bodyClass="'col-left'"
+          :frozen="col.id === '_recordIdentifier' || col.isSystemIdentifier"
+          :alignFrozen="(col.id === '_recordIdentifier' || col.isSystemIdentifier) ? 'left' : undefined"
           :pt="{ headerCell: { 'data-column-id': col.id } }"
-          :headerStyle="getColWidthStyle(col)"
-          :bodyStyle="getColWidthStyle(col)"
+          :headerStyle="getColWidthStyle(col, true)"
+          :bodyStyle="getColWidthStyle(col, false)"
         >
           <template #header>
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px;">
-              <div style="display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0;">
-                <span class="table-col-header-wrap">
+              <div style="display: flex; align-items: center; gap: 5px; flex: 1; min-width: 0;">
+                <span
+                  v-if="col.isSystemIdentifier || col.id === '_recordIdentifier'"
+                  style="font-size: 0.8rem; color: #d97706; display: inline-flex; align-items: center; flex-shrink: 0;"
+                  title="Cột định danh mặc định (Primary Identifier - Không thể xóa, có thể ẩn/hiện)"
+                >
+                  🔒
+                </span>
+                <span
+                  class="teable-col-format-badge"
+                  :title="'Định dạng: ' + (col.format || 'text')"
+                >
+                  <i :class="getFormatIcon(col.format)" style="font-size: 0.68rem;"></i>
+                </span>
+                <span class="table-col-header-wrap" :title="col.label">
                   {{ col.label }}
                 </span>
               </div>
@@ -274,7 +305,7 @@
                 @click.stop="openChildColMenu($event, col)"
                 title="Tùy chỉnh cột này (Đổi tên, đổi kiểu, ẩn cột...)"
               >
-                <i class="pi pi-cog" style="font-size: 0.72rem;"></i>
+                <i class="pi pi-chevron-down" style="font-size: 0.65rem; color: #64748b;"></i>
               </button>
             </div>
           </template>
@@ -288,8 +319,35 @@
               <span class="ditto-mark">″</span>
             </div>
             <template v-else>
+              <!-- 0. Cột Định danh Mặc định (_recordIdentifier) -->
+              <template v-if="col.id === '_recordIdentifier' || col.isSystemIdentifier">
+                <div
+                  class="inline-cell-wrapper"
+                  @dblclick.stop="startChildInlineEdit(data, col)"
+                  title="Mã định danh bản ghi (Nhấp đúp để chỉnh sửa nếu muốn)"
+                >
+                  <div v-if="editingChildCell?.uniqueKey === data.uniqueKey && editingChildCell?.colId === col.id" class="inline-edit-box" @click.stop>
+                    <input
+                      v-model="editingChildCell.value"
+                      class="inline-edit-input"
+                      style="font-family: monospace; font-size: 0.8rem;"
+                      autofocus
+                      @keyup.enter="saveChildInlineEdit"
+                      @keyup.esc="cancelChildInlineEdit"
+                      @blur="saveChildInlineEdit"
+                    />
+                  </div>
+                  <span
+                    v-else
+                    style="display: inline-flex; align-items: center; font-family: monospace; font-size: 0.82rem; font-weight: 600; color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; padding: 2px 7px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px;"
+                  >
+                    {{ getCellValue(data, col.id) }}
+                  </span>
+                </div>
+              </template>
+
               <!-- 1. Cột Họ và tên (Cán bộ, Thân nhân... - chỉ hiện tên thuần túy) -->
-            <template v-if="col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen' || col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'">
+              <template v-else-if="col.id === 'personnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'hoTen' || col.id === 'relativeName' || col.id === 'ho_va_ten_than_nhan'">
               <div
                 class="inline-cell-wrapper"
                 @dblclick.stop="startChildInlineEdit(data, col)"
@@ -487,7 +545,7 @@
                     @blur="saveChildInlineEdit"
                   />
                   <select
-                    v-else-if="col.format === 'dropdown'"
+                    v-else-if="col.format === 'dropdown' || col.format === 'singleSelect'"
                     v-model="editingChildCell.value"
                     class="inline-edit-select"
                     autofocus
@@ -538,6 +596,38 @@
                       {{ block.split('\n').slice(1).join('\n') }}
                     </div>
                   </div>
+                </div>
+
+                <!-- Hiển thị Single Select / Dropdown dạng Soft Badge -->
+                <span
+                  v-else-if="(col.format === 'singleSelect' || col.format === 'dropdown') && getCellValue(data, col.id) && getCellValue(data, col.id) !== '-'"
+                  class="teable-soft-badge"
+                  :style="{
+                    backgroundColor: getTeableOptionColor(getCellValue(data, col.id)).bg,
+                    color: getTeableOptionColor(getCellValue(data, col.id)).text,
+                    borderColor: getTeableOptionColor(getCellValue(data, col.id)).border,
+                  }"
+                >
+                  {{ getCellValue(data, col.id) }}
+                </span>
+
+                <!-- Hiển thị Multiple Select dạng danh sách Soft Badges -->
+                <div
+                  v-else-if="col.format === 'multipleSelect' && getMultiSelectValues(data, col.id).length > 0"
+                  style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;"
+                >
+                  <span
+                    v-for="(val, vIdx) in getMultiSelectValues(data, col.id)"
+                    :key="vIdx"
+                    class="teable-soft-badge"
+                    :style="{
+                      backgroundColor: getTeableOptionColor(val, vIdx).bg,
+                      color: getTeableOptionColor(val, vIdx).text,
+                      borderColor: getTeableOptionColor(val, vIdx).border,
+                    }"
+                  >
+                    {{ val }}
+                  </span>
                 </div>
 
                 <!-- Hiển thị giá trị bình thường (có kiểm tra col.boldFirstLine hoặc xuống dòng) -->
@@ -1156,7 +1246,7 @@ import { useTableGridInteraction } from '@/composables/unified-table/useTableGri
 import { useTableColumns } from '@/composables/unified-table/useTableColumns';
 import { useTableFilters } from '@/composables/unified-table/useTableFilters';
 
-import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug, formatOptions } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateObj, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, generateSlug, formatOptions, getFormatIcon, getFormatCode, getTeableOptionColor, DEFAULT_IDENTIFIER_COLUMN, ensureDefaultIdentifierColumn } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, extractRowFieldValue } from '@/utils/dashboardMetrics';
 import { getFileUrl } from '@/api/files';
 import * as XLSX from 'xlsx';
@@ -2114,6 +2204,16 @@ const {
 });
 // ===== END TEABLE / LARK BASE STATE & METHODS =====
 
+const getMultiSelectValues = (data, colId) => {
+  const val = getCellValue(data, colId);
+  if (!val || val === '-') return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    return val.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+  }
+  return [String(val)];
+};
+
 const onRowClick = (event) => {
   if (currentDashboardConfig.value?.source === 'blank') {
     return;
@@ -2275,6 +2375,7 @@ const allAvailableColumnsList = computed(() => {
         ...c,
         id: c.id,
         label: c.label || c.id,
+        groupTitle: c.groupTitle || currentDashboardConfig.value?.title || currentDashboardConfig.value?.name || 'Bảng tùy biến',
         colIndex: idx + 1,
         formWidth: c.formWidth || (c.width && !String(c.width).includes('px') ? c.width : '50'),
         width: c.tableWidth ? (c.tableWidth + 'px') : (c.width || '160px'),
@@ -2286,7 +2387,7 @@ const allAvailableColumnsList = computed(() => {
         includeInExport: c.includeInExport !== false && c.includeInExport !== 'false',
       });
     });
-    return rawList;
+    return ensureDefaultIdentifierColumn(rawList);
   }
 
   if (src === 'trips') {
@@ -2302,6 +2403,7 @@ const allAvailableColumnsList = computed(() => {
     }
     const colMap = computeColumnIndexMap(tGroups || []);
     (tGroups || []).forEach((g) => {
+      const gTitle = g.title || g.group || g.groupName || 'Chuyến đi';
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
@@ -2311,6 +2413,7 @@ const allAvailableColumnsList = computed(() => {
             ...c,
             id: c.id,
             label: c.label || c.id,
+            groupTitle: c.groupTitle || gTitle,
             colIndex: idxText,
             formWidth: c.formWidth || (c.width && !String(c.width).includes('px') ? c.width : '50'),
             width: c.tableWidth ? (c.tableWidth + 'px') : (c.width || (c.format === 'checkbox_file_loop' || c.format === 'checkbox_file' ? '250px' : '150px')),
@@ -2336,6 +2439,7 @@ const allAvailableColumnsList = computed(() => {
     }
     const colMap = computeColumnIndexMap(rGroups || []);
     (rGroups || []).forEach((g) => {
+      const gTitle = g.title || g.group || g.groupName || 'Thông tin Thân nhân';
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
@@ -2345,6 +2449,7 @@ const allAvailableColumnsList = computed(() => {
             ...c,
             id: c.id,
             label: c.label || c.id,
+            groupTitle: c.groupTitle || gTitle,
             colIndex: idxText,
             formWidth: c.formWidth || (c.width && !String(c.width).includes('px') ? c.width : '50'),
             width: c.tableWidth ? (c.tableWidth + 'px') : (c.width || (c.format === 'checkbox_file_loop' || c.format === 'checkbox_file' ? '250px' : '150px')),
@@ -2371,6 +2476,7 @@ const allAvailableColumnsList = computed(() => {
     }
     const colMap = computeColumnIndexMap(pGroups || []);
     (pGroups || []).forEach((g) => {
+      const gTitle = g.title || g.group || g.groupName || 'Thông tin Cán bộ';
       (g.columns || []).forEach((c) => {
         if (c.id && c.id !== 'stt' && !seen.has(c.id)) {
           seen.add(c.id);
@@ -2380,6 +2486,7 @@ const allAvailableColumnsList = computed(() => {
             ...c,
             id: c.id,
             label: c.label || c.id,
+            groupTitle: c.groupTitle || gTitle,
             colIndex: idxText,
             formWidth: c.formWidth || (c.width && !String(c.width).includes('px') ? c.width : '50'),
             width: c.tableWidth ? (c.tableWidth + 'px') : (c.width || (c.format === 'checkbox_file_loop' || c.format === 'checkbox_file' ? '250px' : '150px')),
@@ -2394,7 +2501,7 @@ const allAvailableColumnsList = computed(() => {
     });
   }
 
-  return rawList;
+  return ensureDefaultIdentifierColumn(rawList);
 });
 
 // ===== LARK BASE COLUMN ENGINE (useTableColumns composable) =====
@@ -2750,7 +2857,13 @@ const getCellValue = (trip, colOrId, depth = 0) => {
   const colId = typeof colOrId === 'object' && colOrId !== null ? (colOrId.id || colOrId.field) : colOrId;
   if (!trip || !colId || depth > 2) return '-';
 
-  // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
+  // 0a. Cột định danh mặc định (_recordIdentifier)
+  if (colId === '_recordIdentifier') {
+    const tcd = typeof trip.custom_data === 'string' ? JSON.parse(trip.custom_data || '{}') : (trip.custom_data || {});
+    return trip._recordIdentifier || tcd._recordIdentifier || trip.code || trip.uniqueKey || trip.id || '-';
+  }
+
+  // 0b. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
   const vVal = resolveVirtualColumnValue(trip, colId);
   if (vVal !== undefined) {
     return vVal || '-';
@@ -3536,4 +3649,28 @@ onUnmounted(() => {
 
 <style scoped>
 @import '@/assets/styles/unified-table.css';
+
+.teable-col-format-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.teable-soft-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  line-height: 1.35;
+}
 </style>

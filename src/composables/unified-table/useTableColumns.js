@@ -324,8 +324,22 @@ export function useTableColumns({
     }
   };
 
-  const getColWidthStyle = (col) => {
+  const getColWidthStyle = (col, isHeader = false) => {
     if (!col) return {};
+
+    if (col.id === '_recordIdentifier' || col.isSystemIdentifier) {
+      const draggedWidth = resizedColWidths.value?.[col.id];
+      const px = draggedWidth ? Math.round(Number(draggedWidth)) : 140;
+      return {
+        width: `${px}px`,
+        minWidth: `${px}px`,
+        maxWidth: `${px}px`,
+        zIndex: isHeader ? 10 : 9,
+        background: isHeader ? '#f8fafc' : '#ffffff',
+        boxShadow: '4px 0 8px rgba(0, 0, 0, 0.05)',
+        borderRight: '1px solid #e2e8f0',
+      };
+    }
 
     if (colWidthMode.value === 'fixed') {
       const px = Math.max(60, Number(colWidthPx.value) || 160);
@@ -1044,6 +1058,10 @@ export function useTableColumns({
   };
 
   const onChildDeleteColumnFromTable = async (colId) => {
+    if (colId === '_recordIdentifier' || colId === 'id' || colId === 'stt') {
+      alert('Cột định danh mặc định là cột hệ thống cốt lõi, không thể xóa! Bạn có thể ẩn cột này trong menu "Tùy chọn Cột".');
+      return;
+    }
     const { key, mapping, isBlank, cDash, src } = getTargetMappingRef();
     let found = false;
 

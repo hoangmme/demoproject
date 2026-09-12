@@ -1411,23 +1411,150 @@ export const generateSlug = (str) => {
   return slug || 'cot_' + Date.now();
 };
 
-export const formatOptions = [
-  { label: 'Văn bản (Text)', value: 'text' },
-  { label: 'Số (Number)', value: 'number' },
-  { label: 'Ngày tháng (Date)', value: 'date' },
-  { label: 'List Dữ liệu (Text Loop)', value: 'text_loop' },
-  { label: 'Bảng lặp nhiều cột (Tùy biến tiêu đề)', value: 'table_loop' },
-  { label: 'Hộp kiểm (Nhiều lựa chọn)', value: 'checkbox' },
-  { label: 'Hộp kiểm + Nhập Text (Có điều kiện)', value: 'checkbox_text' },
-  { label: 'Hộp kiểm + Tệp đính kèm', value: 'checkbox_file' },
-  { label: 'Dropdown (Lựa chọn đơn)', value: 'dropdown' },
-  { label: 'Cột Công thức (Formula / Trạng thái)', value: 'formula' },
-  { label: 'Tham chiếu tự động (Lookup)', value: 'lookup' },
-  { label: 'Tính toán tổng hợp (Rollup)', value: 'rollup' },
-  { label: 'Tệp đính kèm (File/Ảnh/PDF)', value: 'file' },
-  { label: 'Văn bản + Tệp đính kèm (Loop)', value: 'text_file_loop' },
-  { label: 'Hộp kiểm + Tệp đính kèm (Loop)', value: 'checkbox_file_loop' },
+export const TEABLE_FORMAT_GROUPS = [
+  {
+    group: 'Cơ bản (Basic)',
+    items: [
+      { label: 'Văn bản ngắn (Single line text)', value: 'singleLineText', icon: 'pi pi-align-left', code: 'A' },
+      { label: 'Văn bản dài (Long text)', value: 'longText', icon: 'pi pi-align-justify', code: 'A≡' },
+      { label: 'Số (Number)', value: 'number', icon: 'pi pi-hashtag', code: '#' },
+      { label: 'Lựa chọn đơn / Trạng thái (Single select)', value: 'singleSelect', icon: 'pi pi-check-circle', code: '⊘' },
+      { label: 'Nhiều lựa chọn (Multiple select)', value: 'multipleSelect', icon: 'pi pi-list', code: ':=' },
+      { label: 'Ngày tháng (Date)', value: 'date', icon: 'pi pi-calendar', code: '📅' },
+      { label: 'Hộp kiểm (Checkbox)', value: 'checkbox', icon: 'pi pi-check-square', code: '☑️' },
+      { label: 'Tệp đính kèm (Attachment)', value: 'attachment', icon: 'pi pi-paperclip', code: '📎' },
+    ],
+  },
+  {
+    group: 'Nâng cao & Liên kết (Advanced / Relational)',
+    items: [
+      { label: 'Công thức (Formula)', value: 'formula', icon: 'pi pi-calculator', code: 'fx' },
+      { label: 'Liên kết bản ghi (Link to record)', value: 'linkToRecord', icon: 'pi pi-link', code: '🔗' },
+      { label: 'Tham chiếu tự động (Lookup)', value: 'lookup', icon: 'pi pi-search', code: '🔍' },
+      { label: 'Tính toán tổng hợp (Rollup)', value: 'rollup', icon: 'pi pi-database', code: '📚' },
+      { label: 'Số tự tăng (Auto number)', value: 'autoNumber', icon: 'pi pi-sort-numeric-down', code: ':=' },
+    ],
+  },
+  {
+    group: 'Hệ thống (Audit / System)',
+    items: [
+      { label: 'Thời gian tạo (Created time)', value: 'createdTime', icon: 'pi pi-clock', code: '🕒' },
+      { label: 'Thời gian sửa đổi (Last modified time)', value: 'lastModifiedTime', icon: 'pi pi-history', code: '🔄' },
+    ],
+  },
+  {
+    group: 'Đặc thù nghiệp vụ & Kế thừa (Legacy)',
+    items: [
+      { label: 'Hộp kiểm + Tệp đính kèm (Loop)', value: 'checkbox_file_loop', icon: 'pi pi-paperclip', code: '☑️📎' },
+      { label: 'Văn bản + Tệp đính kèm (Loop)', value: 'text_file_loop', icon: 'pi pi-paperclip', code: 'A📎' },
+      { label: 'Hộp kiểm + Tệp đính kèm (Đơn)', value: 'checkbox_file', icon: 'pi pi-file', code: '☑️' },
+      { label: 'Hộp kiểm + Nhập Text (Có điều kiện)', value: 'checkbox_text', icon: 'pi pi-check-square', code: '☑️' },
+      { label: 'Dropdown cũ (Lựa chọn đơn)', value: 'dropdown', icon: 'pi pi-chevron-down', code: '⊘' },
+      { label: 'Văn bản cũ (Text)', value: 'text', icon: 'pi pi-align-left', code: 'A' },
+      { label: 'Tệp đính kèm cũ (File)', value: 'file', icon: 'pi pi-paperclip', code: '📎' },
+      { label: 'List Dữ liệu cũ (Text Loop)', value: 'text_loop', icon: 'pi pi-list', code: 'A' },
+      { label: 'Bảng lặp nhiều cột (Table Loop)', value: 'table_loop', icon: 'pi pi-table', code: '⊞' },
+    ],
+  },
 ];
+
+export const formatOptions = TEABLE_FORMAT_GROUPS.flatMap((g) => g.items);
+
+export const getFormatIcon = (format) => {
+  if (!format) return 'pi pi-align-left';
+  const f = String(format).toLowerCase();
+  if (f === 'number') return 'pi pi-hashtag';
+  if (f === 'date') return 'pi pi-calendar';
+  if (f === 'singleselect' || f === 'dropdown') return 'pi pi-check-circle';
+  if (f === 'multipleselect') return 'pi pi-list';
+  if (f === 'checkbox' || f === 'checkbox_text') return 'pi pi-check-square';
+  if (f === 'attachment' || f === 'file') return 'pi pi-paperclip';
+  if (f === 'formula') return 'pi pi-calculator';
+  if (f === 'linktorecord' || f === 'link') return 'pi pi-link';
+  if (f === 'lookup') return 'pi pi-search';
+  if (f === 'rollup') return 'pi pi-database';
+  if (f === 'autonumber') return 'pi pi-sort-numeric-down';
+  if (f === 'createdtime') return 'pi pi-clock';
+  if (f === 'lastmodifiedtime') return 'pi pi-history';
+  if (f === 'checkbox_file_loop' || f === 'checkbox_file') return 'pi pi-paperclip';
+  if (f === 'text_file_loop') return 'pi pi-paperclip';
+  if (f === 'longtext') return 'pi pi-align-justify';
+  return 'pi pi-align-left';
+};
+
+export const getFormatCode = (format) => {
+  if (!format) return 'A';
+  const f = String(format).toLowerCase();
+  if (f === 'longtext') return 'A≡';
+  if (f === 'number') return '#';
+  if (f === 'date') return '📅';
+  if (f === 'singleselect' || f === 'dropdown') return '⊘';
+  if (f === 'multipleselect') return ':=';
+  if (f === 'checkbox' || f === 'checkbox_text') return '☑️';
+  if (f === 'attachment' || f === 'file') return '📎';
+  if (f === 'formula') return 'fx';
+  if (f === 'linktorecord' || f === 'link') return '🔗';
+  if (f === 'lookup') return '🔍';
+  if (f === 'rollup') return '📚';
+  if (f === 'createdtime') return '🕒';
+  if (f === 'lastmodifiedtime') return '🔄';
+  return 'A';
+};
+
+export const TEABLE_COLOR_PALETTE = [
+  { bg: '#fff7ed', text: '#c2410c', border: '#ffedd5' }, // Orange
+  { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' }, // Green
+  { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe' }, // Blue
+  { bg: '#faf5ff', text: '#7e22ce', border: '#e9d5ff' }, // Purple
+  { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' }, // Red
+  { bg: '#fefce8', text: '#a16207', border: '#fef08a' }, // Yellow
+  { bg: '#f0fdfa', text: '#0f766e', border: '#99f6e4' }, // Teal
+  { bg: '#f8fafc', text: '#334155', border: '#e2e8f0' }, // Slate Gray
+];
+
+export const getTeableOptionColor = (optionText, index = 0) => {
+  if (!optionText) return TEABLE_COLOR_PALETTE[7];
+  let hash = 0;
+  for (let i = 0; i < optionText.length; i++) {
+    hash = (hash << 5) - hash + optionText.charCodeAt(i);
+    hash |= 0;
+  }
+  const idx = Math.abs(hash + (index || 0)) % TEABLE_COLOR_PALETTE.length;
+  return TEABLE_COLOR_PALETTE[idx];
+};
+
+export const DEFAULT_IDENTIFIER_COLUMN = {
+  id: '_recordIdentifier',
+  label: 'Định danh bản ghi',
+  format: 'singleLineText',
+  isSystemIdentifier: true,
+  isPrimary: true,
+  canDelete: false,
+  groupTitle: '📌 Cột Định danh (Cố định)',
+  width: '140',
+  placeholder: 'Mã / Tiêu đề định danh',
+};
+
+export const ensureDefaultIdentifierColumn = (columns = []) => {
+  if (!Array.isArray(columns)) return [DEFAULT_IDENTIFIER_COLUMN];
+  const hasIdCol = columns.some((c) => c && c.id === '_recordIdentifier');
+  if (!hasIdCol) {
+    return [{ ...DEFAULT_IDENTIFIER_COLUMN }, ...columns];
+  }
+  return columns.map((c) => {
+    if (c.id === '_recordIdentifier') {
+      return {
+        ...c,
+        isSystemIdentifier: true,
+        isPrimary: true,
+        canDelete: false,
+        groupTitle: c.groupTitle || '📌 Cột Định danh (Cố định)',
+        label: c.label || 'Định danh bản ghi',
+      };
+    }
+    return c;
+  });
+};
 
 export const lookupOperators = [
   // Nhóm So sánh Chuỗi / Cơ bản

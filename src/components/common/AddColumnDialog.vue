@@ -41,21 +41,16 @@
           Kiểu dữ liệu:
         </label>
         <select v-model="form.format" class="dialog-select" @change="onFormatChange">
-          <option value="text">Văn bản (Text) - Mặc định</option>
-          <option value="number">Số (Number)</option>
-          <option value="date">Ngày tháng (Date)</option>
-          <option value="dropdown">Danh mục lựa chọn (Dropdown / Single Select)</option>
-          <option value="checkbox">Hộp kiểm đơn (Checkbox)</option>
-          <option value="checkbox_file_loop">Hộp kiểm kèm Tệp đính kèm</option>
-          <option value="file">Tệp đính kèm (File / Ảnh / PDF)</option>
-          <option value="lookup">🔗 Tham chiếu tự động (Lookup - Lấy dữ liệu từ bảng liên kết)</option>
-          <option value="formula">⚡ Công thức Nâng cao (Formula - Lark Base / Teable)</option>
-          <option value="rollup">📊 Tính toán tổng hợp (Rollup)</option>
+          <optgroup v-for="g in TEABLE_FORMAT_GROUPS" :key="g.group" :label="g.group">
+            <option v-for="item in g.items" :key="item.value" :value="item.value">
+              {{ item.code ? item.code + ' ' : '' }}{{ item.label }}
+            </option>
+          </optgroup>
         </select>
       </div>
 
-      <!-- Tùy chọn nếu là Dropdown -->
-      <div v-if="form.format === 'dropdown' || form.format === 'checkbox_file_loop'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+      <!-- Tùy chọn nếu là Dropdown hoặc Select -->
+      <div v-if="form.format === 'dropdown' || form.format === 'singleSelect' || form.format === 'multipleSelect' || form.format === 'checkbox_file_loop'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
         <label style="font-size: 0.74rem; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
           Danh sách tùy chọn (cách nhau bởi dấu phẩy):
         </label>
@@ -918,6 +913,7 @@ import {
   evaluateRollup,
   getRecordFieldValue,
   formulaFunctionsCatalog,
+  TEABLE_FORMAT_GROUPS,
 } from '@/utils/formatters';
 
 const props = defineProps({
