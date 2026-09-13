@@ -500,6 +500,36 @@ export const checkConditionMatch = (val, op, target) => {
     if (!dVal || !dTarget) return false;
     return op === 'before' ? dVal < dTarget : dVal > dTarget;
   }
+  if (op === 'date_between' || op === 'between') {
+    const dVal = parseDateValue(val)?.getTime();
+    if (!dVal) return false;
+    let start = null;
+    let end = null;
+    if (target && typeof target === 'object') {
+      start = target.start ? (target.start instanceof Date ? target.start.getTime() : parseDateValue(target.start)?.getTime()) : (target.from ? parseDateValue(target.from)?.getTime() : null);
+      end = target.end ? (target.end instanceof Date ? target.end.getTime() : parseDateValue(target.end)?.getTime()) : (target.to ? parseDateValue(target.to)?.getTime() : null);
+    } else if (typeof target === 'string') {
+      const parts = target.split('..');
+      if (parts.length === 2) {
+        start = parseDateValue(parts[0].trim())?.getTime();
+        end = parseDateValue(parts[1].trim())?.getTime();
+      }
+    }
+    if (start && end) return dVal >= start && dVal <= end;
+    if (start) return dVal >= start;
+    if (end) return dVal <= end;
+    return true;
+  }
+  if (op === 'date_preset') {
+    const dVal = parseDateValue(val);
+    if (!dVal || isNaN(dVal.getTime())) return false;
+    const bounds = resolveDateRangeBounds(String(target || 'today'));
+    const t = dVal.getTime();
+    if (bounds.start && bounds.end) return t >= bounds.start.getTime() && t <= bounds.end.getTime();
+    if (bounds.start) return t >= bounds.start.getTime();
+    if (bounds.end) return t <= bounds.end.getTime();
+    return true;
+  }
 
   // Số học & Điều kiện đếm
   const isNumericOp = ['gt', 'gte', 'lt', 'lte', 'count_gt', 'count_gte', 'count_lt', 'count_lte', 'count_eq'].includes(op);
@@ -887,5 +917,63 @@ export const evaluateConditionWithReason = (item, cond, personnelStore, fieldLab
   }
 
   return { matches, reason };
+};
+
+/**
+ * Phân giải mốc thời gian động (Hôm nay, Tuần này, Tháng này, Năm nay, Tùy chỉnh)
+ */
+export const resolveDateRangeBounds = (preset = 'today', customFrom = '', customTo = '', refDate = new Date()) => {
+  const now = refDate instanceof Date && !isNaN(refDate.getTime()) ? refDate : new Date();
+
+  if (preset === 'today') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const dStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    return { start, end, label: `Hôm nay (${dStr})` };
+  }
+
+  if (preset === 'this_week') {
+    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday...
+    const diffToMonday = (dayOfWeek + 6) % 7;
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0, 0);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 23, 59, 59, 999);
+    const mStr = `${String(monday.getDate()).padStart(2, '0')}/${String(monday.getMonth() + 1).padStart(2, '0')}`;
+    const sStr = `${String(sunday.getDate()).padStart(2, '0')}/${String(sunday.getMonth() + 1).padStart(2, '0')}/${sunday.getFullYear()}`;
+    return { start: monday, end: sunday, label: `Tuần này (${mStr} - ${sStr})` };
+  }
+
+  if (preset === 'this_month') {
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const mStr = String(now.getMonth() + 1).padStart(2, '0');
+    return { start: firstDay, end: lastDay, label: `Tháng này (${mStr}/${now.getFullYear()})` };
+  }
+
+  if (preset === 'this_year') {
+    const firstDay = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+    const lastDay = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return { start: firstDay, end: lastDay, label: `Năm nay (${now.getFullYear()})` };
+  }
+
+  if (preset === 'custom') {
+    const dFrom = customFrom ? parseDateValue(customFrom) : null;
+    const dTo = customTo ? parseDateValue(customTo) : null;
+    const start = dFrom ? new Date(dFrom.getFullYear(), dFrom.getMonth(), dFrom.getDate(), 0, 0, 0, 0) : null;
+    const end = dTo ? new Date(dTo.getFullYear(), dTo.getMonth(), dTo.getDate(), 23, 59, 59, 999) : null;
+
+    let label = 'Thời gian tùy chỉnh';
+    if (dFrom && dTo) {
+      label = `Từ ${String(dFrom.getDate()).padStart(2, '0')}/${String(dFrom.getMonth() + 1).padStart(2, '0')}/${dFrom.getFullYear()} đến ${String(dTo.getDate()).padStart(2, '0')}/${String(dTo.getMonth() + 1).padStart(2, '0')}/${dTo.getFullYear()}`;
+    } else if (dFrom) {
+      label = `Từ ${String(dFrom.getDate()).padStart(2, '0')}/${String(dFrom.getMonth() + 1).padStart(2, '0')}/${dFrom.getFullYear()}`;
+    } else if (dTo) {
+      label = `Đến ${String(dTo.getDate()).padStart(2, '0')}/${String(dTo.getMonth() + 1).padStart(2, '0')}/${dTo.getFullYear()}`;
+    }
+    return { start, end, label };
+  }
+
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  return { start, end, label: `Hôm nay (${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()})` };
 };
 

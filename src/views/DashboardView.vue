@@ -253,6 +253,81 @@
                 <div style="width: 100%; margin-top: 4px;">
                   <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35', whiteSpace: 'pre-line', display: 'block', width: '100%', textAlign: widget.justifyTitle ? 'justify' : 'left', textAlignLast: widget.justifyTitle ? 'justify' : 'auto' }" v-html="formatWidgetTitle(widget.title)"></span>
                 </div>
+
+                <!-- ⏱️ Thanh Lọc Thời Gian Động Riêng Biệt của Khối này (Zero-hardcode) -->
+                <div
+                  v-if="widget.timeFilterEnabled && widget.dateColumnId"
+                  class="widget-time-filter-wrap"
+                  @click.stop
+                >
+                  <div class="time-pills-row">
+                    <button
+                      type="button"
+                      class="btn-time-pill"
+                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'today' }"
+                      @click.stop="setWidgetActiveTimeRange(widget, 'today')"
+                    >
+                      Hôm nay
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-time-pill"
+                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_week' }"
+                      @click.stop="setWidgetActiveTimeRange(widget, 'this_week')"
+                    >
+                      Tuần này
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-time-pill"
+                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_month' }"
+                      @click.stop="setWidgetActiveTimeRange(widget, 'this_month')"
+                    >
+                      Tháng này
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-time-pill"
+                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_year' }"
+                      @click.stop="setWidgetActiveTimeRange(widget, 'this_year')"
+                    >
+                      Năm nay
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-time-pill"
+                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'custom' }"
+                      @click.stop="setWidgetActiveTimeRange(widget, 'custom')"
+                      title="Thời gian tùy chỉnh"
+                    >
+                      Tùy chỉnh 📅
+                    </button>
+                  </div>
+
+                  <!-- Thông tin mốc thời gian -->
+                  <div class="time-range-sublabel">
+                    <span class="sublabel-col" :title="`Cột mốc: ${getColumnLabelForWidget(widget, widget.dateColumnId)}`">
+                      📅 {{ getColumnLabelForWidget(widget, widget.dateColumnId) }}
+                    </span>
+                    <span class="sublabel-dot">·</span>
+                    <span class="sublabel-range">{{ getWidgetTimeRangeText(widget) }}</span>
+                  </div>
+
+                  <!-- Ô nhập khoảng ngày nếu chọn Tùy chỉnh -->
+                  <div v-if="getWidgetActiveTimeRange(widget) === 'custom'" class="time-custom-inputs" @click.stop>
+                    <input
+                      type="date"
+                      v-model="getWidgetCustomDates(widget).from"
+                      class="time-date-input"
+                    />
+                    <span style="font-size: 0.72rem; color: #64748b;">đến</span>
+                    <input
+                      type="date"
+                      v-model="getWidgetCustomDates(widget).to"
+                      class="time-date-input"
+                    />
+                  </div>
+                </div>
               </div>
               <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">
                 <span class="view-more-tag" :style="{ color: widget.color || '#1e293b' }">
@@ -285,6 +360,78 @@
                 <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa biểu đồ này" style="color: #ef4444;">
                   <i class="pi pi-trash"></i>
                 </button>
+              </div>
+            </div>
+
+            <!-- ⏱️ Thanh Lọc Thời Gian Động Riêng Biệt của Khối Biểu đồ này -->
+            <div
+              v-if="widget.timeFilterEnabled && widget.dateColumnId"
+              class="widget-time-filter-wrap"
+              style="margin-bottom: 8px;"
+              @click.stop
+            >
+              <div class="time-pills-row">
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'today' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'today')"
+                >
+                  Hôm nay
+                </button>
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_week' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'this_week')"
+                >
+                  Tuần này
+                </button>
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_month' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'this_month')"
+                >
+                  Tháng này
+                </button>
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_year' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'this_year')"
+                >
+                  Năm nay
+                </button>
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'custom' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'custom')"
+                  title="Thời gian tùy chỉnh"
+                >
+                  Tùy chỉnh 📅
+                </button>
+              </div>
+              <div class="time-range-sublabel">
+                <span class="sublabel-col" :title="`Cột mốc: ${getColumnLabelForWidget(widget, widget.dateColumnId)}`">
+                  📅 {{ getColumnLabelForWidget(widget, widget.dateColumnId) }}
+                </span>
+                <span class="sublabel-dot">·</span>
+                <span class="sublabel-range">{{ getWidgetTimeRangeText(widget) }}</span>
+              </div>
+              <div v-if="getWidgetActiveTimeRange(widget) === 'custom'" class="time-custom-inputs" @click.stop>
+                <input
+                  type="date"
+                  v-model="getWidgetCustomDates(widget).from"
+                  class="time-date-input"
+                />
+                <span style="font-size: 0.72rem; color: #64748b;">đến</span>
+                <input
+                  type="date"
+                  v-model="getWidgetCustomDates(widget).to"
+                  class="time-date-input"
+                />
               </div>
             </div>
 
@@ -388,6 +535,78 @@
                 <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa biểu đồ này" style="color: #ef4444;">
                   <i class="pi pi-trash"></i>
                 </button>
+              </div>
+            </div>
+
+            <!-- ⏱️ Thanh Lọc Thời Gian Động Riêng Biệt của Khối Biểu đồ Ngang này -->
+            <div
+              v-if="widget.timeFilterEnabled && widget.dateColumnId"
+              class="widget-time-filter-wrap"
+              style="margin-bottom: 8px;"
+              @click.stop
+            >
+              <div class="time-pills-row">
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'today' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'today')"
+                >
+                  Hôm nay
+                </button>
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_week' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'this_week')"
+                >
+                  Tuần này
+                </button>
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_month' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'this_month')"
+                >
+                  Tháng này
+                </button>
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_year' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'this_year')"
+                >
+                  Năm nay
+                </button>
+                <button
+                  type="button"
+                  class="btn-time-pill"
+                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'custom' }"
+                  @click.stop="setWidgetActiveTimeRange(widget, 'custom')"
+                  title="Thời gian tùy chỉnh"
+                >
+                  Tùy chỉnh 📅
+                </button>
+              </div>
+              <div class="time-range-sublabel">
+                <span class="sublabel-col" :title="`Cột mốc: ${getColumnLabelForWidget(widget, widget.dateColumnId)}`">
+                  📅 {{ getColumnLabelForWidget(widget, widget.dateColumnId) }}
+                </span>
+                <span class="sublabel-dot">·</span>
+                <span class="sublabel-range">{{ getWidgetTimeRangeText(widget) }}</span>
+              </div>
+              <div v-if="getWidgetActiveTimeRange(widget) === 'custom'" class="time-custom-inputs" @click.stop>
+                <input
+                  type="date"
+                  v-model="getWidgetCustomDates(widget).from"
+                  class="time-date-input"
+                />
+                <span style="font-size: 0.72rem; color: #64748b;">đến</span>
+                <input
+                  type="date"
+                  v-model="getWidgetCustomDates(widget).to"
+                  class="time-date-input"
+                />
               </div>
             </div>
 
@@ -757,6 +976,54 @@
             <span style="font-size: 0.72rem; color: #1e40af; margin-top: 3px; display: block;">
               💡 Khi chọn thêm cột này (VD: Đối tượng 'isRelative' → Cán bộ / Thân nhân, hoặc Trạng thái, Phòng ban...), mỗi cột sẽ được chia thành nhiều đoạn màu xếp chồng (Stacked Bar) kèm chú giải màu. Bấm vào màu nào sẽ mở danh sách chi tiết của riêng loại đó.
             </span>
+          </div>
+        </div>
+
+        <!-- 1d. BỘ LỌC THEO MỐC THỜI GIAN (TÙY CHỌN RIÊNG CHO KHỐI NÀY - ZERO HARDCODE) -->
+        <div class="field-item" style="background: #fffbeb; padding: 12px 14px; border-radius: 8px; border: 1.5px solid #fde68a; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <label class="field-label" style="font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 0; cursor: pointer;">
+              <input
+                type="checkbox"
+                v-model="widgetForm.timeFilterEnabled"
+                style="accent-color: #d97706; width: 16px; height: 16px; cursor: pointer;"
+              />
+              <span>⏱️ Bật Thống kê theo Mốc Thời gian (Hôm nay / Tuần / Tháng / Năm / Tùy chỉnh)</span>
+            </label>
+            <span v-if="widgetForm.timeFilterEnabled" style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 999px; border: 1px solid #fde68a;">
+              Đang kích hoạt
+            </span>
+          </div>
+
+          <div v-if="widgetForm.timeFilterEnabled" style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px; padding-top: 8px; border-top: 1px dashed #fde68a;">
+            <div>
+              <label class="field-label" style="font-weight: 700; color: #92400e; font-size: 0.8rem; margin-bottom: 4px; display: block;">
+                Cột mốc thời gian của Bảng đang chọn (Dùng để tính Hôm nay / Tuần / Tháng / Năm): <span style="color: #ef4444;">*</span>
+              </label>
+              <select v-model="widgetForm.dateColumnId" class="settings-select" style="width: 100%; font-weight: 600; color: #92400e; background: #ffffff; border: 1px solid #fcd34d;">
+                <option value="">-- Chọn cột thời gian của bảng này --</option>
+                <optgroup v-for="grp in allSearchableGroupsForWidget" :key="'dt_' + grp.name" :label="grp.name">
+                  <option v-for="c in grp.columns" :key="'dt_col_' + c.id" :value="c.id">
+                    {{ (c.format === 'date' || c.id.includes('date') || c.id.includes('ngay')) ? '📅 ' : '' }}{{ c.label || c.id }} ({{ c.id }})
+                  </option>
+                </optgroup>
+              </select>
+              <span style="font-size: 0.73rem; color: #b45309; margin-top: 3px; display: block;">
+                💡 <strong>Tự do chọn cột (Zero-hardcode):</strong> Hệ thống sẽ so khớp ngày trong cột này với khoảng thời gian được chọn trên thẻ.
+              </span>
+            </div>
+
+            <!-- Chu kỳ mặc định khi tải trang -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 0.8rem; font-weight: 700; color: #92400e;">Chu kỳ mặc định khi hiển thị:</span>
+              <select v-model="widgetForm.defaultTimeRange" class="settings-select" style="width: 200px; font-weight: 600; font-size: 0.8rem;">
+                <option value="today">Hôm nay (Mặc định)</option>
+                <option value="this_week">Tuần này</option>
+                <option value="this_month">Tháng này</option>
+                <option value="this_year">Năm nay</option>
+                <option value="custom">Thời gian tùy chỉnh</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1485,7 +1752,7 @@ import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
 import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, getColItemStyle } from '@/utils/formatters';
-import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText } from '@/utils/dashboardMetrics';
+import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, resolveDateRangeBounds } from '@/utils/dashboardMetrics';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import {
   getUnifiedTableDefinitions,
@@ -3056,10 +3323,86 @@ const getFieldOptionsForWidget = (fieldId) => {
   return [];
 };
 
+// =========================================================================
+// TIME-BASED DYNAMIC FILTER ENGINE FOR WIDGETS (Zero-hardcode, Table & Date Col)
+// =========================================================================
+const widgetActiveTimeRangeMap = ref({});
+const widgetCustomDatesMap = ref({});
+
+const getColumnLabelForWidget = (widget, colId) => {
+  if (!colId) return '';
+  const src = widget?.source || 'trips';
+  const table = (allUnifiedTables.value || []).find((t) => t.id === src || t.source === src);
+  if (table && typeof table.getSearchableGroups === 'function') {
+    const groups = table.getSearchableGroups(personnelStore);
+    for (const g of groups) {
+      const found = (g.columns || []).find((c) => c.id === colId || c.rawId === colId);
+      if (found) return found.label || found.rawLabel || colId;
+    }
+  }
+  for (const g of allSearchableGroupsForWidget.value) {
+    const found = (g.columns || []).find((c) => c.id === colId || c.rawId === colId);
+    if (found) return found.label || found.rawLabel || colId;
+  }
+  return colId;
+};
+
+const getWidgetActiveTimeRange = (widget) => {
+  if (!widget?.id) return 'today';
+  return widgetActiveTimeRangeMap.value[widget.id] || widget.defaultTimeRange || 'today';
+};
+
+const setWidgetActiveTimeRange = (widget, range) => {
+  if (!widget?.id) return;
+  widgetActiveTimeRangeMap.value = {
+    ...widgetActiveTimeRangeMap.value,
+    [widget.id]: range,
+  };
+  if (range === 'custom' && !widgetCustomDatesMap.value[widget.id]) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    widgetCustomDatesMap.value = {
+      ...widgetCustomDatesMap.value,
+      [widget.id]: {
+        from: widget.customDateFrom || todayStr,
+        to: widget.customDateTo || todayStr,
+      },
+    };
+  }
+};
+
+const getWidgetCustomDates = (widget) => {
+  if (!widget?.id) return { from: '', to: '' };
+  if (!widgetCustomDatesMap.value[widget.id]) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    widgetCustomDatesMap.value[widget.id] = {
+      from: widget.customDateFrom || todayStr,
+      to: widget.customDateTo || todayStr,
+    };
+  }
+  return widgetCustomDatesMap.value[widget.id];
+};
+
+const getWidgetTimeBounds = (widget) => {
+  const range = getWidgetActiveTimeRange(widget);
+  const custom = getWidgetCustomDates(widget);
+  return resolveDateRangeBounds(range, custom?.from, custom?.to);
+};
+
+const getWidgetTimeRangeText = (widget) => {
+  const bounds = getWidgetTimeBounds(widget);
+  return bounds.label;
+};
+
 // Hydrate Widget Conditions from Topic / Field / Card config
 function hydrateWidgetConditions(w, group) {
   if (!w) return w;
   const clone = { ...w };
+
+  clone.timeFilterEnabled = Boolean(w.timeFilterEnabled);
+  clone.dateColumnId = w.dateColumnId || '';
+  clone.defaultTimeRange = w.defaultTimeRange || 'today';
+  clone.customDateFrom = w.customDateFrom || '';
+  clone.customDateTo = w.customDateTo || '';
 
   if (!clone.source) {
     clone.source = group?.defaultSource || 'trips';
@@ -3174,6 +3517,11 @@ const openAddWidgetDialog = async (group) => {
     displayType: 'count',
     widthPercent: 25,
     logicOp: 'AND',
+    timeFilterEnabled: false,
+    dateColumnId: '',
+    defaultTimeRange: 'today',
+    customDateFrom: '',
+    customDateTo: '',
     conditions: [
       {
         id: 'c_' + Date.now(),
@@ -3204,6 +3552,11 @@ const openEditWidgetDialog = async (group, widget) => {
   widgetOrder.value = curIdx !== -1 ? curIdx + 1 : (group.widgets || []).length;
   widgetForm.value = {
     ...JSON.parse(JSON.stringify(hydrated)),
+    timeFilterEnabled: Boolean(hydrated.timeFilterEnabled),
+    dateColumnId: hydrated.dateColumnId || '',
+    defaultTimeRange: hydrated.defaultTimeRange || 'today',
+    customDateFrom: hydrated.customDateFrom || '',
+    customDateTo: hydrated.customDateTo || '',
     breakRow: Boolean(hydrated.breakRow),
     isUnique: Boolean(hydrated.isUnique),
     uniqueKeyCol: hydrated.uniqueKeyCol || '',
@@ -3280,6 +3633,11 @@ const saveWidget = async () => {
 
     const payload = {
       ...widgetForm.value,
+      timeFilterEnabled: Boolean(widgetForm.value.timeFilterEnabled),
+      dateColumnId: widgetForm.value.dateColumnId || '',
+      defaultTimeRange: widgetForm.value.defaultTimeRange || 'today',
+      customDateFrom: widgetForm.value.customDateFrom || '',
+      customDateTo: widgetForm.value.customDateTo || '',
       breakRow: Boolean(widgetForm.value.breakRow),
       justifyTitle: Boolean(widgetForm.value.justifyTitle),
       subColumnId: widgetForm.value.subColumnId || '',
@@ -3565,6 +3923,26 @@ function computeWidgetCount(widget) {
     return getCardMetricValueForTopic(widget, topic);
   }
 
+  // Lọc theo mốc thời gian động (Hôm nay / Tuần này / Tháng này / Năm nay / Tùy chỉnh)
+  if (widget.timeFilterEnabled && widget.dateColumnId) {
+    const bounds = getWidgetTimeBounds(widget);
+    if (bounds && (bounds.start || bounds.end)) {
+      const startMs = bounds.start ? bounds.start.getTime() : null;
+      const endMs = bounds.end ? bounds.end.getTime() : null;
+      filtered = filtered.filter((row) => {
+        const rawDate = getRowFieldValue(row, widget.dateColumnId);
+        if (!rawDate || rawDate === '-' || rawDate === 'chưa rõ') return false;
+        const d = parseDateValue(rawDate);
+        if (!d || isNaN(d.getTime())) return false;
+        const t = d.getTime();
+        if (startMs && endMs) return t >= startMs && t <= endMs;
+        if (startMs) return t >= startMs;
+        if (endMs) return t <= endMs;
+        return true;
+      });
+    }
+  }
+
   if (widget.isUnique) {
     const seen = new Set();
     const uCol = widget.uniqueKeyCol;
@@ -3670,6 +4048,26 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
     }
   }
 
+  // Lọc theo mốc thời gian động (Hôm nay / Tuần này / Tháng này / Năm nay / Tùy chỉnh)
+  if (widget.timeFilterEnabled && widget.dateColumnId) {
+    const bounds = getWidgetTimeBounds(widget);
+    if (bounds && (bounds.start || bounds.end)) {
+      const startMs = bounds.start ? bounds.start.getTime() : null;
+      const endMs = bounds.end ? bounds.end.getTime() : null;
+      filtered = filtered.filter((row) => {
+        const rawDate = getRowFieldValue(row, widget.dateColumnId);
+        if (!rawDate || rawDate === '-' || rawDate === 'chưa rõ') return false;
+        const d = parseDateValue(rawDate);
+        if (!d || isNaN(d.getTime())) return false;
+        const t = d.getTime();
+        if (startMs && endMs) return t >= startMs && t <= endMs;
+        if (startMs) return t >= startMs;
+        if (endMs) return t <= endMs;
+        return true;
+      });
+    }
+  }
+
   if (widget.isUnique) {
     const seen = new Set();
     const uniqueResult = [];
@@ -3700,12 +4098,16 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
 
   drilldownWidget.value = widget;
   drilldownExtraCondition.value = extraCondition;
+
+  const timeBounds = (widget.timeFilterEnabled && widget.dateColumnId) ? getWidgetTimeBounds(widget) : null;
+  const timeSub = timeBounds ? ` · ${timeBounds.label}` : '';
+
   if (Array.isArray(extraCondition) && extraCondition.length > 0) {
-    drilldownExtraTitle.value = `${widget.title || 'Thống kê'}: ${extraCondition.map((c) => `"${c.value}"`).join(' • ')}`;
+    drilldownExtraTitle.value = `${widget.title || 'Thống kê'}: ${extraCondition.map((c) => `"${c.value}"`).join(' • ')}${timeSub}`;
   } else if (extraCondition && extraCondition.value) {
-    drilldownExtraTitle.value = `${widget.title || 'Thống kê'}: "${extraCondition.value}"`;
+    drilldownExtraTitle.value = `${widget.title || 'Thống kê'}: "${extraCondition.value}"${timeSub}`;
   } else {
-    drilldownExtraTitle.value = widget.title || 'Thống kê';
+    drilldownExtraTitle.value = `${widget.title || 'Thống kê'}${timeSub}`;
   }
   drilldownSourceType.value = source;
   drilldownRawList.value = filtered;
@@ -3805,6 +4207,26 @@ const computeWidgetChartData = (widget) => {
       const topicCards = topic.metricCards || [];
       const card = topicCards.find((c, idx) => (c.id && c.id === widget.cardId) || c.label === widget.cardId || c.label === widget.title || `card_${idx}` === widget.cardId) || widget;
       matchedList = list.filter((row) => matchSharedCardCondition(row, card, personnelStore));
+    }
+  }
+
+  // Lọc theo mốc thời gian động (Hôm nay / Tuần này / Tháng này / Năm nay / Tùy chỉnh)
+  if (widget.timeFilterEnabled && widget.dateColumnId) {
+    const bounds = getWidgetTimeBounds(widget);
+    if (bounds && (bounds.start || bounds.end)) {
+      const startMs = bounds.start ? bounds.start.getTime() : null;
+      const endMs = bounds.end ? bounds.end.getTime() : null;
+      matchedList = matchedList.filter((row) => {
+        const rawDate = getRowFieldValue(row, widget.dateColumnId);
+        if (!rawDate || rawDate === '-' || rawDate === 'chưa rõ') return false;
+        const d = parseDateValue(rawDate);
+        if (!d || isNaN(d.getTime())) return false;
+        const t = d.getTime();
+        if (startMs && endMs) return t >= startMs && t <= endMs;
+        if (startMs) return t >= startMs;
+        if (endMs) return t <= endMs;
+        return true;
+      });
     }
   }
 
@@ -4793,5 +5215,104 @@ onUnmounted(() => {
 }
 .drilldown-clickable-table :deep(tbody tr:hover) {
   background-color: #f0fdf4 !important;
+}
+
+/* ========================================================================= */
+/* DYNAMIC TIME FILTER BAR FOR WIDGETS (Zero-hardcode Time Engine)           */
+/* ========================================================================= */
+.widget-time-filter-wrap {
+  margin-top: 8px;
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.time-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.btn-time-pill {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1.3;
+}
+
+.btn-time-pill:hover {
+  border-color: #0284c7;
+  color: #0284c7;
+  background: #f0f9ff;
+}
+
+.btn-time-pill.is-active {
+  border-color: #0284c7;
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
+}
+
+.time-range-sublabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  color: #64748b;
+  flex-wrap: wrap;
+  line-height: 1.3;
+}
+
+.sublabel-col {
+  font-weight: 700;
+  color: #0369a1;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sublabel-dot {
+  color: #cbd5e1;
+}
+
+.sublabel-range {
+  color: #475569;
+  font-weight: 600;
+}
+
+.time-custom-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.time-date-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  color: #1e293b;
+  background: #ffffff;
+  outline: none;
+}
+
+.time-date-input:focus {
+  border-color: #0284c7;
 }
 </style>

@@ -115,25 +115,79 @@
       <!-- 4. Danh sách Cột Phân Nhóm (Tự động kéo dài không bị ép 400px) -->
       <div class="column-selector-list">
         <!-- Trạng thái trống khi tìm kiếm không khớp -->
-        <div v-if="groupedDisplayOptions.length === 0" class="column-empty-state">
+        <div v-if="!identifierColumn && groupedDisplayOptions.length === 0" class="column-empty-state">
           <i class="pi pi-search" style="font-size: 1.4rem; color: #94a3b8; margin-bottom: 6px;"></i>
           <span>Không tìm thấy cột phù hợp với từ khóa</span>
         </div>
 
-        <!-- Nhóm cột -->
+        <!-- Cột Định danh Mặc định (Ghim cố định ở đầu, thẻ riêng biệt không dùng Accordion) -->
+        <div v-if="identifierColumn" class="pinned-identifier-card">
+          <div class="pinned-identifier-header">
+            <div class="pinned-badge-wrap">
+              <span class="pinned-icon">📌</span>
+              <span class="pinned-title">Cột Định danh Bản ghi</span>
+              <span class="system-badge">Cố định</span>
+            </div>
+            <span
+              class="identifier-status-pill"
+              :class="{ 'is-active': modelValue.includes(identifierColumn.id) }"
+            >
+              {{ modelValue.includes(identifierColumn.id) ? 'Đang hiển thị' : 'Đang ẩn' }}
+            </span>
+          </div>
+
+          <div
+            class="column-selector-item item-identifier"
+            :class="{ 'item-checked': modelValue.includes(identifierColumn.id) }"
+          >
+            <label class="item-label-group">
+              <input
+                type="checkbox"
+                :value="identifierColumn.id"
+                :checked="modelValue.includes(identifierColumn.id)"
+                @change="toggleCol(identifierColumn.id)"
+                style="accent-color: #d97706; width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;"
+              />
+              <span
+                class="col-type-badge type-identifier-badge"
+                :title="'Định dạng: ' + (identifierColumn.format || 'text')"
+              >
+                <i :class="getFormatIcon(identifierColumn.format)" style="font-size: 0.68rem;"></i>
+              </span>
+              <div class="identifier-text-block">
+                <span class="item-text" style="font-weight: 600;" :title="identifierColumn.label || identifierColumn.id">
+                  {{ identifierColumn.label || 'Cột Định danh' }}
+                </span>
+                <span class="identifier-subtag">Khóa đồng bộ (Không thể xóa, có thể ẩn/hiện)</span>
+              </div>
+            </label>
+
+            <div class="item-reorder-actions">
+              <button
+                type="button"
+                class="btn-col-action-trigger"
+                @click.stop="copyColumnTag(identifierColumn)"
+                :title="copiedColId === identifierColumn.id ? 'Đã chép vào Clipboard!' : `Sao chép mã thẻ Word/PDF: {${identifierColumn.id}}`"
+                :style="{ color: copiedColId === identifierColumn.id ? '#16a34a' : '#64748b', borderColor: copiedColId === identifierColumn.id ? '#86efac' : '#cbd5e1' }"
+              >
+                <i :class="copiedColId === identifierColumn.id ? 'pi pi-check' : 'pi pi-copy'" style="font-size: 0.72rem;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nhóm cột dữ liệu -->
         <div
           v-for="group in groupedDisplayOptions"
           :key="group.key"
           class="column-group-card"
           :class="{
-            'is-identifier-group': group.isIdentifier,
             'is-collapsed': isGroupCollapsed(group.key),
           }"
         >
           <!-- Group Header (Sticky khi cuộn) -->
           <div
             class="column-group-header"
-            :class="{ 'header-identifier': group.isIdentifier }"
             @click="toggleGroupCollapse(group.key)"
           >
             <div class="group-header-left">
@@ -347,19 +401,75 @@
 
       <!-- Modal Body (Danh sách rộng rãi toàn màn hình) -->
       <div class="modal-columns-body">
+        <!-- Cột Định danh Mặc định trong Modal (Ghim riêng biệt) -->
+        <div v-if="identifierColumn" class="pinned-identifier-card modal-identifier-card">
+          <div class="pinned-identifier-header" style="padding: 8px 12px;">
+            <div class="pinned-badge-wrap">
+              <span class="pinned-icon" style="font-size: 0.95rem;">📌</span>
+              <span class="pinned-title" style="font-size: 0.9rem;">Cột Định danh Bản ghi (Mặc định Hệ thống)</span>
+              <span class="system-badge">Cố định</span>
+            </div>
+            <span
+              class="identifier-status-pill"
+              :class="{ 'is-active': modelValue.includes(identifierColumn.id) }"
+              style="font-size: 0.76rem;"
+            >
+              {{ modelValue.includes(identifierColumn.id) ? 'Đang hiển thị' : 'Đang ẩn' }}
+            </span>
+          </div>
+
+          <div
+            class="column-selector-item item-identifier"
+            :class="{ 'item-checked': modelValue.includes(identifierColumn.id) }"
+            style="padding: 8px 12px;"
+          >
+            <label class="item-label-group">
+              <input
+                type="checkbox"
+                :value="identifierColumn.id"
+                :checked="modelValue.includes(identifierColumn.id)"
+                @change="toggleCol(identifierColumn.id)"
+                style="accent-color: #d97706; width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;"
+              />
+              <span
+                class="col-type-badge type-identifier-badge"
+                style="width: 24px; height: 24px;"
+                :title="'Định dạng: ' + (identifierColumn.format || 'text')"
+              >
+                <i :class="getFormatIcon(identifierColumn.format)" style="font-size: 0.75rem;"></i>
+              </span>
+              <div class="identifier-text-block">
+                <span class="item-text font-semibold" style="font-size: 0.9rem;" :title="identifierColumn.label || identifierColumn.id">
+                  {{ identifierColumn.label || 'Cột Định danh' }}
+                </span>
+                <span class="identifier-subtag" style="font-size: 0.74rem;">Mã khóa đối soát mặc định (Không cho xóa, cho phép bật/tắt hiển thị)</span>
+              </div>
+            </label>
+
+            <div class="item-reorder-actions">
+              <button
+                type="button"
+                class="btn-col-action-trigger"
+                @click.stop="copyColumnTag(identifierColumn)"
+                :title="`Sao chép mã thẻ Word/PDF: {${identifierColumn.id}}`"
+              >
+                <i :class="copiedColId === identifierColumn.id ? 'pi pi-check' : 'pi pi-copy'" style="font-size: 0.75rem;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div
           v-for="group in groupedDisplayOptions"
           :key="'modal_' + group.key"
           class="column-group-card"
           :class="{
-            'is-identifier-group': group.isIdentifier,
             'is-collapsed': isGroupCollapsed(group.key),
           }"
           style="margin-bottom: 10px;"
         >
           <div
             class="column-group-header"
-            :class="{ 'header-identifier': group.isIdentifier }"
             @click="toggleGroupCollapse(group.key)"
             style="padding: 8px 12px;"
           >
@@ -649,22 +759,15 @@ const isGroupCollapsed = (groupKey) => {
   return collapsedGroups.value.has(groupKey);
 };
 
+const identifierColumn = computed(() => {
+  return displayOptions.value.find((c) => c.id === '_recordIdentifier' || c.isSystemIdentifier) || null;
+});
+
 const groupedDisplayOptions = computed(() => {
   const filtered = displayOptions.value;
   const groupsMap = new Map();
 
-  // 1. Pinned Identifier Group
-  const identifierCol = filtered.find((c) => c.id === '_recordIdentifier' || c.isSystemIdentifier);
-  if (identifierCol) {
-    groupsMap.set('__system_identifier__', {
-      key: '__system_identifier__',
-      title: 'Cột Định danh (Cố định)',
-      isIdentifier: true,
-      columns: [identifierCol],
-    });
-  }
-
-  // 2. Các nhóm nghiệp vụ chuẩn theo cấu hình bảng
+  // Các nhóm nghiệp vụ chuẩn theo cấu hình bảng (Cột định danh đã được tách riêng ở đầu)
   filtered.forEach((c) => {
     if (c.id === '_recordIdentifier' || c.isSystemIdentifier) return;
     const gTitle = cleanGroupTitle(c.groupTitle);
@@ -672,7 +775,6 @@ const groupedDisplayOptions = computed(() => {
       groupsMap.set(gTitle, {
         key: gTitle,
         title: gTitle,
-        isIdentifier: false,
         columns: [],
       });
     }
@@ -1100,6 +1202,90 @@ onUnmounted(() => {
   font-size: 0.78rem;
   font-weight: 500;
   text-align: center;
+}
+
+/* Thẻ Cột Định danh Pinned riêng biệt */
+.pinned-identifier-card {
+  border-radius: 8px;
+  border: 1px solid #fde68a;
+  background: #fffdf5;
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.08);
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+
+.modal-identifier-card {
+  margin-bottom: 12px;
+}
+
+.pinned-identifier-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #fef3c7;
+  border-bottom: 1px solid #fde68a;
+}
+
+.pinned-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pinned-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.pinned-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.system-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #b45309;
+  background: #fef9c3;
+  border: 1px solid #fef08a;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.identifier-status-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.identifier-status-pill.is-active {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.type-identifier-badge {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.identifier-text-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.identifier-subtag {
+  font-size: 0.67rem;
+  color: #b45309;
+  line-height: 1.2;
 }
 
 /* Nhóm cột dạng phẳng, thoáng đãng */

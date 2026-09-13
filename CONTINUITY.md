@@ -128,7 +128,7 @@
   - Cột `singleSelect` và `multipleSelect` tự động hiển thị giá trị dạng **Soft Badge** màu sắc hài hòa (`getTeableOptionColor`) chuẩn Teable.
 - **Tùy chọn Cột Phân Nhóm, UX/UI Thoáng Đãng & Fullscreen Modal (`ColumnSelector.vue`)**:
   - Đồng bộ cấu trúc nhóm và thứ tự hiển thị của `ColumnSelector` tương tự như "Tùy chọn Bảng" (`TableOptionsDialog.vue`):
-    - **Nhóm 1 (Ghim trên cùng)**: `📌 Cột Định danh (Cố định)` chứa cột `_recordIdentifier` ("Định danh bản ghi") với huy hiệu `🔒`. Người dùng có thể nhanh chóng tick chọn để Ẩn/Hiện, nút Xóa bị khóa an toàn (`canDelete: false`). Sửa triệt để lỗi lặp icon `"📌 📌"`.
+    - **Thẻ Ghim Riêng Biệt (Pinned Card - Không dùng Accordion Group)**: Tách riêng `_recordIdentifier` khỏi vòng lặp phân nhóm thông thường, loại bỏ hoàn toàn khối accordion `(0/1)` và nút `[Chọn hết]`. Thiết kế thành Thẻ Ghim chuyên biệt trên cùng với badge `📌 Cố định`, trạng thái `[Đang hiển thị]` / `[Đang ẩn]`. Người dùng có thể nhanh chóng tick chọn để Ẩn/Hiện, nút Xóa bị khóa an toàn (`canDelete: false`). Sửa triệt để lỗi lặp icon `"📌 📌"`.
     - **Khắc phục triệt để lỗi lệch cột bảng (Header / Body Misalignment)**: Gỡ bỏ `frozen` trên PrimeVue `<Column>` và styling giả lập sticky, trả về cấu trúc HTML Table tự nhiên của PrimeVue. Cột Checkbox, STT và các cột dữ liệu khớp 100% thẳng tắp, không còn hiện tượng tiêu đề đè lên nhau.
     - **Giải phóng giới hạn chiều cao & Mở rộng chiều ngang (460px)**: Popover được mở rộng lên 460px, chiều cao tự động theo màn hình (`max-height: calc(100vh - 110px)`), danh sách cuộn linh hoạt (`max-height: calc(100vh - 220px)`), không bị co cụm hay cắt cụt tên nhóm ("Thông tin c...").
     - **Thanh chỉnh độ rộng cột gọn nhẹ (1 dòng duy nhất)**: Tích hợp chế độ `Auto` và ô nhập `Cố định px` thành một hàng ngang thanh thoát (32px), tiết kiệm 70px chiều cao cho danh sách cột.
@@ -227,6 +227,23 @@
   - Cập nhật `nullGetter` trong `Docxtemplater`: tự động điền `'-'` trang nhã cho mọi trường/cột không có dữ liệu thay vì để trống trơn, tránh gây hiểu nhầm là lỗi hiển thị. Thẻ lặp và điều kiện vẫn an toàn trả về `[]`.
 - Hỗ trợ chọn bảng màu (color picker), nhập mã hex trực tiếp, các nút gợi ý gam màu chuẩn (Đen mặc định `#000000`, Trắng sáng `#ffffff`, Vàng nhạt `#fef08a`, Xám đậm `#334155`, Xanh lục đậm `#14532d`).
 - Tự động áp dụng màu chữ cho toàn bộ menu bên trái bao gồm: tên cơ quan, các mục menu, tiêu đề phân nhóm và icon.
+
+### 16. KHỐI THỐNG KÊ THỜI GIAN ĐỘNG TRÊN DASHBOARD (DYNAMIC TIME-BASED METRIC ENGINE - ZERO HARDCODE) (Session 40 - 2026-09-14)
+- **1. Giới hạn phạm vi theo đúng 1 Khối Thống kê độc lập (`DashboardView.vue`)**:
+  - Không ép bộ lọc thời gian bao trùm toàn bộ hệ thống hay làm méo mó các bảng dữ liệu tĩnh.
+  - Mỗi Khối Thống kê (Widget) có thể được bật tùy chọn **⏱️ Bật Thống kê theo Mốc Thời gian** (`widget.timeFilterEnabled`).
+- **2. Nguyên tắc Zero-Hardcode 100% (Bảng & Cột Thời gian Động)**:
+  - Cho phép người dùng tự do chọn bất kỳ **Bảng dữ liệu nào** (`widgetForm.source`).
+  - Hệ thống tự động quét và nạp toàn bộ danh mục cột của Bảng đó để người dùng chọn **Cột mốc thời gian** (`widgetForm.dateColumnId`).
+  - Cột thời gian định dạng ngày tự động được ưu tiên đưa lên đầu với icon `📅`.
+- **3. Chuyển đổi Kỳ Thời gian Động Trực Tiếp trên Thẻ**:
+  - **Mặc định:** `Hôm nay` (`today`) (Từ `00:00:00` đến `23:59:59` của ngày hiện hành).
+  - Hỗ trợ thanh nút bấm chuyển nhanh (Segmented Pills): `[Hôm nay]` | `[Tuần này]` | `[Tháng này]` | `[Năm nay]` | `[Tùy chỉnh 📅]`.
+  - Phụ đề thẻ hiển thị chi tiết mốc cột và khoảng ngày: `📅 [Tên cột] · [Kỳ] ([Ngày bắt đầu] - [Ngày kết thúc])`.
+  - Khi chọn `Tùy chỉnh`, hiển thị 2 ô chọn ngày (Từ ngày ... Đến ngày ...) trực tiếp trên khối.
+- **4. Tính toán Tức thì & Drilldown Danh sách Chuẩn xác**:
+  - `computeWidgetCount`, `computeWidgetChartData` và `openDrilldownForWidget` lọc theo khoảng thời gian chuẩn qua hàm `resolveDateRangeBounds` (`src/utils/dashboardMetrics.js`).
+  - Khi bấm Xem chi tiết, hệ thống mở Drilldown Modal hiển thị đúng danh sách bản ghi rơi vào kỳ thời gian đã chọn của khối đó.
 
 ### 20. KHẮC PHỤC LỖI LƯU DỮ LIỆU CCCD/THƯỜNG TRÚ, DROPDOWN FORM, DRILLDOWN POPUP BỊ CHE & TÙY BIẾN CỠ CHỮ HỆ THỐNG (Session 38 - 2026-09-11)
 - **1. Sửa Lỗi Sửa CCCD / Thường trú Cán bộ (Nguyễn Hải Quan) Báo Thành công Nhưng Tải Lại Mất**:
