@@ -212,10 +212,12 @@ export class FormulaEvaluator {
           continue;
         }
 
-        // So sánh số nếu cả 2 là số
+        // So sánh số nếu cả 2 có giá trị dạng số hợp lệ
         const nL = typeof left === 'number' ? left : parseFloat(String(left).replace(/[^0-9.-]+/g, ''));
         const nR = typeof right === 'number' ? right : parseFloat(String(right).replace(/[^0-9.-]+/g, ''));
-        if (!isNaN(nL) && !isNaN(nR) && typeof left !== 'string' && typeof right !== 'string') {
+        const leftLooksNumeric = typeof left === 'number' || /^-?\d+(\.\d+)?$/.test(String(left).trim());
+        const rightLooksNumeric = typeof right === 'number' || /^-?\d+(\.\d+)?$/.test(String(right).trim());
+        if (!isNaN(nL) && !isNaN(nR) && (leftLooksNumeric || rightLooksNumeric)) {
           if (op === '==') left = nL === nR;
           else if (op === '!=') left = nL !== nR;
           else if (op === '>') left = nL > nR;
@@ -227,8 +229,8 @@ export class FormulaEvaluator {
 
         // Xử lý so sánh với trường rỗng/null (trường thiếu dữ liệu hoặc lookup không có kết quả)
         if (left === null && right === null) {
-          if (op === '==') left = false;
-          else if (op === '!=') left = true;
+          if (op === '==') left = true;
+          else if (op === '!=') left = false;
           else left = false;
           continue;
         }

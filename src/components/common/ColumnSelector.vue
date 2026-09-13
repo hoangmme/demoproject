@@ -137,7 +137,7 @@
           </div>
 
           <div
-            class="column-selector-item item-identifier"
+            class="column-selector-item pinned-identifier-item"
             :class="{ 'item-checked': modelValue.includes(identifierColumn.id) }"
           >
             <label class="item-label-group">
@@ -419,7 +419,7 @@
           </div>
 
           <div
-            class="column-selector-item item-identifier"
+            class="column-selector-item pinned-identifier-item"
             :class="{ 'item-checked': modelValue.includes(identifierColumn.id) }"
             style="padding: 8px 12px;"
           >
@@ -1454,6 +1454,11 @@ onUnmounted(() => {
 .item-identifier {
   background: #fffbeb;
   border-left: 3px solid #f59e0b;
+}
+
+.pinned-identifier-item {
+  background: #fffdf5;
+  padding: 6px 10px;
 }
 
 .item-label-group {

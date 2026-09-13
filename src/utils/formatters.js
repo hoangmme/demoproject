@@ -1906,7 +1906,7 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
         }
         return acc;
       }, 0);
-      if (!fields[0] || !hasNumeric) return matched.length;
+      if (!fields[0]) return matched.length;
       return sum;
     }
 
@@ -2297,9 +2297,8 @@ export const evaluateRollup = (item, col, personnelStore) => {
       return acc;
     }, 0);
 
-    // Nếu không chọn cột tính toán hoặc cột được chọn toàn chữ (ví dụ Quốc gia xuất cảnh)
-    // thì tổng số chính là số lượng dòng kết quả (ví dụ 19)
-    if (!field || !hasNumeric) {
+    // Nếu không chọn cột tính toán thì tổng số chính là số lượng dòng kết quả
+    if (!field) {
       return list.length;
     }
     return sum;

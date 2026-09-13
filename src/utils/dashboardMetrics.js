@@ -494,11 +494,11 @@ export const checkConditionMatch = (val, op, target) => {
   }
 
   // Ngày tháng
-  if (op === 'before' || op === 'after') {
+  if (op === 'before' || op === 'before_date' || op === 'after' || op === 'after_date') {
     const dVal = parseDateValue(val)?.getTime();
     const dTarget = parseDateValue(target)?.getTime();
     if (!dVal || !dTarget) return false;
-    return op === 'before' ? dVal < dTarget : dVal > dTarget;
+    return (op === 'before' || op === 'before_date') ? dVal < dTarget : dVal > dTarget;
   }
   if (op === 'date_between' || op === 'between') {
     const dVal = parseDateValue(val)?.getTime();
@@ -535,14 +535,14 @@ export const checkConditionMatch = (val, op, target) => {
   const isNumericOp = ['gt', 'gte', 'lt', 'lte', 'count_gt', 'count_gte', 'count_lt', 'count_lte', 'count_eq'].includes(op);
   if (isNumericOp) {
     const numTarget = parseFloat(strTarget.replace(/[^0-9.-]+/g, ''));
-    if (isNaN(numTarget)) return true;
+    if (isNaN(numTarget)) return false;
     const numVal = parseFloat(strVal.replace(/[^0-9.-]+/g, ''));
-    const effectiveNum = isNaN(numVal) ? 0 : numVal;
-    if (op === 'gt' || op === 'count_gt') return effectiveNum > numTarget;
-    if (op === 'gte' || op === 'count_gte') return effectiveNum >= numTarget;
-    if (op === 'lt' || op === 'count_lt') return effectiveNum < numTarget;
-    if (op === 'lte' || op === 'count_lte') return effectiveNum <= numTarget;
-    if (op === 'count_eq') return effectiveNum === numTarget;
+    if (isNaN(numVal)) return false;
+    if (op === 'gt' || op === 'count_gt') return numVal > numTarget;
+    if (op === 'gte' || op === 'count_gte') return numVal >= numTarget;
+    if (op === 'lt' || op === 'count_lt') return numVal < numTarget;
+    if (op === 'lte' || op === 'count_lte') return numVal <= numTarget;
+    if (op === 'count_eq') return numVal === numTarget;
     return false;
   }
 
