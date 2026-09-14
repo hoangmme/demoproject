@@ -3086,9 +3086,9 @@ const dialogTableIdForRecord = computed(() => {
   if (currentSource === 'personnel' || currentSource === 'relatives' || currentSource === 'trips') {
     return currentSource;
   }
-  if (rec._recordType === 'relative' || rec.isRelative || rec.relationshipName || rec.cccdthannhan) return 'relatives';
-  if (rec._recordType === 'trip' || rec.departureDate || rec.ngay_xuat_canh || rec.cccdchuyendi) return 'trips';
-  if (rec._recordType === 'personnel' || (rec.code && String(rec.code).startsWith('CB-')) || (!rec.isRelative && (rec.positionName || rec.departmentName || rec.position))) return 'personnel';
+  if (rec._recordType === 'relative' || rec.isRelative) return 'relatives';
+  if (rec._recordType === 'trip') return 'trips';
+  if (rec._recordType === 'personnel') return 'personnel';
   return currentDashboardConfig.value?.id || topicId.value;
 });
 

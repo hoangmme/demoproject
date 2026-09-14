@@ -815,7 +815,7 @@ export const usePersonnelStore = defineStore('personnel', {
         // 4. Kiểm tra chống trùng Khóa định danh chính (Số CCCD Cán bộ)
         const pKeyField = this.getPersonnelKeyField();
         const currentCccd = String(formData[pKeyField] ?? formData.custom_data?.[pKeyField] ?? '').trim();
-        if (currentCccd && currentCccd !== '-' && !currentCccd.startsWith('p_') && !currentCccd.startsWith('CB-')) {
+        if (currentCccd && currentCccd !== '-' && !currentCccd.startsWith('p_')) {
           const duplicate = (this.personnelList || []).find((p) => {
             if (formData.id && String(p.id) === String(formData.id)) return false;
             const canBoCccd = String(p[pKeyField] ?? p.custom_data?.[pKeyField] ?? '').trim();
@@ -1543,39 +1543,34 @@ export const usePersonnelStore = defineStore('personnel', {
         return record;
       }
 
-      // Ưu tiên 1: Hồ sơ Cán bộ (Nếu thuộc bảng personnel, hoặc có mã CB- và không phải là chuyến đi lồng)
+      // Ưu tiên 1: Hồ sơ Cán bộ
       const isExplicitPersonnel =
         record._tableId === 'personnel' ||
-        record._recordType === 'personnel' ||
-        (record.code && String(record.code).startsWith('CB-') && !String(record.id || '').startsWith('trip_'));
+        record._recordType === 'personnel';
 
       if (isExplicitPersonnel) {
         return await this.savePerson(record);
       }
 
-      // Ưu tiên 2: Hồ sơ Thân nhân (Nếu thuộc bảng relatives, hoặc có mã TN-, hoặc quan hệ thân nhân)
+      // Ưu tiên 2: Hồ sơ Thân nhân
       const isExplicitRelative =
         record._tableId === 'relatives' ||
-        record._recordType === 'relative' ||
-        (record.code && String(record.code).startsWith('TN-') && !String(record.id || '').startsWith('trip_')) ||
-        (record.id && String(record.id).startsWith('rel_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_'));
+        record._recordType === 'relative';
 
       if (isExplicitRelative) {
         return await this.saveRelative(record);
       }
 
-      // Ưu tiên 3: Chuyến đi (Nếu thuộc bảng trips, hoặc là bản ghi chuyến đi)
+      // Ưu tiên 3: Chuyến đi
       if (
         record._tableId === 'trips' ||
-        record._recordType === 'trip' ||
-        (record.id && String(record.id).startsWith('trip_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('trip_'))
+        record._recordType === 'trip'
       ) {
         return await this.saveTrip(record);
       }
 
-      const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id) || (x.code && String(x.code) === String(record.code)));
+      // Fallback: Tìm trong danh sách hiện có theo ID
+      const p = (this.personnelList || []).find((x) => String(x.id) === String(record.id));
       if (p) {
         return await this.savePerson(record);
       }
@@ -1617,8 +1612,7 @@ export const usePersonnelStore = defineStore('personnel', {
       // Ưu tiên 1: Cán bộ
       if (
         record._tableId === 'personnel' ||
-        (record._recordType === 'personnel' && !String(record.id || '').startsWith('trip_')) ||
-        (record.code && String(record.code).startsWith('CB-') && !String(record.id || '').startsWith('trip_'))
+        record._recordType === 'personnel'
       ) {
         return await this.deletePerson(record);
       }
@@ -1626,12 +1620,7 @@ export const usePersonnelStore = defineStore('personnel', {
       // Ưu tiên 2: Thân nhân
       if (
         record._tableId === 'relatives' ||
-        record._recordType === 'relative' ||
-        (record.code && String(record.code).startsWith('TN-') && !String(record.id || '').startsWith('trip_')) ||
-        (record.id && String(record.id).startsWith('rel_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
-        record.cccdthannhan !== undefined ||
-        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel' && record._recordType !== 'trip')
+        record._recordType === 'relative'
       ) {
         return await this.deleteRelative(record);
       }
@@ -1639,13 +1628,7 @@ export const usePersonnelStore = defineStore('personnel', {
       // Ưu tiên 3: Chuyến đi
       if (
         record._tableId === 'trips' ||
-        record._recordType === 'trip' ||
-        (record.id && String(record.id).startsWith('trip_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('trip_')) ||
-        record.quoc_gia_xuat_canh !== undefined ||
-        record.ngay_xuat_canh !== undefined ||
-        record.departureDate !== undefined ||
-        record.cccdchuyendi !== undefined
+        record._recordType === 'trip'
       ) {
         return await this.deleteTrip(record);
       }

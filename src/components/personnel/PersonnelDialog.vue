@@ -237,17 +237,15 @@ const recordSource = computed(() => {
     return props.tableId;
   }
   if (form.value._tableId) return form.value._tableId;
-  if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-') && !String(form.value.id || '').startsWith('trip_'))) {
+  if (form.value._recordType === 'personnel') {
     return 'personnel';
   }
-  if (form.value._recordType === 'relative' || (form.value.code && String(form.value.code).startsWith('TN-') && !String(form.value.id || '').startsWith('trip_')) || form.value.relationshipName || form.value.relativeName || form.value.cccdthannhan || form.value.isRelative) {
+  if (form.value._recordType === 'relative' || form.value.isRelative) {
     return 'relatives';
   }
-  if (form.value._recordType === 'trip' || (form.value.id && String(form.value.id).startsWith('trip_')) || form.value.cccdchuyendi) {
+  if (form.value._recordType === 'trip') {
     return 'trips';
   }
-  if (form.value.departureDate || form.value.ngay_xuat_canh) return 'trips';
-  if (form.value.positionName || form.value.departmentName) return 'personnel';
   if (form.value._recordType === 'blank') return 'blank';
   return 'personnel';
 });
@@ -825,11 +823,11 @@ const handleSwitchRecord = (newPerson, targetTableId = null) => {
       });
       if (matchedTable) {
         switchedSource.value = matchedTable.id;
-      } else if (newPerson._recordType === 'personnel' || (newPerson.code && String(newPerson.code).startsWith('CB-')) || (newPerson.departmentName && !newPerson.isRelative)) {
+      } else if (newPerson._recordType === 'personnel') {
         switchedSource.value = 'personnel';
-      } else if (newPerson._recordType === 'relative' || newPerson.relationshipName || newPerson.relativeName || newPerson.cccdthannhan) {
+      } else if (newPerson._recordType === 'relative' || newPerson.isRelative) {
         switchedSource.value = 'relatives';
-      } else if (newPerson._recordType === 'trip' || newPerson.departureDate || newPerson.ngay_xuat_canh || newPerson.cccdchuyendi) {
+      } else if (newPerson._recordType === 'trip') {
         switchedSource.value = 'trips';
       } else {
         switchedSource.value = 'personnel';
