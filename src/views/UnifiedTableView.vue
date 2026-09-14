@@ -1180,7 +1180,7 @@
       @insert-right="onInsertChildColRight"
       @duplicate-column="onDuplicateChildCol"
       @change-key="onChildChangeColumnKey"
-      @change-link-table="onChildChangeColumnLinkTable"
+
       @open-key-config="isKeyLinkDialogOpen = true"
     />
 

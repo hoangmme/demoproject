@@ -1021,58 +1021,7 @@
             <span style="font-weight: 600;">🔑 Đặt làm Khóa chính của bảng này (Primary Key)</span>
           </label>
 
-          <!-- Liên kết tới bảng khác (Hỗ trợ liên kết đồng thời nhiều bảng / khóa chính) -->
-          <div style="border-top: 1px dashed #bbf7d0; padding-top: 6px; display: flex; flex-direction: column; gap: 5px;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <label style="font-size: 0.72rem; font-weight: 700; color: #15803d;">
-                🔗 Liên kết cột này tới Bảng khác (Foreign Key):
-              </label>
-              <button
-                v-if="selectedLinkTables.length > 0"
-                type="button"
-                @click="clearAllLinkTables"
-                style="font-size: 0.65rem; color: #ef4444; background: transparent; border: none; cursor: pointer; text-decoration: underline;"
-              >
-                Gỡ liên kết
-              </button>
-            </div>
-            <div style="font-size: 0.64rem; color: #64748b; line-height: 1.35;">
-              Tích chọn bảng đích. Có thể chọn cùng lúc 2 hoặc nhiều bảng (VD: cột CCCD chuyến đi liên kết cả Cán bộ và Thân nhân).
-            </div>
 
-            <!-- Danh sách bảng liên kết dạng Checklist -->
-            <div style="display: flex; flex-direction: column; gap: 4px; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 8px; max-height: 120px; overflow-y: auto;">
-              <label
-                v-for="t in availableTargetTables"
-                :key="t.id"
-                style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: #1e293b; cursor: pointer; user-select: none;"
-              >
-                <input
-                  type="checkbox"
-                  :checked="isLinkTableSelected(t.id)"
-                  @change="toggleLinkTable(t.id)"
-                  style="accent-color: #16a34a; cursor: pointer;"
-                />
-                <span :style="{ fontWeight: isLinkTableSelected(t.id) ? '700' : 'normal', color: isLinkTableSelected(t.id) ? '#15803d' : '#334155' }">
-                  {{ t.title }} <small style="color: #64748b;">({{ t.id }})</small>
-                </span>
-              </label>
-            </div>
-
-            <!-- Tùy chọn cột nối khi chỉ chọn 1 bảng -->
-            <div v-if="selectedLinkTables.length === 1" style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
-              <span style="font-size: 0.65rem; color: #64748b;">Cột ở bảng đích để nối (tùy chọn):</span>
-              <select v-model="editLinkColumn" class="menu-select" style="font-size: 0.7rem;" @change="handleSaveLinkTable">
-                <option value="">-- Mặc định (Khóa chính bảng đích) --</option>
-                <option v-for="c in targetLinkCols" :key="c.id" :value="c.id">
-                  {{ c.label }} ({{ c.id }})
-                </option>
-              </select>
-            </div>
-            <div style="font-size: 0.63rem; color: #64748b; line-height: 1.35; margin-top: 2px;">
-              💡 Khi liên kết bảng, Form Chi tiết sẽ tự động hiển thị Tab mang tên bảng đó để bạn mở và chỉnh sửa trực tiếp. Nếu không chọn bảng nào, sẽ không hiện tab thừa.
-            </div>
-          </div>
         </div>
 
         <!-- 5b. Gợi ý tự điền từ bảng khác (Autocomplete / Suggest Lookup) -->
@@ -1311,7 +1260,7 @@ const emit = defineEmits([
   "change-include-export",
   "change-show-in-detail",
   "change-key",
-  "change-link-table",
+
   "change-lookup",
   "change-rollup",
   "change-collapse-duplicates",
@@ -1369,8 +1318,7 @@ const editIsUnique = ref(false);
 const editBoldFirstLine = ref(false);
 const editFirstLineColor = ref("#0369a1");
 const editIsKey = ref(false);
-const editLinkTable = ref("");
-const editLinkColumn = ref("");
+
 
 const editSuggestEnabled = ref(false);
 const editSuggestTarget = ref("personnel");
@@ -1476,34 +1424,7 @@ const targetRollupCols = computed(() => {
   return getColumnsForTargetTable(editRollupTarget.value);
 });
 
-const selectedLinkTables = computed(() => {
-  if (!editLinkTable.value) return [];
-  return String(editLinkTable.value).split(',').map((s) => s.trim()).filter(Boolean);
-});
 
-const isLinkTableSelected = (tableId) => {
-  return selectedLinkTables.value.includes(tableId);
-};
-
-const toggleLinkTable = (tableId) => {
-  const current = new Set(selectedLinkTables.value);
-  if (current.has(tableId)) {
-    current.delete(tableId);
-  } else {
-    current.add(tableId);
-  }
-  editLinkTable.value = Array.from(current).join(',');
-  if (current.size !== 1) {
-    editLinkColumn.value = '';
-  }
-  handleSaveLinkTable();
-};
-
-const clearAllLinkTables = () => {
-  editLinkTable.value = '';
-  editLinkColumn.value = '';
-  handleSaveLinkTable();
-};
 
 const selectedSuggestTargets = computed(() => {
   if (!editSuggestTarget.value) return ['personnel'];
@@ -1592,12 +1513,7 @@ const selectedFieldCount = computed(() => {
   return effectiveParentFieldOptions.value.filter(opt => Boolean(props.nameColFields?.[opt.key])).length;
 });
 
-const targetLinkCols = computed(() => {
-  if (selectedLinkTables.value.length === 1) {
-    return getColumnsForTargetTable(selectedLinkTables.value[0]);
-  }
-  return [];
-});
+
 
 const handleToggleIsKey = () => {
   if (props.column) {
@@ -1609,17 +1525,7 @@ const handleToggleIsKey = () => {
   });
 };
 
-const handleSaveLinkTable = () => {
-  if (props.column) {
-    props.column.linkTable = editLinkTable.value;
-    props.column.linkColumn = editLinkColumn.value;
-  }
-  emit("change-link-table", {
-    colId: props.column?.id,
-    linkTable: editLinkTable.value,
-    linkColumn: editLinkColumn.value,
-  });
-};
+
 
 watch(
   () => props.column,
@@ -1699,8 +1605,7 @@ watch(
       editBoldFirstLine.value = Boolean(col.boldFirstLine);
       editFirstLineColor.value = col.firstLineColor || "#0369a1";
       editIsKey.value = Boolean(col.isKey);
-      editLinkTable.value = col.linkTable || "";
-      editLinkColumn.value = col.linkColumn || "";
+
     }
   },
   { immediate: true }

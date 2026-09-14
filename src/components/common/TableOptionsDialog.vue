@@ -133,6 +133,39 @@
       </div>
     </div>
 
+    <!-- Liên kết bảng (Hiện tab khi chỉnh sửa) -->
+    <div class="linked-tables-section">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <label style="font-size: 0.78rem; font-weight: 700; color: #15803d; display: flex; align-items: center; gap: 5px;">
+          <i class="pi pi-link" style="font-size: 0.85rem;"></i>
+          Liên kết bảng (Hiện tab khi chỉnh sửa):
+        </label>
+        <span v-if="localLinkedTables.length > 0" style="font-size: 0.65rem; color: #64748b;">
+          {{ localLinkedTables.length }} bảng đã liên kết
+        </span>
+      </div>
+      <div style="font-size: 0.68rem; color: #64748b; margin-bottom: 6px; line-height: 1.4;">
+        Tích chọn bảng muốn hiển thị dạng Tab khi mở chỉnh sửa bản ghi. Liên kết tự động 2 chiều.
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+        <label
+          v-for="t in otherTables"
+          :key="t.id"
+          class="linked-table-chip"
+          :class="{ active: isLinkedTable(t.id) }"
+        >
+          <input
+            type="checkbox"
+            :checked="isLinkedTable(t.id)"
+            @change="toggleLinkedTable(t.id)"
+            style="display: none;"
+          />
+          <i :class="['pi', t.icon || 'pi-table']" style="font-size: 0.72rem;"></i>
+          <span>{{ t.title || t.id }}</span>
+        </label>
+      </div>
+    </div>
+
     <!-- Chrome-Style Tabs Bar -->
     <div class="chrome-tabs-bar">
       <div class="chrome-tabs-scroll">
@@ -477,6 +510,7 @@ const iconSearchQuery = ref('');
 const localGroups = ref([]);
 const searchColQuery = ref('');
 const saving = ref(false);
+const localLinkedTables = ref([]);
 
 const filteredIcons = computed(() => {
   const q = iconSearchQuery.value.trim().toLowerCase();
@@ -487,6 +521,28 @@ const filteredIcons = computed(() => {
     item.keywords.toLowerCase().includes(q)
   );
 });
+
+const otherTables = computed(() => {
+  const allConfigs = ensureStandardDashboards(props.customDashboards || []);
+  return allConfigs.filter((d) => d.id !== props.tableId).map((d) => ({
+    id: d.id,
+    title: d.title || d.id,
+    icon: d.icon || 'pi-table',
+  }));
+});
+
+const isLinkedTable = (tableId) => {
+  return localLinkedTables.value.some((lt) => lt.tableId === tableId);
+};
+
+const toggleLinkedTable = (tableId) => {
+  const idx = localLinkedTables.value.findIndex((lt) => lt.tableId === tableId);
+  if (idx >= 0) {
+    localLinkedTables.value.splice(idx, 1);
+  } else {
+    localLinkedTables.value.push({ tableId });
+  }
+};
 
 const activeGroup = computed(() => {
   if (!Array.isArray(localGroups.value) || localGroups.value.length === 0) return null;
@@ -544,6 +600,10 @@ const initIdentityAndGroups = () => {
     else if (props.tableId === 'relatives') localColor.value = '#a855f7';
     else localColor.value = '#0284c7';
   }
+
+  // 5. Liên kết bảng
+  const dLinked = (props.customDashboards || []).find((x) => x.id === props.tableId);
+  localLinkedTables.value = Array.isArray(dLinked?.linkedTables) ? [...dLinked.linkedTables] : [];
 
   // 4. Nhóm cột - TRIỆT ĐỂ KHÔNG TRÙNG FIELD GIỮA CÁC NHÓM
   let rawGroups = null;
@@ -783,6 +843,7 @@ const handleSave = async () => {
           title: newTitle,
           icon: newIcon,
           iconColor: newColor,
+          linkedTables: localLinkedTables.value,
         };
       } else {
         list.push({
@@ -790,6 +851,7 @@ const handleSave = async () => {
           title: newTitle,
           icon: newIcon,
           iconColor: newColor,
+          linkedTables: localLinkedTables.value,
         });
       }
       localStorage.setItem('custom_dashboards_config', JSON.stringify(list));
@@ -803,6 +865,7 @@ const handleSave = async () => {
       title: newTitle,
       icon: newIcon,
       iconColor: newColor,
+      linkedTables: localLinkedTables.value,
     });
     emit('update:modelValue', false);
   } catch (err) {
@@ -815,6 +878,41 @@ const handleSave = async () => {
 </script>
 
 <style scoped>
+.linked-tables-section {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border-bottom: 1px solid #bbf7d0;
+}
+
+.linked-table-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #475569;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.linked-table-chip:hover {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.linked-table-chip.active {
+  border-color: #16a34a;
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 700;
+}
+
 :deep(.p-dialog-content) {
   height: 100% !important;
   max-height: 100% !important;

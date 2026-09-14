@@ -279,6 +279,10 @@ const props = defineProps({
     type: [String, Number],
     default: null,
   },
+  customDashboards: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'refresh', 'switchRecord']);
@@ -310,6 +314,15 @@ const relativeNameField = computed(() => {
 });
 
 // All registered tables
+const resolvedDashboards = computed(() => {
+  if (props.customDashboards && props.customDashboards.length > 0) return props.customDashboards;
+  try {
+    const local = localStorage.getItem('custom_dashboards_config');
+    if (local) return JSON.parse(local);
+  } catch (e) {}
+  return [];
+});
+
 const allTables = computed(() => getUnifiedTableDefinitions({ personnelStore }));
 
 // Current active table
@@ -686,19 +699,25 @@ const getLinkedRows = (targetTable) => {
 
 // Check whether target table is linked to current table
 const isTableLinked = (targetTable) => {
-  if (!targetTable) return false;
   const curTable = currentTable.value;
   const curId = curTable?.id || props.recordSource || 'personnel';
   const targetId = targetTable.id;
   if (curId === targetId) return false;
 
-  // 1. Automatic reciprocal link for Core 3 Tables: personnel <-> relatives <-> trips
-  const coreTables = ['personnel', 'relatives', 'trips'];
-  if (coreTables.includes(curId) && coreTables.includes(targetId)) {
+  // 1. Check tableConfig.linkedTables (from Table Settings)
+  const curConfig = (resolvedDashboards.value || []).find((d) => d.id === curId);
+  const targetConfig = (resolvedDashboards.value || []).find((d) => d.id === targetId);
+  
+  // Forward link: current table links to target
+  if (Array.isArray(curConfig?.linkedTables) && curConfig.linkedTables.some((lt) => lt.tableId === targetId)) {
+    return true;
+  }
+  // Reverse link: target table links to current (bidirectional)
+  if (Array.isArray(targetConfig?.linkedTables) && targetConfig.linkedTables.some((lt) => lt.tableId === curId)) {
     return true;
   }
 
-  // 2. Column link checks (Dynamic foreign keys, lookup, or linkTable)
+  // 2. Column link checks (backward compat with col.linkTable — will be migrated)
   const targetCols = targetTable.getColumns ? targetTable.getColumns(personnelStore) : [];
   const curCols = curTable?.getColumns ? curTable.getColumns(personnelStore) : [];
 
@@ -714,13 +733,11 @@ const isTableLinked = (targetTable) => {
   );
   if (fkCur) return true;
 
-  // 3. Dynamic row check: If there are linked rows found, auto-link
+  // 3. Dynamic row check
   try {
     const rows = getLinkedRows(targetTable);
     if (rows && rows.length > 0) return true;
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 
   return false;
 };
