@@ -1,0 +1,24 @@
+========================================================================
+   HƯỚNG DẪN CẬP NHẬT CODE GIAO DIỆN (GIỮ NGUYÊN DỮ LIỆU 100%)
+========================================================================
+
+Gói này chỉ chứa mã nguồn nâng cấp (Giao diện + Tính năng mới).
+TUYỆT ĐỐI KHÔNG CHỨA VÀ KHÔNG GHI ĐÈ DỮ LIỆU (Database, Hồ sơ, Ảnh thẻ).
+
+CÁCH THỰC HIỆN CẬP NHẬT:
+------------------------------------------------------------------------
+1. Tắt phần mềm nếu đang chạy:
+   - Đóng cửa sổ dòng lệnh đen (Node.js).
+   - Đóng tab trình duyệt web.
+
+2. Cập nhật mã nguồn mới:
+   - Giải nén file "WINDOWS_OFFLINE_UPDATE.zip" (hoặc copy toàn bộ các file bên trong)
+   - DÁN ĐÈ TRỰC TIẾP vào thư mục phần mềm đang sử dụng trên máy bạn.
+   - Khi Windows hiển thị thông báo "Replace or Skip Files":
+     -> Bấm chọn: "Replace the files in the destination" (Ghi đè tất cả).
+
+3. Khởi động lại:
+   - Nhấp đúp chuột vào file: "2_KHOI_DONG_HE_THONG.bat".
+
+XONG! Toàn bộ dữ liệu hồ sơ, cán bộ, chuyến đi cũ của bạn vẫn còn nguyên 100%!
+========================================================================
