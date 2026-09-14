@@ -628,7 +628,6 @@ const relativeFieldIdsSet = computed(() => {
 
 const resolvePersonFromSearchItem = (item) => {
   if (!item) return null;
-  if (item.rawPerson && item.rawPerson.id) return item.rawPerson;
   if (item.personnelId) {
     const found = (personnelStore.personnelList || []).find((p) => p.id === item.personnelId);
     if (found) return found;
@@ -769,8 +768,6 @@ const buildDataset = () => {
         ...tCustom,
         ...t,
         uniqueKey: t.id || `trip_${p.id}_${tIdx}`,
-        rawPerson: p,
-        rawTrip: t,
         pRelatives: pRelatives,
         personnelId: p.id,
         personnelCode: p.code || '',
@@ -807,7 +804,6 @@ const buildDataset = () => {
         ...p.custom_data,
         ...p,
         uniqueKey: `person_${p.id}`,
-        rawPerson: p,
         pRelatives: pRelatives,
         personnelId: p.id,
         personnelCode: p.code || '',
@@ -1097,7 +1093,7 @@ const testCondition = (item, crit) => {
   const labelWithCol = fieldColIndex ? `[Cột ${fieldColIndex}] ${fieldLabel}` : fieldLabel;
 
   if (isRel) {
-    const relatives = item.pRelatives || item.rawPerson?.relatives || [];
+    const relatives = item.pRelatives || [];
     return testRelativeCondition(relatives, crit, labelWithCol, f);
   }
 

@@ -622,7 +622,7 @@ export const computeDepartBeforeDecision = (record, formulaConfig = {}) => {
 
   // If single trip item, evaluate ONLY this trip!
   let trips = [];
-  if (record.departureDate || record.ngay_xuat_canh || record.rawTrip || !Array.isArray(record.trips)) {
+  if (record.departureDate || record.ngay_xuat_canh || record._recordType === 'trip' || !Array.isArray(record.trips)) {
     trips = [record];
   } else {
     trips = [...(record.trips || [])].sort((a, b) => {
@@ -756,11 +756,11 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
 
   // 1. Thu thập toàn bộ danh sách chuyến đi của chính đối tượng (Cán bộ hoặc Thân nhân)
   let personTrips = [];
-  const isRelative = Boolean(record.isRelative || record.relativeId || record.rawRelative || record._recordType === 'relative');
+  const isRelative = Boolean(record.isRelative || record.relativeId || record._recordType === 'relative');
 
   if (isRelative) {
     // Đối tượng là Thân nhân (hoặc chuyến đi của Thân nhân)
-    const rel = record.rawRelative || record;
+    const rel = record;
     if (Array.isArray(rel.trips) && rel.trips.length > 0) {
       personTrips = [...rel.trips];
     } else {
@@ -785,15 +785,13 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     // Tra cứu chéo thêm từ toàn bộ danh sách chuyến đi nếu có
     const allTrips = formulaConfig.allTrips || formulaConfig.personnelStore?.tripsList || [];
     if (allTrips.length > 0) {
-      const relId = record.relativeId || record.id || record.rawRelative?.id;
-      const relCccd = record.cccdthannhan || record.cccd || record.rawRelative?.cccdthannhan || record.rawRelative?.cccd;
-      const relName = record.relativeName || record.name || record.rawRelative?.relativeName || record.rawRelative?.name;
+      const relId = record.relativeId || record.id;
+      const relCccd = record.cccdthannhan || record.cccd;
       allTrips.forEach((t) => {
         if (!t.isRelative) return;
         const matchId = relId && (t.relativeId === relId || t.id === relId);
         const matchCccd = relCccd && (t.cccdthannhan === relCccd || t.cccd === relCccd);
-        const matchName = relName && (t.relativeName === relName || t.name === relName);
-        if (matchId || matchCccd || matchName) {
+        if (matchId || matchCccd) {
           const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
           if (!exists) personTrips.push(t);
         }
@@ -805,7 +803,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     }
   } else {
     // Đối tượng là Cán bộ (hoặc chuyến đi của Cán bộ)
-    const p = record.rawPerson || record;
+    const p = record;
     if (Array.isArray(p.trips) && p.trips.length > 0) {
       personTrips = p.trips.filter((t) => !t.isRelative);
     } else {
@@ -830,8 +828,8 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     // Tra cứu chéo thêm từ toàn bộ danh sách chuyến đi nếu có
     const allTrips = formulaConfig.allTrips || formulaConfig.personnelStore?.tripsList || [];
     if (allTrips.length > 0) {
-      const pId = record.personnelId || record.rawPerson?.id || (!record.isRelative ? record.id : null);
-      const pCccd = record.cccdchuyendi || record.cccdparent || record.cccd || record.rawPerson?.cccdparent || record.rawPerson?.cccd;
+      const pId = record.personnelId || (!record.isRelative ? record.id : null);
+      const pCccd = record.cccdchuyendi || record.cccdparent || record.cccd;
       allTrips.forEach((t) => {
         if (t.isRelative) return;
         const matchId = pId && (t.personnelId === pId || t.id === pId);
@@ -853,7 +851,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   let targetYear = configuredYear || (currentDepDate ? currentDepDate.getFullYear() : null);
 
   // Nếu là dòng chuyến đi nhưng hoàn toàn không có ngày xuất cảnh hợp lệ và không cấu hình năm:
-  const isTripRecord = Boolean(record._recordType === 'trip' || record.rawTrip || record.quoc_gia_xuat_canh || record.countryName);
+  const isTripRecord = Boolean(record._recordType === 'trip');
   if (isTripRecord && !currentDepDate && !configuredYear) {
     return defaultResult;
   }
@@ -1131,7 +1129,6 @@ export const isPresenceField = (colId) => {
   return (
     c === 'presencestatus' ||
     c === '_presencestatus' ||
-    c === 'status' ||
     c === 'tripstatus' ||
     c === 'trang_thai_hien_dien' ||
     c === 'trangthaihiendien' ||
@@ -1157,16 +1154,16 @@ export const resolveVirtualColumnValue = (item, colId) => {
     return item.isRelative ? 'Thân nhân' : 'Cán bộ';
   }
   if (colId === '_parentPersonnelName' || colId === 'parentPersonnelName' || colId === 'parentName') {
-    return item.rawPerson?.name || item.parentPersonnelName || item.parentName || (!item.isRelative ? (item.personnelName || item.name) : '') || '';
+    return item.parentPersonnelName || item.parentName || item.personnelName || '';
   }
   if (colId === '_parentPersonnelCode' || colId === 'parentPersonnelCode') {
-    return item.rawPerson?.code || item.parentPersonnelCode || (!item.isRelative ? (item.personnelCode || item.code) : '') || '';
+    return item.parentPersonnelCode || item.personnelCode || '';
   }
   if (colId === '_parentPosition' || colId === 'parentPosition') {
-    return item.rawPerson?.positionName || item.rawPerson?.position || item.parentPosition || (!item.isRelative ? (item.position) : '') || '';
+    return item.parentPosition || '';
   }
   if (colId === '_parentDepartment' || colId === 'parentDepartment') {
-    return item.rawPerson?.departmentName || item.parentDepartment || (!item.isRelative ? (item.departmentName) : '') || '';
+    return item.parentDepartment || '';
   }
   if (colId === '_relativeName') {
     return item.isRelative ? (item.relativeName || item.name || '') : '';
@@ -1874,12 +1871,12 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
     } else if (target === 'relatives') {
       // Nếu điều kiện người dùng khớp nhiều Thân nhân (ví dụ: điều kiện cccdparent trùng với Cán bộ bảo lãnh có nhiều thân nhân),
       // nhưng bản thân dòng chuyến đi này thuộc về một Thân nhân cụ thể -> Thu hẹp về đúng Thân nhân thực tế của chuyến đi đó
-      if (matched.length > 1 && (item.relativeId || item.rawRelative)) {
-        const targetRelId = String(item.relativeId || item.rawRelative?.id || item.rawRelative?.code || '').trim().toLowerCase();
+      if (matched.length > 1 && item.relativeId) {
+        const targetRelId = String(item.relativeId || '').trim().toLowerCase();
         const specific = matched.find(r => {
           const rId = String(r.id || '').trim().toLowerCase();
           const rCode = String(r.code || '').trim().toLowerCase();
-          return (targetRelId && (rId === targetRelId || rCode === targetRelId)) || (item.rawRelative && r === item.rawRelative);
+          return targetRelId && (rId === targetRelId || rCode === targetRelId);
         });
         if (specific) {
           matched = [specific];
@@ -1942,9 +1939,6 @@ export const evaluateLookup = (item, col, personnelStore, depth = 0) => {
 
   // 4. Nếu không cấu hình điều kiện và target là Cán bộ, hỗ trợ liên kết sẵn có qua rawPerson / personnelId
   if (target === 'personnel') {
-    if (item.rawPerson && candidatePool.some(p => p.id === item.rawPerson.id)) {
-      return extractCandidateValue(item.rawPerson) || '-';
-    }
     if (item.personnelId) {
       const pid = String(item.personnelId).trim().toLowerCase();
       const cand = candidatePool.find(p => String(p.id || '').trim().toLowerCase() === pid || String(p.code || '').trim().toLowerCase() === pid);
@@ -2162,9 +2156,7 @@ export const evaluateRollup = (item, col, personnelStore) => {
         }
 
         if (list.length === 0) {
-          if (item.rawPerson && candidatePool.some(p => p.id === item.rawPerson.id)) {
-            list = [item.rawPerson];
-          } else if (item.personnelId) {
+          if (item.personnelId) {
             const pid = String(item.personnelId).trim().toLowerCase();
             const pOfficer = candidatePool.find(p => String(p.id || '').trim().toLowerCase() === pid || String(p.code || '').trim().toLowerCase() === pid);
             if (pOfficer) list = [pOfficer];
@@ -2172,15 +2164,15 @@ export const evaluateRollup = (item, col, personnelStore) => {
         }
       } else if (target === 'relatives') {
         const isTripItem = item._recordType === 'trip' || item.departureDate !== undefined || item.destination !== undefined || item.isRelative !== undefined;
-        if (isTripItem && !item.isRelative && !item.relativeId && !item.rawRelative) {
+        if (isTripItem && !item.isRelative && !item.relativeId) {
           list = [];
         } else {
-          if (list.length > 1 && (item.relativeId || item.rawRelative)) {
-            const targetRelId = String(item.relativeId || item.rawRelative?.id || item.rawRelative?.code || '').trim().toLowerCase();
+          if (list.length > 1 && item.relativeId) {
+            const targetRelId = String(item.relativeId || '').trim().toLowerCase();
             const specific = list.find(r => {
               const rId = String(r.id || '').trim().toLowerCase();
               const rCode = String(r.code || '').trim().toLowerCase();
-              return (targetRelId && (rId === targetRelId || rCode === targetRelId)) || (item.rawRelative && r === item.rawRelative);
+              return targetRelId && (rId === targetRelId || rCode === targetRelId);
             });
             if (specific) list = [specific];
           }
@@ -2224,12 +2216,12 @@ export const evaluateRollup = (item, col, personnelStore) => {
                 return false;
               });
               if (relsByParent.length > 0) {
-                if (item.relativeId || item.rawRelative) {
-                  const targetRelId = String(item.relativeId || item.rawRelative?.id || item.rawRelative?.code || '').trim().toLowerCase();
+                if (item.relativeId) {
+                  const targetRelId = String(item.relativeId || '').trim().toLowerCase();
                   const specific = relsByParent.find(r => {
                     const rId = String(r.id || '').trim().toLowerCase();
                     const rCode = String(r.code || '').trim().toLowerCase();
-                    return (targetRelId && (rId === targetRelId || rCode === targetRelId)) || (item.rawRelative && r === item.rawRelative);
+                    return targetRelId && (rId === targetRelId || rCode === targetRelId);
                   });
                   if (specific) list = [specific];
                   else list = relsByParent;
@@ -2240,9 +2232,7 @@ export const evaluateRollup = (item, col, personnelStore) => {
             }
 
             if (list.length === 0) {
-              if (item.rawRelative && candidatePool.some(r => r.id === item.rawRelative.id)) {
-                list = [item.rawRelative];
-              } else if (item.relativeId) {
+              if (item.relativeId) {
                 const rid = String(item.relativeId).trim().toLowerCase();
                 const rel = candidatePool.find(r => String(r.id || '').trim().toLowerCase() === rid || String(r.code || '').trim().toLowerCase() === rid);
                 if (rel) list = [rel];

@@ -502,7 +502,7 @@ const getLinkedRows = (targetTable) => {
         if (val && val === pVal) return true;
       }
       return false;
-    }) || curRecord.rawPerson;
+    }) || null;
 
     return p ? [p] : [];
   }

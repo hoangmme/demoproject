@@ -237,13 +237,13 @@ const recordSource = computed(() => {
     return props.tableId;
   }
   if (form.value._tableId) return form.value._tableId;
-  if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-') && !form.value.rawTrip && !String(form.value.id || '').startsWith('trip_'))) {
+  if (form.value._recordType === 'personnel' || (form.value.code && String(form.value.code).startsWith('CB-') && !String(form.value.id || '').startsWith('trip_'))) {
     return 'personnel';
   }
-  if (form.value._recordType === 'relative' || (form.value.code && String(form.value.code).startsWith('TN-') && !String(form.value.id || '').startsWith('trip_')) || form.value.rawRelative || form.value.relationshipName || form.value.relativeName || form.value.cccdthannhan || form.value.isRelative) {
+  if (form.value._recordType === 'relative' || (form.value.code && String(form.value.code).startsWith('TN-') && !String(form.value.id || '').startsWith('trip_')) || form.value.relationshipName || form.value.relativeName || form.value.cccdthannhan || form.value.isRelative) {
     return 'relatives';
   }
-  if (form.value._recordType === 'trip' || form.value.rawTrip || (form.value.id && String(form.value.id).startsWith('trip_')) || form.value.cccdchuyendi) {
+  if (form.value._recordType === 'trip' || (form.value.id && String(form.value.id).startsWith('trip_')) || form.value.cccdchuyendi) {
     return 'trips';
   }
   if (form.value.departureDate || form.value.ngay_xuat_canh) return 'trips';
@@ -668,9 +668,6 @@ const initFormData = (val) => {
       _primaryKey: val._primaryKey || parsedVal._primaryKey || val.id,
       _recordType: val._recordType || parsedVal._recordType,
       _tableId: parsedVal._tableId || val._tableId,
-      rawPerson: val.rawPerson,
-      rawRelative: val.rawRelative,
-      rawTrip: val.rawTrip,
       custom_data: { ...merged },
     };
   } else {

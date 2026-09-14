@@ -11,9 +11,18 @@ import {
   resolvePresence,
   isPresenceField,
   generateSlug,
+  parseDateValue,
 } from './formatters';
 import { getAppSettings } from '@/api/settings';
 import { getLinkedRowsByConfig, findUnifiedTable, getTableKeyColId } from './tableRegistry';
+
+const safeCustomData = (rec) => {
+  let cd = rec?.custom_data;
+  if (typeof cd === 'string') {
+    try { return JSON.parse(cd); } catch (e) { return {}; }
+  }
+  return cd && typeof cd === 'object' ? cd : {};
+};
 
 /**
  * Chuyển đổi giá trị của một cột thành chuỗi hiển thị chuẩn cho file xuất (Word / PDF)
@@ -101,7 +110,7 @@ export function formatFieldValueForDocx(val, col = {}) {
   };
 
   // 3. Format: Tệp đính kèm (file hoặc trường đính kèm)
-  const isFileField = format === 'file' || /dinh_kem|attachment|file/i.test(col.id || '') || /dinh_kem|đính kèm|tệp/i.test(col.label || '');
+  const isFileField = format === 'file' || format === 'attachment' || /dinh_kem|attachment|file/i.test(col.id || '') || /dinh_kem|đính kèm|tệp/i.test(col.label || '');
   if (isFileField) {
     return extractFileName(val);
   }
@@ -211,6 +220,15 @@ export function formatFieldValueForDocx(val, col = {}) {
   }
   if (Array.isArray(val)) {
     return val.map((x) => (typeof x === 'object' ? JSON.stringify(x) : String(x).trim())).filter(Boolean).join(', ');
+  }
+  if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+    return val.label || val.name || val.title || val.value || String(val);
+  }
+  if (format === 'createdTime' || format === 'lastModifiedTime') {
+    const d = parseDateValue(val);
+    if (d && !isNaN(d.getTime())) {
+      return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    }
   }
   return String(val).trim();
 }
@@ -363,7 +381,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       val = formatFieldValueForDocx(val, col);
     }
 
-    data[col.id] = val ?? '';
+    data[col.id] = (val !== undefined && val !== null && val !== '') ? val : undefined;
     data[`label_${col.id}`] = col.label || col.id;
 
     // Phân rã options & chips nếu có nhiều giá trị hoặc dấu hai chấm
@@ -452,8 +470,6 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     const rawPersonnel = getLinkedRowsByConfig(effectivePerson, curTableId, 'personnel', personnelStore);
     if (rawPersonnel && rawPersonnel.length > 0) {
       linkedOfficer = rawPersonnel[0];
-    } else if (effectivePerson.rawPerson) {
-      linkedOfficer = effectivePerson.rawPerson;
     } else if (personnelStore?.findParentPersonForTrip && (curTableId === 'trips' || effectivePerson.departureDate || effectivePerson.ngay_xuat_canh)) {
       linkedOfficer = personnelStore.findParentPersonForTrip(effectivePerson);
     } else if (personnelStore?.findParentPersonForRelative && (curTableId === 'relatives' || effectivePerson.relationshipName || effectivePerson.relativeName)) {
@@ -470,7 +486,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       : (curTableId !== 'relatives' ? getLinkedRowsByConfig(effectivePerson, curTableId, 'relatives', personnelStore) : []);
     const relCols = (personnelStore?.importMappingRelative || []).flatMap((g) => g.columns || []);
     processedRelatives = (rawRelatives || []).map((rel, rIdx) => {
-      const rcd = rel.custom_data || {};
+      const rcd = safeCustomData(rel);
       const relObj = {
         stt: rIdx + 1,
         code: rel.code || `TN-${String(rIdx + 1).padStart(4, '0')}`,
@@ -486,8 +502,8 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
         if (col.format === 'formula') rVal = evaluateFormula(rel, col)?.label || '';
         else if (col.format === 'date') rVal = formatDate(rVal);
         else rVal = formatFieldValueForDocx(rVal, col);
-        relObj[col.id] = rVal ?? '';
-        relObj[`tn_${col.id}`] = rVal ?? '';
+        relObj[col.id] = (rVal !== undefined && rVal !== null && rVal !== '') ? rVal : undefined;
+        relObj[`tn_${col.id}`] = (rVal !== undefined && rVal !== null && rVal !== '') ? rVal : undefined;
       });
       return relObj;
     });
@@ -517,7 +533,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       : (curTableId !== 'trips' ? getLinkedRowsByConfig(effectivePerson, curTableId, 'trips', personnelStore) : [effectivePerson]);
     const tripCols = (personnelStore?.importMappingTrips || []).flatMap((g) => g.columns || []);
     processedTrips = (rawTrips || []).map((trip, tIdx) => {
-      const tcd = trip.custom_data || {};
+      const tcd = safeCustomData(trip);
       const resolvedTripCountry = trip.quoc_gia_xuat_canh !== undefined ? trip.quoc_gia_xuat_canh : (trip.countryName || trip.country || '');
       const tripObj = {
         stt: tIdx + 1,
@@ -539,7 +555,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
         else if (col.format === 'presence' || isPresenceField(col.id)) tVal = resolvePresence(trip)?.label || '';
         else if (col.format === 'date') tVal = formatDate(tVal);
         else tVal = formatFieldValueForDocx(tVal, col);
-        tripObj[col.id] = tVal ?? '';
+        tripObj[col.id] = (tVal !== undefined && tVal !== null && tVal !== '') ? tVal : undefined;
       });
       return tripObj;
     });
@@ -557,7 +573,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     const rawPersonnel = linkedOfficer ? [linkedOfficer] : getLinkedRowsByConfig(effectivePerson, curTableId, 'personnel', personnelStore);
     const pCols = (personnelStore?.importMappingPersonnel || []).flatMap((g) => g.columns || []);
     processedPersonnel = (rawPersonnel || []).map((p, pIdx) => {
-      const pcd = p.custom_data || {};
+      const pcd = safeCustomData(p);
       const pObj = {
         stt: pIdx + 1,
         code: p.code || '',
@@ -570,7 +586,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
         if (col.format === 'formula') pVal = evaluateFormula(p, col)?.label || '';
         else if (col.format === 'date') pVal = formatDate(pVal);
         else pVal = formatFieldValueForDocx(pVal, col);
-        pObj[col.id] = pVal ?? '';
+        pObj[col.id] = (pVal !== undefined && pVal !== null && pVal !== '') ? pVal : undefined;
       });
       return pObj;
     });
@@ -587,7 +603,7 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
 
   // ĐỒNG BỘ TOÀN DIỆN THÔNG TIN CÁN BỘ LÊN GỐC DỮ LIỆU KHI XUẤT TỪ THÂN NHÂN / CHUYẾN ĐI (Zero hardcode)
   if (linkedOfficer) {
-    const pcd = linkedOfficer.custom_data || {};
+    const pcd = safeCustomData(linkedOfficer);
     const pCols = (personnelStore?.importMappingPersonnel || []).flatMap((g) => g.columns || []);
     pCols.forEach((col) => {
       if (!col.id || col.id === 'stt') return;
@@ -595,9 +611,9 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
       if (col.format === 'formula') pVal = evaluateFormula ? evaluateFormula(linkedOfficer, col)?.label : pVal;
       else if (col.format === 'date') pVal = formatDate(pVal);
       else pVal = formatFieldValueForDocx(pVal, col);
-      data[col.id] = pVal ?? '';
-      data[`cb_${col.id}`] = pVal ?? '';
-      data[`can_bo_${col.id}`] = pVal ?? '';
+      data[col.id] = (pVal !== undefined && pVal !== null && pVal !== '') ? pVal : undefined;
+      data[`cb_${col.id}`] = (pVal !== undefined && pVal !== null && pVal !== '') ? pVal : undefined;
+      data[`can_bo_${col.id}`] = (pVal !== undefined && pVal !== null && pVal !== '') ? pVal : undefined;
     });
 
     const oName = linkedOfficer.name || linkedOfficer.fullName || linkedOfficer.ho_ten || '';
@@ -654,9 +670,10 @@ export function preparePersonnelDocxData(person, index = 0, personnelStore = nul
     const loopTag = `bang_${ct.id.replace(/[^a-zA-Z0-9_]/g, '_')}`;
     const rawRows = getLinkedRowsByConfig(effectivePerson, curTableId, ct.id, personnelStore);
     const processedRows = (rawRows || []).map((row, rIdx) => {
+      const rcd = safeCustomData(row);
       const rowObj = { stt: rIdx + 1 };
       (ct.columns || []).forEach((c) => {
-        rowObj[c.id] = formatFieldValueForDocx(row[c.id] ?? row.custom_data?.[c.id], c);
+        rowObj[c.id] = formatFieldValueForDocx(row[c.id] ?? rcd[c.id], c);
       });
       return rowObj;
     });

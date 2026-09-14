@@ -514,7 +514,7 @@ export function getLinkedRowsByConfig(curRecord, curTableId, targetTableId, stor
   }
 
   if (curId === 'trips' && targetId === 'personnel') {
-    if (curRecord.rawPerson) return [curRecord.rawPerson];
+    // rawPerson removed — link via personnelId only
     if (store.findParentPersonForTrip) {
       const p = store.findParentPersonForTrip(curRecord);
       if (p) return [p];
@@ -533,7 +533,7 @@ export function getLinkedRowsByConfig(curRecord, curTableId, targetTableId, stor
   }
 
   if (curId === 'relatives' && targetId === 'personnel') {
-    if (curRecord.rawPerson) return [curRecord.rawPerson];
+    // rawPerson removed — link via personnelId only
     if (store.findParentPersonForRelative) {
       const p = store.findParentPersonForRelative(curRecord);
       if (p) return [p];

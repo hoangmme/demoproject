@@ -371,10 +371,8 @@ export const usePersonnelStore = defineStore('personnel', {
                 personnelCode: p.code || '',
                 parentPersonnelName: p.name || '',
                 parentCccd: personCccd,
-                cccdparent: r.cccdparent || rCustom.cccdparent || r.cccd_can_bo || rCustom.cccd_can_bo || personCccd,
+                cccdparent: r.cccdparent || rCustom.cccdparent || r.cccd_can_bo || rCustom.cccd_can_bo || '',
                 relativeIndex: rIdx,
-                rawRelative: r,
-                rawPerson: p,
                 code: r.code || `TN-${String(allRelatives.length + 1).padStart(5, '0')}`,
               });
             });
@@ -395,7 +393,6 @@ export const usePersonnelStore = defineStore('personnel', {
                 isRelative: false,
                 personnelId: p.id,
                 personnelCode: p.code || '',
-                rawPerson: p,
               });
             });
           }
@@ -419,8 +416,6 @@ export const usePersonnelStore = defineStore('personnel', {
                     relativeId: r.id,
                     relativeName: r.relativeName || r.name || '',
                     parentPersonnelName: p.name || '',
-                    rawPerson: p,
-                    rawRelative: r,
                   });
                 }
               });
@@ -638,7 +633,6 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     findParentPersonForRelative(relative) {
       if (!relative) return null;
-      if (relative.rawPerson) return relative.rawPerson;
       if (relative.personnelId) {
         const found = (this.personnelList || []).find((p) => String(p.id).trim() === String(relative.personnelId).trim());
         if (found) return found;
@@ -661,7 +655,6 @@ export const usePersonnelStore = defineStore('personnel', {
     },
     findParentPersonForTrip(trip) {
       if (!trip) return null;
-      if (trip.rawPerson) return trip.rawPerson;
       if (trip.personnelId) {
         const found = (this.personnelList || []).find((p) => String(p.id).trim() === String(trip.personnelId).trim());
         if (found) return found;
@@ -929,8 +922,8 @@ export const usePersonnelStore = defineStore('personnel', {
       try {
         const parentKeyField = this.getRelativeParentKeyField();
         const pKeyField = this.getPersonnelKeyField();
-        const targetParentId = rel.personnelId || rel.rawPerson?.id;
-        const targetParentVal = String(rel[parentKeyField] || rel.rawPerson?.[pKeyField] || '').trim().toLowerCase();
+        const targetParentId = rel.personnelId;
+        const targetParentVal = String(rel[parentKeyField] || '').trim().toLowerCase();
         const targetRelId = rel.id ? String(rel.id).trim() : '';
         const targetRelUniqueKey = rel.uniqueKey ? String(rel.uniqueKey).trim() : '';
         const rKeyField = this.getRelativeKeyField ? this.getRelativeKeyField() : 'id';
@@ -944,7 +937,7 @@ export const usePersonnelStore = defineStore('personnel', {
         const isSameRelItem = (r, idx) => {
           if (!r) return false;
           // 1. Exact object reference
-          if (r === rel || r === rel.rawRelative) return true;
+          if (r === rel) return true;
           // 2. Exact unique ID match (most robust)
           if (targetRelId && r.id && String(r.id).trim() === targetRelId) return true;
           // 3. Exact uniqueKey match
@@ -991,7 +984,7 @@ export const usePersonnelStore = defineStore('personnel', {
             }
             const rels = Array.isArray(p.relatives) ? p.relatives : (Array.isArray(custom.relatives) ? custom.relatives : []);
             return rels.some((r, idx) => {
-              if (r === rel || r === rel.rawRelative) return true;
+              if (r === rel) return true;
               if (targetRelId && r.id && String(r.id).trim() === targetRelId) return true;
               return false;
             });
@@ -1090,8 +1083,8 @@ export const usePersonnelStore = defineStore('personnel', {
       try {
         const parentKeyField = this.getRelativeParentKeyField();
         const pKeyField = this.getPersonnelKeyField();
-        const targetParentId = relData.personnelId || relData.rawPerson?.id;
-        const targetParentVal = String(relData[parentKeyField] || relData.rawPerson?.[pKeyField] || '').trim().toLowerCase();
+        const targetParentId = relData.personnelId;
+        const targetParentVal = String(relData[parentKeyField] || '').trim().toLowerCase();
         const targetRelId = relData.id ? String(relData.id).trim() : '';
         const targetRelUniqueKey = relData.uniqueKey ? String(relData.uniqueKey).trim() : '';
         const targetRelCode = relData.code ? String(relData.code).trim() : '';
@@ -1105,7 +1098,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
         const isSameRel = (r, idx) => {
           if (!r || !relData) return false;
-          if (r === relData || r === relData.rawRelative) return true;
+          if (r === relData) return true;
           // 1. Match by id
           if (targetRelId && r.id && String(r.id).trim() === targetRelId) return true;
           // 2. Match by uniqueKey
@@ -1256,7 +1249,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
         const isSameTrip = (t) => {
           if (!t || !tripData) return false;
-          if (t === tripData || t === tripData.rawTrip) return true;
+          if (t === tripData) return true;
           if (targetTripId && t.id && String(t.id).trim() === targetTripId) return true;
           if (targetTripUniqueKey && (String(t.uniqueKey || '').trim() === targetTripUniqueKey || String(t.id || '').trim() === targetTripUniqueKey)) return true;
           if (targetTripPrimaryKey && t._primaryKey && String(t._primaryKey).trim() === targetTripPrimaryKey) return true;
@@ -1272,8 +1265,6 @@ export const usePersonnelStore = defineStore('personnel', {
           }
           return false;
         };
-
-        const countryAliases = ['quoc_gia_xuat_canh', 'countryName', 'country', 'quoc_gia', 'quoc_gia_den'];
 
         // 1. Unnest and sanitize custom_data from tripData
         let tripCustom = {};
@@ -1302,36 +1293,6 @@ export const usePersonnelStore = defineStore('personnel', {
         // Direct user edits on tripData must take precedence over custom_data!
         const cleanTrip = sanitizeEntity({ ...tripCustom, ...tripData });
 
-        // 2. Strict country resolution: If user explicitly cleared or set country, propagate to all aliases
-        let explicitCountry = undefined;
-        if (tripData.quoc_gia_xuat_canh !== undefined && String(tripData.quoc_gia_xuat_canh || '').trim() !== '') {
-          explicitCountry = String(tripData.quoc_gia_xuat_canh).trim();
-        } else if (tripData.countryName !== undefined && String(tripData.countryName || '').trim() !== '') {
-          explicitCountry = String(tripData.countryName).trim();
-        } else if (tripData.country !== undefined && String(tripData.country || '').trim() !== '') {
-          explicitCountry = String(tripData.country).trim();
-        } else if (tripData.quoc_gia !== undefined && String(tripData.quoc_gia || '').trim() !== '') {
-          explicitCountry = String(tripData.quoc_gia).trim();
-        } else if (
-          (tripData.quoc_gia_xuat_canh !== undefined && String(tripData.quoc_gia_xuat_canh || '').trim() === '') ||
-          (tripData.countryName !== undefined && String(tripData.countryName || '').trim() === '')
-        ) {
-          explicitCountry = '';
-        }
-
-        const isCountryCleared = explicitCountry !== undefined && explicitCountry === '';
-
-        if (isCountryCleared) {
-          for (const alias of countryAliases) {
-            cleanTrip[alias] = '';
-            delete tripCustom[alias];
-          }
-        } else if (explicitCountry !== undefined && explicitCountry !== '') {
-          for (const alias of countryAliases) {
-            cleanTrip[alias] = explicitCountry;
-            tripCustom[alias] = explicitCountry;
-          }
-        }
         delete tripCustom.custom_data;
         cleanTrip.custom_data = tripCustom;
 
@@ -1407,19 +1368,7 @@ export const usePersonnelStore = defineStore('personnel', {
                 }
                 const tIdx = relObj.trips.findIndex(isSameTrip);
                 if (tIdx !== -1) {
-                  if (isCountryCleared) {
-                    for (const alias of countryAliases) {
-                      delete relObj.trips[tIdx][alias];
-                      if (relObj.trips[tIdx].custom_data) delete relObj.trips[tIdx].custom_data[alias];
-                    }
-                  }
                   relObj.trips[tIdx] = { ...relObj.trips[tIdx], ...cleanTrip };
-                  if (isCountryCleared) {
-                    for (const alias of countryAliases) {
-                      relObj.trips[tIdx][alias] = '';
-                      if (relObj.trips[tIdx].custom_data) relObj.trips[tIdx].custom_data[alias] = '';
-                    }
-                  }
                 } else if (cleanTrip.isRelative) {
                   if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
                   relObj.trips.push(cleanTrip);
@@ -1439,36 +1388,13 @@ export const usePersonnelStore = defineStore('personnel', {
             if (hasTrip || (!cleanTrip.isRelative && matchesPerson) || !updatedInRel) {
               const tIdx = pTrips.findIndex(isSameTrip);
               if (tIdx !== -1) {
-                if (isCountryCleared) {
-                  for (const alias of countryAliases) {
-                    delete pTrips[tIdx][alias];
-                    if (pTrips[tIdx].custom_data) delete pTrips[tIdx].custom_data[alias];
-                  }
-                }
                 pTrips[tIdx] = { ...pTrips[tIdx], ...cleanTrip };
-                if (isCountryCleared) {
-                  for (const alias of countryAliases) {
-                    pTrips[tIdx][alias] = '';
-                    if (pTrips[tIdx].custom_data) pTrips[tIdx].custom_data[alias] = '';
-                  }
-                }
               } else if (!cleanTrip.isRelative) {
                 if (!cleanTrip.id) cleanTrip.id = 'trip_' + Date.now();
                 pTrips.push(cleanTrip);
               }
               updatedP.trips = pTrips;
               updatedP.custom_data.trips = pTrips;
-            } else if (isCountryCleared) {
-              // Ngay cả khi chuyến đi thuộc thân nhân, dọn sạch nếu pTrips còn lưu bản sao cũ
-              const tIdx = pTrips.findIndex(isSameTrip);
-              if (tIdx !== -1) {
-                for (const alias of countryAliases) {
-                  pTrips[tIdx][alias] = '';
-                  if (pTrips[tIdx].custom_data) pTrips[tIdx].custom_data[alias] = '';
-                }
-                updatedP.trips = pTrips;
-                updatedP.custom_data.trips = pTrips;
-              }
             }
 
             await this.savePerson(updatedP);
@@ -1487,18 +1413,7 @@ export const usePersonnelStore = defineStore('personnel', {
         if (Array.isArray(this.standaloneTrips)) {
           const sIdx = this.standaloneTrips.findIndex(isSameTrip);
           if (sIdx !== -1) {
-            if (isCountryCleared) {
-              for (const alias of countryAliases) {
-                delete this.standaloneTrips[sIdx][alias];
-                if (this.standaloneTrips[sIdx].custom_data) delete this.standaloneTrips[sIdx].custom_data[alias];
-              }
-            }
             this.standaloneTrips[sIdx] = { ...this.standaloneTrips[sIdx], ...cleanTrip };
-            if (isCountryCleared) {
-              for (const alias of countryAliases) {
-                this.standaloneTrips[sIdx][alias] = '';
-              }
-            }
             await saveAppSettings('standalone_trips', this.standaloneTrips);
           }
         }
@@ -1527,7 +1442,7 @@ export const usePersonnelStore = defineStore('personnel', {
       try {
         const isSameTrip = (t) => {
           if (!t || !trip) return false;
-          if (t === trip || t === trip.rawTrip) return true;
+          if (t === trip) return true;
           if (t.id && trip.id && String(t.id) === String(trip.id)) return true;
           if (t.uniqueKey && trip.uniqueKey && String(t.uniqueKey) === String(trip.uniqueKey)) return true;
           if (t._primaryKey && trip._primaryKey && String(t._primaryKey) === String(trip._primaryKey)) return true;
@@ -1574,18 +1489,6 @@ export const usePersonnelStore = defineStore('personnel', {
             updatedP.custom_data.trips = updatedP.trips;
             updatedP.custom_data.relatives = updatedP.relatives;
 
-            if (isFlattenedTripOnPerson) {
-              const tripKeys = [
-                'countryName', 'quoc_gia_xuat_canh', 'quoc_gia', 'quoc_gia_den', 'country',
-                'departureDate', 'ngay_xuat_canh', 'arrivalDate', 'ngay_nhap_canh',
-                'decisionNumber', 'so_quyet_dinh', 'decisionDate', 'decisionIssuer',
-                'purpose', 'muc_dich_xuat_canh', 'funding2', 'nguon_kinh_phi', 'tripCount'
-              ];
-              for (const k of tripKeys) {
-                delete updatedP.custom_data[k];
-                delete updatedP[k];
-              }
-            }
             await this.savePerson(updatedP, { silentLog: true });
           }
         }
@@ -1644,7 +1547,7 @@ export const usePersonnelStore = defineStore('personnel', {
       const isExplicitPersonnel =
         record._tableId === 'personnel' ||
         record._recordType === 'personnel' ||
-        (record.code && String(record.code).startsWith('CB-') && !record.rawTrip && !String(record.id || '').startsWith('trip_'));
+        (record.code && String(record.code).startsWith('CB-') && !String(record.id || '').startsWith('trip_'));
 
       if (isExplicitPersonnel) {
         return await this.savePerson(record);
@@ -1654,12 +1557,9 @@ export const usePersonnelStore = defineStore('personnel', {
       const isExplicitRelative =
         record._tableId === 'relatives' ||
         record._recordType === 'relative' ||
-        record.rawRelative ||
         (record.code && String(record.code).startsWith('TN-') && !String(record.id || '').startsWith('trip_')) ||
         (record.id && String(record.id).startsWith('rel_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
-        (record.cccdthannhan !== undefined && !record.departureDate && !record.ngay_xuat_canh) ||
-        ((record.relationshipName || record.relativeName) && record._recordType !== 'personnel' && record._recordType !== 'trip');
+        (record.uniqueKey && String(record.uniqueKey).startsWith('rel_'));
 
       if (isExplicitRelative) {
         return await this.saveRelative(record);
@@ -1669,13 +1569,8 @@ export const usePersonnelStore = defineStore('personnel', {
       if (
         record._tableId === 'trips' ||
         record._recordType === 'trip' ||
-        record.rawTrip ||
         (record.id && String(record.id).startsWith('trip_')) ||
-        (record.uniqueKey && String(record.uniqueKey).startsWith('trip_')) ||
-        record.cccdchuyendi !== undefined ||
-        record.quoc_gia_xuat_canh !== undefined ||
-        record.ngay_xuat_canh !== undefined ||
-        record.departureDate !== undefined
+        (record.uniqueKey && String(record.uniqueKey).startsWith('trip_'))
       ) {
         return await this.saveTrip(record);
       }
@@ -1722,8 +1617,8 @@ export const usePersonnelStore = defineStore('personnel', {
       // Ưu tiên 1: Cán bộ
       if (
         record._tableId === 'personnel' ||
-        (record._recordType === 'personnel' && !record.rawTrip && !String(record.id || '').startsWith('trip_')) ||
-        (record.code && String(record.code).startsWith('CB-') && !record.rawTrip && !String(record.id || '').startsWith('trip_'))
+        (record._recordType === 'personnel' && !String(record.id || '').startsWith('trip_')) ||
+        (record.code && String(record.code).startsWith('CB-') && !String(record.id || '').startsWith('trip_'))
       ) {
         return await this.deletePerson(record);
       }
@@ -1732,7 +1627,6 @@ export const usePersonnelStore = defineStore('personnel', {
       if (
         record._tableId === 'relatives' ||
         record._recordType === 'relative' ||
-        record.rawRelative ||
         (record.code && String(record.code).startsWith('TN-') && !String(record.id || '').startsWith('trip_')) ||
         (record.id && String(record.id).startsWith('rel_')) ||
         (record.uniqueKey && String(record.uniqueKey).startsWith('rel_')) ||
@@ -1746,7 +1640,6 @@ export const usePersonnelStore = defineStore('personnel', {
       if (
         record._tableId === 'trips' ||
         record._recordType === 'trip' ||
-        record.rawTrip ||
         (record.id && String(record.id).startsWith('trip_')) ||
         (record.uniqueKey && String(record.uniqueKey).startsWith('trip_')) ||
         record.quoc_gia_xuat_canh !== undefined ||

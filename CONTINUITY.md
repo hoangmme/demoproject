@@ -1,8 +1,10 @@
 # CONTINUITY.MD - STRATEGIC CONTINUITY LEDGER (v7.4)
 
-## PROJECT: demoproject | Hệ thống Quản lý Cán bộ & Theo dõi Chuyến đi Xuất nhập cảnh
+## PROJECT: demoproject | Nền tảng No-Code Quản lý Dữ liệu Động (Đang triển khai: Quản lý Cán bộ & Theo dõi Chuyến đi Xuất nhập cảnh)
 
-### 1. NORTH STAR & ARCHITECTURE RULES (PURE FLAT TABLE / RECORD PARADIGM)
+> **TẦM NHÌN NO-CODE**: Hệ thống được phát triển theo hướng nền tảng No-Code tái sử dụng — có thể áp dụng cho BẤT KỲ dự án quản lý dữ liệu nào (nhân sự, tài sản, học vụ, dự án...) mà không cần viết code mới. Mọi cấu hình bảng, cột, công thức, liên kết, xuất báo cáo đều do người dùng tự thiết lập qua giao diện. Chỉ cho phép một số công thức custom đặc thù.
+
+### 1. NORTH STAR & ARCHITECTURE RULES (PURE FLAT TABLE / RECORD PARADIGM — NO-CODE PLATFORM)
 - **Kiến trúc Bảng Phẳng Thuần Túy (Pure Flat Table / Record Architecture - Teable / Lark Base Paradigm)**:
   - Toàn bộ các bảng trong hệ thống: **Cán bộ (`personnel`)**, **Thân nhân (`relatives`)**, **Chuyến đi (`trips`)**, và các **Bảng tùy biến tự tạo (`custom tables`)** hoạt động 100% như các Bảng Phẳng Độc Lập (Flat Records).
   - Không còn khái niệm bao bọc đa tầng hay phân loại đa hình cứng (`targetType: 'personnel' | 'relative' | 'trip'`).

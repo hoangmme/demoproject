@@ -2154,7 +2154,6 @@ const previewPdfForRow = async (row) => {
     if (curSource !== 'personnel') {
       const linked = getLinkedRowsByConfig(row, curSource, 'personnel', personnelStore);
       if (linked && linked.length > 0) linkedOfficer = linked[0];
-      else if (row.rawPerson) linkedOfficer = row.rawPerson;
       else if (personnelStore.findParentPersonForTrip && (curSource === 'trips' || row.departureDate || row.ngay_xuat_canh)) linkedOfficer = personnelStore.findParentPersonForTrip(row);
       else if (personnelStore.findParentPersonForRelative && (curSource === 'relatives' || row.relationshipName || row.relativeName)) linkedOfficer = personnelStore.findParentPersonForRelative(row);
     }
@@ -2165,8 +2164,7 @@ const previewPdfForRow = async (row) => {
                   (titleCol && (row[titleCol.id] || row.custom_data?.[titleCol.id])) ||
                   row.name || row.fullName || row.pName || row.personnelName ||
                   row.relativeName || row.rName || row.countryName || row.quoc_gia_xuat_canh ||
-                  row.rawPerson?.fullName || row.rawPerson?.name ||
-                  row.rawRelative?.relativeName || row.title || 'Hồ sơ';
+                  row.title || 'Hồ sơ';
     const keyCol = curCols.find((c) => c.isKey);
     const pCode = titlePerson.cccd || titlePerson.so_cccd || titlePerson.code ||
                   (keyCol && (row[keyCol.id] || row.custom_data?.[keyCol.id])) ||
@@ -3950,14 +3948,11 @@ function computeWidgetCount(widget) {
       let val;
       if (uCol) {
         val = getRowFieldValue(r, uCol);
-        if ((val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') && r.rawPerson) {
-          val = getRowFieldValue(r.rawPerson, uCol);
-        }
         if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') {
-          val = r.cccdchuyendi || r.cccd || r.rawPerson?.cccd || r.rawPerson?.code || r.personnelId || r.id;
+          val = r.cccdchuyendi || r.cccd || r.personnelId || r.id;
         }
       } else {
-        val = r.cccd || r.rawPerson?.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
+        val = r.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
       }
       if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') {
         seen.add(String(val).trim().toLowerCase());
@@ -4076,14 +4071,11 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
       let val;
       if (uCol) {
         val = getRowFieldValue(r, uCol);
-        if ((val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') && r.rawPerson) {
-          val = getRowFieldValue(r.rawPerson, uCol);
-        }
         if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') {
-          val = r.cccdchuyendi || r.cccd || r.rawPerson?.cccd || r.rawPerson?.code || r.personnelId || r.id;
+          val = r.cccdchuyendi || r.cccd || r.personnelId || r.id;
         }
       } else {
-        val = r.cccd || r.rawPerson?.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
+        val = r.cccd || r.id || r.code || r.personnelCode || r.uniqueKey;
       }
       if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') {
         const key = String(val).trim().toLowerCase();

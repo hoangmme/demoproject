@@ -983,7 +983,6 @@ const handleExportAllInOneData = () => {
           parentPersonnelCccd: personCccd,
           parentPosition: p.position || p.positionName || custom.position || '',
           parentDepartment: p.departmentName || (p.departmentId ? personnelStore.getDepartmentName(p.departmentId) : '') || '',
-          rawPerson: p,
         });
       });
     }
@@ -1001,7 +1000,6 @@ const handleExportAllInOneData = () => {
         departmentId: p.departmentId || '',
         position: p.position || '',
         cccd: p.cccd || '',
-        rawPerson: p,
       });
     });
   });
@@ -1016,7 +1014,6 @@ const handleExportAllInOneData = () => {
         cccd: r.cccd || '',
         isRelative: true,
         parentName: r.parentName || '',
-        rawPerson: r,
       });
     });
   });

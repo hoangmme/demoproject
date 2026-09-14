@@ -1276,7 +1276,6 @@ const previewPdfForRow = async (row) => {
     if (curSource !== 'personnel') {
       const linked = getLinkedRowsByConfig(row, curSource, 'personnel', personnelStore);
       if (linked && linked.length > 0) linkedOfficer = linked[0];
-      else if (row.rawPerson) linkedOfficer = row.rawPerson;
       else if (personnelStore.findParentPersonForTrip && (curSource === 'trips' || row.departureDate || row.ngay_xuat_canh)) linkedOfficer = personnelStore.findParentPersonForTrip(row);
       else if (personnelStore.findParentPersonForRelative && (curSource === 'relatives' || row.relationshipName || row.relativeName)) linkedOfficer = personnelStore.findParentPersonForRelative(row);
     }
@@ -1287,8 +1286,7 @@ const previewPdfForRow = async (row) => {
                   (titleCol && (row[titleCol.id] || row.custom_data?.[titleCol.id])) ||
                   row.name || row.fullName || row.pName || row.personnelName ||
                   row.relativeName || row.rName || row.countryName || row.quoc_gia_xuat_canh ||
-                  row.rawPerson?.fullName || row.rawPerson?.name ||
-                  row.rawRelative?.relativeName || row.title || curTitle || 'Hồ sơ';
+                  row.title || curTitle || 'Hồ sơ';
     const keyCol = curCols.find((c) => c.isKey);
     const pCode = titlePerson.cccd || titlePerson.so_cccd || titlePerson.code ||
                   (keyCol && (row[keyCol.id] || row.custom_data?.[keyCol.id])) ||
@@ -1679,7 +1677,6 @@ const openAdvancedDocxExport = () => {
 
 const resolvePersonFromItem = (item) => {
   if (!item) return null;
-  if (item.rawPerson && item.rawPerson.id) return item.rawPerson;
   if (item.personnelId) {
     const found = (personnelStore.personnelList || []).find((p) => p.id === item.personnelId);
     if (found) return found;
@@ -2971,9 +2968,8 @@ const resolveTargetPersonnel = (trip) => {
   if (!trip) return null;
   const pList = personnelStore.personnelList || [];
 
-  // 0. Direct personnel record or rawPerson
-  if (trip._recordType === 'personnel' || trip.rawPerson) {
-    if (trip.rawPerson) return trip.rawPerson;
+  // 0. Direct personnel record
+  if (trip._recordType === 'personnel') {
     const found = pList.find((p) => String(p.id) === String(trip.id));
     if (found) return found;
     return trip;
@@ -2992,30 +2988,19 @@ const resolveTargetPersonnel = (trip) => {
     if (found) return found;
   }
 
-  // 3. By rawPerson.id
-  if (trip.rawPerson?.id !== undefined && trip.rawPerson?.id !== null) {
-    const found = pList.find((p) => String(p.id) === String(trip.rawPerson.id));
-    if (found) return found;
-  }
-
-  // 4. By CCCD
+  // 3. By CCCD
   const cccd = trip.cccdchuyendi || trip.cccd || trip.cccdparent || trip.custom_data?.cccd;
   if (cccd && String(cccd).trim() !== '') {
     const found = personnelStore.findPersonByCccd(String(cccd).trim());
     if (found) return found;
   }
 
-  // 5. By personnelName (for cán bộ)
+  // 4. By personnelName (for cán bộ)
   const pName = trip.personnelName || trip.name;
   if (pName && String(pName).trim() !== '' && !trip.isRelative) {
     const targetName = String(pName).trim().toLowerCase();
     const found = pList.find((p) => p.name && String(p.name).trim().toLowerCase() === targetName);
     if (found) return found;
-  }
-
-  // 6. If trip.rawPerson exists
-  if (trip.rawPerson) {
-    return trip.rawPerson;
   }
 
   return null;
@@ -3130,7 +3115,7 @@ function openPersonnelDetail(record) {
 
 const isSameTripItem = (t, trip) => {
   if (!t || !trip) return false;
-  if (t === trip || t === trip.rawTrip) return true;
+  if (t === trip) return true;
   if (t.id && trip.id && String(t.id) === String(trip.id)) return true;
   if (t.id && trip.uniqueKey && String(t.id) === String(trip.uniqueKey)) return true;
   if (t.uniqueKey && trip.uniqueKey && String(t.uniqueKey) === String(trip.uniqueKey)) return true;

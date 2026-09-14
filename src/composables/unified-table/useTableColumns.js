@@ -1295,7 +1295,7 @@ export function useTableColumns({
   };
 
   const getPersonFieldValue = (data, fieldKey) => {
-    const person = data.rawPerson || data;
+    const person = data;
     if (!person) return '-';
     if (fieldKey === 'name') return person.name || person.ho_ten || '-';
     if (fieldKey === 'cccdCB') return person.cccdCB || person.cccd || '-';

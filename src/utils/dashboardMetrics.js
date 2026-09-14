@@ -33,7 +33,6 @@ export const buildTopicSourceList = (source, personnelStore) => {
         personnelCode: p.code,
         departmentName: (personnelStore.getDepartmentName && personnelStore.getDepartmentName(p.departmentId)) || p.departmentName || '',
         position: p.positionName || p.position || '',
-        rawPerson: p,
         custom_data: pCustom,
         trips: Array.isArray(p.trips) ? p.trips : (Array.isArray(pCustom.trips) ? pCustom.trips : []),
         isAbroad: presence.isAbroad,
@@ -148,8 +147,6 @@ export const buildTopicSourceList = (source, personnelStore) => {
         cccdparent: r.cccdparent || parentPerson?.cccd || parentPerson?.cccdparent || '',
         cccdthannhan: r.cccdthannhan || r.cccd || '',
         departmentName: parentPerson?.departmentName || (parentPerson?.departmentId && personnelStore.getDepartmentName ? personnelStore.getDepartmentName(parentPerson.departmentId) : '') || '',
-        rawPerson: parentPerson || r.rawPerson || r,
-        rawRelative: r.rawRelative || r,
         custom_data: rCustom,
         isAbroad: presence.isAbroad,
         isOverdue: presence.isOverdue,
@@ -289,8 +286,6 @@ export const buildTopicSourceList = (source, personnelStore) => {
           matchedPerson = personnelByKey.get(parentKey);
         } else if (matchedRelative.personnelId && personnelByKey.has(String(matchedRelative.personnelId).trim().toLowerCase())) {
           matchedPerson = personnelByKey.get(String(matchedRelative.personnelId).trim().toLowerCase());
-        } else if (matchedRelative.rawPerson) {
-          matchedPerson = matchedRelative.rawPerson;
         }
       }
     }
@@ -312,13 +307,8 @@ export const buildTopicSourceList = (source, personnelStore) => {
         const mpid = String(matchedRelative.personnelId).trim().toLowerCase();
         if (personnelByKey.has(mpid)) matchedPerson = personnelByKey.get(mpid);
         else if (personnelStore?.personnelList) matchedPerson = personnelStore.personnelList.find(p => String(p.id).trim() === String(matchedRelative.personnelId).trim());
-      } else if (matchedRelative.rawPerson) {
-        matchedPerson = matchedRelative.rawPerson;
       }
     }
-
-    if (!matchedPerson && t.rawPerson) matchedPerson = t.rawPerson;
-    if (!matchedRelative && t.rawRelative) matchedRelative = t.rawRelative;
 
     const presence = resolvePresence(t);
     const tripPrimaryKey = t.id || t.uniqueKey || t.code || `CD-${trips.length + 1}`;
@@ -332,8 +322,8 @@ export const buildTopicSourceList = (source, personnelStore) => {
       isRelative: isRel,
       personnelId: t.personnelId || matchedPerson?.id || matchedRelative?.personnelId || '',
       relativeId: t.relativeId || matchedRelative?.id || '',
-      rawPerson: matchedPerson || t.rawPerson || null,
-      rawRelative: matchedRelative || t.rawRelative || null,
+      parentPersonnelName: matchedPerson?.name || t.parentPersonnelName || '',
+      parentPersonnelCode: matchedPerson?.code || t.parentPersonnelCode || '',
       custom_data: tCustom,
       isAbroad: presence.isAbroad,
       isOverdue: presence.isOverdue,
@@ -646,7 +636,7 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
 
   // 1. Đối tượng Cán bộ / Thân nhân (isRelative)
   if (field === 'isRelative' || field === '_doiTuong' || field === 'doi_tuong') {
-    const isRel = Boolean(item.isRelative || item.rawRelative);
+    const isRel = Boolean(item.isRelative);
     const tLower = String(target).toLowerCase().trim();
     if (op === 'equals') {
       if (tLower === 'true' || tLower.includes('thân nhân') || tLower === '1') return isRel === true;
@@ -712,7 +702,7 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
     if (isNaN(count)) {
       const personTrips = Array.isArray(item.trips)
         ? item.trips
-        : (item.isRelative ? (Array.isArray(item.rawRelative?.trips) ? item.rawRelative.trips : []) : (Array.isArray(item.rawPerson?.trips) ? item.rawPerson.trips : []));
+        : [];
       count = personTrips.length;
     }
 
@@ -835,11 +825,8 @@ export const computeMetricCardCount = (card, sourceList, firstCard, personnelSto
       let keyVal;
       if (uCol) {
         keyVal = extractRowFieldValue(item, uCol, personnelStore);
-        if ((keyVal === undefined || keyVal === null || String(keyVal).trim() === '' || String(keyVal).trim() === '-') && item.rawPerson) {
-          keyVal = extractRowFieldValue(item.rawPerson, uCol, personnelStore);
-        }
         if (keyVal === undefined || keyVal === null || String(keyVal).trim() === '' || String(keyVal).trim() === '-') {
-          keyVal = item.cccdchuyendi || item.cccd || item.rawPerson?.cccd || item.rawPerson?.code || item.personnelId || item.id;
+          keyVal = item.cccdchuyendi || item.cccd || item.personnelId || item.id;
         }
       } else {
         keyVal = item[pKeyField] ?? item.cccdparent ?? item.parentCccd ?? item.personnelId ?? item.id;
