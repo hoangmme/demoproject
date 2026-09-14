@@ -1311,13 +1311,16 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* Nhóm cột dạng phẳng, thoáng đãng */
+/* Nhóm cột dạng phẳng, thoáng đãng - Chiều cao tự nhiên 100%, không ép co, cuộn tổng */
 .column-group-card {
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
-  overflow: hidden;
+  overflow: visible;
   transition: all 0.15s ease;
+  flex-shrink: 0;
+  height: auto;
+  max-height: none;
 }
 
 .column-group-card.is-identifier-group {
@@ -1336,6 +1339,8 @@ onUnmounted(() => {
   padding: 6px 10px;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
   cursor: pointer;
   user-select: none;
   transition: background 0.12s ease;
@@ -1373,16 +1378,22 @@ onUnmounted(() => {
   color: #64748b;
   cursor: pointer;
   padding: 0;
-  font-size: 0.65rem;
+  border-radius: 3px;
+  transition: all 0.1s ease;
+}
+
+.btn-group-toggle:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .group-header-pin {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   line-height: 1;
 }
 
 .group-header-folder {
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   color: #0284c7;
 }
 
@@ -1390,19 +1401,18 @@ onUnmounted(() => {
   font-size: 0.78rem;
   font-weight: 700;
   color: #1e293b;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .group-header-count {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  color: #64748b;
-  background: #e2e8f0;
   padding: 1px 6px;
   border-radius: 999px;
-  white-space: nowrap;
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .group-header-count.all-selected {
@@ -1413,14 +1423,10 @@ onUnmounted(() => {
 .group-header-actions {
   display: flex;
   align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  margin-left: 8px;
+  gap: 4px;
 }
 
 .btn-group-action {
-  border: 1px solid #bae6fd;
-  background: #f0f9ff;
   color: #0284c7;
   font-size: 0.68rem;
   font-weight: 600;
