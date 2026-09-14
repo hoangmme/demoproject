@@ -112,6 +112,50 @@
         ></i>
       </div>
 
+      <!-- Thanh Cột Định danh Cố định ở đầu (Ghim trên cùng, không bị cuộn che) -->
+      <div v-if="identifierColumn" class="pinned-identifier-topbar">
+        <label class="pinned-topbar-label">
+          <input
+            type="checkbox"
+            :value="identifierColumn.id"
+            :checked="modelValue.includes(identifierColumn.id)"
+            @change="toggleCol(identifierColumn.id)"
+            class="pinned-topbar-checkbox"
+          />
+          <span class="pinned-topbar-pin" title="Cột định danh ghim cố định ở đầu">📌</span>
+          <span
+            class="col-type-badge type-identifier-badge"
+            :title="'Định dạng: ' + (identifierColumn.format || 'text')"
+          >
+            <i :class="getFormatIcon(identifierColumn.format)" style="font-size: 0.68rem;"></i>
+          </span>
+          <div class="pinned-topbar-info">
+            <span class="pinned-topbar-name" :title="identifierColumn.label || identifierColumn.id">
+              {{ identifierColumn.label || 'Định danh bản ghi' }}
+            </span>
+            <span class="pinned-col-badge">Cố định</span>
+          </div>
+        </label>
+
+        <div class="pinned-topbar-actions">
+          <span
+            class="pinned-status-pill"
+            :class="{ 'is-active': modelValue.includes(identifierColumn.id) }"
+          >
+            {{ modelValue.includes(identifierColumn.id) ? 'Đang hiển thị' : 'Đang ẩn' }}
+          </span>
+          <button
+            type="button"
+            class="btn-col-action-trigger"
+            @click.stop="copyColumnTag(identifierColumn)"
+            :title="copiedColId === identifierColumn.id ? 'Đã chép vào Clipboard!' : `Sao chép mã thẻ Word/PDF: {${identifierColumn.id}}`"
+            :style="{ color: copiedColId === identifierColumn.id ? '#16a34a' : '#64748b', borderColor: copiedColId === identifierColumn.id ? '#86efac' : '#cbd5e1' }"
+          >
+            <i :class="copiedColId === identifierColumn.id ? 'pi pi-check' : 'pi pi-copy'" style="font-size: 0.72rem;"></i>
+          </button>
+        </div>
+      </div>
+
       <!-- 4. Danh sách Cột Phân Nhóm (Tự động kéo dài không bị ép 400px) -->
       <div class="column-selector-list">
         <!-- Trạng thái trống khi tìm kiếm không khớp -->
@@ -347,6 +391,53 @@
           <button type="button" class="btn-text-link" style="font-size: 0.8rem;" @click="deselectAll">Bỏ chọn</button>
           <span style="color: #cbd5e1;">·</span>
           <button type="button" class="btn-text-link" style="font-size: 0.8rem;" @click="resetOrder">Thứ tự chuẩn</button>
+        </div>
+      </div>
+
+      <!-- Thanh Cột Định danh Cố định ở đầu trong Modal (Không bị cuộn che) -->
+      <div v-if="identifierColumn" class="pinned-identifier-topbar modal-pinned-topbar">
+        <label class="pinned-topbar-label">
+          <input
+            type="checkbox"
+            :value="identifierColumn.id"
+            :checked="modelValue.includes(identifierColumn.id)"
+            @change="toggleCol(identifierColumn.id)"
+            class="pinned-topbar-checkbox"
+            style="width: 18px; height: 18px;"
+          />
+          <span class="pinned-topbar-pin" style="font-size: 1rem;" title="Cột định danh ghim cố định ở đầu">📌</span>
+          <span
+            class="col-type-badge type-identifier-badge"
+            style="width: 24px; height: 24px;"
+            :title="'Định dạng: ' + (identifierColumn.format || 'text')"
+          >
+            <i :class="getFormatIcon(identifierColumn.format)" style="font-size: 0.75rem;"></i>
+          </span>
+          <div class="pinned-topbar-info">
+            <span class="pinned-topbar-name" style="font-size: 0.9rem;" :title="identifierColumn.label || identifierColumn.id">
+              {{ identifierColumn.label || 'Định danh bản ghi' }}
+            </span>
+            <span class="pinned-col-badge" style="font-size: 0.7rem;">Cố định hệ thống</span>
+          </div>
+        </label>
+
+        <div class="pinned-topbar-actions">
+          <span
+            class="pinned-status-pill"
+            :class="{ 'is-active': modelValue.includes(identifierColumn.id) }"
+            style="font-size: 0.75rem; padding: 2px 9px;"
+          >
+            {{ modelValue.includes(identifierColumn.id) ? 'Đang hiển thị' : 'Đang ẩn' }}
+          </span>
+          <button
+            type="button"
+            class="btn-col-action-trigger"
+            @click.stop="copyColumnTag(identifierColumn)"
+            :title="copiedColId === identifierColumn.id ? 'Đã chép vào Clipboard!' : `Sao chép mã thẻ Word/PDF: {${identifierColumn.id}}`"
+            style="width: 26px; height: 26px;"
+          >
+            <i :class="copiedColId === identifierColumn.id ? 'pi pi-check' : 'pi pi-copy'" style="font-size: 0.75rem;"></i>
+          </button>
         </div>
       </div>
 
@@ -663,17 +754,17 @@ const isGroupCollapsed = (groupKey) => {
   return collapsedGroups.value.has(groupKey);
 };
 
+const identifierColumn = computed(() => {
+  return displayOptions.value.find((c) => c.id === '_recordIdentifier' || c.isSystemIdentifier) || null;
+});
+
 const groupedDisplayOptions = computed(() => {
   const filtered = displayOptions.value;
   const groupsMap = new Map();
-  let idCol = null;
 
-  // Thu thập các cột theo nhóm nghiệp vụ chuẩn
+  // Thu thập các cột theo nhóm nghiệp vụ chuẩn (Cột định danh đã được cố định ở thanh trên cùng)
   filtered.forEach((c) => {
-    if (c.id === '_recordIdentifier' || c.isSystemIdentifier) {
-      idCol = c;
-      return;
-    }
+    if (c.id === '_recordIdentifier' || c.isSystemIdentifier) return;
     const gTitle = cleanGroupTitle(c.groupTitle);
     if (!groupsMap.has(gTitle)) {
       groupsMap.set(gTitle, {
@@ -684,23 +775,6 @@ const groupedDisplayOptions = computed(() => {
     }
     groupsMap.get(gTitle).columns.push(c);
   });
-
-  // Chèn Cột định danh mặc định vào vị trí đầu tiên của Nhóm đầu tiên (đồng bộ với Tùy chọn Bảng)
-  if (idCol) {
-    if (groupsMap.size > 0) {
-      const firstGroup = groupsMap.values().next().value;
-      if (firstGroup) {
-        firstGroup.columns.unshift(idCol);
-      }
-    } else {
-      const gTitle = 'Thông tin chung';
-      groupsMap.set(gTitle, {
-        key: gTitle,
-        title: gTitle,
-        columns: [idCol],
-      });
-    }
-  }
 
   const activeSet = new Set(props.modelValue);
   return Array.from(groupsMap.values()).map((g) => {
@@ -1125,7 +1199,93 @@ onUnmounted(() => {
   text-align: center;
 }
 
-/* Nhãn & Biểu tượng Cột Định danh hiển thị trực quan trong nhóm */
+/* Thanh Cột Định danh Ghim Cố định trên cùng (Bên ngoài vùng cuộn) */
+.pinned-identifier-topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #fffdf5;
+  border-bottom: 1.5px solid #fde68a;
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.08);
+  z-index: 10;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.pinned-identifier-topbar:hover {
+  background: #fef9c3;
+}
+
+.modal-pinned-topbar {
+  padding: 10px 16px;
+  border-bottom: 2px solid #fde68a;
+}
+
+.pinned-topbar-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-width: 0;
+  flex: 1;
+}
+
+.pinned-topbar-checkbox {
+  accent-color: #d97706;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pinned-topbar-pin {
+  font-size: 0.85rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.pinned-topbar-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pinned-topbar-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #92400e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pinned-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pinned-status-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.pinned-status-pill.is-active {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
 .col-identifier-icon {
   font-size: 0.82rem;
   line-height: 1;
