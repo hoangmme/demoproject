@@ -123,7 +123,52 @@
             <span v-else style="font-size: 0.74rem; color: #64748b;">{{ (group.widgets || []).filter(w => !isWidgetHidden(w)).length }} khối thống kê</span>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <!-- ⏱️ Thanh Lọc Thời Gian Cấp Nhóm (Group Time Filter - cùng hàng với các nút nhóm) -->
+          <div
+            v-if="group.timeFilterEnabled && group.dateColumnId"
+            class="group-time-filter-wrap"
+            style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; border: 1px solid #fde68a; padding: 2px 6px; border-radius: 6px; margin-right: 4px;"
+          >
+            <span style="font-size: 0.72rem; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 3px; padding-right: 4px; border-right: 1px solid #fde68a;" :title="`Cột mốc thời gian: ${getDateColumnLabel(group.timeFilterSource, group.dateColumnId)}`">
+              <i class="pi pi-clock" style="font-size: 0.72rem;"></i>
+              <span style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ getDateColumnLabel(group.timeFilterSource, group.dateColumnId) }}</span>
+            </span>
+            <button
+              v-for="r in [
+                { id: 'today', label: 'Hôm nay' },
+                { id: 'this_week', label: 'Tuần này' },
+                { id: 'this_month', label: 'Tháng này' },
+                { id: 'this_year', label: 'Năm nay' },
+                { id: 'custom', label: 'Tùy chỉnh 📅' }
+              ]"
+              :key="r.id"
+              type="button"
+              class="btn-time-pill"
+              :class="{ 'is-active': getGroupActiveTimeRange(group) === r.id }"
+              @click="setGroupActiveTimeRange(group, r.id)"
+            >
+              {{ r.label }}
+            </button>
+            <div v-if="getGroupActiveTimeRange(group) === 'custom'" style="display: inline-flex; align-items: center; gap: 3px; margin-left: 2px;">
+              <input
+                type="date"
+                :value="getGroupCustomDates(group).from"
+                @input="setGroupCustomDate(group, 'from', $event.target.value)"
+                class="time-date-input"
+                style="height: 22px; font-size: 0.7rem; padding: 1px 4px; border: 1px solid #cbd5e1; border-radius: 4px;"
+              />
+              <span style="font-size: 0.7rem; color: #92400e;">-</span>
+              <input
+                type="date"
+                :value="getGroupCustomDates(group).to"
+                @input="setGroupCustomDate(group, 'to', $event.target.value)"
+                class="time-date-input"
+                style="height: 22px; font-size: 0.7rem; padding: 1px 4px; border: 1px solid #cbd5e1; border-radius: 4px;"
+              />
+            </div>
+          </div>
+
           <!-- Move Group Up / Down -->
           <button
             type="button"
@@ -229,7 +274,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                   <div style="display: flex; align-items: baseline; gap: 6px;">
                     <span class="stat-value" :style="{ color: widget.color || '#1e293b', fontSize: '2.1rem', margin: '0', lineHeight: 1 }">
-                      {{ computeWidgetCount(widget) }}
+                      {{ computeWidgetCount(widget, group) }}
                     </span>
                     <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">trường hợp</span>
                   </div>
@@ -252,81 +297,6 @@
                 <!-- Tiêu đề thẻ chiếm trọn 100% width -->
                 <div style="width: 100%; margin-top: 4px;">
                   <span class="stat-label" :style="{ color: widget.color || '#334155', fontSize: '0.88rem', fontWeight: '700', lineHeight: '1.35', whiteSpace: 'pre-line', display: 'block', width: '100%', textAlign: widget.justifyTitle ? 'justify' : 'left', textAlignLast: widget.justifyTitle ? 'justify' : 'auto' }" v-html="formatWidgetTitle(widget.title)"></span>
-                </div>
-
-                <!-- ⏱️ Thanh Lọc Thời Gian Động Riêng Biệt của Khối này (Zero-hardcode) -->
-                <div
-                  v-if="widget.timeFilterEnabled && widget.dateColumnId"
-                  class="widget-time-filter-wrap"
-                  @click.stop
-                >
-                  <div class="time-pills-row">
-                    <button
-                      type="button"
-                      class="btn-time-pill"
-                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'today' }"
-                      @click.stop="setWidgetActiveTimeRange(widget, 'today')"
-                    >
-                      Hôm nay
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-time-pill"
-                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_week' }"
-                      @click.stop="setWidgetActiveTimeRange(widget, 'this_week')"
-                    >
-                      Tuần này
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-time-pill"
-                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_month' }"
-                      @click.stop="setWidgetActiveTimeRange(widget, 'this_month')"
-                    >
-                      Tháng này
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-time-pill"
-                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_year' }"
-                      @click.stop="setWidgetActiveTimeRange(widget, 'this_year')"
-                    >
-                      Năm nay
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-time-pill"
-                      :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'custom' }"
-                      @click.stop="setWidgetActiveTimeRange(widget, 'custom')"
-                      title="Thời gian tùy chỉnh"
-                    >
-                      Tùy chỉnh 📅
-                    </button>
-                  </div>
-
-                  <!-- Thông tin mốc thời gian -->
-                  <div class="time-range-sublabel">
-                    <span class="sublabel-col" :title="`Cột mốc: ${getColumnLabelForWidget(widget, widget.dateColumnId)}`">
-                      📅 {{ getColumnLabelForWidget(widget, widget.dateColumnId) }}
-                    </span>
-                    <span class="sublabel-dot">·</span>
-                    <span class="sublabel-range">{{ getWidgetTimeRangeText(widget) }}</span>
-                  </div>
-
-                  <!-- Ô nhập khoảng ngày nếu chọn Tùy chỉnh -->
-                  <div v-if="getWidgetActiveTimeRange(widget) === 'custom'" class="time-custom-inputs" @click.stop>
-                    <input
-                      type="date"
-                      v-model="getWidgetCustomDates(widget).from"
-                      class="time-date-input"
-                    />
-                    <span style="font-size: 0.72rem; color: #64748b;">đến</span>
-                    <input
-                      type="date"
-                      v-model="getWidgetCustomDates(widget).to"
-                      class="time-date-input"
-                    />
-                  </div>
                 </div>
               </div>
               <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 6px;">
@@ -360,78 +330,6 @@
                 <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa biểu đồ này" style="color: #ef4444;">
                   <i class="pi pi-trash"></i>
                 </button>
-              </div>
-            </div>
-
-            <!-- ⏱️ Thanh Lọc Thời Gian Động Riêng Biệt của Khối Biểu đồ này -->
-            <div
-              v-if="widget.timeFilterEnabled && widget.dateColumnId"
-              class="widget-time-filter-wrap"
-              style="margin-bottom: 8px;"
-              @click.stop
-            >
-              <div class="time-pills-row">
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'today' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'today')"
-                >
-                  Hôm nay
-                </button>
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_week' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'this_week')"
-                >
-                  Tuần này
-                </button>
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_month' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'this_month')"
-                >
-                  Tháng này
-                </button>
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_year' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'this_year')"
-                >
-                  Năm nay
-                </button>
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'custom' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'custom')"
-                  title="Thời gian tùy chỉnh"
-                >
-                  Tùy chỉnh 📅
-                </button>
-              </div>
-              <div class="time-range-sublabel">
-                <span class="sublabel-col" :title="`Cột mốc: ${getColumnLabelForWidget(widget, widget.dateColumnId)}`">
-                  📅 {{ getColumnLabelForWidget(widget, widget.dateColumnId) }}
-                </span>
-                <span class="sublabel-dot">·</span>
-                <span class="sublabel-range">{{ getWidgetTimeRangeText(widget) }}</span>
-              </div>
-              <div v-if="getWidgetActiveTimeRange(widget) === 'custom'" class="time-custom-inputs" @click.stop>
-                <input
-                  type="date"
-                  v-model="getWidgetCustomDates(widget).from"
-                  class="time-date-input"
-                />
-                <span style="font-size: 0.72rem; color: #64748b;">đến</span>
-                <input
-                  type="date"
-                  v-model="getWidgetCustomDates(widget).to"
-                  class="time-date-input"
-                />
               </div>
             </div>
 
@@ -535,78 +433,6 @@
                 <button type="button" class="btn-card-setting" @click.stop="deleteWidget(group, widget)" title="Xóa biểu đồ này" style="color: #ef4444;">
                   <i class="pi pi-trash"></i>
                 </button>
-              </div>
-            </div>
-
-            <!-- ⏱️ Thanh Lọc Thời Gian Động Riêng Biệt của Khối Biểu đồ Ngang này -->
-            <div
-              v-if="widget.timeFilterEnabled && widget.dateColumnId"
-              class="widget-time-filter-wrap"
-              style="margin-bottom: 8px;"
-              @click.stop
-            >
-              <div class="time-pills-row">
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'today' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'today')"
-                >
-                  Hôm nay
-                </button>
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_week' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'this_week')"
-                >
-                  Tuần này
-                </button>
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_month' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'this_month')"
-                >
-                  Tháng này
-                </button>
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'this_year' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'this_year')"
-                >
-                  Năm nay
-                </button>
-                <button
-                  type="button"
-                  class="btn-time-pill"
-                  :class="{ 'is-active': getWidgetActiveTimeRange(widget) === 'custom' }"
-                  @click.stop="setWidgetActiveTimeRange(widget, 'custom')"
-                  title="Thời gian tùy chỉnh"
-                >
-                  Tùy chỉnh 📅
-                </button>
-              </div>
-              <div class="time-range-sublabel">
-                <span class="sublabel-col" :title="`Cột mốc: ${getColumnLabelForWidget(widget, widget.dateColumnId)}`">
-                  📅 {{ getColumnLabelForWidget(widget, widget.dateColumnId) }}
-                </span>
-                <span class="sublabel-dot">·</span>
-                <span class="sublabel-range">{{ getWidgetTimeRangeText(widget) }}</span>
-              </div>
-              <div v-if="getWidgetActiveTimeRange(widget) === 'custom'" class="time-custom-inputs" @click.stop>
-                <input
-                  type="date"
-                  v-model="getWidgetCustomDates(widget).from"
-                  class="time-date-input"
-                />
-                <span style="font-size: 0.72rem; color: #64748b;">đến</span>
-                <input
-                  type="date"
-                  v-model="getWidgetCustomDates(widget).to"
-                  class="time-date-input"
-                />
               </div>
             </div>
 
@@ -878,6 +704,65 @@
             </label>
           </div>
         </div>
+
+        <!-- CẤU HÌNH LỌC THEO MỐC THỜI GIAN CỦA NHÓM (GROUP-LEVEL TIME FILTER) -->
+        <div style="background: #fffbeb; padding: 12px 14px; border-radius: 8px; border: 1.5px solid #fde68a; display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <label class="field-label" style="font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 0; cursor: pointer;">
+              <input
+                type="checkbox"
+                v-model="groupForm.timeFilterEnabled"
+                style="accent-color: #d97706; width: 16px; height: 16px; cursor: pointer;"
+              />
+              <span>⏱️ Bật Thống kê theo Mốc Thời gian cho toàn bộ nhóm (Hôm nay / Tuần / Tháng / Năm / Tùy chỉnh)</span>
+            </label>
+            <span v-if="groupForm.timeFilterEnabled" style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 999px; border: 1px solid #fde68a;">
+              Đang kích hoạt
+            </span>
+          </div>
+
+          <div v-if="groupForm.timeFilterEnabled" style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px; padding-top: 8px; border-top: 1px dashed #fde68a;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <label class="field-label" style="font-weight: 700; color: #92400e; font-size: 0.8rem; margin-bottom: 4px; display: block;">
+                  Bảng dữ liệu mốc thời gian: <span style="color: #ef4444;">*</span>
+                </label>
+                <select v-model="groupForm.timeFilterSource" class="settings-select" style="width: 100%; font-weight: 600; color: #92400e; background: #ffffff; border: 1px solid #fcd34d;">
+                  <option v-for="t in allUnifiedTables" :key="t.id" :value="t.id">
+                    📋 {{ t.title }}
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="field-label" style="font-weight: 700; color: #92400e; font-size: 0.8rem; margin-bottom: 4px; display: block;">
+                  Cột mốc thời gian: <span style="color: #ef4444;">*</span>
+                </label>
+                <select v-model="groupForm.dateColumnId" class="settings-select" style="width: 100%; font-weight: 600; color: #92400e; background: #ffffff; border: 1px solid #fcd34d;">
+                  <option value="">-- Chọn cột mốc thời gian --</option>
+                  <option v-for="c in availableDateColumnsForGroup" :key="c.id" :value="c.id">
+                    {{ (c.format === 'date' || c.id.includes('date') || c.id.includes('ngay')) ? '📅 ' : '' }}{{ c.label || c.id }} ({{ c.id }})
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Chu kỳ mặc định khi hiển thị -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 0.8rem; font-weight: 700; color: #92400e;">Chu kỳ mặc định khi hiển thị:</span>
+              <select v-model="groupForm.defaultTimeRange" class="settings-select" style="width: 200px; font-weight: 600; font-size: 0.8rem;">
+                <option value="today">Hôm nay</option>
+                <option value="this_week">Tuần này</option>
+                <option value="this_month">Tháng này</option>
+                <option value="this_year">Năm nay (Mặc định)</option>
+                <option value="custom">Thời gian tùy chỉnh</option>
+              </select>
+            </div>
+            <span style="font-size: 0.73rem; color: #b45309; display: block;">
+              💡 <strong>Tự động áp dụng:</strong> Mọi khối thống kê (thẻ số đếm, biểu đồ phân bổ) trong nhóm này sẽ tự động lọc dữ liệu theo thanh mốc thời gian hiển thị ở đầu nhóm.
+            </span>
+          </div>
+        </div>
       </div>
       <template #footer>
         <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
@@ -931,7 +816,7 @@
               Cột gom nhóm phân bổ chính (Trục ngang / Danh mục chính):
             </label>
             <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; font-weight: 600;">
-              <option value="">-- Mặc định (theo Quốc gia / Đơn vị) --</option>
+              <option value="">-- Chọn Cột Gom Nhóm Phân Bổ --</option>
               <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
                 <option v-for="c in grp.columns" :key="c.id" :value="c.id">
                   {{ c.label || c.id }}
@@ -960,54 +845,6 @@
             <span style="font-size: 0.72rem; color: #1e40af; margin-top: 3px; display: block;">
               💡 Khi chọn thêm cột này (VD: Đối tượng 'isRelative' → Cán bộ / Thân nhân, hoặc Trạng thái, Phòng ban...), mỗi cột sẽ được chia thành nhiều đoạn màu xếp chồng (Stacked Bar) kèm chú giải màu. Bấm vào màu nào sẽ mở danh sách chi tiết của riêng loại đó.
             </span>
-          </div>
-        </div>
-
-        <!-- 1d. BỘ LỌC THEO MỐC THỜI GIAN (TÙY CHỌN RIÊNG CHO KHỐI NÀY - ZERO HARDCODE) -->
-        <div class="field-item" style="background: #fffbeb; padding: 12px 14px; border-radius: 8px; border: 1.5px solid #fde68a; display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <label class="field-label" style="font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 0; cursor: pointer;">
-              <input
-                type="checkbox"
-                v-model="widgetForm.timeFilterEnabled"
-                style="accent-color: #d97706; width: 16px; height: 16px; cursor: pointer;"
-              />
-              <span>⏱️ Bật Thống kê theo Mốc Thời gian (Hôm nay / Tuần / Tháng / Năm / Tùy chỉnh)</span>
-            </label>
-            <span v-if="widgetForm.timeFilterEnabled" style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 999px; border: 1px solid #fde68a;">
-              Đang kích hoạt
-            </span>
-          </div>
-
-          <div v-if="widgetForm.timeFilterEnabled" style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px; padding-top: 8px; border-top: 1px dashed #fde68a;">
-            <div>
-              <label class="field-label" style="font-weight: 700; color: #92400e; font-size: 0.8rem; margin-bottom: 4px; display: block;">
-                Cột mốc thời gian của Bảng đang chọn (Dùng để tính Hôm nay / Tuần / Tháng / Năm): <span style="color: #ef4444;">*</span>
-              </label>
-              <select v-model="widgetForm.dateColumnId" class="settings-select" style="width: 100%; font-weight: 600; color: #92400e; background: #ffffff; border: 1px solid #fcd34d;">
-                <option value="">-- Chọn cột thời gian của bảng này --</option>
-                <optgroup v-for="grp in allSearchableGroupsForWidget" :key="'dt_' + grp.name" :label="grp.name">
-                  <option v-for="c in grp.columns" :key="'dt_col_' + c.id" :value="c.id">
-                    {{ (c.format === 'date' || c.id.includes('date') || c.id.includes('ngay')) ? '📅 ' : '' }}{{ c.label || c.id }} ({{ c.id }})
-                  </option>
-                </optgroup>
-              </select>
-              <span style="font-size: 0.73rem; color: #b45309; margin-top: 3px; display: block;">
-                💡 <strong>Tự do chọn cột (Zero-hardcode):</strong> Hệ thống sẽ so khớp ngày trong cột này với khoảng thời gian được chọn trên thẻ.
-              </span>
-            </div>
-
-            <!-- Chu kỳ mặc định khi tải trang -->
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 0.8rem; font-weight: 700; color: #92400e;">Chu kỳ mặc định khi hiển thị:</span>
-              <select v-model="widgetForm.defaultTimeRange" class="settings-select" style="width: 200px; font-weight: 600; font-size: 0.8rem;">
-                <option value="today">Hôm nay (Mặc định)</option>
-                <option value="this_week">Tuần này</option>
-                <option value="this_month">Tháng này</option>
-                <option value="this_year">Năm nay</option>
-                <option value="custom">Thời gian tùy chỉnh</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -2448,6 +2285,12 @@ const groupForm = ref({
   widthPercent: '100',
   titleFontSize: 15,
   titleUppercase: false,
+  timeFilterEnabled: false,
+  timeFilterSource: 'trips',
+  dateColumnId: '',
+  defaultTimeRange: 'this_year',
+  customDateFrom: '',
+  customDateTo: '',
   widgets: [],
 });
 
@@ -2857,6 +2700,12 @@ const openAddGroupDialog = () => {
     widthPercent: '100',
     titleFontSize: 15,
     titleUppercase: false,
+    timeFilterEnabled: false,
+    timeFilterSource: 'trips',
+    dateColumnId: '',
+    defaultTimeRange: 'this_year',
+    customDateFrom: '',
+    customDateTo: '',
     widgets: [],
   };
   isGroupDialogOpen.value = true;
@@ -2870,6 +2719,12 @@ const openEditGroupDialog = (group) => {
     widthPercent: '100',
     titleFontSize: group.titleFontSize || 15,
     titleUppercase: !!group.titleUppercase,
+    timeFilterEnabled: Boolean(group.timeFilterEnabled),
+    timeFilterSource: group.timeFilterSource || group.defaultSource || 'trips',
+    dateColumnId: group.dateColumnId || '',
+    defaultTimeRange: group.defaultTimeRange || 'this_year',
+    customDateFrom: group.customDateFrom || '',
+    customDateTo: group.customDateTo || '',
     ...JSON.parse(JSON.stringify(group)),
   };
   isGroupDialogOpen.value = true;
@@ -3306,14 +3161,73 @@ const getFieldOptionsForWidget = (fieldId) => {
 };
 
 // =========================================================================
-// TIME-BASED DYNAMIC FILTER ENGINE FOR WIDGETS (Zero-hardcode, Table & Date Col)
+// TIME-BASED DYNAMIC FILTER ENGINE FOR GROUPS (Zero-hardcode, Table & Date Col)
 // =========================================================================
-const widgetActiveTimeRangeMap = ref({});
-const widgetCustomDatesMap = ref({});
+const groupActiveTimeRangeMap = ref({});
+const groupCustomDatesMap = ref({});
 
-const getColumnLabelForWidget = (widget, colId) => {
+const getGroupActiveTimeRange = (group) => {
+  if (!group?.id) return 'this_year';
+  return groupActiveTimeRangeMap.value[group.id] || group.defaultTimeRange || 'this_year';
+};
+
+const setGroupActiveTimeRange = (group, range) => {
+  if (!group?.id) return;
+  groupActiveTimeRangeMap.value = {
+    ...groupActiveTimeRangeMap.value,
+    [group.id]: range,
+  };
+  if (range === 'custom' && !groupCustomDatesMap.value[group.id]) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    groupCustomDatesMap.value = {
+      ...groupCustomDatesMap.value,
+      [group.id]: {
+        from: group.customDateFrom || todayStr,
+        to: group.customDateTo || todayStr,
+      },
+    };
+  }
+  chartDataCache.clear();
+};
+
+const getGroupCustomDates = (group) => {
+  if (!group?.id) return { from: '', to: '' };
+  if (!groupCustomDatesMap.value[group.id]) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    groupCustomDatesMap.value[group.id] = {
+      from: group.customDateFrom || todayStr,
+      to: group.customDateTo || todayStr,
+    };
+  }
+  return groupCustomDatesMap.value[group.id];
+};
+
+const setGroupCustomDate = (group, field, val) => {
+  if (!group?.id) return;
+  const cur = getGroupCustomDates(group);
+  cur[field] = val;
+  groupCustomDatesMap.value = {
+    ...groupCustomDatesMap.value,
+    [group.id]: { ...cur },
+  };
+  chartDataCache.clear();
+};
+
+const getGroupTimeBounds = (group) => {
+  if (!group) return null;
+  const range = getGroupActiveTimeRange(group);
+  const custom = getGroupCustomDates(group);
+  return resolveDateRangeBounds(range, custom?.from, custom?.to);
+};
+
+const getGroupTimeRangeText = (group) => {
+  const bounds = getGroupTimeBounds(group);
+  return bounds?.label || '';
+};
+
+const getDateColumnLabel = (source, colId) => {
   if (!colId) return '';
-  const src = widget?.source || 'trips';
+  const src = source || 'trips';
   const table = (allUnifiedTables.value || []).find((t) => t.id === src || t.source === src);
   if (table && typeof table.getSearchableGroups === 'function') {
     const groups = table.getSearchableGroups(personnelStore);
@@ -3322,69 +3236,46 @@ const getColumnLabelForWidget = (widget, colId) => {
       if (found) return found.label || found.rawLabel || colId;
     }
   }
-  for (const g of allSearchableGroupsForWidget.value) {
-    const found = (g.columns || []).find((c) => c.id === colId || c.rawId === colId);
-    if (found) return found.label || found.rawLabel || colId;
+  const map = src === 'trips' ? personnelStore.importMappingTrips : (src === 'relatives' ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel);
+  for (const g of (map || [])) {
+    const found = (g.columns || []).find((c) => c.id === colId);
+    if (found) return found.label || colId;
   }
   return colId;
 };
 
-const getWidgetActiveTimeRange = (widget) => {
-  if (!widget?.id) return 'today';
-  return widgetActiveTimeRangeMap.value[widget.id] || widget.defaultTimeRange || 'today';
-};
-
-const setWidgetActiveTimeRange = (widget, range) => {
-  if (!widget?.id) return;
-  widgetActiveTimeRangeMap.value = {
-    ...widgetActiveTimeRangeMap.value,
-    [widget.id]: range,
-  };
-  if (range === 'custom' && !widgetCustomDatesMap.value[widget.id]) {
-    const todayStr = new Date().toISOString().split('T')[0];
-    widgetCustomDatesMap.value = {
-      ...widgetCustomDatesMap.value,
-      [widget.id]: {
-        from: widget.customDateFrom || todayStr,
-        to: widget.customDateTo || todayStr,
-      },
-    };
+const availableDateColumnsForGroup = computed(() => {
+  const src = groupForm.value.timeFilterSource || 'trips';
+  const table = (allUnifiedTables.value || []).find((t) => t.id === src || t.source === src);
+  if (table && typeof table.getSearchableGroups === 'function') {
+    const groups = table.getSearchableGroups(personnelStore);
+    const cols = [];
+    groups.forEach((g) => {
+      (g.columns || []).forEach((c) => {
+        cols.push(c);
+      });
+    });
+    return cols;
   }
-};
-
-const getWidgetCustomDates = (widget) => {
-  if (!widget?.id) return { from: '', to: '' };
-  if (!widgetCustomDatesMap.value[widget.id]) {
-    const todayStr = new Date().toISOString().split('T')[0];
-    widgetCustomDatesMap.value[widget.id] = {
-      from: widget.customDateFrom || todayStr,
-      to: widget.customDateTo || todayStr,
-    };
-  }
-  return widgetCustomDatesMap.value[widget.id];
-};
+  const cols = [];
+  const map = src === 'trips' ? personnelStore.importMappingTrips : (src === 'relatives' ? personnelStore.importMappingRelative : personnelStore.importMappingPersonnel);
+  (map || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      cols.push(c);
+    });
+  });
+  return cols;
+});
 
 const getWidgetTimeBounds = (widget) => {
-  const range = getWidgetActiveTimeRange(widget);
-  const custom = getWidgetCustomDates(widget);
-  return resolveDateRangeBounds(range, custom?.from, custom?.to);
-};
-
-const getWidgetTimeRangeText = (widget) => {
-  const bounds = getWidgetTimeBounds(widget);
-  return bounds.label;
+  const group = (customGroups.value || []).find((g) => (g.widgets || []).some((w) => w.id === widget?.id));
+  return getGroupTimeBounds(group);
 };
 
 // Hydrate Widget Conditions from Topic / Field / Card config
 function hydrateWidgetConditions(w, group) {
   if (!w) return w;
   const clone = { ...w };
-
-  clone.timeFilterEnabled = Boolean(w.timeFilterEnabled);
-  clone.dateColumnId = w.dateColumnId || '';
-  clone.defaultTimeRange = w.defaultTimeRange || 'today';
-  clone.customDateFrom = w.customDateFrom || '';
-  clone.customDateTo = w.customDateTo || '';
 
   if (!clone.source) {
     clone.source = group?.defaultSource || 'trips';
@@ -3394,6 +3285,15 @@ function hydrateWidgetConditions(w, group) {
   }
   if (!clone.viewId) {
     clone.viewId = clone.cardId || 'all';
+  }
+
+  // Tự động chuẩn hóa cột gom nhóm phân bổ cho biểu đồ (Zero-hardcode):
+  // Nếu là biểu đồ trips mà columnId rỗng hoặc là 'countryName' cũ, chuyển sang quoc_gia_xuat_canh
+  if (clone.displayType !== 'count' && (!clone.columnId || clone.columnId === 'countryName') && clone.source === 'trips') {
+    const tripCols = [];
+    (personnelStore.importMappingTrips || []).forEach((g) => { (g.columns || []).forEach((c) => { if (c.id) tripCols.push(c); }); });
+    const foundCountryCol = tripCols.find((c) => c.id === 'quoc_gia_xuat_canh' || c.id.toLowerCase().includes('quoc_gia') || c.label?.toLowerCase().includes('quốc gia'));
+    clone.columnId = foundCountryCol ? foundCountryCol.id : 'quoc_gia_xuat_canh';
   }
 
   if (Array.isArray(clone.conditions) && clone.conditions.length > 0) {
@@ -3476,7 +3376,7 @@ const removeWidgetCondition = (idx) => {
 
 const previewLiveCount = computed(() => {
   try {
-    return computeWidgetCount(widgetForm.value);
+    return computeWidgetCount(widgetForm.value, activeGroupForWidget.value);
   } catch (e) {
     return 0;
   }
@@ -3487,23 +3387,19 @@ const openAddWidgetDialog = async (group) => {
   activeGroupForWidget.value = group;
   editingWidget.value = null;
   await loadTopicDashboards();
+  const defSource = group?.defaultSource || 'trips';
   widgetForm.value = {
     id: 'w_' + Date.now(),
     title: '',
-    source: group?.defaultSource || 'trips',
+    source: defSource,
     viewId: 'all',
-    columnId: '',
+    columnId: defSource === 'trips' ? 'quoc_gia_xuat_canh' : '',
     columnLabel: '',
     subColumnId: '',
     subColumnLabel: '',
     displayType: 'count',
     widthPercent: 25,
     logicOp: 'AND',
-    timeFilterEnabled: false,
-    dateColumnId: '',
-    defaultTimeRange: 'today',
-    customDateFrom: '',
-    customDateTo: '',
     conditions: [
       {
         id: 'c_' + Date.now(),
@@ -3534,11 +3430,6 @@ const openEditWidgetDialog = async (group, widget) => {
   widgetOrder.value = curIdx !== -1 ? curIdx + 1 : (group.widgets || []).length;
   widgetForm.value = {
     ...JSON.parse(JSON.stringify(hydrated)),
-    timeFilterEnabled: Boolean(hydrated.timeFilterEnabled),
-    dateColumnId: hydrated.dateColumnId || '',
-    defaultTimeRange: hydrated.defaultTimeRange || 'today',
-    customDateFrom: hydrated.customDateFrom || '',
-    customDateTo: hydrated.customDateTo || '',
     breakRow: Boolean(hydrated.breakRow),
     isUnique: Boolean(hydrated.isUnique),
     uniqueKeyCol: hydrated.uniqueKeyCol || '',
@@ -3615,11 +3506,6 @@ const saveWidget = async () => {
 
     const payload = {
       ...widgetForm.value,
-      timeFilterEnabled: Boolean(widgetForm.value.timeFilterEnabled),
-      dateColumnId: widgetForm.value.dateColumnId || '',
-      defaultTimeRange: widgetForm.value.defaultTimeRange || 'today',
-      customDateFrom: widgetForm.value.customDateFrom || '',
-      customDateTo: widgetForm.value.customDateTo || '',
       breakRow: Boolean(widgetForm.value.breakRow),
       justifyTitle: Boolean(widgetForm.value.justifyTitle),
       subColumnId: widgetForm.value.subColumnId || '',
@@ -3875,7 +3761,7 @@ const formatWidgetTitle = (title) => {
     .replace(/\n/g, '<br>');
 };
 
-function computeWidgetCount(widget) {
+function computeWidgetCount(widget, group = null) {
   if (!widget) return 0;
 
   const source = widget.source || 'trips';
@@ -3905,14 +3791,15 @@ function computeWidgetCount(widget) {
     return getCardMetricValueForTopic(widget, topic);
   }
 
-  // Lọc theo mốc thời gian động (Hôm nay / Tuần này / Tháng này / Năm nay / Tùy chỉnh)
-  if (widget.timeFilterEnabled && widget.dateColumnId) {
-    const bounds = getWidgetTimeBounds(widget);
+  // Lọc theo mốc thời gian động từ Nhóm (Group-level Dynamic Time Filter)
+  const targetGroup = group || (widget?.id ? (customGroups.value || []).find((g) => (g.widgets || []).some((w) => w.id === widget.id)) : null);
+  if (targetGroup && targetGroup.timeFilterEnabled && targetGroup.dateColumnId) {
+    const bounds = getGroupTimeBounds(targetGroup);
     if (bounds && (bounds.start || bounds.end)) {
       const startMs = bounds.start ? bounds.start.getTime() : null;
       const endMs = bounds.end ? bounds.end.getTime() : null;
       filtered = filtered.filter((row) => {
-        const rawDate = getRowFieldValue(row, widget.dateColumnId);
+        const rawDate = getRowFieldValue(row, targetGroup.dateColumnId);
         if (!rawDate || rawDate === '-' || rawDate === 'chưa rõ') return false;
         const d = parseDateValue(rawDate);
         if (!d || isNaN(d.getTime())) return false;
@@ -3973,7 +3860,7 @@ const getSemanticColorForSubVal = (val, colorIdx) => {
   return DEFAULT_SERIES_COLORS[colorIdx % DEFAULT_SERIES_COLORS.length];
 };
 
-const openDrilldownForWidget = (widget, extraCondition = null) => {
+const openDrilldownForWidget = (widget, extraCondition = null, group = null) => {
   const source = widget.source || 'trips';
   let list = getSourceList(source);
 
@@ -4027,14 +3914,15 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
     }
   }
 
-  // Lọc theo mốc thời gian động (Hôm nay / Tuần này / Tháng này / Năm nay / Tùy chỉnh)
-  if (widget.timeFilterEnabled && widget.dateColumnId) {
-    const bounds = getWidgetTimeBounds(widget);
+  // Lọc theo mốc thời gian động từ Nhóm (Group-level Dynamic Time Filter)
+  const targetGroup = group || (widget?.id ? (customGroups.value || []).find((g) => (g.widgets || []).some((w) => w.id === widget.id)) : null);
+  if (targetGroup && targetGroup.timeFilterEnabled && targetGroup.dateColumnId) {
+    const bounds = getGroupTimeBounds(targetGroup);
     if (bounds && (bounds.start || bounds.end)) {
       const startMs = bounds.start ? bounds.start.getTime() : null;
       const endMs = bounds.end ? bounds.end.getTime() : null;
       filtered = filtered.filter((row) => {
-        const rawDate = getRowFieldValue(row, widget.dateColumnId);
+        const rawDate = getRowFieldValue(row, targetGroup.dateColumnId);
         if (!rawDate || rawDate === '-' || rawDate === 'chưa rõ') return false;
         const d = parseDateValue(rawDate);
         if (!d || isNaN(d.getTime())) return false;
@@ -4075,7 +3963,7 @@ const openDrilldownForWidget = (widget, extraCondition = null) => {
   drilldownWidget.value = widget;
   drilldownExtraCondition.value = extraCondition;
 
-  const timeBounds = (widget.timeFilterEnabled && widget.dateColumnId) ? getWidgetTimeBounds(widget) : null;
+  const timeBounds = (targetGroup && targetGroup.timeFilterEnabled && targetGroup.dateColumnId) ? getGroupTimeBounds(targetGroup) : null;
   const timeSub = timeBounds ? ` · ${timeBounds.label}` : '';
 
   if (Array.isArray(extraCondition) && extraCondition.length > 0) {
@@ -4153,7 +4041,7 @@ const handleChartSegmentClick = (widget, item, segment) => {
   openDrilldownForWidget(widget, extraConditions);
 };
 
-const computeWidgetChartData = (widget) => {
+const computeWidgetChartData = (widget, group = null) => {
   if (!widget) return { list: [], max: 1, total: 0, groupField: '', subGroupField: '', seriesList: [] };
   const source = widget.source || 'trips';
   const list = getSourceList(source);
@@ -4186,14 +4074,15 @@ const computeWidgetChartData = (widget) => {
     }
   }
 
-  // Lọc theo mốc thời gian động (Hôm nay / Tuần này / Tháng này / Năm nay / Tùy chỉnh)
-  if (widget.timeFilterEnabled && widget.dateColumnId) {
-    const bounds = getWidgetTimeBounds(widget);
+  // Lọc theo mốc thời gian động từ Nhóm (Group-level Dynamic Time Filter)
+  const targetGroup = group || (widget?.id ? (customGroups.value || []).find((g) => (g.widgets || []).some((w) => w.id === widget.id)) : null);
+  if (targetGroup && targetGroup.timeFilterEnabled && targetGroup.dateColumnId) {
+    const bounds = getGroupTimeBounds(targetGroup);
     if (bounds && (bounds.start || bounds.end)) {
       const startMs = bounds.start ? bounds.start.getTime() : null;
       const endMs = bounds.end ? bounds.end.getTime() : null;
       matchedList = matchedList.filter((row) => {
-        const rawDate = getRowFieldValue(row, widget.dateColumnId);
+        const rawDate = getRowFieldValue(row, targetGroup.dateColumnId);
         if (!rawDate || rawDate === '-' || rawDate === 'chưa rõ') return false;
         const d = parseDateValue(rawDate);
         if (!d || isNaN(d.getTime())) return false;
@@ -4206,13 +4095,28 @@ const computeWidgetChartData = (widget) => {
     }
   }
 
-  // Xác định Cột cần Gom nhóm (Group by Field)
+  // Xác định Cột cần Gom nhóm (Group by Field - Dynamic Zero-hardcode)
   let groupField = widget.columnId;
   if (!groupField && activeConds.length > 0 && activeConds[0].field) {
     groupField = activeConds[0].field;
   }
-  if (!groupField) {
-    groupField = source === 'trips' ? 'countryName' : (source === 'relatives' ? 'countryName' : 'departmentName');
+  if (!groupField || groupField === 'countryName') {
+    if (source === 'trips') {
+      const tripCols = [];
+      (personnelStore.importMappingTrips || []).forEach((g) => { (g.columns || []).forEach((c) => { if (c.id) tripCols.push(c); }); });
+      const foundCountryCol = tripCols.find((c) => c.id === 'quoc_gia_xuat_canh' || c.id.toLowerCase().includes('quoc_gia') || c.label?.toLowerCase().includes('quốc gia'));
+      groupField = foundCountryCol ? foundCountryCol.id : 'quoc_gia_xuat_canh';
+    } else if (source === 'personnel') {
+      const pCols = [];
+      (personnelStore.importMappingPersonnel || []).forEach((g) => { (g.columns || []).forEach((c) => { if (c.id) pCols.push(c); }); });
+      const deptCol = pCols.find((c) => c.id === 'phong_ban' || c.id === 'don_vi' || c.label?.toLowerCase().includes('đơn vị') || c.label?.toLowerCase().includes('phòng ban'));
+      groupField = deptCol ? deptCol.id : (pCols[0]?.id || 'departmentName');
+    } else if (source === 'relatives') {
+      const rCols = [];
+      (personnelStore.importMappingRelative || []).forEach((g) => { (g.columns || []).forEach((c) => { if (c.id) rCols.push(c); }); });
+      const countryCol = rCols.find((c) => c.id === 'quoc_gia_xuat_canh' || c.id.toLowerCase().includes('quoc_gia') || c.label?.toLowerCase().includes('quốc gia'));
+      groupField = countryCol ? countryCol.id : (rCols[0]?.id || 'countryName');
+    }
   }
 
   const subGroupField = widget.subColumnId || '';
@@ -4310,13 +4214,16 @@ watch(
   { deep: false }
 );
 
-const getWidgetChartData = (widget) => {
+const getWidgetChartData = (widget, group = null) => {
   if (!widget?.id) return { list: [], max: 1, total: 0, groupField: '', subGroupField: '', seriesList: [] };
-  const cacheKey = `${widget.id}_${widget.topicId || ''}_${widget.columnId || ''}_${widget.subColumnId || ''}_${widget.cardId || ''}`;
+  const targetGroup = group || (widget?.id ? (customGroups.value || []).find((g) => (g.widgets || []).some((w) => w.id === widget.id)) : null);
+  const bounds = (targetGroup && targetGroup.timeFilterEnabled && targetGroup.dateColumnId) ? getGroupTimeBounds(targetGroup) : null;
+  const timeKey = bounds ? `${bounds.label}_${bounds.start ? bounds.start.getTime() : ''}_${bounds.end ? bounds.end.getTime() : ''}` : '';
+  const cacheKey = `${widget.id}_${widget.topicId || ''}_${widget.columnId || ''}_${widget.subColumnId || ''}_${widget.cardId || ''}_${timeKey}`;
   if (chartDataCache.has(cacheKey)) {
     return chartDataCache.get(cacheKey);
   }
-  const res = computeWidgetChartData(widget);
+  const res = computeWidgetChartData(widget, targetGroup);
   chartDataCache.set(cacheKey, res);
   return res;
 };

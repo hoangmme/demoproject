@@ -272,6 +272,24 @@
     - Nâng cấp `SettingsImportView.vue`: Preview logo bọc qua `getFileUrl()`.
     - Nâng cấp `scripts/sync_online_db.cjs`: Bổ sung bước 8b tự động quét `app_settings` và tải toàn bộ UUID tệp nhận diện, logo và hình nền đăng nhập về `WINDOWS_OFFLINE_APP/uploads/`.
 
+### 22. ĐỘNG CƠ LỌC MỐC THỜI GIAN CẤP NHÓM & SỬA LỖI BIỂU ĐỒ PHÂN BỔ QUỐC GIA (Session 45 - 2026-09-15)
+- **1. Sửa Triệt Để Lỗi Biểu Đồ Quốc Gia (Bên ngoài có 4 phân loại / 5 kết quả, Popup chi tiết có 30 kết quả)**:
+  - *Nguyên nhân cốt lõi*: Trong `computeWidgetChartData` (`DashboardView.vue`), khi `widget.columnId` để trống hoặc chưa gán, hệ thống rơi vào fallback tĩnh sang trường tiếng Anh cũ `'countryName'` (`groupField = source === 'trips' ? 'countryName' : ...`). Trong cơ sở dữ liệu, chỉ có 5 chuyến đi cũ có thuộc tính `'countryName'` (Nhật Bản 2, Trung Quốc 1, Canada 1, Hàn Quốc 1 = 4 phân loại), trong khi toàn bộ 30 chuyến đi đều mang thuộc tính chuẩn động `'quoc_gia_xuat_canh'`. Do đó 25 chuyến đi bị bỏ qua khi gom nhóm phân bổ, trong khi Popup chi tiết lọc theo điều kiện chung nên vẫn hiển thị 30 kết quả.
+  - *Giải pháp triệt để (Zero-Hardcode & Dynamic Column Engine)*:
+    - Trong `computeWidgetChartData`: Nếu `!groupField || groupField === 'countryName'`, tự động truy vấn danh mục cột cấu hình động của bảng (`importMappingTrips`, `importMappingPersonnel`, `importMappingRelative`) để lấy chính xác `quoc_gia_xuat_canh` hoặc cột phòng ban/đơn vị tương ứng.
+    - Trong `hydrateWidgetConditions`: Tự động chuẩn hóa và di trú các widget biểu đồ cũ sang `quoc_gia_xuat_canh`.
+    - Trong Dialog Khối Thống kê: Đổi nhãn `-- Mặc định (theo Quốc gia / Đơn vị) --` thành `-- Chọn Cột Gom Nhóm Phân Bổ --` và tự động chọn `quoc_gia_xuat_canh` khi nguồn là `trips`.
+- **2. Chuyển Đổi Tính Năng Lọc Mốc Thời Gian Lên Cấp Nhóm (`customGroups`) & Xóa Bỏ Ở Từng Khối**:
+  - *Yêu cầu người dùng*: Chuyển tính năng "⏱️ Bật Thống kê theo Mốc Thời gian (Hôm nay / Tuần / Tháng / Năm / Tùy chỉnh)" gán cho nhóm để tất cả thống kê trong nhóm hiển thị theo setup nhóm; đặt thanh mốc thời gian cùng hàng với các nút tác vụ nhóm; xóa hoàn toàn checkbox và bộ lọc mốc thời gian ở từng khối thống kê riêng lẻ.
+  - *Triển khai chuẩn mực*:
+    - **Cấu hình Cấp Nhóm (`isGroupDialogOpen`)**: Bổ sung cài đặt `timeFilterEnabled`, `timeFilterSource` (chọn bảng mốc thời gian), `dateColumnId` (danh sách cột ngày động `availableDateColumnsForGroup`), `defaultTimeRange` ('today' | 'this_week' | 'this_month' | 'this_year' | 'custom').
+    - **Hiển thị Cùng Hàng trên Header Nhóm (`custom-group-header`)**: Tích hợp thanh pills `[Hôm nay] [Tuần này] [Tháng này] [Năm nay] [Tùy chỉnh 📅]` nằm cùng hàng linh hoạt với các nút `+ Thêm Khối Thống kê`, `Sắp xếp vị trí`, `Chỉnh sửa`, `Nhân bản`, `Xóa`.
+    - **Xóa bỏ hoàn toàn ở từng khối thống kê**: Gỡ bỏ 3 khối `widget-time-filter-wrap` trùng lặp ở Thẻ Đếm (Count Card), Biểu đồ Cột dọc (Vertical Bar Card), Biểu đồ Thanh ngang (Horizontal Bar Card), và gỡ bỏ mục 1d trong Dialog Widget.
+    - **Kế thừa & Lọc Động Toàn Nhóm**: `computeWidgetCount(widget, group)`, `computeWidgetChartData(widget, group)`, và `openDrilldownForWidget(widget, extraCondition, group)` tự động lọc dữ liệu theo khoảng thời gian động của nhóm thông qua `getGroupTimeBounds(group)`.
+- **3. Đóng gói & Kiểm thử**:
+  - Biên dịch Vite thành công sạch sẽ (exit 0).
+  - Đóng gói bản cập nhật code `WINDOWS_OFFLINE_UPDATE.zip` (2.5M) an toàn dữ liệu 100%.
+
 ### 20. KHẮC PHỤC LỖI LƯU DỮ LIỆU CCCD/THƯỜNG TRÚ, DROPDOWN FORM, DRILLDOWN POPUP BỊ CHE & TÙY BIẾN CỠ CHỮ HỆ THỐNG (Session 38 - 2026-09-11)
 - **1. Sửa Lỗi Sửa CCCD / Thường trú Cán bộ (Nguyễn Hải Quan) Báo Thành công Nhưng Tải Lại Mất**:
   - *Nguyên nhân cốt lõi*: Trong `src/stores/personnel.js`, hàm `saveRecord` kiểm tra `record.departureDate !== undefined` trước khi kiểm tra loại bản ghi `personnel` hoặc mã `CB-`. Hồ sơ Cán bộ Nguyễn Hải Quan trước đó bị dính thuộc tính phẳng `departureDate` trong `custom_data`, dẫn tới việc `saveRecord` chuyển hướng nhầm bản ghi Cán bộ sang hàm `saveTrip(record)`. Hàm `saveTrip` chỉ sửa mảng `trips` của Cán bộ và bỏ qua việc cập nhật các trường gốc của Cán bộ như `cccdparent`, `thuongTru`.
