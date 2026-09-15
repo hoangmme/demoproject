@@ -816,7 +816,7 @@
               Cột gom nhóm phân bổ chính (Trục ngang / Danh mục chính):
             </label>
             <select v-model="widgetForm.columnId" class="settings-select" style="width: 100%; font-weight: 600;">
-              <option value="">-- Chọn Cột Gom Nhóm Phân Bổ --</option>
+              <option value="">-- Vui lòng chọn Cột gom nhóm phân bổ (Bắt buộc) --</option>
               <optgroup v-for="grp in allSearchableGroupsForWidget" :key="grp.name" :label="grp.name">
                 <option v-for="c in grp.columns" :key="c.id" :value="c.id">
                   {{ c.label || c.id }}
@@ -3287,15 +3287,6 @@ function hydrateWidgetConditions(w, group) {
     clone.viewId = clone.cardId || 'all';
   }
 
-  // Tự động chuẩn hóa cột gom nhóm phân bổ cho biểu đồ (Zero-hardcode):
-  // Nếu là biểu đồ trips mà columnId rỗng hoặc là 'countryName' cũ, chuyển sang quoc_gia_xuat_canh
-  if (clone.displayType !== 'count' && (!clone.columnId || clone.columnId === 'countryName') && clone.source === 'trips') {
-    const tripCols = [];
-    (personnelStore.importMappingTrips || []).forEach((g) => { (g.columns || []).forEach((c) => { if (c.id) tripCols.push(c); }); });
-    const foundCountryCol = tripCols.find((c) => c.id === 'quoc_gia_xuat_canh' || c.id.toLowerCase().includes('quoc_gia') || c.label?.toLowerCase().includes('quốc gia'));
-    clone.columnId = foundCountryCol ? foundCountryCol.id : 'quoc_gia_xuat_canh';
-  }
-
   if (Array.isArray(clone.conditions) && clone.conditions.length > 0) {
     return clone;
   }
@@ -3393,7 +3384,7 @@ const openAddWidgetDialog = async (group) => {
     title: '',
     source: defSource,
     viewId: 'all',
-    columnId: defSource === 'trips' ? 'quoc_gia_xuat_canh' : '',
+    columnId: '',
     columnLabel: '',
     subColumnId: '',
     subColumnLabel: '',
@@ -3480,6 +3471,10 @@ const saveWidget = async () => {
   if (isSavingWidget.value) return;
   if (!widgetForm.value.title?.trim()) {
     alert('Vui lòng nhập Tiêu đề cho Khối thống kê!');
+    return;
+  }
+  if (widgetForm.value.displayType !== 'count' && !widgetForm.value.columnId) {
+    alert('Vui lòng chọn Cột gom nhóm phân bổ chính cho biểu đồ!');
     return;
   }
   const group = activeGroupForWidget.value;
@@ -4002,7 +3997,7 @@ const handleWidgetClick = (widget) => {
 };
 
 const handleChartItemClick = (widget, item) => {
-  const groupField = item?.field || widget.columnId || (widget.source === 'personnel' ? 'departmentName' : 'countryName');
+  const groupField = item?.field || widget.columnId;
   const groupVal = item?.name || '';
   const extraCondition = (groupField && groupVal) ? {
     field: groupField,
@@ -4017,7 +4012,7 @@ const handleChartSegmentClick = (widget, item, segment) => {
     handleChartItemClick(widget, item);
     return;
   }
-  const groupField = item?.field || widget.columnId || (widget.source === 'personnel' ? 'departmentName' : 'countryName');
+  const groupField = item?.field || widget.columnId;
   const groupVal = item?.name || '';
   const subField = segment?.field || widget.subColumnId || '';
   const subVal = segment?.name || '';
@@ -4095,28 +4090,10 @@ const computeWidgetChartData = (widget, group = null) => {
     }
   }
 
-  // Xác định Cột cần Gom nhóm (Group by Field - Dynamic Zero-hardcode)
-  let groupField = widget.columnId;
-  if (!groupField && activeConds.length > 0 && activeConds[0].field) {
-    groupField = activeConds[0].field;
-  }
-  if (!groupField || groupField === 'countryName') {
-    if (source === 'trips') {
-      const tripCols = [];
-      (personnelStore.importMappingTrips || []).forEach((g) => { (g.columns || []).forEach((c) => { if (c.id) tripCols.push(c); }); });
-      const foundCountryCol = tripCols.find((c) => c.id === 'quoc_gia_xuat_canh' || c.id.toLowerCase().includes('quoc_gia') || c.label?.toLowerCase().includes('quốc gia'));
-      groupField = foundCountryCol ? foundCountryCol.id : 'quoc_gia_xuat_canh';
-    } else if (source === 'personnel') {
-      const pCols = [];
-      (personnelStore.importMappingPersonnel || []).forEach((g) => { (g.columns || []).forEach((c) => { if (c.id) pCols.push(c); }); });
-      const deptCol = pCols.find((c) => c.id === 'phong_ban' || c.id === 'don_vi' || c.label?.toLowerCase().includes('đơn vị') || c.label?.toLowerCase().includes('phòng ban'));
-      groupField = deptCol ? deptCol.id : (pCols[0]?.id || 'departmentName');
-    } else if (source === 'relatives') {
-      const rCols = [];
-      (personnelStore.importMappingRelative || []).forEach((g) => { (g.columns || []).forEach((c) => { if (c.id) rCols.push(c); }); });
-      const countryCol = rCols.find((c) => c.id === 'quoc_gia_xuat_canh' || c.id.toLowerCase().includes('quoc_gia') || c.label?.toLowerCase().includes('quốc gia'));
-      groupField = countryCol ? countryCol.id : (rCols[0]?.id || 'countryName');
-    }
+  // Xác định Cột cần Gom nhóm: LẤY ĐÚNG 100% THEO CỘT NGƯỜI DÙNG CHỌN (widget.columnId - ZERO HARDCODE)
+  const groupField = widget.columnId;
+  if (!groupField) {
+    return { list: [], max: 1, total: 0, groupField: '', subGroupField: '', seriesList: [] };
   }
 
   const subGroupField = widget.subColumnId || '';

@@ -273,12 +273,13 @@
     - Nâng cấp `scripts/sync_online_db.cjs`: Bổ sung bước 8b tự động quét `app_settings` và tải toàn bộ UUID tệp nhận diện, logo và hình nền đăng nhập về `WINDOWS_OFFLINE_APP/uploads/`.
 
 ### 22. ĐỘNG CƠ LỌC MỐC THỜI GIAN CẤP NHÓM & SỬA LỖI BIỂU ĐỒ PHÂN BỔ QUỐC GIA (Session 45 - 2026-09-15)
-- **1. Sửa Triệt Để Lỗi Biểu Đồ Quốc Gia (Bên ngoài có 4 phân loại / 5 kết quả, Popup chi tiết có 30 kết quả)**:
-  - *Nguyên nhân cốt lõi*: Trong `computeWidgetChartData` (`DashboardView.vue`), khi `widget.columnId` để trống hoặc chưa gán, hệ thống rơi vào fallback tĩnh sang trường tiếng Anh cũ `'countryName'` (`groupField = source === 'trips' ? 'countryName' : ...`). Trong cơ sở dữ liệu, chỉ có 5 chuyến đi cũ có thuộc tính `'countryName'` (Nhật Bản 2, Trung Quốc 1, Canada 1, Hàn Quốc 1 = 4 phân loại), trong khi toàn bộ 30 chuyến đi đều mang thuộc tính chuẩn động `'quoc_gia_xuat_canh'`. Do đó 25 chuyến đi bị bỏ qua khi gom nhóm phân bổ, trong khi Popup chi tiết lọc theo điều kiện chung nên vẫn hiển thị 30 kết quả.
-  - *Giải pháp triệt để (Zero-Hardcode & Dynamic Column Engine)*:
-    - Trong `computeWidgetChartData`: Nếu `!groupField || groupField === 'countryName'`, tự động truy vấn danh mục cột cấu hình động của bảng (`importMappingTrips`, `importMappingPersonnel`, `importMappingRelative`) để lấy chính xác `quoc_gia_xuat_canh` hoặc cột phòng ban/đơn vị tương ứng.
-    - Trong `hydrateWidgetConditions`: Tự động chuẩn hóa và di trú các widget biểu đồ cũ sang `quoc_gia_xuat_canh`.
-    - Trong Dialog Khối Thống kê: Đổi nhãn `-- Mặc định (theo Quốc gia / Đơn vị) --` thành `-- Chọn Cột Gom Nhóm Phân Bổ --` và tự động chọn `quoc_gia_xuat_canh` khi nguồn là `trips`.
+- **1. Sửa Triệt Để Lỗi Biểu Đồ Phân Bổ (100% Thuần Khiết Theo Cột Người Dùng Chọn - Zero Hardcode & Zero Guessing)**:
+  - *Nguyên nhân trước đây*: Khi tạo widget biểu đồ, ô chọn cột gom nhóm để nhãn `-- Mặc định (theo Quốc gia / Đơn vị) --` lưu giá trị rỗng `columnId: ""`. Khi rỗng, code cũ tự fallback ngầm sang chuỗi tĩnh `'countryName'`, khiến các chuyến đi mang cột tiếng Việt hoặc cột khác không có thuộc tính `countryName` bị loại bỏ.
+  - *Xử lý triệt để chuẩn No-Code (What You Pick Is What You Group)*:
+    - Trong `computeWidgetChartData` (`DashboardView.vue`): Gom nhóm **100% đúng theo `widget.columnId` do người dùng chọn**. Nếu người dùng chưa chọn cột gom nhóm (`!widget.columnId`), hệ thống trả về mảng rỗng, **tuyệt đối KHÔNG tự ý phỏng đoán hay fallback ngầm sang bất kỳ cột nào** (`countryName`, `quoc_gia_xuat_canh`, `departmentName`...).
+    - Trong `handleChartItemClick` & `handleChartSegmentClick`: Lấy đúng `groupField = item?.field || widget.columnId`, xóa bỏ 100% fallback tĩnh.
+    - Trong Dialog Khối Thống kê: Đổi nhãn thành `-- Vui lòng chọn Cột gom nhóm phân bổ (Bắt buộc) --`. Khi lưu biểu đồ (`saveWidget`), nếu người dùng chưa chọn cột gom nhóm thì thông báo yêu cầu chọn, không cho phép lưu cấu hình rỗng gây phỏng đoán.
+    - Trong `openAddWidgetDialog` & `hydrateWidgetConditions`: Xóa bỏ toàn bộ mã tự động gán ngầm sang `quoc_gia_xuat_canh` hay `countryName`.
 - **2. Chuyển Đổi Tính Năng Lọc Mốc Thời Gian Lên Cấp Nhóm (`customGroups`) & Xóa Bỏ Ở Từng Khối**:
   - *Yêu cầu người dùng*: Chuyển tính năng "⏱️ Bật Thống kê theo Mốc Thời gian (Hôm nay / Tuần / Tháng / Năm / Tùy chỉnh)" gán cho nhóm để tất cả thống kê trong nhóm hiển thị theo setup nhóm; đặt thanh mốc thời gian cùng hàng với các nút tác vụ nhóm; xóa hoàn toàn checkbox và bộ lọc mốc thời gian ở từng khối thống kê riêng lẻ.
   - *Triển khai chuẩn mực*:
