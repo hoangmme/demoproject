@@ -3762,5 +3762,25 @@
   - Đồng bộ `dist/` sang `WINDOWS_OFFLINE_APP/frontend/`.
 - **Trạng thái**: Done [Reversible].
 
-
-
+### 58. TRANG CHI TIẾT TẬP TRUNG (CONCENTRATED HUB VIEW), BẢNG ĐỨNG ĐẦU (ROOT MASTER TABLE) & XUẤT PDF TOÀN BỘ QUY VỀ BẢNG CHÍNH (Session 58 - 2026-09-15)
+- **1. Tầm nhìn & Yêu cầu Người dùng**:
+  - **Trang Chi tiết Tập trung**: Thay vì các tab rời rạc, hiển thị toàn bộ hồ sơ trên một trang tập trung cuộn mượt (dựa trên prototype `05-chi-tiet-can-bo.html`).
+  - **Header Nhận diện Động (Zero Hardcode)**: Lấy toàn bộ thông tin từ Nhóm 1 (Nhóm đầu tiên) của Bảng Đứng Đầu (`formGroups[0]`) hiển thị tiêu đề và các pill tóm tắt (Họ tên, CCCD, chức vụ, đơn vị...). Tuyệt đối không hardcode nhãn trường hay alias.
+  - **Thanh Nhảy Mục Dính (Sticky Anchor Nav)**: Tự động sinh danh sách nút nhảy dựa trên các Nhóm của Bảng Đứng Đầu và các Bảng Con trực thuộc (`[Nhóm 1] [Nhóm 2] ... [Thân nhân (N)] [Chuyến đi (N)]`), bấm nút cuộn mượt đến đúng vị trí.
+  - **Bảng Con dạng Accordion No-Code**: Tiêu đề thanh Accordion hiển thị 100% các cột thuộc Nhóm 1 của bảng con đó. Bấm vào mới bung các nhóm còn lại để xem/sửa inline.
+  - **Tag Liên kết Động (Zero Guessing)**: Dựa trên Cột khóa liên kết đã cấu hình (nếu Chuyến đi có CCCD/khóa thân nhân thì gắn tag `[👥 Thân nhân: <Tên>]`, nếu của cán bộ thì gắn tag `[👤 Cán bộ]`).
+  - **Lồng Chuyến đi trong Thân nhân**: Trong từng Accordion Thân nhân, hiển thị danh sách các chuyến đi của chính thân nhân đó kèm nút `+ Thêm chuyến đi cho thân nhân này`.
+  - **Kiến trúc Bảng Đứng Đầu (Root Master Table)**: Khi click xem/sửa ở Bảng Con (Chuyến đi, Thân nhân) hoặc trong Popup Thống kê, hệ thống luôn mở Trang Chi Tiết Tập Trung của Bảng Đứng Đầu, đồng thời Sticky Nav tự động cuộn đến và mở bung Accordion của đúng bản ghi con đó.
+  - **Xuất PDF Toàn Bộ Quy Về Bảng Chính**: Bất kể bấm xuất PDF ở dòng Bảng con hay Thống kê, hệ thống tự động tra cứu ngược về Bảng Đứng Đầu để xuất trọn vẹn toàn bộ hồ sơ (Cán bộ + Thân nhân + các Chuyến đi).
+  - **Cấu hình No-Code trong "Tùy chọn Bảng"**: Bổ sung thiết lập `[x] Đây là Bảng Đứng Đầu (Root Master Table)` hoặc chọn Bảng Đứng Đầu trực thuộc và Cột liên kết.
+- **2. Đã xử lý & Triển khai**:
+  - **`src/components/personnel/PersonnelConcentratedView.vue`**: Tạo mới component quản lý hiển thị tập trung không hardcode, tự động quét nhóm 1 làm tiêu đề, render DynamicField cho từng nhóm, tích hợp accordion bảng con và lồng chuyến đi theo thân nhân.
+  - **`src/components/personnel/PersonnelDialog.vue`**: Nhúng `PersonnelConcentratedView` khi sửa hồ sơ Cán bộ (`recordSource === 'personnel' && isEdit`), giữ lại modal tạo mới chuẩn.
+  - **`src/components/common/TableOptionsDialog.vue`**: Bổ sung khu vực cấu hình "Vai trò Bảng & Bảng Đứng Đầu (Root Master Table)", lưu vào `custom_dashboards_config` và kích hoạt đồng bộ toàn hệ thống.
+  - **`src/views/UnifiedTableView.vue` & `src/views/DashboardView.vue`**:
+    - Nâng cấp `previewPdfForRow`: Tự động tra cứu `masterPerson` trước khi tạo blob PDF, đảm bảo PDF luôn đầy đủ 100% thông tin.
+    - Nâng cấp `openPersonnelDetail`: Khi click bản ghi bảng con hoặc trong popup thống kê, tự động quy về `masterPerson`, truyền `initialTab` và `initialRecordId` để cuộn và mở bung accordion tương ứng.
+- **3. Kiểm thử & Đóng gói**:
+  - `npm run build`: Thành công 100% (0 lỗi).
+  - Chạy `./sync_and_package_offline.sh --update-only`: Đóng gói thành công `WINDOWS_OFFLINE_UPDATE.zip`.
+- **Trạng thái**: Done [Reversible].

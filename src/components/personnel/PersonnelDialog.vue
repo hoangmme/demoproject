@@ -25,129 +25,146 @@
       </div>
     </template>
 
-    <!-- Tab navigation & Linked Relatives / Trips / Custom Tables Content -->
-    <PersonnelRelatedTabs
-      v-if="isEdit"
-      v-model="activeTab"
-      :currentRecord="form"
+    <!-- TRANG CHI TIẾT TẬP TRUNG (CONCENTRATED HUB VIEW - PROTOTYPE 05 STYLE) -->
+    <PersonnelConcentratedView
+      v-if="isEdit && recordSource === 'personnel'"
+      v-model="form"
+      :formGroups="formGroups"
       :recordSource="recordSource"
-      :tableId="recordSource"
+      :initialSection="initialTab"
       :initialRecordId="initialRecordId"
+      :saving="saving"
+      @save-master="handleSave"
+      @export-pdf="isDocxExportOpen = true"
       @refresh="handleTabRefresh"
-      @switchRecord="handleSwitchRecord"
     />
 
-    <!-- Thẻ Nhận diện Người đi & Điều hướng Chuyển Tab Nhanh (Traveler Identity Card) -->
-    <div v-if="recordSource === 'trips' && activeTab === 'info' && (tripLinkedOfficer || tripLinkedRelative)" class="trip-traveler-card">
-      <div class="traveler-card-main">
-        <div class="traveler-badge" :class="isRelativeTrip ? 'is-relative' : 'is-officer'">
-          <i :class="isRelativeTrip ? 'pi pi-users' : 'pi pi-user'"></i>
-          <span>{{ isRelativeTrip ? 'CHUYẾN ĐI CỦA THÂN NHÂN' : 'CHUYẾN ĐI CỦA CÁN BỘ' }}</span>
-        </div>
-        <div class="traveler-info-body">
-          <div class="traveler-name-row">
-            <span class="label">Người đi:</span>
-            <strong class="name-highlight">
-              {{ isRelativeTrip ? (tripLinkedRelative?.relativeName || tripLinkedRelative?.name || 'Thân nhân') : (tripLinkedOfficer?.name || 'Cán bộ') }}
-            </strong>
-            <span v-if="isRelativeTrip && (tripLinkedRelative?.relationshipName || form.relationshipName)" class="relation-badge">
-              ({{ tripLinkedRelative?.relationshipName || form.relationshipName }})
-            </span>
-          </div>
-          <div v-if="tripLinkedOfficer" class="traveler-officer-row">
-            <span class="label">{{ isRelativeTrip ? 'Cán bộ bảo lãnh:' : 'Đơn vị / Chức vụ:' }}</span>
-            <span class="officer-detail">
-              <strong v-if="isRelativeTrip">{{ tripLinkedOfficer.name }}</strong>
-              <span v-if="tripLinkedOfficer.positionName || tripLinkedOfficer.position"> - {{ tripLinkedOfficer.positionName || tripLinkedOfficer.position }}</span>
-              <span v-if="tripLinkedOfficer.departmentName"> ({{ tripLinkedOfficer.departmentName }})</span>
-            </span>
-          </div>
-        </div>
-      </div>
+    <!-- Nếu tạo mới hoặc bảng độc lập khác thì dùng chế độ Tab đơn giản -->
+    <template v-else>
+      <!-- Tab navigation & Linked Relatives / Trips / Custom Tables Content -->
+      <PersonnelRelatedTabs
+        v-if="isEdit"
+        v-model="activeTab"
+        :currentRecord="form"
+        :recordSource="recordSource"
+        :tableId="recordSource"
+        :initialRecordId="initialRecordId"
+        @refresh="handleTabRefresh"
+        @switchRecord="handleSwitchRecord"
+      />
 
-      <!-- Nút chuyển nhanh sang hồ sơ Cán bộ hoặc Thân nhân liên quan -->
-      <div class="traveler-quick-nav">
-        <button
-          v-if="tripLinkedOfficer"
-          type="button"
-          class="quick-nav-btn officer"
-          @click="handleSwitchRecord(tripLinkedOfficer)"
-          title="Bấm để mở toàn bộ hồ sơ Cán bộ (Bao gồm danh sách chuyến đi & thân nhân)"
-        >
-          <i class="pi pi-user"></i>
-          <span>Hồ sơ Cán bộ</span>
-        </button>
-        <button
-          v-if="isRelativeTrip || tripLinkedRelative"
-          type="button"
-          class="quick-nav-btn relative"
-          @click="handleSwitchRecord(tripLinkedRelative)"
-          title="Bấm để mở hồ sơ Thân nhân"
-        >
-          <i class="pi pi-users"></i>
-          <span>Hồ sơ Thân nhân</span>
-        </button>
-      </div>
+      <!-- Thẻ Nhận diện Người đi & Điều hướng Chuyển Tab Nhanh (Traveler Identity Card) -->
+      <div v-if="recordSource === 'trips' && activeTab === 'info' && (tripLinkedOfficer || tripLinkedRelative)" class="trip-traveler-card">
+        <div class="traveler-card-main">
+          <div class="traveler-badge" :class="isRelativeTrip ? 'is-relative' : 'is-officer'">
+            <i :class="isRelativeTrip ? 'pi pi-users' : 'pi pi-user'"></i>
+            <span>{{ isRelativeTrip ? 'CHUYẾN ĐI CỦA THÂN NHÂN' : 'CHUYẾN ĐI CỦA CÁN BỘ' }}</span>
+          </div>
+          <div class="traveler-info-body">
+            <div class="traveler-name-row">
+              <span class="label">Người đi:</span>
+              <strong class="name-highlight">
+                {{ isRelativeTrip ? (tripLinkedRelative?.relativeName || tripLinkedRelative?.name || 'Thân nhân') : (tripLinkedOfficer?.name || 'Cán bộ') }}
+              </strong>
+              <span v-if="isRelativeTrip && (tripLinkedRelative?.relationshipName || form.relationshipName)" class="relation-badge">
+                ({{ tripLinkedRelative?.relationshipName || form.relationshipName }})
+              </span>
+            </div>
+            <div v-if="tripLinkedOfficer" class="traveler-officer-row">
+              <span class="label">{{ isRelativeTrip ? 'Cán bộ bảo lãnh:' : 'Đơn vị / Chức vụ:' }}</span>
+              <span class="officer-detail">
+                <strong v-if="isRelativeTrip">{{ tripLinkedOfficer.name }}</strong>
+                <span v-if="tripLinkedOfficer.positionName || tripLinkedOfficer.position"> - {{ tripLinkedOfficer.positionName || tripLinkedOfficer.position }}</span>
+                <span v-if="tripLinkedOfficer.departmentName"> ({{ tripLinkedOfficer.departmentName }})</span>
+              </span>
+            </div>
+          </div>
+        </div>
 
-      <!-- Danh sách chuyển đổi các chuyến đi của người này (nếu có > 1 chuyến) -->
-      <div v-if="travelerTrips.length > 1" class="traveler-trips-switcher">
-        <span class="switcher-label">
-          <i class="pi pi-list"></i> Các chuyến đi của {{ isRelativeTrip ? 'thân nhân' : 'cán bộ' }} ({{ travelerTrips.length }} chuyến):
-        </span>
-        <div class="trips-pills">
+        <!-- Nút chuyển nhanh sang hồ sơ Cán bộ hoặc Thân nhân liên quan -->
+        <div class="traveler-quick-nav">
           <button
-            v-for="(t, idx) in travelerTrips"
-            :key="t.id || t.uniqueKey || idx"
+            v-if="tripLinkedOfficer"
             type="button"
-            class="trip-pill-btn"
-            :class="{ active: isCurrentTrip(t) }"
-            @click="initFormData(t)"
-            :title="'Bấm để xem chi tiết ' + getTripDisplayLabel(t, idx)"
+            class="quick-nav-btn officer"
+            @click="handleSwitchRecord(tripLinkedOfficer)"
+            title="Bấm để mở toàn bộ hồ sơ Cán bộ (Bao gồm danh sách chuyến đi & thân nhân)"
           >
-            <i class="pi pi-send"></i>
-            {{ getTripDisplayLabel(t, idx) }}
+            <i class="pi pi-user"></i>
+            <span>Hồ sơ Cán bộ</span>
+          </button>
+          <button
+            v-if="isRelativeTrip || tripLinkedRelative"
+            type="button"
+            class="quick-nav-btn relative"
+            @click="handleSwitchRecord(tripLinkedRelative)"
+            title="Bấm để mở hồ sơ Thân nhân"
+          >
+            <i class="pi pi-users"></i>
+            <span>Hồ sơ Thân nhân</span>
           </button>
         </div>
-      </div>
-    </div>
-    <div v-else-if="recordSource === 'trips' && activeTab === 'info'" class="trip-unlinked-card">
-      <div class="unlinked-icon">
-        <i class="pi pi-info-circle"></i>
-      </div>
-      <div class="unlinked-text">
-        <strong>Chuyến đi độc lập / Chưa liên kết:</strong>
-        <span> Cột CCCD chuyến đi đang để trống hoặc chưa khớp với bất kỳ Cán bộ / Thân nhân nào trong hệ thống.</span>
-      </div>
-    </div>
 
-    <!-- Contents Area: 100% Dynamic Grouped Form -->
-    <div v-show="activeTab === 'info'" class="dialog-grouped-container">
-      <div
-        v-for="(grp, gIdx) in formGroups"
-        :key="grp.title || gIdx"
-        class="form-group-section"
-      >
-        <div class="form-group-header">
-          <i class="pi pi-folder-open form-group-icon"></i>
-          <span class="form-group-title">{{ grp.title }}</span>
-          <span class="form-group-count">({{ grp.columns.length }} trường)</span>
-        </div>
-        <div class="form-grid">
-          <template v-for="col in grp.columns" :key="col.id">
-            <div class="field-item" :style="getColItemStyle(col.formWidth || col.width)">
-              <label class="field-label" :title="col.label">
-                <span class="label-text">{{ col.label }}</span>
-                <span v-if="col.required" style="color: #ef4444; font-weight: 800; margin-left: 2px;">*</span>
-              </label>
-              <DynamicField
-                v-model="form[col.id]"
-                :col="col"
-              />
-            </div>
-          </template>
+        <!-- Danh sách chuyển đổi các chuyến đi của người này (nếu có > 1 chuyến) -->
+        <div v-if="travelerTrips.length > 1" class="traveler-trips-switcher">
+          <span class="switcher-label">
+            <i class="pi pi-list"></i> Các chuyến đi của {{ isRelativeTrip ? 'thân nhân' : 'cán bộ' }} ({{ travelerTrips.length }} chuyến):
+          </span>
+          <div class="trips-pills">
+            <button
+              v-for="(t, idx) in travelerTrips"
+              :key="t.id || t.uniqueKey || idx"
+              type="button"
+              class="trip-pill-btn"
+              :class="{ active: isCurrentTrip(t) }"
+              @click="initFormData(t)"
+              :title="'Bấm để xem chi tiết ' + getTripDisplayLabel(t, idx)"
+            >
+              <i class="pi pi-send"></i>
+              {{ getTripDisplayLabel(t, idx) }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+      <div v-else-if="recordSource === 'trips' && activeTab === 'info'" class="trip-unlinked-card">
+        <div class="unlinked-icon">
+          <i class="pi pi-info-circle"></i>
+        </div>
+        <div class="unlinked-text">
+          <strong>Chuyến đi độc lập / Chưa liên kết:</strong>
+          <span> Cột CCCD chuyến đi đang để trống hoặc chưa khớp với bất kỳ Cán bộ / Thân nhân nào trong hệ thống.</span>
+        </div>
+      </div>
+
+      <!-- Contents Area: 100% Dynamic Grouped Form -->
+      <div v-show="activeTab === 'info'" class="dialog-grouped-container">
+        <div
+          v-for="(grp, gIdx) in formGroups"
+          :key="grp.title || gIdx"
+          class="form-group-section"
+        >
+          <div class="form-group-header">
+            <i class="pi pi-folder-open form-group-icon"></i>
+            <span class="form-group-title">{{ grp.title }}</span>
+            <span class="form-group-count">({{ grp.columns.length }} trường)</span>
+          </div>
+          <div class="form-grid">
+            <template v-for="col in grp.columns" :key="col.id">
+              <div class="field-item" :style="getColItemStyle(col.formWidth || col.width)">
+                <label class="field-label" :title="col.label">
+                  <span class="label-text">{{ col.label }}</span>
+                  <span v-if="col.required" class="required-star">*</span>
+                </label>
+                <DynamicField
+                  v-model="form[col.id]"
+                  :col="col"
+                />
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <template #footer>
       <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
@@ -220,6 +237,7 @@ import DynamicField from '@/components/common/DynamicField.vue';
 import AdvancedDocxExportDialog from '@/components/common/AdvancedDocxExportDialog.vue';
 import TableDataEntryDialog from '@/components/common/TableDataEntryDialog.vue';
 import PersonnelRelatedTabs from '@/components/personnel/PersonnelRelatedTabs.vue';
+import PersonnelConcentratedView from '@/components/personnel/PersonnelConcentratedView.vue';
 import { getColItemStyle, formatDate } from '@/utils/formatters';
 import { getUnifiedTableColumns, getUnifiedTableDefinitions } from '@/utils/tableRegistry';
 

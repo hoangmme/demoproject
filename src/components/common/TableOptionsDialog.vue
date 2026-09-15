@@ -133,6 +133,39 @@
       </div>
     </div>
 
+    <!-- Cấu hình Vai trò Bảng & Bảng Đứng Đầu (Master / Root Table) -->
+    <div class="master-role-section" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; color: #1e293b; cursor: pointer;">
+          <input
+            type="checkbox"
+            v-model="localIsMasterTable"
+            style="width: 16px; height: 16px; accent-color: #0284c7;"
+          />
+          <span>👑 Bảng Đứng Đầu (Master / Root Table - Hồ sơ gốc chính)</span>
+        </label>
+        <span v-if="localIsMasterTable" style="font-size: 0.7rem; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 999px; font-weight: 600;">
+          Mọi bảng con khi bấm xem/sửa sẽ hiển thị tập trung trong hồ sơ bảng này
+        </span>
+      </div>
+
+      <div v-if="!localIsMasterTable" style="display: flex; align-items: center; gap: 10px; font-size: 0.75rem; flex-wrap: wrap;">
+        <span style="color: #64748b; font-weight: 600;">Trực thuộc Bảng Đứng Đầu:</span>
+        <select v-model="localParentMasterTableId" class="settings-select" style="height: 26px; font-size: 0.75rem; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+          <option v-for="m in masterTableOptions" :key="m.id" :value="m.id">
+            👑 {{ m.title }}
+          </option>
+        </select>
+        <span style="color: #64748b; font-weight: 600; margin-left: 4px;">Cột liên kết:</span>
+        <select v-model="localParentKeyField" class="settings-select" style="height: 26px; font-size: 0.75rem; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+          <option value="">-- Chọn cột liên kết --</option>
+          <option v-for="col in allCurrentTableCols" :key="col.id" :value="col.id">
+            {{ col.label || col.id }} ({{ col.id }})
+          </option>
+        </select>
+      </div>
+    </div>
+
     <!-- Liên kết bảng (Hiện tab khi chỉnh sửa) -->
     <div class="linked-tables-section">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
@@ -511,6 +544,32 @@ const localGroups = ref([]);
 const searchColQuery = ref('');
 const saving = ref(false);
 const localLinkedTables = ref([]);
+const localIsMasterTable = ref(false);
+const localParentMasterTableId = ref('personnel');
+const localParentKeyField = ref('');
+
+const allCurrentTableCols = computed(() => {
+  const cols = [];
+  const seen = new Set();
+  (localGroups.value || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c && c.id && !seen.has(c.id)) {
+        seen.add(c.id);
+        cols.push(c);
+      }
+    });
+  });
+  return cols;
+});
+
+const masterTableOptions = computed(() => {
+  const allConfigs = ensureStandardDashboards(props.customDashboards || []);
+  const list = allConfigs.filter((d) => d.id !== props.tableId && (d.isMasterTable || d.id === 'personnel'));
+  if (list.length === 0) {
+    return [{ id: 'personnel', title: 'Cán bộ' }];
+  }
+  return list.map((d) => ({ id: d.id, title: d.title || d.id }));
+});
 
 const filteredIcons = computed(() => {
   const q = iconSearchQuery.value.trim().toLowerCase();
@@ -601,9 +660,14 @@ const initIdentityAndGroups = () => {
     else localColor.value = '#0284c7';
   }
 
-  // 5. Liên kết bảng
+  // 5. Liên kết bảng & Vai trò Bảng Đứng Đầu
   const dLinked = (props.customDashboards || []).find((x) => x.id === props.tableId);
   localLinkedTables.value = Array.isArray(dLinked?.linkedTables) ? [...dLinked.linkedTables] : [];
+  localIsMasterTable.value = dLinked?.isMasterTable !== undefined
+    ? Boolean(dLinked.isMasterTable)
+    : (props.tableId === 'personnel');
+  localParentMasterTableId.value = dLinked?.parentMasterTableId || 'personnel';
+  localParentKeyField.value = dLinked?.parentKeyField || '';
 
   // 4. Nhóm cột - TRIỆT ĐỂ KHÔNG TRÙNG FIELD GIỮA CÁC NHÓM
   let rawGroups = null;
@@ -837,21 +901,25 @@ const handleSave = async () => {
       list = ensureStandardDashboards(list);
 
       const idx = list.findIndex((d) => d.id === src);
+      const updatedItem = {
+        title: newTitle,
+        icon: newIcon,
+        iconColor: newColor,
+        linkedTables: localLinkedTables.value,
+        isMasterTable: Boolean(localIsMasterTable.value),
+        parentMasterTableId: localIsMasterTable.value ? null : localParentMasterTableId.value,
+        parentKeyField: localIsMasterTable.value ? null : localParentKeyField.value,
+      };
+
       if (idx !== -1) {
         list[idx] = {
           ...list[idx],
-          title: newTitle,
-          icon: newIcon,
-          iconColor: newColor,
-          linkedTables: localLinkedTables.value,
+          ...updatedItem,
         };
       } else {
         list.push({
           id: src,
-          title: newTitle,
-          icon: newIcon,
-          iconColor: newColor,
-          linkedTables: localLinkedTables.value,
+          ...updatedItem,
         });
       }
       localStorage.setItem('custom_dashboards_config', JSON.stringify(list));
@@ -866,6 +934,9 @@ const handleSave = async () => {
       icon: newIcon,
       iconColor: newColor,
       linkedTables: localLinkedTables.value,
+      isMasterTable: Boolean(localIsMasterTable.value),
+      parentMasterTableId: localIsMasterTable.value ? null : localParentMasterTableId.value,
+      parentKeyField: localIsMasterTable.value ? null : localParentKeyField.value,
     });
     emit('update:modelValue', false);
   } catch (err) {

@@ -1952,10 +1952,26 @@ const previewPdfForRow = async (row) => {
     const curCols = drilldownColumns.value || [];
     const curTitle = drilldownExtraTitle.value || drilldownWidget.value?.title || 'Thống kê';
 
+    // 1. Quy về Bảng Đứng Đầu (Master / Root Table): Luôn xuất trọn vẹn toàn bộ hồ sơ từ Bảng Chính
+    let masterPerson = row;
+    if (curSource !== 'personnel') {
+      const linked = getLinkedRowsByConfig(row, curSource, 'personnel', personnelStore);
+      if (linked && linked.length > 0) {
+        masterPerson = linked[0];
+      } else if (personnelStore.findParentPersonForTrip && (curSource === 'trips' || row.departureDate || row.ngay_xuat_canh)) {
+        masterPerson = personnelStore.findParentPersonForTrip(row) || row;
+      } else if (personnelStore.findParentPersonForRelative && (curSource === 'relatives' || row.relationshipName || row.relativeName)) {
+        masterPerson = personnelStore.findParentPersonForRelative(row) || row;
+      }
+    }
+
+    const pCols = (personnelStore.importMappingPersonnel || []).flatMap((g) => g.columns || []).filter((c) => c && c.id);
+    const effectiveCols = pCols.length > 0 ? pCols : curCols;
+
     const exportOpts = {
-      tableId: curSource,
-      columns: curCols,
-      selectedFieldIds: curCols.map((c) => c.id),
+      tableId: 'personnel',
+      columns: effectiveCols,
+      selectedFieldIds: effectiveCols.map((c) => c.id),
       includePersonnel: true,
       includeRelatives: true,
       includeTrips: true,
@@ -1964,35 +1980,25 @@ const previewPdfForRow = async (row) => {
         personnel: 'Cán bộ',
         relatives: 'Thân nhân',
         trips: 'Chuyến đi',
-        main: curTitle,
+        main: 'Hồ sơ Cán bộ',
       },
     };
 
     const tplBuffer = await getEffectiveExportTemplateBuffer(exportOpts, personnelStore);
-    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, row, personnelStore, authStore.user || authStore.currentUser, exportOpts);
+    const blob = await generateSinglePersonnelPdfBlob(tplBuffer, masterPerson, personnelStore, authStore.user || authStore.currentUser, exportOpts);
 
-    let linkedOfficer = null;
-    if (curSource !== 'personnel') {
-      const linked = getLinkedRowsByConfig(row, curSource, 'personnel', personnelStore);
-      if (linked && linked.length > 0) linkedOfficer = linked[0];
-      else if (personnelStore.findParentPersonForTrip && (curSource === 'trips' || row.departureDate || row.ngay_xuat_canh)) linkedOfficer = personnelStore.findParentPersonForTrip(row);
-      else if (personnelStore.findParentPersonForRelative && (curSource === 'relatives' || row.relationshipName || row.relativeName)) linkedOfficer = personnelStore.findParentPersonForRelative(row);
-    }
-
-    const titlePerson = linkedOfficer || row;
-    const titleCol = curCols.find((c) => c.isTitle || c.isIdentifier);
+    const titlePerson = masterPerson;
+    const titleCol = effectiveCols.find((c) => c.isTitle || c.isIdentifier);
     const pName = titlePerson.name || titlePerson.fullName || titlePerson.ho_ten ||
-                  (titleCol && (row[titleCol.id] || row.custom_data?.[titleCol.id])) ||
-                  row.name || row.fullName || row.pName || row.personnelName ||
-                  row.relativeName || row.rName || row.countryName || row.quoc_gia_xuat_canh ||
-                  row.title || 'Hồ sơ';
-    const keyCol = curCols.find((c) => c.isKey);
+                  (titleCol && (titlePerson[titleCol.id] || titlePerson.custom_data?.[titleCol.id])) ||
+                  titlePerson.title || curTitle || 'Hồ sơ';
+    const keyCol = effectiveCols.find((c) => c.isKey);
     const pCode = titlePerson.cccd || titlePerson.so_cccd || titlePerson.code ||
-                  (keyCol && (row[keyCol.id] || row.custom_data?.[keyCol.id])) ||
-                  row.cccdchuyendi || row.cccdthannhan || row.cccdparent || row.code || row.cccd || '';
+                  (keyCol && (titlePerson[keyCol.id] || titlePerson.custom_data?.[keyCol.id])) ||
+                  titlePerson.code || titlePerson.cccd || '';
 
     rowPreviewPdfBlob.value = blob;
-    rowPreviewTitle.value = `Hồ sơ: ${pName}${pCode ? ' (' + pCode + ')' : ''}`;
+    rowPreviewTitle.value = `Hồ sơ toàn bộ: ${pName}${pCode ? ' (' + pCode + ')' : ''}`;
     rowPreviewFileName.value = `Ho_so_${String(pName).replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, '_')}.pdf`;
     showRowPdfPreview.value = true;
   } catch (err) {
@@ -2164,16 +2170,42 @@ const initialRecordIdForDialog = ref(null);
 
 const openPersonnelDetail = (p) => {
   if (!p) return;
-  selectedPersonForDialog.value = p;
-  initialTabForDialog.value = 'info';
-  initialRecordIdForDialog.value = null;
-  const src = p._recordType === 'relative' || p.relationshipName
+  const curSource = p._recordType === 'relative' || p.relationshipName
     ? 'relatives'
     : (p._recordType === 'trip' || p.departureDate || p.destination || p.decisionNumber ? 'trips' : (drilldownSourceType.value || 'personnel'));
-  dialogTableId.value = src;
 
-  // Luôn nạp ĐẦY ĐỦ các cột của bảng nguồn cho Form Chỉnh sửa (không bị giới hạn theo 5 cột của View)
-  const allCols = getUnifiedTableColumns(src, {
+  let masterPerson = p;
+  let targetSection = 'info';
+  let targetRecordId = p.id || p.uniqueKey || null;
+
+  if (curSource !== 'personnel') {
+    const linked = getLinkedRowsByConfig(p, curSource, 'personnel', personnelStore);
+    if (linked && linked.length > 0) {
+      masterPerson = { ...linked[0], _recordType: 'personnel' };
+      targetSection = curSource;
+    } else if (personnelStore.findParentPersonForTrip && (curSource === 'trips' || p.departureDate || p.ngay_xuat_canh)) {
+      const parentOfficer = personnelStore.findParentPersonForTrip(p);
+      if (parentOfficer) {
+        masterPerson = { ...parentOfficer, _recordType: 'personnel' };
+        targetSection = 'trips';
+      }
+    } else if (personnelStore.findParentPersonForRelative && (curSource === 'relatives' || p.relationshipName || p.relativeName)) {
+      const parentOfficer = personnelStore.findParentPersonForRelative(p);
+      if (parentOfficer) {
+        masterPerson = { ...parentOfficer, _recordType: 'personnel' };
+        targetSection = 'relatives';
+      }
+    }
+  } else {
+    masterPerson = { ...p, _recordType: 'personnel' };
+  }
+
+  selectedPersonForDialog.value = masterPerson;
+  initialTabForDialog.value = targetSection;
+  initialRecordIdForDialog.value = targetRecordId;
+  dialogTableId.value = 'personnel';
+
+  const allCols = getUnifiedTableColumns('personnel', {
     personnelStore,
     customDashboards: availableTopicDashboards.value,
     systemBranding: systemBranding.value,
