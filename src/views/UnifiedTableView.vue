@@ -577,17 +577,23 @@
                 </div>
 
                 <!-- Hiển thị Single Select / Dropdown dạng Soft Badge -->
-                <span
+                <div
                   v-else-if="(col.format === 'singleSelect' || col.format === 'dropdown') && getCellValue(data, col.id) && getCellValue(data, col.id) !== '-'"
-                  class="teable-soft-badge"
-                  :style="{
-                    backgroundColor: getTeableOptionColor(getCellValue(data, col.id)).bg,
-                    color: getTeableOptionColor(getCellValue(data, col.id)).text,
-                    borderColor: getTeableOptionColor(getCellValue(data, col.id)).border,
-                  }"
+                  style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;"
                 >
-                  {{ getCellValue(data, col.id) }}
-                </span>
+                  <span
+                    v-for="(val, vIdx) in String(getCellValue(data, col.id)).split('\n').filter(Boolean)"
+                    :key="vIdx"
+                    class="teable-soft-badge"
+                    :style="{
+                      backgroundColor: getTeableOptionColor(val, vIdx).bg,
+                      color: getTeableOptionColor(val, vIdx).text,
+                      borderColor: getTeableOptionColor(val, vIdx).border,
+                    }"
+                  >
+                    {{ val }}
+                  </span>
+                </div>
 
                 <!-- Hiển thị Multiple Select dạng danh sách Soft Badges -->
                 <div
@@ -613,12 +619,23 @@
                   v-else-if="String(getCellValue(data, col.id)).includes('\n')"
                   style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; color: #1e293b;"
                 >
-                  <div :style="{ fontWeight: col.boldFirstLine !== false ? '700' : 'normal', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
-                    {{ String(getCellValue(data, col.id)).split('\n')[0] }}
-                  </div>
-                  <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
-                    {{ String(getCellValue(data, col.id)).split('\n').slice(1).join('\n') }}
-                  </div>
+                  <template v-if="col.boldFirstLine || col.format === 'lookup' || col.id === 'so_lan_xuat_canh_trong_nam' || col.id === '_parentPersonnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'relativeName'">
+                    <div :style="{ fontWeight: '700', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
+                      {{ String(getCellValue(data, col.id)).split('\n')[0] }}
+                    </div>
+                    <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
+                      {{ String(getCellValue(data, col.id)).split('\n').slice(1).join('\n') }}
+                    </div>
+                  </template>
+                  <template v-else>
+                    <div
+                      v-for="(val, vIdx) in String(getCellValue(data, col.id)).split('\n')"
+                      :key="vIdx"
+                      style="font-size: 1.05rem; color: #334155; line-height: 1.45;"
+                    >
+                      {{ val }}
+                    </div>
+                  </template>
                 </div>
                 <template v-else-if="col.boldFirstLine">
                   <strong :style="{ color: col.firstLineColor || '#0369a1', fontWeight: '700', fontSize: '1.15rem', whiteSpace: 'pre-line', display: 'inline-block', lineHeight: '1.45' }">
@@ -2837,6 +2854,25 @@ const shouldCollapseDuplicate = (data, index, col) => {
 const getCellValue = (trip, colOrId, depth = 0) => {
   const colId = typeof colOrId === 'object' && colOrId !== null ? (colOrId.id || colOrId.field) : colOrId;
   if (!trip || !colId || depth > 2) return '-';
+
+  // 0. Tự động gom toàn bộ giá trị của các dòng được gộp nếu đang ở chế độ Unique
+  if (trip._mergedRows && trip._mergedRows.length > 1 && !trip._evaluatingMerged) {
+    const distinctVals = [];
+    const seen = new Set();
+    for (const subRow of trip._mergedRows) {
+      const val = getCellValue({ ...subRow, _evaluatingMerged: true }, colOrId, depth);
+      if (val !== undefined && val !== null && val !== '' && val !== '-') {
+        const strVal = String(val).trim();
+        if (!seen.has(strVal.toLowerCase())) {
+          seen.add(strVal.toLowerCase());
+          distinctVals.push(strVal);
+        }
+      }
+    }
+    if (distinctVals.length === 0) return '-';
+    if (distinctVals.length === 1) return distinctVals[0];
+    return distinctVals.join('\n');
+  }
 
   // 0a. Cột định danh mặc định (_recordIdentifier)
   if (colId === '_recordIdentifier') {

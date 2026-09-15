@@ -3784,3 +3784,28 @@
   - `npm run build`: Thành công 100% (0 lỗi).
   - Chạy `./sync_and_package_offline.sh --update-only`: Đóng gói thành công `WINDOWS_OFFLINE_UPDATE.zip`.
 - **Trạng thái**: Done [Reversible].
+
+### 59. GỘP TOÀN BỘ GIÁ TRỊ KHI UNIQUE, TỐI ƯU UX ẢNH NỀN LOGIN & CHUẨN HÓA BẢN CÀI OFFLINE SẠCH DỮ LIỆU (Session 59 - 2026-09-15)
+- **1. Tối ưu UX Ảnh nền Đăng nhập (`LoginView.vue`)**:
+  - *Vấn đề*: Ảnh nền login trước đây khởi tạo mặc định `/login-bg.jpg`, sau đó đợi `onMounted` và `new Image().onload` mới chuyển sang ảnh tùy biến -> gây chớp/nhấp nháy ảnh mặc định trước khi hiện ảnh được chọn.
+  - *Giải pháp*: Khởi tạo đồng bộ `resolvedLoginBg` từ `localStorage` ngay tức thì (0ms). Khi có ảnh nền tùy biến, gán trực tiếp URL và chỉ kích hoạt `img.onerror` fallback về ảnh mặc định khi tệp thực sự bị lỗi 404/hỏng. Triệt tiêu 100% hiện tượng chớp ảnh.
+- **2. Tự động Hiển thị Toàn bộ Giá trị của các Hàng được Gộp khi Unique (`useTableFilters.js`, `UnifiedTableView.vue`, `DashboardView.vue`)**:
+  - *Vấn đề*: Khi bật "Đếm số bản ghi duy nhất (Unique / Khử trùng lặp)", logic cũ chỉ lấy dòng đầu tiên và bỏ qua dòng thứ hai trở đi, dẫn đến mất các giá trị khác nhau giữa các chuyến (ví dụ cán bộ có 2 chuyến: 1 việc riêng, 1 công tác thì chỉ hiện việc riêng, mất công tác).
+  - *Giải pháp Kiến trúc (Tự động áp dụng cho MỌI CỘT, Không cần tick thủ công từng cột)*:
+    - Tại `useTableFilters.js` và `DashboardView.vue` (Drilldown popup): Gom các dòng trùng khóa thành mảng `_mergedRows`.
+    - Tại `getCellValue` (`UnifiedTableView.vue`) và `getRowFieldValue` (`DashboardView.vue`): Khi bản ghi có `_mergedRows.length > 1`, tự động gom tất cả các giá trị khác nhau của từng cột qua `Set`, khử trùng lặp và nối các giá trị bằng `\n`.
+    - Nếu các dòng con có cùng giá trị (Họ tên, Đơn vị, Chức vụ, CCCD, hoặc công thức đã gộp sẵn như Số lần xuất cảnh): Giữ nguyên 1 giá trị duy nhất, không lặp thừa.
+    - Nếu các dòng con có giá trị khác nhau (Mục đích: Việc riêng & Công tác; Quốc gia; Quyết định...): Hiển thị đầy đủ mọi giá trị (dạng danh sách xuống dòng hoặc soft badges nếu là cột dropdown).
+- **3. Chuẩn hóa Bản Cài Offline Đầy Đủ & Sạch Dữ Liệu (`WINDOWS_OFFLINE_APP.zip`)**:
+  - *Bộ cài Node.js*: Đã có sẵn file `1_CAI_DAT_NODEJS.bat` và `installer/node-v20.18.0-x64.msi` (26MB).
+  - *Dữ liệu sạch (Clean Slate)*:
+    - Trong `WINDOWS_OFFLINE_APP/database/db.json`: Xóa sạch dữ liệu mẫu (`personnels: []`, `appendix1: []`, `appendix2: []`, `appendix3: []`, `audit_logs: []`).
+    - Giữ nguyên 100% cấu hình hệ thống: 121 `app_settings` (branding, logo, ảnh nền login, ảnh nền menu, cấu hình 3 bảng + toàn bộ dynamic fields/columns, các khối widget bảng thống kê), phòng ban và tài khoản quản trị `directus_users`.
+    - Dọn sạch 239 tệp đính kèm rác của cán bộ cũ trong `uploads/`, chỉ giữ lại các tệp nhận diện hệ thống (`f4c662bc...`, `642d4a70...`). Dung lượng thư mục `uploads/` giảm từ 731MB xuống dưới 1MB.
+  - *Đóng gói*:
+    - `WINDOWS_OFFLINE_APP.zip` (29M - đầy đủ bộ cài Node.js + database cấu hình sạch).
+    - `WINDOWS_OFFLINE_UPDATE.zip` (2.5M - bản cập nhật code không đè database/uploads).
+- **4. Kiểm thử**:
+  - `npm run build`: Thành công 100% (618ms, 0 lỗi).
+  - Đóng gói `./sync_and_package_offline.sh --all` thành công exit code 0.
+- **Trạng thái**: Done [Reversible].

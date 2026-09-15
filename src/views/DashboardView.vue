@@ -1411,6 +1411,25 @@
                 </span>
               </template>
 
+              <!-- Hiển thị Single Select / Dropdown dạng Soft Badge -->
+              <div
+                v-else-if="(col.format === 'singleSelect' || col.format === 'dropdown') && getRowFieldValue(data, col.id, col) && getRowFieldValue(data, col.id, col) !== '-'"
+                style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;"
+              >
+                <span
+                  v-for="(val, vIdx) in String(getRowFieldValue(data, col.id, col)).split('\n').filter(Boolean)"
+                  :key="vIdx"
+                  class="teable-soft-badge"
+                  :style="{
+                    backgroundColor: getTeableOptionColor(val, vIdx).bg,
+                    color: getTeableOptionColor(val, vIdx).text,
+                    borderColor: getTeableOptionColor(val, vIdx).border,
+                  }"
+                >
+                  {{ val }}
+                </span>
+              </div>
+
               <!-- Hiển thị nhiều khối bản ghi phân cách bởi \n\n (VD: nhiều thân nhân trong 1 ô Lookup) -->
               <div
                 v-else-if="String(getRowFieldValue(data, col.id, col) || '').includes('\n\n')"
@@ -1435,17 +1454,28 @@
                 </div>
               </div>
 
-              <!-- Cột có xuống dòng (Họ tên + chức vụ/đơn vị, hoặc công thức nhiều dòng: dòng 1 tô đậm theo cấu hình hoặc mặc định) -->
+              <!-- Cột có xuống dòng (Họ tên + chức vụ/đơn vị, hoặc công thức nhiều dòng, hoặc gộp nhiều giá trị khi Unique) -->
               <div
                 v-else-if="String(getRowFieldValue(data, col.id, col) || '').includes('\n')"
                 style="white-space: pre-line; line-height: 1.45; font-size: 1.05rem; color: #1e293b; text-align: left;"
               >
-                <div :style="{ fontWeight: col.boldFirstLine !== false ? '700' : 'normal', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
-                  {{ String(getRowFieldValue(data, col.id, col) || '').split('\n')[0] }}
-                </div>
-                <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
-                  {{ String(getRowFieldValue(data, col.id, col) || '').split('\n').slice(1).join('\n') }}
-                </div>
+                <template v-if="col.boldFirstLine || col.format === 'lookup' || col.id === 'so_lan_xuat_canh_trong_nam' || col.id === '_parentPersonnelName' || col.id === 'name' || col.id === 'ho_va_ten' || col.id === 'relativeName'">
+                  <div :style="{ fontWeight: '700', color: col.firstLineColor || '#0369a1', fontSize: '1.12rem' }">
+                    {{ String(getRowFieldValue(data, col.id, col) || '').split('\n')[0] }}
+                  </div>
+                  <div style="font-size: 0.95rem; color: #475569; margin-top: 2px;">
+                    {{ String(getRowFieldValue(data, col.id, col) || '').split('\n').slice(1).join('\n') }}
+                  </div>
+                </template>
+                <template v-else>
+                  <div
+                    v-for="(val, vIdx) in String(getRowFieldValue(data, col.id, col) || '').split('\n')"
+                    :key="vIdx"
+                    style="font-size: 1.05rem; color: #334155; line-height: 1.45;"
+                  >
+                    {{ val }}
+                  </div>
+                </template>
               </div>
 
               <!-- Cột được cấu hình In đậm dòng đầu hoặc là cột tên -->
@@ -1572,7 +1602,7 @@ import { useAuthStore } from '@/stores/auth';
 import PdfPreviewDialog from '@/components/common/PdfPreviewDialog.vue';
 import { getEffectiveExportTemplateBuffer, generateSinglePersonnelPdfBlob } from '@/utils/docxExport';
 import { exportToExcel, exportFullPersonnelExcel, exportFullRelativesExcel, getSubOptionsList } from '@/utils/excel';
-import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, getColItemStyle } from '@/utils/formatters';
+import { computeColumnIndexMap, formatDate, parseDateValue, computePresenceStatus, computeOverdueStatus, computeTripPresence, evaluateFormula, evaluateLookup, evaluateRollup, computeDepartBeforeDecision, formatGenericCellValue, resolvePresence, isPresenceField, resolveVirtualColumnValue, getPresenceBadge, getColItemStyle, getTeableOptionColor } from '@/utils/formatters';
 import { buildTopicSourceList, computeMetricCardCount, isSameCard, matchCardCondition as matchSharedCardCondition, isCardAllType as isSharedCardAllType, checkConditionMatch, normalizeFieldValueToText, resolveDateRangeBounds } from '@/utils/dashboardMetrics';
 import { getAppSettings, saveAppSettings } from '@/api/settings';
 import {
@@ -2990,7 +3020,26 @@ const unifiedTripsList = computed(() => buildTopicSourceList('trips', personnelS
 const getRowFieldValue = (row, colId, colDefOverride = null, depth = 0) => {
   if (!row || !colId || depth > 2) return '';
 
-  // 0. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
+  // 0a. Tự động gom toàn bộ giá trị của các dòng được gộp nếu đang ở chế độ Unique
+  if (row._mergedRows && row._mergedRows.length > 1 && !row._evaluatingMerged) {
+    const distinctVals = [];
+    const seen = new Set();
+    for (const subRow of row._mergedRows) {
+      const val = getRowFieldValue({ ...subRow, _evaluatingMerged: true }, colId, colDefOverride, depth);
+      if (val !== undefined && val !== null && val !== '' && val !== '-') {
+        const strVal = String(val).trim();
+        if (!seen.has(strVal.toLowerCase())) {
+          seen.add(strVal.toLowerCase());
+          distinctVals.push(strVal);
+        }
+      }
+    }
+    if (distinctVals.length === 0) return '-';
+    if (distinctVals.length === 1) return distinctVals[0];
+    return distinctVals.join('\n');
+  }
+
+  // 0b. Phân giải Cột ảo (Trạng thái hiện diện, Đối tượng, Thông tin Cán bộ liên quan...)
   const vVal = resolveVirtualColumnValue(row, colId);
   if (vVal !== undefined) {
     return vVal;
@@ -3963,8 +4012,7 @@ const openDrilldownForWidget = (widget, extraCondition = null, group = null) => 
   }
 
   if (widget.isUnique) {
-    const seen = new Set();
-    const uniqueResult = [];
+    const seenMap = new Map();
     const uCol = widget.uniqueKeyCol;
     filtered.forEach((r) => {
       let val;
@@ -3978,13 +4026,15 @@ const openDrilldownForWidget = (widget, extraCondition = null, group = null) => 
       }
       if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') {
         const key = String(val).trim().toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          uniqueResult.push(r);
+        if (!seenMap.has(key)) {
+          const master = { ...r, _isUniqueRow: true, _mergedRows: [r] };
+          seenMap.set(key, master);
+        } else {
+          seenMap.get(key)._mergedRows.push(r);
         }
       }
     });
-    filtered = uniqueResult;
+    filtered = Array.from(seenMap.values());
   }
 
   drilldownWidget.value = widget;

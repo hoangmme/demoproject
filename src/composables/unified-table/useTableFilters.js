@@ -97,8 +97,8 @@ export function useTableFilters({
       const pKeyField = uColId || (personnelStore?.getPersonnelKeyField
         ? personnelStore.getPersonnelKeyField()
         : 'cccdparent');
-      const seenKeys = new Set();
-      list = list.filter((item) => {
+      const seenMap = new Map();
+      list.forEach((item) => {
         let keyVal;
         if (uColId) {
           keyVal = typeof extractRowFieldValue === 'function'
@@ -120,13 +120,15 @@ export function useTableFilters({
         }
         if (keyVal !== undefined && keyVal !== null && String(keyVal).trim() !== '' && String(keyVal).trim() !== '-') {
           const strKey = String(keyVal).trim().toLowerCase();
-          if (seenKeys.has(strKey)) return false;
-          seenKeys.add(strKey);
-          item._isUniqueRow = true;
-          return true;
+          if (!seenMap.has(strKey)) {
+            const master = { ...item, _isUniqueRow: true, _mergedRows: [item] };
+            seenMap.set(strKey, master);
+          } else {
+            seenMap.get(strKey)._mergedRows.push(item);
+          }
         }
-        return false;
       });
+      list = Array.from(seenMap.values());
     }
 
     // 3. Lọc theo Drill-down trường động (filterField & filterValue)

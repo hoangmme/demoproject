@@ -9,7 +9,7 @@
 set -e
 
 MODE="both"
-SYNC_ONLINE=true
+SYNC_ONLINE=false
 
 # Đọc tham số dòng lệnh
 for arg in "$@"; do
@@ -18,16 +18,17 @@ for arg in "$@"; do
       MODE="update"
       SYNC_ONLINE=false
       ;;
+    --sync-online)
+      SYNC_ONLINE=true
+      ;;
     --skip-sync|-s)
       SYNC_ONLINE=false
       ;;
     --full|-f)
       MODE="full"
-      SYNC_ONLINE=true
       ;;
     --all|-a)
       MODE="both"
-      SYNC_ONLINE=true
       ;;
   esac
 done

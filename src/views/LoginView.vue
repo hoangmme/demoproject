@@ -72,7 +72,19 @@ const password = ref('');
 const loading = ref(false);
 const customLoginBg = ref('');
 const DEFAULT_LOGIN_BG = '/login-bg.jpg';
-const resolvedLoginBg = ref(DEFAULT_LOGIN_BG);
+
+const getInitialLoginBg = () => {
+  try {
+    const cached = localStorage.getItem('custom_login_bg');
+    if (cached) {
+      const formatted = getFileUrl(cached);
+      if (formatted) return formatted;
+    }
+  } catch (e) {}
+  return DEFAULT_LOGIN_BG;
+};
+
+const resolvedLoginBg = ref(getInitialLoginBg());
 
 const DEFAULT_BRANDING = {
   logoUrl: '',
@@ -112,10 +124,12 @@ const applyLoginBg = (rawBg) => {
     resolvedLoginBg.value = DEFAULT_LOGIN_BG;
     return;
   }
-  const img = new Image();
-  img.onload = () => {
+  // Gán trực tiếp ảnh cấu hình ngay lập tức (0ms) để không bị chớp ảnh fallback
+  if (resolvedLoginBg.value !== formattedUrl) {
     resolvedLoginBg.value = formattedUrl;
-  };
+  }
+  // Chỉ fallback sang ảnh mặc định nếu tệp tùy biến thực sự lỗi tải (404/hỏng)
+  const img = new Image();
   img.onerror = () => {
     console.warn('Custom login background failed to load, falling back to default:', formattedUrl);
     resolvedLoginBg.value = DEFAULT_LOGIN_BG;
@@ -144,6 +158,7 @@ onMounted(async () => {
     const bgData = await getAppSettings('custom_login_bg', null);
     if (bgData) {
       customLoginBg.value = bgData;
+      try { localStorage.setItem('custom_login_bg', bgData); } catch (e) {}
       applyLoginBg(bgData);
     } else if (!cached) {
       resolvedLoginBg.value = DEFAULT_LOGIN_BG;
