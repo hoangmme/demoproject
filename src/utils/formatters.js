@@ -782,15 +782,38 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
       }
     }
 
-    // Tra cứu chéo thêm từ toàn bộ danh sách chuyến đi nếu có
+    // Tra cứu chéo thêm từ parentPerson và toàn bộ danh sách chuyến đi nếu có
+    const pStore = formulaConfig.personnelStore;
+    if (pStore) {
+      let parentRel = null;
+      if (record.personnelId && pStore.relativesList) {
+        parentRel = pStore.relativesList.find((r) => String(r.id).trim() === String(record.personnelId).trim());
+      }
+      if (!parentRel && (record.cccdthannhan || record.cccd) && pStore.relativesList) {
+        const c = String(record.cccdthannhan || record.cccd).trim().replace(/\.+$/, '').toLowerCase();
+        parentRel = pStore.relativesList.find((r) => {
+          const rc = String(r.cccdthannhan || r.cccd || '').trim().replace(/\.+$/, '').toLowerCase();
+          return rc && rc === c;
+        });
+      }
+      if (parentRel && Array.isArray(parentRel.trips)) {
+        parentRel.trips.forEach((t) => {
+          const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
+          if (!exists) personTrips.push(t);
+        });
+      }
+    }
+
     const allTrips = formulaConfig.allTrips || formulaConfig.personnelStore?.tripsList || [];
     if (allTrips.length > 0) {
-      const relId = record.relativeId || record.id;
-      const relCccd = record.cccdthannhan || record.cccd;
+      const relId = record.relativeId || (record.isRelative && record._recordType !== 'trip' ? record.id : null);
+      const relCccd = String(record.cccdthannhan || record.cccd || '').trim().replace(/\.+$/, '').toLowerCase();
       allTrips.forEach((t) => {
         if (!t.isRelative) return;
-        const matchId = relId && (t.relativeId === relId || t.id === relId);
-        const matchCccd = relCccd && (t.cccdthannhan === relCccd || t.cccd === relCccd);
+        const tRelId = t.relativeId || (t.isRelative && t._recordType !== 'trip' ? t.id : null);
+        const tRelCccd = String(t.cccdthannhan || t.cccd || '').trim().replace(/\.+$/, '').toLowerCase();
+        const matchId = relId && tRelId && String(tRelId).trim() === String(relId).trim();
+        const matchCccd = relCccd && tRelCccd && tRelCccd === relCccd;
         if (matchId || matchCccd) {
           const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
           if (!exists) personTrips.push(t);
@@ -825,16 +848,53 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
       }
     }
 
-    // Tra cứu chéo thêm từ toàn bộ danh sách chuyến đi nếu có
+    // Tra cứu chéo từ parentPerson và toàn bộ danh sách chuyến đi nếu có
+    const pStore = formulaConfig.personnelStore;
+    if (pStore) {
+      let parentPerson = null;
+      if (pStore.findParentPersonForTrip) {
+        parentPerson = pStore.findParentPersonForTrip(record);
+      }
+      if (!parentPerson && record.personnelId && pStore.personnelList) {
+        parentPerson = pStore.personnelList.find((item) => String(item.id).trim() === String(record.personnelId).trim());
+      }
+      if (!parentPerson && (record.cccdchuyendi || record.cccdparent || record.cccd) && pStore.personnelList) {
+        const c = String(record.cccdchuyendi || record.cccdparent || record.cccd).trim().replace(/\.+$/, '').toLowerCase();
+        parentPerson = pStore.personnelList.find((item) => {
+          const pc = String(item.cccdparent || item.cccd || '').trim().replace(/\.+$/, '').toLowerCase();
+          return pc && pc === c;
+        });
+      }
+      if (parentPerson && Array.isArray(parentPerson.trips)) {
+        parentPerson.trips.filter((t) => !t.isRelative).forEach((t) => {
+          const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
+          if (!exists) personTrips.push(t);
+        });
+      }
+    }
+
     const allTrips = formulaConfig.allTrips || formulaConfig.personnelStore?.tripsList || [];
     if (allTrips.length > 0) {
-      const pId = record.personnelId || (!record.isRelative ? record.id : null);
-      const pCccd = record.cccdchuyendi || record.cccdparent || record.cccd;
+      const pId = record.personnelId || (!record.isRelative && record._recordType !== 'trip' ? record.id : null);
+      const pCode = record.personnelCode || record.parentPersonnelCode || record.code;
+      const clean = (val) => String(val || '').trim().replace(/\.+$/, '').toLowerCase();
+      const pCccd = clean(record.cccdchuyendi || record.cccdparent || record.cccd);
+
       allTrips.forEach((t) => {
         if (t.isRelative) return;
-        const matchId = pId && (t.personnelId === pId || t.id === pId);
-        const matchCccd = pCccd && (t.cccdchuyendi === pCccd || t.cccdparent === pCccd || t.cccd === pCccd);
-        if (matchId || matchCccd) {
+        let tCustom = {};
+        if (t.custom_data) {
+          try { tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data; } catch (e) {}
+        }
+        const tPid = t.personnelId || tCustom.personnelId;
+        const tCode = t.personnelCode || tCustom.personnelCode || t.parentPersonnelCode || t.code;
+        const tCccd = clean(t.cccdchuyendi ?? tCustom.cccdchuyendi ?? t.cccdparent ?? tCustom.cccdparent ?? t.cccd ?? tCustom.cccd);
+
+        const matchId = pId && tPid && String(tPid).trim() === String(pId).trim();
+        const matchCode = pCode && tCode && clean(tCode) === clean(pCode);
+        const matchCccd = pCccd && tCccd && tCccd === pCccd;
+
+        if (matchId || matchCode || matchCccd) {
           const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
           if (!exists) personTrips.push(t);
         }
@@ -846,29 +906,40 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     }
   }
 
-  // 2. Xác định ngày và năm của chuyến đi hiện tại
-  const currentDepDate = extractTripDepDate(record);
-  let targetYear = configuredYear || (currentDepDate ? currentDepDate.getFullYear() : null);
-
-  // Nếu là dòng chuyến đi nhưng hoàn toàn không có ngày xuất cảnh hợp lệ và không cấu hình năm:
-  const isTripRecord = Boolean(record._recordType === 'trip');
-  if (isTripRecord && !currentDepDate && !configuredYear) {
-    return defaultResult;
+  // 2. Gom nhóm chuyến đi theo năm và xác định năm tính toán (targetYear)
+  const countByYear = {};
+  for (const t of personTrips) {
+    const d = extractTripDepDate(t);
+    if (d) {
+      const y = d.getFullYear();
+      countByYear[y] = (countByYear[y] || 0) + 1;
+    }
   }
 
+  const currentDepDate = extractTripDepDate(record);
+  let targetYear = configuredYear;
+
   if (!targetYear) {
-    const yearsWithTrips = [];
-    for (const t of personTrips) {
-      const d = extractTripDepDate(t);
-      if (d) yearsWithTrips.push(d.getFullYear());
-    }
-    const currentYear = new Date().getFullYear();
-    if (yearsWithTrips.includes(currentYear)) {
-      targetYear = currentYear;
-    } else if (yearsWithTrips.length > 0) {
-      targetYear = Math.max(...yearsWithTrips);
+    if (currentDepDate) {
+      targetYear = currentDepDate.getFullYear();
     } else {
-      targetYear = currentYear;
+      const years = Object.keys(countByYear).map(Number);
+      const currentYear = new Date().getFullYear();
+      if (countByYear[currentYear] && countByYear[currentYear] >= 2) {
+        targetYear = currentYear;
+      } else if (years.length > 0) {
+        let bestYear = years[0];
+        let maxCount = 0;
+        for (const y of years) {
+          if (countByYear[y] > maxCount) {
+            maxCount = countByYear[y];
+            bestYear = y;
+          }
+        }
+        targetYear = bestYear;
+      } else {
+        targetYear = currentYear;
+      }
     }
   }
 

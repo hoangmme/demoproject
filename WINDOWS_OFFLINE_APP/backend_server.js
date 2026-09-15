@@ -232,11 +232,37 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-      const ext = path.extname(filePath).toLowerCase();
-      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      let contentType = 'application/octet-stream';
+      // 1. Kiểm tra từ file metadata
+      const meta = (db.files || []).find(f => f.id === fileId || f.filename_disk === fileId);
+      if (meta && meta.type && meta.type !== 'application/octet-stream') {
+        contentType = meta.type;
+      } else {
+        // 2. Kiểm tra magic bytes
+        try {
+          const fd = fs.openSync(filePath, 'r');
+          const headBuf = Buffer.alloc(16);
+          fs.readSync(fd, headBuf, 0, 16, 0);
+          fs.closeSync(fd);
+          if (headBuf[0] === 0xFF && headBuf[1] === 0xD8 && headBuf[2] === 0xFF) {
+            contentType = 'image/jpeg';
+          } else if (headBuf[0] === 0x89 && headBuf[1] === 0x50 && headBuf[2] === 0x4E && headBuf[3] === 0x47) {
+            contentType = 'image/png';
+          } else if (headBuf[0] === 0x47 && headBuf[1] === 0x49 && headBuf[2] === 0x46) {
+            contentType = 'image/gif';
+          } else if (headBuf[0] === 0x25 && headBuf[1] === 0x50 && headBuf[2] === 0x44 && headBuf[3] === 0x46) {
+            contentType = 'application/pdf';
+          } else {
+            const ext = path.extname(filePath).toLowerCase() || (meta?.filename_download ? path.extname(meta.filename_download).toLowerCase() : '');
+            if (MIME_TYPES[ext]) contentType = MIME_TYPES[ext];
+          }
+        } catch (e) {}
+      }
+
       res.writeHead(200, {
         'Content-Type': contentType,
         'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, max-age=86400',
       });
       return fs.createReadStream(filePath).pipe(res);
     } else {
@@ -251,10 +277,57 @@ const server = http.createServer(async (req, res) => {
     const fileId = crypto.randomUUID();
     let filename = `upload_${Date.now()}`;
     let filesize = raw.length;
-    let type = 'application/octet-stream';
+    let mimeType = 'application/octet-stream';
+    let fileBuffer = raw;
+
+    const contentTypeHeader = req.headers['content-type'] || '';
+    if (contentTypeHeader.includes('multipart/form-data')) {
+      const boundaryMatch = contentTypeHeader.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+      const boundary = boundaryMatch ? (boundaryMatch[1] || boundaryMatch[2]).trim() : null;
+      if (boundary) {
+        const boundaryBuffer = Buffer.from(`--${boundary}`);
+        const headerEndSequence = Buffer.from('\r\n\r\n');
+        const altHeaderEndSequence = Buffer.from('\n\n');
+
+        const startIdx = raw.indexOf(boundaryBuffer);
+        if (startIdx !== -1) {
+          let headEndIdx = raw.indexOf(headerEndSequence, startIdx + boundaryBuffer.length);
+          let headEndLen = 4;
+          if (headEndIdx === -1) {
+            headEndIdx = raw.indexOf(altHeaderEndSequence, startIdx + boundaryBuffer.length);
+            headEndLen = 2;
+          }
+
+          if (headEndIdx !== -1) {
+            const headerStr = raw.subarray(startIdx + boundaryBuffer.length, headEndIdx).toString('utf8');
+            const fnMatch = headerStr.match(/filename="([^"]+)"/i);
+            if (fnMatch) filename = fnMatch[1];
+            const ctMatch = headerStr.match(/Content-Type:\s*([^\r\n;]+)/i);
+            if (ctMatch) mimeType = ctMatch[1].trim();
+
+            const fileDataStart = headEndIdx + headEndLen;
+            const nextBoundaryIdx = raw.indexOf(Buffer.from(`\r\n--${boundary}`), fileDataStart);
+            const fileDataEnd = nextBoundaryIdx !== -1 ? nextBoundaryIdx : raw.indexOf(boundaryBuffer, fileDataStart);
+
+            if (fileDataEnd !== -1 && fileDataEnd > fileDataStart) {
+              fileBuffer = raw.subarray(fileDataStart, fileDataEnd);
+              filesize = fileBuffer.length;
+            }
+          }
+        }
+      }
+    }
+
+    // Auto-detect MIME if still octet-stream
+    if (mimeType === 'application/octet-stream' && fileBuffer.length >= 4) {
+      if (fileBuffer[0] === 0xFF && fileBuffer[1] === 0xD8 && fileBuffer[2] === 0xFF) mimeType = 'image/jpeg';
+      else if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50 && fileBuffer[2] === 0x4E && fileBuffer[3] === 0x47) mimeType = 'image/png';
+      else if (fileBuffer[0] === 0x47 && fileBuffer[1] === 0x49 && fileBuffer[2] === 0x46) mimeType = 'image/gif';
+      else if (fileBuffer[0] === 0x25 && fileBuffer[1] === 0x50 && fileBuffer[2] === 0x44 && fileBuffer[3] === 0x46) mimeType = 'application/pdf';
+    }
 
     const targetPath = path.join(UPLOADS_DIR, fileId);
-    fs.writeFileSync(targetPath, raw);
+    fs.writeFileSync(targetPath, fileBuffer);
 
     const fileMeta = {
       id: fileId,
@@ -262,7 +335,7 @@ const server = http.createServer(async (req, res) => {
       filename_disk: fileId,
       filename_download: filename,
       title: filename,
-      type: type,
+      type: mimeType,
       filesize: filesize,
       uploaded_on: new Date().toISOString(),
     };

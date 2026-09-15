@@ -923,22 +923,6 @@
           </div>
         </div>
 
-        <!-- 1b. CHỌN CHẾ ĐỘ XEM (VIEW) ÁP DỤNG THỨ TỰ CỘT -->
-        <div class="field-item" style="background: #f0fdf4; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #86efac; display: flex; flex-direction: column; gap: 6px;">
-          <label class="field-label" style="font-weight: 700; color: #166534; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 0;">
-            <i class="pi pi-sliders-h" style="color: #16a34a; font-size: 1rem;"></i>
-            Áp dụng thứ tự cột theo Chế độ xem (View): <span style="color: #ef4444;">*</span>
-          </label>
-          <select v-model="widgetForm.viewId" class="settings-select" style="width: 100%; font-weight: 700; color: #166534; background: #ffffff; border: 1px solid #86efac; padding: 6px 10px; font-size: 0.82rem;">
-            <option v-for="v in availableViewsForWidgetSource" :key="v.id" :value="v.id">
-              👁️ {{ v.label }}
-            </option>
-          </select>
-          <span style="font-size: 0.74rem; color: #15803d; line-height: 1.35;">
-            💡 <strong>Tự động áp dụng cột:</strong> Khi mở popup chi tiết của khối thống kê này, bảng sẽ tự động hiển thị danh sách và thứ tự cột theo Chế độ xem đã chọn.
-          </span>
-        </div>
-
         <!-- 1c. CỘT GOM NHÓM (KHI CHỌN BIỂU ĐỒ) -->
         <div v-if="widgetForm.displayType !== 'count'" class="field-item" style="background: #eff6ff; padding: 10px 12px; border-radius: 8px; border: 1px solid #bfdbfe; display: flex; flex-direction: column; gap: 10px;">
           <div>

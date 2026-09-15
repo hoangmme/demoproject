@@ -82,7 +82,7 @@
             </div>
             <div style="width: 110px; height: 110px; border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; background: #ffffff; margin-bottom: 12px; overflow: hidden; padding: 6px;">
               <img
-                :src="systemBranding.logoUrl || '/bo-cong-an-logo.png'"
+                :src="(systemBranding.logoUrl ? getFileUrl(systemBranding.logoUrl) : '') || '/bo-cong-an-logo.png'"
                 alt="Logo Preview"
                 style="max-width: 100%; max-height: 100%; object-fit: contain;"
               />

@@ -181,6 +181,21 @@ async function syncAll() {
     console.log(`\n   -> Đã tải thành công ${downloadedCount}/${files.length} tệp.`);
   }
 
+  // 8b. Đảm bảo toàn bộ tài nguyên Branding, Logo, Login Background trong app_settings đều được tải về uploads/
+  const settingsStr = JSON.stringify(appSettings || []);
+  const uuidMatches = settingsStr.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g) || [];
+  const uniqueAssetUuids = [...new Set(uuidMatches)];
+  if (uniqueAssetUuids.length > 0) {
+    console.log(`🎨 [8b] Đang kiểm tra & tải các tệp Branding/Logo/Background (${uniqueAssetUuids.length} tệp)...`);
+    for (const uuid of uniqueAssetUuids) {
+      const dest = path.join(UPLOADS_DIR, uuid);
+      if (!fs.existsSync(dest) || fs.statSync(dest).size === 0) {
+        const ok = await downloadFile(`${ONLINE_API_URL}/assets/${uuid}`, dest);
+        if (ok) console.log(`   -> Đã tải tệp tài nguyên hệ thống: ${uuid}`);
+      }
+    }
+  }
+
   // Kiểm tra an toàn: Tuyệt đối không ghi đè nếu dữ liệu tải về bị rỗng
   if ((!Array.isArray(personnels) || personnels.length === 0) && (!Array.isArray(appSettings) || appSettings.length === 0)) {
     throw new Error('❌ Dữ liệu tải về bị trống (0 cán bộ, 0 cấu hình). HỦY BỎ để tránh ghi đè làm mất dữ liệu offline!');

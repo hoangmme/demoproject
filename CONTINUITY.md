@@ -247,6 +247,26 @@
   - `computeWidgetCount`, `computeWidgetChartData` và `openDrilldownForWidget` lọc theo khoảng thời gian chuẩn qua hàm `resolveDateRangeBounds` (`src/utils/dashboardMetrics.js`).
   - Khi bấm Xem chi tiết, hệ thống mở Drilldown Modal hiển thị đúng danh sách bản ghi rơi vào kỳ thời gian đã chọn của khối đó.
 
+### 21. TỐI ƯU CÔNG THỨC ĐẾM CHUYẾN ĐI, GỠ DROPDOWN VIEW THỐNG KÊ & SỬA LỖI BRANDING/LOGO/ẢNH NỀN OFFLINE (Session 44 - 2026-09-15)
+- **1. Gỡ bỏ Dropdown Áp dụng Chế độ xem (View) trong Dialog Thống kê (`DashboardView.vue`)**:
+  - Xóa bỏ trường chọn "Áp dụng thứ tự cột theo Chế độ xem (View)" (`widgetForm.viewId`) trong form cấu hình Widget thống kê vì mỗi widget hiện nay đã có tùy chọn danh sách cột độc lập (`widget.columns`).
+- **2. Khắc phục & Chuẩn hóa Công thức Lọc Số lần Xuất cảnh (`dashboardMetrics.js`, `formatters.js`)**:
+  - *Nguyên nhân cốt lõi*: Khi widget có nguồn là Chuyến đi (`trips`), mỗi dòng là một chuyến đi đơn lẻ không chứa mảng `trips`. Khi gọi `evaluateFormula` trong `matchSingleCondition`, hệ thống thiếu `personnelStore` và không truy vết được các chuyến đi cùng người trong năm, dẫn đến số lần luôn bằng 1 và điều kiện `>= 2` luôn trả về 0 kết quả.
+  - *Khắc phục triệt để*:
+    - Trong `dashboardMetrics.js`: Truyền đầy đủ `personnelStore` vào `configWithResolver` và `evaluateFormula(item, { ...colDef, personnelStore })`.
+    - Trong `formatters.js` (`computeTripsCountInYear`): Hỗ trợ đối chiếu chéo ngược từ dòng chuyến đi sang `parentPerson` và toàn bộ danh sách `allTrips` (thông qua `personnelId`, `personnelCode`, `cccdchuyendi`, `cccdparent` đã chuẩn hóa loại bỏ dấu chấm/khoảng trắng thừa).
+    - Gom nhóm chính xác theo năm (`countByYear`): Nếu bản ghi là chuyến đi, tính theo năm của chuyến đi đó; nếu là cán bộ, tự động lấy năm có nhiều chuyến đi nhất hoặc năm hiện tại. Kết quả lọc `>= 2` khớp chuẩn 100% cả trên Bảng Cán bộ và Bảng Chuyến đi.
+- **3. Nhận diện Hệ thống (Branding, Logo, Tiêu đề, Hình nền Login) cho Bản Offline (`LoginView.vue`, `SettingsImportView.vue`, `backend_server.js`, `sync_online_db.cjs`)**:
+  - *Nguyên nhân bản offline không đổi được logo và ảnh nền*:
+    - Trong `backend_server.js`, endpoint upload `POST /files` ghi thẳng toàn bộ buffer `multipart/form-data` thô (kèm header boundary MIME) vào file trên đĩa khiến tệp ảnh bị hỏng cấu trúc (corrupted).
+    - Endpoint `/assets/:id` không có phần mở rộng tệp và trả về MIME type `application/octet-stream`, khiến trình duyệt từ chối hiển thị ảnh.
+    - `LoginView.vue` hardcode trực tiếp logo `/bo-cong-an-logo.png` và các dòng tiêu đề cơ quan mà không đọc từ `system_branding_config`.
+  - *Khắc phục triệt để*:
+    - Nâng cấp `backend_server.js`: Bổ sung bộ tách binary `multipart/form-data` chuẩn xác để lưu file ảnh nguyên bản 100%; tự động nhận diện MIME type qua Magic Bytes (JPEG `ffd8ff`, PNG `89504e47`, GIF, PDF).
+    - Nâng cấp `LoginView.vue`: Đọc động cấu hình `system_branding_config` (`logoUrl`, `orgNameLine1`, `orgNameLine2`, `headerMainTitle`) và `custom_login_bg` qua `getFileUrl()`.
+    - Nâng cấp `SettingsImportView.vue`: Preview logo bọc qua `getFileUrl()`.
+    - Nâng cấp `scripts/sync_online_db.cjs`: Bổ sung bước 8b tự động quét `app_settings` và tải toàn bộ UUID tệp nhận diện, logo và hình nền đăng nhập về `WINDOWS_OFFLINE_APP/uploads/`.
+
 ### 20. KHẮC PHỤC LỖI LƯU DỮ LIỆU CCCD/THƯỜNG TRÚ, DROPDOWN FORM, DRILLDOWN POPUP BỊ CHE & TÙY BIẾN CỠ CHỮ HỆ THỐNG (Session 38 - 2026-09-11)
 - **1. Sửa Lỗi Sửa CCCD / Thường trú Cán bộ (Nguyễn Hải Quan) Báo Thành công Nhưng Tải Lại Mất**:
   - *Nguyên nhân cốt lõi*: Trong `src/stores/personnel.js`, hàm `saveRecord` kiểm tra `record.departureDate !== undefined` trước khi kiểm tra loại bản ghi `personnel` hoặc mã `CB-`. Hồ sơ Cán bộ Nguyễn Hải Quan trước đó bị dính thuộc tính phẳng `departureDate` trong `custom_data`, dẫn tới việc `saveRecord` chuyển hướng nhầm bản ghi Cán bộ sang hàm `saveTrip(record)`. Hàm `saveTrip` chỉ sửa mảng `trips` của Cán bộ và bỏ qua việc cập nhật các trường gốc của Cán bộ như `cccdparent`, `thuongTru`.

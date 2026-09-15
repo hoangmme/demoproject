@@ -7,15 +7,15 @@
       <!-- CỘT TRÁI: LOGO & ĐƠN VỊ CHỦ QUẢN -->
       <div class="login-left-col">
         <img
-          src="/bo-cong-an-logo.png"
-          alt="Bộ Công An"
+          :src="resolvedLogoUrl"
+          :alt="systemBranding.orgNameLine1 || 'Logo'"
           class="login-logo"
         />
         <div class="agency-title-main">
-          CÔNG AN THÀNH PHỐ HỒ CHÍ MINH
+          {{ systemBranding.orgNameLine1 || 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH' }}
         </div>
         <div class="agency-title-sub">
-          PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ
+          {{ systemBranding.orgNameLine2 || 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ' }}
         </div>
       </div>
 
@@ -25,11 +25,8 @@
       <!-- CỘT PHẢI: TIÊU ĐỀ HỆ THỐNG & FORM ĐĂNG NHẬP -->
       <div class="login-right-col">
         <div class="software-header">
-          <div class="software-title-main">
-            DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN
-          </div>
-          <div class="software-title-sub">
-            VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI
+          <div class="software-title-main" :style="{ color: systemBranding.headerMainTitleColor || '#1e3a8a' }">
+            {{ systemBranding.headerMainTitle || 'DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI' }}
           </div>
         </div>
 
@@ -59,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
@@ -76,6 +73,34 @@ const loading = ref(false);
 const customLoginBg = ref('');
 const DEFAULT_LOGIN_BG = '/login-bg.jpg';
 const resolvedLoginBg = ref(DEFAULT_LOGIN_BG);
+
+const DEFAULT_BRANDING = {
+  logoUrl: '',
+  orgNameLine1: 'CÔNG AN THÀNH PHỐ HỒ CHÍ MINH',
+  orgNameLine2: 'PHÒNG AN NINH CHÍNH TRỊ NỘI BỘ',
+  headerMainTitle: 'DỮ LIỆU QUẢN LÝ CÁN BỘ, ĐẢNG VIÊN VÀ THÂN NHÂN CÓ YẾU TỐ NƯỚC NGOÀI',
+  headerMainTitleColor: '#1e3a8a',
+};
+
+const getInitialBranding = () => {
+  try {
+    const local = localStorage.getItem('system_branding_config');
+    if (local) {
+      return { ...DEFAULT_BRANDING, ...JSON.parse(local) };
+    }
+  } catch (e) {}
+  return { ...DEFAULT_BRANDING };
+};
+
+const systemBranding = ref(getInitialBranding());
+
+const resolvedLogoUrl = computed(() => {
+  if (systemBranding.value.logoUrl) {
+    const formatted = getFileUrl(systemBranding.value.logoUrl);
+    if (formatted) return formatted;
+  }
+  return '/bo-cong-an-logo.png';
+});
 
 const applyLoginBg = (rawBg) => {
   if (!rawBg) {
@@ -100,6 +125,18 @@ const applyLoginBg = (rawBg) => {
 
 onMounted(async () => {
   try {
+    // 1. Tải Nhận diện / Tiêu đề / Logo hệ thống
+    const cachedBranding = localStorage.getItem('system_branding_config');
+    if (cachedBranding) {
+      try { systemBranding.value = { ...DEFAULT_BRANDING, ...JSON.parse(cachedBranding) }; } catch (e) {}
+    }
+    const savedBranding = await getAppSettings('system_branding_config', null);
+    if (savedBranding && typeof savedBranding === 'object') {
+      systemBranding.value = { ...DEFAULT_BRANDING, ...savedBranding };
+      try { localStorage.setItem('system_branding_config', JSON.stringify(systemBranding.value)); } catch (e) {}
+    }
+
+    // 2. Tải Ảnh nền đăng nhập
     const cached = localStorage.getItem('custom_login_bg');
     if (cached) {
       applyLoginBg(cached);
