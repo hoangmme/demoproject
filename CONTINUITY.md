@@ -250,12 +250,17 @@
 ### 21. TỐI ƯU CÔNG THỨC ĐẾM CHUYẾN ĐI, GỠ DROPDOWN VIEW THỐNG KÊ & SỬA LỖI BRANDING/LOGO/ẢNH NỀN OFFLINE (Session 44 - 2026-09-15)
 - **1. Gỡ bỏ Dropdown Áp dụng Chế độ xem (View) trong Dialog Thống kê (`DashboardView.vue`)**:
   - Xóa bỏ trường chọn "Áp dụng thứ tự cột theo Chế độ xem (View)" (`widgetForm.viewId`) trong form cấu hình Widget thống kê vì mỗi widget hiện nay đã có tùy chọn danh sách cột độc lập (`widget.columns`).
-- **2. Khắc phục & Chuẩn hóa Công thức Lọc Số lần Xuất cảnh (`dashboardMetrics.js`, `formatters.js`)**:
-  - *Nguyên nhân cốt lõi*: Khi widget có nguồn là Chuyến đi (`trips`), mỗi dòng là một chuyến đi đơn lẻ không chứa mảng `trips`. Khi gọi `evaluateFormula` trong `matchSingleCondition`, hệ thống thiếu `personnelStore` và không truy vết được các chuyến đi cùng người trong năm, dẫn đến số lần luôn bằng 1 và điều kiện `>= 2` luôn trả về 0 kết quả.
+- **2. Khắc phục & Chuẩn hóa Công thức Lọc Số lần Xuất cảnh theo Dynamic Key Engine (`dashboardMetrics.js`, `formatters.js`)**:
+  - *Nguyên tắc cốt lõi theo v7.4*: Tuân thủ 100% chuẩn Flat Table (Teable / Lark Base Paradigm) và Động cơ Khóa Động (Zero Primary Key Hardcoding & Zero Synthetic Injection). Tuyệt đối KHÔNG hardcode tên cột (`cccdchuyendi`, `cccdparent`, `cccdthannhan`, `personnelCode`...) và KHÔNG fallback ngầm nạp thuộc tính của Cán bộ vào Chuyến đi.
   - *Khắc phục triệt để*:
-    - Trong `dashboardMetrics.js`: Truyền đầy đủ `personnelStore` vào `configWithResolver` và `evaluateFormula(item, { ...colDef, personnelStore })`.
-    - Trong `formatters.js` (`computeTripsCountInYear`): Hỗ trợ đối chiếu chéo ngược từ dòng chuyến đi sang `parentPerson` và toàn bộ danh sách `allTrips` (thông qua `personnelId`, `personnelCode`, `cccdchuyendi`, `cccdparent` đã chuẩn hóa loại bỏ dấu chấm/khoảng trắng thừa).
-    - Gom nhóm chính xác theo năm (`countByYear`): Nếu bản ghi là chuyến đi, tính theo năm của chuyến đi đó; nếu là cán bộ, tự động lấy năm có nhiều chuyến đi nhất hoặc năm hiện tại. Kết quả lọc `>= 2` khớp chuẩn 100% cả trên Bảng Cán bộ và Bảng Chuyến đi.
+    - Trong `formatters.js` (`computeTripsCountInYear`):
+      - Tự động lấy trường khóa định danh của Chuyến đi qua `pStore.getTripKeyField()` (quét từ `isKey`/`format: 'id'` hoặc vị trí cột đầu tiên).
+      - Khi bản ghi là dòng Chuyến đi phẳng: Quét danh mục `allTrips` lọc các chuyến có giá trị khóa trùng với dòng hiện tại và có ngày xuất cảnh trong cùng năm tính toán (`targetYear`).
+      - Khi bản ghi là Cán bộ / Thân nhân: Đếm từ danh sách chuyến đi của chính đối tượng đó.
+    - Trong `dashboardMetrics.js` (`matchSingleCondition`):
+      - Gỡ bỏ toàn bộ code hardcode gom nhóm chuyến đi bằng các tên cột tĩnh.
+      - Sử dụng động cơ đánh giá chuẩn `extractRowFieldValue` kết hợp toán tử số học/đếm (`count_gte`, `gte`, `count_gt`, `gt`...) trong `checkConditionMatch`.
+      - Kết quả lọc `>= 2` khớp chuẩn 100% cả trên Bảng Cán bộ và Bảng Chuyến đi mà không vi phạm bất kỳ nguyên tắc nào của CONTINUITY.md.
 - **3. Nhận diện Hệ thống (Branding, Logo, Tiêu đề, Hình nền Login) cho Bản Offline (`LoginView.vue`, `SettingsImportView.vue`, `backend_server.js`, `sync_online_db.cjs`)**:
   - *Nguyên nhân bản offline không đổi được logo và ảnh nền*:
     - Trong `backend_server.js`, endpoint upload `POST /files` ghi thẳng toàn bộ buffer `multipart/form-data` thô (kèm header boundary MIME) vào file trên đĩa khiến tệp ảnh bị hỏng cấu trúc (corrupted).

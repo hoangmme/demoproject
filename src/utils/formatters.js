@@ -754,155 +754,66 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     return '';
   };
 
-  // 1. Thu thập toàn bộ danh sách chuyến đi của chính đối tượng (Cán bộ hoặc Thân nhân)
+  // 1. Thu thập danh sách chuyến đi của đối tượng theo Dynamic Key Engine (Zero Hardcode)
+  const allTrips = formulaConfig.allTrips || pStore?.tripsList || [];
+  const isTripRecord = Boolean(record._recordType === 'trip' || (!Array.isArray(record.trips) && (record.departureDate || record.ngay_xuat_canh || depCol)));
+
   let personTrips = [];
-  const isRelative = Boolean(record.isRelative || record.relativeId || record._recordType === 'relative');
 
-  if (isRelative) {
-    // Đối tượng là Thân nhân (hoặc chuyến đi của Thân nhân)
-    const rel = record;
-    if (Array.isArray(rel.trips) && rel.trips.length > 0) {
-      personTrips = [...rel.trips];
-    } else {
-      let cdTrips = null;
-      try {
-        const cd = typeof rel.custom_data === 'string' ? JSON.parse(rel.custom_data) : rel.custom_data;
-        if (cd && Array.isArray(cd.trips)) cdTrips = cd.trips;
-      } catch (e) {}
-      if (!cdTrips) {
-        try {
-          const rcd = typeof record.custom_data === 'string' ? JSON.parse(record.custom_data) : record.custom_data;
-          if (rcd && Array.isArray(rcd.trips)) cdTrips = rcd.trips;
-        } catch (e) {}
-      }
-      if (cdTrips && cdTrips.length > 0) {
-        personTrips = [...cdTrips];
-      } else if (Array.isArray(record.trips) && record.trips.length > 0) {
-        personTrips = [...record.trips];
-      }
-    }
+  if (isTripRecord) {
+    // Bản ghi là một dòng Chuyến đi độc lập trong Bảng Phẳng (Flat Table)
+    const tKeyField = pStore?.getTripKeyField ? pStore.getTripKeyField() : 'id';
+    const rawTripKey = getRecordFieldValue(record, tKeyField) ?? record.id;
+    const cleanKeyVal = String(rawTripKey || '').trim().toLowerCase();
 
-    // Tra cứu chéo thêm từ parentPerson và toàn bộ danh sách chuyến đi nếu có
-    const pStore = formulaConfig.personnelStore;
-    if (pStore) {
-      let parentRel = null;
-      if (record.personnelId && pStore.relativesList) {
-        parentRel = pStore.relativesList.find((r) => String(r.id).trim() === String(record.personnelId).trim());
-      }
-      if (!parentRel && (record.cccdthannhan || record.cccd) && pStore.relativesList) {
-        const c = String(record.cccdthannhan || record.cccd).trim().replace(/\.+$/, '').toLowerCase();
-        parentRel = pStore.relativesList.find((r) => {
-          const rc = String(r.cccdthannhan || r.cccd || '').trim().replace(/\.+$/, '').toLowerCase();
-          return rc && rc === c;
-        });
-      }
-      if (parentRel && Array.isArray(parentRel.trips)) {
-        parentRel.trips.forEach((t) => {
-          const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
-          if (!exists) personTrips.push(t);
-        });
-      }
-    }
-
-    const allTrips = formulaConfig.allTrips || formulaConfig.personnelStore?.tripsList || [];
-    if (allTrips.length > 0) {
-      const relId = record.relativeId || (record.isRelative && record._recordType !== 'trip' ? record.id : null);
-      const relCccd = String(record.cccdthannhan || record.cccd || '').trim().replace(/\.+$/, '').toLowerCase();
-      allTrips.forEach((t) => {
-        if (!t.isRelative) return;
-        const tRelId = t.relativeId || (t.isRelative && t._recordType !== 'trip' ? t.id : null);
-        const tRelCccd = String(t.cccdthannhan || t.cccd || '').trim().replace(/\.+$/, '').toLowerCase();
-        const matchId = relId && tRelId && String(tRelId).trim() === String(relId).trim();
-        const matchCccd = relCccd && tRelCccd && tRelCccd === relCccd;
-        if (matchId || matchCccd) {
-          const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
-          if (!exists) personTrips.push(t);
-        }
+    if (cleanKeyVal && allTrips.length > 0) {
+      personTrips = allTrips.filter((t) => {
+        const tVal = String(getRecordFieldValue(t, tKeyField) ?? t.id ?? '').trim().toLowerCase();
+        return tVal && tVal === cleanKeyVal;
       });
     }
 
-    if (personTrips.length === 0 && (record._recordType === 'trip' || record.quoc_gia_xuat_canh || record.departureDate || record.ngay_xuat_canh)) {
+    if (personTrips.length === 0) {
       personTrips = [record];
     }
   } else {
-    // Đối tượng là Cán bộ (hoặc chuyến đi của Cán bộ)
-    const p = record;
-    if (Array.isArray(p.trips) && p.trips.length > 0) {
-      personTrips = p.trips.filter((t) => !t.isRelative);
+    // Bản ghi là Cán bộ hoặc Thân nhân
+    const isRelative = Boolean(record.isRelative || record._recordType === 'relative');
+    let directTrips = [];
+    if (Array.isArray(record.trips) && record.trips.length > 0) {
+      directTrips = record.trips;
     } else {
-      let cdTrips = null;
-      try {
-        const cd = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
-        if (cd && Array.isArray(cd.trips)) cdTrips = cd.trips;
-      } catch (e) {}
-      if (!cdTrips) {
-        try {
-          const rcd = typeof record.custom_data === 'string' ? JSON.parse(record.custom_data) : record.custom_data;
-          if (rcd && Array.isArray(rcd.trips)) cdTrips = rcd.trips;
-        } catch (e) {}
+      let cd = record.custom_data;
+      if (typeof cd === 'string') {
+        try { cd = JSON.parse(cd); } catch (e) { cd = {}; }
       }
-      if (cdTrips && cdTrips.length > 0) {
-        personTrips = cdTrips.filter((t) => !t.isRelative);
-      } else if (Array.isArray(record.trips) && record.trips.length > 0) {
-        personTrips = record.trips.filter((t) => !t.isRelative);
+      if (cd && Array.isArray(cd.trips)) {
+        directTrips = cd.trips;
       }
     }
 
-    // Tra cứu chéo từ parentPerson và toàn bộ danh sách chuyến đi nếu có
-    const pStore = formulaConfig.personnelStore;
-    if (pStore) {
-      let parentPerson = null;
-      if (pStore.findParentPersonForTrip) {
-        parentPerson = pStore.findParentPersonForTrip(record);
-      }
-      if (!parentPerson && record.personnelId && pStore.personnelList) {
-        parentPerson = pStore.personnelList.find((item) => String(item.id).trim() === String(record.personnelId).trim());
-      }
-      if (!parentPerson && (record.cccdchuyendi || record.cccdparent || record.cccd) && pStore.personnelList) {
-        const c = String(record.cccdchuyendi || record.cccdparent || record.cccd).trim().replace(/\.+$/, '').toLowerCase();
-        parentPerson = pStore.personnelList.find((item) => {
-          const pc = String(item.cccdparent || item.cccd || '').trim().replace(/\.+$/, '').toLowerCase();
-          return pc && pc === c;
+    if (isRelative) {
+      personTrips = directTrips.filter((t) => t.isRelative);
+    } else {
+      personTrips = directTrips.filter((t) => !t.isRelative);
+    }
+
+    // Nếu directTrips rỗng, tra cứu động qua allTrips bằng khóa định danh tương ứng
+    if (personTrips.length === 0 && allTrips.length > 0) {
+      const pKeyField = isRelative
+        ? (pStore?.getRelativeKeyField ? pStore.getRelativeKeyField() : 'id')
+        : (pStore?.getPersonnelKeyField ? pStore.getPersonnelKeyField() : 'id');
+      const tKeyField = pStore?.getTripKeyField ? pStore.getTripKeyField() : 'id';
+      const pKeyVal = String(getRecordFieldValue(record, pKeyField) ?? record.id ?? '').trim().toLowerCase();
+
+      if (pKeyVal) {
+        personTrips = allTrips.filter((t) => {
+          if (isRelative && !t.isRelative) return false;
+          if (!isRelative && t.isRelative) return false;
+          const tVal = String(getRecordFieldValue(t, tKeyField) ?? '').trim().toLowerCase();
+          return tVal && tVal === pKeyVal;
         });
       }
-      if (parentPerson && Array.isArray(parentPerson.trips)) {
-        parentPerson.trips.filter((t) => !t.isRelative).forEach((t) => {
-          const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
-          if (!exists) personTrips.push(t);
-        });
-      }
-    }
-
-    const allTrips = formulaConfig.allTrips || formulaConfig.personnelStore?.tripsList || [];
-    if (allTrips.length > 0) {
-      const pId = record.personnelId || (!record.isRelative && record._recordType !== 'trip' ? record.id : null);
-      const pCode = record.personnelCode || record.parentPersonnelCode || record.code;
-      const clean = (val) => String(val || '').trim().replace(/\.+$/, '').toLowerCase();
-      const pCccd = clean(record.cccdchuyendi || record.cccdparent || record.cccd);
-
-      allTrips.forEach((t) => {
-        if (t.isRelative) return;
-        let tCustom = {};
-        if (t.custom_data) {
-          try { tCustom = typeof t.custom_data === 'string' ? JSON.parse(t.custom_data) : t.custom_data; } catch (e) {}
-        }
-        const tPid = t.personnelId || tCustom.personnelId;
-        const tCode = t.personnelCode || tCustom.personnelCode || t.parentPersonnelCode || t.code;
-        const tCccd = clean(t.cccdchuyendi ?? tCustom.cccdchuyendi ?? t.cccdparent ?? tCustom.cccdparent ?? t.cccd ?? tCustom.cccd);
-
-        const matchId = pId && tPid && String(tPid).trim() === String(pId).trim();
-        const matchCode = pCode && tCode && clean(tCode) === clean(pCode);
-        const matchCccd = pCccd && tCccd && tCccd === pCccd;
-
-        if (matchId || matchCode || matchCccd) {
-          const exists = personTrips.some((et) => (et.id && et.id === t.id) || (et.uniqueKey && et.uniqueKey === t.uniqueKey));
-          if (!exists) personTrips.push(t);
-        }
-      });
-    }
-
-    if (personTrips.length === 0 && (record._recordType === 'trip' || record.quoc_gia_xuat_canh || record.departureDate || record.ngay_xuat_canh)) {
-      personTrips = [record];
     }
   }
 

@@ -583,6 +583,7 @@ export const extractRowFieldValue = (item, field, personnelStore, depth = 0) => 
       const configWithResolver = {
         ...colDef,
         personnelStore,
+        allTrips: personnelStore.tripsList || [],
         columns: allColDefs,
         cellResolver: (targetColId) => {
           if (!targetColId || targetColId === field || depth > 2) return '';
@@ -699,31 +700,9 @@ export const matchSingleCondition = (item, cond, personnelStore) => {
       }
     }
 
-    // Ưu tiên 3: Đếm trực tiếp từ mảng trips của đối tượng hoặc liên kết với hồ sơ cán bộ chủ quản
-    if (isNaN(count)) {
-      let personTrips = Array.isArray(item.trips) ? item.trips : [];
-      if (personTrips.length === 0 && (item._recordType === 'trip' || !item.trips)) {
-        if (personnelStore) {
-          const parent = personnelStore.findParentPersonForTrip ? personnelStore.findParentPersonForTrip(item) : null;
-          if (parent && Array.isArray(parent.trips)) {
-            personTrips = parent.trips;
-          } else if (Array.isArray(personnelStore.tripsList)) {
-            const clean = (val) => String(val || '').trim().replace(/\.+$/, '').toLowerCase();
-            const pCccd = clean(item.cccdchuyendi || item.cccdparent || item.cccd);
-            const pId = item.personnelId;
-            const pCode = item.personnelCode || item.parentPersonnelCode;
-            personTrips = personnelStore.tripsList.filter((t) => {
-              const tPid = t.personnelId;
-              const tCode = t.personnelCode || t.parentPersonnelCode;
-              const tCccd = clean(t.cccdchuyendi || t.cccdparent || t.cccd);
-              return (pId && tPid && String(tPid).trim() === String(pId).trim()) ||
-                     (pCode && tCode && clean(tCode) === clean(pCode)) ||
-                     (pCccd && tCccd && tCccd === pCccd);
-            });
-          }
-        }
-      }
-      count = personTrips.length;
+    // Ưu tiên 3: Nếu đối tượng có mảng trips tự thân
+    if (isNaN(count) && Array.isArray(item.trips)) {
+      count = item.trips.length;
     }
 
     const numTarget = parseFloat(String(target || '').replace(/[^0-9.-]+/g, ''));
