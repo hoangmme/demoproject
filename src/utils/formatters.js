@@ -710,6 +710,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   const labelTpl = formulaConfig.formulaLabelFormat || formulaConfig.formulaLabelNormal;
   const unit = formulaConfig.formulaUnit || 'lần';
   const configuredYear = Number(formulaConfig.formulaTargetYear || formulaConfig.targetYear) || null;
+  const pStore = formulaConfig.personnelStore || formulaConfig.store || null;
 
   // Helper 1: Trích xuất an toàn ngày xuất cảnh từ chuyến đi
   const extractTripDepDate = (t) => {
