@@ -142,10 +142,7 @@
       </div>
 
       <!-- Bảng 2: Thân nhân (Table 2 độc lập) -->
-      <div
-        v-if="personnelStore.relativesList.length > 0 || systemBranding.showSecondaryInputs"
-        class="sidebar-item-row"
-      >
+      <div class="sidebar-item-row">
         <router-link
           to="/relatives"
           class="app-nav-item"

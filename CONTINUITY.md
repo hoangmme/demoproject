@@ -3805,7 +3805,10 @@
   - *Đóng gói*:
     - `WINDOWS_OFFLINE_APP.zip` (29M - đầy đủ bộ cài Node.js + database cấu hình sạch).
     - `WINDOWS_OFFLINE_UPDATE.zip` (2.5M - bản cập nhật code không đè database/uploads).
-- **4. Kiểm thử**:
-  - `npm run build`: Thành công 100% (618ms, 0 lỗi).
+- **4. Luôn Hiển thị Bảng Thân nhân trên Sidebar Menu (`AppSidebar.vue`)**:
+  - *Nguyên nhân*: Thẻ Bảng Thân nhân trước đây có điều kiện `v-if="personnelStore.relativesList.length > 0 || systemBranding.showSecondaryInputs"`. Khi ở bản offline sạch dữ liệu (0 bản ghi) và `showSecondaryInputs: false`, bảng Thân nhân bị ẩn khỏi thanh menu.
+  - *Đã khắc phục*: Gỡ bỏ hoàn toàn điều kiện `v-if` cũ. Bảng Thân nhân luôn xuất hiện cố định trên Menu Sidebar ngang hàng với Cán bộ và Chuyến đi kể cả khi cơ sở dữ liệu có 0 bản ghi.
+- **5. Kiểm thử**:
+  - `npm run build`: Thành công 100% (590ms, 0 lỗi).
   - Đóng gói `./sync_and_package_offline.sh --all` thành công exit code 0.
 - **Trạng thái**: Done [Reversible].
