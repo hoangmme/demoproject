@@ -896,7 +896,15 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
   // Sắp xếp các chuyến đi theo ngày tăng dần
   matchedTrips.sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0));
 
-  // 4. Xây dựng nhãn hiển thị: luôn hiển thị rõ tổng số lần và chi tiết chuyến đi
+  // 4. Xây dựng nhãn hiển thị
+  const isUniqueMerged = Boolean(
+    record._isUniqueRow ||
+    (record._mergedRows && record._mergedRows.length > 1) ||
+    formulaConfig.isUnique ||
+    formulaConfig.collapseDuplicates ||
+    !isTripRecord // Cán bộ hoặc Thân nhân: luôn là dòng gộp tổng thể của người đó
+  );
+
   let mainCountStr = '';
   if (labelTpl && labelTpl !== '{count} lần') {
     mainCountStr = labelTpl
@@ -908,7 +916,33 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
 
   const shortLabel = count > 0 ? (mainCountStr.trim() ? mainCountStr : `${count} ${unit}`) : '0 lần';
   const detailLines = matchedTrips.map((t, idx) => `- Chuyến ${idx + 1}: ${t.country} - ${t.dateStr}`);
-  const fullLabel = `${shortLabel}\n${detailLines.join('\n')}`;
+
+  let fullLabel = '';
+  let effectiveShortLabel = shortLabel;
+
+  if (isUniqueMerged || count <= 1) {
+    // Chế độ gộp Unique HOẶC chỉ có 1 chuyến trong năm: hiển thị đầy đủ tổng số lần và toàn bộ danh sách chuyến
+    fullLabel = `${shortLabel}\n${detailLines.join('\n')}`;
+  } else {
+    // Chế độ phẳng (mỗi dòng là 1 chuyến đi riêng biệt, chưa bật Unique):
+    // KHÔNG gộp danh sách toàn bộ chuyến lên mọi dòng, chỉ hiển thị đúng chuyến đi của dòng hiện tại
+    let thisTripIdx = matchedTrips.findIndex((m) => {
+      if (m.trip === record) return true;
+      const mId = m.trip?.id || m.trip?.uniqueKey;
+      const rId = record.id || record.uniqueKey;
+      if (rId && mId && String(rId) === String(mId)) return true;
+      if (currentDepDate && m.date && m.date.getTime() === currentDepDate.getTime()) {
+        const rCountry = resolveTripCountry(record);
+        if (!rCountry || m.country === rCountry) return true;
+      }
+      return false;
+    });
+    if (thisTripIdx === -1) thisTripIdx = 0;
+
+    const thisTrip = matchedTrips[thisTripIdx];
+    effectiveShortLabel = `Chuyến ${thisTripIdx + 1}/${count} (năm ${targetYear})`;
+    fullLabel = `${effectiveShortLabel}\n- ${thisTrip.country} - ${thisTrip.dateStr}`;
+  }
 
   return {
     status: 'normal',
@@ -916,7 +950,7 @@ export const computeTripsCountInYear = (record, formulaConfig = {}) => {
     value: count,
     year: targetYear,
     label: fullLabel,
-    shortLabel: shortLabel,
+    shortLabel: effectiveShortLabel,
     details: matchedTrips,
     cssClass: '',
   };

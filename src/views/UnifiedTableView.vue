@@ -2855,8 +2855,27 @@ const getCellValue = (trip, colOrId, depth = 0) => {
   const colId = typeof colOrId === 'object' && colOrId !== null ? (colOrId.id || colOrId.field) : colOrId;
   if (!trip || !colId || depth > 2) return '-';
 
+  // 1. Phân giải cấu hình cột
+  const allMap = {};
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (currentDashboardConfig.value?.customColumns || []).forEach((c) => {
+    if (c.id) allMap[c.id] = c;
+  });
+
+  const colDef = (typeof colOrId === 'object' && colOrId !== null && colOrId.id) ? colOrId : allMap[colId];
+  const isTripsCountFormula = colDef && colDef.format === 'formula' && colDef.formulaType === 'trips_count_in_year';
+
   // 0. Tự động gom toàn bộ giá trị của các dòng được gộp nếu đang ở chế độ Unique
-  if (trip._mergedRows && trip._mergedRows.length > 1 && !trip._evaluatingMerged) {
+  // (Ngoại trừ công thức trips_count_in_year vì tự bản thân nó đã có logic gộp danh sách đầy đủ khi ở chế độ Unique)
+  if (trip._mergedRows && trip._mergedRows.length > 1 && !trip._evaluatingMerged && !isTripsCountFormula) {
     const distinctVals = [];
     const seen = new Set();
     for (const subRow of trip._mergedRows) {
@@ -2885,23 +2904,6 @@ const getCellValue = (trip, colOrId, depth = 0) => {
   if (vVal !== undefined) {
     return vVal || '-';
   }
-
-  // 1. Check if col is Formula column in any mapping
-  const allMap = {};
-  (personnelStore.importMappingTrips || []).forEach((g) => {
-    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
-  });
-  (personnelStore.importMappingPersonnel || []).forEach((g) => {
-    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
-  });
-  (personnelStore.importMappingRelative || []).forEach((g) => {
-    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
-  });
-  (currentDashboardConfig.value?.customColumns || []).forEach((c) => {
-    if (c.id) allMap[c.id] = c;
-  });
-
-  const colDef = (typeof colOrId === 'object' && colOrId !== null && colOrId.id) ? colOrId : allMap[colId];
   if (colDef && colDef.format === 'formula') {
     const configWithResolver = {
       ...colDef,

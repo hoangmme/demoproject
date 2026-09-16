@@ -3020,8 +3020,29 @@ const unifiedTripsList = computed(() => buildTopicSourceList('trips', personnelS
 const getRowFieldValue = (row, colId, colDefOverride = null, depth = 0) => {
   if (!row || !colId || depth > 2) return '';
 
+  // 1. Phân giải cấu hình cột
+  const allMap = {};
+  (personnelStore.importMappingTrips || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (personnelStore.importMappingPersonnel || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (personnelStore.importMappingRelative || []).forEach((g) => {
+    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
+  });
+  (availableTopicDashboards.value || []).forEach((topic) => {
+    (topic.customColumns || topic.columns || []).forEach((c) => {
+      if (c && c.id && !allMap[c.id]) allMap[c.id] = c;
+    });
+  });
+
+  const colDef = colDefOverride || drilldownColumns.value?.find((c) => c.id === colId) || allMap[colId];
+  const isTripsCountFormula = colDef && colDef.format === 'formula' && colDef.formulaType === 'trips_count_in_year';
+
   // 0a. Tự động gom toàn bộ giá trị của các dòng được gộp nếu đang ở chế độ Unique
-  if (row._mergedRows && row._mergedRows.length > 1 && !row._evaluatingMerged) {
+  // (Ngoại trừ công thức trips_count_in_year vì tự nó đã có logic gộp danh sách đầy đủ khi ở chế độ Unique)
+  if (row._mergedRows && row._mergedRows.length > 1 && !row._evaluatingMerged && !isTripsCountFormula) {
     const distinctVals = [];
     const seen = new Set();
     for (const subRow of row._mergedRows) {
@@ -3044,25 +3065,6 @@ const getRowFieldValue = (row, colId, colDefOverride = null, depth = 0) => {
   if (vVal !== undefined) {
     return vVal;
   }
-
-  // 1. Check formula column from mapping (Khớp 100% ChildDashboardView)
-  const allMap = {};
-  (personnelStore.importMappingTrips || []).forEach((g) => {
-    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
-  });
-  (personnelStore.importMappingPersonnel || []).forEach((g) => {
-    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
-  });
-  (personnelStore.importMappingRelative || []).forEach((g) => {
-    (g.columns || []).forEach((c) => { if (c.id) allMap[c.id] = c; });
-  });
-  (availableTopicDashboards.value || []).forEach((topic) => {
-    (topic.customColumns || topic.columns || []).forEach((c) => {
-      if (c && c.id && !allMap[c.id]) allMap[c.id] = c;
-    });
-  });
-
-  const colDef = colDefOverride || drilldownColumns.value?.find((c) => c.id === colId) || allMap[colId];
   if (colDef && colDef.format === 'formula') {
     if (colDef.formulaType === 'presence_status') {
       const p = resolvePresence(row);
