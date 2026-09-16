@@ -156,13 +156,68 @@
             👑 {{ m.title }}
           </option>
         </select>
-        <span style="color: #64748b; font-weight: 600; margin-left: 4px;">Cột liên kết:</span>
-        <select v-model="localParentKeyField" class="settings-select" style="height: 26px; font-size: 0.75rem; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-          <option value="">-- Chọn cột liên kết --</option>
-          <option v-for="col in allCurrentTableCols" :key="col.id" :value="col.id">
-            {{ col.label || col.id }} ({{ col.id }})
-          </option>
-        </select>
+      </div>
+    </div>
+
+    <!-- Cấu hình Khóa Định Danh & Điều kiện Nhập liệu (Zero-Hardcode: Người dùng tự do tùy biến) -->
+    <div class="key-link-config-section" style="background: #f0fdf4; border-bottom: 1px solid #bbf7d0; padding: 10px 16px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+        <div style="font-size: 0.8rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 6px;">
+          <i class="pi pi-key" style="color: #15803d;"></i>
+          <span>Cấu hình Khóa Định Danh & Điều kiện Nhập liệu (Zero-Hardcode):</span>
+        </div>
+        <span style="font-size: 0.7rem; color: #15803d; font-style: italic;">
+          Tự do chọn cột khóa và đặt điều kiện bắt buộc mà không bị ép cứng CCCD
+        </span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; align-items: start;">
+        <!-- 1. Khóa định danh riêng của bảng -->
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label style="font-size: 0.74rem; font-weight: 700; color: #1e293b;">
+            🔑 Khóa định danh của Bảng này (Primary Key / CCCD / Mã):
+          </label>
+          <select v-model="localPrimaryKeyField" class="settings-select" style="width: 100%; height: 28px; font-size: 0.75rem; padding: 2px 8px; border: 1px solid #86efac; border-radius: 6px; background: #ffffff;">
+            <option value="">-- Mặc định (Theo ID bản ghi) --</option>
+            <option v-for="col in allCurrentTableCols" :key="col.id" :value="col.id">
+              {{ col.label || col.id }} ({{ col.id }})
+            </option>
+          </select>
+          <span style="font-size: 0.68rem; color: #475569;">
+            Cột dùng để nhận diện duy nhất từng bản ghi trong bảng.
+          </span>
+        </div>
+
+        <!-- 2. Cột liên kết hồ sơ chính (nếu là Bảng con) -->
+        <div v-if="!localIsMasterTable" style="display: flex; flex-direction: column; gap: 4px;">
+          <label style="font-size: 0.74rem; font-weight: 700; color: #1e293b;">
+            🔗 Cột liên kết Cán bộ chủ quản (Parent Link Key):
+          </label>
+          <select v-model="localParentKeyField" class="settings-select" style="width: 100%; height: 28px; font-size: 0.75rem; padding: 2px 8px; border: 1px solid #86efac; border-radius: 6px; background: #ffffff;">
+            <option value="">-- Chọn cột liên kết Cán bộ --</option>
+            <option v-for="col in allCurrentTableCols" :key="col.id" :value="col.id">
+              {{ col.label || col.id }} ({{ col.id }})
+            </option>
+          </select>
+          <span style="font-size: 0.68rem; color: #475569;">
+            Cột trong bảng này lưu mã/CCCD của Cán bộ để móc nối dữ liệu.
+          </span>
+        </div>
+
+        <!-- 3. Ràng buộc nhập liệu & Kiểm tra -->
+        <div style="display: flex; flex-direction: column; gap: 6px; background: #ffffff; padding: 8px 10px; border-radius: 6px; border: 1px solid #bbf7d0;">
+          <label style="font-size: 0.72rem; font-weight: 700; color: #334155;">
+            ⚙️ Ràng buộc khi người dùng nhập Khóa / CCCD:
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.73rem; color: #1e293b; cursor: pointer;">
+            <input type="checkbox" v-model="localKeyRequired" style="accent-color: #16a34a;" />
+            <span>Bắt buộc phải nhập trường này khi lưu (không để trống)</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.73rem; color: #1e293b; cursor: pointer;">
+            <input type="checkbox" v-model="localKeyAllowFreeText" style="accent-color: #16a34a;" />
+            <span>Cho phép định dạng tự do (chữ, số, ký tự tùy ý, không ép số CCCD)</span>
+          </label>
+        </div>
       </div>
     </div>
 
@@ -547,6 +602,9 @@ const localLinkedTables = ref([]);
 const localIsMasterTable = ref(false);
 const localParentMasterTableId = ref('personnel');
 const localParentKeyField = ref('');
+const localPrimaryKeyField = ref('');
+const localKeyRequired = ref(false);
+const localKeyAllowFreeText = ref(true);
 
 const allCurrentTableCols = computed(() => {
   const cols = [];
@@ -669,6 +727,29 @@ const initIdentityAndGroups = () => {
   localParentMasterTableId.value = dLinked?.parentMasterTableId || 'personnel';
   localParentKeyField.value = dLinked?.parentKeyField || '';
 
+  // 6. Khóa Định danh & Ràng buộc nhập liệu (Zero-Hardcode)
+  const keyCfg = personnelStore.systemKeyConfig || {};
+  if (props.tableId === 'personnel') {
+    localPrimaryKeyField.value = keyCfg.personnelKeyField || personnelStore.getPersonnelKeyField() || 'cccdparent';
+    localKeyRequired.value = true;
+  } else if (props.tableId === 'relatives') {
+    localPrimaryKeyField.value = keyCfg.relativeKeyField || personnelStore.getRelativeKeyField() || 'cccdthannhan';
+    localParentKeyField.value = keyCfg.relativeParentKeyField || personnelStore.getRelativeParentKeyField() || 'cccdparent';
+  } else if (props.tableId === 'trips') {
+    localPrimaryKeyField.value = keyCfg.tripKeyField || personnelStore.getTripKeyField() || 'cccdchuyendi';
+    localParentKeyField.value = keyCfg.tripKeyField || personnelStore.getTripKeyField() || 'cccdchuyendi';
+  } else {
+    const storedConstraints = localStorage.getItem('table_key_constraints_' + props.tableId);
+    if (storedConstraints) {
+      try {
+        const parsed = JSON.parse(storedConstraints);
+        localPrimaryKeyField.value = parsed.primaryKeyField || '';
+        localKeyRequired.value = Boolean(parsed.keyRequired);
+        localKeyAllowFreeText.value = parsed.allowFreeText !== undefined ? Boolean(parsed.allowFreeText) : true;
+      } catch (e) {}
+    }
+  }
+
   // 4. Nhóm cột - TRIỆT ĐỂ KHÔNG TRÙNG FIELD GIỮA CÁC NHÓM
   let rawGroups = null;
   if (Array.isArray(props.groups) && props.groups.length > 0) {
@@ -741,6 +822,12 @@ const initIdentityAndGroups = () => {
   }
 
   localGroups.value = parsedGroups;
+  if (localPrimaryKeyField.value) {
+    const kCol = parsedGroups.flatMap(g => g.columns || []).find(c => c.id === localPrimaryKeyField.value);
+    if (kCol && kCol.required !== undefined) {
+      localKeyRequired.value = Boolean(kCol.required);
+    }
+  }
   activeTabIdx.value = 0;
 };
 
@@ -846,9 +933,41 @@ const handleSave = async () => {
     });
 
     const src = props.tableId || 'trips';
-    const newTitle = (localTitle.value || '').trim() || props.tableTitle || 'Bảng dữ liệu';
-    const newIcon = localIcon.value || 'pi-table';
-    const newColor = localColor.value || '#0284c7';
+    // Đồng bộ thuộc tính required và isKey cho cột Primary Key đã chọn
+    if (localPrimaryKeyField.value) {
+      cleanedGroups.forEach((g) => {
+        (g.columns || []).forEach((c) => {
+          if (c.id === localPrimaryKeyField.value) {
+            c.required = localKeyRequired.value;
+            c.isKey = true;
+          } else if (c.isKey && (src === 'personnel' || src === 'relatives' || src === 'trips')) {
+            c.isKey = false;
+          }
+        });
+      });
+    }
+
+    // Cập nhật và lưu systemKeyConfig toàn hệ thống (Zero-Hardcode)
+    const keyCfg = { ...(personnelStore.systemKeyConfig || {}) };
+    if (src === 'personnel') {
+      if (localPrimaryKeyField.value) keyCfg.personnelKeyField = localPrimaryKeyField.value;
+    } else if (src === 'relatives') {
+      if (localPrimaryKeyField.value) keyCfg.relativeKeyField = localPrimaryKeyField.value;
+      if (localParentKeyField.value) keyCfg.relativeParentKeyField = localParentKeyField.value;
+    } else if (src === 'trips') {
+      if (localPrimaryKeyField.value) keyCfg.tripKeyField = localPrimaryKeyField.value;
+      if (localParentKeyField.value) keyCfg.tripKeyField = localParentKeyField.value;
+    }
+    personnelStore.systemKeyConfig = keyCfg;
+    try {
+      localStorage.setItem('system_key_config', JSON.stringify(keyCfg));
+      saveAppSettings('system_key_config', keyCfg).catch(() => {});
+      localStorage.setItem('table_key_constraints_' + src, JSON.stringify({
+        primaryKeyField: localPrimaryKeyField.value,
+        keyRequired: localKeyRequired.value,
+        allowFreeText: localKeyAllowFreeText.value,
+      }));
+    } catch (e) {}
 
     // 1. Lưu cấu hình nhóm cột
     if (src === 'trips') {

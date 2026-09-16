@@ -523,18 +523,21 @@ const linkedSubTablesList = computed(() => {
   return allTables.filter((t) => t.id !== curId && linkedTableIds.includes(t.id));
 });
 
-// 3. TRUY VẤN DỮ LIỆU CỦA TỪNG BẢNG CON THEO HỒ SƠ CHÍNH
+// 3. TRUY VẤN DỮ LIỆU CỦA TỪNG BẢNG CON THEO HỒ SƠ CHÍNH (DYNAMIC KEY FIELDS)
 const linkedRelativesList = computed(() => {
   const allRels = personnelStore.relativesList || [];
-  const pKey = String(form.value.cccd || form.value.so_cccd || form.value.id || '').trim().toLowerCase();
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  const pKey = String(form.value[pKeyField] || form.value.cccd || form.value.so_cccd || form.value.id || '').trim().toLowerCase();
   const pId = String(form.value.id || '').trim();
 
   const res = [];
   const seen = new Set();
+  const parentKeyField = personnelStore.getRelativeParentKeyField();
+
   allRels.forEach((r, idx) => {
     const uKey = r.id || r.uniqueKey || `rel_${idx}`;
     if (seen.has(uKey)) return;
-    const parentVal = String(r.cccdparent || r.parentCccd || '').trim().toLowerCase();
+    const parentVal = String(r[parentKeyField] || r.cccdparent || r.parentCccd || '').trim().toLowerCase();
     const matchId = Boolean(pId && r.personnelId && String(r.personnelId).trim() === pId);
     const matchKey = Boolean(pKey && parentVal && parentVal === pKey);
 
@@ -558,20 +561,23 @@ const linkedRelativesList = computed(() => {
 
 const linkedTripsList = computed(() => {
   const allTrips = personnelStore.tripsList || [];
-  const pKey = String(form.value.cccd || form.value.so_cccd || form.value.id || '').trim().toLowerCase();
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  const pKey = String(form.value[pKeyField] || form.value.cccd || form.value.so_cccd || form.value.id || '').trim().toLowerCase();
   const pId = String(form.value.id || '').trim();
 
-  // Tạo tập hợp CCCD và ID của các thân nhân thuộc cán bộ này
-  const relKeys = new Set(linkedRelativesList.value.map((r) => String(r.cccdthannhan || r.cccd || '').trim().toLowerCase()).filter(Boolean));
+  // Tạo tập hợp Khóa định danh và ID của các thân nhân thuộc cán bộ này
+  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+  const relKeys = new Set(linkedRelativesList.value.map((r) => String(r[rKeyField] || r.cccdthannhan || r.cccd || '').trim().toLowerCase()).filter(Boolean));
   const relIds = new Set(linkedRelativesList.value.map((r) => String(r.id || '').trim()).filter(Boolean));
 
+  const tripKeyField = personnelStore.getTripKeyField();
   const res = [];
   const seen = new Set();
 
   allTrips.forEach((t, idx) => {
     const uKey = t.uniqueKey || t.id || `trip_${idx}`;
     if (seen.has(uKey)) return;
-    const tVal = String(t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
+    const tVal = String(t[tripKeyField] || t.cccdchuyendi || t.cccd || '').trim().toLowerCase();
     const matchOfficer = (pId && t.personnelId && String(t.personnelId).trim() === pId) || (pKey && tVal && tVal === pKey);
     const matchRel = (t.relativeId && relIds.has(String(t.relativeId).trim())) || (tVal && relKeys.has(tVal));
 
@@ -745,9 +751,11 @@ function startAddNewSubRecord(tableId) {
 function openAddTripForSpecificRelative(rel) {
   addingSubTableId.value = 'trips';
   newTripTravelerType.value = 'rel_' + (rel.id || rel.uniqueKey);
+  const tripKeyField = personnelStore.getTripKeyField();
+  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
   newSubRecordForm.value = {
     relativeId: rel.id || '',
-    cccdchuyendi: rel.cccdthannhan || rel.cccd || '',
+    [tripKeyField]: rel[rKeyField] || rel.cccdthannhan || rel.cccd || '',
     relativeName: getRelativeDisplayName(rel),
     isRelative: true,
   };
@@ -757,17 +765,20 @@ function openAddTripForSpecificRelative(rel) {
 async function handleSaveNewSubRecord(tableId) {
   isSavingSub.value = true;
   try {
-    const pKey = String(form.value.cccd || form.value.so_cccd || form.value.id || '').trim();
+    const pKeyField = personnelStore.getPersonnelKeyField();
+    const pKey = String(form.value[pKeyField] || form.value.cccd || form.value.so_cccd || form.value.id || '').trim();
     const pId = String(form.value.id || '').trim();
 
     if (tableId === 'relatives') {
+      const parentKeyField = personnelStore.getRelativeParentKeyField();
       const payload = {
         ...newSubRecordForm.value,
         personnelId: pId,
-        cccdparent: pKey,
+        [parentKeyField]: pKey,
       };
       await personnelStore.saveRelative(payload);
     } else if (tableId === 'trips') {
+      const tripKeyField = personnelStore.getTripKeyField();
       let payload = {
         ...newSubRecordForm.value,
         personnelId: pId,
@@ -775,13 +786,14 @@ async function handleSaveNewSubRecord(tableId) {
       if (newTripTravelerType.value.startsWith('rel_')) {
         const relId = newTripTravelerType.value.replace('rel_', '');
         const rel = linkedRelativesList.value.find((r) => String(r.id || r.uniqueKey) === relId);
+        const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
         payload.isRelative = true;
         payload.relativeId = relId;
-        payload.cccdchuyendi = rel?.cccdthannhan || rel?.cccd || '';
+        payload[tripKeyField] = rel?.[rKeyField] || rel?.cccdthannhan || rel?.cccd || '';
         payload.relativeName = rel ? getRelativeDisplayName(rel) : '';
       } else {
         payload.isRelative = false;
-        payload.cccdchuyendi = pKey;
+        payload[tripKeyField] = pKey;
       }
       await personnelStore.saveTrip(payload);
     }

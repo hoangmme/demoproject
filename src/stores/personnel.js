@@ -1179,7 +1179,7 @@ export const usePersonnelStore = defineStore('personnel', {
         }
 
         if (!targetPerson) {
-          throw new Error('Không tìm thấy hồ sơ Cán bộ chủ quản để liên kết Thân nhân này! Vui lòng kiểm tra lại trường CCCD/Mã số của Cán bộ (cccdparent).');
+          throw new Error(`Không tìm thấy hồ sơ Cán bộ chủ quản để liên kết Thân nhân này! Vui lòng kiểm tra lại trường liên kết Cán bộ (${parentKeyField}).`);
         }
 
         const updatedP = JSON.parse(JSON.stringify(targetPerson));
