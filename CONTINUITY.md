@@ -42,6 +42,17 @@
 - **Ảnh nền Login**: Tải đồng bộ 0ms từ `localStorage`, không để chớp ảnh fallback `/login-bg.jpg`.
 - **Triệt tiêu đoán mò**: Khi thiếu thông tin hoặc logic chưa rõ ràng, **BẮT BUỘC DỪNG LẠI VÀ HỎI NGƯỜI DÙNG**.
 
+### 5. CHUẨN EXPORT & IMPORT EXCEL HEADER KÉP 2 DÒNG
+- **Xuất dữ liệu & Tải mẫu (Export/Template)**:
+  - **Dòng 1**: Tên cột tiếng Việt thân thiện (`[Cột 1] STT`, `[Cột 2] Họ và tên`, `[Cột 3] Số CCCD`...) để người dùng đọc dễ hiểu.
+  - **Dòng 2**: Mã ID kỹ thuật (`stt`, `name`, `cccdparent`...) để máy tính nhận diện chính xác 100%.
+  - **Dòng 3 trở đi**: Dữ liệu các bản ghi thực tế.
+- **Quy trình Nhập dữ liệu (Import Wizard)**:
+  - Tự động phát hiện file 2 Header: So khớp dòng 2 với `column.id`. Nếu là file 2 Header -> map 100% bằng ID và đọc dữ liệu từ dòng 3.
+  - Tương thích ngược: Nếu là file 1 Header cũ -> map bằng label/id/vị trí cột và đọc từ dòng 2.
+  - Tích hợp nút tải file mẫu chuẩn ngay tại Bước 1 của Wizard.
+  - Upsert chống trùng lặp chuyên nghiệp cho cả 3 bảng (Cán bộ: theo CCCD; Thân nhân: theo CCCD thân nhân hoặc Tên + Quan hệ; Chuyến đi: theo Ngày đi + Quốc gia / Số QĐ).
+
 ---
 
 ## Strategic Decisions (Architecture / Core Logic - Hard to Reverse)
