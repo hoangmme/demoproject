@@ -42,16 +42,18 @@
 - **Ảnh nền Login**: Tải đồng bộ 0ms từ `localStorage`, không để chớp ảnh fallback `/login-bg.jpg`.
 - **Triệt tiêu đoán mò**: Khi thiếu thông tin hoặc logic chưa rõ ràng, **BẮT BUỘC DỪNG LẠI VÀ HỎI NGƯỜI DÙNG**.
 
-### 5. CHUẨN EXPORT & IMPORT EXCEL HEADER KÉP 2 DÒNG
+### 5. CHUẨN EXPORT & IMPORT EXCEL HEADER KÉP 2 DÒNG & ZERO-HARDCODE SO KHỚP
 - **Xuất dữ liệu & Tải mẫu (Export/Template)**:
   - **Dòng 1**: Tên cột tiếng Việt thân thiện (`[Cột 1] STT`, `[Cột 2] Họ và tên`, `[Cột 3] Số CCCD`...) để người dùng đọc dễ hiểu.
   - **Dòng 2**: Mã ID kỹ thuật (`stt`, `name`, `cccdparent`...) để máy tính nhận diện chính xác 100%.
   - **Dòng 3 trở đi**: Dữ liệu các bản ghi thực tế.
-- **Quy trình Nhập dữ liệu (Import Wizard)**:
-  - Tự động phát hiện file 2 Header: So khớp dòng 2 với `column.id`. Nếu là file 2 Header -> map 100% bằng ID và đọc dữ liệu từ dòng 3.
-  - Tương thích ngược: Nếu là file 1 Header cũ -> map bằng label/id/vị trí cột và đọc từ dòng 2.
-  - Tích hợp nút tải file mẫu chuẩn ngay tại Bước 1 của Wizard.
-  - Upsert chống trùng lặp chuyên nghiệp cho cả 3 bảng (Cán bộ: theo CCCD; Thân nhân: theo CCCD thân nhân hoặc Tên + Quan hệ; Chuyến đi: theo Ngày đi + Quốc gia / Số QĐ).
+- **Quy trình Nhập dữ liệu (Import Wizard - Zero-Hardcode Matching)**:
+  - Tự động phát hiện file 2 Header: So khớp dòng 2 với `column.id`. Nếu là file 2 Header -> map 100% bằng ID và đọc dữ liệu từ dòng 3. Nếu là file 1 Header cũ -> tự động fallback sang mapping theo label/thứ tự cột.
+  - **Người dùng trực tiếp chọn (các) cột dùng để so khớp / nhận diện trùng lặp**:
+    - **Cán bộ**: Tick chọn 1 hoặc nhiều cột (CCCD, Mã CB, Họ tên + Ngày sinh...).
+    - **Thân nhân**: Chọn cột liên kết Cán bộ trong Excel + Tick chọn (các) cột nhận diện Thân nhân (CCCD thân nhân, Họ tên + Mối quan hệ...).
+    - **Chuyến đi**: Chọn cột liên kết Người đi trong Excel + Tick chọn (các) cột nhận diện Chuyến đi (Ngày đi + Quốc gia, Số QĐ...).
+  - **Không hardcode bất kỳ cột nào**: Hàm so khớp `isRecordMatched(existingRecord, excelRowData, selectedMatchKeys)` tự động đối chiếu linh hoạt theo đúng mảng cột người dùng tick chọn ở cả các bước Xác thực (Validation), Tính toán Kế hoạch nạp (Plan Counts), và Thực thi (Upsert/Skip/Replace).
 
 ---
 
@@ -96,11 +98,13 @@
   - [x] Kiến trúc Bảng Đứng Đầu (Master Root Table) & Trang Chi Tiết Tập Trung (`PersonnelConcentratedView.vue`).
   - [x] Cơ chế gộp giá trị `_mergedRows` khi Unique ("Đếm số bản ghi duy nhất") cho mọi cột.
   - [x] Tách hiển thị công thức Số lần xuất cảnh trong năm: Dòng phẳng hiển thị chuyến hiện tại, dòng Unique gộp toàn bộ.
-  - [x] Đóng gói chuẩn Windows Offline: Full setup (`WINDOWS_OFFLINE_APP.zip`, 29M) kèm Node.js & Cập nhật code (`WINDOWS_OFFLINE_UPDATE.zip`, 2.5M).
+  - [x] Chuẩn Export & Template Excel Header kép 2 dòng (Dòng 1: Label tiếng Việt, Dòng 2: ID kỹ thuật).
+  - [x] Import Wizard Zero-Hardcode: Người dùng tự do tick chọn bất kỳ cột nào để so khớp trùng lặp (Upsert/Skip/Replace) cho cả 3 bảng.
+  - [x] Đóng gói chuẩn Windows Offline: Full setup (`WINDOWS_OFFLINE_APP.zip`) kèm Node.js & Cập nhật code (`WINDOWS_OFFLINE_UPDATE.zip`, 2.5M).
   - [x] Sidebar hiển thị cố định Bảng Thân nhân, ảnh nền Login tải đồng bộ 0ms không nhấp nháy.
   - [x] Tách toàn bộ lịch sử 59 phiên phát triển sang `CHANGELOG.md` để tinh gọn CONTINUITY.md theo chuẩn v7.4.
 - **Current Focus**:
-  - Đồng bộ cập nhật tài liệu `README.md` phản ánh trung thực kiến trúc No-Code mới nhất của toàn hệ thống.
+  - Hỗ trợ người dùng kiểm tra và trải nghiệm quy trình Xuất / Nhập dữ liệu mới.
 - **Next**:
   - Tiếp tục tối ưu trải nghiệm người dùng theo các phản hồi thực tế từ người dùng.
 

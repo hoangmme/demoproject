@@ -114,7 +114,7 @@
                   <span class="mode-title">🔄 Cập nhật & Thêm mới (Giữ dữ liệu cũ)</span>
                 </div>
                 <p class="mode-desc">
-                  Nếu CCCD đã có: <strong>Giữ nguyên các dữ liệu cũ</strong>, chỉ cập nhật hoặc bổ sung các cột mới có giá trị trong file Excel. Chưa có thì tạo mới.
+                  Nếu bản ghi đã tồn tại theo các cột so khớp: <strong>Giữ nguyên các trường cũ</strong>, chỉ cập nhật hoặc bổ sung các trường mới có giá trị trong file Excel. Chưa có thì tạo mới.
                 </p>
               </div>
 
@@ -127,7 +127,7 @@
                   <span class="mode-title">➕ Chỉ thêm mới (Bỏ qua nếu đã có)</span>
                 </div>
                 <p class="mode-desc">
-                  Nếu CCCD đã tồn tại trong hệ thống: <strong>Bỏ qua không cập nhật</strong>. Chỉ tạo mới các bản ghi chưa từng có.
+                  Nếu bản ghi đã tồn tại theo các cột so khớp: <strong>Bỏ qua không cập nhật</strong>. Chỉ tạo mới các bản ghi chưa từng có.
                 </p>
               </div>
 
@@ -140,16 +140,117 @@
                   <span class="mode-title">⚡ Ghi đè thay thế hoàn toàn</span>
                 </div>
                 <p class="mode-desc">
-                  Nếu CCCD đã có: <strong>Ghi đè toàn bộ</strong> các trường dữ liệu bằng dữ liệu mới từ file Excel.
+                  Nếu bản ghi đã có: <strong>Ghi đè toàn bộ</strong> các trường dữ liệu bằng dữ liệu mới từ file Excel.
                 </p>
               </div>
             </div>
           </div>
 
-          <!-- 1C. Dropzone Chọn tệp -->
+          <!-- 1C. Chọn Cột So Khớp / Nhận diện Trùng lặp (Dynamic Matching Columns - Zero Hardcode) -->
+          <div class="form-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+              <label class="section-label" style="margin: 0;">3. Chọn (các) cột dùng để so khớp / nhận diện bản ghi đã tồn tại:</label>
+              <span style="font-size: 0.72rem; color: #64748b;">(Tick chọn cột theo ý muốn, hệ thống sẽ đối chiếu theo các cột này)</span>
+            </div>
+
+            <!-- A. Bảng Cán bộ -->
+            <div v-if="targetEntity === 'personnel'" class="match-keys-box">
+              <div class="match-keys-hint">
+                <i class="pi pi-info-circle text-blue-600"></i>
+                <span>Chọn (các) cột để đối chiếu xem Cán bộ đã có trong hệ thống hay chưa (chọn nhiều cột thì bản ghi phải trùng tất cả các cột đã chọn):</span>
+              </div>
+              <div class="match-chips-grid">
+                <label
+                  v-for="col in targetColumns"
+                  :key="col.id"
+                  class="match-chip-item"
+                  :class="{ selected: selectedMatchKeysPersonnel.includes(col.id) }"
+                >
+                  <input
+                    type="checkbox"
+                    :value="col.id"
+                    v-model="selectedMatchKeysPersonnel"
+                  />
+                  <span class="chip-label">{{ col.label }}</span>
+                  <span v-if="col.isKey" class="chip-badge-key">Khóa chính</span>
+                  <span class="chip-id">({{ col.id }})</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- B. Bảng Thân nhân -->
+            <div v-else-if="targetEntity === 'relative'" class="match-keys-box">
+              <div class="match-link-row">
+                <span class="match-link-label">🔗 Cột trong file liên kết Cán bộ chủ quản:</span>
+                <select v-model="selectedMatchParentKeyRelative" class="match-select">
+                  <option v-for="col in targetColumns" :key="col.id" :value="col.id">
+                    {{ col.label }} ({{ col.id }})
+                  </option>
+                </select>
+              </div>
+
+              <div class="match-keys-hint">
+                <i class="pi pi-info-circle text-blue-600"></i>
+                <span>Chọn (các) cột nhận diện Thân nhân để đối chiếu trùng lặp trong hồ sơ cán bộ:</span>
+              </div>
+              <div class="match-chips-grid">
+                <label
+                  v-for="col in targetColumns"
+                  :key="col.id"
+                  class="match-chip-item"
+                  :class="{ selected: selectedMatchKeysRelative.includes(col.id) }"
+                >
+                  <input
+                    type="checkbox"
+                    :value="col.id"
+                    v-model="selectedMatchKeysRelative"
+                  />
+                  <span class="chip-label">{{ col.label }}</span>
+                  <span v-if="col.isKey" class="chip-badge-key">Khóa chính</span>
+                  <span class="chip-id">({{ col.id }})</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- C. Bảng Chuyến đi -->
+            <div v-else-if="targetEntity === 'trips'" class="match-keys-box">
+              <div class="match-link-row">
+                <span class="match-link-label">🔗 Cột trong file liên kết Người đi (Cán bộ hoặc Thân nhân):</span>
+                <select v-model="selectedMatchPersonKeyTrips" class="match-select">
+                  <option v-for="col in targetColumns" :key="col.id" :value="col.id">
+                    {{ col.label }} ({{ col.id }})
+                  </option>
+                </select>
+              </div>
+
+              <div class="match-keys-hint">
+                <i class="pi pi-info-circle text-blue-600"></i>
+                <span>Chọn (các) cột nhận diện Chuyến đi để đối chiếu trùng lặp (ví dụ: Ngày đi + Quốc gia, hoặc Số QĐ):</span>
+              </div>
+              <div class="match-chips-grid">
+                <label
+                  v-for="col in targetColumns"
+                  :key="col.id"
+                  class="match-chip-item"
+                  :class="{ selected: selectedMatchKeysTrips.includes(col.id) }"
+                >
+                  <input
+                    type="checkbox"
+                    :value="col.id"
+                    v-model="selectedMatchKeysTrips"
+                  />
+                  <span class="chip-label">{{ col.label }}</span>
+                  <span v-if="col.isKey" class="chip-badge-key">Khóa chính</span>
+                  <span class="chip-id">({{ col.id }})</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 1D. Dropzone Chọn tệp -->
           <div class="form-section">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <label class="section-label" style="margin: 0;">3. Tải lên tệp Excel (.xlsx, .xls):</label>
+              <label class="section-label" style="margin: 0;">4. Tải lên tệp Excel (.xlsx, .xls):</label>
               <div class="template-quick-buttons">
                 <Button
                   :label="`Tải mẫu ${targetEntity === 'personnel' ? 'Cán bộ' : targetEntity === 'relative' ? 'Thân nhân' : 'Chuyến đi'}`"
@@ -345,6 +446,29 @@
               <p class="confirm-sub">
                 Đích nạp: <strong>{{ getTargetEntityLabel(targetEntity) }}</strong> • Chế độ: <strong>{{ getImportModeLabel(importMode) }}</strong>
               </p>
+            </div>
+          </div>
+
+          <!-- Hiển thị chi tiết tiêu chí so khớp đã chọn (Zero-Hardcode) -->
+          <div class="match-summary-card">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+              <i class="pi pi-sliders-h" style="color: #2563eb;"></i>
+              Tiêu chí so khớp / nhận diện bản ghi đã tồn tại:
+            </div>
+            <div style="font-size: 0.74rem; color: #475569; display: flex; flex-direction: column; gap: 4px;">
+              <div v-if="targetEntity === 'personnel'">
+                • Cột đối chiếu Cán bộ: <strong style="color: #1e40af;">{{ selectedMatchKeysPersonnelLabels.join(', ') || 'Chưa chọn' }}</strong>
+              </div>
+              <div v-else-if="targetEntity === 'relative'">
+                • Cột liên kết Cán bộ: <strong style="color: #1e40af;">{{ getColumnLabelById(selectedMatchParentKeyRelative) }}</strong>
+                <br />
+                • Cột nhận diện Thân nhân: <strong style="color: #1e40af;">{{ selectedMatchKeysRelativeLabels.join(', ') || 'Chưa chọn' }}</strong>
+              </div>
+              <div v-else-if="targetEntity === 'trips'">
+                • Cột liên kết Người đi: <strong style="color: #1e40af;">{{ getColumnLabelById(selectedMatchPersonKeyTrips) }}</strong>
+                <br />
+                • Cột nhận diện Chuyến đi: <strong style="color: #1e40af;">{{ selectedMatchKeysTripsLabels.join(', ') || 'Chưa chọn' }}</strong>
+              </div>
             </div>
           </div>
 
@@ -580,6 +704,7 @@ const targetColumns = computed(() => {
           id: c.id,
           label: c.label || c.id,
           format: c.format || 'text',
+          isKey: Boolean(c.isKey || c.isIdentifier || c.isPrimaryKey),
           group: g.group || '',
           tableWidth: c.tableWidth || c.width || '150px',
         });
@@ -588,6 +713,177 @@ const targetColumns = computed(() => {
   });
   return list;
 });
+
+// Dynamic Matching Columns State (Zero-Hardcode: Người dùng tự do chọn cột so khớp)
+const selectedMatchKeysPersonnel = ref([]);
+const selectedMatchParentKeyRelative = ref('');
+const selectedMatchKeysRelative = ref([]);
+const selectedMatchPersonKeyTrips = ref('');
+const selectedMatchKeysTrips = ref([]);
+
+// Tự động khởi tạo gợi ý cột so khớp ban đầu từ cấu hình bảng
+const initDefaultMatchKeys = () => {
+  const cols = targetColumns.value || [];
+  if (cols.length === 0) return;
+
+  if (targetEntity.value === 'personnel') {
+    const pKey = personnelStore.getPersonnelKeyField();
+    const keyCol = cols.find(c => c.isKey || c.id === pKey) || cols[0];
+    if (keyCol && (!selectedMatchKeysPersonnel.value || selectedMatchKeysPersonnel.value.length === 0)) {
+      selectedMatchKeysPersonnel.value = [keyCol.id];
+    }
+  } else if (targetEntity.value === 'relative') {
+    const parentKey = personnelStore.getRelativeParentKeyField();
+    const parentCol = cols.find(c => c.id === parentKey || c.id === 'cccdparent' || c.id.toLowerCase().includes('parent')) || cols[0];
+    if (parentCol && !selectedMatchParentKeyRelative.value) {
+      selectedMatchParentKeyRelative.value = parentCol.id;
+    }
+
+    const rKey = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+    const relKeyCol = cols.find(c => c.isKey || c.id === rKey || c.id === 'cccdthannhan') || cols[1] || cols[0];
+    if (relKeyCol && (!selectedMatchKeysRelative.value || selectedMatchKeysRelative.value.length === 0)) {
+      selectedMatchKeysRelative.value = [relKeyCol.id];
+    }
+  } else if (targetEntity.value === 'trips') {
+    const tripKey = personnelStore.getTripKeyField();
+    const tripCol = cols.find(c => c.id === tripKey || c.id === 'cccdchuyendi' || c.id.toLowerCase().includes('cccd')) || cols[0];
+    if (tripCol && !selectedMatchPersonKeyTrips.value) {
+      selectedMatchPersonKeyTrips.value = tripCol.id;
+    }
+
+    if (!selectedMatchKeysTrips.value || selectedMatchKeysTrips.value.length === 0) {
+      const defaultTripsCols = [];
+      const depCol = cols.find(c => c.id === 'departureDate' || c.id.toLowerCase().includes('departure') || c.id.toLowerCase().includes('ngay_di'));
+      const ctryCol = cols.find(c => c.id === 'countryName' || c.id.toLowerCase().includes('country') || c.id.toLowerCase().includes('quoc_gia'));
+      if (depCol) defaultTripsCols.push(depCol.id);
+      if (ctryCol) defaultTripsCols.push(ctryCol.id);
+      if (defaultTripsCols.length === 0 && cols.length > 1) {
+        defaultTripsCols.push(cols[1].id);
+      }
+      selectedMatchKeysTrips.value = defaultTripsCols;
+    }
+  }
+};
+
+watch(
+  () => [targetEntity.value, targetColumns.value],
+  () => {
+    initDefaultMatchKeys();
+  },
+  { immediate: true, deep: true }
+);
+
+const getColumnLabelById = (colId) => {
+  const c = (targetColumns.value || []).find((col) => col.id === colId);
+  return c ? `${c.label} (${c.id})` : colId;
+};
+
+const selectedMatchKeysPersonnelLabels = computed(() => {
+  return (selectedMatchKeysPersonnel.value || []).map(id => getColumnLabelById(id));
+});
+
+const selectedMatchKeysRelativeLabels = computed(() => {
+  return (selectedMatchKeysRelative.value || []).map(id => getColumnLabelById(id));
+});
+
+const selectedMatchKeysTripsLabels = computed(() => {
+  return (selectedMatchKeysTrips.value || []).map(id => getColumnLabelById(id));
+});
+
+const getRecordValue = (rec, colId) => {
+  if (!rec || !colId) return '';
+  if (rec[colId] !== undefined && rec[colId] !== null) return rec[colId];
+  if (rec.custom_data && rec.custom_data[colId] !== undefined && rec.custom_data[colId] !== null) {
+    return rec.custom_data[colId];
+  }
+  return '';
+};
+
+// Hàm so khớp bản ghi tổng quát (Dynamic Matching Function - Zero Hardcode)
+const isRecordMatched = (existingRecord, excelRowData, matchKeyColIds) => {
+  if (!existingRecord || !excelRowData || !matchKeyColIds || matchKeyColIds.length === 0) return false;
+  return matchKeyColIds.every((colId) => {
+    const rawVal = excelRowData[colId];
+    if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '') return false;
+    const existVal = getRecordValue(existingRecord, colId);
+    if (existVal === undefined || existVal === null || String(existVal).trim() === '') return false;
+
+    const str1 = String(rawVal).trim().toLowerCase();
+    const str2 = String(existVal).trim().toLowerCase();
+    return str1 === str2;
+  });
+};
+
+const findParentPersonnel = (parentKeyVal) => {
+  if (!parentKeyVal || String(parentKeyVal).trim() === '') return null;
+  const targetVal = String(parentKeyVal).trim().toLowerCase();
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  return (personnelStore.personnelList || []).find((p) => {
+    const candidates = [
+      getRecordValue(p, pKeyField),
+      getRecordValue(p, selectedMatchParentKeyRelative.value),
+      p.cccd,
+      p.code,
+      p.id,
+    ];
+    return candidates.some((c) => c && String(c).trim().toLowerCase() === targetVal);
+  });
+};
+
+const findTripPerson = (personKeyVal) => {
+  if (!personKeyVal || String(personKeyVal).trim() === '') return { person: null, matchedRelative: null };
+  const targetVal = String(personKeyVal).trim().toLowerCase();
+  const pKeyField = personnelStore.getPersonnelKeyField();
+  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+
+  // 1. Tìm trong danh sách cán bộ
+  const foundPerson = (personnelStore.personnelList || []).find((p) => {
+    const candidates = [
+      getRecordValue(p, pKeyField),
+      getRecordValue(p, selectedMatchPersonKeyTrips.value),
+      p.cccd,
+      p.code,
+      p.id,
+    ];
+    return candidates.some((c) => c && String(c).trim().toLowerCase() === targetVal);
+  });
+  if (foundPerson) return { person: foundPerson, matchedRelative: null };
+
+  // 2. Tìm trong thân nhân của các cán bộ
+  for (const p of (personnelStore.personnelList || [])) {
+    const rels = Array.isArray(p.relatives) ? p.relatives : [];
+    const matchedRel = rels.find((r) => {
+      const candidates = [
+        getRecordValue(r, rKeyField),
+        getRecordValue(r, selectedMatchPersonKeyTrips.value),
+        r.cccd,
+        r.id,
+      ];
+      return candidates.some((c) => c && String(c).trim().toLowerCase() === targetVal);
+    });
+    if (matchedRel) {
+      return { person: p, matchedRelative: matchedRel };
+    }
+  }
+
+  return { person: null, matchedRelative: null };
+};
+
+watch(
+  () => [
+    selectedMatchKeysPersonnel.value,
+    selectedMatchParentKeyRelative.value,
+    selectedMatchKeysRelative.value,
+    selectedMatchPersonKeyTrips.value,
+    selectedMatchKeysTrips.value,
+  ],
+  () => {
+    if (parsedRows.value && parsedRows.value.length > 0) {
+      parsedRows.value.forEach((r) => validateRowItem(r));
+    }
+  },
+  { deep: true }
+);
 
 // Normalizer
 const normalizeKey = (str) => {
@@ -867,42 +1163,76 @@ const buildParsedRows = () => {
   parsedRows.value = parsed;
 };
 
-// Validate Row Item
+// Validate Row Item (Dựa trên các cột so khớp mà người dùng đã tick chọn)
 const validateRowItem = (rowItem) => {
   const data = rowItem.data || {};
   const issues = [];
 
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  const relParentKeyField = personnelStore.getRelativeParentKeyField();
-  const tripKeyField = personnelStore.getTripKeyField();
-
   if (targetEntity.value === 'personnel') {
-    // Họ tên
-    const name = data.name || data.fullName || data.personnelName || data.ho_va_ten;
-    if (!name || String(name).trim() === '') {
-      issues.push('Thiếu Họ và tên cán bộ');
+    // 1. Kiểm tra các cột so khớp đã chọn
+    if (!selectedMatchKeysPersonnel.value || selectedMatchKeysPersonnel.value.length === 0) {
+      issues.push('Chưa chọn cột so khớp cán bộ');
+    } else {
+      selectedMatchKeysPersonnel.value.forEach((colId) => {
+        const val = data[colId];
+        if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') {
+          issues.push(`Thiếu cột so khớp: ${getColumnLabelById(colId)}`);
+        }
+      });
     }
-    // CCCD
-    const cccd = data[pKeyField] || data.cccd || data.cccdparent || data.so_cccd;
-    if (!cccd || String(cccd).trim() === '' || String(cccd).trim() === '-') {
-      issues.push(`Thiếu Khóa định danh CCCD (${pKeyField})`);
+
+    // Họ tên cán bộ (nếu có trường name trong cấu hình)
+    const nameCol = (targetColumns.value || []).find((c) => c.id === 'name' || c.id === 'fullName' || c.id === 'ho_va_ten');
+    if (nameCol && !selectedMatchKeysPersonnel.value.includes(nameCol.id)) {
+      const name = data[nameCol.id];
+      if (!name || String(name).trim() === '') {
+        issues.push(`Thiếu ${nameCol.label}`);
+      }
     }
   } else if (targetEntity.value === 'relative') {
-    // Tên thân nhân
-    const relName = data.relativeName || data.name || data.fullName;
-    if (!relName || String(relName).trim() === '') {
-      issues.push('Thiếu Tên thân nhân');
+    // 1. Kiểm tra cột liên kết Cán bộ chủ quản
+    const parentColId = selectedMatchParentKeyRelative.value;
+    if (!parentColId || data[parentColId] === undefined || data[parentColId] === null || String(data[parentColId]).trim() === '' || String(data[parentColId]).trim() === '-') {
+      issues.push(`Thiếu Cột liên kết Cán bộ: ${getColumnLabelById(parentColId || 'Chưa chọn')}`);
     }
-    // CCCD cán bộ liên quan
-    const parentCccd = data[relParentKeyField] || data.cccdparent || data.parentCccd || data.parentPersonnelCccd;
-    if (!parentCccd || String(parentCccd).trim() === '' || String(parentCccd).trim() === '-') {
-      issues.push(`Thiếu CCCD Cán bộ liên quan (${relParentKeyField})`);
+
+    // 2. Kiểm tra các cột so khớp Thân nhân
+    if (!selectedMatchKeysRelative.value || selectedMatchKeysRelative.value.length === 0) {
+      issues.push('Chưa chọn cột so khớp thân nhân');
+    } else {
+      selectedMatchKeysRelative.value.forEach((colId) => {
+        const val = data[colId];
+        if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') {
+          issues.push(`Thiếu cột so khớp: ${getColumnLabelById(colId)}`);
+        }
+      });
+    }
+
+    // Tên thân nhân (nếu có cột relativeName trong cấu hình)
+    const relNameCol = (targetColumns.value || []).find((c) => c.id === 'relativeName' || c.id === 'name');
+    if (relNameCol && !selectedMatchKeysRelative.value.includes(relNameCol.id)) {
+      const relName = data[relNameCol.id];
+      if (!relName || String(relName).trim() === '') {
+        issues.push(`Thiếu ${relNameCol.label}`);
+      }
     }
   } else if (targetEntity.value === 'trips') {
-    // CCCD người đi là khóa duy nhất để định danh
-    const tripCccd = data[tripKeyField] || data.cccdchuyendi || data.cccd || data.cccdparent;
-    if (!tripCccd || String(tripCccd).trim() === '' || String(tripCccd).trim() === '-') {
-      issues.push(`Thiếu CCCD người đi (${tripKeyField})`);
+    // 1. Kiểm tra cột liên kết Người đi
+    const personColId = selectedMatchPersonKeyTrips.value;
+    if (!personColId || data[personColId] === undefined || data[personColId] === null || String(data[personColId]).trim() === '' || String(data[personColId]).trim() === '-') {
+      issues.push(`Thiếu Cột liên kết Người đi: ${getColumnLabelById(personColId || 'Chưa chọn')}`);
+    }
+
+    // 2. Kiểm tra các cột so khớp Chuyến đi
+    if (!selectedMatchKeysTrips.value || selectedMatchKeysTrips.value.length === 0) {
+      issues.push('Chưa chọn cột so khớp chuyến đi');
+    } else {
+      selectedMatchKeysTrips.value.forEach((colId) => {
+        const val = data[colId];
+        if (val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-') {
+          issues.push(`Thiếu cột so khớp: ${getColumnLabelById(colId)}`);
+        }
+      });
     }
   }
 
@@ -932,25 +1262,27 @@ const validateRowItem = (rowItem) => {
   rowItem.issues = issues;
 };
 
-// Check if specific cell is invalid
+// Check if specific cell is invalid (highlight đỏ trong Step 2 preview)
 const isCellInvalid = (row, colId) => {
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  const relParentKeyField = personnelStore.getRelativeParentKeyField();
-  const tripKeyField = personnelStore.getTripKeyField();
-
   const val = row.data[colId];
+  const isEmpty = val === undefined || val === null || String(val).trim() === '' || String(val).trim() === '-';
+
   if (targetEntity.value === 'personnel') {
-    if ((colId === 'name' || colId === 'ho_va_ten') && (!val || String(val).trim() === '')) return true;
-    if ((colId === pKeyField || colId === 'cccdparent' || colId === 'cccd' || colId === 'so_cccd') && (!val || String(val).trim() === '' || String(val).trim() === '-')) return true;
+    if (selectedMatchKeysPersonnel.value.includes(colId) && isEmpty) return true;
+    if ((colId === 'name' || colId === 'ho_va_ten') && isEmpty) return true;
   } else if (targetEntity.value === 'relative') {
-    if ((colId === 'relativeName' || colId === 'name') && (!val || String(val).trim() === '')) return true;
-    if ((colId === relParentKeyField || colId === 'parentCccd' || colId === 'cccdparent') && (!val || String(val).trim() === '' || String(val).trim() === '-')) return true;
+    if (colId === selectedMatchParentKeyRelative.value && isEmpty) return true;
+    if (selectedMatchKeysRelative.value.includes(colId) && isEmpty) return true;
   } else if (targetEntity.value === 'trips') {
-    if ((colId === tripKeyField || colId === 'cccd' || colId === 'cccdchuyendi' || colId === 'cccdparent') && (!val || String(val).trim() === '' || String(val).trim() === '-')) return true;
+    if (colId === selectedMatchPersonKeyTrips.value && isEmpty) return true;
+    if (selectedMatchKeysTrips.value.includes(colId) && isEmpty) return true;
   }
 
-  // Check date cell
+  // Check required
   const colDef = targetColumns.value.find((c) => c.id === colId);
+  if (colDef && colDef.required && isEmpty) return true;
+
+  // Check date cell
   if (colDef && (colDef.format === 'date' || colId.toLowerCase().includes('date'))) {
     if (val && String(val).trim() !== '' && String(val).trim() !== '-') {
       const parsedD = parseDateValue(val);
@@ -987,26 +1319,17 @@ const invalidRows = computed(() => {
   return (parsedRows.value || []).filter((r) => r.issues && r.issues.length > 0);
 });
 
-// Calculate Plan Counts for Step 3 (Chuẩn xác cho cả 3 bảng)
+// Calculate Plan Counts for Step 3 (Hoàn toàn linh hoạt theo tiêu chí so khớp người dùng chọn)
 const planCounts = computed(() => {
-  const pKeyField = personnelStore.getPersonnelKeyField();
-  const relParentKeyField = personnelStore.getRelativeParentKeyField();
-  const tripKeyField = personnelStore.getTripKeyField();
-  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
-
   let toCreate = 0;
   let toUpdate = 0;
 
   if (targetEntity.value === 'personnel') {
-    const existingCccdSet = new Set();
-    (personnelStore.personnelList || []).forEach((p) => {
-      const cccd = p[pKeyField] || p.cccd || p.cccdparent || p.custom_data?.[pKeyField];
-      if (cccd) existingCccdSet.add(String(cccd).trim());
-    });
-
     validRows.value.forEach((r) => {
-      const cccd = r.data[pKeyField] || r.data.cccd || r.data.cccdparent || r.data.so_cccd;
-      if (cccd && existingCccdSet.has(String(cccd).trim())) {
+      const isMatch = (personnelStore.personnelList || []).some((p) =>
+        isRecordMatched(p, r.data, selectedMatchKeysPersonnel.value)
+      );
+      if (isMatch) {
         toUpdate++;
       } else {
         toCreate++;
@@ -1015,11 +1338,7 @@ const planCounts = computed(() => {
   } else if (targetEntity.value === 'relative') {
     validRows.value.forEach((rowItem) => {
       const rowData = rowItem.data || {};
-      const parentCccd = String(rowData[relParentKeyField] || rowData.cccdparent || rowData.parentCccd || '').trim();
-      const parentPerson = personnelStore.personnelList.find((p) => {
-        const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent ?? p.cccd;
-        return canBoCccd && String(canBoCccd).trim() === parentCccd;
-      });
+      const parentPerson = findParentPersonnel(rowData[selectedMatchParentKeyRelative.value]);
 
       if (!parentPerson) {
         toCreate++;
@@ -1027,17 +1346,9 @@ const planCounts = computed(() => {
       }
 
       const currentRels = Array.isArray(parentPerson.relatives) ? parentPerson.relatives : [];
-      const relCccd = String(rowData[rKeyField] || rowData.cccdthannhan || rowData.cccd || '').trim();
-      const relName = String(rowData.relativeName || rowData.name || '').trim().toLowerCase();
-      const relRelation = String(rowData.relationshipName || rowData.relation || '').trim().toLowerCase();
-
-      const exists = currentRels.some((r) => {
-        const rC = String(r[rKeyField] || r.cccdthannhan || r.cccd || '').trim();
-        if (relCccd && rC && relCccd === rC) return true;
-        const rN = String(r.relativeName || r.name || '').trim().toLowerCase();
-        const rR = String(r.relationshipName || r.relation || '').trim().toLowerCase();
-        return relName && rN === relName && (!relRelation || rR === relRelation);
-      });
+      const exists = currentRels.some((r) =>
+        isRecordMatched(r, rowData, selectedMatchKeysRelative.value)
+      );
 
       if (exists) {
         toUpdate++;
@@ -1048,48 +1359,18 @@ const planCounts = computed(() => {
   } else if (targetEntity.value === 'trips') {
     validRows.value.forEach((rowItem) => {
       const rowData = rowItem.data || {};
-      const tripCccd = String(rowData[tripKeyField] || rowData.cccdchuyendi || rowData.cccd || '').trim();
-
-      let resolvedPerson = personnelStore.personnelList.find((p) => {
-        const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent ?? p.cccd;
-        return canBoCccd && String(canBoCccd).trim() === tripCccd;
-      });
-
-      if (!resolvedPerson) {
-        for (const p of (personnelStore.personnelList || [])) {
-          const rels = Array.isArray(p.relatives) ? p.relatives : [];
-          const matchedRel = rels.find((r) => {
-            const rCccd = r[rKeyField] ?? r.custom_data?.[rKeyField] ?? r.cccdthannhan ?? r.cccd;
-            return rCccd && String(rCccd).trim() === tripCccd;
-          });
-          if (matchedRel) {
-            resolvedPerson = p;
-            break;
-          }
-        }
-      }
-
-      const tripDepDate = String(rowData.departureDate || rowData.ngay_di || '').trim();
-      const tripCountry = String(rowData.countryName || rowData.quoc_gia_xuat_canh || rowData.destinationCountry || '').trim().toLowerCase();
-      const tripDecNum = String(rowData.decisionNumber || rowData.so_quyet_dinh || '').trim();
-
-      const isSameTrip = (t) => {
-        if (tripDecNum && t.decisionNumber && String(t.decisionNumber).trim() === tripDecNum) return true;
-        const tDep = String(t.departureDate || t.ngay_di || '').trim();
-        const tCtry = String(t.countryName || t.quoc_gia_xuat_canh || t.destinationCountry || '').trim().toLowerCase();
-        return tripDepDate && tDep === tripDepDate && (!tripCountry || tCtry === tripCountry);
-      };
+      const { person: resolvedPerson } = findTripPerson(rowData[selectedMatchPersonKeyTrips.value]);
 
       if (resolvedPerson) {
         const currentTrips = Array.isArray(resolvedPerson.trips) ? resolvedPerson.trips : [];
-        if (currentTrips.some(isSameTrip)) {
+        if (currentTrips.some((t) => isRecordMatched(t, rowData, selectedMatchKeysTrips.value))) {
           toUpdate++;
         } else {
           toCreate++;
         }
       } else {
         const currentStandalone = Array.isArray(personnelStore.standaloneTrips) ? personnelStore.standaloneTrips : [];
-        if (currentStandalone.some(isSameTrip)) {
+        if (currentStandalone.some((t) => isRecordMatched(t, rowData, selectedMatchKeysTrips.value))) {
           toUpdate++;
         } else {
           toCreate++;
@@ -1111,7 +1392,7 @@ const downloadErrorReport = () => {
   exportToExcel(errors, `Danh_sach_dong_loi_${targetEntity.value}`, 'Dòng lỗi');
 };
 
-// Execute Import (Step 3 -> Step 4)
+// Execute Import (Step 3 -> Step 4) - Hoàn toàn linh hoạt theo tiêu chí so khớp đã chọn
 const executeImport = async () => {
   importing.value = true;
   let createdCount = 0;
@@ -1120,40 +1401,33 @@ const executeImport = async () => {
 
   try {
     const rowsToImport = validRows.value;
-    const pKeyField = personnelStore.getPersonnelKeyField();
-    const relParentKeyField = personnelStore.getRelativeParentKeyField();
-    const tripKeyField = personnelStore.getTripKeyField();
-    const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+    let localPersonnelList = [...(personnelStore.personnelList || [])];
 
     if (targetEntity.value === 'personnel') {
-      const existingByCccd = {};
-      (personnelStore.personnelList || []).forEach((p) => {
-        const cccd = p[pKeyField] || p.cccd || p.cccdparent || p.custom_data?.[pKeyField];
-        if (cccd) existingByCccd[String(cccd).trim()] = p;
-      });
-
       for (const rowItem of rowsToImport) {
         const rowData = { ...rowItem.data };
-        const cccd = String(rowData[pKeyField] || rowData.cccd || rowData.cccdparent || rowData.so_cccd || '').trim();
-        const existingPerson = existingByCccd[cccd] || null;
+        const existIdx = localPersonnelList.findIndex((p) =>
+          isRecordMatched(p, rowData, selectedMatchKeysPersonnel.value)
+        );
 
-        if (existingPerson) {
+        if (existIdx >= 0) {
+          const existingPerson = localPersonnelList[existIdx];
           if (importMode.value === 'skip') {
             skippedCount++;
             continue;
           }
 
           if (importMode.value === 'replace') {
-            // Ghi đè thay thế toàn bộ các trường thông tin cá nhân
             const replacedPayload = {
               ...existingPerson,
               ...rowData,
               custom_data: { ...rowData },
             };
             await updatePersonnel(existingPerson.id, replacedPayload);
+            localPersonnelList[existIdx] = replacedPayload;
             updatedCount++;
           } else {
-            // Upsert (Cập nhật và giữ nguyên trường cũ nếu trường mới rỗng)
+            // Upsert
             const mergedCustom = { ...(existingPerson.custom_data || {}), ...rowData };
             const mergedPayload = {
               ...existingPerson,
@@ -1161,11 +1435,12 @@ const executeImport = async () => {
               custom_data: mergedCustom,
             };
             await updatePersonnel(existingPerson.id, mergedPayload);
+            localPersonnelList[existIdx] = mergedPayload;
             updatedCount++;
           }
         } else {
           // Tạo mới cán bộ
-          const nextIndex = personnelStore.personnelList.length + createdCount + 1;
+          const nextIndex = localPersonnelList.length + createdCount + 1;
           const assignedCode = rowData.code || ('CB-' + String(nextIndex).padStart(5, '0'));
           const newId = 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
           const newPayload = {
@@ -1178,37 +1453,39 @@ const executeImport = async () => {
             custom_data: { ...rowData },
           };
           await createPersonnel(newPayload);
-          existingByCccd[cccd] = newPayload;
+          localPersonnelList.push(newPayload);
           createdCount++;
         }
       }
     } else if (targetEntity.value === 'relative') {
-      // Import thân nhân gắn vào cán bộ (Chống trùng lặp theo CCCD thân nhân hoặc Tên + Quan hệ)
       for (const rowItem of rowsToImport) {
         const rowData = { ...rowItem.data };
-        const parentCccd = String(rowData[relParentKeyField] || rowData.cccdparent || rowData.parentCccd || '').trim();
-        const parentPerson = personnelStore.personnelList.find(p => {
-          const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent ?? p.cccd;
-          return canBoCccd && String(canBoCccd).trim() === parentCccd;
+        const parentKeyVal = rowData[selectedMatchParentKeyRelative.value];
+        const parentIdx = localPersonnelList.findIndex((p) => {
+          const pKeyField = personnelStore.getPersonnelKeyField();
+          const targetVal = String(parentKeyVal || '').trim().toLowerCase();
+          const candidates = [
+            getRecordValue(p, pKeyField),
+            getRecordValue(p, selectedMatchParentKeyRelative.value),
+            p.cccd,
+            p.code,
+            p.id,
+          ];
+          return candidates.some((c) => c && String(c).trim().toLowerCase() === targetVal);
         });
 
-        if (!parentPerson) {
+        if (parentIdx < 0) {
           skippedCount++;
           continue;
         }
 
+        const parentPerson = localPersonnelList[parentIdx];
         const currentRels = Array.isArray(parentPerson.relatives) ? [...parentPerson.relatives] : [];
-        const relCccd = String(rowData[rKeyField] || rowData.cccdthannhan || rowData.cccd || '').trim();
-        const relName = String(rowData.relativeName || rowData.name || '').trim().toLowerCase();
-        const relRelation = String(rowData.relationshipName || rowData.relation || '').trim().toLowerCase();
+        const existingRelIdx = currentRels.findIndex((r) =>
+          isRecordMatched(r, rowData, selectedMatchKeysRelative.value)
+        );
 
-        const existingRelIdx = currentRels.findIndex(r => {
-          const rC = String(r[rKeyField] || r.cccdthannhan || r.cccd || '').trim();
-          if (relCccd && rC && relCccd === rC) return true;
-          const rN = String(r.relativeName || r.name || '').trim().toLowerCase();
-          const rR = String(r.relationshipName || r.relation || '').trim().toLowerCase();
-          return relName && rN === relName && (!relRelation || rR === relRelation);
-        });
+        const parentCccd = getRecordValue(parentPerson, personnelStore.getPersonnelKeyField()) || parentPerson.cccd || '';
 
         if (existingRelIdx >= 0) {
           if (importMode.value === 'skip') {
@@ -1226,7 +1503,7 @@ const executeImport = async () => {
             };
             updatedCount++;
           } else {
-            // Upsert: Giữ nguyên các trường cũ, chỉ cập nhật trường mới có giá trị
+            // Upsert
             const mergedCustom = { ...(currentRels[existingRelIdx].custom_data || {}), ...rowData };
             currentRels[existingRelIdx] = {
               ...currentRels[existingRelIdx],
@@ -1259,55 +1536,64 @@ const executeImport = async () => {
           },
         };
         await updatePersonnel(parentPerson.id, updatedParent);
+        localPersonnelList[parentIdx] = updatedParent;
       }
     } else if (targetEntity.value === 'trips') {
-      // Import chuyến đi gắn vào cán bộ hoặc thân nhân (Chống trùng lặp theo Ngày đi + Quốc gia / Số QĐ)
+      let localStandalone = [...(personnelStore.standaloneTrips || [])];
+
       for (const rowItem of rowsToImport) {
         const rowData = { ...rowItem.data };
-        const tripCccd = String(rowData[tripKeyField] || rowData.cccdchuyendi || rowData.cccd || '').trim();
+        const personKeyVal = rowData[selectedMatchPersonKeyTrips.value];
+        const targetVal = String(personKeyVal || '').trim().toLowerCase();
+        const pKeyField = personnelStore.getPersonnelKeyField();
+        const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
 
-        let resolvedPerson = personnelStore.personnelList.find(p => {
-          const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent ?? p.cccd;
-          return canBoCccd && String(canBoCccd).trim() === tripCccd;
+        let resolvedPersonIdx = localPersonnelList.findIndex((p) => {
+          const candidates = [
+            getRecordValue(p, pKeyField),
+            getRecordValue(p, selectedMatchPersonKeyTrips.value),
+            p.cccd,
+            p.code,
+            p.id,
+          ];
+          return candidates.some((c) => c && String(c).trim().toLowerCase() === targetVal);
         });
-        let resolvedName = rowData.personnelName || rowData.name || '';
-        let isRelativeTrip = false;
 
-        if (!resolvedPerson) {
-          // Kiểm tra xem có phải CCCD của thân nhân không
-          for (const p of (personnelStore.personnelList || [])) {
+        let matchedRelative = null;
+        if (resolvedPersonIdx < 0) {
+          for (let pIdx = 0; pIdx < localPersonnelList.length; pIdx++) {
+            const p = localPersonnelList[pIdx];
             const rels = Array.isArray(p.relatives) ? p.relatives : [];
-            const matchedRel = rels.find(r => {
-              const rCccd = r[rKeyField] ?? r.custom_data?.[rKeyField] ?? r.cccdthannhan ?? r.cccd;
-              return rCccd && String(rCccd).trim() === tripCccd;
+            const r = rels.find((rel) => {
+              const candidates = [
+                getRecordValue(rel, rKeyField),
+                getRecordValue(rel, selectedMatchPersonKeyTrips.value),
+                rel.cccd,
+                rel.id,
+              ];
+              return candidates.some((c) => c && String(c).trim().toLowerCase() === targetVal);
             });
-            if (matchedRel) {
-              resolvedPerson = p;
-              if (!resolvedName) resolvedName = matchedRel.relativeName || matchedRel.name || '';
-              isRelativeTrip = true;
+            if (r) {
+              resolvedPersonIdx = pIdx;
+              matchedRelative = r;
               break;
             }
           }
         }
 
-        if (resolvedPerson && !resolvedName) {
-          resolvedName = resolvedPerson.name;
-        }
+        let resolvedName = rowData.personnelName || rowData.name || '';
+        const isRelativeTrip = Boolean(matchedRelative);
 
-        const tripDepDate = String(rowData.departureDate || rowData.ngay_di || '').trim();
-        const tripCountry = String(rowData.countryName || rowData.quoc_gia_xuat_canh || rowData.destinationCountry || '').trim().toLowerCase();
-        const tripDecNum = String(rowData.decisionNumber || rowData.so_quyet_dinh || '').trim();
+        if (resolvedPersonIdx >= 0) {
+          const resolvedPerson = localPersonnelList[resolvedPersonIdx];
+          if (!resolvedName) {
+            resolvedName = matchedRelative ? (matchedRelative.relativeName || matchedRelative.name) : resolvedPerson.name;
+          }
 
-        const isSameTrip = (t) => {
-          if (tripDecNum && t.decisionNumber && String(t.decisionNumber).trim() === tripDecNum) return true;
-          const tDep = String(t.departureDate || t.ngay_di || '').trim();
-          const tCtry = String(t.countryName || t.quoc_gia_xuat_canh || t.destinationCountry || '').trim().toLowerCase();
-          return tripDepDate && tDep === tripDepDate && (!tripCountry || tCtry === tripCountry);
-        };
-
-        if (resolvedPerson) {
           const currentTrips = Array.isArray(resolvedPerson.trips) ? [...resolvedPerson.trips] : [];
-          const existingTripIdx = currentTrips.findIndex(isSameTrip);
+          const existingTripIdx = currentTrips.findIndex((t) =>
+            isRecordMatched(t, rowData, selectedMatchKeysTrips.value)
+          );
 
           if (existingTripIdx >= 0) {
             if (importMode.value === 'skip') {
@@ -1319,7 +1605,7 @@ const executeImport = async () => {
                 id: currentTrips[existingTripIdx].id,
                 personnelId: resolvedPerson.id,
                 personnelName: resolvedName,
-                cccd: tripCccd,
+                cccd: personKeyVal || '',
                 isRelative: isRelativeTrip,
                 ...rowData,
                 custom_data: { ...rowData },
@@ -1341,7 +1627,7 @@ const executeImport = async () => {
               id: newTripId,
               personnelId: resolvedPerson.id,
               personnelName: resolvedName,
-              cccd: tripCccd,
+              cccd: personKeyVal || '',
               isRelative: isRelativeTrip,
               ...rowData,
               custom_data: { ...rowData },
@@ -1359,10 +1645,12 @@ const executeImport = async () => {
             },
           };
           await updatePersonnel(resolvedPerson.id, updatedParent);
+          localPersonnelList[resolvedPersonIdx] = updatedParent;
         } else {
-          // Lưu chuyến đi độc lập dạng Flat (ánh xạ độc lập qua điều kiện khóa, không phụ thuộc cán bộ)
-          const currentStandalone = Array.isArray(personnelStore.standaloneTrips) ? [...personnelStore.standaloneTrips] : [];
-          const existingTripIdx = currentStandalone.findIndex(isSameTrip);
+          // Lưu chuyến đi độc lập
+          const existingTripIdx = localStandalone.findIndex((t) =>
+            isRecordMatched(t, rowData, selectedMatchKeysTrips.value)
+          );
 
           if (existingTripIdx >= 0) {
             if (importMode.value === 'skip') {
@@ -1371,24 +1659,26 @@ const executeImport = async () => {
             }
             if (importMode.value === 'replace') {
               const updatedTrip = {
-                id: currentStandalone[existingTripIdx].id,
+                id: localStandalone[existingTripIdx].id,
                 personnelId: '',
                 personnelName: resolvedName,
-                cccd: tripCccd,
+                cccd: personKeyVal || '',
                 isRelative: false,
                 ...rowData,
                 custom_data: { ...rowData },
               };
               await personnelStore.addStandaloneTrip(updatedTrip);
+              localStandalone[existingTripIdx] = updatedTrip;
               updatedCount++;
             } else {
-              const mergedCustom = { ...(currentStandalone[existingTripIdx].custom_data || {}), ...rowData };
+              const mergedCustom = { ...(localStandalone[existingTripIdx].custom_data || {}), ...rowData };
               const updatedTrip = {
-                ...currentStandalone[existingTripIdx],
+                ...localStandalone[existingTripIdx],
                 ...rowData,
                 custom_data: mergedCustom,
               };
               await personnelStore.addStandaloneTrip(updatedTrip);
+              localStandalone[existingTripIdx] = updatedTrip;
               updatedCount++;
             }
           } else {
@@ -1397,12 +1687,13 @@ const executeImport = async () => {
               id: newTripId,
               personnelId: '',
               personnelName: resolvedName,
-              cccd: tripCccd,
+              cccd: personKeyVal || '',
               isRelative: false,
               ...rowData,
               custom_data: { ...rowData },
             };
             await personnelStore.addStandaloneTrip(tripPayload);
+            localStandalone.push(tripPayload);
             createdCount++;
           }
         }
@@ -1699,6 +1990,97 @@ const getImportModeLabel = (mode) => {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Match Keys Selector (Step 1) */
+.match-keys-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.match-keys-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+.match-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.78rem;
+}
+.match-link-label {
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+.match-select {
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  background: #ffffff;
+  color: #1e293b;
+  outline: none;
+}
+.match-select:focus {
+  border-color: #3b82f6;
+}
+.match-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.match-chip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 0.76rem;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+.match-chip-item:hover {
+  border-color: #93c5fd;
+  background: #f0f9ff;
+}
+.match-chip-item.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1e40af;
+  font-weight: 600;
+}
+.chip-label {
+  line-height: 1.2;
+}
+.chip-badge-key {
+  font-size: 0.65rem;
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+.chip-id {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+.match-summary-card {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 4px;
 }
 
 .template-guide-box {
