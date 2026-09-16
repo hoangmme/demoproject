@@ -148,7 +148,34 @@
 
           <!-- 1C. Dropzone Chọn tệp -->
           <div class="form-section">
-            <label class="section-label">3. Tải lên tệp Excel (.xlsx, .xls):</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <label class="section-label" style="margin: 0;">3. Tải lên tệp Excel (.xlsx, .xls):</label>
+              <div class="template-quick-buttons">
+                <Button
+                  :label="`Tải mẫu ${targetEntity === 'personnel' ? 'Cán bộ' : targetEntity === 'relative' ? 'Thân nhân' : 'Chuyến đi'}`"
+                  icon="pi pi-download"
+                  size="small"
+                  severity="secondary"
+                  outlined
+                  @click="downloadCurrentTemplate"
+                  style="font-size: 0.75rem; padding: 4px 10px;"
+                />
+                <Button
+                  label="Mẫu 3 Sheet"
+                  icon="pi pi-file-excel"
+                  size="small"
+                  severity="help"
+                  text
+                  @click="downloadAllInOneTemplateAction"
+                  style="font-size: 0.75rem; padding: 4px 10px;"
+                  title="Tải tệp mẫu tổng hợp chứa đầy đủ 3 Sheet: Cán bộ, Thân nhân, Chuyến đi"
+                />
+              </div>
+            </div>
+            <div class="template-guide-box">
+              <i class="pi pi-info-circle text-blue-600"></i>
+              <span>Mẫu chuẩn có <strong>Header kép 2 dòng</strong> (Dòng 1: Tên cột tiếng Việt, Dòng 2: Mã ID). Hệ thống sẽ tự nhận diện chuẩn xác 100%!</span>
+            </div>
             <div
               class="excel-dropzone"
               :class="{ 'has-file': !!selectedFileName, 'is-dragging': isDragging }"
@@ -457,7 +484,15 @@ import { ref, computed, watch } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { usePersonnelStore } from '@/stores/personnel';
-import { readExcelWorkbook, exportToExcel, getSubOptionsList } from '@/utils/excel';
+import {
+  readExcelWorkbook,
+  exportToExcel,
+  getSubOptionsList,
+  downloadPersonnelTemplate,
+  downloadRelativeTemplate,
+  downloadTripsTemplate,
+  downloadAllInOneTemplate,
+} from '@/utils/excel';
 import { formatExcelDate, parseDateValue } from '@/utils/formatters';
 import { createPersonnel, updatePersonnel } from '@/api/personnel';
 
@@ -579,6 +614,25 @@ const onFileDrop = (e) => {
   if (file) handleFileLoad(file);
 };
 
+// Tải tệp mẫu Excel chuẩn cho bảng đang chọn
+const downloadCurrentTemplate = () => {
+  if (targetEntity.value === 'personnel') {
+    downloadPersonnelTemplate(personnelStore.importMappingPersonnel);
+  } else if (targetEntity.value === 'relative') {
+    downloadRelativeTemplate(personnelStore.importMappingRelative);
+  } else if (targetEntity.value === 'trips') {
+    downloadTripsTemplate(personnelStore.importMappingTrips);
+  }
+};
+
+const downloadAllInOneTemplateAction = () => {
+  downloadAllInOneTemplate(
+    personnelStore.importMappingPersonnel,
+    personnelStore.importMappingRelative,
+    personnelStore.importMappingTrips
+  );
+};
+
 const handleFileLoad = async (file) => {
   selectedFileName.value = file.name;
   try {
@@ -587,7 +641,7 @@ const handleFileLoad = async (file) => {
     rawWorkbookData.value = res.sheetsData || {};
     if (availableSheets.value.length > 0) {
       selectedSheet.value = availableSheets.value[0];
-      rawSheetRows.value = (res.sheetsData[selectedSheet.value] || []).filter((r) => r && r.length > 0);
+      onSelectSheet(selectedSheet.value);
     }
   } catch (err) {
     alert('Lỗi đọc tệp Excel: ' + (err.message || err));
@@ -596,6 +650,15 @@ const handleFileLoad = async (file) => {
 
 const onSelectSheet = (s) => {
   selectedSheet.value = s;
+  // Tự động nhận diện bảng đích từ tên Sheet nếu phù hợp
+  const normS = normalizeKey(s);
+  if (normS.includes('thannhan') || normS.includes('than_nhan')) {
+    targetEntity.value = 'relative';
+  } else if (normS.includes('chuyendi') || normS.includes('chuyen_di')) {
+    targetEntity.value = 'trips';
+  } else if (normS.includes('canbo') || normS.includes('can_bo') || normS.includes('hosocanbo')) {
+    targetEntity.value = 'personnel';
+  }
   if (rawWorkbookData.value && rawWorkbookData.value[s]) {
     rawSheetRows.value = (rawWorkbookData.value[s] || []).filter((r) => r && r.length > 0);
   }
@@ -624,7 +687,7 @@ const finishAndClose = () => {
   emit('update:visible', false);
 };
 
-// Build Parsed Rows from raw Sheet Rows
+// Build Parsed Rows from raw Sheet Rows (Hỗ trợ tự động Header kép 2 dòng & Header đơn 1 dòng)
 const buildParsedRows = () => {
   const rawRows = rawSheetRows.value || [];
   if (rawRows.length < 2) {
@@ -632,47 +695,108 @@ const buildParsedRows = () => {
     return;
   }
 
-  const headerRow = rawRows[0] || [];
-  const colMap = {};
   const entityCols = targetColumns.value || [];
+  if (entityCols.length === 0) {
+    parsedRows.value = [];
+    return;
+  }
 
-  // Index map of target columns
+  const row0 = rawRows[0] || [];
+  const row1 = rawRows[1] || [];
+
+  // Tạo map tra cứu cột đích
+  const entityColById = new Map();
+  const entityColByNormId = new Map();
+  const entityColByNormLabel = new Map();
+
   let currentColIdx = 0;
   entityCols.forEach((c) => {
     currentColIdx++;
-    colMap[normalizeKey(c.label)] = c;
-    colMap[normalizeKey(c.id)] = c;
-    colMap[normalizeKey(`[Cột ${currentColIdx}] ${c.label}`)] = c;
-    colMap[normalizeKey(`cột ${currentColIdx}`)] = c;
+    entityColById.set(c.id, c);
+    entityColByNormId.set(normalizeKey(c.id), c);
+    entityColByNormLabel.set(normalizeKey(c.label), c);
+    entityColByNormLabel.set(normalizeKey(`[Cột ${currentColIdx}] ${c.label}`), c);
+    entityColByNormLabel.set(normalizeKey(`cột ${currentColIdx}`), c);
   });
 
-  // Pre-determine column mapping for each Excel column index
-  const mappedCols = [];
-  let sequentialTargetIdx = 0;
-  const isFirstColStt = headerRow.length > 0 && (
-    normalizeKey(headerRow[0]) === 'stt' ||
-    normalizeKey(headerRow[0]).includes('stt') ||
-    normalizeKey(headerRow[0]) === 'c1' ||
-    normalizeKey(headerRow[0]) === 'cot1'
-  );
+  // 1. Phán đoán xem Dòng 2 có phải là dòng ID kỹ thuật không (chuẩn Header kép 2 dòng)
+  const knownCoreIds = new Set([
+    'stt', 'name', 'fullname', 'cccd', 'cccdparent', 'cccdthannhan', 'cccdchuyendi',
+    'birthdate', 'birthyear', 'gender', 'departmentname', 'departmentid', 'position',
+    'relativename', 'relation', 'relationshipname', 'departuredate', 'arrivaldate',
+    'countryname', 'decisionnumber', 'decisiondate', 'fundingname', 'purpose', 'passportnumber', 'notes'
+  ]);
+  entityCols.forEach(c => {
+    if (c.id) knownCoreIds.add(String(c.id).toLowerCase());
+  });
 
-  headerRow.forEach((rawH, cIdx) => {
-    const normH = normalizeKey(rawH);
-    if (cIdx === 0 && isFirstColStt) {
-      mappedCols.push(null); // skip STT column
-      return;
+  let idMatchCount = 0;
+  let nonBlankCount = 0;
+  row1.forEach(cell => {
+    if (cell !== undefined && cell !== null && String(cell).trim() !== '') {
+      nonBlankCount++;
+      const normCell = normalizeKey(cell);
+      if (knownCoreIds.has(normCell) || entityColByNormId.has(normCell)) {
+        idMatchCount++;
+      }
+    }
+  });
+
+  const is2HeaderMode = (idMatchCount >= 2) || (nonBlankCount > 0 && (idMatchCount / nonBlankCount) >= 0.25);
+  const dataStartIdx = is2HeaderMode ? 2 : 1;
+  const headerLabels = row0;
+  const headerIds = is2HeaderMode ? row1 : row0;
+
+  // 2. Xác định ánh xạ từng cột Excel sang entityCol
+  const mappedCols = [];
+  const isFirstColStt = (row) => {
+    if (!row || row.length === 0) return false;
+    const n = normalizeKey(row[0]);
+    return n === 'stt' || n.includes('stt') || n === 'c1' || n === 'cot1';
+  };
+
+  const firstColIsStt = isFirstColStt(headerIds) || isFirstColStt(headerLabels);
+  let sequentialTargetIdx = 0;
+
+  const numCols = Math.max(headerLabels.length, headerIds.length);
+  for (let cIdx = 0; cIdx < numCols; cIdx++) {
+    if (cIdx === 0 && firstColIsStt) {
+      mappedCols.push(null); // Bỏ qua cột STT
+      continue;
     }
 
-    let matched = colMap[normH];
-    if (!matched) {
-      const colNumMatch = String(rawH || '').match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
-      if (colNumMatch) {
-        const num = Number(colNumMatch[1]);
-        if (entityCols[num - 1]) matched = entityCols[num - 1];
+    let matched = null;
+    const rawId = headerIds[cIdx];
+    const rawLabel = headerLabels[cIdx];
+
+    if (is2HeaderMode) {
+      // Ưu tiên 1: So khớp chính xác 100% bằng ID kỹ thuật ở Dòng 2
+      if (rawId !== undefined && rawId !== null) {
+        const idStr = String(rawId).trim();
+        const normId = normalizeKey(idStr);
+        matched = entityColById.get(idStr) || entityColByNormId.get(normId);
+      }
+      // Ưu tiên 2: Nếu Dòng 2 không khớp, thử so khớp theo Nhãn tiếng Việt ở Dòng 1
+      if (!matched && rawLabel !== undefined && rawLabel !== null) {
+        const normLabel = normalizeKey(rawLabel);
+        matched = entityColByNormLabel.get(normLabel);
+      }
+    } else {
+      // Chế độ 1 Header: So khớp theo Nhãn tiếng Việt hoặc ID
+      if (rawLabel !== undefined && rawLabel !== null) {
+        const normCell = normalizeKey(rawLabel);
+        matched = entityColByNormLabel.get(normCell) || entityColByNormId.get(normCell);
+        if (!matched) {
+          const colNumMatch = String(rawLabel).match(/\[\s*c[ộo]t\s*(\d+)\s*\]/i);
+          if (colNumMatch) {
+            const num = Number(colNumMatch[1]);
+            if (entityCols[num - 1]) matched = entityCols[num - 1];
+          }
+        }
       }
     }
 
-    // Fallback: Positional mapping if not matched by label
+    // Fallback thứ tự cột nếu chưa map được
     if (!matched && sequentialTargetIdx < entityCols.length) {
       matched = entityCols[sequentialTargetIdx];
       sequentialTargetIdx++;
@@ -684,56 +808,54 @@ const buildParsedRows = () => {
     }
 
     mappedCols.push(matched || null);
-  });
+  }
 
+  // 3. Đọc dữ liệu từ dataStartIdx trở đi
   const parsed = [];
 
-  for (let rIdx = 1; rIdx < rawRows.length; rIdx++) {
+  for (let rIdx = dataStartIdx; rIdx < rawRows.length; rIdx++) {
     const rawRow = rawRows[rIdx];
     if (!rawRow || rawRow.length === 0 || !rawRow.some(cell => cell !== undefined && cell !== null && String(cell).trim() !== '')) {
       continue;
     }
 
     const rowObj = {};
-    // Initialize all columns with empty string
     entityCols.forEach((c) => {
       rowObj[c.id] = '';
     });
 
-    headerRow.forEach((rawH, cIdx) => {
+    mappedCols.forEach((matchedCol, cIdx) => {
+      if (!matchedCol) return;
       const cellVal = rawRow[cIdx];
       if (cellVal === undefined || cellVal === null) return;
       const valStr = typeof cellVal === 'number' ? String(cellVal) : String(cellVal).trim();
       if (valStr === '') return;
 
-      const matchedCol = mappedCols[cIdx];
-      if (matchedCol) {
-        let finalVal = valStr;
-        if (
-          matchedCol.format === 'date' ||
-          matchedCol.id.toLowerCase().includes('date') ||
-          matchedCol.id.toLowerCase().includes('year') ||
-          matchedCol.id.toLowerCase().includes('sinh')
-        ) {
-          finalVal = formatExcelDate(cellVal);
-        } else if (
-          matchedCol.id.toLowerCase().includes('cccd') ||
-          matchedCol.id.toLowerCase().includes('cmnd') ||
-          matchedCol.id.toLowerCase().includes('dinhdanh')
-        ) {
-          if (typeof cellVal === 'number') {
-            const integerStr = String(Math.trunc(cellVal));
-            finalVal = integerStr.length <= 12 && integerStr.length >= 9 ? integerStr.padStart(12, '0') : integerStr;
-          } else {
-            finalVal = String(finalVal).replace(/\.0+$/, '').trim();
-          }
+      let finalVal = valStr;
+      if (
+        matchedCol.format === 'date' ||
+        matchedCol.id.toLowerCase().includes('date') ||
+        matchedCol.id.toLowerCase().includes('year') ||
+        matchedCol.id.toLowerCase().includes('sinh')
+      ) {
+        finalVal = formatExcelDate(cellVal);
+      } else if (
+        matchedCol.id.toLowerCase().includes('cccd') ||
+        matchedCol.id.toLowerCase().includes('cmnd') ||
+        matchedCol.id.toLowerCase().includes('dinhdanh')
+      ) {
+        if (typeof cellVal === 'number') {
+          const integerStr = String(Math.trunc(cellVal));
+          finalVal = integerStr.length <= 12 && integerStr.length >= 9 ? integerStr.padStart(12, '0') : integerStr;
+        } else {
+          finalVal = String(finalVal).replace(/\.0+$/, '').trim();
         }
-        rowObj[matchedCol.id] = finalVal;
       }
+      rowObj[matchedCol.id] = finalVal;
     });
 
     const rowItem = {
-      excelRowIndex: rIdx + 1,
+      excelRowIndex: rIdx + 1, // Số thứ tự dòng thực tế trong file Excel (1-based)
       data: rowObj,
       issues: [],
     };
@@ -761,7 +883,7 @@ const validateRowItem = (rowItem) => {
       issues.push('Thiếu Họ và tên cán bộ');
     }
     // CCCD
-    const cccd = data[pKeyField] || data.cccd || data.cccdparent;
+    const cccd = data[pKeyField] || data.cccd || data.cccdparent || data.so_cccd;
     if (!cccd || String(cccd).trim() === '' || String(cccd).trim() === '-') {
       issues.push(`Thiếu Khóa định danh CCCD (${pKeyField})`);
     }
@@ -772,13 +894,13 @@ const validateRowItem = (rowItem) => {
       issues.push('Thiếu Tên thân nhân');
     }
     // CCCD cán bộ liên quan
-    const parentCccd = data[relParentKeyField];
-    if (!parentCccd || String(parentCccd).trim() === '') {
+    const parentCccd = data[relParentKeyField] || data.cccdparent || data.parentCccd || data.parentPersonnelCccd;
+    if (!parentCccd || String(parentCccd).trim() === '' || String(parentCccd).trim() === '-') {
       issues.push(`Thiếu CCCD Cán bộ liên quan (${relParentKeyField})`);
     }
   } else if (targetEntity.value === 'trips') {
     // CCCD người đi là khóa duy nhất để định danh
-    const tripCccd = data[tripKeyField];
+    const tripCccd = data[tripKeyField] || data.cccdchuyendi || data.cccd || data.cccdparent;
     if (!tripCccd || String(tripCccd).trim() === '' || String(tripCccd).trim() === '-') {
       issues.push(`Thiếu CCCD người đi (${tripKeyField})`);
     }
@@ -819,10 +941,10 @@ const isCellInvalid = (row, colId) => {
   const val = row.data[colId];
   if (targetEntity.value === 'personnel') {
     if ((colId === 'name' || colId === 'ho_va_ten') && (!val || String(val).trim() === '')) return true;
-    if ((colId === pKeyField || colId === 'cccdparent' || colId === 'cccd') && (!val || String(val).trim() === '')) return true;
+    if ((colId === pKeyField || colId === 'cccdparent' || colId === 'cccd' || colId === 'so_cccd') && (!val || String(val).trim() === '' || String(val).trim() === '-')) return true;
   } else if (targetEntity.value === 'relative') {
     if ((colId === 'relativeName' || colId === 'name') && (!val || String(val).trim() === '')) return true;
-    if ((colId === relParentKeyField || colId === 'parentCccd' || colId === 'cccdparent') && (!val || String(val).trim() === '')) return true;
+    if ((colId === relParentKeyField || colId === 'parentCccd' || colId === 'cccdparent') && (!val || String(val).trim() === '' || String(val).trim() === '-')) return true;
   } else if (targetEntity.value === 'trips') {
     if ((colId === tripKeyField || colId === 'cccd' || colId === 'cccdchuyendi' || colId === 'cccdparent') && (!val || String(val).trim() === '' || String(val).trim() === '-')) return true;
   }
@@ -865,26 +987,116 @@ const invalidRows = computed(() => {
   return (parsedRows.value || []).filter((r) => r.issues && r.issues.length > 0);
 });
 
-// Calculate Plan Counts for Step 3
+// Calculate Plan Counts for Step 3 (Chuẩn xác cho cả 3 bảng)
 const planCounts = computed(() => {
   const pKeyField = personnelStore.getPersonnelKeyField();
+  const relParentKeyField = personnelStore.getRelativeParentKeyField();
+  const tripKeyField = personnelStore.getTripKeyField();
+  const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+
   let toCreate = 0;
   let toUpdate = 0;
 
-  const existingCccdMap = {};
-  (personnelStore.personnelList || []).forEach((p) => {
-    const cccd = p[pKeyField] || p.cccd || p.cccdparent || p.custom_data?.[pKeyField];
-    if (cccd) existingCccdMap[String(cccd).trim()] = p;
-  });
+  if (targetEntity.value === 'personnel') {
+    const existingCccdSet = new Set();
+    (personnelStore.personnelList || []).forEach((p) => {
+      const cccd = p[pKeyField] || p.cccd || p.cccdparent || p.custom_data?.[pKeyField];
+      if (cccd) existingCccdSet.add(String(cccd).trim());
+    });
 
-  validRows.value.forEach((r) => {
-    const cccd = r.data[pKeyField] || r.data.cccd || r.data.cccdparent;
-    if (cccd && existingCccdMap[String(cccd).trim()]) {
-      toUpdate++;
-    } else {
-      toCreate++;
-    }
-  });
+    validRows.value.forEach((r) => {
+      const cccd = r.data[pKeyField] || r.data.cccd || r.data.cccdparent || r.data.so_cccd;
+      if (cccd && existingCccdSet.has(String(cccd).trim())) {
+        toUpdate++;
+      } else {
+        toCreate++;
+      }
+    });
+  } else if (targetEntity.value === 'relative') {
+    validRows.value.forEach((rowItem) => {
+      const rowData = rowItem.data || {};
+      const parentCccd = String(rowData[relParentKeyField] || rowData.cccdparent || rowData.parentCccd || '').trim();
+      const parentPerson = personnelStore.personnelList.find((p) => {
+        const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent ?? p.cccd;
+        return canBoCccd && String(canBoCccd).trim() === parentCccd;
+      });
+
+      if (!parentPerson) {
+        toCreate++;
+        return;
+      }
+
+      const currentRels = Array.isArray(parentPerson.relatives) ? parentPerson.relatives : [];
+      const relCccd = String(rowData[rKeyField] || rowData.cccdthannhan || rowData.cccd || '').trim();
+      const relName = String(rowData.relativeName || rowData.name || '').trim().toLowerCase();
+      const relRelation = String(rowData.relationshipName || rowData.relation || '').trim().toLowerCase();
+
+      const exists = currentRels.some((r) => {
+        const rC = String(r[rKeyField] || r.cccdthannhan || r.cccd || '').trim();
+        if (relCccd && rC && relCccd === rC) return true;
+        const rN = String(r.relativeName || r.name || '').trim().toLowerCase();
+        const rR = String(r.relationshipName || r.relation || '').trim().toLowerCase();
+        return relName && rN === relName && (!relRelation || rR === relRelation);
+      });
+
+      if (exists) {
+        toUpdate++;
+      } else {
+        toCreate++;
+      }
+    });
+  } else if (targetEntity.value === 'trips') {
+    validRows.value.forEach((rowItem) => {
+      const rowData = rowItem.data || {};
+      const tripCccd = String(rowData[tripKeyField] || rowData.cccdchuyendi || rowData.cccd || '').trim();
+
+      let resolvedPerson = personnelStore.personnelList.find((p) => {
+        const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent ?? p.cccd;
+        return canBoCccd && String(canBoCccd).trim() === tripCccd;
+      });
+
+      if (!resolvedPerson) {
+        for (const p of (personnelStore.personnelList || [])) {
+          const rels = Array.isArray(p.relatives) ? p.relatives : [];
+          const matchedRel = rels.find((r) => {
+            const rCccd = r[rKeyField] ?? r.custom_data?.[rKeyField] ?? r.cccdthannhan ?? r.cccd;
+            return rCccd && String(rCccd).trim() === tripCccd;
+          });
+          if (matchedRel) {
+            resolvedPerson = p;
+            break;
+          }
+        }
+      }
+
+      const tripDepDate = String(rowData.departureDate || rowData.ngay_di || '').trim();
+      const tripCountry = String(rowData.countryName || rowData.quoc_gia_xuat_canh || rowData.destinationCountry || '').trim().toLowerCase();
+      const tripDecNum = String(rowData.decisionNumber || rowData.so_quyet_dinh || '').trim();
+
+      const isSameTrip = (t) => {
+        if (tripDecNum && t.decisionNumber && String(t.decisionNumber).trim() === tripDecNum) return true;
+        const tDep = String(t.departureDate || t.ngay_di || '').trim();
+        const tCtry = String(t.countryName || t.quoc_gia_xuat_canh || t.destinationCountry || '').trim().toLowerCase();
+        return tripDepDate && tDep === tripDepDate && (!tripCountry || tCtry === tripCountry);
+      };
+
+      if (resolvedPerson) {
+        const currentTrips = Array.isArray(resolvedPerson.trips) ? resolvedPerson.trips : [];
+        if (currentTrips.some(isSameTrip)) {
+          toUpdate++;
+        } else {
+          toCreate++;
+        }
+      } else {
+        const currentStandalone = Array.isArray(personnelStore.standaloneTrips) ? personnelStore.standaloneTrips : [];
+        if (currentStandalone.some(isSameTrip)) {
+          toUpdate++;
+        } else {
+          toCreate++;
+        }
+      }
+    });
+  }
 
   return { toCreate, toUpdate };
 });
@@ -911,6 +1123,7 @@ const executeImport = async () => {
     const pKeyField = personnelStore.getPersonnelKeyField();
     const relParentKeyField = personnelStore.getRelativeParentKeyField();
     const tripKeyField = personnelStore.getTripKeyField();
+    const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
 
     if (targetEntity.value === 'personnel') {
       const existingByCccd = {};
@@ -921,7 +1134,7 @@ const executeImport = async () => {
 
       for (const rowItem of rowsToImport) {
         const rowData = { ...rowItem.data };
-        const cccd = String(rowData[pKeyField] || rowData.cccd || rowData.cccdparent || '').trim();
+        const cccd = String(rowData[pKeyField] || rowData.cccd || rowData.cccdparent || rowData.so_cccd || '').trim();
         const existingPerson = existingByCccd[cccd] || null;
 
         if (existingPerson) {
@@ -931,7 +1144,7 @@ const executeImport = async () => {
           }
 
           if (importMode.value === 'replace') {
-            // Ghi đè thay thế toàn bộ
+            // Ghi đè thay thế toàn bộ các trường thông tin cá nhân
             const replacedPayload = {
               ...existingPerson,
               ...rowData,
@@ -951,7 +1164,7 @@ const executeImport = async () => {
             updatedCount++;
           }
         } else {
-          // Tạo mới
+          // Tạo mới cán bộ
           const nextIndex = personnelStore.personnelList.length + createdCount + 1;
           const assignedCode = rowData.code || ('CB-' + String(nextIndex).padStart(5, '0'));
           const newId = 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
@@ -970,49 +1183,91 @@ const executeImport = async () => {
         }
       }
     } else if (targetEntity.value === 'relative') {
-      // Import thân nhân gắn vào cán bộ
+      // Import thân nhân gắn vào cán bộ (Chống trùng lặp theo CCCD thân nhân hoặc Tên + Quan hệ)
       for (const rowItem of rowsToImport) {
         const rowData = { ...rowItem.data };
-        const parentCccd = String(rowData[relParentKeyField] || '').trim();
+        const parentCccd = String(rowData[relParentKeyField] || rowData.cccdparent || rowData.parentCccd || '').trim();
         const parentPerson = personnelStore.personnelList.find(p => {
-          const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent;
+          const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent ?? p.cccd;
           return canBoCccd && String(canBoCccd).trim() === parentCccd;
         });
 
-        const newRelId = 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
-        const relPayload = {
-          id: newRelId,
-          personnelId: parentPerson ? parentPerson.id : '',
-          parentName: parentPerson ? parentPerson.name : (rowData.parentName || ''),
-          parentCccd: parentCccd,
-          ...rowData,
-          custom_data: { ...rowData },
-        };
+        if (!parentPerson) {
+          skippedCount++;
+          continue;
+        }
 
-        if (parentPerson) {
-          const currentRels = Array.isArray(parentPerson.relatives) ? [...parentPerson.relatives] : [];
-          currentRels.push(relPayload);
-          const updatedParent = {
-            ...parentPerson,
-            relatives: currentRels,
-            custom_data: {
-              ...(parentPerson.custom_data || {}),
-              relatives: currentRels,
-            },
+        const currentRels = Array.isArray(parentPerson.relatives) ? [...parentPerson.relatives] : [];
+        const relCccd = String(rowData[rKeyField] || rowData.cccdthannhan || rowData.cccd || '').trim();
+        const relName = String(rowData.relativeName || rowData.name || '').trim().toLowerCase();
+        const relRelation = String(rowData.relationshipName || rowData.relation || '').trim().toLowerCase();
+
+        const existingRelIdx = currentRels.findIndex(r => {
+          const rC = String(r[rKeyField] || r.cccdthannhan || r.cccd || '').trim();
+          if (relCccd && rC && relCccd === rC) return true;
+          const rN = String(r.relativeName || r.name || '').trim().toLowerCase();
+          const rR = String(r.relationshipName || r.relation || '').trim().toLowerCase();
+          return relName && rN === relName && (!relRelation || rR === relRelation);
+        });
+
+        if (existingRelIdx >= 0) {
+          if (importMode.value === 'skip') {
+            skippedCount++;
+            continue;
+          }
+          if (importMode.value === 'replace') {
+            currentRels[existingRelIdx] = {
+              id: currentRels[existingRelIdx].id,
+              personnelId: parentPerson.id,
+              parentName: parentPerson.name,
+              parentCccd: parentCccd,
+              ...rowData,
+              custom_data: { ...rowData },
+            };
+            updatedCount++;
+          } else {
+            // Upsert: Giữ nguyên các trường cũ, chỉ cập nhật trường mới có giá trị
+            const mergedCustom = { ...(currentRels[existingRelIdx].custom_data || {}), ...rowData };
+            currentRels[existingRelIdx] = {
+              ...currentRels[existingRelIdx],
+              ...rowData,
+              custom_data: mergedCustom,
+            };
+            updatedCount++;
+          }
+        } else {
+          // Tạo mới thân nhân
+          const newRelId = 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
+          const relPayload = {
+            id: newRelId,
+            personnelId: parentPerson.id,
+            parentName: parentPerson.name,
+            parentCccd: parentCccd,
+            ...rowData,
+            custom_data: { ...rowData },
           };
-          await updatePersonnel(parentPerson.id, updatedParent);
+          currentRels.push(relPayload);
           createdCount++;
         }
+
+        const updatedParent = {
+          ...parentPerson,
+          relatives: currentRels,
+          custom_data: {
+            ...(parentPerson.custom_data || {}),
+            relatives: currentRels,
+          },
+        };
+        await updatePersonnel(parentPerson.id, updatedParent);
       }
     } else if (targetEntity.value === 'trips') {
-      // Import chuyến đi gắn vào cán bộ hoặc thân nhân
-      const rKeyField = personnelStore.getRelativeKeyField ? personnelStore.getRelativeKeyField() : 'cccdthannhan';
+      // Import chuyến đi gắn vào cán bộ hoặc thân nhân (Chống trùng lặp theo Ngày đi + Quốc gia / Số QĐ)
       for (const rowItem of rowsToImport) {
         const rowData = { ...rowItem.data };
-        const tripCccd = String(rowData[tripKeyField] || '').trim();
-        
+        const tripCccd = String(rowData[tripKeyField] || rowData.cccdchuyendi || rowData.cccd || '').trim();
+
         let resolvedPerson = personnelStore.personnelList.find(p => {
-          const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent;
+          const canBoCccd = p[pKeyField] ?? p.custom_data?.[pKeyField] ?? p.cccdparent ?? p.cccd;
           return canBoCccd && String(canBoCccd).trim() === tripCccd;
         });
         let resolvedName = rowData.personnelName || rowData.name || '';
@@ -1023,7 +1278,7 @@ const executeImport = async () => {
           for (const p of (personnelStore.personnelList || [])) {
             const rels = Array.isArray(p.relatives) ? p.relatives : [];
             const matchedRel = rels.find(r => {
-              const rCccd = r[rKeyField] ?? r.custom_data?.[rKeyField] ?? r.cccdthannhan;
+              const rCccd = r[rKeyField] ?? r.custom_data?.[rKeyField] ?? r.cccdthannhan ?? r.cccd;
               return rCccd && String(rCccd).trim() === tripCccd;
             });
             if (matchedRel) {
@@ -1039,20 +1294,62 @@ const executeImport = async () => {
           resolvedName = resolvedPerson.name;
         }
 
-        const newTripId = 'trip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
-        const tripPayload = {
-          id: newTripId,
-          personnelId: resolvedPerson ? resolvedPerson.id : '',
-          personnelName: resolvedName,
-          cccd: tripCccd,
-          isRelative: isRelativeTrip,
-          ...rowData,
-          custom_data: { ...rowData },
+        const tripDepDate = String(rowData.departureDate || rowData.ngay_di || '').trim();
+        const tripCountry = String(rowData.countryName || rowData.quoc_gia_xuat_canh || rowData.destinationCountry || '').trim().toLowerCase();
+        const tripDecNum = String(rowData.decisionNumber || rowData.so_quyet_dinh || '').trim();
+
+        const isSameTrip = (t) => {
+          if (tripDecNum && t.decisionNumber && String(t.decisionNumber).trim() === tripDecNum) return true;
+          const tDep = String(t.departureDate || t.ngay_di || '').trim();
+          const tCtry = String(t.countryName || t.quoc_gia_xuat_canh || t.destinationCountry || '').trim().toLowerCase();
+          return tripDepDate && tDep === tripDepDate && (!tripCountry || tCtry === tripCountry);
         };
 
         if (resolvedPerson) {
           const currentTrips = Array.isArray(resolvedPerson.trips) ? [...resolvedPerson.trips] : [];
-          currentTrips.push(tripPayload);
+          const existingTripIdx = currentTrips.findIndex(isSameTrip);
+
+          if (existingTripIdx >= 0) {
+            if (importMode.value === 'skip') {
+              skippedCount++;
+              continue;
+            }
+            if (importMode.value === 'replace') {
+              currentTrips[existingTripIdx] = {
+                id: currentTrips[existingTripIdx].id,
+                personnelId: resolvedPerson.id,
+                personnelName: resolvedName,
+                cccd: tripCccd,
+                isRelative: isRelativeTrip,
+                ...rowData,
+                custom_data: { ...rowData },
+              };
+              updatedCount++;
+            } else {
+              // Upsert
+              const mergedCustom = { ...(currentTrips[existingTripIdx].custom_data || {}), ...rowData };
+              currentTrips[existingTripIdx] = {
+                ...currentTrips[existingTripIdx],
+                ...rowData,
+                custom_data: mergedCustom,
+              };
+              updatedCount++;
+            }
+          } else {
+            const newTripId = 'trip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
+            const tripPayload = {
+              id: newTripId,
+              personnelId: resolvedPerson.id,
+              personnelName: resolvedName,
+              cccd: tripCccd,
+              isRelative: isRelativeTrip,
+              ...rowData,
+              custom_data: { ...rowData },
+            };
+            currentTrips.push(tripPayload);
+            createdCount++;
+          }
+
           const updatedParent = {
             ...resolvedPerson,
             trips: currentTrips,
@@ -1062,11 +1359,52 @@ const executeImport = async () => {
             },
           };
           await updatePersonnel(resolvedPerson.id, updatedParent);
-          createdCount++;
         } else {
           // Lưu chuyến đi độc lập dạng Flat (ánh xạ độc lập qua điều kiện khóa, không phụ thuộc cán bộ)
-          await personnelStore.addStandaloneTrip(tripPayload);
-          createdCount++;
+          const currentStandalone = Array.isArray(personnelStore.standaloneTrips) ? [...personnelStore.standaloneTrips] : [];
+          const existingTripIdx = currentStandalone.findIndex(isSameTrip);
+
+          if (existingTripIdx >= 0) {
+            if (importMode.value === 'skip') {
+              skippedCount++;
+              continue;
+            }
+            if (importMode.value === 'replace') {
+              const updatedTrip = {
+                id: currentStandalone[existingTripIdx].id,
+                personnelId: '',
+                personnelName: resolvedName,
+                cccd: tripCccd,
+                isRelative: false,
+                ...rowData,
+                custom_data: { ...rowData },
+              };
+              await personnelStore.addStandaloneTrip(updatedTrip);
+              updatedCount++;
+            } else {
+              const mergedCustom = { ...(currentStandalone[existingTripIdx].custom_data || {}), ...rowData };
+              const updatedTrip = {
+                ...currentStandalone[existingTripIdx],
+                ...rowData,
+                custom_data: mergedCustom,
+              };
+              await personnelStore.addStandaloneTrip(updatedTrip);
+              updatedCount++;
+            }
+          } else {
+            const newTripId = 'trip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 7);
+            const tripPayload = {
+              id: newTripId,
+              personnelId: '',
+              personnelName: resolvedName,
+              cccd: tripCccd,
+              isRelative: false,
+              ...rowData,
+              custom_data: { ...rowData },
+            };
+            await personnelStore.addStandaloneTrip(tripPayload);
+            createdCount++;
+          }
         }
       }
     }
@@ -1354,6 +1692,25 @@ const getImportModeLabel = (mode) => {
   font-size: 0.73rem;
   color: #64748b;
   margin: 0;
+  line-height: 1.35;
+}
+
+.template-quick-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.template-guide-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.74rem;
+  color: #1e40af;
   line-height: 1.35;
 }
 

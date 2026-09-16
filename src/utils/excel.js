@@ -26,220 +26,211 @@ export const getSubOptionsList = (col) => {
   return [];
 };
 
-// Export Full Columns for Personnel with [Cột N] prefix
+// Chuẩn hóa danh sách cột từ cấu hình mapping theo chuẩn Header kép 2 dòng:
+// Dòng 1: Label tiếng Việt (thân thiện người dùng đọc)
+// Dòng 2: Mã ID kỹ thuật (chuẩn xác 100% khi import)
+export const buildColumnDefsFromMapping = (mappingConfig) => {
+  let currentColIdx = 0;
+  const colDefs = [];
+
+  (mappingConfig || []).forEach((g) => {
+    (g.columns || []).forEach((c) => {
+      if (c.includeInExport === false) return;
+      currentColIdx++;
+      if (c.id === 'stt') {
+        colDefs.push({
+          id: 'stt',
+          label: `[Cột ${currentColIdx}] STT`,
+          col: { id: 'stt', format: 'number' },
+        });
+        return;
+      }
+      colDefs.push({
+        id: c.id,
+        label: `[Cột ${currentColIdx}] ${c.label || c.id}`,
+        col: c,
+      });
+    });
+  });
+
+  return colDefs;
+};
+
+// Tạo Worksheet theo chuẩn 2 Header Rows (Dòng 1: Label, Dòng 2: ID, Dòng 3+: Dữ liệu)
+export const create2HeaderWorksheet = (columnDefs, dataRows = [], getRowValueFn = null) => {
+  const row1Labels = columnDefs.map((c) => c.label);
+  const row2Ids = columnDefs.map((c) => c.id);
+
+  const aoa = [row1Labels, row2Ids];
+
+  (dataRows || []).forEach((item, idx) => {
+    const rowValues = columnDefs.map((colDef) => {
+      if (colDef.id === 'stt') {
+        return idx + 1;
+      }
+      if (colDef.col?.format === 'formula') {
+        return '';
+      }
+      if (getRowValueFn) {
+        const raw = getRowValueFn(item, colDef.id, colDef.col);
+        return formatCellForExcel(raw, colDef.col);
+      }
+      const raw = item[colDef.id];
+      return formatCellForExcel(raw, colDef.col);
+    });
+    aoa.push(rowValues);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Tự động căn chỉnh độ rộng cột
+  ws['!cols'] = columnDefs.map((c) => {
+    const lLen = String(c.label || '').length;
+    const iLen = String(c.id || '').length;
+    return { wch: Math.max(lLen, iLen, 12) + 4 };
+  });
+
+  return ws;
+};
+
+// Xuất file mẫu với 2 dòng Header (Dòng 1: Label, Dòng 2: ID)
+export const exportTemplateWith2Headers = (columnDefs, fileName = 'Mau_Excel', sheetName = 'Mẫu nhập liệu') => {
+  const ws = create2HeaderWorksheet(columnDefs, []);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
+  XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+// Giữ lại để tương thích ngược nếu có module gọi
+export const getMappingHeadersList = (mappingConfig) => {
+  const defs = buildColumnDefsFromMapping(mappingConfig);
+  return defs.map((d) => d.label);
+};
+
+export const exportTemplateWithHeaders = (headers, fileName = 'Mau_Excel', sheetName = 'Mẫu nhập liệu') => {
+  const ws = XLSX.utils.aoa_to_sheet([headers]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+// Xuất Toàn bộ Cột Cán bộ theo chuẩn 2 Header
 export const exportFullPersonnelExcel = (personnelList, mappingConfig, getDepartmentName) => {
-  let currentColIdx = 0;
-  const columnHeaders = [];
-
-  (mappingConfig || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.includeInExport === false) return;
-      currentColIdx++;
-      if (c.id === 'stt') {
-        columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
-        return;
-      }
-
-      const subOpts = getSubOptionsList(c);
-      if (subOpts.length > 1) {
-        subOpts.forEach((opt, sIdx) => {
-          const colNum = currentColIdx + sIdx;
-          columnHeaders.push({
-            id: c.id,
-            subOpt: opt,
-            header: `[Cột ${colNum}] ${c.label || c.id}: ${opt}`,
-            col: c,
-          });
-        });
-        currentColIdx += (subOpts.length - 1);
-      } else {
-        columnHeaders.push({
-          id: c.id,
-          header: `[Cột ${currentColIdx}] ${c.label || c.id}`,
-          col: c,
-        });
-      }
-    });
-  });
-
-  const list = Array.isArray(personnelList) && personnelList.length > 0 ? personnelList : [];
-  let rows = [];
-
-  if (list.length > 0) {
-    rows = list.map((p, idx) => {
-      const row = {};
-      columnHeaders.forEach((item) => {
-        if (item.id === 'stt') {
-          row[item.header] = idx + 1;
-        } else if (item.subOpt) {
-          const val = getFieldValue(p, item.id, getDepartmentName);
-          row[item.header] = String(val).toLowerCase().includes(item.subOpt.toLowerCase()) ? 'X' : '';
-        } else {
-          row[item.header] = getFieldValue(p, item.id, getDepartmentName);
-        }
-      });
-      return row;
-    });
-  } else {
-    const emptyRow = {};
-    columnHeaders.forEach((item) => {
-      emptyRow[item.header] = item.id === 'stt' ? 1 : '';
-    });
-    rows = [emptyRow];
-  }
-
-  exportToExcel(rows, 'Danh_sach_Can_bo', 'Hồ sơ Cán bộ');
+  const colDefs = buildColumnDefsFromMapping(mappingConfig);
+  const ws = create2HeaderWorksheet(
+    colDefs,
+    personnelList || [],
+    (p, colId) => getFieldValue(p, colId, getDepartmentName)
+  );
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Hồ sơ Cán bộ');
+  XLSX.writeFile(wb, `Danh_sach_Can_bo_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
-// Export Full Columns for Relatives with [Cột N] prefix
+// Xuất Toàn bộ Cột Thân nhân theo chuẩn 2 Header
 export const exportFullRelativesExcel = (relativesList, mappingConfig) => {
-  let currentColIdx = 0;
-  const columnHeaders = [];
-
-  (mappingConfig || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.includeInExport === false) return;
-      currentColIdx++;
-      if (c.id === 'stt') {
-        columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
-        return;
-      }
-
-      const subOpts = getSubOptionsList(c);
-      if (subOpts.length > 1) {
-        subOpts.forEach((opt, sIdx) => {
-          const colNum = currentColIdx + sIdx;
-          columnHeaders.push({
-            id: c.id,
-            subOpt: opt,
-            header: `[Cột ${colNum}] ${c.label || c.id}: ${opt}`,
-            col: c,
-          });
-        });
-        currentColIdx += (subOpts.length - 1);
-      } else {
-        columnHeaders.push({
-          id: c.id,
-          header: `[Cột ${currentColIdx}] ${c.label || c.id}`,
-          col: c,
-        });
-      }
-    });
-  });
-
-  const list = Array.isArray(relativesList) && relativesList.length > 0 ? relativesList : [];
-  let rows = [];
-
-  if (list.length > 0) {
-    rows = list.map((r, idx) => {
-      const row = {};
-      columnHeaders.forEach((item) => {
-        if (item.id === 'stt') {
-          row[item.header] = idx + 1;
-        } else if (item.subOpt) {
-          const val = getRelativeFieldValue(r, item.id, item.col.label);
-          row[item.header] = String(val).toLowerCase().includes(item.subOpt.toLowerCase()) ? 'X' : '';
-        } else {
-          row[item.header] = getRelativeFieldValue(r, item.id, item.col.label);
-        }
-      });
-      return row;
-    });
-  } else {
-    const emptyRow = {};
-    columnHeaders.forEach((item) => {
-      emptyRow[item.header] = item.id === 'stt' ? 1 : '';
-    });
-    rows = [emptyRow];
-  }
-
-  exportToExcel(rows, 'Danh_sach_Than_nhan', 'Hồ sơ Thân nhân');
+  const colDefs = buildColumnDefsFromMapping(mappingConfig);
+  const ws = create2HeaderWorksheet(
+    colDefs,
+    relativesList || [],
+    (r, colId, col) => getRelativeFieldValue(r, colId, col?.label)
+  );
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Hồ sơ Thân nhân');
+  XLSX.writeFile(wb, `Danh_sach_Than_nhan_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
-// Export Full Columns for Trips with [Cột N] prefix
+// Xuất Toàn bộ Cột Chuyến đi theo chuẩn 2 Header
 export const exportFullTripsExcel = (tripsList, mappingConfig, getDepartmentName) => {
-  let currentColIdx = 0;
-  const columnHeaders = [];
-
-  (mappingConfig || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.includeInExport === false) return;
-      currentColIdx++;
-      if (c.id === 'stt') {
-        columnHeaders.push({ id: 'stt', header: `[Cột ${currentColIdx}] STT`, col: c });
-        return;
-      }
-
-      const subOpts = getSubOptionsList(c);
-      if (subOpts.length > 1) {
-        subOpts.forEach((opt, sIdx) => {
-          const colNum = currentColIdx + sIdx;
-          columnHeaders.push({
-            id: c.id,
-            subOpt: opt,
-            header: `[Cột ${colNum}] ${c.label || c.id}: ${opt}`,
-            col: c,
-          });
-        });
-        currentColIdx += (subOpts.length - 1);
-      } else {
-        columnHeaders.push({
-          id: c.id,
-          header: `[Cột ${currentColIdx}] ${c.label || c.id}`,
-          col: c,
-        });
-      }
-    });
-  });
-
-  const list = Array.isArray(tripsList) && tripsList.length > 0 ? tripsList : [];
-  let rows = [];
-
-  if (list.length > 0) {
-    rows = list.map((t, idx) => {
-      const row = {};
-      columnHeaders.forEach((item) => {
-        if (item.id === 'stt') {
-          row[item.header] = idx + 1;
-        } else if (item.subOpt) {
-          const val = getTripFieldValue(t, item.id, item.col.label, getDepartmentName);
-          row[item.header] = String(val).toLowerCase().includes(item.subOpt.toLowerCase()) ? 'X' : '';
-        } else {
-          row[item.header] = getTripFieldValue(t, item.id, item.col.label, getDepartmentName);
-        }
-      });
-      return row;
-    });
-  } else {
-    const emptyRow = {};
-    columnHeaders.forEach((item) => {
-      emptyRow[item.header] = item.id === 'stt' ? 1 : '';
-    });
-    rows = [emptyRow];
-  }
-
-  exportToExcel(rows, 'Danh_sach_Chuyen_di', 'Hồ sơ Chuyến đi');
+  const colDefs = buildColumnDefsFromMapping(mappingConfig);
+  const ws = create2HeaderWorksheet(
+    colDefs,
+    tripsList || [],
+    (t, colId, col) => getTripFieldValue(t, colId, col?.label, getDepartmentName)
+  );
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Hồ sơ Chuyến đi');
+  XLSX.writeFile(wb, `Danh_sach_Chuyen_di_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
-function getTripFieldValue(t, fieldId, colLabel = '', getDepartmentName) {
+export const downloadPersonnelTemplate = (mappingConfig = null) => {
+  const colDefs = buildColumnDefsFromMapping(mappingConfig);
+  exportTemplateWith2Headers(colDefs, 'Mau_Import_Can_Bo', 'Mẫu Cán bộ');
+};
+
+export const downloadRelativeTemplate = (mappingConfig = null) => {
+  const colDefs = buildColumnDefsFromMapping(mappingConfig);
+  exportTemplateWith2Headers(colDefs, 'Mau_Import_Than_Nhan', 'Mẫu Thân nhân');
+};
+
+export const downloadTripsTemplate = (mappingConfig = null) => {
+  const colDefs = buildColumnDefsFromMapping(mappingConfig);
+  exportTemplateWith2Headers(colDefs, 'Mau_Import_Chuyen_Di', 'Mẫu Chuyến đi');
+};
+
+export function getTripFieldValue(t, fieldId, colLabel = '', getDepartmentName) {
   if (!t) return '';
   if (t[fieldId] !== undefined && t[fieldId] !== null) return t[fieldId];
   if (t.custom_data && t.custom_data[fieldId] !== undefined && t.custom_data[fieldId] !== null) {
     return t.custom_data[fieldId];
   }
+  // Fallback các bí danh cột phổ biến
+  if (fieldId === 'cccdchuyendi' || fieldId === 'cccd') {
+    return t.cccdchuyendi || t.cccd || t.cccdparent || '';
+  }
+  if (fieldId === 'countryName' || fieldId === 'quoc_gia_xuat_canh') {
+    return t.countryName || t.quoc_gia_xuat_canh || t.destinationCountry || '';
+  }
+  if (fieldId === 'personnelName' || fieldId === 'name') {
+    return t.personnelName || t.name || '';
+  }
+  if (fieldId === 'decisionNumber' || fieldId === 'so_quyet_dinh') {
+    return t.decisionNumber || t.so_quyet_dinh || '';
+  }
+  if (fieldId === 'departureDate' || fieldId === 'ngay_di') {
+    return t.departureDate || t.ngay_di || '';
+  }
+  if (fieldId === 'arrivalDate' || fieldId === 'ngay_ve') {
+    return t.arrivalDate || t.ngay_ve || '';
+  }
+  if (fieldId === 'purpose' || fieldId === 'muc_dich') {
+    return t.purpose || t.muc_dich || '';
+  }
+  if (fieldId === 'fundingName' || fieldId === 'kinh_phi') {
+    return t.fundingName || t.kinh_phi || '';
+  }
   return '';
 }
 
-function getRelativeFieldValue(r, fieldId, colLabel = '') {
+export function getRelativeFieldValue(r, fieldId, colLabel = '') {
   if (!r) return '';
   if (r[fieldId] !== undefined && r[fieldId] !== null) return r[fieldId];
   if (r.custom_data && r.custom_data[fieldId] !== undefined && r.custom_data[fieldId] !== null) {
     return r.custom_data[fieldId];
   }
+  // Fallback các bí danh cột phổ biến
+  if (fieldId === 'cccdparent' || fieldId === 'parentCccd') {
+    return r.cccdparent || r.parentCccd || r.parentPersonnelCccd || '';
+  }
+  if (fieldId === 'parentName' || fieldId === 'parentPersonnelName') {
+    return r.parentName || r.parentPersonnelName || '';
+  }
+  if (fieldId === 'cccdthannhan' || fieldId === 'cccd') {
+    return r.cccdthannhan || r.cccd || '';
+  }
+  if (fieldId === 'relativeName' || fieldId === 'name') {
+    return r.relativeName || r.name || '';
+  }
+  if (fieldId === 'relationshipName' || fieldId === 'relation') {
+    return r.relationshipName || r.relation || '';
+  }
+  if (fieldId === 'birthYear' || fieldId === 'birthDate') {
+    return r.birthYear || r.birthDate || '';
+  }
   return '';
 }
 
-function getFieldValue(p, fieldId, getDepartmentName) {
+export function getFieldValue(p, fieldId, getDepartmentName) {
   if (!p) return '';
   
   if (fieldId === 'code') return p.code || `CB-${String(p.id).padStart(5, '0')}`;
@@ -248,6 +239,12 @@ function getFieldValue(p, fieldId, getDepartmentName) {
   }
   if (fieldId === 'position' || fieldId === 'positionName') {
     return p.position || p.positionName || '';
+  }
+  if (fieldId === 'cccdparent' || fieldId === 'cccd' || fieldId === 'so_cccd') {
+    return p.cccdparent || p.cccd || p.so_cccd || p.custom_data?.cccdparent || p.custom_data?.cccd || p.custom_data?.so_cccd || '';
+  }
+  if (fieldId === 'name' || fieldId === 'fullName' || fieldId === 'ho_va_ten') {
+    return p.name || p.fullName || p.ho_va_ten || p.custom_data?.name || '';
   }
 
   if (p[fieldId] !== undefined && p[fieldId] !== null) return p[fieldId];
@@ -267,57 +264,6 @@ function getFieldValue(p, fieldId, getDepartmentName) {
 
   return '';
 }
-
-export const getMappingHeadersList = (mappingConfig) => {
-  let currentColIdx = 0;
-  const headers = [];
-
-  (mappingConfig || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.includeInExport === false) return;
-      currentColIdx++;
-      if (c.id === 'stt') {
-        headers.push(`[Cột ${currentColIdx}] STT`);
-        return;
-      }
-
-      const subOpts = getSubOptionsList(c);
-      if (subOpts.length > 1) {
-        subOpts.forEach((opt, sIdx) => {
-          const colNum = currentColIdx + sIdx;
-          headers.push(`[Cột ${colNum}] ${c.label || c.id}: ${opt}`);
-        });
-        currentColIdx += (subOpts.length - 1);
-      } else {
-        headers.push(`[Cột ${currentColIdx}] ${c.label || c.id}`);
-      }
-    });
-  });
-
-  return headers;
-};
-
-export const exportTemplateWithHeaders = (headers, fileName = 'Mau_Excel', sheetName = 'Mẫu nhập liệu') => {
-  const ws = XLSX.utils.aoa_to_sheet([headers]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
-};
-
-export const downloadPersonnelTemplate = (mappingConfig = null) => {
-  const headers = getMappingHeadersList(mappingConfig);
-  exportTemplateWithHeaders(headers, 'Mau_Import_Can_Bo', 'Mẫu Cán bộ');
-};
-
-export const downloadRelativeTemplate = (mappingConfig = null) => {
-  const headers = getMappingHeadersList(mappingConfig);
-  exportTemplateWithHeaders(headers, 'Mau_Import_Than_Nhan', 'Mẫu Thân nhân');
-};
-
-export const downloadTripsTemplate = (mappingConfig = null) => {
-  const headers = getMappingHeadersList(mappingConfig);
-  exportTemplateWithHeaders(headers, 'Mau_Import_Chuyen_Di', 'Mẫu Chuyến đi');
-};
 
 export const formatCellForExcel = (val, colDef) => {
   if (val === undefined || val === null || val === '') return '';
@@ -438,6 +384,7 @@ export const formatCellForExcel = (val, colDef) => {
   return result;
 };
 
+// Xuất file Tổng hợp thực tế gồm 3 Sheet theo chuẩn 2 Header
 export const exportAllInOneDataExcel = (
   personnelList = [],
   relativesList = [],
@@ -450,121 +397,52 @@ export const exportAllInOneDataExcel = (
   const wb = XLSX.utils.book_new();
 
   // 1. Sheet Cán bộ
-  const pHeaders = [];
-  let pIdx = 0;
-  (personnelMapping || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.includeInExport === false) return;
-      pIdx++;
-      if (c.id === 'stt') {
-        pHeaders.push({ id: 'stt', header: `[Cột ${pIdx}] STT`, col: c });
-      } else {
-        pHeaders.push({ id: c.id, header: `[Cột ${pIdx}] ${c.label || c.id}`, col: c });
-      }
-    });
-  });
-
-  const pRows = (personnelList || []).map((p, idx) => {
-    const row = {};
-    pHeaders.forEach((item) => {
-      if (item.id === 'stt') {
-        row[item.header] = idx + 1;
-      } else if (item.col.format === 'formula') {
-        row[item.header] = ''; // Giữ cột, bỏ qua nội dung
-      } else {
-        const raw = getFieldValue(p, item.id, getDepartmentName);
-        row[item.header] = formatCellForExcel(raw, item.col);
-      }
-    });
-    return row;
-  });
-  const wsP = XLSX.utils.json_to_sheet(pRows.length > 0 ? pRows : [pHeaders.reduce((acc, h) => ({ ...acc, [h.header]: '' }), {})]);
+  const pDefs = buildColumnDefsFromMapping(personnelMapping);
+  const wsP = create2HeaderWorksheet(
+    pDefs,
+    personnelList || [],
+    (p, colId) => getFieldValue(p, colId, getDepartmentName)
+  );
   XLSX.utils.book_append_sheet(wb, wsP, 'Cán bộ');
 
   // 2. Sheet Thân nhân
-  const rHeaders = [];
-  let rIdx = 0;
-  (relativeMapping || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.includeInExport === false) return;
-      rIdx++;
-      if (c.id === 'stt') {
-        rHeaders.push({ id: 'stt', header: `[Cột ${rIdx}] STT`, col: c });
-      } else {
-        rHeaders.push({ id: c.id, header: `[Cột ${rIdx}] ${c.label || c.id}`, col: c });
-      }
-    });
-  });
-
-  const rRows = (relativesList || []).map((r, idx) => {
-    const row = {};
-    rHeaders.forEach((item) => {
-      if (item.id === 'stt') {
-        row[item.header] = idx + 1;
-      } else if (item.col.format === 'formula') {
-        row[item.header] = ''; // Giữ cột, bỏ qua nội dung
-      } else {
-        const raw = getRelativeFieldValue(r, item.id, item.col.label);
-        row[item.header] = formatCellForExcel(raw, item.col);
-      }
-    });
-    return row;
-  });
-  const wsR = XLSX.utils.json_to_sheet(rRows.length > 0 ? rRows : [rHeaders.reduce((acc, h) => ({ ...acc, [h.header]: '' }), {})]);
+  const rDefs = buildColumnDefsFromMapping(relativeMapping);
+  const wsR = create2HeaderWorksheet(
+    rDefs,
+    relativesList || [],
+    (r, colId, col) => getRelativeFieldValue(r, colId, col?.label)
+  );
   XLSX.utils.book_append_sheet(wb, wsR, 'Thân nhân');
 
   // 3. Sheet Chuyến đi
-  const tHeaders = [];
-  let tIdx = 0;
-  (tripsMapping || []).forEach((g) => {
-    (g.columns || []).forEach((c) => {
-      if (c.includeInExport === false) return;
-      tIdx++;
-      if (c.id === 'stt') {
-        tHeaders.push({ id: 'stt', header: `[Cột ${tIdx}] STT`, col: c });
-      } else {
-        tHeaders.push({ id: c.id, header: `[Cột ${tIdx}] ${c.label || c.id}`, col: c });
-      }
-    });
-  });
-
-  const tRows = (tripsList || []).map((t, idx) => {
-    const row = {};
-    tHeaders.forEach((item) => {
-      if (item.id === 'stt') {
-        row[item.header] = idx + 1;
-      } else if (item.col.format === 'formula') {
-        row[item.header] = ''; // Giữ cột, bỏ qua nội dung
-      } else {
-        const raw = getTripFieldValue(t, item.id, item.col.label, getDepartmentName);
-        row[item.header] = formatCellForExcel(raw, item.col);
-      }
-    });
-    return row;
-  });
-  const wsT = XLSX.utils.json_to_sheet(tRows.length > 0 ? tRows : [tHeaders.reduce((acc, h) => ({ ...acc, [h.header]: '' }), {})]);
+  const tDefs = buildColumnDefsFromMapping(tripsMapping);
+  const wsT = create2HeaderWorksheet(
+    tDefs,
+    tripsList || [],
+    (t, colId, col) => getTripFieldValue(t, colId, col?.label, getDepartmentName)
+  );
   XLSX.utils.book_append_sheet(wb, wsT, 'Chuyến đi');
 
   XLSX.writeFile(wb, `Du_Lieu_Web_Thuc_Te_3_Sheet_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
+// Tải file Mẫu Tổng hợp 3 Sheet theo chuẩn 2 Header
 export const downloadAllInOneTemplate = (personnelMapping = null, relativeMapping = null, tripsMapping = null) => {
-  const pHeaders = getMappingHeadersList(personnelMapping);
-  const rHeaders = getMappingHeadersList(relativeMapping);
-  const tHeaders = getMappingHeadersList(tripsMapping);
-
   const wb = XLSX.utils.book_new();
 
   // Sheet 1: Cán bộ
-  const wsP = XLSX.utils.aoa_to_sheet([pHeaders]);
+  const pDefs = buildColumnDefsFromMapping(personnelMapping);
+  const wsP = create2HeaderWorksheet(pDefs, []);
   XLSX.utils.book_append_sheet(wb, wsP, 'Cán bộ');
 
   // Sheet 2: Thân nhân
-  const wsR = XLSX.utils.aoa_to_sheet([rHeaders]);
+  const rDefs = buildColumnDefsFromMapping(relativeMapping);
+  const wsR = create2HeaderWorksheet(rDefs, []);
   XLSX.utils.book_append_sheet(wb, wsR, 'Thân nhân');
 
   // Sheet 3: Chuyến đi
-  const wsT = XLSX.utils.aoa_to_sheet([tHeaders]);
+  const tDefs = buildColumnDefsFromMapping(tripsMapping);
+  const wsT = create2HeaderWorksheet(tDefs, []);
   XLSX.utils.book_append_sheet(wb, wsT, 'Chuyến đi');
 
   XLSX.writeFile(wb, `Mau_Nhap_Lieu_Tong_Hop_3_Sheet_${new Date().toISOString().slice(0, 10)}.xlsx`);

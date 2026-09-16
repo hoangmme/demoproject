@@ -992,6 +992,13 @@ const handleExportAllInOneData = () => {
 
   const allTrips = [];
   pList.forEach((p) => {
+    let custom = {};
+    if (p.custom_data) {
+      try {
+        custom = typeof p.custom_data === 'string' ? JSON.parse(p.custom_data) : p.custom_data;
+      } catch (e) {}
+    }
+    const personCccd = String(p.cccdparent || p.cccd || p.so_cccd || custom.cccdparent || custom.cccd || custom.so_cccd || '').trim();
     (p.trips || []).forEach((t) => {
       allTrips.push({
         ...t,
@@ -999,22 +1006,34 @@ const handleExportAllInOneData = () => {
         departmentName: p.departmentName || '',
         departmentId: p.departmentId || '',
         position: p.position || '',
-        cccd: p.cccd || '',
+        cccd: personCccd || p.cccd || '',
+        cccdchuyendi: personCccd || p.cccd || t.cccdchuyendi || '',
       });
     });
   });
 
   rList.forEach((r) => {
+    const relCccd = String(r.cccdthannhan || r.cccd || '').trim();
     (r.trips || []).forEach((t) => {
       allTrips.push({
         ...t,
         personnelName: r.name || r.relativeName || '',
         departmentName: '',
         position: '',
-        cccd: r.cccd || '',
+        cccd: relCccd || r.cccd || '',
+        cccdchuyendi: relCccd || r.cccd || t.cccdchuyendi || '',
         isRelative: true,
         parentName: r.parentName || '',
       });
+    });
+  });
+
+  // Bổ sung các chuyến đi độc lập (nếu có)
+  (personnelStore.standaloneTrips || []).forEach((t) => {
+    allTrips.push({
+      ...t,
+      cccd: t.cccd || t.cccdchuyendi || '',
+      cccdchuyendi: t.cccdchuyendi || t.cccd || '',
     });
   });
 

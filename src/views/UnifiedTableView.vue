@@ -3527,20 +3527,34 @@ const handleSeedTrips = async () => {
   }
 };
 
-// Excel Export (Dynamic 100% theo các cột đang hiển thị trên bảng)
+// Excel Export (Định dạng Header kép 2 dòng: Dòng 1 là Label tiếng Việt, Dòng 2 là Mã ID kỹ thuật)
 const exportExcel = () => {
   const list = filteredList.value || [];
   const cols = visibleColumns.value || [];
-  const rows = list.map((item, idx) => {
-    const obj = { 'STT': dtFirst.value + idx + 1 };
-    cols.forEach((col) => {
-      const val = getCellValue(item, col.id);
-      obj[col.label || col.id] = (val !== null && val !== undefined) ? String(val).replace(/\n/g, ' ') : '-';
-    });
-    return obj;
+
+  const row1Labels = ['STT', ...cols.map((col) => col.label || col.id)];
+  const row2Ids = ['stt', ...cols.map((col) => col.id)];
+
+  const aoa = [row1Labels, row2Ids];
+  list.forEach((item, idx) => {
+    const rowValues = [
+      dtFirst.value + idx + 1,
+      ...cols.map((col) => {
+        const val = getCellValue(item, col.id);
+        return (val !== null && val !== undefined) ? String(val).replace(/\n/g, ' ') : '';
+      }),
+    ];
+    aoa.push(rowValues);
   });
 
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    { wch: 8 },
+    ...cols.map((c) => ({
+      wch: Math.max(String(c.label || '').length, String(c.id || '').length, 12) + 4,
+    })),
+  ];
+
   const wb = XLSX.utils.book_new();
   const sheetTitle = (currentDashboardConfig.value?.title || 'Dữ liệu').slice(0, 31);
   XLSX.utils.book_append_sheet(wb, ws, sheetTitle);
