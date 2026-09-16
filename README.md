@@ -1,14 +1,17 @@
-# Hệ thống Quản lý Hồ sơ Cán bộ & Yếu tố Nước ngoài (Enterprise)
+# Hệ thống Nền tảng No-Code Quản lý Dữ liệu Động (Enterprise)
+*(Ứng dụng Quản lý Hồ sơ Cán bộ, Thân nhân & Yếu tố Nước ngoài)*
 
-Hệ thống số hóa và quản trị hồ sơ cán bộ toàn diện, tích hợp quản lý thân nhân, lịch sử xuất cảnh và các yếu tố liên quan đến nước ngoài theo chuẩn các biểu mẫu Phụ lục quản lý nhà nước.
+Hệ thống số hóa và quản trị dữ liệu toàn diện theo mô hình **Nền tảng No-Code Bảng Phẳng Độc Lập (Pure Flat Table Record Paradigm - Teable / Lark Base Standard)**. 
 
-Phần mềm sử dụng mô hình **"Nhập 1 lần - Đồng bộ đa chiều"**, hỗ trợ Import/Export Excel khối lượng lớn, chuẩn hóa khóa định danh chống trùng lặp dữ liệu và phân quyền bảo mật nhiều cấp.
+Phần mềm cho phép tự do tạo bảng mới, cấu hình cột động, thiết lập công thức thông minh, xây dựng bảng thống kê chuyên đề, quản lý hồ sơ tập trung theo Bảng Đứng Đầu và xuất bản báo cáo PDF/Word trực quan mà **không cần viết thêm bất kỳ dòng code nào**.
 
 ---
 
-## 📑 Tài liệu Hướng dẫn Vận hành & Quy trình Chuẩn (SOP)
+## 📑 Tài liệu Hướng dẫn Vận hành & Tra cứu
 
-👉 **[Xem chi tiết Quy trình Chuẩn hóa, Xuất - Nhập và Đồng bộ Dữ liệu (QUY_TRINH_XUAT_NHAP_DU_LIEU.md)](./QUY_TRINH_XUAT_NHAP_DU_LIEU.md)**
+- ⚡ **[Quy tắc Cốt lõi khi Phát triển & Kiến trúc (CONTINUITY.md)](./CONTINUITY.md)**: Bản tóm tắt nguyên tắc kiến trúc v7.4 dành cho AI và Lập trình viên.
+- 📜 **[Nhật ký Nâng cấp & Lịch sử Chi tiết 59 Phiên (CHANGELOG.md)](./CHANGELOG.md)**: Chi tiết toàn bộ quá trình phát triển và các lỗi đã xử lý.
+- 📘 **[Quy trình Chuẩn hóa, Xuất - Nhập và Đồng bộ Dữ liệu (QUY_TRINH_XUAT_NHAP_DU_LIEU.md)](./QUY_TRINH_XUAT_NHAP_DU_LIEU.md)**: Hướng dẫn import/export Excel khối lượng lớn.
 
 ---
 
@@ -17,68 +20,58 @@ Phần mềm sử dụng mô hình **"Nhập 1 lần - Đồng bộ đa chiều"
 - **Frontend (Giao diện người dùng):**
   - **Framework:** Vue 3 (Composition API) + Vite (Tối ưu hóa build & Hot Reload).
   - **UI Kit:** PrimeVue (Enterprise Theme Aura) + TailwindCSS.
-  - **State Management:** Pinia Store với cơ chế đồng bộ Reactive Cache.
+  - **State Management:** Pinia Store kết hợp Universal Record Engine (`saveRecord` / `deleteRecord`).
+  - **Performance Caching:** Động cơ bộ đệm 3 tầng (In-Memory RAM `0ms` $\rightarrow$ `localStorage` `0ms` $\rightarrow$ Directus API).
   - **Router & Guard:** Vue Router 4 tích hợp Navigation Guard kiểm tra Authentication & Phân quyền Admin/User.
 
 - **Backend (Headless CMS & API Engine):**
   - **Directus v11 (Node.js)** kết hợp cùng Cơ sở dữ liệu quan hệ **PostgreSQL / SQLite**.
   - RESTful API tốc độ cao, quản lý Phân quyền theo vai trò (RBAC), Nhật ký Hoạt động (Audit Logs).
 
-- **Deployment & Web Server:**
-  - **Docker & Docker Compose** (Containerized).
-  - **Nginx Alpine** với cấu hình chống Cache `index.html` tự động (`Cache-Control: no-cache, no-store`), phục vụ tài nguyên SPA tức thì khi cập nhật phiên bản mới.
+- **Deployment & Server Modes:**
+  - **Docker & Docker Compose** (Containerized Production Server).
+  - **Windows Standalone Offline App:** Hoạt động độc lập không cần Internet với Node.js runtime nhúng sẵn và Local DB.
+  - **Nginx Reverse Proxy:** Cấu hình chống cache `index.html` tự động (`Cache-Control: no-cache, no-store`), phục vụ tài nguyên SPA tức thì.
 
 ---
 
-## 2. Tính năng Cốt lõi (Core Features)
+## 2. Tính năng Cốt lõi & Đột phá No-Code
 
-1. **Quản lý Hồ sơ Cán bộ (Cá nhân):**
-   - Đầy đủ các trường thông tin lý lịch: Thông tin chung, Nơi ở hiện nay, Chức vụ, Phòng ban, Hộ chiếu công vụ/cá nhân, Kết quả thẩm tra chính trị.
-   - Quản lý Lịch sử Đi Nước Ngoài (Phụ lục 1) và Lịch sử Kỷ luật / Lưu ý chính trị (Phụ lục 3).
-2. **Quản lý Thân nhân có Yếu tố Nước ngoài (Phụ lục 2):**
-   - Tự động liên kết thân nhân vào hồ sơ Cán bộ thông qua mã CCCD.
-   - Xem chi tiết từng thân nhân riêng biệt (`TN-xxxxx`), chỉnh sửa thông tin học tập, cư trú, làm việc ở nước ngoài.
-   - Gom gọn hiển thị theo cán bộ thông minh trên bảng danh sách.
-3. **Import Excel Thông minh (Upsert Engine):**
-   - **Tự động Cập nhật hoặc Thêm mới:** Nhận diện theo số CCCD cán bộ (`cccdparent`) và CCCD thân nhân (`cccdthannhan`).
-   - Đọc trực tiếp định dạng gốc (`raw: true`), không làm biến dạng số CCCD dài ($\ge 12$ chữ số).
-   - Tự động nhận diện nhiều Sheet, xem trước dữ liệu trước khi nạp vào hệ thống.
-4. **Xuất Báo cáo Excel Linh hoạt (Multi-Sheet Export):**
-   - Xuất danh sách Cán bộ phân bổ tự động thành 4 Sheet độc lập trong 1 file Excel duy nhất.
-   - Xuất Danh sách Thân nhân đầy đủ 27 cột theo chuẩn.
-   - Xuất các Biểu mẫu Phụ lục 1, Phụ lục 2, Phụ lục 3 phục vụ báo cáo.
-5. **Quản lý Tài khoản & Phân quyền Người dùng:**
-   - Đăng nhập/Đăng xuất bảo mật.
-   - Phân quyền Admin (toàn quyền chỉnh sửa, cấu hình cột, quản lý user) và User (xem và nhập liệu theo phạm vi).
-   - Nhật ký thao tác (Audit Logs) lưu lại mọi hành động thêm/sửa/xóa/import.
+### 🎯 1. Nền tảng Bảng Phẳng Độc Lập (Pure Flat Table Paradigm)
+- Toàn bộ các bảng: **Cán bộ (`personnel`)**, **Thân nhân (`relatives`)**, **Chuyến đi (`trips`)**, và các **Bảng tùy biến tự tạo** hoạt động 100% như các Bảng Phẳng Độc Lập.
+- **100% Dynamic Columns theo `column.id`**: Truy xuất dữ liệu động minh bạch, không dùng mảng alias tĩnh gom trường.
+- **Hệ thống Định dạng Chuẩn Teable**: Hỗ trợ đầy đủ các kiểu dữ liệu từ Cơ bản (Text, Number, Single/Multiple Select, Date, Checkbox, Attachment) đến Nâng cao (Formula, Link to Record, Lookup đa tầng, Rollup) và Nghiệp vụ lặp (`checkbox_file_loop`).
+- **Cột Định danh Ghim Cố định (`_recordIdentifier`)**: Luôn ghim trái cùng STT, hiển thị icon `🔒`, hỗ trợ tự do Ẩn/Hiện nhưng khóa nút xóa để bảo vệ toàn vẹn định danh.
 
----
+### 🏛️ 2. Trang Chi Tiết Tập Trung & Bảng Đứng Đầu (Master Root Hub)
+- **Trang Chi Tiết Tập Trung (`PersonnelConcentratedView.vue`)**:
+  - **Header Nhận diện Động**: Tự động quét toàn bộ trường ở Nhóm 1 của Bảng Đứng Đầu để làm tiêu đề và thanh badge tóm tắt.
+  - **Thanh Nhảy Mục Dính (Sticky Anchor Nav)**: Tự sinh nút nhảy mục mượt mà theo Nhóm và các Bảng Con trực thuộc.
+  - **Bảng Con Dạng Accordion Inline**: Thanh Accordion hiển thị các cột Nhóm 1; bấm vào mở bung toàn bộ các nhóm còn lại để chỉnh sửa trực tiếp.
+  - **Lồng Chuyến Đi Vào Thân Nhân**: Tự động lọc và lồng chuyến đi của thân nhân vào ngay dưới từng thân nhân tương ứng.
+- **Điều hướng & Xuất PDF quy về Bảng Đứng Đầu**:
+  - Click xem/sửa ở bất kỳ đâu (Bảng con, Popup thống kê): Luôn mở Trang Chi Tiết Tập Trung của Cán bộ chủ quản và cuộn đến đúng bản ghi con.
+  - Xuất PDF: Luôn tự động tra cứu ngược về Bảng Đứng Đầu để xuất trọn vẹn toàn bộ hồ sơ (Cán bộ + Thân nhân + các Chuyến đi).
 
-## 3. Quy trình Quản lý & Chuẩn hóa Dữ liệu (Tránh Xung đột)
+### 📊 3. Bảng Thống Kê (Dashboard) & Bộ Lọc Tự Động Phản Ứng
+- **25+ Widget Thống Kê & KPI Cards Đa Dạng**: Đếm số lượng, tỷ lệ %, biểu đồ tròn phân bổ quốc gia, biểu đồ cột xếp chồng nhiều màu (Stacked Bar), ma trận phòng ban.
+- **Bộ Lọc Query Builder Trực Quan**: Lọc theo mọi trường dữ liệu với đầy đủ toán tử (`equals`, `contains`, `gte`, `lte`, `count_gte`...).
+- **Tính Năng Khử Trùng Lặp (Unique)**:
+  - Khi bật "Đếm số bản ghi duy nhất": Tự động gom các dòng trùng khóa vào `_mergedRows`.
+  - Mọi cột có giá trị khác nhau giữa các dòng con (Mục đích, Quốc gia, Quyết định...) tự động gom qua `Set` và hiển thị đầy đủ (xuống dòng hoặc dropdown soft badges).
+- **Công Thức "Số Lần Xuất Cảnh Trong Năm" Thông Minh**:
+  - Dòng chuyến đi phẳng: Hiển thị chuyến đi tương ứng của dòng đó (`Chuyến 1/2: Thái Lan - 29/04/2026`).
+  - Dòng Unique hoặc Bảng Cán bộ: Tự động gộp toàn bộ danh sách các chuyến trong năm vào 1 dòng duy nhất.
 
-### Cơ chế Khóa Định danh (Unique Keys):
-- **Cán bộ:** Quản lý theo số CCCD cán bộ (`cccdparent`).
-- **Thân nhân:** Quản lý theo số CCCD thân nhân (`cccdthannhan`) và CCCD cán bộ (`cccd_can_bo`).
-
-### Xử lý khi Import Nhiều Lần:
-- **Không bao giờ bị trùng lặp:** Khi import file mới, hệ thống so khớp theo số CCCD:
-  - Nếu đã tồn tại trong CSDL $\rightarrow$ **Cập nhật ghi đè các thông tin mới nhất**.
-  - Nếu chưa có $\rightarrow$ **Tự động tạo mới bản ghi**.
-- **Đồng bộ 2 chiều:** Bạn có thể sửa trực tiếp trên Web hoặc sửa trên file Excel rồi nạp lại vào phần mềm.
+### 📑 4. Xuất Báo Cáo & In Ấn Động
+- **Xuất PDF / In Trực Tiếp**: Bản in chuẩn hóa font chữ trang trọng, tự động phân nhóm bảng và căn lề chuyên nghiệp.
+- **Xuất Excel / Mẫu Nhập Liệu**: Hỗ trợ xuất multi-sheet, xuất danh sách theo cấu hình cột hiển thị của từng View.
 
 ---
 
-## 4. Hướng dẫn Khởi chạy Hệ thống
+## 3. Hướng dẫn Cài đặt & Khởi chạy
 
-### 1. Chạy với Docker (Khuyến nghị cho Production/Server):
-```bash
-# Khởi động toàn bộ dịch vụ (Frontend + Backend + Database)
-docker-compose up -d --build
-```
-- **Frontend App:** `http://localhost:80` (hoặc domain cấu hình)
-- **Directus Admin:** `http://localhost:8055`
-
-### 2. Chạy Môi trường Phát triển (Local Dev):
+### 1. Môi trường Phát triển (Local Dev):
 ```bash
 # Cài đặt dependencies
 npm install
@@ -86,36 +79,39 @@ npm install
 # Khởi chạy Vite Dev Server
 npm run dev
 
-# Build kiểm tra đóng gói
+# Kiểm tra biên dịch Production
 npm run build
 ```
 
----
-
-## 5. Hướng dẫn Đóng gói & Cập nhật Bản Offline Windows (`WINDOWS_OFFLINE_APP`)
-
-### 🔄 Cách cập nhật Giao diện & Tính năng mới sang máy Offline (Giữ nguyên dữ liệu):
-Khi có thay đổi code giao diện, sửa nút bấm, tối ưu xuất PDF/Word hoặc thêm chức năng mới:
+### 2. Chạy với Docker (Production Server):
 ```bash
-# 1. Build phiên bản mới
-npm run build
-
-# 2. Cập nhật bản build vào gói offline
-rm -rf WINDOWS_OFFLINE_APP/frontend && cp -r dist WINDOWS_OFFLINE_APP/frontend
+# Khởi động toàn bộ dịch vụ (Frontend + Backend + PostgreSQL)
+docker-compose up -d --build
 ```
-👉 **Cách đưa sang máy Offline:**
-- Copy **duy nhất thư mục `WINDOWS_OFFLINE_APP/frontend`** vào USB.
-- Sang máy Windows Offline, chép đè vào thư mục `frontend` của hệ thống.
-- **Lợi ích:** Máy Offline có ngay tính năng mới nhất mà **toàn bộ dữ liệu hồ sơ cán bộ đã nhập trên máy Offline không bị ảnh hưởng (giữ nguyên 100%)**.
+- **Frontend App:** `http://localhost:80`
+- **Directus Admin:** `http://localhost:8055`
 
 ---
 
-### 📥 Cách đồng bộ Dữ liệu từ Online về gói Offline (Khi cần tạo bản cài mới):
+## 4. Hướng dẫn Đóng gói & Cập nhật Bản Offline Windows (`WINDOWS_OFFLINE_APP`)
+
+Hệ thống cung cấp script tự động hóa hoàn chỉnh `./sync_and_package_offline.sh`:
+
+### 🔄 [1] Cập nhật Code Giao diện (Không Mất Dữ Liệu Khách Hàng):
+Dùng khi có bản cập nhật tính năng mới hoặc sửa giao diện:
 ```bash
-# Đồng bộ toàn bộ dữ liệu & file uploads từ web online
-node scripts/sync_online_data.cjs
-node scripts/export_db_json.cjs
+./sync_and_package_offline.sh --update-only
 ```
+- **Sản phẩm:** `WINDOWS_OFFLINE_UPDATE.zip` (~2.5 MB).
+- **Cách áp dụng:** Giải nén đè trực tiếp vào thư mục phần mềm trên máy khách. Toàn bộ hồ sơ trong `database/` và file đính kèm trong `uploads/` **được bảo toàn 100%**.
+
+### 📦 [2] Tạo Bản Cài Đặt Mới Đầy Đủ (Full Setup):
+Dành cho máy tính mới chưa từng cài đặt:
+```bash
+./sync_and_package_offline.sh --all
+```
+- **Sản phẩm:** `WINDOWS_OFFLINE_APP.zip` (~29 MB).
+- **Đặc điểm:** Tự động tích hợp bộ cài Node.js v20 64-bit (`1_CAI_DAT_NODEJS.bat`), Database cấu hình sạch (0 cán bộ, 0 thân nhân, 0 chuyến đi) nhưng bảo toàn 100% cấu hình các bảng, 25 widget thống kê, logo và ảnh nền login/sidebar.
 
 ---
 
