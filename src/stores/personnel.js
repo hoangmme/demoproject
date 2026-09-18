@@ -58,6 +58,7 @@ export const usePersonnelStore = defineStore('personnel', {
     importMappingRelative: [],
     importMappingTrips: [],
     systemKeyConfig: null,
+    metricsVersion: 0,
   }),
   getters: {
     departmentMap: (state) => {
@@ -219,6 +220,9 @@ export const usePersonnelStore = defineStore('personnel', {
     },
   },
   actions: {
+    bumpMetricsVersion() {
+      this.metricsVersion++;
+    },
     async init() {
       await Promise.all([
         this.loadSettings(),
@@ -880,6 +884,7 @@ export const usePersonnelStore = defineStore('personnel', {
         // Đồng bộ ngầm trong background mà không block giao diện
         this.fetchPersonnel().catch((err) => console.warn('Background sync failed:', err));
         this.isDialogOpen = false;
+        this.bumpMetricsVersion();
         return saved;
       } catch (e) {
         console.error('Error saving person:', e);
@@ -895,6 +900,7 @@ export const usePersonnelStore = defineStore('personnel', {
         await deletePersonnel(person.id);
         await logActivity('Xóa Cán bộ', `Xóa hồ sơ: ${person.name} (${person.code || person.id})`);
         await this.fetchPersonnel();
+        this.bumpMetricsVersion();
       } catch (e) {
         console.error('Error deleting person:', e);
         throw e;
@@ -909,6 +915,7 @@ export const usePersonnelStore = defineStore('personnel', {
         await deleteMultiplePersonnel(ids);
         await logActivity('Xóa nhiều Cán bộ', `Xóa hàng loạt ${ids.length} hồ sơ`);
         await this.fetchPersonnel();
+        this.bumpMetricsVersion();
       } catch (e) {
         console.error('Error deleting multiple personnel:', e);
         throw e;
@@ -1044,6 +1051,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
         await logActivity('Xóa Thân nhân', `Xóa thân nhân: ${rel.relativeName || rel.name || targetRelId} (thuộc cán bộ ${targetPerson.name || targetPerson.id})`).catch(() => {});
         await this.fetchPersonnel();
+        this.bumpMetricsVersion();
       } catch (e) {
         console.error('Error deleting relative:', e);
         throw e;
@@ -1226,6 +1234,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
         await logActivity('Cập nhật Thân nhân', `Cập nhật thân nhân: ${cleanRelData.relativeName || cleanRelData.name || cleanRelData.code}`).catch(() => {});
         this.fetchPersonnel().catch((err) => console.warn('Background sync failed:', err));
+        this.bumpMetricsVersion();
         return cleanRelData;
       } catch (e) {
         console.error('Error saving relative:', e);
@@ -1428,6 +1437,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
         await logActivity('Cập nhật Chuyến đi', `Cập nhật chuyến đi: ${cleanTrip.quoc_gia_xuat_canh || cleanTrip.countryName || cleanTrip.id}`).catch(() => {});
         this.fetchPersonnel().catch((err) => console.warn('Background sync failed:', err));
+        this.bumpMetricsVersion();
         return cleanTrip;
       } catch (e) {
         console.error('Error saving trip:', e);
@@ -1509,6 +1519,7 @@ export const usePersonnelStore = defineStore('personnel', {
 
         await logActivity('Xóa Chuyến đi', `Xóa chuyến đi: ${trip.countryName || trip.quoc_gia_xuat_canh || trip.id || ''}`).catch(() => {});
         await this.fetchPersonnel();
+        this.bumpMetricsVersion();
       } catch (e) {
         console.error('Error deleting trip:', e);
         throw e;
@@ -1539,6 +1550,7 @@ export const usePersonnelStore = defineStore('personnel', {
             localStorage.setItem(`custom_table_rows_${tid}`, JSON.stringify(rows));
             await saveAppSettings(`custom_table_rows_${tid}`, rows);
           } catch (e) {}
+          this.bumpMetricsVersion();
         }
         return record;
       }

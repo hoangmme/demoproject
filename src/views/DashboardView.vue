@@ -4268,9 +4268,11 @@ const computeWidgetChartData = (widget, group = null) => {
 const chartDataCache = new Map();
 
 watch(
-  () => [personnelStore.personnelList, customGroups.value, availableTopicDashboards.value],
+  () => [personnelStore.personnelList, personnelStore.tripsList, personnelStore.relativesList, personnelStore.metricsVersion, customGroups.value, availableTopicDashboards.value],
   () => {
     chartDataCache.clear();
+    // Xóa cache bảng tùy chỉnh để buộc nạp lại dữ liệu mới nhất
+    customTableRowsMap.value = {};
   },
   { deep: false }
 );

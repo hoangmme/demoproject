@@ -10,6 +10,7 @@ set -e
 
 MODE="both"
 SYNC_ONLINE=false
+CLEAN_DATA=false
 
 # Đọc tham số dòng lệnh
 for arg in "$@"; do
@@ -29,6 +30,11 @@ for arg in "$@"; do
       ;;
     --all|-a)
       MODE="both"
+      SYNC_ONLINE=true
+      CLEAN_DATA=true
+      ;;
+    --clean-data)
+      CLEAN_DATA=true
       ;;
   esac
 done
@@ -36,7 +42,7 @@ done
 echo ""
 echo "========================================================================"
 echo "🚀 BẮT ĐẦU ĐÓNG GÓI ỨNG DỤNG WINDOWS OFFLINE..."
-echo "   Chế độ: $MODE | Đồng bộ Online: $SYNC_ONLINE"
+echo "   Chế độ: $MODE | Đồng bộ Online: $SYNC_ONLINE | Xóa dữ liệu: $CLEAN_DATA"
 echo "========================================================================"
 echo ""
 
@@ -48,6 +54,15 @@ if [ "$SYNC_ONLINE" = true ]; then
   }
 else
   echo "⏭️  [BƯỚC 1] Bỏ qua tải Database Online (giữ nguyên database & uploads hiện có)."
+fi
+
+# 1b. Xóa dữ liệu hàng (giữ nguyên cấu hình) nếu được yêu cầu
+if [ "$CLEAN_DATA" = true ]; then
+  echo ""
+  echo "🧹 [BƯỚC 1b] Đang xóa dữ liệu hàng, giữ nguyên 100% cấu hình..."
+  node scripts/clean_data_rows.cjs || {
+    echo "⚠️ Lỗi khi xóa dữ liệu hàng."
+  }
 fi
 
 # 2. Build Frontend mới nhất và cập nhật vào WINDOWS_OFFLINE_APP
@@ -125,6 +140,8 @@ if [ -f WINDOWS_OFFLINE_APP.zip ]; then
 fi
 echo "💡 Gợi ý lệnh nhanh:"
 echo "   ./sync_and_package_offline.sh --update-only  # Chỉ tạo gói update code trong 10 giây"
-echo "   ./sync_and_package_offline.sh --full         # Tải online và đóng gói bản cài full"
+echo "   ./sync_and_package_offline.sh --full         # Đóng gói bản cài full (giữ nguyên DB hiện có)"
+echo "   ./sync_and_package_offline.sh --all          # Tải cấu hình Online + XÓA SẠCH dữ liệu → bản cài sạch cho khách mới"
+echo "   ./sync_and_package_offline.sh --clean-data   # Chỉ xóa dữ liệu hàng trong DB hiện có"
 echo "========================================================================"
 echo ""
